@@ -2,13 +2,15 @@
 
 ## GitHub Secrets
 
-В environment `production` должны быть настроены:
+В repository secrets должны быть настроены:
 
 - `SUPABASE_ACCESS_TOKEN` — personal access token Supabase CLI;
 - `SUPABASE_DB_PASSWORD` — пароль новой БД;
 - `SUPABASE_PROJECT_ID` — `xwfuzfkuhblswpdludbc`.
 
 После merge миграции применяет `.github/workflows/deploy-database.yml`. Запуск SQL через Dashboard запрещён. Publishable key может находиться в frontend deployment environment; service role и DB password — никогда.
+
+Workflow не использует GitHub Environment: для приватного репозитория на GitHub Free эта возможность недоступна. Переход на environment secrets выполняется отдельно после подключения подходящего тарифа.
 
 ## Google OAuth
 
