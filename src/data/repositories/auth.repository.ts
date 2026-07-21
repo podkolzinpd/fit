@@ -2,6 +2,8 @@ import type { SessionActor } from '../../shared/domain'
 import { authQueries } from '../queries/auth.queries'
 import { repositoryError } from './error'
 
+const signupFailedMessage = 'Не удалось создать аккаунт. Попробуйте войти или используйте другой email.'
+
 export const authRepository = {
   getSession: authQueries.getSession,
   onAuthStateChange: authQueries.onAuthStateChange,
@@ -10,8 +12,12 @@ export const authRepository = {
     if (error) throw repositoryError(error)
   },
   async signUp(email: string, password: string, firstName: string) {
-    const { error } = await authQueries.signUp(email, password, firstName)
+    const { data, error } = await authQueries.signUp(email, password, firstName)
+    if (error?.code === 'user_already_exists' || error?.message === 'User already registered') {
+      throw new Error(signupFailedMessage)
+    }
     if (error) throw repositoryError(error)
+    if (!data.session) throw new Error(signupFailedMessage)
   },
   async signInWithGoogle() {
     const redirect = `${window.location.origin}/auth/callback`
