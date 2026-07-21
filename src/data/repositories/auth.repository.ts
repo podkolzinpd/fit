@@ -9,10 +9,9 @@ export const authRepository = {
     const { error } = await authQueries.signIn(email, password)
     if (error) throw repositoryError(error)
   },
-  async signUp(email: string, password: string, firstName: string, lastName: string) {
-    const { data, error } = await authQueries.signUp(email, password, firstName, lastName)
+  async signUp(email: string, password: string, firstName: string) {
+    const { error } = await authQueries.signUp(email, password, firstName)
     if (error) throw repositoryError(error)
-    return data.session !== null
   },
   async signInWithGoogle() {
     const redirect = `${window.location.origin}/auth/callback`

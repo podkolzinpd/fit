@@ -5,8 +5,8 @@ export const authQueries = {
   onAuthStateChange: (callback: Parameters<typeof supabase.auth.onAuthStateChange>[0]) =>
     supabase.auth.onAuthStateChange(callback),
   signIn: (email: string, password: string) => supabase.auth.signInWithPassword({ email, password }),
-  signUp: (email: string, password: string, firstName: string, lastName: string) =>
-    supabase.auth.signUp({ email, password, options: { data: { first_name: firstName, last_name: lastName } } }),
+  signUp: (email: string, password: string, firstName: string) =>
+    supabase.auth.signUp({ email, password, options: { data: { first_name: firstName } } }),
   signInWithGoogle: (redirectTo: string) => supabase.auth.signInWithOAuth({
     provider: 'google', options: { redirectTo },
   }),
