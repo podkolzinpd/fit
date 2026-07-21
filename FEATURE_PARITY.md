@@ -1,6 +1,6 @@
 # Feature parity с trainer-app
 
-Baseline: `podkolzinpd/yandex-fit-prototype@049773605235dc2d92dc9b9ccfaa0244d00795f5`.
+Baseline: зафиксированный snapshot V1.
 
 | Область | Обязательный результат V2 | Статус |
 |---|---|---|
