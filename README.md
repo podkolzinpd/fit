@@ -32,6 +32,4 @@ npm run check
 - [AI_AGENT_PROMPT.md](./AI_AGENT_PROMPT.md) — промпт, который добавляется к каждой задаче агента.
 - [OPERATIONS.md](./OPERATIONS.md) — secrets, Google OAuth, автодеплой БД и release gates.
 
-Baseline V1: `podkolzinpd/yandex-fit-prototype@049773605235dc2d92dc9b9ccfaa0244d00795f5`.
-
 Текущий foundation переносит базовые CRUD и основной trainer flow. Полный статус переноса и ещё не закрытые UX-сценарии перечислены в `FEATURE_PARITY.md`; до их закрытия V1 не архивируется.

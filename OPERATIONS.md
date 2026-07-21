@@ -12,6 +12,31 @@
 
 Workflow не использует GitHub Environment: для приватного репозитория на GitHub Free эта возможность недоступна. Переход на environment secrets выполняется отдельно после подключения подходящего тарифа.
 
+## Frontend hosting
+
+Production и PR previews разворачиваются в Vercel через GitHub integration:
+
+- repository: `podkolzinpd/fit`;
+- framework preset: Vite;
+- production branch: `main`;
+- build command: `npm run build`;
+- output directory: `dist`.
+
+В Vercel для Production и Preview задаются только публичные frontend-переменные:
+
+```text
+VITE_SUPABASE_URL=https://xwfuzfkuhblswpdludbc.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<publishable key>
+```
+
+`SUPABASE_DB_PASSWORD`, `SUPABASE_ACCESS_TOKEN`, service-role key и OAuth Client Secret в Vercel не добавляются. После первого production deploy его канонический URL фиксируется в Supabase Auth URL Configuration:
+
+- Site URL: `https://<production-domain>`;
+- Redirect URLs: `https://<production-domain>/auth/callback` и `https://<production-domain>/auth/reset`;
+- локальные `http://localhost:5173/auth/callback` и `http://localhost:5173/auth/reset` остаются разрешёнными для разработки.
+
+OAuth на произвольных preview-доменах по умолчанию не разрешается. Если позднее подключается custom domain, Supabase и Google OAuth настраиваются на него до переключения трафика.
+
 ## Google OAuth
 
 Создайте отдельный Google Web OAuth client для V2 и добавьте redirect URI:
