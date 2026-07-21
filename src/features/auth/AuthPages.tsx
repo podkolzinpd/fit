@@ -9,20 +9,18 @@ type Mode = 'login' | 'register'
 export function AuthPage() {
   const [mode, setMode] = useState<Mode>('login')
   const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const { actor } = useAuth()
   const location = useLocation()
   if (actor) return <Navigate to={(location.state as { from?: string } | null)?.from ?? '/clients'} replace />
 
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true); setError(null); setMessage(null)
+    event.preventDefault(); setBusy(true); setError(null)
     const values = new FormData(event.currentTarget)
     try {
       if (mode === 'login') await authRepository.signIn(String(values.get('email')), String(values.get('password')))
       else {
-        const active = await authRepository.signUp(String(values.get('email')), String(values.get('password')), String(values.get('firstName')), String(values.get('lastName')))
-        if (!active) setMessage('Проверьте почту и подтвердите регистрацию.')
+        await authRepository.signUp(String(values.get('email')), String(values.get('password')), String(values.get('firstName')))
       }
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Не удалось войти') }
     finally { setBusy(false) }
@@ -32,10 +30,10 @@ export function AuthPage() {
     <div className="brand">FIT</div><h1>{mode === 'login' ? 'Вход для тренера' : 'Регистрация'}</h1>
     <p className="muted">Планируйте тренировки и следите за прогрессом клиентов.</p>
     <form className="stack" onSubmit={(event) => void submit(event)}>
-      {mode === 'register' && <div className="split"><Field label="Имя"><input name="firstName" required /></Field><Field label="Фамилия"><input name="lastName" required /></Field></div>}
+      {mode === 'register' && <Field label="Имя"><input name="firstName" autoComplete="given-name" required /></Field>}
       <Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>
       <Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required /></Field>
-      {error && <p className="error" role="alert">{error}</p>}{message && <p className="success">{message}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
       <button disabled={busy}>{busy ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}</button>
     </form>
     <button className="secondary" onClick={() => void authRepository.signInWithGoogle()}>Продолжить с Google</button>

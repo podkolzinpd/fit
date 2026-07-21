@@ -4,7 +4,7 @@ Baseline: зафиксированный snapshot V1.
 
 | Область | Обязательный результат V2 | Статус |
 |---|---|---|
-| Auth | Email/password, confirmation, Google OAuth, session restore, logout, password reset | Implemented; real Google smoke pending |
+| Auth | Email/password без confirmation для MVP, Google OAuth, session restore, logout, password reset | Implemented; production Google smoke passed, reset SMTP pending |
 | Profile | Просмотр и изменение имени, корректный Cancel | Partial: edit/logout ready, Cancel UX pending |
 | Clients | List/empty/error/retry, create, detail, edit, archive/restore | Implemented; core E2E + RLS ready |
 | Exercises | System search/filter; custom create/edit/archive/restore | Partial: CRUD ready, search/filter E2E pending |
