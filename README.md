@@ -6,14 +6,14 @@
 
 ```bash
 npm ci
-cp .env.example .env.local
 npm run dev
 ```
 
-Для локальной базы нужен Docker-совместимый runtime:
+`npm run dev` сначала запускает локальный Supabase, затем frontend. Для этого нужен Docker-совместимый runtime. Локальные значения уже зафиксированы в `.env.development`; production Supabase используется только в Vercel.
+
+Для пересоздания и проверки локальной базы:
 
 ```bash
-npm run db:start
 npm run db:reset
 npm run db:test
 ```

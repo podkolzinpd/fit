@@ -1,5 +1,11 @@
 # Эксплуатация Fit V2
 
+## Локальная разработка
+
+Обычный запуск выполняется командой `npm run dev`: она запускает локальный Supabase и только затем frontend. Безопасные локальные URL и publishable key хранятся в committed-файле `.env.development`.
+
+Development-сборка программно отклоняет любой Supabase URL, кроме `localhost` и `127.0.0.1`. Production URL и publishable key задаются только в Vercel. Их запрещено копировать в `.env.local`, `.env.development` или другие локальные env-файлы. Для сброса локальных данных используйте `npm run db:reset`.
+
 ## GitHub Secrets
 
 В repository secrets должны быть настроены:
