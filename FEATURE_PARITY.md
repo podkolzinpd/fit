@@ -7,6 +7,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Auth | Email/password без confirmation для MVP, Google OAuth, session restore, logout, password reset | Implemented; production Google smoke passed, reset SMTP pending |
 | Profile | Просмотр и изменение имени, корректный Cancel | Partial: edit/logout ready, Cancel UX pending |
 | Clients | List/empty/error/retry, create, detail, edit, archive/restore | Implemented; core E2E + RLS ready |
+| Client stats | Сводка на карточке: количество выполненных, % выполнения, дата последней тренировки, дней в работе (от первой тренировки), индикатор «требует внимания» при 14+ днях без тренировки | Implemented: pure aggregation covered unit + E2E |
 | Exercises | System search/filter; custom create/edit/archive/restore | Implemented: complete catalog and shared picker covered; management E2E pending |
 | Workout | Create/view/edit/correct/copy/delete, strength/distance/reps, atomic save | Implemented: multi-set plan and load correction covered; wider acceptance pending |
 | Voice notes | Browser-only Russian transcription into editable workout and client trainer notes; manual input remains available | Prototype: local whisper.cpp WASM ready; real-device acceptance pending |

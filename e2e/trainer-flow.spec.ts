@@ -49,6 +49,10 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByText('Готово', { exact: true })).toBeVisible()
 
   await page.goto(clientUrl)
+  await expect(page.getByText('Тренировок')).toBeVisible()
+  await expect(page.locator('.summary.stats')).toContainText('1')
+  await expect(page.locator('.summary.stats')).toContainText('100%')
+
   await page.getByRole('link', { name: 'Замеры и аналитика' }).click()
   await page.getByLabel('Дата').fill('2026-07-20')
   await page.getByLabel('Вес, кг').fill('61')
