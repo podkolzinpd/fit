@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Fit</title>
+  <defs>
+    <linearGradient id="background" x1="88" y1="64" x2="424" y2="448" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9B87FF" />
+      <stop offset="0.52" stop-color="#7457FF" />
+      <stop offset="1" stop-color="#5133D5" />
+    </linearGradient>
+    <linearGradient id="shine" x1="128" y1="104" x2="384" y2="408" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" />
+      <stop offset="1" stop-color="#EEE9FF" />
+    </linearGradient>
+    <filter id="shadow" x="96" y="80" width="320" height="352" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="16" stdDeviation="12" flood-color="#241269" flood-opacity="0.28" />
+    </filter>
+  </defs>
+  <rect x="24" y="24" width="464" height="464" rx="132" fill="#17151D" />
+  <rect x="40" y="40" width="432" height="432" rx="116" fill="url(#background)" />
+  <path d="M40 184C124 88 258 38 414 74C438 80 458 88 472 96V156C352 110 196 138 40 254V184Z" fill="#FFFFFF" opacity="0.09" />
+  <g fill="url(#shine)" filter="url(#shadow)">
+    <rect x="142" y="116" width="76" height="280" rx="38" />
+    <rect x="180" y="116" width="198" height="76" rx="38" />
+    <rect x="180" y="228" width="158" height="68" rx="34" />
+  </g>
+</svg>
