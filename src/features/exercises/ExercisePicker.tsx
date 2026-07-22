@@ -1,5 +1,6 @@
 import { useMemo, useState, type MouseEvent } from 'react'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
+import { CloseIcon } from '../../shared/icons'
 import { MUSCLE_GROUP_LABELS, MUSCLE_GROUPS } from '../../shared/system-exercises'
 import type { ExerciseCatalogState } from './exercise-catalog'
 
@@ -49,7 +50,7 @@ export function ExercisePicker({ catalog, onPick, onClose }: ExercisePickerProps
 
   return <div className="sheet-overlay" onClick={onClose}>
     <section className="exercise-picker" role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
-      <header className="picker-header"><h1>{creating ? 'Своё упражнение' : 'Добавить упражнение'}</h1><button type="button" className="picker-close" aria-label="Закрыть" onClick={creating ? () => setCreating(false) : onClose}>×</button></header>
+      <header className="picker-header"><h1>{creating ? 'Своё упражнение' : 'Добавить упражнение'}</h1><button type="button" className="picker-close" aria-label="Закрыть" onClick={creating ? () => setCreating(false) : onClose}><CloseIcon /></button></header>
       {creating ? <div className="stack">
         <label className="field">Название<input value={name} onChange={(event) => setName(event.target.value)} placeholder="Например: Болгарский присед" /></label>
         <div className="picker-categories" aria-label="Группа мышц">{MUSCLE_GROUPS.map((item) => <button type="button" key={item} className={group === item ? 'picker-category active' : 'picker-category'} onClick={() => setGroup(item)}>{MUSCLE_GROUP_LABELS[item]}</button>)}</div>
