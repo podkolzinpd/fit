@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(22);
 
 select has_table('public', 'profiles', 'profiles exists');
 select has_table('public', 'trainers', 'trainers exists');
@@ -21,6 +21,8 @@ select has_function('public', 'start_workout', array['uuid', 'bigint'], 'start R
 select has_function('public', 'save_live_set_draft', array['uuid', 'jsonb', 'bigint'], 'live draft RPC exists');
 select has_function('public', 'confirm_live_set', array['uuid', 'bigint'], 'confirm RPC exists');
 select has_function('public', 'finish_workout', array['uuid', 'bigint'], 'finish RPC exists');
+select has_function('public', 'append_live_exercise', array['uuid', 'jsonb', 'bigint'], 'append live exercise RPC exists');
+select has_function('public', 'append_live_set', array['uuid', 'bigint'], 'append live set RPC exists');
 select has_function('public', 'save_progress', array['jsonb', 'bigint'], 'progress RPC exists');
 
 select * from finish();

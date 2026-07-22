@@ -1,4 +1,4 @@
-import type { InputKind, LiveSetDraft, MuscleGroup, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
+import type { ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { clientsRepository } from './clients.repository'
 import { repositoryError } from './error'
@@ -63,6 +63,16 @@ export const workoutsRepository = {
   },
   async confirmLiveSet(id: string, version: number): Promise<number> {
     const result = await workoutQueries.confirmLiveSet(id, version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
+  async appendLiveExercise(workout: Workout, exercise: ExerciseSnapshot): Promise<number> {
+    const result = await workoutQueries.appendLiveExercise(workout.id, exercise, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
+  async appendLiveSet(workout: Workout, exerciseId: string): Promise<number> {
+    const result = await workoutQueries.appendLiveSet(exerciseId, workout.version)
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
