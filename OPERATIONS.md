@@ -60,7 +60,16 @@ https://xwfuzfkuhblswpdludbc.supabase.co/auth/v1/callback
 http://127.0.0.1:54321/auth/v1/callback
 ```
 
-В Supabase Auth включите Google provider и сохраните Client ID/Secret там. Secret не передаётся frontend. Для локального Supabase используйте переменные `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` и `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`, затем включите provider в локальном `config.toml` только в личной конфигурации.
+В Supabase Auth включите Google provider и сохраните Client ID/Secret там. Secret не передаётся frontend.
+
+Для локальной разработки создайте отдельный Google Web OAuth client и запишите его данные в игнорируемый Git файл `.env.local`:
+
+```text
+SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=<local client id>
+SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET=<local client secret>
+```
+
+`npm run dev` загружает эти переменные только для локального Supabase. Без `.env.local` email/password продолжает работать, а попытка Google-входа завершится ошибкой конфигурации Google. Production Client Secret запрещено копировать в локальный файл или коммитить.
 
 Frontend redirect для разработки: `http://localhost:5173/auth/callback`. Production frontend URL добавляется в allow-list Supabase после выбора hosting.
 
