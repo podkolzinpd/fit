@@ -12,10 +12,10 @@ import type { z } from 'zod'
 export function ClientsPage() {
   const [showArchived, setShowArchived] = useState(false)
   const query = useQuery({ queryKey: ['clients', showArchived], queryFn: () => clientsRepository.list(showArchived) })
-  return <Page title="Клиенты" action={<Link className="button" to="/clients/new">Добавить</Link>}>
+  return <Page title="Мои клиенты" action={<Link className="button" to="/clients/new">Добавить</Link>}>
     <label className="toggle"><input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} /> Показывать архив</label>
     <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}>
-      <div className="cards">{query.data?.map((client) => <Link className="card" key={client.id} to={`/clients/${client.id}`}><div><strong>{client.fullName}</strong><p>{client.ageYears} лет · {client.heightCm} см{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</p></div>{client.archivedAt && <span className="badge">Архив</span>}</Link>)}</div>
+      <div className="cards">{query.data?.map((client) => <Link className="card client-card" key={client.id} to={`/clients/${client.id}`}><span className={`client-avatar tone-${client.fullName.length % 4}`}>{client.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span><div><strong>{client.fullName}</strong><p>{client.ageYears} лет · {client.heightCm} см{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</p></div>{client.archivedAt && <span className="badge">Архив</span>}</Link>)}</div>
     </AsyncView>
   </Page>
 }
@@ -71,8 +71,10 @@ export function ClientDetailPage() {
       <section className="summary"><div><span>Возраст</span><strong>{query.data.ageYears}</strong></div><div><span>Рост</span><strong>{query.data.heightCm} см</strong></div><div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div></section>
       {query.data.goal && <section><h2>Цель</h2><p>{query.data.goal}</p></section>}{query.data.note && <section><h2>Заметка</h2><p>{query.data.note}</p></section>}
       <div className="menu"><Link to={`/workouts/new?client=${clientId}`}>＋ Запланировать тренировку</Link><Link to={`/clients/${clientId}/workouts`}>Тренировки и история</Link><Link to={`/progress/${clientId}`}>Замеры и аналитика</Link></div>
-      <button className="danger secondary" disabled={archive.isPending} onClick={() => archive.mutate(query.data!)}>{query.data.archivedAt ? 'Вернуть из архива' : 'Архивировать клиента'}</button>
-      <button className="link" onClick={() => navigate('/clients')}>← Все клиенты</button>
+      <div className="page-actions">
+        <button className="danger secondary wide" disabled={archive.isPending} onClick={() => archive.mutate(query.data!)}>{query.data.archivedAt ? 'Вернуть из архива' : 'Архивировать клиента'}</button>
+        <button className="link" onClick={() => navigate('/clients')}>← Все клиенты</button>
+      </div>
     </>}</AsyncView>
   </Page>
 }
