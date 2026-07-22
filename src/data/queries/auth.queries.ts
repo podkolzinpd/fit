@@ -1,9 +1,15 @@
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { supabase } from './client'
+
+type AuthStateChangeCallback = (event: AuthChangeEvent, session: Session | null) => void
 
 export const authQueries = {
   getSession: () => supabase.auth.getSession(),
-  onAuthStateChange: (callback: Parameters<typeof supabase.auth.onAuthStateChange>[0]) =>
-    supabase.auth.onAuthStateChange(callback),
+  onAuthStateChange: (callback: AuthStateChangeCallback) =>
+    supabase.auth.onAuthStateChange((event, session) => {
+      callback(event, session)
+      return Promise.resolve()
+    }),
   signIn: (email: string, password: string) => supabase.auth.signInWithPassword({ email, password }),
   signUp: (email: string, password: string, firstName: string) =>
     supabase.auth.signUp({ email, password, options: { data: { first_name: firstName } } }),
