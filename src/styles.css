@@ -56,6 +56,9 @@ p { margin: 6px 0 }
 .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px }
 .summary div { background: var(--surface-raised); border: 1px solid var(--border); padding: 13px 8px; border-radius: 14px; display: flex; flex-direction: column; gap: 3px; text-align: center }
 .summary span { color: var(--muted); font-size: 12px }
+.summary.stats { grid-template-columns: repeat(2, 1fr); margin-top: 8px }
+.summary.stats strong { font-size: 15px }
+.attention { margin: 12px 0 0; align-self: flex-start; font-size: 13px; font-weight: 600; color: var(--danger); background: #3a1f24; padding: 7px 11px; border-radius: 10px }
 .menu { display: flex; flex-direction: column; margin: 22px 0; border-block: 1px solid var(--border) }
 .menu a { padding: 15px 4px; text-decoration: none; border-bottom: 1px solid var(--border) }.menu a:last-child { border-bottom: 0 }
 .toggle { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; color: var(--muted) }

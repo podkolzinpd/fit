@@ -1,9 +1,9 @@
-import type { ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
+import type { ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { clientsRepository } from './clients.repository'
 import { repositoryError } from './error'
 import { workoutQueries } from '../queries/workouts.queries'
-export { canTransition, copyWorkout } from './workout-rules'
+export { canTransition, copyWorkout, computeClientStats } from './workout-rules'
 
 async function get(id: string): Promise<Workout> {
   const [root, exercises] = await Promise.all([workoutQueries.getRoot(id), workoutQueries.getExercises(id)])
@@ -45,6 +45,13 @@ export const workoutsRepository = {
     const result = await workoutQueries.list(from, to, clientId)
     if (result.error) throw repositoryError(result.error)
     return Promise.all(result.data.map((row) => get(row.id)))
+  },
+  async listSummaries(clientId: string): Promise<WorkoutSummary[]> {
+    const result = await workoutQueries.list(undefined, undefined, clientId)
+    if (result.error) throw repositoryError(result.error)
+    return result.data.map((row) => ({
+      id: row.id, workoutDate: localDate(row.workout_date), status: row.status as WorkoutStatus,
+    }))
   },
   async save(draft: WorkoutDraft): Promise<string> {
     const result = await workoutQueries.save(draft)

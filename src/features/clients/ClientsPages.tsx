@@ -3,8 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
+import { computeClientStats, workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { Client, Gender } from '../../shared/domain'
-import { todayLocalDate } from '../../shared/local-date'
+import { formatLocalDate, todayLocalDate } from '../../shared/local-date'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { clientSchema } from '../../shared/validation'
 import { VoiceNoteField } from '../voice-input'
@@ -71,10 +72,20 @@ function ClientForm({ existing, onSaved, onCancel }: { existing?: Client; onSave
 export function ClientDetailPage() {
   const { clientId = '' } = useParams(); const navigate = useNavigate(); const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
+  const stats = useQuery({ queryKey: ['client-stats', clientId], queryFn: async () => computeClientStats(await workoutsRepository.listSummaries(clientId), todayLocalDate()) })
   const archive = useMutation({ mutationFn: (client: Client) => clientsRepository.setArchived(client, !client.archivedAt), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); await query.refetch() } })
   return <Page title={query.data?.fullName ?? 'Клиент'} action={query.data && <Link className="button secondary" to={`/clients/${clientId}/edit`}>Изменить</Link>}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
       <section className="summary"><div><span>Возраст</span><strong>{query.data.ageYears}</strong></div><div><span>Рост</span><strong>{query.data.heightCm} см</strong></div><div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div></section>
+      {stats.data && <>
+        {stats.data.needsAttention && <p className="attention">⚠ Давно не тренировался</p>}
+        <section className="summary stats">
+          <div><span>Тренировок</span><strong>{stats.data.doneCount}</strong></div>
+          <div><span>Выполнено</span><strong>{stats.data.completionPercent === null ? '—' : `${stats.data.completionPercent}%`}</strong></div>
+          <div><span>Последняя</span><strong>{stats.data.lastWorkoutDate ? formatLocalDate(stats.data.lastWorkoutDate) : '—'}</strong></div>
+          <div><span>Дней в работе</span><strong>{stats.data.daysInWork ?? '—'}</strong></div>
+        </section>
+      </>}
       {query.data.goal && <section><h2>Цель</h2><p>{query.data.goal}</p></section>}{query.data.note && <section><h2>Заметка</h2><p>{query.data.note}</p></section>}
       <div className="menu"><Link to={`/workouts/new?client=${clientId}`}>＋ Запланировать тренировку</Link><Link to={`/clients/${clientId}/workouts`}>Тренировки и история</Link><Link to={`/progress/${clientId}`}>Замеры и аналитика</Link></div>
       <div className="page-actions">
