@@ -8,6 +8,7 @@ import { playGong } from '../../shared/gong'
 import { formatLocalDate, localDate, todayLocalDate } from '../../shared/local-date'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
+import { VoiceNoteField } from '../voice-input'
 import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
 
 export function SchedulePage() {
@@ -62,7 +63,7 @@ export function WorkoutFormPage() {
     <AsyncView loading={loading} error={error}><form className="stack" onSubmit={(event) => void submit(event)}>
       <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} required><option value="">Выберите</option>{clients.data?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>
       <div className="split"><Field label="Дата"><input name="date" type="date" defaultValue={initial?.workoutDate ?? todayLocalDate()} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} /></Field></div>
-      <Field label="Заметка"><textarea name="notes" defaultValue={initial?.notes ?? ''} /></Field>
+      <VoiceNoteField name="notes" defaultValue={initial?.notes ?? ''} />
       <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => setPickerOpen(true)} />
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>

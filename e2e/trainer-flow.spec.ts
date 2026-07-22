@@ -8,6 +8,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Добавить' }).click()
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
   await page.getByLabel('Имя').fill('Анна Тестова')
   await page.getByLabel('Начальный вес, кг').fill('61.5')
   await page.getByLabel('Цель').fill('Стать сильнее')
@@ -17,6 +18,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
 
   await page.getByRole('link', { name: /Запланировать тренировку/ }).click()
   await page.getByLabel('Клиент').selectOption({ label: 'Анна Тестова' })
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await expect(page.getByRole('button', { name: /Присед со штангой/ })).toBeVisible()
   await expect(page).toHaveScreenshot('exercise-picker-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03 })

@@ -21,6 +21,7 @@
     "check": "npm run lint && npm run typecheck && npm run test:coverage && npm run db:types:check && npm run build"
   },
   "dependencies": {
+    "@fugood/node-whisper-wasm": "^1.1.1",
     "@hookform/resolvers": "^5.4.0",
     "@supabase/supabase-js": "^2.110.8",
     "@tanstack/react-query": "^5.101.4",
