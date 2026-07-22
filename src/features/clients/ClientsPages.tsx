@@ -1,12 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import type { Client, Gender } from '../../shared/domain'
 import { todayLocalDate } from '../../shared/local-date'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { clientSchema } from '../../shared/validation'
+import { VoiceNoteField } from '../voice-input'
 import type { z } from 'zod'
 
 export function ClientsPage() {
@@ -55,7 +56,12 @@ function ClientForm({ existing, onSaved, onCancel }: { existing?: Client; onSave
       <Field label="Пол"><select {...form.register('gender')}><option value="female">Женский</option><option value="male">Мужской</option></select></Field>
       <div className="split"><Field label="Возраст"><input type="number" {...form.register('ageYears')} /></Field><Field label="Рост, см"><input type="number" step="0.1" {...form.register('heightCm')} /></Field></div>
       {!existing && <Field label="Начальный вес, кг"><input type="number" step="0.1" {...form.register('initialWeightKg')} /></Field>}
-      <Field label="Цель"><textarea {...form.register('goal')} /></Field><Field label="Заметка тренера"><textarea {...form.register('note')} /></Field>
+      <Field label="Цель"><textarea {...form.register('goal')} /></Field>
+      <Controller
+        control={form.control}
+        name="note"
+        render={({ field }) => <VoiceNoteField name={field.name} label="Заметка тренера" value={field.value ?? ''} onValueChange={field.onChange} />}
+      />
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions"><button type="button" className="secondary" onClick={onCancel}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
     </form>

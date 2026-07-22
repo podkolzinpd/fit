@@ -25,3 +25,11 @@ export function ProfileIcon(props: IconProps) {
 export function CloseIcon(props: IconProps) {
   return <Icon {...props}><path d="M6 6l12 12M18 6 6 18" /></Icon>
 }
+
+export function MicIcon(props: IconProps) {
+  return <Icon {...props}><rect x="8.2" y="3" width="7.6" height="12" rx="3.8" /><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M8.5 21h7" /></Icon>
+}
+
+export function StopIcon(props: IconProps) {
+  return <Icon {...props}><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none" /></Icon>
+}
