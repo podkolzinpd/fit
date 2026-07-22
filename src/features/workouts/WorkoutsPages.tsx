@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { copyWorkout, workoutsRepository } from '../../data/repositories/workouts.repository'
@@ -10,6 +10,7 @@ import { AsyncView, Field, Page } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { VoiceNoteField } from '../voice-input'
 import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
+import { createLiveSetCoordinator } from './live-set-coordinator'
 
 export function SchedulePage() {
   const query = useQuery({ queryKey: ['workouts'], queryFn: () => workoutsRepository.list() })
@@ -98,17 +99,17 @@ export function LiveWorkoutPage() {
   const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   const catalog = useExerciseCatalog()
-  const [versions, setVersions] = useState<Record<string, number>>({})
+  const [liveSets] = useState(() => createLiveSetCoordinator(
+    (id, draft, version) => workoutsRepository.saveLiveSet(id, draft, version),
+    (id, version) => workoutsRepository.confirmLiveSet(id, version),
+  ))
+  const skipBlurForSet = useRef<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [restRemaining, setRestRemaining] = useState<number | null>(null)
-  const save = useMutation({ mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => workoutsRepository.saveLiveSet(set.id, draft, versions[set.id] ?? set.version), onSuccess: (version, variables) => setVersions((current) => ({ ...current, [variables.set.id]: version })) })
+  const save = useMutation({ mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.save(set, draft) })
   const confirm = useMutation({
-    mutationFn: async ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => {
-      const savedVersion = await workoutsRepository.saveLiveSet(set.id, draft, versions[set.id] ?? set.version)
-      return workoutsRepository.confirmLiveSet(set.id, savedVersion)
-    },
-    onSuccess: (version, variables) => {
-      setVersions((current) => ({ ...current, [variables.set.id]: version }))
+    mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.confirm(set, draft),
+    onSuccess: () => {
       setRestRemaining(90)
       void query.refetch()
     },
@@ -131,12 +132,15 @@ export function LiveWorkoutPage() {
       {query.data.exercises.map((exercise) => <section key={exercise.id}>
         <h2>{exercise.name}</h2>
         {exercise.sets.map((set, index) => <form className={`exercise ${set.confirmedAt ? 'confirmed' : ''}`} key={set.id} onBlur={(event) => {
+          if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
           if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
           save.mutate({ set, draft: draftFrom(event.currentTarget) })
         }}>
           <span className="muted">Подход {index + 1}</span>
           <LiveSetFields inputKind={exercise.inputKind} set={set} />
-          <button type="button" className="secondary" disabled={Boolean(set.confirmedAt) || confirm.isPending} onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }) }}>{set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'}</button>
+          <button type="button" className="secondary" disabled={Boolean(set.confirmedAt) || confirm.isPending}
+            onPointerDown={() => { skipBlurForSet.current = set.id }}
+            onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>{set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'}</button>
         </form>)}
         <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
       </section>)}
