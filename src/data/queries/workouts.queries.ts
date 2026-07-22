@@ -1,4 +1,4 @@
-import type { LiveSetDraft, WorkoutDraft } from '../../shared/domain'
+import type { ExerciseSnapshot, LiveSetDraft, WorkoutDraft } from '../../shared/domain'
 import { supabase } from './client'
 import { toJson } from './json'
 
@@ -27,6 +27,12 @@ export const workoutQueries = {
     p_set_id: id, p_draft: toJson(draft), p_expected_version: version,
   }),
   confirmLiveSet: (id: string, version: number) => supabase.rpc('confirm_live_set', { p_set_id: id, p_expected_version: version }),
+  appendLiveExercise: (id: string, exercise: ExerciseSnapshot, version: number) => supabase.rpc('append_live_exercise', {
+    p_workout_id: id, p_exercise: toJson(exercise), p_expected_version: version,
+  }),
+  appendLiveSet: (exerciseId: string, version: number) => supabase.rpc('append_live_set', {
+    p_workout_exercise_id: exerciseId, p_expected_version: version,
+  }),
   finish: (id: string, version: number) => supabase.rpc('finish_workout', { p_workout_id: id, p_expected_version: version }),
   remove: (id: string, version: number) => supabase.rpc('soft_delete_workout', { p_workout_id: id, p_expected_version: version }),
 }

@@ -5,7 +5,7 @@
 ## Порядок работы
 
 1. Сформулируйте пользовательский результат и acceptance cases.
-2. Найдите существующий публичный контракт feature. Не создавайте параллельный путь к тем же данным.
+2. Найдите существующий публичный контракт feature. Для parity-задачи сравните его с точным V1 baseline из `FEATURE_PARITY.md`: данные, состояния, действия и mobile visual. Не создавайте параллельный путь к тем же данным.
 3. Если меняется БД: migration → SQL/RLS tests → generated types → query → repository → UI.
 4. Добавьте happy path, validation, loading, empty, error и retry states.
 5. Запустите `npm run check`; для DB-изменений также `npm run db:reset && npm run db:test`.
@@ -42,6 +42,8 @@
 - Многошаговая запись обязана полностью откатываться при любой ошибке.
 - Добавляйте тест на cross-tenant доступ для каждого нового tenant ID.
 - Не копируйте legacy `src/db` или старые migrations; переносите только проверенное поведение.
+- Старый источник называйте только `V1 baseline` или `legacy trainer-app`; не переносите в Fit V2 названия и URL исходных репозиториев.
+- Не отмечайте parity-сценарий как `Implemented` по одному happy path: зафиксируйте проверяемый инвентарь V1 и тест на каждое обязательное поведение.
 
 ## Definition of Done
 

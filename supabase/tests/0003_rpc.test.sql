@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(21);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password)
 values ('40000000-0000-4000-8000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'rpc@example.test', '');
@@ -84,7 +84,21 @@ select lives_ok(
   'confirm_live_set confirms saved fact'
 );
 select lives_ok(
-  format('select public.finish_workout(%L::uuid, 2)', (select id from public.workouts limit 1)),
+  format('select public.append_live_set(%L::uuid, 2)', (select id from public.workout_exercises limit 1)),
+  'append_live_set adds a set to an in-progress workout'
+);
+select is((select count(*) from public.workout_sets), 2::bigint, 'appended live set exists');
+select lives_ok(
+  format(
+    'select public.append_live_exercise(%L::uuid, %L::jsonb, 3)',
+    (select id from public.workouts limit 1),
+    jsonb_build_object('source', 'system', 'ref', 'running', 'name', 'Бег', 'muscleGroup', 'cardio', 'inputKind', 'distance')
+  ),
+  'append_live_exercise adds an exercise and initial set'
+);
+select is((select count(*) from public.workout_sets), 3::bigint, 'appended live exercise has an initial set');
+select lives_ok(
+  format('select public.finish_workout(%L::uuid, 4)', (select id from public.workouts limit 1)),
   'finish_workout completes in-progress workout'
 );
 

@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
-import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { copyWorkout, workoutsRepository } from '../../data/repositories/workouts.repository'
-import type { ExerciseSnapshot, LiveSetDraft, WorkoutDraft, WorkoutExerciseDraft, WorkoutSet } from '../../shared/domain'
+import type { ExerciseSnapshot, LiveSetDraft, WorkoutDraft, WorkoutSet } from '../../shared/domain'
+import { playGong } from '../../shared/gong'
 import { formatLocalDate, localDate, todayLocalDate } from '../../shared/local-date'
 import { AsyncView, Field, Page } from '../../shared/ui'
+import { ExercisePicker, useExerciseCatalog } from '../exercises'
+import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
 
 export function SchedulePage() {
   const query = useQuery({ queryKey: ['workouts'], queryFn: () => workoutsRepository.list() })
@@ -30,23 +32,23 @@ export function ClientWorkoutsPage() {
 }
 
 export function WorkoutFormPage() {
-  const { workoutId } = useParams(); const [params] = useSearchParams(); const navigate = useNavigate(); const queryClient = useQueryClient()
+  const { workoutId } = useParams()
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const sourceId = workoutId ?? params.get('copy') ?? undefined
   const source = useQuery({ queryKey: ['workout', sourceId], queryFn: () => workoutsRepository.get(sourceId ?? ''), enabled: Boolean(sourceId) })
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
-  const custom = useQuery({ queryKey: ['exercises'], queryFn: () => exercisesRepository.list() })
-  const [draftExercises, setDraftExercises] = useState<WorkoutExerciseDraft[] | null>(null)
+  const catalog = useExerciseCatalog()
+  const [draftExercises, setDraftExercises] = useState<WorkoutDraft['exercises'] | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
   const initial = source.data ? (workoutId ? { ...copyWorkout(source.data), id: source.data.id, version: source.data.version } : copyWorkout(source.data, todayLocalDate())) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
-  const allExercises: readonly ExerciseSnapshot[] = [...exercisesRepository.system, ...(custom.data?.filter((item) => !item.archivedAt) ?? [])]
   const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => workoutsRepository.save(draft), onSuccess: async (id) => { await queryClient.invalidateQueries({ queryKey: ['workouts'] }); navigate(`/workouts/${id}`) } })
 
-  function addExercise(ref: string) {
-    const selected = allExercises.find((item) => item.ref === ref); if (!selected) return
+  function addExercise(selected: ExerciseSnapshot) {
     setDraftExercises([...exercises, { ...selected, position: exercises.length, sets: [{ position: 0 }] }])
-  }
-  function updateSet(index: number, value: Partial<WorkoutSet>) {
-    setDraftExercises(exercises.map((exercise, current) => current === index ? { ...exercise, sets: [{ ...exercise.sets[0], position: 0, ...value }] } : exercise))
+    setPickerOpen(false)
   }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget)
@@ -54,15 +56,19 @@ export function WorkoutFormPage() {
     mutation.mutate({ id: workoutId, clientId, workoutDate: date, startTime: String(form.get('startTime') || '') || undefined,
       notes: String(form.get('notes') || '') || undefined, exercises, version: source.data?.version })
   }
-  const loading = source.isLoading || clients.isLoading || custom.isLoading
-  const error = source.error ?? clients.error ?? custom.error
-  return <Page title={workoutId ? 'Редактировать тренировку' : params.has('copy') ? 'Копия тренировки' : 'Новая тренировка'}><AsyncView loading={loading} error={error}><form className="stack" onSubmit={(event) => void submit(event)}>
-    <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} required><option value="">Выберите</option>{clients.data?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>
-    <div className="split"><Field label="Дата"><input name="date" type="date" defaultValue={initial?.workoutDate ?? todayLocalDate()} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} /></Field></div>
-    <Field label="Заметка"><textarea name="notes" defaultValue={initial?.notes ?? ''} /></Field>
-    <section><h2>Упражнения</h2>{exercises.map((exercise, index) => <article className="exercise" key={`${exercise.ref}-${index}`}><header><strong>{exercise.name}</strong><button type="button" className="link danger" onClick={() => setDraftExercises(exercises.filter((_, position) => position !== index).map((item, position) => ({ ...item, position })))}>Удалить</button></header><div className="set-row">{exercise.inputKind === 'strength' && <><input aria-label="Вес" type="number" step="0.5" placeholder="кг" defaultValue={exercise.sets[0]?.weightKg} onBlur={(e) => updateSet(index, { weightKg: e.target.value ? Number(e.target.value) : undefined })} /><input aria-label="Повторы" type="number" placeholder="повт." defaultValue={exercise.sets[0]?.reps} onBlur={(e) => updateSet(index, { reps: e.target.value ? Number(e.target.value) : undefined })} /></>}{exercise.inputKind === 'reps' && <input aria-label="Повторы" type="number" placeholder="повт." defaultValue={exercise.sets[0]?.reps} onBlur={(e) => updateSet(index, { reps: e.target.value ? Number(e.target.value) : undefined })} />}{exercise.inputKind === 'distance' && <><input aria-label="Расстояние" type="number" step="0.1" placeholder="км" defaultValue={exercise.sets[0]?.distanceKm} onBlur={(e) => updateSet(index, { distanceKm: e.target.value ? Number(e.target.value) : undefined })} /><input aria-label="Время" type="number" step="0.5" placeholder="мин" defaultValue={exercise.sets[0]?.durationMin} onBlur={(e) => updateSet(index, { durationMin: e.target.value ? Number(e.target.value) : undefined })} /></>}</div></article>)}<select aria-label="Добавить упражнение" value="" onChange={(event) => addExercise(event.target.value)}><option value="">＋ Добавить упражнение</option>{allExercises.map((exercise) => <option key={exercise.ref} value={exercise.ref}>{exercise.name}</option>)}</select></section>
-    {mutation.error && <p className="error">{mutation.error.message}</p>}<div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
-  </form></AsyncView></Page>
+  const loading = source.isLoading || clients.isLoading
+  const error = source.error ?? clients.error
+  return <Page title={workoutId ? 'Редактировать тренировку' : params.has('copy') ? 'Копия тренировки' : 'Новая тренировка'}>
+    <AsyncView loading={loading} error={error}><form className="stack" onSubmit={(event) => void submit(event)}>
+      <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} required><option value="">Выберите</option>{clients.data?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>
+      <div className="split"><Field label="Дата"><input name="date" type="date" defaultValue={initial?.workoutDate ?? todayLocalDate()} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} /></Field></div>
+      <Field label="Заметка"><textarea name="notes" defaultValue={initial?.notes ?? ''} /></Field>
+      <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => setPickerOpen(true)} />
+      {mutation.error && <p className="error">{mutation.error.message}</p>}
+      <div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
+    </form></AsyncView>
+    {pickerOpen && <ExercisePicker catalog={catalog} onPick={addExercise} onClose={() => setPickerOpen(false)} />}
+  </Page>
 }
 
 export function WorkoutDetailPage() {
@@ -75,15 +81,70 @@ export function WorkoutDetailPage() {
 
 function formatSet(set: WorkoutSet) { const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, set.distanceKm && `${set.distanceKm} км`, set.durationMin && `${set.durationMin} мин`].filter(Boolean).join(' × '); return plan || 'Подход без плана' }
 
+function LiveSetFields({ inputKind, set }: { inputKind: ExerciseSnapshot['inputKind']; set: WorkoutSet }) {
+  if (inputKind === 'strength') return <div className="set-row"><input aria-label="Фактический вес" name="weightKg" type="number" min="0" step="0.5" defaultValue={set.fact.weightKg} placeholder={set.weightKg === undefined ? 'кг' : `${set.weightKg} кг`} /><input aria-label="Фактические повторы" name="reps" type="number" min="0" defaultValue={set.fact.reps} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
+  if (inputKind === 'reps') return <div className="set-row"><input aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" defaultValue={set.fact.durationMin} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input aria-label="Фактические повторы" name="reps" type="number" min="0" defaultValue={set.fact.reps} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
+  return <div className="set-row"><input aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" defaultValue={set.fact.durationMin} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input aria-label="Фактическая дистанция" name="distanceKm" type="number" min="0" step="0.1" defaultValue={set.fact.distanceKm} placeholder={set.distanceKm === undefined ? 'км' : `${set.distanceKm} км`} /></div>
+}
+
+function formatRest(seconds: number): string {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+}
+
 export function LiveWorkoutPage() {
-  const { workoutId = '' } = useParams(); const navigate = useNavigate(); const queryClient = useQueryClient()
+  const { workoutId = '' } = useParams()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
+  const catalog = useExerciseCatalog()
   const [versions, setVersions] = useState<Record<string, number>>({})
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [restRemaining, setRestRemaining] = useState<number | null>(null)
   const save = useMutation({ mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => workoutsRepository.saveLiveSet(set.id, draft, versions[set.id] ?? set.version), onSuccess: (version, variables) => setVersions((current) => ({ ...current, [variables.set.id]: version })) })
-  const confirm = useMutation({ mutationFn: (set: WorkoutSet) => workoutsRepository.confirmLiveSet(set.id, versions[set.id] ?? set.version), onSuccess: (version, set) => { setVersions((current) => ({ ...current, [set.id]: version })); void query.refetch() } })
+  const confirm = useMutation({
+    mutationFn: async ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => {
+      const savedVersion = await workoutsRepository.saveLiveSet(set.id, draft, versions[set.id] ?? set.version)
+      return workoutsRepository.confirmLiveSet(set.id, savedVersion)
+    },
+    onSuccess: (version, variables) => {
+      setVersions((current) => ({ ...current, [variables.set.id]: version }))
+      setRestRemaining(90)
+      void query.refetch()
+    },
+  })
+  const appendSet = useMutation({ mutationFn: (exerciseId: string) => workoutsRepository.appendLiveSet(query.data!, exerciseId), onSuccess: async () => { await query.refetch() } })
+  const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => workoutsRepository.appendLiveExercise(query.data!, exercise), onSuccess: async () => { await query.refetch() } })
   const finish = useMutation({ mutationFn: () => workoutsRepository.finish(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }); navigate(`/workouts/${workoutId}`) } })
   function draftFrom(form: HTMLFormElement): LiveSetDraft { const values = new FormData(form); return { weightKg: numberValue(values.get('weightKg')), reps: numberValue(values.get('reps')), distanceKm: numberValue(values.get('distanceKm')), durationMin: numberValue(values.get('durationMin')) } }
-  return <Page title="Live-тренировка" action={<span className="live-dot">● LIVE</span>}><AsyncView loading={query.isLoading} error={query.error}>{query.data && <><p>{query.data.clientName} · черновик сохраняется отдельно от плана</p>{query.data.exercises.map((exercise) => <section key={exercise.id}><h2>{exercise.name}</h2>{exercise.sets.map((set) => <form className={`exercise ${set.confirmedAt ? 'confirmed' : ''}`} key={set.id} onBlur={(event) => void save.mutate({ set, draft: draftFrom(event.currentTarget) })}><div className="set-row"><input name="weightKg" type="number" step="0.5" defaultValue={set.fact.weightKg} placeholder={set.weightKg ? `${set.weightKg} кг` : 'кг'} /><input name="reps" type="number" defaultValue={set.fact.reps} placeholder={set.reps ? `${set.reps} повт.` : 'повт.'} /><input name="distanceKm" type="number" step="0.1" defaultValue={set.fact.distanceKm} placeholder="км" /><input name="durationMin" type="number" step="0.5" defaultValue={set.fact.durationMin} placeholder="мин" /></div><button type="button" className="secondary" disabled={Boolean(set.confirmedAt)} onClick={() => confirm.mutate(set)}>{set.confirmedAt ? 'Подтверждено' : 'Подтвердить подход'}</button></form>)}</section>)}{(save.error ?? confirm.error ?? finish.error) && <p className="error">{(save.error ?? confirm.error ?? finish.error)?.message}</p>}<button className="wide" onClick={() => { const incomplete = query.data!.exercises.some((exercise) => exercise.sets.some((set) => !set.confirmedAt)); if (!incomplete || window.confirm('Есть незавершённые подходы. Завершить тренировку частично?')) finish.mutate() }}>Завершить тренировку</button></>}</AsyncView></Page>
+  useEffect(() => {
+    if (restRemaining === null) return
+    if (restRemaining === 0) { playGong(); setRestRemaining(null); return }
+    const timer = window.setTimeout(() => setRestRemaining((current) => current === null ? null : current - 1), 1000)
+    return () => window.clearTimeout(timer)
+  }, [restRemaining])
+  const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? finish.error
+  return <Page title="Live-тренировка" action={<span className="live-dot">● LIVE</span>}>
+    <AsyncView loading={query.isLoading} error={query.error}>{query.data && <>
+      <p>{query.data.clientName} · черновик сохраняется отдельно от плана</p>
+      {restRemaining !== null && <div className="rest-timer"><strong>Отдых {formatRest(restRemaining)}</strong><button type="button" className="link" onClick={() => setRestRemaining(null)}>Пропустить</button></div>}
+      {query.data.exercises.map((exercise) => <section key={exercise.id}>
+        <h2>{exercise.name}</h2>
+        {exercise.sets.map((set, index) => <form className={`exercise ${set.confirmedAt ? 'confirmed' : ''}`} key={set.id} onBlur={(event) => {
+          if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
+          save.mutate({ set, draft: draftFrom(event.currentTarget) })
+        }}>
+          <span className="muted">Подход {index + 1}</span>
+          <LiveSetFields inputKind={exercise.inputKind} set={set} />
+          <button type="button" className="secondary" disabled={Boolean(set.confirmedAt) || confirm.isPending} onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }) }}>{set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'}</button>
+        </form>)}
+        <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
+      </section>)}
+      <button type="button" className="secondary wide" onClick={() => setPickerOpen(true)}>＋ Ещё упражнение</button>
+      {error && <p className="error">{error.message}</p>}
+      <button className="wide" disabled={finish.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => exercise.sets.some((set) => !set.confirmedAt)); if (!incomplete || window.confirm('Есть незавершённые подходы. Завершить тренировку частично?')) finish.mutate() }}>Завершить тренировку</button>
+    </>}</AsyncView>
+    {pickerOpen && <ExercisePicker catalog={catalog} onPick={(exercise) => { setPickerOpen(false); appendExercise.mutate(exercise) }} onClose={() => setPickerOpen(false)} />}
+  </Page>
 }
 
 function numberValue(value: FormDataEntryValue | null) { return value ? Number(value) : undefined }
