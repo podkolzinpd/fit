@@ -1,4 +1,4 @@
-// schema-sha256: 8ef0f205f9c4e8623ea924f9b7dbfeca4707e7bfb8c0b2fcc47f429d21eabe6d
+// schema-sha256: 82e5705c3ccf90de3a99cfaff15a5dfdc585da6f93a001cf8f0a8fd60a337bb7
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
@@ -19,6 +19,7 @@ type WorkoutSetRow = { id: string; workout_exercise_id: string; trainer_id: stri
 type ProgressRow = { id: string; trainer_id: string; client_id: string; recorded_on: string; weight_kg: number | null; chest_cm: number | null; waist_cm: number | null; hip_cm: number | null; notes: string | null; deleted_at: string | null; version: number; created_at: string; updated_at: string }
 type MetricRow = { id: string; trainer_id: string; client_id: string; name: string; unit: string | null; archived_at: string | null; version: number; created_at: string; updated_at: string }
 type ProgressCustomRow = { id: string; trainer_id: string; client_id: string; progress_id: string; metric_id: string; value: number; created_at: string; updated_at: string }
+type ClientListRow = { id: string; full_name: string; gender: string; age_years: number; age_updated_at: string; height_cm: number; goal: string | null; note: string | null; current_weight_kg: number | null; archived_at: string | null; version: number }
 
 export interface Database {
   public: {
@@ -38,6 +39,7 @@ export interface Database {
     Views: Record<string, never>
     Functions: {
       initialize_trainer: { Args: { p_first_name?: string | null; p_last_name?: string | null; p_timezone?: string }; Returns: TrainerRow }
+      list_clients: { Args: { p_include_archived?: boolean }; Returns: ClientListRow[] }
       create_client: { Args: { p_client: Json }; Returns: string }
       update_client: { Args: { p_client: Json; p_expected_version: number }; Returns: number }
       save_workout: { Args: { p_workout: Json; p_expected_version?: number | null }; Returns: string }
