@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { InputKind, Workout, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, exerciseChartPoints, muscleGroupLabels, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, exerciseChartPoints, muscleGroupLabels, nextSetDraft, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -248,5 +248,27 @@ describe('muscleGroupLabels', () => {
       ],
     }
     expect(muscleGroupLabels(workout)).toEqual(['Ноги', 'Грудь'])
+  })
+})
+
+describe('nextSetDraft', () => {
+  it('копирует вес и повторы для силового упражнения', () => {
+    const sets = [{ position: 0, weightKg: 60, reps: 10 }]
+    expect(nextSetDraft(sets, 'strength')).toEqual({ position: 1, weightKg: 60, reps: 10 })
+  })
+  it('копирует время и дистанцию для distance-упражнения', () => {
+    const sets = [{ position: 0, durationMin: 30, distanceKm: 5 }]
+    expect(nextSetDraft(sets, 'distance')).toEqual({ position: 1, durationMin: 30, distanceKm: 5 })
+  })
+  it('копирует время и повторы для reps-упражнения', () => {
+    const sets = [{ position: 0, durationMin: 5, reps: 40 }]
+    expect(nextSetDraft(sets, 'reps')).toEqual({ position: 1, durationMin: 5, reps: 40 })
+  })
+  it('копирует именно последний подход, а не первый', () => {
+    const sets = [{ position: 0, weightKg: 50, reps: 12 }, { position: 1, weightKg: 55, reps: 8 }]
+    expect(nextSetDraft(sets, 'strength')).toEqual({ position: 2, weightKg: 55, reps: 8 })
+  })
+  it('пустой список → пустой подход на позиции 0', () => {
+    expect(nextSetDraft([], 'strength')).toEqual({ position: 0 })
   })
 })
