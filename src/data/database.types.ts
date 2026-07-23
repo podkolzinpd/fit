@@ -1,4 +1,4 @@
-// schema-sha256: 8a1c5e5f7cd59732225ac2f6eda9d179c60deab67ca2d09b38ef0a5528232407
+// schema-sha256: 02728760d1ed1bfe5441414d9f8aeba5c23e09af9d7aeb8640993a7d62ffee53
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
@@ -20,6 +20,10 @@ type ProgressRow = { id: string; trainer_id: string; client_id: string; recorded
 type MetricRow = { id: string; trainer_id: string; client_id: string; name: string; unit: string | null; archived_at: string | null; version: number; created_at: string; updated_at: string }
 type ProgressCustomRow = { id: string; trainer_id: string; client_id: string; progress_id: string; metric_id: string; value: number; created_at: string; updated_at: string }
 type ClientListRow = { id: string; full_name: string; gender: string; age_years: number; age_updated_at: string; height_cm: number; goal: string | null; note: string | null; current_weight_kg: number | null; archived_at: string | null; version: number }
+type WorkoutListSetRow = Pick<WorkoutSetRow, 'id' | 'position' | 'plan_weight_kg' | 'plan_reps' | 'plan_duration_min' | 'plan_distance_km' | 'fact_weight_kg' | 'fact_reps' | 'fact_duration_min' | 'fact_distance_km' | 'confirmed_at' | 'version'>
+type WorkoutListExerciseRow = Pick<WorkoutExerciseRow, 'id' | 'position' | 'exercise_source' | 'exercise_ref' | 'custom_exercise_id' | 'exercise_name' | 'muscle_group' | 'input_kind'> & { sets: WorkoutListSetRow[] }
+export type WorkoutListRow = Pick<WorkoutRow, 'id' | 'client_id' | 'workout_date' | 'start_time' | 'end_time' | 'status' | 'notes' | 'version'> & { client_name: string; total_count: number; exercises: WorkoutListExerciseRow[] }
+type WorkoutSummaryRow = Pick<WorkoutRow, 'id' | 'workout_date' | 'status'>
 
 export interface Database {
   public: {
@@ -40,6 +44,8 @@ export interface Database {
     Functions: {
       initialize_trainer: { Args: { p_first_name?: string | null; p_last_name?: string | null; p_timezone?: string }; Returns: TrainerRow }
       list_clients: { Args: { p_include_archived?: boolean }; Returns: ClientListRow[] }
+      list_workouts: { Args: { p_from?: string | null; p_to?: string | null; p_client_id?: string | null; p_limit?: number; p_offset?: number }; Returns: WorkoutListRow[] }
+      list_workout_summaries: { Args: { p_client_id: string }; Returns: WorkoutSummaryRow[] }
       create_client: { Args: { p_client: Json }; Returns: string }
       update_client: { Args: { p_client: Json; p_expected_version: number }; Returns: number }
       save_workout: { Args: { p_workout: Json; p_expected_version?: number | null }; Returns: string }

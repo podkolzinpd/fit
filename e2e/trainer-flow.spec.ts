@@ -16,7 +16,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByRole('heading', { name: 'Анна Тестова' })).toBeVisible()
   const clientUrl = page.url()
 
-  await page.getByRole('link', { name: /Запланировать тренировку/ }).click()
+  await page.getByRole('link', { name: /Запланировать/ }).click()
   await page.getByLabel('Клиент').selectOption({ label: 'Анна Тестова' })
   await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
@@ -32,7 +32,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Начать' }).click()
-  await expect(page.getByText('● LIVE', { exact: true })).toBeVisible()
+  // Вместо значка LIVE — таймер тренировки, идущий от старта (мм:сс).
+  await expect(page.locator('.live-timer')).toContainText(/\d\d:\d\d/)
   await page.getByLabel('Фактический вес').first().fill('42.5')
   await page.getByLabel('Фактические повторы').first().fill('9')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
@@ -40,8 +41,14 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByText(/Отдых 1:30/)).toBeVisible()
   // Отдых считается от абсолютного времени: через ~2 с значение должно уменьшиться.
   await expect(page.getByText(/Отдых 1:2\d/)).toBeVisible({ timeout: 4000 })
+  // Кнопка +15с продлевает текущий отдых.
+  await page.getByRole('button', { name: 'Плюс 15 секунд' }).click()
+  await expect(page.getByText(/Отдых 1:3\d/)).toBeVisible()
   await page.getByRole('button', { name: 'Пропустить' }).click()
   await page.getByRole('button', { name: '＋ Подход' }).click()
+  // Дождаться, пока добавленный подход подтянется (refetch завершён и version
+  // актуальна), иначе следующая правка ловит конфликт оптимистичной блокировки.
+  await expect(page.getByText('Подход 3')).toBeVisible()
   await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Берпи')
   await page.getByRole('button', { name: /^Берпи/ }).click()
@@ -71,6 +78,7 @@ test('schedule shows week strip and hour grid with day/week navigation', async (
 
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
+  await expect(page.locator('.schedule-count')).toHaveText(/\d+ трениров/)
 
   // Week strip has 7 day buttons, hour grid is rendered.
   await expect(page.locator('.week-day')).toHaveCount(7)
