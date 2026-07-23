@@ -3,12 +3,12 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { clientsRepository } from '../../data/repositories/clients.repository'
-import { chartUnitFor, copyWorkout, exerciseChartPoints, workoutsRepository } from '../../data/repositories/workouts.repository'
-import type { ExerciseSnapshot, LiveSetDraft, WorkoutDraft, WorkoutSet } from '../../shared/domain'
+import { chartUnitFor, copyWorkout, exerciseChartPoints, splitClientWorkouts, workoutsRepository } from '../../data/repositories/workouts.repository'
+import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
-  addDays, addMonths, endOfMonth, endOfWeek, formatLocalDate, formatMonth, formatWeekRange,
-  localDate, startOfMonth, startOfWeek, todayLocalDate, type LocalDate,
+  addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayLocalDate, weekdayShort,
+  type LocalDate,
 } from '../../shared/local-date'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
@@ -18,65 +18,94 @@ import { createLiveSetCoordinator } from './live-set-coordinator'
 import { LoadMoreButton } from './LoadMoreButton'
 import { workoutCountLabel } from './workout-count-label'
 
-type ScheduleView = 'week' | 'month'
+const HOURS = Array.from({ length: 24 }, (_, index) => index)
+const HOUR_HEIGHT = 56
 
-function schedulePeriod(view: ScheduleView, anchor: LocalDate): { from: LocalDate; to: LocalDate; label: string } {
-  if (view === 'month') {
-    const from = startOfMonth(anchor)
-    return { from, to: endOfMonth(anchor), label: formatMonth(from) }
-  }
-  const from = startOfWeek(anchor)
-  const to = endOfWeek(anchor)
-  return { from, to, label: formatWeekRange(from, to) }
+function minutesOf(time: string): number {
+  const [h, m] = time.split(':').map(Number)
+  return (h ?? 0) * 60 + (m ?? 0)
+}
+
+function eventTime(workout: Workout): string {
+  const start = workout.startTime?.slice(0, 5) ?? ''
+  if (!workout.endTime) return start
+  return `${start}–${workout.endTime.slice(0, 5)}`
 }
 
 export function SchedulePage() {
   const [params, setParams] = useSearchParams()
-  const view: ScheduleView = params.get('view') === 'month' ? 'month' : 'week'
-  const anchorParam = params.get('date')
-  const anchor = anchorParam ? localDate(anchorParam) : todayLocalDate()
-  const { from, to, label } = schedulePeriod(view, anchor)
+  const selected = params.get('date') ? localDate(params.get('date')!) : todayLocalDate()
+  const today = todayLocalDate()
+  const weekStart = startOfWeek(selected)
+  const weekDays = useMemo(() => HOURS.slice(0, 7).map((offset) => addDays(weekStart, offset)), [weekStart])
+  const scrollRef = useRef<HTMLDivElement>(null)
 
-  function setPeriod(nextView: ScheduleView, nextAnchor: LocalDate) {
-    setParams({ view: nextView, date: nextAnchor })
-  }
-  function shift(direction: -1 | 1) {
-    setPeriod(view, view === 'month' ? addMonths(anchor, direction) : addDays(anchor, direction * 7))
-  }
+  function selectDate(date: LocalDate) { setParams({ date }) }
+  function shiftWeek(direction: -1 | 1) { selectDate(addDays(selected, direction * 7)) }
 
   const query = useInfiniteQuery({
-    queryKey: ['workouts', from, to],
+    queryKey: ['workouts', selected],
     initialPageParam: 0,
-    queryFn: ({ pageParam }) => workoutsRepository.listPage(from, to, undefined, pageParam),
+    queryFn: ({ pageParam }) => workoutsRepository.listPage(selected, selected, undefined, pageParam),
     getNextPageParam: (page) => page.nextOffset,
   })
   const items = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data])
   const totalCount = query.data?.pages[0]?.totalCount ?? 0
-  const byDate = useMemo(() => items.reduce<Record<string, typeof items>>((groups, item) => {
-    groups[item.workoutDate] = [...(groups[item.workoutDate] ?? []), item]
-    return groups
-  }, {}), [items])
+  const timed = items.filter((workout) => workout.startTime).sort((a, b) => minutesOf(a.startTime!) - minutesOf(b.startTime!))
+  const untimed = items.filter((workout) => !workout.startTime)
 
-  return <Page title="Расписание" action={<Link className="button" to="/workouts/new">Добавить</Link>}>
-    <div className="schedule-controls">
-      <div className="segmented">
-        <button type="button" className={view === 'week' ? 'active' : ''} onClick={() => setPeriod('week', anchor)}>Неделя</button>
-        <button type="button" className={view === 'month' ? 'active' : ''} onClick={() => setPeriod('month', anchor)}>Месяц</button>
-      </div>
-      <div className="schedule-nav">
-        <button type="button" className="secondary" aria-label="Предыдущий период" onClick={() => shift(-1)}>‹</button>
-        <strong className="schedule-period">{label}</strong>
-        <button type="button" className="secondary" aria-label="Следующий период" onClick={() => shift(1)}>›</button>
-      </div>
-      <div className="schedule-meta">
-        <span className="schedule-count">{query.isLoading ? 'Загружаем…' : workoutCountLabel(totalCount)}</span>
-        <button type="button" className="link" onClick={() => setPeriod(view, todayLocalDate())}>Сегодня</button>
-      </div>
+  useEffect(() => {
+    if (query.isLoading || !scrollRef.current) return
+    const firstStart = timed[0] ? minutesOf(timed[0].startTime!.slice(0, 5)) : 7 * 60
+    scrollRef.current.scrollTop = (Math.min(firstStart, 7 * 60) / 60) * HOUR_HEIGHT
+  }, [query.isLoading, selected])
+
+  return <Page className="schedule-page" title="Расписание" action={
+     <div className="schedule-actions">
+       <span className="schedule-count">{query.isLoading ? 'Загружаем…' : workoutCountLabel(totalCount)}</span>
+       <button type="button" className="secondary schedule-today" disabled={selected === today} onClick={() => selectDate(today)}>Сегодня</button>
+      <label className="schedule-jump" aria-label="Выбрать дату">📅<input type="date" value={selected} onChange={(event) => event.target.value && selectDate(localDate(event.target.value))} /></label>
     </div>
-    <AsyncView loading={query.isLoading} error={query.error} empty={!items.length} onRetry={() => void query.refetch()}>
-      <div className="timeline">{Object.entries(byDate).map(([date, workouts]) => <section key={date}><h2>{formatLocalDate(localDate(date))}</h2>{workouts?.map((workout) => <Link className="card" to={`/workouts/${workout.id}`} key={workout.id}><div><strong>{workout.startTime?.slice(0, 5) ?? 'Без времени'} · {workout.clientName}</strong><p>{workout.exercises.length} упражнений</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>)}</section>)}</div>
-      <LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} />
-    </AsyncView>
+  }>
+    <div className="week-nav">
+      <button type="button" className="secondary week-arrow" aria-label="Предыдущая неделя" onClick={() => shiftWeek(-1)}>‹</button>
+      <div className="week-strip">
+        {weekDays.map((day) => (
+          <button key={day} type="button" className={day === selected ? 'week-day active' : 'week-day'} onClick={() => selectDate(day)}>
+            <span className="day-label">{weekdayShort(day)}</span>
+            <span className={day === today ? 'day-num today' : 'day-num'}>{dayOfMonth(day)}</span>
+          </button>
+        ))}
+      </div>
+      <button type="button" className="secondary week-arrow" aria-label="Следующая неделя" onClick={() => shiftWeek(1)}>›</button>
+    </div>
+
+    <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
+      <div className="day-grid-scroll" ref={scrollRef}>
+        {untimed.length > 0 && <div className="day-untimed">{untimed.map((workout) => (
+          <Link key={workout.id} className="card" to={`/workouts/${workout.id}`}><div><strong>{workout.clientName}</strong><p>без времени</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
+        ))}</div>}
+        <div className="day-grid" style={{ height: HOURS.length * HOUR_HEIGHT }}>
+          {HOURS.map((hour) => (
+            <div key={hour} className="day-grid-hour" style={{ top: hour * HOUR_HEIGHT }}>
+              <span className="day-grid-hour-label">{String(hour).padStart(2, '0')}:00</span>
+              <div className="day-grid-hour-line" />
+            </div>
+          ))}
+          {timed.map((workout) => {
+            const startMin = minutesOf(workout.startTime!.slice(0, 5))
+            const endMin = workout.endTime ? minutesOf(workout.endTime.slice(0, 5)) : startMin + 60
+            const top = (startMin / 60) * HOUR_HEIGHT
+            const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 28)
+            return <Link key={workout.id} className={`day-grid-event ${workout.status}`} style={{ top, height }} to={`/workouts/${workout.id}`}>
+              <span className="day-grid-event-time">{eventTime(workout)}</span>
+              <span className="day-grid-event-name">{workout.clientName}</span>
+            </Link>
+          })}
+         </div>
+       </div>
+       <LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} />
+     </AsyncView>
   </Page>
 }
 
@@ -91,7 +120,8 @@ export function ClientWorkoutsPage() {
     getNextPageParam: (page) => page.nextOffset,
   })
   const items = query.data?.pages.flatMap((page) => page.items) ?? []
-  return <Page title="Тренировки" action={<Link className="button" to={`/workouts/new?client=${clientId}`}>Добавить</Link>}><AsyncView loading={query.isLoading} error={query.error} empty={!items.length} onRetry={() => void query.refetch()}><div className="cards">{items.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{workout.exercises.map((item) => item.name).join(', ') || 'Без упражнений'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>)}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
+  const history = splitClientWorkouts(items, todayLocalDate()).history
+  return <Page title="История тренировок" action={<Link className="button" to={`/workouts/new?client=${clientId}`}>Добавить</Link>}><AsyncView loading={query.isLoading} error={query.error} empty={!history.length} onRetry={() => void query.refetch()}><div className="cards">{history.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{workout.exercises.map((item) => item.name).join(', ') || 'Без упражнений'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>)}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
 }
 
 export function WorkoutFormPage() {
@@ -139,7 +169,7 @@ export function WorkoutDetailPage() {
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   const start = useMutation({ mutationFn: () => workoutsRepository.start(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }); navigate(`/workouts/${workoutId}/live`) } })
   const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workouts'] }); navigate('/schedule') } })
-  return <Page title="Тренировка"><AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <><section className="workout-title"><div><h2>{query.data.clientName}</h2><p>{formatLocalDate(query.data.workoutDate)} · {query.data.startTime?.slice(0, 5) ?? 'без времени'}</p></div><span className={`badge ${query.data.status}`}>{statusLabel(query.data.status)}</span></section><div className="cards">{query.data.exercises.map((exercise) => <article className="exercise" key={exercise.id}><strong>{exercise.name}</strong>{exercise.sets.map((set) => <p key={set.id}>{formatSet(set)}</p>)}<Link to={`/workouts/${query.data!.id}/history/${encodeURIComponent(exercise.ref)}`}>История упражнения</Link></article>)}</div>{query.data.notes && <p>{query.data.notes}</p>}<div className="actions">{query.data.status === 'planned' && <button onClick={() => start.mutate()}>Начать</button>}{query.data.status === 'in_progress' && <Link className="button" to={`/workouts/${workoutId}/live`}>Продолжить</Link>}{query.data.status === 'planned' && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>Изменить</Link>}<Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link></div><button className="danger secondary wide" onClick={() => remove.mutate()}>Удалить тренировку</button></>}</AsyncView></Page>
+  return <Page title="Тренировка"><AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <><section className="workout-title"><div><h2>{query.data.clientName}</h2><p>{formatLocalDate(query.data.workoutDate)} · {query.data.startTime?.slice(0, 5) ?? 'без времени'}</p></div><span className={`badge ${query.data.status}`}>{statusLabel(query.data.status)}</span></section><div className="cards">{query.data.exercises.map((exercise) => <article className="exercise" key={exercise.id}><Link className="exercise-name-link" to={`/workouts/${query.data!.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>{exercise.sets.map((set) => <p key={set.id}>{formatSet(set)}</p>)}</article>)}</div>{query.data.notes && <p>{query.data.notes}</p>}<div className="actions">{query.data.status === 'planned' && <button onClick={() => start.mutate()}>Начать</button>}{query.data.status === 'in_progress' && <Link className="button" to={`/workouts/${workoutId}/live`}>Продолжить</Link>}{query.data.status === 'planned' && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>Изменить</Link>}<Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link></div><button className="danger secondary wide" onClick={() => remove.mutate()}>Удалить тренировку</button></>}</AsyncView></Page>
 }
 
 function formatSet(set: WorkoutSet) { const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, set.distanceKm && `${set.distanceKm} км`, set.durationMin && `${set.durationMin} мин`].filter(Boolean).join(' × '); return plan || 'Подход без плана' }

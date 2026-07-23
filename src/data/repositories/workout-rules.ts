@@ -1,9 +1,21 @@
-import type { ClientStats, InputKind, Workout, WorkoutDraft, WorkoutSummary } from '../../shared/domain'
+import type { ClientStats, InputKind, Workout, WorkoutDraft, WorkoutSet, WorkoutSummary } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
 
 export interface ExerciseChartPoint {
   date: LocalDate
   value: number
+}
+
+// Upcoming = not yet done and dated today or later, nearest first.
+// History = everything else (done, or planned in the past), most recent first.
+export function splitClientWorkouts(workouts: Workout[], today: LocalDate): { upcoming: Workout[]; history: Workout[] } {
+  const upcoming = workouts
+    .filter((workout) => workout.status !== 'done' && workout.workoutDate >= today)
+    .sort((a, b) => (a.workoutDate < b.workoutDate ? -1 : a.workoutDate > b.workoutDate ? 1 : 0))
+  const history = workouts
+    .filter((workout) => workout.status === 'done' || workout.workoutDate < today)
+    .sort((a, b) => (a.workoutDate > b.workoutDate ? -1 : a.workoutDate < b.workoutDate ? 1 : 0))
+  return { upcoming, history }
 }
 
 const ATTENTION_DAYS = 14
@@ -45,21 +57,24 @@ export function chartUnitFor(inputKind: InputKind): string {
   return 'кг'
 }
 
-function factMetric(inputKind: InputKind, fact: { weightKg?: number; distanceKm?: number; reps?: number }): number | undefined {
-  if (inputKind === 'distance') return fact.distanceKm
-  if (inputKind === 'reps') return fact.reps
-  return fact.weightKg
+// Actual result if recorded, otherwise the plan — so completed workouts
+// marked done without live fact entry still appear on the chart.
+function setMetric(inputKind: InputKind, set: WorkoutSet): number | undefined {
+  if (inputKind === 'distance') return set.fact.distanceKm ?? set.distanceKm
+  if (inputKind === 'reps') return set.fact.reps ?? set.reps
+  return set.fact.weightKg ?? set.weightKg
 }
 
-// Best actual result per workout for one exercise, oldest first, for the
-// progression chart. Workouts without recorded facts are skipped.
+// Best result per completed workout for one exercise, oldest first, for the
+// progression chart. Only done workouts; workouts without any value skipped.
 export function exerciseChartPoints(workouts: Workout[], exerciseRef: string): ExerciseChartPoint[] {
   return workouts
+    .filter((workout) => workout.status === 'done')
     .map((workout) => {
       const exercise = workout.exercises.find((item) => item.ref === exerciseRef)
       if (!exercise) return null
       const values = exercise.sets
-        .map((set) => factMetric(exercise.inputKind, set.fact))
+        .map((set) => setMetric(exercise.inputKind, set))
         .filter((value): value is number => value !== undefined)
       if (values.length === 0) return null
       return { date: workout.workoutDate, value: Math.max(...values) }
