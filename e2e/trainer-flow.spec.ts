@@ -35,12 +35,16 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Начать' }).click()
-  // Вместо значка LIVE — таймер тренировки, идущий от старта (мм:сс).
-  await expect(page.locator('.live-timer')).toContainText(/\d\d:\d\d/)
+  // Крупный таймер тренировки по центру над подходами, идущий от старта (мм:сс).
+  await expect(page.locator('.live-timer-big')).toContainText(/\d\d:\d\d/)
   await page.getByLabel('Фактический вес').first().fill('42.5')
   await page.getByLabel('Фактические повторы').first().fill('9')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
+  // Подтверждённый подход показывает зафиксированные значения ярко (не placeholder):
+  // поле веса заблокировано и содержит реальное значение 42.5.
+  await expect(page.locator('.set-row.locked input').first()).toHaveValue('42.5')
+  await expect(page.locator('.set-row.locked input').first()).toBeDisabled()
   await expect(page.getByText(/Отдых 1:30/)).toBeVisible()
   // Отдых считается от абсолютного времени: через ~2 с значение должно уменьшиться.
   await expect(page.getByText(/Отдых 1:2\d/)).toBeVisible({ timeout: 4000 })
