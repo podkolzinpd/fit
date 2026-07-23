@@ -51,6 +51,19 @@ export function computeClientStats(summaries: WorkoutSummary[], today: LocalDate
   return { doneCount: done.length, completionPercent, lastWorkoutDate, daysInWork, needsAttention }
 }
 
+// Actual workout duration by the timer (start → finish), as "42 мин" or
+// "1 ч 05 мин". Returns null when timestamps are missing or non-positive.
+export function workoutDurationLabel(startedAt: string | null, completedAt: string | null): string | null {
+  if (!startedAt || !completedAt) return null
+  const ms = Date.parse(completedAt) - Date.parse(startedAt)
+  if (!Number.isFinite(ms) || ms <= 0) return null
+  const totalMinutes = Math.round(ms / 60000)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  if (hours === 0) return `${minutes} мин`
+  return `${hours} ч ${String(minutes).padStart(2, '0')} мин`
+}
+
 export function chartUnitFor(inputKind: InputKind): string {
   if (inputKind === 'distance') return 'км'
   if (inputKind === 'reps') return 'повт.'

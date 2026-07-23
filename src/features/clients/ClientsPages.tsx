@@ -70,30 +70,34 @@ function ClientForm({ existing, onSaved, onCancel }: { existing?: Client; onSave
 }
 
 export function ClientDetailPage() {
-  const { clientId = '' } = useParams(); const navigate = useNavigate(); const queryClient = useQueryClient()
+  const { clientId = '' } = useParams(); const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
   const stats = useQuery({ queryKey: ['client-stats', clientId], queryFn: async () => computeClientStats(await workoutsRepository.listSummaries(clientId), todayLocalDate()) })
   const workouts = useQuery({ queryKey: ['workouts', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
   const upcoming = workouts.data ? splitClientWorkouts(workouts.data, todayLocalDate()).upcoming : []
   const archive = useMutation({ mutationFn: (client: Client) => clientsRepository.setArchived(client, !client.archivedAt), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); await query.refetch() } })
-  return <Page title={query.data?.fullName ?? 'Клиент'} action={query.data && <Link className="button secondary" to={`/clients/${clientId}/edit`}>Изменить</Link>}>
+  return <Page title={query.data?.fullName ?? 'Клиент'} center back="/clients" action={query.data && <Link className="button secondary" to={`/clients/${clientId}/edit`}>Изменить</Link>}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
       <section className="summary"><div><span>Возраст</span><strong>{query.data.ageYears}</strong></div><div><span>Рост</span><strong>{query.data.heightCm} см</strong></div><div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div></section>
       {stats.data && <>
         {stats.data.needsAttention && <p className="attention">⚠ Давно не тренировался</p>}
-        <section className="summary stats">
+        <section className="summary stats stats-3">
           <div><span>Тренировок</span><strong>{stats.data.doneCount}</strong></div>
           <div><span>Выполнено</span><strong>{stats.data.completionPercent === null ? '—' : `${stats.data.completionPercent}%`}</strong></div>
           <div><span>Последняя</span><strong>{stats.data.lastWorkoutDate ? formatLocalDate(stats.data.lastWorkoutDate) : '—'}</strong></div>
-          <div><span>Дней в работе</span><strong>{stats.data.daysInWork ?? '—'}</strong></div>
         </section>
       </>}
+      <div className="client-actions">
+        <div className="client-actions-row">
+          <Link className="button" to={`/workouts/new?client=${clientId}`}>＋ Запланировать</Link>
+          <Link className="button secondary" to={`/clients/${clientId}/workouts`}>История</Link>
+        </div>
+        <Link className="button secondary wide" to={`/progress/${clientId}`}>Замеры и аналитика</Link>
+      </div>
       {query.data.goal && <section><h2>Цель</h2><p>{query.data.goal}</p></section>}{query.data.note && <section><h2>Заметка</h2><p>{query.data.note}</p></section>}
       {upcoming.length > 0 && <section><h2>Предстоит</h2><div className="cards">{upcoming.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}{workout.startTime ? ` · ${workout.startTime.slice(0, 5)}` : ''}</strong><p>{workout.exercises.map((item) => item.name).join(', ') || 'Без упражнений'}</p></div><span className={`badge ${workout.status}`}>{workout.status === 'in_progress' ? 'Идёт' : 'План'}</span></Link>)}</div></section>}
-      <div className="menu"><Link to={`/workouts/new?client=${clientId}`}>＋ Запланировать тренировку</Link><Link to={`/clients/${clientId}/workouts`}>История тренировок</Link><Link to={`/progress/${clientId}`}>Замеры и аналитика</Link></div>
       <div className="page-actions">
         <button className="danger secondary wide" disabled={archive.isPending} onClick={() => archive.mutate(query.data!)}>{query.data.archivedAt ? 'Вернуть из архива' : 'Архивировать клиента'}</button>
-        <button className="link" onClick={() => navigate('/clients')}>← Все клиенты</button>
       </div>
     </>}</AsyncView>
   </Page>
