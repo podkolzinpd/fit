@@ -110,6 +110,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByLabel('Дата').fill('2026-07-20')
   await page.getByLabel('Вес, кг').fill('61')
   await page.getByRole('button', { name: 'Сохранить замер' }).click()
+  // История замеров свёрнута по умолчанию — разворачиваем, чтобы увидеть карточку.
+  await page.getByRole('button', { name: 'Показать' }).click()
   await expect(page.getByText('61 кг')).toBeVisible()
 })
 
