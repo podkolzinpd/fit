@@ -67,6 +67,10 @@ p { margin: 6px 0 }
 .summary.stats strong { font-size: 15px }
 .summary.done-summary { grid-template-columns: 1fr 1fr; margin-bottom: 18px }
 .summary.done-summary strong { font-size: 15px }
+.summary.done-summary-3 { grid-template-columns: repeat(3, 1fr) }
+.summary.done-summary-3 strong { font-size: 14px }
+.card-meta { color: var(--muted); font-size: 12px; margin-top: 2px }
+.day-grid-event-groups { font-size: 11px; color: #c9c2e6; line-height: 1.15 }
 .summary.stats-3 { grid-template-columns: repeat(3, 1fr) }
 .client-actions { display: flex; flex-direction: column; gap: 10px; margin: 20px 0 }
 .client-actions-row { display: flex; gap: 10px }
@@ -100,7 +104,7 @@ p { margin: 6px 0 }
 .day-grid-hour { position: absolute; left: 0; right: 0; display: flex; align-items: flex-start; gap: 8px; height: 0 }
 .day-grid-hour-label { width: 44px; flex-shrink: 0; font-size: 11px; color: var(--muted); transform: translateY(-6px) }
 .day-grid-hour-line { flex: 1; height: 1px; background: var(--border); margin-top: 2px }
-.day-grid-event { position: absolute; left: 52px; right: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 10px; border-radius: 10px; background: #2b2549; border: 1px solid var(--accent); color: var(--fg); overflow: hidden; text-align: left; text-decoration: none }
+.day-grid-event { position: absolute; left: 52px; right: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 5px 10px; border-radius: 10px; background: #2b2549; border: 1px solid var(--accent); color: var(--fg); overflow: hidden; text-align: left; text-decoration: none; line-height: 1.15 }
 .day-grid-event.done { border-color: var(--success); background: #1d3626 }
 .day-grid-event.in_progress { border-color: #ffc06b; background: #3a2b1d }
 .day-grid-event-time { font-size: 11px; font-weight: 700; color: var(--purple) }
@@ -129,6 +133,13 @@ p { margin: 6px 0 }
 .row-actions { display: flex; flex-direction: column; align-items: flex-end }
 .chart { margin: 12px -8px; padding: 14px 0; border: 1px solid var(--border); border-radius: 16px }
 .chart h2 { margin: 0 18px 10px }
+.chart-range { color: var(--muted); font-weight: 400; font-size: 13px }
+.chart-drag-area { touch-action: pan-y; cursor: grab }
+.chart-drag-area.dragging { cursor: grabbing }
+.chart-empty-window { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 18px; text-align: center }
+.metric-tabs { display: flex; gap: 6px; margin: 12px -8px 0; overflow-x: auto }
+.metric-tab { padding: 7px 14px; border: 1px solid var(--border); border-radius: 99px; background: var(--surface-raised); color: var(--muted); font-size: 13px; white-space: nowrap }
+.metric-tab.active { border-color: var(--accent); color: #fff; background: var(--accent) }
 .measure-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
 .inline-form { display: grid; grid-template-columns: 1.3fr .7fr auto; gap: 7px }
 .metric { display: flex; justify-content: space-between; padding: 10px 2px; border-bottom: 1px solid var(--border) }

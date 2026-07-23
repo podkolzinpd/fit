@@ -56,10 +56,38 @@ test('trainer can create client, complete workout and save progress', async ({ p
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   await expect(page.getByText('Готово', { exact: true })).toBeVisible()
+  // Завершённая тренировка показывает фактический результат (вес × повторы),
+  // а не только название упражнения.
+  await expect(page.getByText(/42\.5 кг × 9 повт\./)).toBeVisible()
+  // Сводка завершённой тренировки: время, тоннаж (42.5×9 + план 35×12 = 802.5 ≈ 803 кг), группы мышц.
+  await expect(page.locator('.done-summary-3')).toContainText('Тоннаж')
+  await expect(page.locator('.done-summary-3')).toContainText('803 кг')
 
   await page.goto(clientUrl)
   await expect(page.getByText('Тренировок', { exact: true })).toBeVisible()
   await expect(page.locator('.summary.stats')).toContainText('1')
+  await expect(page.locator('.summary.stats')).toContainText('100%')
+  // Вместо «Последней» на карточке показываем ИМТ.
+  await expect(page.locator('.summary.stats')).toContainText('ИМТ')
+
+  // История и карточка используют один префикс ключа кэша, но разной формы —
+  // переход туда-обратно не должен ронять приложение (регресс e.filter).
+  await page.getByRole('link', { name: 'История', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'История тренировок' })).toBeVisible()
+  await expect(page.locator('.card').first()).toBeVisible()
+  // На карточке истории — тоннаж завершённой тренировки.
+  await expect(page.locator('.card-meta').first()).toContainText('803 кг')
+  await page.locator('.card').first().click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  // Заходим в аналитику упражнения и возвращаемся: «назад» с тренировки не должен
+  // пинг-понгить обратно в историю упражнения (регресс петли навигации).
+  await page.locator('.exercise-name-link').first().click()
+  await expect(page.getByRole('heading', { name: 'История упражнения' })).toBeVisible()
+  await page.locator('.page-back').click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await page.locator('.page-back').click()
+  await expect(page.getByRole('heading', { name: 'История тренировок' })).toBeVisible()
+  await page.locator('.page-back').click()
   await expect(page.locator('.summary.stats')).toContainText('100%')
 
   await page.getByRole('link', { name: 'Замеры и аналитика' }).click()

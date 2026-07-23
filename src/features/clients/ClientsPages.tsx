@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
-import { computeClientStats, splitClientWorkouts, workoutsRepository } from '../../data/repositories/workouts.repository'
+import { bmiLabel, computeClientStats, splitClientWorkouts, workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { Client, Gender } from '../../shared/domain'
 import { formatLocalDate, todayLocalDate } from '../../shared/local-date'
 import { AsyncView, Field, Page } from '../../shared/ui'
@@ -17,7 +17,7 @@ export function ClientsPage() {
   return <Page title="Мои клиенты" action={<Link className="button" to="/clients/new">Добавить</Link>}>
     <label className="toggle"><input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} /> Показывать архив</label>
     <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}>
-      <div className="cards">{query.data?.map((client) => <Link className="card client-card" key={client.id} to={`/clients/${client.id}`}><span className={`client-avatar tone-${client.fullName.length % 4}`}>{client.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span><div><strong>{client.fullName}</strong><p>{client.ageYears} лет · {client.heightCm} см{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</p></div>{client.archivedAt && <span className="badge">Архив</span>}</Link>)}</div>
+      <div className="cards">{query.data?.map((client) => <Link className="card client-card" key={client.id} to={`/clients/${client.id}`}><span className={`client-avatar tone-${client.fullName.length % 4}`}>{client.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span><div><strong>{client.fullName}</strong><p>{client.ageYears} лет · {client.heightCm} см{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''} · ИМТ {bmiLabel(client.heightCm, client.currentWeightKg)}</p></div>{client.archivedAt && <span className="badge">Архив</span>}</Link>)}</div>
     </AsyncView>
   </Page>
 }
@@ -73,7 +73,7 @@ export function ClientDetailPage() {
   const { clientId = '' } = useParams(); const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
   const stats = useQuery({ queryKey: ['client-stats', clientId], queryFn: async () => computeClientStats(await workoutsRepository.listSummaries(clientId), todayLocalDate()) })
-  const workouts = useQuery({ queryKey: ['workouts', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
+  const workouts = useQuery({ queryKey: ['workouts', clientId, 'upcoming'], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
   const upcoming = workouts.data ? splitClientWorkouts(workouts.data, todayLocalDate()).upcoming : []
   const archive = useMutation({ mutationFn: (client: Client) => clientsRepository.setArchived(client, !client.archivedAt), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); await query.refetch() } })
   return <Page title={query.data?.fullName ?? 'Клиент'} center back="/clients" action={query.data && <Link className="button secondary" to={`/clients/${clientId}/edit`}>Изменить</Link>}>
@@ -84,7 +84,7 @@ export function ClientDetailPage() {
         <section className="summary stats stats-3">
           <div><span>Тренировок</span><strong>{stats.data.doneCount}</strong></div>
           <div><span>Выполнено</span><strong>{stats.data.completionPercent === null ? '—' : `${stats.data.completionPercent}%`}</strong></div>
-          <div><span>Последняя</span><strong>{stats.data.lastWorkoutDate ? formatLocalDate(stats.data.lastWorkoutDate) : '—'}</strong></div>
+          <div><span>ИМТ</span><strong>{bmiLabel(query.data.heightCm, query.data.currentWeightKg)}</strong></div>
         </section>
       </>}
       <div className="client-actions">

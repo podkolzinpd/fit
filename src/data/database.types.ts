@@ -1,4 +1,4 @@
-// schema-sha256: 02728760d1ed1bfe5441414d9f8aeba5c23e09af9d7aeb8640993a7d62ffee53
+// schema-sha256: d72091ce7ccf7d758fcb695075abbe329d42fb564c4b51382126537a46a13b80
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
@@ -22,7 +22,7 @@ type ProgressCustomRow = { id: string; trainer_id: string; client_id: string; pr
 type ClientListRow = { id: string; full_name: string; gender: string; age_years: number; age_updated_at: string; height_cm: number; goal: string | null; note: string | null; current_weight_kg: number | null; archived_at: string | null; version: number }
 type WorkoutListSetRow = Pick<WorkoutSetRow, 'id' | 'position' | 'plan_weight_kg' | 'plan_reps' | 'plan_duration_min' | 'plan_distance_km' | 'fact_weight_kg' | 'fact_reps' | 'fact_duration_min' | 'fact_distance_km' | 'confirmed_at' | 'version'>
 type WorkoutListExerciseRow = Pick<WorkoutExerciseRow, 'id' | 'position' | 'exercise_source' | 'exercise_ref' | 'custom_exercise_id' | 'exercise_name' | 'muscle_group' | 'input_kind'> & { sets: WorkoutListSetRow[] }
-export type WorkoutListRow = Pick<WorkoutRow, 'id' | 'client_id' | 'workout_date' | 'start_time' | 'end_time' | 'status' | 'notes' | 'version'> & { client_name: string; total_count: number; exercises: WorkoutListExerciseRow[] }
+export type WorkoutListRow = Pick<WorkoutRow, 'id' | 'client_id' | 'workout_date' | 'start_time' | 'end_time' | 'started_at' | 'completed_at' | 'status' | 'notes' | 'version'> & { client_name: string; total_count: number; exercises: WorkoutListExerciseRow[] }
 type WorkoutSummaryRow = Pick<WorkoutRow, 'id' | 'workout_date' | 'status'>
 
 export interface Database {
