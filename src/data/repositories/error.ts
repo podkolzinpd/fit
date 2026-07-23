@@ -7,8 +7,15 @@ export class RepositoryError extends Error {
 
 export function repositoryError(error: { code?: string; message: string } | null): RepositoryError {
   if (!error) return new RepositoryError('unknown', 'Неизвестная ошибка')
-  const conflict = error.code === '40001' || error.message.includes('conflict')
-  return new RepositoryError(error.code ?? 'database_error', conflict
-    ? 'Данные уже изменились. Обновите страницу и повторите.'
-    : error.message)
+  const code = error.code ?? 'database_error'
+  if (code === 'PT409' || code === '40001') {
+    return new RepositoryError(code, 'Данные уже изменились. Обновите страницу и повторите.')
+  }
+  if (code === 'PT404') {
+    return new RepositoryError(code, 'Запись не найдена или больше недоступна.')
+  }
+  if (code === 'PT422') {
+    return new RepositoryError(code, 'Операцию нельзя выполнить с текущими данными.')
+  }
+  return new RepositoryError(code, error.message)
 }
