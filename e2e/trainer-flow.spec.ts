@@ -38,6 +38,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
   await expect(page.getByText(/Отдых 1:30/)).toBeVisible()
+  // Отдых считается от абсолютного времени: через ~2 с значение должно уменьшиться.
+  await expect(page.getByText(/Отдых 1:2\d/)).toBeVisible({ timeout: 4000 })
   await page.getByRole('button', { name: 'Пропустить' }).click()
   await page.getByRole('button', { name: '＋ Подход' }).click()
   await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()

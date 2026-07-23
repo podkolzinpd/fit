@@ -89,6 +89,8 @@ function LiveSetFields({ inputKind, set }: { inputKind: ExerciseSnapshot['inputK
   return <div className="set-row"><input aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" defaultValue={set.fact.durationMin} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input aria-label="Фактическая дистанция" name="distanceKm" type="number" min="0" step="0.1" defaultValue={set.fact.distanceKm} placeholder={set.distanceKm === undefined ? 'км' : `${set.distanceKm} км`} /></div>
 }
 
+const REST_SECONDS = 90
+
 function formatRest(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
@@ -106,29 +108,50 @@ export function LiveWorkoutPage() {
   const skipBlurForSet = useRef<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [restRemaining, setRestRemaining] = useState<number | null>(null)
+  const restEndsAt = useRef<number | null>(null)
   const save = useMutation({ mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.save(set, draft) })
   const confirm = useMutation({
     mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.confirm(set, draft),
     onSuccess: () => {
-      setRestRemaining(90)
+      startRest()
       void query.refetch()
     },
   })
+  function startRest() {
+    restEndsAt.current = Date.now() + REST_SECONDS * 1000
+    setRestRemaining(REST_SECONDS)
+  }
+  function stopRest() {
+    restEndsAt.current = null
+    setRestRemaining(null)
+  }
   const appendSet = useMutation({ mutationFn: (exerciseId: string) => workoutsRepository.appendLiveSet(query.data!, exerciseId), onSuccess: async () => { await query.refetch() } })
   const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => workoutsRepository.appendLiveExercise(query.data!, exercise), onSuccess: async () => { await query.refetch() } })
   const finish = useMutation({ mutationFn: () => workoutsRepository.finish(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }); navigate(`/workouts/${workoutId}`) } })
   function draftFrom(form: HTMLFormElement): LiveSetDraft { const values = new FormData(form); return { weightKg: numberValue(values.get('weightKg')), reps: numberValue(values.get('reps')), distanceKm: numberValue(values.get('distanceKm')), durationMin: numberValue(values.get('durationMin')) } }
+  // Derive the countdown from a wall-clock deadline so it stays correct even
+  // when the tab is backgrounded and timers are throttled by the browser.
+  const restActive = restRemaining !== null
   useEffect(() => {
-    if (restRemaining === null) return
-    if (restRemaining === 0) { playGong(); setRestRemaining(null); return }
-    const timer = window.setTimeout(() => setRestRemaining((current) => current === null ? null : current - 1), 1000)
-    return () => window.clearTimeout(timer)
-  }, [restRemaining])
+    if (!restActive) return
+    const timer = window.setInterval(() => {
+      if (restEndsAt.current === null) return
+      const left = Math.ceil((restEndsAt.current - Date.now()) / 1000)
+      if (left <= 0) {
+        restEndsAt.current = null
+        setRestRemaining(null)
+        playGong()
+      } else {
+        setRestRemaining(left)
+      }
+    }, 250)
+    return () => window.clearInterval(timer)
+  }, [restActive])
   const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? finish.error
   return <Page title="Live-тренировка" action={<span className="live-dot">● LIVE</span>}>
     <AsyncView loading={query.isLoading} error={query.error}>{query.data && <>
       <p>{query.data.clientName} · черновик сохраняется отдельно от плана</p>
-      {restRemaining !== null && <div className="rest-timer"><strong>Отдых {formatRest(restRemaining)}</strong><button type="button" className="link" onClick={() => setRestRemaining(null)}>Пропустить</button></div>}
+      {restRemaining !== null && <div className="rest-timer"><strong>Отдых {formatRest(restRemaining)}</strong><button type="button" className="link" onClick={stopRest}>Пропустить</button></div>}
       {query.data.exercises.map((exercise) => <section key={exercise.id}>
         <h2>{exercise.name}</h2>
         {exercise.sets.map((set, index) => <form className={`exercise ${set.confirmedAt ? 'confirmed' : ''}`} key={set.id} onBlur={(event) => {
