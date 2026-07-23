@@ -6,20 +6,61 @@ import { clientsRepository } from '../../data/repositories/clients.repository'
 import { chartUnitFor, copyWorkout, exerciseChartPoints, workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, WorkoutDraft, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
-import { formatLocalDate, localDate, todayLocalDate } from '../../shared/local-date'
+import {
+  addDays, addMonths, endOfMonth, endOfWeek, formatLocalDate, formatMonth, formatWeekRange,
+  localDate, startOfMonth, startOfWeek, todayLocalDate, type LocalDate,
+} from '../../shared/local-date'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { VoiceNoteField } from '../voice-input'
 import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
 import { createLiveSetCoordinator } from './live-set-coordinator'
 
+type ScheduleView = 'week' | 'month'
+
+function schedulePeriod(view: ScheduleView, anchor: LocalDate): { from: LocalDate; to: LocalDate; label: string } {
+  if (view === 'month') {
+    const from = startOfMonth(anchor)
+    return { from, to: endOfMonth(anchor), label: formatMonth(from) }
+  }
+  const from = startOfWeek(anchor)
+  const to = endOfWeek(anchor)
+  return { from, to, label: formatWeekRange(from, to) }
+}
+
 export function SchedulePage() {
-  const query = useQuery({ queryKey: ['workouts'], queryFn: () => workoutsRepository.list() })
+  const [params, setParams] = useSearchParams()
+  const view: ScheduleView = params.get('view') === 'month' ? 'month' : 'week'
+  const anchorParam = params.get('date')
+  const anchor = anchorParam ? localDate(anchorParam) : todayLocalDate()
+  const { from, to, label } = schedulePeriod(view, anchor)
+
+  function setPeriod(nextView: ScheduleView, nextAnchor: LocalDate) {
+    setParams({ view: nextView, date: nextAnchor })
+  }
+  function shift(direction: -1 | 1) {
+    setPeriod(view, view === 'month' ? addMonths(anchor, direction) : addDays(anchor, direction * 7))
+  }
+
+  const query = useQuery({ queryKey: ['workouts', from, to], queryFn: () => workoutsRepository.list(from, to) })
   const byDate = useMemo(() => (query.data ?? []).reduce<Record<string, typeof query.data>>((groups, item) => {
     groups[item.workoutDate] = [...(groups[item.workoutDate] ?? []), item]
     return groups
   }, {}), [query.data])
+
   return <Page title="Расписание" action={<Link className="button" to="/workouts/new">Добавить</Link>}>
+    <div className="schedule-controls">
+      <div className="segmented">
+        <button type="button" className={view === 'week' ? 'active' : ''} onClick={() => setPeriod('week', anchor)}>Неделя</button>
+        <button type="button" className={view === 'month' ? 'active' : ''} onClick={() => setPeriod('month', anchor)}>Месяц</button>
+      </div>
+      <div className="schedule-nav">
+        <button type="button" className="secondary" aria-label="Предыдущий период" onClick={() => shift(-1)}>‹</button>
+        <strong className="schedule-period">{label}</strong>
+        <button type="button" className="secondary" aria-label="Следующий период" onClick={() => shift(1)}>›</button>
+      </div>
+      <button type="button" className="link" onClick={() => setPeriod(view, todayLocalDate())}>Сегодня</button>
+    </div>
     <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}>
       <div className="timeline">{Object.entries(byDate).map(([date, workouts]) => <section key={date}><h2>{formatLocalDate(localDate(date))}</h2>{workouts?.map((workout) => <Link className="card" to={`/workouts/${workout.id}`} key={workout.id}><div><strong>{workout.startTime?.slice(0, 5) ?? 'Без времени'} · {workout.clientName}</strong><p>{workout.exercises.length} упражнений</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>)}</section>)}</div>
     </AsyncView>

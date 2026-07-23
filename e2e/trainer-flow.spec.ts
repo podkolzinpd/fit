@@ -61,3 +61,27 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('button', { name: 'Сохранить замер' }).click()
   await expect(page.getByText('61 кг')).toBeVisible()
 })
+
+test('schedule supports week/month navigation with URL state', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Расписание', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Неделя' })).toHaveClass(/active/)
+
+  // Switch to month → state goes into the URL.
+  await page.getByRole('button', { name: 'Месяц' }).click()
+  await expect(page.getByRole('button', { name: 'Месяц' })).toHaveClass(/active/)
+  await expect(page).toHaveURL(/view=month/)
+
+  const monthLabel = await page.locator('.schedule-period').innerText()
+  await page.getByRole('button', { name: 'Следующий период' }).click()
+  await expect(page.locator('.schedule-period')).not.toHaveText(monthLabel)
+
+  await page.getByRole('button', { name: 'Сегодня' }).click()
+  await expect(page.locator('.schedule-period')).toHaveText(monthLabel)
+})
