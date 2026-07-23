@@ -62,6 +62,14 @@ p { margin: 6px 0 }
 .menu { display: flex; flex-direction: column; margin: 22px 0; border-block: 1px solid var(--border) }
 .menu a { padding: 15px 4px; text-decoration: none; border-bottom: 1px solid var(--border) }.menu a:last-child { border-bottom: 0 }
 .toggle { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; color: var(--muted) }
+.schedule-controls { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px }
+.segmented { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-raised) }
+.segmented button { flex: 1; padding: 8px; border: 0; border-radius: 8px; background: none; color: var(--muted); font-size: 14px; font-weight: 600 }
+.segmented button.active { background: var(--accent); color: #fff }
+.schedule-nav { display: flex; align-items: center; gap: 10px }
+.schedule-nav button { flex: 0 0 auto; width: 40px; height: 40px; padding: 0; font-size: 20px; line-height: 1 }
+.schedule-period { flex: 1; text-align: center; font-size: 15px }
+.schedule-controls .link { align-self: center }
 .exercise { border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin: 10px 0; background: var(--surface-raised) }
 .cards > .exercise { margin: 0 }
 .exercise header, .workout-title { display: flex; justify-content: space-between; align-items: center; gap: 12px }

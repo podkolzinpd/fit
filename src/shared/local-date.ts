@@ -26,3 +26,66 @@ export function formatLocalDate(value: LocalDate, locale = 'ru-RU'): string {
   return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric' })
     .format(new Date(year ?? 0, (month ?? 1) - 1, day))
 }
+
+function parts(value: LocalDate): [number, number, number] {
+  const [year, month, day] = value.split('-').map(Number)
+  return [year ?? 0, month ?? 1, day ?? 1]
+}
+
+function fromUtc(timestamp: number): LocalDate {
+  const date = new Date(timestamp)
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+  return localDate(`${year}-${month}-${day}`)
+}
+
+export function addDays(value: LocalDate, days: number): LocalDate {
+  const [year, month, day] = parts(value)
+  return fromUtc(Date.UTC(year, month - 1, day + days))
+}
+
+export function addMonths(value: LocalDate, months: number): LocalDate {
+  const [year, month, day] = parts(value)
+  // Clamp to the last day of the target month (e.g. 31 Jan + 1 month → 28/29 Feb).
+  const target = new Date(Date.UTC(year, month - 1 + months, 1))
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate()
+  return fromUtc(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), Math.min(day, lastDay)))
+}
+
+// Week starts on Monday.
+export function startOfWeek(value: LocalDate): LocalDate {
+  const [year, month, day] = parts(value)
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay() // 0=Sun..6=Sat
+  const shift = (weekday + 6) % 7 // days since Monday
+  return addDays(value, -shift)
+}
+
+export function endOfWeek(value: LocalDate): LocalDate {
+  return addDays(startOfWeek(value), 6)
+}
+
+export function startOfMonth(value: LocalDate): LocalDate {
+  const [year, month] = parts(value)
+  return fromUtc(Date.UTC(year, month - 1, 1))
+}
+
+export function endOfMonth(value: LocalDate): LocalDate {
+  const [year, month] = parts(value)
+  return fromUtc(Date.UTC(year, month, 0))
+}
+
+export function formatWeekRange(from: LocalDate, to: LocalDate, locale = 'ru-RU'): string {
+  const [fy, fm, fd] = parts(from)
+  const [ty, tm, td] = parts(to)
+  const dayMonth = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long' })
+  const start = dayMonth.format(new Date(fy, fm - 1, fd))
+  const end = dayMonth.format(new Date(ty, tm - 1, td))
+  return `${start} – ${end} ${ty}`
+}
+
+export function formatMonth(value: LocalDate, locale = 'ru-RU'): string {
+  const [year, month] = parts(value)
+  const label = new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(year, month - 1, 1))
+  return `${label.charAt(0).toUpperCase()}${label.slice(1)} ${year}`
+}
