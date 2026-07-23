@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import type { InputKind, Workout, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { canTransition, computeClientStats, copyWorkout, exerciseChartPoints } from './workout-rules'
+import { canTransition, chartUnitFor, computeClientStats, copyWorkout, exerciseChartPoints, splitClientWorkouts } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
   return { id, workoutDate: localDate(date), status }
+}
+
+function bareWorkout(date: string, status: WorkoutStatus): Workout {
+  return {
+    id: date + status, clientId: 'c1', clientName: 'Клиент', workoutDate: localDate(date),
+    startTime: null, endTime: null, status, notes: null, version: 1, exercises: [],
+  }
 }
 
 const TODAY = localDate('2026-07-22')
@@ -85,6 +92,10 @@ function set(fact: WorkoutSet['fact'], position = 0): WorkoutSet {
   return { id: `s${position}`, position, fact, confirmedAt: 'now', version: 1 }
 }
 
+function planSet(weightKg: number, position = 0): WorkoutSet {
+  return { id: `p${position}`, position, weightKg, fact: {}, confirmedAt: null, version: 1 }
+}
+
 function workoutWith(date: string, ref: string, inputKind: InputKind, sets: WorkoutSet[]): Workout {
   return {
     id: `w-${date}`, clientId: 'c1', clientName: 'Клиент', workoutDate: localDate(date),
@@ -121,5 +132,62 @@ describe('exerciseChartPoints', () => {
       workoutWith('2026-07-12', 'squat', 'strength', [set({})]),
     ]
     expect(exerciseChartPoints(workouts, 'squat')).toEqual([{ date: '2026-07-05', value: 50 }])
+  })
+
+  it('берёт план как fallback, если факт не заполнен', () => {
+    const workouts = [workoutWith('2026-07-15', 'squat', 'strength', [planSet(70), planSet(75, 1)])]
+    expect(exerciseChartPoints(workouts, 'squat')).toEqual([{ date: '2026-07-15', value: 75 }])
+  })
+
+  it('берёт плановую дистанцию как fallback', () => {
+    const plan: WorkoutSet = { id: 'pd', position: 0, distanceKm: 8, fact: {}, confirmedAt: null, version: 1 }
+    const workouts = [workoutWith('2026-07-15', 'run', 'distance', [plan])]
+    expect(exerciseChartPoints(workouts, 'run')).toEqual([{ date: '2026-07-15', value: 8 }])
+  })
+
+  it('берёт плановые повторы как fallback', () => {
+    const plan: WorkoutSet = { id: 'pr', position: 0, reps: 30, fact: {}, confirmedAt: null, version: 1 }
+    const workouts = [workoutWith('2026-07-15', 'burpee', 'reps', [plan])]
+    expect(exerciseChartPoints(workouts, 'burpee')).toEqual([{ date: '2026-07-15', value: 30 }])
+  })
+
+  it('учитывает только завершённые тренировки', () => {
+    const planned = workoutWith('2026-07-20', 'squat', 'strength', [set({ weightKg: 80 })])
+    planned.status = 'planned'
+    expect(exerciseChartPoints([planned], 'squat')).toEqual([])
+  })
+})
+
+describe('chartUnitFor', () => {
+  it('возвращает единицу по типу ввода', () => {
+    expect(chartUnitFor('distance')).toBe('км')
+    expect(chartUnitFor('reps')).toBe('повт.')
+    expect(chartUnitFor('strength')).toBe('кг')
+  })
+})
+
+describe('splitClientWorkouts', () => {
+  it('предстоящие — ближайшая сверху, история — недавняя сверху', () => {
+    const workouts = [
+      bareWorkout('2026-07-30', 'planned'),
+      bareWorkout('2026-07-24', 'planned'),
+      bareWorkout('2026-07-10', 'done'),
+      bareWorkout('2026-07-18', 'done'),
+      bareWorkout('2026-07-20', 'planned'), // прошлое planned → пропущено → история
+    ]
+    const { upcoming, history } = splitClientWorkouts(workouts, TODAY)
+    expect(upcoming.map((w) => w.workoutDate)).toEqual(['2026-07-24', '2026-07-30'])
+    expect(history.map((w) => w.workoutDate)).toEqual(['2026-07-20', '2026-07-18', '2026-07-10'])
+  })
+
+  it('выполненная сегодня уходит в историю, не в предстоящие', () => {
+    const { upcoming, history } = splitClientWorkouts([bareWorkout('2026-07-22', 'done')], TODAY)
+    expect(upcoming).toHaveLength(0)
+    expect(history).toHaveLength(1)
+  })
+
+  it('идущая тренировка (in_progress) сегодня — в предстоящих', () => {
+    const { upcoming } = splitClientWorkouts([bareWorkout('2026-07-22', 'in_progress')], TODAY)
+    expect(upcoming).toHaveLength(1)
   })
 })

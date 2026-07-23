@@ -95,6 +95,8 @@ p { margin: 6px 0 }
 .day-grid-event-name { font-size: 13px; font-weight: 600 }
 .exercise { border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin: 10px 0; background: var(--surface-raised) }
 .cards > .exercise { margin: 0 }
+.exercise-name-link { display: inline-flex; align-items: baseline; gap: 8px; text-decoration: none; color: var(--fg) }
+.exercise-name-hint { font-size: 12px; color: var(--purple); font-weight: 600 }
 .exercise header, .workout-title { display: flex; justify-content: space-between; align-items: center; gap: 12px }
 .workout-title { margin-bottom: 18px }
 .workout-title h2 { margin: 0 0 4px }
