@@ -1,6 +1,53 @@
-import type { ClientStats, InputKind, Workout, WorkoutDraft, WorkoutSet, WorkoutSetDraft, WorkoutSummary } from '../../shared/domain'
+import type { BlockType, ClientStats, InputKind, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet, WorkoutSetDraft, WorkoutSummary } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
+
+export interface ExerciseBlock {
+  blockId: string
+  blockType: BlockType
+  exercises: WorkoutExercise[]
+}
+
+// Группирует упражнения тренировки в блоки по blockId, сохраняя порядок
+// (по позиции первого упражнения блока). Соседние упражнения одного блока
+// объединяются; порядок упражнений внутри блока — по позиции.
+export function groupIntoBlocks(exercises: WorkoutExercise[]): ExerciseBlock[] {
+  const ordered = [...exercises].sort((a, b) => a.position - b.position)
+  const blocks: ExerciseBlock[] = []
+  const byId = new Map<string, ExerciseBlock>()
+  for (const exercise of ordered) {
+    const existing = byId.get(exercise.blockId)
+    if (existing) {
+      existing.exercises.push(exercise)
+    } else {
+      const block: ExerciseBlock = { blockId: exercise.blockId, blockType: exercise.blockType, exercises: [exercise] }
+      byId.set(exercise.blockId, block)
+      blocks.push(block)
+    }
+  }
+  return blocks
+}
+
+// True, если подход — последний подтверждаемый в своём блоке: последний сет
+// последнего (по позиции) упражнения блока. Используется в live, чтобы отдых
+// стартовал только после всего блока (суперсет/трисет/круговая).
+export function isLastSetOfBlock(workout: Workout, exerciseId: string, setId: string): boolean {
+  const exercise = workout.exercises.find((item) => item.id === exerciseId)
+  if (!exercise) return false
+  const block = groupIntoBlocks(workout.exercises).find((b) => b.blockId === exercise.blockId)
+  if (!block) return false
+  const lastExercise = block.exercises[block.exercises.length - 1]
+  if (!lastExercise || lastExercise.id !== exerciseId) return false
+  const lastSet = [...exercise.sets].sort((a, b) => a.position - b.position)[exercise.sets.length - 1]
+  return Boolean(lastSet && lastSet.id === setId)
+}
+
+export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
+  single: 'Обычный',
+  superset: 'Суперсет',
+  triset: 'Трисет',
+  circuit: 'Круговая',
+}
 
 // A new set for "＋ Подход" that inherits the relevant params of the last set
 // (by input kind), so the trainer doesn't retype identical weight/reps. When
@@ -155,6 +202,16 @@ export function exerciseChartPoints(workouts: Workout[], exerciseRef: string): E
 }
 
 export function copyWorkout(source: Workout, workoutDate = source.workoutDate): WorkoutDraft {
+  // Копия сохраняет структуру блоков (тип), но получает свежие block_id,
+  // чтобы не конфликтовать с исходной тренировкой.
+  const blockIdMap = new Map<string, string>()
+  const nextBlockId = (sourceBlockId: string): string => {
+    const existing = blockIdMap.get(sourceBlockId)
+    if (existing) return existing
+    const fresh = crypto.randomUUID()
+    blockIdMap.set(sourceBlockId, fresh)
+    return fresh
+  }
   return {
     clientId: source.clientId, workoutDate, startTime: source.startTime ?? undefined,
     endTime: source.endTime ?? undefined, notes: source.notes ?? undefined,
@@ -162,6 +219,7 @@ export function copyWorkout(source: Workout, workoutDate = source.workoutDate): 
       source: exercise.source, ref: exercise.ref, customExerciseId: exercise.customExerciseId,
       name: exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind,
       position: exercise.position,
+      blockId: nextBlockId(exercise.blockId), blockType: exercise.blockType,
       sets: exercise.sets.map((set) => ({ position: set.position, weightKg: set.weightKg,
         reps: set.reps, durationMin: set.durationMin, distanceKm: set.distanceKm })),
     })),
