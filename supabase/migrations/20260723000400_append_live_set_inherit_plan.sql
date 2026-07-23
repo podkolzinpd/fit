@@ -34,7 +34,8 @@ begin
     and deleted_at is null and version = p_expected_version
   returning version into next_version;
   if next_version is null then
-    raise exception 'workout_conflict' using errcode = '40001';
+    -- Неповторяемый конфликт версии (код PT409, см. миграцию 0006).
+    raise exception 'workout_conflict' using errcode = 'PT409';
   end if;
 
   select coalesce(max(s.position) + 1, 0)::smallint into next_position
