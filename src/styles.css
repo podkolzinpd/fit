@@ -62,7 +62,7 @@ p { margin: 6px 0 }
 .menu { display: flex; flex-direction: column; margin: 22px 0; border-block: 1px solid var(--border) }
 .menu a { padding: 15px 4px; text-decoration: none; border-bottom: 1px solid var(--border) }.menu a:last-child { border-bottom: 0 }
 .toggle { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; color: var(--muted) }
-.content:has(.schedule-page) { overflow: hidden; padding-bottom: 0 }
+ .content:has(.schedule-page) { overflow: hidden; padding-bottom: 0 }
 .schedule-page { height: 100%; display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0 }
 .schedule-page > .page-header, .schedule-page > .week-nav { flex: 0 0 auto }
 .schedule-page > .day-grid-scroll { flex: 1; min-height: 0; padding-bottom: 100px }
@@ -91,8 +91,9 @@ p { margin: 6px 0 }
 .day-grid-event.in_progress { border-color: #ffc06b; background: #3a2b1d }
 .day-grid-event-time { font-size: 11px; font-weight: 700; color: var(--purple) }
 .day-grid-event.done .day-grid-event-time { color: var(--success) }
-.day-grid-event.in_progress .day-grid-event-time { color: #ffc06b }
-.day-grid-event-name { font-size: 13px; font-weight: 600 }
+ .day-grid-event.in_progress .day-grid-event-time { color: #ffc06b }
+ .day-grid-event-name { font-size: 13px; font-weight: 600 }
+ .schedule-count { padding: 5px 9px; border: 1px solid var(--border); border-radius: 99px; color: var(--muted); background: var(--surface-raised); font-size: 12px; white-space: nowrap }
 .exercise { border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin: 10px 0; background: var(--surface-raised) }
 .cards > .exercise { margin: 0 }
 .exercise-name-link { display: inline-flex; align-items: baseline; gap: 8px; text-decoration: none; color: var(--fg) }

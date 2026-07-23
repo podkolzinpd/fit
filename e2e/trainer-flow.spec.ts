@@ -71,6 +71,7 @@ test('schedule shows week strip and hour grid with day/week navigation', async (
 
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
+  await expect(page.locator('.schedule-count')).toHaveText(/\d+ трениров/)
 
   // Week strip has 7 day buttons, hour grid is rendered.
   await expect(page.locator('.week-day')).toHaveCount(7)

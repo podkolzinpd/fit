@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -15,6 +15,8 @@ import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { VoiceNoteField } from '../voice-input'
 import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
 import { createLiveSetCoordinator } from './live-set-coordinator'
+import { LoadMoreButton } from './LoadMoreButton'
+import { workoutCountLabel } from './workout-count-label'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -41,9 +43,16 @@ export function SchedulePage() {
   function selectDate(date: LocalDate) { setParams({ date }) }
   function shiftWeek(direction: -1 | 1) { selectDate(addDays(selected, direction * 7)) }
 
-  const query = useQuery({ queryKey: ['workouts', selected], queryFn: () => workoutsRepository.list(selected, selected) })
-  const timed = (query.data ?? []).filter((workout) => workout.startTime).sort((a, b) => minutesOf(a.startTime!) - minutesOf(b.startTime!))
-  const untimed = (query.data ?? []).filter((workout) => !workout.startTime)
+  const query = useInfiniteQuery({
+    queryKey: ['workouts', selected],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => workoutsRepository.listPage(selected, selected, undefined, pageParam),
+    getNextPageParam: (page) => page.nextOffset,
+  })
+  const items = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data])
+  const totalCount = query.data?.pages[0]?.totalCount ?? 0
+  const timed = items.filter((workout) => workout.startTime).sort((a, b) => minutesOf(a.startTime!) - minutesOf(b.startTime!))
+  const untimed = items.filter((workout) => !workout.startTime)
 
   useEffect(() => {
     if (query.isLoading || !scrollRef.current) return
@@ -52,8 +61,9 @@ export function SchedulePage() {
   }, [query.isLoading, selected])
 
   return <Page className="schedule-page" title="Расписание" action={
-    <div className="schedule-actions">
-      <button type="button" className="secondary schedule-today" disabled={selected === today} onClick={() => selectDate(today)}>Сегодня</button>
+     <div className="schedule-actions">
+       <span className="schedule-count">{query.isLoading ? 'Загружаем…' : workoutCountLabel(totalCount)}</span>
+       <button type="button" className="secondary schedule-today" disabled={selected === today} onClick={() => selectDate(today)}>Сегодня</button>
       <label className="schedule-jump" aria-label="Выбрать дату">📅<input type="date" value={selected} onChange={(event) => event.target.value && selectDate(localDate(event.target.value))} /></label>
     </div>
   }>
@@ -92,9 +102,10 @@ export function SchedulePage() {
               <span className="day-grid-event-name">{workout.clientName}</span>
             </Link>
           })}
-        </div>
-      </div>
-    </AsyncView>
+         </div>
+       </div>
+       <LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} />
+     </AsyncView>
   </Page>
 }
 
@@ -102,9 +113,15 @@ function statusLabel(status: string) { return status === 'planned' ? 'План' 
 
 export function ClientWorkoutsPage() {
   const { clientId = '' } = useParams()
-  const query = useQuery({ queryKey: ['workouts', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
-  const history = query.data ? splitClientWorkouts(query.data, todayLocalDate()).history : []
-  return <Page title="История тренировок" action={<Link className="button" to={`/workouts/new?client=${clientId}`}>Добавить</Link>}><AsyncView loading={query.isLoading} error={query.error} empty={!history.length} onRetry={() => void query.refetch()}><div className="cards">{history.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{workout.exercises.map((item) => item.name).join(', ') || 'Без упражнений'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>)}</div></AsyncView></Page>
+  const query = useInfiniteQuery({
+    queryKey: ['workouts', clientId],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => workoutsRepository.listPage(undefined, undefined, clientId, pageParam),
+    getNextPageParam: (page) => page.nextOffset,
+  })
+  const items = query.data?.pages.flatMap((page) => page.items) ?? []
+  const history = splitClientWorkouts(items, todayLocalDate()).history
+  return <Page title="История тренировок" action={<Link className="button" to={`/workouts/new?client=${clientId}`}>Добавить</Link>}><AsyncView loading={query.isLoading} error={query.error} empty={!history.length} onRetry={() => void query.refetch()}><div className="cards">{history.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{workout.exercises.map((item) => item.name).join(', ') || 'Без упражнений'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>)}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
 }
 
 export function WorkoutFormPage() {

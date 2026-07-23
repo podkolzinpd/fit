@@ -1,6 +1,8 @@
 import type { ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
+import type { WorkoutListRow } from '../database.types'
 import { clientsRepository } from './clients.repository'
+import { collectPages, pageFromLookahead } from './collect-pages'
 import { repositoryError } from './error'
 import { workoutQueries } from '../queries/workouts.queries'
 export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, splitClientWorkouts } from './workout-rules'
@@ -40,15 +42,63 @@ async function get(id: string): Promise<Workout> {
   }
 }
 
+function mapWorkout(row: WorkoutListRow): Workout {
+  return {
+    id: row.id,
+    clientId: row.client_id,
+    clientName: row.client_name,
+    workoutDate: localDate(row.workout_date),
+    startTime: row.start_time,
+    endTime: row.end_time,
+    status: row.status as WorkoutStatus,
+    notes: row.notes,
+    version: row.version,
+    exercises: row.exercises.map((exercise) => ({
+      id: exercise.id,
+      position: exercise.position,
+      source: exercise.exercise_source as 'system' | 'custom',
+      ref: exercise.exercise_ref,
+      customExerciseId: exercise.custom_exercise_id ?? undefined,
+      name: exercise.exercise_name,
+      muscleGroup: exercise.muscle_group as MuscleGroup,
+      inputKind: exercise.input_kind as InputKind,
+      sets: exercise.sets.map((set) => ({
+        id: set.id,
+        position: set.position,
+        weightKg: set.plan_weight_kg ?? undefined,
+        reps: set.plan_reps ?? undefined,
+        durationMin: set.plan_duration_min ?? undefined,
+        distanceKm: set.plan_distance_km ?? undefined,
+        fact: {
+          weightKg: set.fact_weight_kg ?? undefined,
+          reps: set.fact_reps ?? undefined,
+          durationMin: set.fact_duration_min ?? undefined,
+          distanceKm: set.fact_distance_km ?? undefined,
+        },
+        confirmedAt: set.confirmed_at,
+        version: set.version,
+      })),
+    })),
+  }
+}
+
+async function listPage(from?: string, to?: string, clientId?: string, offset = 0, pageSize = 50) {
+  const result = await workoutQueries.listPage(from, to, clientId, pageSize + 1, offset)
+  if (result.error) throw repositoryError(result.error)
+  return {
+    ...pageFromLookahead(result.data.map(mapWorkout), pageSize, offset),
+    totalCount: Number(result.data[0]?.total_count ?? 0),
+  }
+}
+
 export const workoutsRepository = {
   get,
+  listPage,
   async list(from?: string, to?: string, clientId?: string): Promise<Workout[]> {
-    const result = await workoutQueries.list(from, to, clientId)
-    if (result.error) throw repositoryError(result.error)
-    return Promise.all(result.data.map((row) => get(row.id)))
+    return collectPages((offset) => listPage(from, to, clientId, offset))
   },
   async listSummaries(clientId: string): Promise<WorkoutSummary[]> {
-    const result = await workoutQueries.list(undefined, undefined, clientId)
+    const result = await workoutQueries.listSummaries(clientId)
     if (result.error) throw repositoryError(result.error)
     return result.data.map((row) => ({
       id: row.id, workoutDate: localDate(row.workout_date), status: row.status as WorkoutStatus,
