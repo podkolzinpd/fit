@@ -72,6 +72,7 @@ test('schedule supports week/month navigation with URL state', async ({ page }) 
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Неделя' })).toHaveClass(/active/)
+  await expect(page.locator('.schedule-count')).toHaveText(/\d+ трениров/)
 
   // Switch to month → state goes into the URL.
   await page.getByRole('button', { name: 'Месяц' }).click()

@@ -69,7 +69,9 @@ p { margin: 6px 0 }
 .schedule-nav { display: flex; align-items: center; gap: 10px }
 .schedule-nav button { flex: 0 0 auto; width: 40px; height: 40px; padding: 0; font-size: 20px; line-height: 1 }
 .schedule-period { flex: 1; text-align: center; font-size: 15px }
-.schedule-controls .link { align-self: center }
+.schedule-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px }
+.schedule-count { padding: 5px 9px; border: 1px solid var(--border); border-radius: 99px; color: var(--muted); background: var(--surface-raised); font-size: 12px; white-space: nowrap }
+.schedule-controls .link { margin-left: auto }
 .exercise { border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin: 10px 0; background: var(--surface-raised) }
 .cards > .exercise { margin: 0 }
 .exercise header, .workout-title { display: flex; justify-content: space-between; align-items: center; gap: 12px }

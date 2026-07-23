@@ -15,6 +15,7 @@ import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { VoiceNoteField } from '../voice-input'
 import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
 import { createLiveSetCoordinator } from './live-set-coordinator'
+import { workoutCountLabel } from './workout-count-label'
 
 type ScheduleView = 'week' | 'month'
 
@@ -59,7 +60,10 @@ export function SchedulePage() {
         <strong className="schedule-period">{label}</strong>
         <button type="button" className="secondary" aria-label="Следующий период" onClick={() => shift(1)}>›</button>
       </div>
-      <button type="button" className="link" onClick={() => setPeriod(view, todayLocalDate())}>Сегодня</button>
+      <div className="schedule-meta">
+        <span className="schedule-count">{query.isLoading ? 'Загружаем…' : workoutCountLabel(query.data?.length ?? 0)}</span>
+        <button type="button" className="link" onClick={() => setPeriod(view, todayLocalDate())}>Сегодня</button>
+      </div>
     </div>
     <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}>
       <div className="timeline">{Object.entries(byDate).map(([date, workouts]) => <section key={date}><h2>{formatLocalDate(localDate(date))}</h2>{workouts?.map((workout) => <Link className="card" to={`/workouts/${workout.id}`} key={workout.id}><div><strong>{workout.startTime?.slice(0, 5) ?? 'Без времени'} · {workout.clientName}</strong><p>{workout.exercises.length} упражнений</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>)}</section>)}</div>
