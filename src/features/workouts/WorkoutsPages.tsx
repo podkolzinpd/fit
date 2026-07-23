@@ -3,8 +3,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { clientsRepository } from '../../data/repositories/clients.repository'
-import { chartUnitFor, copyWorkout, exerciseChartPoints, splitClientWorkouts, workoutDurationLabel, workoutsRepository } from '../../data/repositories/workouts.repository'
-import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
+import { chartUnitFor, copyWorkout, exerciseChartPoints, muscleGroupLabels, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -84,7 +83,7 @@ export function SchedulePage() {
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       <div className="day-grid-scroll" ref={scrollRef}>
         {untimed.length > 0 && <div className="day-untimed">{untimed.map((workout) => (
-          <Link key={workout.id} className="card" to={`/workouts/${workout.id}`}><div><strong>{workout.clientName}</strong><p>без времени</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
+          <Link key={workout.id} className="card" to={`/workouts/${workout.id}`}><div><strong>{workout.clientName}</strong><p>{muscleGroupLabels(workout).join(', ') || 'без времени'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
         ))}</div>}
         <div className="day-grid" style={{ height: HOURS.length * HOUR_HEIGHT }}>
           {HOURS.map((hour) => (
@@ -98,9 +97,11 @@ export function SchedulePage() {
             const endMin = workout.endTime ? minutesOf(workout.endTime.slice(0, 5)) : startMin + 60
             const top = (startMin / 60) * HOUR_HEIGHT
             const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 28)
+            const groups = muscleGroupLabels(workout).join(', ')
             return <Link key={workout.id} className={`day-grid-event ${workout.status}`} style={{ top, height }} to={`/workouts/${workout.id}`}>
               <span className="day-grid-event-time">{eventTime(workout)}</span>
               <span className="day-grid-event-name">{workout.clientName}</span>
+              {groups && <span className="day-grid-event-groups">{groups}</span>}
             </Link>
           })}
          </div>
@@ -122,7 +123,12 @@ export function ClientWorkoutsPage() {
   })
   const items = query.data?.pages.flatMap((page) => page.items) ?? []
   const history = splitClientWorkouts(items, todayLocalDate()).history
-  return <Page title="История тренировок" back={`/clients/${clientId}`} action={<Link className="button" to={`/workouts/new?client=${clientId}`}>Добавить</Link>}><AsyncView loading={query.isLoading} error={query.error} empty={!history.length} onRetry={() => void query.refetch()}><div className="cards">{history.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{muscleGroupLabels(workout).join(', ') || 'Без упражнений'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>)}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
+  return <Page title="История тренировок" back={`/clients/${clientId}`} action={<Link className="button" to={`/workouts/new?client=${clientId}`}>Добавить</Link>}><AsyncView loading={query.isLoading} error={query.error} empty={!history.length} onRetry={() => void query.refetch()}><div className="cards">{history.map((workout) => {
+    const duration = workoutDurationLabel(workout.startedAt, workout.completedAt)
+    const tonnage = workoutTonnage(workout)
+    const meta = workout.status === 'done' ? [duration, tonnage > 0 ? tonnageLabel(tonnage) : null].filter(Boolean).join(' · ') : ''
+    return <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{muscleGroupLabels(workout).join(', ') || 'Без упражнений'}</p>{meta && <p className="card-meta">{meta}</p>}</div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
+  })}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
 }
 
 export function WorkoutFormPage() {
@@ -174,6 +180,7 @@ export function WorkoutDetailPage() {
   const done = workout?.status === 'done'
   const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt) : null
   const groups = workout ? muscleGroupLabels(workout) : []
+  const tonnage = workout ? workoutTonnage(workout) : 0
   // Явный путь назад (история тренировок клиента), а не -1 по истории браузера:
   // -1 создавал петлю тренировка ↔ история упражнения после захода в аналитику.
   const backTo = workout ? `/clients/${workout.clientId}/workouts` : undefined
@@ -183,8 +190,11 @@ export function WorkoutDetailPage() {
         <div><h2>{workout.clientName}</h2><p>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</p></div>
         <span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span>
       </section>
-      {done && <section className="summary done-summary">
-        <div><span>Время по таймеру</span><strong>{duration ?? '—'}</strong></div>
+      {workout.status === 'planned' && <button className="wide" onClick={() => start.mutate()}>Начать тренировку</button>}
+      {workout.status === 'in_progress' && <Link className="button wide" to={`/workouts/${workoutId}/live`}>Продолжить тренировку</Link>}
+      {done && <section className="summary done-summary done-summary-3">
+        <div><span>Время</span><strong>{duration ?? '—'}</strong></div>
+        <div><span>Тоннаж</span><strong>{tonnageLabel(tonnage)}</strong></div>
         <div><span>Группы мышц</span><strong>{groups.length ? groups.join(', ') : '—'}</strong></div>
       </section>}
       <div className="cards">{workout.exercises.map((exercise) => <article className="exercise" key={exercise.id}>
@@ -193,8 +203,6 @@ export function WorkoutDetailPage() {
       </article>)}</div>
       {workout.notes && <p>{workout.notes}</p>}
       <div className="actions">
-        {workout.status === 'planned' && <button onClick={() => start.mutate()}>Начать</button>}
-        {workout.status === 'in_progress' && <Link className="button" to={`/workouts/${workoutId}/live`}>Продолжить</Link>}
         {workout.status === 'planned' && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>Изменить</Link>}
         <Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link>
       </div>
@@ -216,16 +224,6 @@ function formatFactSet(set: WorkoutSet) {
   return parts.join(' × ') || 'Без результата'
 }
 
-// Ordered, de-duplicated muscle-group labels for a workout's exercises.
-function muscleGroupLabels(workout: Workout): string[] {
-  const seen = new Set<string>()
-  const labels: string[] = []
-  for (const exercise of workout.exercises) {
-    const label = MUSCLE_GROUP_LABELS[exercise.muscleGroup]
-    if (!seen.has(label)) { seen.add(label); labels.push(label) }
-  }
-  return labels
-}
 
 function LiveSetFields({ inputKind, set }: { inputKind: ExerciseSnapshot['inputKind']; set: WorkoutSet }) {
   if (inputKind === 'strength') return <div className="set-row"><input aria-label="Фактический вес" name="weightKg" type="number" min="0" step="0.5" defaultValue={set.fact.weightKg} placeholder={set.weightKg === undefined ? 'кг' : `${set.weightKg} кг`} /><input aria-label="Фактические повторы" name="reps" type="number" min="0" defaultValue={set.fact.reps} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
@@ -323,7 +321,7 @@ export function LiveWorkoutPage() {
   const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? finish.error
   return <Page title="Live-тренировка" action={<WorkoutTimer startedAt={query.data?.startedAt ?? null} />}>
     <AsyncView loading={query.isLoading} error={query.error}>{query.data && <>
-      <p>{query.data.clientName} · черновик сохраняется отдельно от плана</p>
+      <p>{query.data.clientName}</p>
       {restRemaining !== null && <div className="rest-timer">
         <strong>Отдых {formatRest(restRemaining)}</strong>
         <div className="rest-controls">
