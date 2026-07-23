@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  addDays, addMonths, endOfMonth, endOfWeek, formatLocalDate, formatMonth,
+  addDays, addMonths, endOfMonth, endOfWeek, formatLocalDate, formatLocalDateShort, formatMonth,
   localDate, startOfMonth, startOfWeek, todayLocalDate,
 } from './local-date'
 
@@ -15,6 +15,10 @@ describe('LocalDate', () => {
 
   it('форматирует локально', () => {
     expect(formatLocalDate(localDate('2026-07-21'))).toContain('2026')
+  })
+
+  it('форматирует кратко в числовом виде', () => {
+    expect(formatLocalDateShort(localDate('2026-07-05'))).toBe('05.07.2026')
   })
 })
 

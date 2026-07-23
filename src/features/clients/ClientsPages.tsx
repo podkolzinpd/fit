@@ -5,7 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { computeClientStats, splitClientWorkouts, workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { Client, Gender } from '../../shared/domain'
-import { formatLocalDate, todayLocalDate } from '../../shared/local-date'
+import { formatLocalDate, formatLocalDateShort, todayLocalDate } from '../../shared/local-date'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { clientSchema } from '../../shared/validation'
 import { VoiceNoteField } from '../voice-input'
@@ -73,7 +73,7 @@ export function ClientDetailPage() {
   const { clientId = '' } = useParams(); const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
   const stats = useQuery({ queryKey: ['client-stats', clientId], queryFn: async () => computeClientStats(await workoutsRepository.listSummaries(clientId), todayLocalDate()) })
-  const workouts = useQuery({ queryKey: ['workouts', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
+  const workouts = useQuery({ queryKey: ['workouts', clientId, 'upcoming'], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
   const upcoming = workouts.data ? splitClientWorkouts(workouts.data, todayLocalDate()).upcoming : []
   const archive = useMutation({ mutationFn: (client: Client) => clientsRepository.setArchived(client, !client.archivedAt), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); await query.refetch() } })
   return <Page title={query.data?.fullName ?? 'Клиент'} center back="/clients" action={query.data && <Link className="button secondary" to={`/clients/${clientId}/edit`}>Изменить</Link>}>
@@ -84,7 +84,7 @@ export function ClientDetailPage() {
         <section className="summary stats stats-3">
           <div><span>Тренировок</span><strong>{stats.data.doneCount}</strong></div>
           <div><span>Выполнено</span><strong>{stats.data.completionPercent === null ? '—' : `${stats.data.completionPercent}%`}</strong></div>
-          <div><span>Последняя</span><strong>{stats.data.lastWorkoutDate ? formatLocalDate(stats.data.lastWorkoutDate) : '—'}</strong></div>
+          <div><span>Последняя</span><strong>{stats.data.lastWorkoutDate ? formatLocalDateShort(stats.data.lastWorkoutDate) : '—'}</strong></div>
         </section>
       </>}
       <div className="client-actions">
