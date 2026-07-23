@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { InputKind, Workout, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { canTransition, chartUnitFor, computeClientStats, copyWorkout, exerciseChartPoints, splitClientWorkouts } from './workout-rules'
+import { canTransition, chartUnitFor, computeClientStats, copyWorkout, exerciseChartPoints, splitClientWorkouts, workoutDurationLabel } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -10,7 +10,7 @@ function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary
 function bareWorkout(date: string, status: WorkoutStatus): Workout {
   return {
     id: date + status, clientId: 'c1', clientName: 'Клиент', workoutDate: localDate(date),
-    startTime: null, endTime: null, status, notes: null, version: 1, exercises: [],
+    startTime: null, endTime: null, startedAt: null, completedAt: null, status, notes: null, version: 1, exercises: [],
   }
 }
 
@@ -26,7 +26,7 @@ describe('workouts repository rules', () => {
   it('копирует план без факта и идентификаторов', () => {
     const source: Workout = {
       id: 'w1', clientId: 'c1', clientName: 'Анна', workoutDate: localDate('2026-07-21'),
-      startTime: null, endTime: null, status: 'done', notes: null, version: 3,
+      startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'done', notes: null, version: 3,
       exercises: [{ id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0,
         sets: [{ id: 's1', position: 0, weightKg: 50, reps: 10, fact: { weightKg: 55, reps: 9 }, confirmedAt: 'now', version: 2 }] }],
     }
@@ -99,7 +99,7 @@ function planSet(weightKg: number, position = 0): WorkoutSet {
 function workoutWith(date: string, ref: string, inputKind: InputKind, sets: WorkoutSet[]): Workout {
   return {
     id: `w-${date}`, clientId: 'c1', clientName: 'Клиент', workoutDate: localDate(date),
-    startTime: null, endTime: null, status: 'done', notes: null, version: 1,
+    startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'done', notes: null, version: 1,
     exercises: [{ id: `e-${date}`, source: 'system', ref, name: ref, muscleGroup: 'legs', inputKind, position: 0, sets }],
   }
 }
@@ -155,6 +155,20 @@ describe('exerciseChartPoints', () => {
     const planned = workoutWith('2026-07-20', 'squat', 'strength', [set({ weightKg: 80 })])
     planned.status = 'planned'
     expect(exerciseChartPoints([planned], 'squat')).toEqual([])
+  })
+})
+
+describe('workoutDurationLabel', () => {
+  it('форматирует минуты', () => {
+    expect(workoutDurationLabel('2026-07-22T10:00:00Z', '2026-07-22T10:42:00Z')).toBe('42 мин')
+  })
+  it('форматирует часы и минуты', () => {
+    expect(workoutDurationLabel('2026-07-22T10:00:00Z', '2026-07-22T11:05:00Z')).toBe('1 ч 05 мин')
+  })
+  it('возвращает null без меток или при неположительной длительности', () => {
+    expect(workoutDurationLabel(null, '2026-07-22T11:00:00Z')).toBeNull()
+    expect(workoutDurationLabel('2026-07-22T11:00:00Z', null)).toBeNull()
+    expect(workoutDurationLabel('2026-07-22T11:00:00Z', '2026-07-22T11:00:00Z')).toBeNull()
   })
 })
 

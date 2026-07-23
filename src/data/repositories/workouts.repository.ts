@@ -3,7 +3,7 @@ import { localDate } from '../../shared/local-date'
 import { clientsRepository } from './clients.repository'
 import { repositoryError } from './error'
 import { workoutQueries } from '../queries/workouts.queries'
-export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, splitClientWorkouts } from './workout-rules'
+export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, splitClientWorkouts, workoutDurationLabel } from './workout-rules'
 export type { ExerciseChartPoint } from './workout-rules'
 
 async function get(id: string): Promise<Workout> {
@@ -35,7 +35,8 @@ async function get(id: string): Promise<Workout> {
   return {
     id: root.data.id, clientId: root.data.client_id, clientName: client.fullName,
     workoutDate: localDate(root.data.workout_date), startTime: root.data.start_time,
-    endTime: root.data.end_time, status: root.data.status as Workout['status'], notes: root.data.notes,
+    endTime: root.data.end_time, startedAt: root.data.started_at ?? null, completedAt: root.data.completed_at ?? null,
+    status: root.data.status as Workout['status'], notes: root.data.notes,
     version: root.data.version, exercises: mappedExercises,
   }
 }

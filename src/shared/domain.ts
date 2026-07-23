@@ -105,6 +105,8 @@ export interface Workout {
   workoutDate: LocalDate
   startTime: string | null
   endTime: string | null
+  startedAt: string | null
+  completedAt: string | null
   status: WorkoutStatus
   notes: string | null
   version: number
