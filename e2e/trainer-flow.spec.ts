@@ -62,6 +62,18 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.summary.stats')).toContainText('1')
   await expect(page.locator('.summary.stats')).toContainText('100%')
 
+  // История и карточка используют один префикс ключа кэша, но разной формы —
+  // переход туда-обратно не должен ронять приложение (регресс e.filter).
+  await page.getByRole('link', { name: 'История', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'История тренировок' })).toBeVisible()
+  await expect(page.locator('.card').first()).toBeVisible()
+  await page.locator('.card').first().click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await page.locator('.page-back').click()
+  await expect(page.getByRole('heading', { name: 'История тренировок' })).toBeVisible()
+  await page.locator('.page-back').click()
+  await expect(page.locator('.summary.stats')).toContainText('100%')
+
   await page.getByRole('link', { name: 'Замеры и аналитика' }).click()
   await page.getByLabel('Дата').fill('2026-07-20')
   await page.getByLabel('Вес, кг').fill('61')
