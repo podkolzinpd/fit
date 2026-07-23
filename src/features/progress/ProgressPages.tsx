@@ -1,13 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useAuth } from '../../app/auth-context'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { progressRepository } from '../../data/repositories/progress.repository'
 import type { CustomMetric, ProgressEntry } from '../../shared/domain'
-import { formatLocalDate, localDate, todayLocalDate } from '../../shared/local-date'
+import { formatLocalDate, localDate, type LocalDate, todayLocalDate } from '../../shared/local-date'
 import { AsyncView, Field, Page } from '../../shared/ui'
+import { ProgressChart, type MetricKey } from './ProgressChart'
+
+const METRIC_TABS: Array<{ key: MetricKey; label: string; unit: string }> = [
+  { key: 'weightKg', label: 'Вес', unit: 'кг' },
+  { key: 'chestCm', label: 'Грудь', unit: 'см' },
+  { key: 'waistCm', label: 'Талия', unit: 'см' },
+  { key: 'hipCm', label: 'Бёдра', unit: 'см' },
+]
 
 export function AnalyticsPage() {
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
@@ -16,6 +23,9 @@ export function AnalyticsPage() {
 
 export function ProgressPage() {
   const { clientId = '' } = useParams(); const queryClient = useQueryClient(); const { actor } = useAuth(); const [editing, setEditing] = useState<ProgressEntry | null>(null)
+  const [selectedMetric, setSelectedMetric] = useState<MetricKey>('weightKg')
+  const [windowEnd, setWindowEnd] = useState<LocalDate | null>(null)
+  useEffect(() => { setSelectedMetric('weightKg'); setWindowEnd(null) }, [clientId])
   const client = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
   const entries = useQuery({ queryKey: ['progress', clientId], queryFn: () => progressRepository.list(clientId) })
   const metrics = useQuery({ queryKey: ['metrics', clientId], queryFn: () => progressRepository.listMetrics(clientId) })
@@ -24,9 +34,12 @@ export function ProgressPage() {
   const createMetric = useMutation({ mutationFn: ({ name, unit }: { name: string; unit: string | null }) => progressRepository.createMetric(actor!.userId, clientId, name, unit), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }) })
   const archiveMetric = useMutation({ mutationFn: (metric: CustomMetric) => progressRepository.setMetricArchived(metric, !metric.archivedAt), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }) })
   const loading = client.isLoading || entries.isLoading || metrics.isLoading; const error = client.error ?? entries.error ?? metrics.error
-  const chart = [...(entries.data ?? [])].reverse().filter((entry) => entry.weightKg).map((entry) => ({ date: entry.recordedOn.slice(5), weight: entry.weightKg }))
+  const activeTab = METRIC_TABS.find((tab) => tab.key === selectedMetric) ?? METRIC_TABS[0]
   return <Page title={client.data ? `Прогресс · ${client.data.fullName}` : 'Прогресс'}><AsyncView loading={loading} error={error}>{client.data && <>
-    {chart.length > 1 && <section className="chart"><h2>Вес</h2><ResponsiveContainer width="100%" height={220}><LineChart data={chart}><XAxis dataKey="date" /><YAxis domain={['dataMin - 2', 'dataMax + 2']} /><Tooltip /><Line type="monotone" dataKey="weight" stroke="#735cff" strokeWidth={3} /></LineChart></ResponsiveContainer></section>}
+    {entries.data && entries.data.length > 0 && <>
+      <div className="metric-tabs">{METRIC_TABS.map((tab) => <button key={tab.key} type="button" className={`metric-tab${tab.key === selectedMetric ? ' active' : ''}`} onClick={() => setSelectedMetric(tab.key)}>{tab.label}</button>)}</div>
+      <ProgressChart entries={entries.data} metric={activeTab.key} label={activeTab.label} unit={activeTab.unit} windowEnd={windowEnd} onWindowChange={setWindowEnd} />
+    </>}
     <ProgressForm key={editing?.id ?? 'new'} entry={editing} metrics={metrics.data ?? []} busy={save.isPending} error={save.error} onSubmit={(form) => save.mutate(form)} onCancel={editing ? () => setEditing(null) : undefined} />
     <section><h2>История замеров</h2>{entries.data?.map((entry) => <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{[entry.weightKg && `${entry.weightKg} кг`, entry.chestCm && `грудь ${entry.chestCm}`, entry.waistCm && `талия ${entry.waistCm}`, entry.hipCm && `бёдра ${entry.hipCm}`].filter(Boolean).join(' · ')}</p></div><div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" onClick={() => remove.mutate(entry)}>Удалить</button></div></article>)}</section>
     <MetricsManager metrics={metrics.data ?? []} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />
