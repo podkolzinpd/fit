@@ -31,12 +31,12 @@ describe('date arithmetic', () => {
     expect(addMonths(localDate('2026-12-15'), 1)).toBe('2027-01-15')
   })
 
-  it('startOfWeek/endOfWeek — неделя с понедельника', () => {
-    // 2026-07-22 — среда
-    expect(startOfWeek(localDate('2026-07-22'))).toBe('2026-07-20')
-    expect(endOfWeek(localDate('2026-07-22'))).toBe('2026-07-26')
-    // воскресенье относится к своей неделе, а не к следующей
-    expect(startOfWeek(localDate('2026-07-26'))).toBe('2026-07-20')
+  it('startOfWeek/endOfWeek — неделя с воскресенья', () => {
+    // 2026-07-22 — среда, неделя ВС 19 .. СБ 25
+    expect(startOfWeek(localDate('2026-07-22'))).toBe('2026-07-19')
+    expect(endOfWeek(localDate('2026-07-22'))).toBe('2026-07-25')
+    // воскресенье — начало своей недели
+    expect(startOfWeek(localDate('2026-07-19'))).toBe('2026-07-19')
   })
 
   it('startOfMonth/endOfMonth', () => {
