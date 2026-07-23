@@ -51,8 +51,11 @@ export function SchedulePage() {
     scrollRef.current.scrollTop = (Math.min(firstStart, 7 * 60) / 60) * HOUR_HEIGHT
   }, [query.isLoading, selected])
 
-  return <Page title="Расписание" action={
-    <label className="schedule-jump" aria-label="Выбрать дату">📅<input type="date" value={selected} onChange={(event) => event.target.value && selectDate(localDate(event.target.value))} /></label>
+  return <Page className="schedule-page" title="Расписание" action={
+    <div className="schedule-actions">
+      {selected !== today && <button type="button" className="secondary schedule-today" onClick={() => selectDate(today)}>Сегодня</button>}
+      <label className="schedule-jump" aria-label="Выбрать дату">📅<input type="date" value={selected} onChange={(event) => event.target.value && selectDate(localDate(event.target.value))} /></label>
+    </div>
   }>
     <div className="week-nav">
       <button type="button" className="secondary week-arrow" aria-label="Предыдущая неделя" onClick={() => shiftWeek(-1)}>‹</button>

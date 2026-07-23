@@ -85,4 +85,9 @@ test('schedule shows week strip and hour grid with day/week navigation', async (
   const firstDayBefore = await page.locator('.week-day .day-num').first().innerText()
   await page.getByRole('button', { name: 'Следующая неделя' }).click()
   await expect(page.locator('.week-day .day-num').first()).not.toHaveText(firstDayBefore)
+
+  // «Сегодня» появляется вне текущей недели и возвращает обратно.
+  await page.getByRole('button', { name: 'Сегодня' }).click()
+  await expect(page.locator('.week-day .day-num').first()).toHaveText(firstDayBefore)
+  await expect(page.getByRole('button', { name: 'Сегодня' })).toHaveCount(0)
 })

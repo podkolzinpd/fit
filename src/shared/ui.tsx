@@ -1,7 +1,7 @@
 import type { PropsWithChildren, ReactNode } from 'react'
 
-export function Page({ title, action, children }: PropsWithChildren<{ title: string; action?: ReactNode }>) {
-  return <main className="page"><header className="page-header"><h1>{title}</h1>{action}</header>{children}</main>
+export function Page({ title, action, className, children }: PropsWithChildren<{ title: string; action?: ReactNode; className?: string }>) {
+  return <main className={className ? `page ${className}` : 'page'}><header className="page-header"><h1>{title}</h1>{action}</header>{children}</main>
 }
 
 export function AsyncView({ loading, error, empty, onRetry, children }: PropsWithChildren<{
