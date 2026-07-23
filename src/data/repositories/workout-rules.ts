@@ -1,6 +1,10 @@
-import type { ClientStats, WorkoutSummary } from '../../shared/domain'
-import type { Workout, WorkoutDraft } from '../../shared/domain'
+import type { ClientStats, InputKind, Workout, WorkoutDraft, WorkoutSummary } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
+
+export interface ExerciseChartPoint {
+  date: LocalDate
+  value: number
+}
 
 const ATTENTION_DAYS = 14
 
@@ -33,6 +37,35 @@ export function computeClientStats(summaries: WorkoutSummary[], today: LocalDate
   const needsAttention = lastWorkoutDate !== null && daysBetween(lastWorkoutDate, today) >= ATTENTION_DAYS
 
   return { doneCount: done.length, completionPercent, lastWorkoutDate, daysInWork, needsAttention }
+}
+
+export function chartUnitFor(inputKind: InputKind): string {
+  if (inputKind === 'distance') return 'км'
+  if (inputKind === 'reps') return 'повт.'
+  return 'кг'
+}
+
+function factMetric(inputKind: InputKind, fact: { weightKg?: number; distanceKm?: number; reps?: number }): number | undefined {
+  if (inputKind === 'distance') return fact.distanceKm
+  if (inputKind === 'reps') return fact.reps
+  return fact.weightKg
+}
+
+// Best actual result per workout for one exercise, oldest first, for the
+// progression chart. Workouts without recorded facts are skipped.
+export function exerciseChartPoints(workouts: Workout[], exerciseRef: string): ExerciseChartPoint[] {
+  return workouts
+    .map((workout) => {
+      const exercise = workout.exercises.find((item) => item.ref === exerciseRef)
+      if (!exercise) return null
+      const values = exercise.sets
+        .map((set) => factMetric(exercise.inputKind, set.fact))
+        .filter((value): value is number => value !== undefined)
+      if (values.length === 0) return null
+      return { date: workout.workoutDate, value: Math.max(...values) }
+    })
+    .filter((point): point is ExerciseChartPoint => point !== null)
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
 }
 
 export function copyWorkout(source: Workout, workoutDate = source.workoutDate): WorkoutDraft {

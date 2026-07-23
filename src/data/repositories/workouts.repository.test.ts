@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Workout, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { canTransition, computeClientStats, copyWorkout } from './workout-rules'
+import type { InputKind, Workout, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
+import { canTransition, computeClientStats, copyWorkout, exerciseChartPoints } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -78,5 +78,48 @@ describe('computeClientStats', () => {
   it('не помечает вниманием при недавней тренировке', () => {
     const stats = computeClientStats([summary('2026-07-18', 'done')], TODAY)
     expect(stats.needsAttention).toBe(false)
+  })
+})
+
+function set(fact: WorkoutSet['fact'], position = 0): WorkoutSet {
+  return { id: `s${position}`, position, fact, confirmedAt: 'now', version: 1 }
+}
+
+function workoutWith(date: string, ref: string, inputKind: InputKind, sets: WorkoutSet[]): Workout {
+  return {
+    id: `w-${date}`, clientId: 'c1', clientName: 'Клиент', workoutDate: localDate(date),
+    startTime: null, endTime: null, status: 'done', notes: null, version: 1,
+    exercises: [{ id: `e-${date}`, source: 'system', ref, name: ref, muscleGroup: 'legs', inputKind, position: 0, sets }],
+  }
+}
+
+describe('exerciseChartPoints', () => {
+  it('берёт максимальный фактический вес за тренировку, сортирует по дате', () => {
+    const workouts = [
+      workoutWith('2026-07-18', 'squat', 'strength', [set({ weightKg: 60 }), set({ weightKg: 65 }, 1)]),
+      workoutWith('2026-07-05', 'squat', 'strength', [set({ weightKg: 50 }), set({ weightKg: 55 }, 1)]),
+    ]
+    expect(exerciseChartPoints(workouts, 'squat')).toEqual([
+      { date: '2026-07-05', value: 55 },
+      { date: '2026-07-18', value: 65 },
+    ])
+  })
+
+  it('использует дистанцию для distance-упражнений', () => {
+    const workouts = [workoutWith('2026-07-10', 'run', 'distance', [set({ distanceKm: 5, durationMin: 30 })])]
+    expect(exerciseChartPoints(workouts, 'run')).toEqual([{ date: '2026-07-10', value: 5 }])
+  })
+
+  it('использует повторы для reps-упражнений', () => {
+    const workouts = [workoutWith('2026-07-10', 'burpee', 'reps', [set({ reps: 40, durationMin: 5 })])]
+    expect(exerciseChartPoints(workouts, 'burpee')).toEqual([{ date: '2026-07-10', value: 40 }])
+  })
+
+  it('пропускает тренировки без фактических данных', () => {
+    const workouts = [
+      workoutWith('2026-07-05', 'squat', 'strength', [set({ weightKg: 50 })]),
+      workoutWith('2026-07-12', 'squat', 'strength', [set({})]),
+    ]
+    expect(exerciseChartPoints(workouts, 'squat')).toEqual([{ date: '2026-07-05', value: 50 }])
   })
 })
