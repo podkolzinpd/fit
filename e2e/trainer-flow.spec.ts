@@ -72,6 +72,12 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.card').first()).toBeVisible()
   await page.locator('.card').first().click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  // Заходим в аналитику упражнения и возвращаемся: «назад» с тренировки не должен
+  // пинг-понгить обратно в историю упражнения (регресс петли навигации).
+  await page.locator('.exercise-name-link').first().click()
+  await expect(page.getByRole('heading', { name: 'История упражнения' })).toBeVisible()
+  await page.locator('.page-back').click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await page.locator('.page-back').click()
   await expect(page.getByRole('heading', { name: 'История тренировок' })).toBeVisible()
   await page.locator('.page-back').click()
