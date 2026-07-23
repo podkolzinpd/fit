@@ -105,10 +105,26 @@ export interface Workout {
   workoutDate: LocalDate
   startTime: string | null
   endTime: string | null
+  startedAt: string | null
+  completedAt: string | null
   status: WorkoutStatus
   notes: string | null
   version: number
   exercises: WorkoutExercise[]
+}
+
+export interface WorkoutSummary {
+  id: UUID
+  workoutDate: LocalDate
+  status: WorkoutStatus
+}
+
+export interface ClientStats {
+  doneCount: number
+  completionPercent: number | null
+  lastWorkoutDate: LocalDate | null
+  daysInWork: number | null
+  needsAttention: boolean
 }
 
 export interface CustomMetric {

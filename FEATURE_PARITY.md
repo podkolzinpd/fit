@@ -6,13 +6,14 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 |---|---|---|
 | Auth | Email/password без confirmation для MVP, Google OAuth, session restore, logout, password reset | Implemented; production Google smoke passed, reset SMTP pending |
 | Profile | Просмотр и изменение имени, корректный Cancel | Partial: edit/logout ready, Cancel UX pending |
-| Clients | List/empty/error/retry, create, detail, edit, archive/restore | Implemented; core E2E + RLS ready |
+| Clients | List/empty/error/retry, create, detail, edit, archive/restore | Implemented; aggregate list uses one tenant-scoped RPC; core E2E + RLS ready |
+| Client stats | Сводка на карточке: количество выполненных, % выполнения, дата последней тренировки, дней в работе (от первой тренировки), индикатор «требует внимания» при 14+ днях без тренировки | Implemented: pure aggregation covered unit + E2E |
 | Exercises | System search/filter; custom create/edit/archive/restore | Implemented: complete catalog and shared picker covered; management E2E pending |
 | Workout | Create/view/edit/correct/copy/delete, strength/distance/reps, atomic save | Implemented: multi-set plan and load correction covered; wider acceptance pending |
 | Voice notes | Browser-only Russian transcription into editable workout and client trainer notes; manual input remains available | Prototype: local whisper.cpp WASM ready; real-device acceptance pending |
-| Schedule | Week/month/local date, timed/untimed, open workout/back | Partial: grouped schedule ready, week/month controls pending |
-| Live | Start, autosave, confirm, rest, append, resume, partial finish | Implemented: rest and transactional append covered; wider resume acceptance pending |
-| History | Done workouts only, set list and max-value chart | Partial: done set list ready, max chart pending |
+| Schedule | Week/month/local date, timed/untimed, open workout/back | Implemented: недельная лента дней + часовая сетка на день (timed по времени, untimed отдельно), закреплённая шапка с прокруткой только сетки, автоскролл к 07:00/первой тренировке, кнопка «Сегодня», выбор дня и недели в URL, календарь-переход к дате; covered unit + E2E |
+| Live | Start, autosave, confirm, rest, append, resume, partial finish | Implemented: rest, transactional append and non-retryable optimistic conflicts covered; wider resume acceptance pending |
+| History | Done workouts only, set list and max-value chart | Implemented: set list and max-value progression chart (по типу упражнения) covered unit; broader visual pending |
 | Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; broader visual/E2E matrix pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; acceptance matrix pending |
 
@@ -27,5 +28,5 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - Picker одинаково используется в плане и live: поиск без учёта регистра, фильтр по семи категориям, empty/loading/error/retry и создание своего упражнения.
 - Силовой подход хранит вес и повторы; distance — время и дистанцию; cardio reps — время и повторы.
 - План поддерживает несколько подходов, удаление, сброс значений и изменение веса на ±5% с округлением до 2,5 кг.
-- Live поддерживает добавление подхода и упражнения отдельными транзакционными RPC, autosave факта, подтверждение, отдых 90 секунд и частичное завершение с предупреждением.
+- Live поддерживает добавление подхода и упражнения отдельными транзакционными RPC, autosave факта, подтверждение, отдых 90 секунд и частичное завершение с предупреждением. Таймер отдыха считается от абсолютной метки времени и остаётся корректным при сворачивании вкладки.
 - Обязательные проверки: уникальность полного каталога, component search/filter/create, RPC rollback/cross-tenant, mobile visual snapshot и E2E plan → multi-set → live append → partial finish.

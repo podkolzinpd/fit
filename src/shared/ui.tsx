@@ -1,7 +1,19 @@
 import type { PropsWithChildren, ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 
-export function Page({ title, action, children }: PropsWithChildren<{ title: string; action?: ReactNode }>) {
-  return <main className="page"><header className="page-header"><h1>{title}</h1>{action}</header>{children}</main>
+export function Page({ title, action, back, center, className, children }: PropsWithChildren<{
+  title: string; action?: ReactNode; back?: string | number; center?: boolean; className?: string
+}>) {
+  const navigate = useNavigate()
+  const classes = ['page', center ? 'page-center' : '', className].filter(Boolean).join(' ')
+  return <main className={classes}>
+    <header className="page-header">
+      {back !== undefined && <button type="button" className="page-back" aria-label="Назад" onClick={() => navigate(back as never)}>←</button>}
+      <h1>{title}</h1>
+      {action}
+    </header>
+    {children}
+  </main>
 }
 
 export function AsyncView({ loading, error, empty, onRetry, children }: PropsWithChildren<{

@@ -2,16 +2,17 @@ import type { ExerciseSnapshot, LiveSetDraft, WorkoutDraft } from '../../shared/
 import { supabase } from './client'
 import { toJson } from './json'
 
-const rootColumns = 'id,client_id,workout_date,start_time,end_time,status,notes,version'
+const rootColumns = 'id,client_id,workout_date,start_time,end_time,started_at,completed_at,status,notes,version'
 
 export const workoutQueries = {
-  list: (from?: string, to?: string, clientId?: string) => {
-    let query = supabase.from('workouts').select(rootColumns).is('deleted_at', null).order('workout_date').order('start_time')
-    if (from) query = query.gte('workout_date', from)
-    if (to) query = query.lte('workout_date', to)
-    if (clientId) query = query.eq('client_id', clientId)
-    return query
-  },
+  listPage: (from: string | undefined, to: string | undefined, clientId: string | undefined, limit: number, offset: number) => supabase.rpc('list_workouts', {
+    p_from: from ?? null,
+    p_to: to ?? null,
+    p_client_id: clientId ?? null,
+    p_limit: limit,
+    p_offset: offset,
+  }),
+  listSummaries: (clientId: string) => supabase.rpc('list_workout_summaries', { p_client_id: clientId }),
   getRoot: (id: string) => supabase.from('workouts').select(rootColumns).eq('id', id).is('deleted_at', null).single(),
   getExercises: (id: string) => supabase.from('workout_exercises')
     .select('id,position,exercise_source,exercise_ref,custom_exercise_id,exercise_name,muscle_group,input_kind')

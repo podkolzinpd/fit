@@ -4,6 +4,16 @@ import { clientQueries } from '../queries/clients.queries'
 import { repositoryError } from './error'
 
 type ClientRow = Awaited<ReturnType<typeof clientQueries.get>>['data']
+type ClientListRow = NonNullable<Awaited<ReturnType<typeof clientQueries.list>>['data']>[number]
+
+function fromListRow(row: ClientListRow): Client {
+  return {
+    id: row.id, fullName: row.full_name, gender: row.gender as Gender,
+    ageYears: row.age_years, ageUpdatedAt: localDate(row.age_updated_at), heightCm: Number(row.height_cm),
+    goal: row.goal, note: row.note, currentWeightKg: row.current_weight_kg === null ? null : Number(row.current_weight_kg),
+    archivedAt: row.archived_at, version: row.version,
+  }
+}
 
 async function enrich(row: NonNullable<ClientRow>): Promise<Client> {
   const [note, weight] = await Promise.all([clientQueries.getNote(row.id), clientQueries.getLatestWeight(row.id)])
@@ -21,7 +31,7 @@ export const clientsRepository = {
   async list(includeArchived = false): Promise<Client[]> {
     const result = await clientQueries.list(includeArchived)
     if (result.error) throw repositoryError(result.error)
-    return Promise.all(result.data.map(enrich))
+    return result.data.map(fromListRow)
   },
   async get(id: string): Promise<Client> {
     const result = await clientQueries.get(id)
