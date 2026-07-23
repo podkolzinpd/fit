@@ -27,6 +27,13 @@ export function formatLocalDate(value: LocalDate, locale = 'ru-RU'): string {
     .format(new Date(year ?? 0, (month ?? 1) - 1, day))
 }
 
+// Compact numeric date (e.g. 23.07.2026) for tight spots like stat tiles.
+export function formatLocalDateShort(value: LocalDate, locale = 'ru-RU'): string {
+  const [year, month, day] = value.split('-').map(Number)
+  return new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
+    .format(new Date(year ?? 0, (month ?? 1) - 1, day))
+}
+
 function parts(value: LocalDate): [number, number, number] {
   const [year, month, day] = value.split('-').map(Number)
   return [year ?? 0, month ?? 1, day ?? 1]
