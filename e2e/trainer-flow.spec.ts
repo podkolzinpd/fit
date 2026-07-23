@@ -56,6 +56,9 @@ test('trainer can create client, complete workout and save progress', async ({ p
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   await expect(page.getByText('Готово', { exact: true })).toBeVisible()
+  // Завершённая тренировка показывает фактический результат (вес × повторы),
+  // а не только название упражнения.
+  await expect(page.getByText(/42\.5 кг × 9 повт\./)).toBeVisible()
 
   await page.goto(clientUrl)
   await expect(page.getByText('Тренировок', { exact: true })).toBeVisible()

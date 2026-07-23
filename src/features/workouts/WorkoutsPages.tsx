@@ -184,9 +184,10 @@ export function WorkoutDetailPage() {
         <div><span>Время по таймеру</span><strong>{duration ?? '—'}</strong></div>
         <div><span>Группы мышц</span><strong>{groups.length ? groups.join(', ') : '—'}</strong></div>
       </section>}
-      {done
-        ? <div className="cards">{workout.exercises.map((exercise) => <Link className="exercise-name-link exercise" key={exercise.id} to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>)}</div>
-        : <div className="cards">{workout.exercises.map((exercise) => <article className="exercise" key={exercise.id}><Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>{exercise.sets.map((set) => <p key={set.id}>{formatSet(set)}</p>)}</article>)}</div>}
+      <div className="cards">{workout.exercises.map((exercise) => <article className="exercise" key={exercise.id}>
+        <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
+        {exercise.sets.map((set) => <p key={set.id}>{done ? formatFactSet(set) : formatSet(set)}</p>)}
+      </article>)}</div>
       {workout.notes && <p>{workout.notes}</p>}
       <div className="actions">
         {workout.status === 'planned' && <button onClick={() => start.mutate()}>Начать</button>}
@@ -200,6 +201,17 @@ export function WorkoutDetailPage() {
 }
 
 function formatSet(set: WorkoutSet) { const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, set.distanceKm && `${set.distanceKm} км`, set.durationMin && `${set.durationMin} мин`].filter(Boolean).join(' × '); return plan || 'Подход без плана' }
+
+// Actual result of a set (fact), falling back to the plan when a value wasn't
+// recorded live — so completed workouts still show вес × повторы.
+function formatFactSet(set: WorkoutSet) {
+  const weight = set.fact.weightKg ?? set.weightKg
+  const reps = set.fact.reps ?? set.reps
+  const distance = set.fact.distanceKm ?? set.distanceKm
+  const duration = set.fact.durationMin ?? set.durationMin
+  const parts = [weight && `${weight} кг`, reps && `${reps} повт.`, distance && `${distance} км`, duration && `${duration} мин`].filter(Boolean)
+  return parts.join(' × ') || 'Без результата'
+}
 
 // Ordered, de-duplicated muscle-group labels for a workout's exercises.
 function muscleGroupLabels(workout: Workout): string[] {
