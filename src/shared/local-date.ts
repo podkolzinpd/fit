@@ -53,12 +53,11 @@ export function addMonths(value: LocalDate, months: number): LocalDate {
   return fromUtc(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), Math.min(day, lastDay)))
 }
 
-// Week starts on Monday.
+// Week starts on Sunday (matches the weekday strip ВС..СБ).
 export function startOfWeek(value: LocalDate): LocalDate {
   const [year, month, day] = parts(value)
   const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay() // 0=Sun..6=Sat
-  const shift = (weekday + 6) % 7 // days since Monday
-  return addDays(value, -shift)
+  return addDays(value, -weekday)
 }
 
 export function endOfWeek(value: LocalDate): LocalDate {
@@ -88,4 +87,20 @@ export function formatMonth(value: LocalDate, locale = 'ru-RU'): string {
   const [year, month] = parts(value)
   const label = new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(year, month - 1, 1))
   return `${label.charAt(0).toUpperCase()}${label.slice(1)} ${year}`
+}
+
+// 0=Sunday..6=Saturday, matching Date.getUTCDay.
+export function weekdayIndex(value: LocalDate): number {
+  const [year, month, day] = parts(value)
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+}
+
+export function dayOfMonth(value: LocalDate): number {
+  return parts(value)[2]
+}
+
+const WEEKDAY_SHORT = ['ВС', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ']
+
+export function weekdayShort(value: LocalDate): string {
+  return WEEKDAY_SHORT[weekdayIndex(value)] ?? ''
 }

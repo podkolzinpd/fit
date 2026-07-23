@@ -62,7 +62,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByText('61 кг')).toBeVisible()
 })
 
-test('schedule supports week/month navigation with URL state', async ({ page }) => {
+test('schedule shows week strip and hour grid with day/week navigation', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -71,17 +71,18 @@ test('schedule supports week/month navigation with URL state', async ({ page }) 
 
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Неделя' })).toHaveClass(/active/)
 
-  // Switch to month → state goes into the URL.
-  await page.getByRole('button', { name: 'Месяц' }).click()
-  await expect(page.getByRole('button', { name: 'Месяц' })).toHaveClass(/active/)
-  await expect(page).toHaveURL(/view=month/)
+  // Week strip has 7 day buttons, hour grid is rendered.
+  await expect(page.locator('.week-day')).toHaveCount(7)
+  await expect(page.locator('.day-grid-hour')).toHaveCount(24)
 
-  const monthLabel = await page.locator('.schedule-period').innerText()
-  await page.getByRole('button', { name: 'Следующий период' }).click()
-  await expect(page.locator('.schedule-period')).not.toHaveText(monthLabel)
+  // Picking another weekday selects it (active class moves) and does not error.
+  const other = page.locator('.week-day').nth(1)
+  await other.click()
+  await expect(other).toHaveClass(/active/)
 
-  await page.getByRole('button', { name: 'Сегодня' }).click()
-  await expect(page.locator('.schedule-period')).toHaveText(monthLabel)
+  // Week arrows shift the visible week — day numbers change.
+  const firstDayBefore = await page.locator('.week-day .day-num').first().innerText()
+  await page.getByRole('button', { name: 'Следующая неделя' }).click()
+  await expect(page.locator('.week-day .day-num').first()).not.toHaveText(firstDayBefore)
 })
