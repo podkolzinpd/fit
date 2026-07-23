@@ -1,6 +1,18 @@
-import type { ClientStats, InputKind, Workout, WorkoutDraft, WorkoutSet, WorkoutSummary } from '../../shared/domain'
+import type { ClientStats, InputKind, Workout, WorkoutDraft, WorkoutSet, WorkoutSetDraft, WorkoutSummary } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
+
+// A new set for "＋ Подход" that inherits the relevant params of the last set
+// (by input kind), so the trainer doesn't retype identical weight/reps. When
+// there are no sets yet, returns an empty set at position 0.
+export function nextSetDraft(sets: WorkoutSetDraft[], inputKind: InputKind): WorkoutSetDraft {
+  const position = sets.length
+  const last = sets[sets.length - 1]
+  if (!last) return { position }
+  if (inputKind === 'distance') return { position, durationMin: last.durationMin, distanceKm: last.distanceKm }
+  if (inputKind === 'reps') return { position, durationMin: last.durationMin, reps: last.reps }
+  return { position, weightKg: last.weightKg, reps: last.reps }
+}
 
 export interface ExerciseChartPoint {
   date: LocalDate
