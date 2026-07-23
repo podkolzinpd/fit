@@ -12,7 +12,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Workout | Create/view/edit/correct/copy/delete, strength/distance/reps, atomic save | Implemented: multi-set plan and load correction covered; wider acceptance pending |
 | Voice notes | Browser-only Russian transcription into editable workout and client trainer notes; manual input remains available | Prototype: local whisper.cpp WASM ready; real-device acceptance pending |
 | Schedule | Week/month/local date, timed/untimed, open workout/back | Partial: grouped schedule ready, week/month controls pending |
-| Live | Start, autosave, confirm, rest, append, resume, partial finish | Implemented: rest and transactional append covered; wider resume acceptance pending |
+| Live | Start, autosave, confirm, rest, append, resume, partial finish | Implemented: rest, transactional append and non-retryable optimistic conflicts covered; wider resume acceptance pending |
 | History | Done workouts only, set list and max-value chart | Implemented: set list and max-value progression chart (по типу упражнения) covered unit; broader visual pending |
 | Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; broader visual/E2E matrix pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; acceptance matrix pending |

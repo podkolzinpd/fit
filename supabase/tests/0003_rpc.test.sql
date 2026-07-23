@@ -72,7 +72,7 @@ select lives_ok(
 );
 select throws_ok(
   format('select public.start_workout(%L::uuid, 1)', (select id from public.workouts limit 1)),
-  '40001', 'workout_conflict', 'stale workout version is rejected'
+  'PT409', 'workout_conflict', 'stale workout version is rejected without a retryable SQLSTATE'
 );
 select lives_ok(
   format('select public.save_live_set_draft(%L::uuid, %L::jsonb, 1)',
@@ -114,7 +114,7 @@ select throws_ok(
     'select public.save_progress(%L::jsonb, 0)',
     jsonb_build_object('id', (select id from public.client_progress where recorded_on = '2026-07-22'), 'clientId', (select id from public.clients limit 1), 'recordedOn', '2026-07-22', 'weightKg', 60, 'customMetrics', '[]'::jsonb)
   ),
-  '40001', 'progress_conflict', 'stale progress version is rejected'
+  'PT409', 'progress_conflict', 'stale progress version is rejected without a retryable SQLSTATE'
 );
 
 reset role;

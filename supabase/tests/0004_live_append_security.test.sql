@@ -40,7 +40,7 @@ select throws_ok(
     '{"source":"system","ref":"running","name":"Бег","muscleGroup":"cardio","inputKind":"distance"}',
     1
   )$$,
-  '40001', 'workout_conflict', 'trainer B cannot append an exercise to trainer A workout'
+  'PT409', 'workout_conflict', 'trainer B cannot append an exercise to trainer A workout'
 );
 reset role;
 
