@@ -3,7 +3,7 @@ import { localDate } from '../../shared/local-date'
 import { clientsRepository } from './clients.repository'
 import { repositoryError } from './error'
 import { workoutQueries } from '../queries/workouts.queries'
-export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor } from './workout-rules'
+export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, splitClientWorkouts } from './workout-rules'
 export type { ExerciseChartPoint } from './workout-rules'
 
 async function get(id: string): Promise<Workout> {

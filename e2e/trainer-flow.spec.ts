@@ -51,7 +51,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByText('Готово', { exact: true })).toBeVisible()
 
   await page.goto(clientUrl)
-  await expect(page.getByText('Тренировок')).toBeVisible()
+  await expect(page.getByText('Тренировок', { exact: true })).toBeVisible()
   await expect(page.locator('.summary.stats')).toContainText('1')
   await expect(page.locator('.summary.stats')).toContainText('100%')
 
@@ -86,8 +86,10 @@ test('schedule shows week strip and hour grid with day/week navigation', async (
   await page.getByRole('button', { name: 'Следующая неделя' }).click()
   await expect(page.locator('.week-day .day-num').first()).not.toHaveText(firstDayBefore)
 
-  // «Сегодня» появляется вне текущей недели и возвращает обратно.
+  // «Сегодня» видна всегда: вне текущей недели активна и возвращает обратно,
+  // на сегодняшней неделе — задизейблена.
+  await expect(page.getByRole('button', { name: 'Сегодня' })).toBeEnabled()
   await page.getByRole('button', { name: 'Сегодня' }).click()
   await expect(page.locator('.week-day .day-num').first()).toHaveText(firstDayBefore)
-  await expect(page.getByRole('button', { name: 'Сегодня' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Сегодня' })).toBeDisabled()
 })
