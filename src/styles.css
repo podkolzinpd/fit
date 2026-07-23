@@ -67,6 +67,10 @@ p { margin: 6px 0 }
 .summary.stats strong { font-size: 15px }
 .summary.done-summary { grid-template-columns: 1fr 1fr; margin-bottom: 18px }
 .summary.done-summary strong { font-size: 15px }
+.summary.done-summary-3 { grid-template-columns: repeat(3, 1fr) }
+.summary.done-summary-3 strong { font-size: 14px }
+.card-meta { color: var(--muted); font-size: 12px; margin-top: 2px }
+.day-grid-event-groups { font-size: 11px; color: #c9c2e6; line-height: 1.15 }
 .summary.stats-3 { grid-template-columns: repeat(3, 1fr) }
 .client-actions { display: flex; flex-direction: column; gap: 10px; margin: 20px 0 }
 .client-actions-row { display: flex; gap: 10px }
@@ -100,7 +104,7 @@ p { margin: 6px 0 }
 .day-grid-hour { position: absolute; left: 0; right: 0; display: flex; align-items: flex-start; gap: 8px; height: 0 }
 .day-grid-hour-label { width: 44px; flex-shrink: 0; font-size: 11px; color: var(--muted); transform: translateY(-6px) }
 .day-grid-hour-line { flex: 1; height: 1px; background: var(--border); margin-top: 2px }
-.day-grid-event { position: absolute; left: 52px; right: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 10px; border-radius: 10px; background: #2b2549; border: 1px solid var(--accent); color: var(--fg); overflow: hidden; text-align: left; text-decoration: none }
+.day-grid-event { position: absolute; left: 52px; right: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 5px 10px; border-radius: 10px; background: #2b2549; border: 1px solid var(--accent); color: var(--fg); overflow: hidden; text-align: left; text-decoration: none; line-height: 1.15 }
 .day-grid-event.done { border-color: var(--success); background: #1d3626 }
 .day-grid-event.in_progress { border-color: #ffc06b; background: #3a2b1d }
 .day-grid-event-time { font-size: 11px; font-weight: 700; color: var(--purple) }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { InputKind, Workout, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { canTransition, chartUnitFor, computeClientStats, copyWorkout, exerciseChartPoints, splitClientWorkouts, workoutDurationLabel } from './workout-rules'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, exerciseChartPoints, muscleGroupLabels, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -203,5 +203,50 @@ describe('splitClientWorkouts', () => {
   it('идущая тренировка (in_progress) сегодня — в предстоящих', () => {
     const { upcoming } = splitClientWorkouts([bareWorkout('2026-07-22', 'in_progress')], TODAY)
     expect(upcoming).toHaveLength(1)
+  })
+})
+
+describe('bmiValue / bmiLabel', () => {
+  it('считает ИМТ по росту и весу', () => {
+    expect(bmiValue(180, 80)).toBeCloseTo(24.69, 1)
+    expect(bmiLabel(180, 80)).toBe('24.7')
+  })
+  it('возвращает null/«—» при отсутствии или некорректных данных', () => {
+    expect(bmiValue(180, null)).toBeNull()
+    expect(bmiValue(0, 80)).toBeNull()
+    expect(bmiLabel(180, null)).toBe('—')
+  })
+})
+
+describe('workoutTonnage / tonnageLabel', () => {
+  it('суммирует вес × повторы по силовым подходам (факт или план)', () => {
+    const workout = workoutWith('2026-07-20', 'squat', 'strength', [
+      set({ weightKg: 60, reps: 10 }),       // факт 60×10 = 600
+      { id: 'p', position: 1, weightKg: 50, reps: 8, fact: {}, confirmedAt: null, version: 1 }, // план 50×8 = 400
+    ])
+    expect(workoutTonnage(workout)).toBe(1000)
+  })
+  it('игнорирует не-силовые упражнения', () => {
+    const workout = workoutWith('2026-07-20', 'run', 'distance', [set({ distanceKm: 5, durationMin: 30 })])
+    expect(workoutTonnage(workout)).toBe(0)
+  })
+  it('форматирует тоннаж в кг и тоннах', () => {
+    expect(tonnageLabel(0)).toBe('—')
+    expect(tonnageLabel(750)).toBe('750 кг')
+    expect(tonnageLabel(1500)).toBe('1.5 т')
+  })
+})
+
+describe('muscleGroupLabels', () => {
+  it('возвращает уникальные группы в порядке упражнений', () => {
+    const workout: Workout = {
+      ...workoutWith('2026-07-20', 'squat', 'strength', [set({ weightKg: 60 })]),
+      exercises: [
+        { id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, sets: [] },
+        { id: 'e2', source: 'system', ref: 'bench', name: 'Жим', muscleGroup: 'chest', inputKind: 'strength', position: 1, sets: [] },
+        { id: 'e3', source: 'system', ref: 'lunge', name: 'Выпад', muscleGroup: 'legs', inputKind: 'strength', position: 2, sets: [] },
+      ],
+    }
+    expect(muscleGroupLabels(workout)).toEqual(['Ноги', 'Грудь'])
   })
 })

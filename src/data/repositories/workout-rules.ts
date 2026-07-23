@@ -1,5 +1,6 @@
 import type { ClientStats, InputKind, Workout, WorkoutDraft, WorkoutSet, WorkoutSummary } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
+import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 
 export interface ExerciseChartPoint {
   date: LocalDate
@@ -68,6 +69,51 @@ export function chartUnitFor(inputKind: InputKind): string {
   if (inputKind === 'distance') return 'км'
   if (inputKind === 'reps') return 'повт.'
   return 'кг'
+}
+
+// Ordered, de-duplicated muscle-group labels for a workout's exercises.
+export function muscleGroupLabels(workout: Workout): string[] {
+  const seen = new Set<string>()
+  const labels: string[] = []
+  for (const exercise of workout.exercises) {
+    const label = MUSCLE_GROUP_LABELS[exercise.muscleGroup]
+    if (!seen.has(label)) { seen.add(label); labels.push(label) }
+  }
+  return labels
+}
+
+// Body Mass Index = weight(kg) / height(m)². Null when data is missing/invalid.
+export function bmiValue(heightCm: number, weightKg: number | null): number | null {
+  if (!weightKg || weightKg <= 0 || !heightCm || heightCm <= 0) return null
+  const meters = heightCm / 100
+  return weightKg / (meters * meters)
+}
+
+export function bmiLabel(heightCm: number, weightKg: number | null): string {
+  const value = bmiValue(heightCm, weightKg)
+  return value === null ? '—' : value.toFixed(1)
+}
+
+// Total lifted volume (tonnage) over a workout: Σ weight × reps for every set
+// of strength exercises, using the actual result and falling back to the plan.
+export function workoutTonnage(workout: Workout): number {
+  let total = 0
+  for (const exercise of workout.exercises) {
+    if (exercise.inputKind !== 'strength') continue
+    for (const set of exercise.sets) {
+      const weight = set.fact.weightKg ?? set.weightKg
+      const reps = set.fact.reps ?? set.reps
+      if (weight && reps) total += weight * reps
+    }
+  }
+  return total
+}
+
+// Compact tonnage label, e.g. "1 250 кг" (or "1.2 т" once past a tonne).
+export function tonnageLabel(kg: number): string {
+  if (kg <= 0) return '—'
+  if (kg >= 1000) return `${(kg / 1000).toFixed(1)} т`
+  return `${Math.round(kg)} кг`
 }
 
 // Actual result if recorded, otherwise the plan — so completed workouts
