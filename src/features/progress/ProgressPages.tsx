@@ -34,7 +34,7 @@ export function ProgressPage() {
   const createMetric = useMutation({ mutationFn: ({ name, unit }: { name: string; unit: string | null }) => progressRepository.createMetric(actor!.userId, clientId, name, unit), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }) })
   const archiveMetric = useMutation({ mutationFn: (metric: CustomMetric) => progressRepository.setMetricArchived(metric, !metric.archivedAt), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }) })
   const loading = client.isLoading || entries.isLoading || metrics.isLoading; const error = client.error ?? entries.error ?? metrics.error
-  const activeTab = METRIC_TABS.find((tab) => tab.key === selectedMetric) ?? METRIC_TABS[0]
+  const activeTab = METRIC_TABS.find((tab) => tab.key === selectedMetric) ?? METRIC_TABS[0]!
   return <Page title={client.data ? `Прогресс · ${client.data.fullName}` : 'Прогресс'}><AsyncView loading={loading} error={error}>{client.data && <>
     {entries.data && entries.data.length > 0 && <>
       <div className="metric-tabs">{METRIC_TABS.map((tab) => <button key={tab.key} type="button" className={`metric-tab${tab.key === selectedMetric ? ' active' : ''}`} onClick={() => setSelectedMetric(tab.key)}>{tab.label}</button>)}</div>

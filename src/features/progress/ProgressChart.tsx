@@ -94,7 +94,7 @@ export function ProgressChart({ entries, metric, label, unit, windowEnd, onWindo
 
   if (chartData.length === 0) return <p className="muted">Нет данных для отображения</p>
 
-  const minDate = chartData[0].date; const maxDate = chartData[chartData.length - 1].date
+  const minDate = chartData[0]!.date; const maxDate = chartData[chartData.length - 1]!.date
   const earliestWindowEnd = addDays(minDate, WINDOW_DAYS - 1)
   const canDrag = earliestWindowEnd < maxDate
 
@@ -144,7 +144,7 @@ export function ProgressChart({ entries, metric, label, unit, windowEnd, onWindo
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="date" stroke="var(--muted)" height={40} tick={AxisTick} interval={Math.max(0, Math.ceil(visibleData.length / 5) - 1)} />
               <YAxis stroke="var(--muted)" style={{ fontSize: '12px' }} domain={yDomain} allowDecimals />
-              {!isDragging && <Tooltip formatter={(value: number) => formatTooltipValue(value, unit, label)} labelFormatter={formatTooltipLabel} />}
+              {!isDragging && <Tooltip formatter={(value) => formatTooltipValue(Number(value), unit, label)} labelFormatter={(date) => formatTooltipLabel(String(date))} />}
               <Line type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={3}
                 dot={(dotProps: { cx?: number; cy?: number; index?: number }) => renderChartDot(dotProps, minIndex, maxIndex, visibleData.length)}
                 activeDot={{ r: 7 }} isAnimationActive={false} />
