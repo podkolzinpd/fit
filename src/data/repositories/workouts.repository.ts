@@ -5,7 +5,7 @@ import { clientsRepository } from './clients.repository'
 import { collectPages, pageFromLookahead } from './collect-pages'
 import { repositoryError } from './error'
 import { workoutQueries } from '../queries/workouts.queries'
-export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, splitClientWorkouts, workoutDurationLabel } from './workout-rules'
+export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, splitClientWorkouts, workoutDurationLabel, muscleGroupLabels, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel } from './workout-rules'
 export type { ExerciseChartPoint } from './workout-rules'
 
 async function get(id: string): Promise<Workout> {
@@ -51,10 +51,8 @@ function mapWorkout(row: WorkoutListRow): Workout {
     workoutDate: localDate(row.workout_date),
     startTime: row.start_time,
     endTime: row.end_time,
-    // The list RPC doesn't carry timer timestamps; only the detail view (get)
-    // needs them for the duration label.
-    startedAt: null,
-    completedAt: null,
+    startedAt: row.started_at ?? null,
+    completedAt: row.completed_at ?? null,
     status: row.status as WorkoutStatus,
     notes: row.notes,
     version: row.version,

@@ -67,6 +67,10 @@ p { margin: 6px 0 }
 .summary.stats strong { font-size: 15px }
 .summary.done-summary { grid-template-columns: 1fr 1fr; margin-bottom: 18px }
 .summary.done-summary strong { font-size: 15px }
+.summary.done-summary-3 { grid-template-columns: repeat(3, 1fr) }
+.summary.done-summary-3 strong { font-size: 14px }
+.card-meta { color: var(--muted); font-size: 12px; margin-top: 2px }
+.day-grid-event-groups { font-size: 11px; color: #c9c2e6; line-height: 1.15 }
 .summary.stats-3 { grid-template-columns: repeat(3, 1fr) }
 .client-actions { display: flex; flex-direction: column; gap: 10px; margin: 20px 0 }
 .client-actions-row { display: flex; gap: 10px }
@@ -100,7 +104,7 @@ p { margin: 6px 0 }
 .day-grid-hour { position: absolute; left: 0; right: 0; display: flex; align-items: flex-start; gap: 8px; height: 0 }
 .day-grid-hour-label { width: 44px; flex-shrink: 0; font-size: 11px; color: var(--muted); transform: translateY(-6px) }
 .day-grid-hour-line { flex: 1; height: 1px; background: var(--border); margin-top: 2px }
-.day-grid-event { position: absolute; left: 52px; right: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 10px; border-radius: 10px; background: #2b2549; border: 1px solid var(--accent); color: var(--fg); overflow: hidden; text-align: left; text-decoration: none }
+.day-grid-event { position: absolute; left: 52px; right: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 5px 10px; border-radius: 10px; background: #2b2549; border: 1px solid var(--accent); color: var(--fg); overflow: hidden; text-align: left; text-decoration: none; line-height: 1.15 }
 .day-grid-event.done { border-color: var(--success); background: #1d3626 }
 .day-grid-event.in_progress { border-color: #ffc06b; background: #3a2b1d }
 .day-grid-event-time { font-size: 11px; font-weight: 700; color: var(--purple) }
@@ -117,9 +121,14 @@ p { margin: 6px 0 }
 .workout-title h2 { margin: 0 0 4px }
 .set-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0 }
 .set-row input { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 9px; color: #ece7f0; background: var(--input) }
+/* Зафиксированный подход: значения горят ярко, не тускнеют как disabled. */
+.set-row.locked input { color: #ece7f0; -webkit-text-fill-color: #ece7f0; opacity: 1; font-weight: 700; border-color: #367b4b; background: #15271a }
 .confirmed { border-color: #367b4b; background: #15271a }
 .live-dot { color: #d33030; font-weight: 800; font-size: 13px }
 .live-timer { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border: 1px solid #4b3f83; border-radius: 11px; background: #29223f; color: var(--fg); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14px }
+/* Крупный таймер по центру над подходами. */
+.live-timer-big { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 8px 0 18px; padding: 16px; border: 1px solid #4b3f83; border-radius: 16px; background: #29223f; color: var(--fg); font-weight: 800; font-variant-numeric: tabular-nums; font-size: 40px; letter-spacing: 1px }
+.live-timer-big .live-dot-mark { width: 14px; height: 14px }
 .live-dot-mark { width: 8px; height: 8px; border-radius: 50%; background: #d33030; box-shadow: 0 0 0 0 #d3303066; animation: live-pulse 1.6s ease-out infinite }
 @keyframes live-pulse { 0% { box-shadow: 0 0 0 0 #d3303066 } 70% { box-shadow: 0 0 0 6px #d3303000 } 100% { box-shadow: 0 0 0 0 #d3303000 } }
 .rest-controls { display: flex; align-items: center; gap: 8px }

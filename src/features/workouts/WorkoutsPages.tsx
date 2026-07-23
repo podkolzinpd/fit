@@ -3,8 +3,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { clientsRepository } from '../../data/repositories/clients.repository'
-import { chartUnitFor, copyWorkout, exerciseChartPoints, splitClientWorkouts, workoutDurationLabel, workoutsRepository } from '../../data/repositories/workouts.repository'
-import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
+import { chartUnitFor, copyWorkout, exerciseChartPoints, muscleGroupLabels, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -84,7 +83,7 @@ export function SchedulePage() {
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       <div className="day-grid-scroll" ref={scrollRef}>
         {untimed.length > 0 && <div className="day-untimed">{untimed.map((workout) => (
-          <Link key={workout.id} className="card" to={`/workouts/${workout.id}`}><div><strong>{workout.clientName}</strong><p>без времени</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
+          <Link key={workout.id} className="card" to={`/workouts/${workout.id}`}><div><strong>{workout.clientName}</strong><p>{muscleGroupLabels(workout).join(', ') || 'без времени'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
         ))}</div>}
         <div className="day-grid" style={{ height: HOURS.length * HOUR_HEIGHT }}>
           {HOURS.map((hour) => (
@@ -98,9 +97,11 @@ export function SchedulePage() {
             const endMin = workout.endTime ? minutesOf(workout.endTime.slice(0, 5)) : startMin + 60
             const top = (startMin / 60) * HOUR_HEIGHT
             const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 28)
+            const groups = muscleGroupLabels(workout).join(', ')
             return <Link key={workout.id} className={`day-grid-event ${workout.status}`} style={{ top, height }} to={`/workouts/${workout.id}`}>
               <span className="day-grid-event-time">{eventTime(workout)}</span>
               <span className="day-grid-event-name">{workout.clientName}</span>
+              {groups && <span className="day-grid-event-groups">{groups}</span>}
             </Link>
           })}
          </div>
@@ -122,7 +123,12 @@ export function ClientWorkoutsPage() {
   })
   const items = query.data?.pages.flatMap((page) => page.items) ?? []
   const history = splitClientWorkouts(items, todayLocalDate()).history
-  return <Page title="История тренировок" back={-1} action={<Link className="button" to={`/workouts/new?client=${clientId}`}>Добавить</Link>}><AsyncView loading={query.isLoading} error={query.error} empty={!history.length} onRetry={() => void query.refetch()}><div className="cards">{history.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{muscleGroupLabels(workout).join(', ') || 'Без упражнений'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>)}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
+  return <Page title="История тренировок" back={`/clients/${clientId}`} action={<Link className="button" to={`/workouts/new?client=${clientId}`}>Добавить</Link>}><AsyncView loading={query.isLoading} error={query.error} empty={!history.length} onRetry={() => void query.refetch()}><div className="cards">{history.map((workout) => {
+    const duration = workoutDurationLabel(workout.startedAt, workout.completedAt)
+    const tonnage = workoutTonnage(workout)
+    const meta = workout.status === 'done' ? [duration, tonnage > 0 ? tonnageLabel(tonnage) : null].filter(Boolean).join(' · ') : ''
+    return <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{muscleGroupLabels(workout).join(', ') || 'Без упражнений'}</p>{meta && <p className="card-meta">{meta}</p>}</div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
+  })}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
 }
 
 export function WorkoutFormPage() {
@@ -174,23 +180,29 @@ export function WorkoutDetailPage() {
   const done = workout?.status === 'done'
   const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt) : null
   const groups = workout ? muscleGroupLabels(workout) : []
-  return <Page title="Тренировка" back={-1}>
+  const tonnage = workout ? workoutTonnage(workout) : 0
+  // Явный путь назад (история тренировок клиента), а не -1 по истории браузера:
+  // -1 создавал петлю тренировка ↔ история упражнения после захода в аналитику.
+  const backTo = workout ? `/clients/${workout.clientId}/workouts` : undefined
+  return <Page title="Тренировка" back={backTo}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       <section className="workout-title">
         <div><h2>{workout.clientName}</h2><p>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</p></div>
         <span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span>
       </section>
-      {done && <section className="summary done-summary">
-        <div><span>Время по таймеру</span><strong>{duration ?? '—'}</strong></div>
+      {workout.status === 'planned' && <button className="wide" onClick={() => start.mutate()}>Начать тренировку</button>}
+      {workout.status === 'in_progress' && <Link className="button wide" to={`/workouts/${workoutId}/live`}>Продолжить тренировку</Link>}
+      {done && <section className="summary done-summary done-summary-3">
+        <div><span>Время</span><strong>{duration ?? '—'}</strong></div>
+        <div><span>Тоннаж</span><strong>{tonnageLabel(tonnage)}</strong></div>
         <div><span>Группы мышц</span><strong>{groups.length ? groups.join(', ') : '—'}</strong></div>
       </section>}
-      {done
-        ? <div className="cards">{workout.exercises.map((exercise) => <Link className="exercise-name-link exercise" key={exercise.id} to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>)}</div>
-        : <div className="cards">{workout.exercises.map((exercise) => <article className="exercise" key={exercise.id}><Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>{exercise.sets.map((set) => <p key={set.id}>{formatSet(set)}</p>)}</article>)}</div>}
+      <div className="cards">{workout.exercises.map((exercise) => <article className="exercise" key={exercise.id}>
+        <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
+        {exercise.sets.map((set) => <p key={set.id}>{done ? formatFactSet(set) : formatSet(set)}</p>)}
+      </article>)}</div>
       {workout.notes && <p>{workout.notes}</p>}
       <div className="actions">
-        {workout.status === 'planned' && <button onClick={() => start.mutate()}>Начать</button>}
-        {workout.status === 'in_progress' && <Link className="button" to={`/workouts/${workoutId}/live`}>Продолжить</Link>}
         {workout.status === 'planned' && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>Изменить</Link>}
         <Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link>
       </div>
@@ -201,21 +213,30 @@ export function WorkoutDetailPage() {
 
 function formatSet(set: WorkoutSet) { const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, set.distanceKm && `${set.distanceKm} км`, set.durationMin && `${set.durationMin} мин`].filter(Boolean).join(' × '); return plan || 'Подход без плана' }
 
-// Ordered, de-duplicated muscle-group labels for a workout's exercises.
-function muscleGroupLabels(workout: Workout): string[] {
-  const seen = new Set<string>()
-  const labels: string[] = []
-  for (const exercise of workout.exercises) {
-    const label = MUSCLE_GROUP_LABELS[exercise.muscleGroup]
-    if (!seen.has(label)) { seen.add(label); labels.push(label) }
-  }
-  return labels
+// Actual result of a set (fact), falling back to the plan when a value wasn't
+// recorded live — so completed workouts still show вес × повторы.
+function formatFactSet(set: WorkoutSet) {
+  const weight = set.fact.weightKg ?? set.weightKg
+  const reps = set.fact.reps ?? set.reps
+  const distance = set.fact.distanceKm ?? set.distanceKm
+  const duration = set.fact.durationMin ?? set.durationMin
+  const parts = [weight && `${weight} кг`, reps && `${reps} повт.`, distance && `${distance} км`, duration && `${duration} мин`].filter(Boolean)
+  return parts.join(' × ') || 'Без результата'
 }
 
+
 function LiveSetFields({ inputKind, set }: { inputKind: ExerciseSnapshot['inputKind']; set: WorkoutSet }) {
-  if (inputKind === 'strength') return <div className="set-row"><input aria-label="Фактический вес" name="weightKg" type="number" min="0" step="0.5" defaultValue={set.fact.weightKg} placeholder={set.weightKg === undefined ? 'кг' : `${set.weightKg} кг`} /><input aria-label="Фактические повторы" name="reps" type="number" min="0" defaultValue={set.fact.reps} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
-  if (inputKind === 'reps') return <div className="set-row"><input aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" defaultValue={set.fact.durationMin} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input aria-label="Фактические повторы" name="reps" type="number" min="0" defaultValue={set.fact.reps} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
-  return <div className="set-row"><input aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" defaultValue={set.fact.durationMin} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input aria-label="Фактическая дистанция" name="distanceKm" type="number" min="0" step="0.1" defaultValue={set.fact.distanceKm} placeholder={set.distanceKm === undefined ? 'км' : `${set.distanceKm} км`} /></div>
+  // После подтверждения показываем зафиксированный результат (факт, иначе план)
+  // как обычное яркое значение в заблокированном поле, а не тусклый placeholder.
+  const locked = Boolean(set.confirmedAt)
+  const rowClass = locked ? 'set-row locked' : 'set-row'
+  // Ключ по locked ремоунтит поля при подтверждении, чтобы неконтролируемый
+  // defaultValue пересчитался и показал зафиксированное значение.
+  const k = locked ? 'locked' : 'edit'
+  const value = (fact: number | undefined, plan: number | undefined) => (locked ? (fact ?? plan) : fact)
+  if (inputKind === 'strength') return <div className={rowClass}><input key={`w-${k}`} aria-label="Фактический вес" name="weightKg" type="number" min="0" step="0.5" disabled={locked} defaultValue={value(set.fact.weightKg, set.weightKg)} placeholder={set.weightKg === undefined ? 'кг' : `${set.weightKg} кг`} /><input key={`r-${k}`} aria-label="Фактические повторы" name="reps" type="number" min="0" disabled={locked} defaultValue={value(set.fact.reps, set.reps)} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
+  if (inputKind === 'reps') return <div className={rowClass}><input key={`d-${k}`} aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" disabled={locked} defaultValue={value(set.fact.durationMin, set.durationMin)} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input key={`r-${k}`} aria-label="Фактические повторы" name="reps" type="number" min="0" disabled={locked} defaultValue={value(set.fact.reps, set.reps)} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
+  return <div className={rowClass}><input key={`d-${k}`} aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" disabled={locked} defaultValue={value(set.fact.durationMin, set.durationMin)} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input key={`dist-${k}`} aria-label="Фактическая дистанция" name="distanceKm" type="number" min="0" step="0.1" disabled={locked} defaultValue={value(set.fact.distanceKm, set.distanceKm)} placeholder={set.distanceKm === undefined ? 'км' : `${set.distanceKm} км`} /></div>
 }
 
 const REST_SECONDS = 90
@@ -235,15 +256,16 @@ function formatElapsed(seconds: number): string {
   return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`
 }
 
-function WorkoutTimer({ startedAt }: { startedAt: string | null }) {
+function WorkoutTimer({ startedAt, variant = 'chip' }: { startedAt: string | null; variant?: 'chip' | 'big' }) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
   }, [])
-  if (!startedAt) return <span className="live-timer">● LIVE</span>
+  const className = variant === 'big' ? 'live-timer-big' : 'live-timer'
+  if (!startedAt) return <span className={className}><span className="live-dot-mark" aria-hidden="true" />LIVE</span>
   const elapsed = Math.max(0, Math.floor((now - Date.parse(startedAt)) / 1000))
-  return <span className="live-timer"><span className="live-dot-mark" aria-hidden="true" />{formatElapsed(elapsed)}</span>
+  return <span className={className}><span className="live-dot-mark" aria-hidden="true" />{formatElapsed(elapsed)}</span>
 }
 
 export function LiveWorkoutPage() {
@@ -285,7 +307,18 @@ export function LiveWorkoutPage() {
   }
   const appendSet = useMutation({ mutationFn: (exerciseId: string) => workoutsRepository.appendLiveSet(query.data!, exerciseId), onSuccess: async () => { await query.refetch() } })
   const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => workoutsRepository.appendLiveExercise(query.data!, exercise), onSuccess: async () => { await query.refetch() } })
-  const finish = useMutation({ mutationFn: () => workoutsRepository.finish(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }); navigate(`/workouts/${workoutId}`) } })
+  const finish = useMutation({ mutationFn: () => workoutsRepository.finish(query.data!), onSuccess: async () => {
+    const clientId = query.data?.clientId
+    // Освежаем не только саму тренировку, но и статистику клиента и списки
+    // тренировок (карточка, история, расписание), иначе кол-во/% выполнения
+    // на карточке клиента обновляются только после перезагрузки.
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }),
+      queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+      clientId ? queryClient.invalidateQueries({ queryKey: ['client-stats', clientId] }) : Promise.resolve(),
+    ])
+    navigate(`/workouts/${workoutId}`)
+  } })
   function draftFrom(form: HTMLFormElement): LiveSetDraft { const values = new FormData(form); return { weightKg: numberValue(values.get('weightKg')), reps: numberValue(values.get('reps')), distanceKm: numberValue(values.get('distanceKm')), durationMin: numberValue(values.get('durationMin')) } }
   // Derive the countdown from a wall-clock deadline so it stays correct even
   // when the tab is backgrounded and timers are throttled by the browser.
@@ -306,9 +339,10 @@ export function LiveWorkoutPage() {
     return () => window.clearInterval(timer)
   }, [restActive])
   const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? finish.error
-  return <Page title="Live-тренировка" action={<WorkoutTimer startedAt={query.data?.startedAt ?? null} />}>
+  return <Page title="Live-тренировка">
     <AsyncView loading={query.isLoading} error={query.error}>{query.data && <>
-      <p>{query.data.clientName} · черновик сохраняется отдельно от плана</p>
+      <p>{query.data.clientName}</p>
+      <WorkoutTimer startedAt={query.data.startedAt ?? null} variant="big" />
       {restRemaining !== null && <div className="rest-timer">
         <strong>Отдых {formatRest(restRemaining)}</strong>
         <div className="rest-controls">

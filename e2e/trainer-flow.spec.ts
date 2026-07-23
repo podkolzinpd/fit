@@ -27,17 +27,24 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
   await page.getByRole('button', { name: '＋ Подход' }).click()
+  // «＋ Подход» наследует параметры предыдущего подхода (40 кг × 10).
+  await expect(page.getByLabel('Вес, подход 2')).toHaveValue('40')
+  await expect(page.getByLabel('Повторы, подход 2')).toHaveValue('10')
   await page.getByLabel('Вес, подход 2').fill('35')
   await page.getByLabel('Повторы, подход 2').fill('12')
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Начать' }).click()
-  // Вместо значка LIVE — таймер тренировки, идущий от старта (мм:сс).
-  await expect(page.locator('.live-timer')).toContainText(/\d\d:\d\d/)
+  // Крупный таймер тренировки по центру над подходами, идущий от старта (мм:сс).
+  await expect(page.locator('.live-timer-big')).toContainText(/\d\d:\d\d/)
   await page.getByLabel('Фактический вес').first().fill('42.5')
   await page.getByLabel('Фактические повторы').first().fill('9')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
+  // Подтверждённый подход показывает зафиксированные значения ярко (не placeholder):
+  // поле веса заблокировано и содержит реальное значение 42.5.
+  await expect(page.locator('.set-row.locked input').first()).toHaveValue('42.5')
+  await expect(page.locator('.set-row.locked input').first()).toBeDisabled()
   await expect(page.getByText(/Отдых 1:30/)).toBeVisible()
   // Отдых считается от абсолютного времени: через ~2 с значение должно уменьшиться.
   await expect(page.getByText(/Отдых 1:2\d/)).toBeVisible({ timeout: 4000 })
@@ -56,18 +63,43 @@ test('trainer can create client, complete workout and save progress', async ({ p
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   await expect(page.getByText('Готово', { exact: true })).toBeVisible()
+  // Завершённая тренировка показывает фактический результат (вес × повторы),
+  // а не только название упражнения.
+  await expect(page.getByText(/42\.5 кг × 9 повт\./)).toBeVisible()
+  // Сводка завершённой тренировки: время, тоннаж, группы мышц.
+  // Тоннаж: факт 42.5×9 + план 35×12 (п2) + план 35×12 (п3, унаследован live «＋ Подход») ≈ 1.2 т.
+  await expect(page.locator('.done-summary-3')).toContainText('Тоннаж')
+  await expect(page.locator('.done-summary-3')).toContainText('1.2 т')
+
+  // Без перезагрузки: после завершения тренировки статистика клиента обновляется
+  // (finish инвалидирует client-stats). Возвращаемся SPA-навигацией, не goto.
+  await page.locator('.page-back').click()
+  await expect(page.getByRole('heading', { name: 'История тренировок' })).toBeVisible()
+  await page.locator('.page-back').click()
+  await expect(page.locator('.summary.stats')).toContainText('1')
+  await expect(page.locator('.summary.stats')).toContainText('100%')
 
   await page.goto(clientUrl)
   await expect(page.getByText('Тренировок', { exact: true })).toBeVisible()
   await expect(page.locator('.summary.stats')).toContainText('1')
   await expect(page.locator('.summary.stats')).toContainText('100%')
+  // Вместо «Последней» на карточке показываем ИМТ.
+  await expect(page.locator('.summary.stats')).toContainText('ИМТ')
 
   // История и карточка используют один префикс ключа кэша, но разной формы —
   // переход туда-обратно не должен ронять приложение (регресс e.filter).
   await page.getByRole('link', { name: 'История', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'История тренировок' })).toBeVisible()
   await expect(page.locator('.card').first()).toBeVisible()
+  // На карточке истории — тоннаж завершённой тренировки.
+  await expect(page.locator('.card-meta').first()).toContainText('1.2 т')
   await page.locator('.card').first().click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  // Заходим в аналитику упражнения и возвращаемся: «назад» с тренировки не должен
+  // пинг-понгить обратно в историю упражнения (регресс петли навигации).
+  await page.locator('.exercise-name-link').first().click()
+  await expect(page.getByRole('heading', { name: 'История упражнения' })).toBeVisible()
+  await page.locator('.page-back').click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await page.locator('.page-back').click()
   await expect(page.getByRole('heading', { name: 'История тренировок' })).toBeVisible()
@@ -79,6 +111,22 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByLabel('Вес, кг').fill('61')
   await page.getByRole('button', { name: 'Сохранить замер' }).click()
   await expect(page.getByText('61 кг')).toBeVisible()
+})
+
+test('profile Cancel resets unsaved edits', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Профиль', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
+  const firstName = page.getByLabel('Имя')
+  const original = await firstName.inputValue()
+  await firstName.fill('Черновик Который Отменим')
+  await page.getByRole('button', { name: 'Отмена' }).click()
+  await expect(firstName).toHaveValue(original)
 })
 
 test('schedule shows week strip and hour grid with day/week navigation', async ({ page }) => {
