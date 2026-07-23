@@ -121,9 +121,14 @@ p { margin: 6px 0 }
 .workout-title h2 { margin: 0 0 4px }
 .set-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0 }
 .set-row input { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 9px; color: #ece7f0; background: var(--input) }
+/* Зафиксированный подход: значения горят ярко, не тускнеют как disabled. */
+.set-row.locked input { color: #ece7f0; -webkit-text-fill-color: #ece7f0; opacity: 1; font-weight: 700; border-color: #367b4b; background: #15271a }
 .confirmed { border-color: #367b4b; background: #15271a }
 .live-dot { color: #d33030; font-weight: 800; font-size: 13px }
 .live-timer { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border: 1px solid #4b3f83; border-radius: 11px; background: #29223f; color: var(--fg); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14px }
+/* Крупный таймер по центру над подходами. */
+.live-timer-big { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 8px 0 18px; padding: 16px; border: 1px solid #4b3f83; border-radius: 16px; background: #29223f; color: var(--fg); font-weight: 800; font-variant-numeric: tabular-nums; font-size: 40px; letter-spacing: 1px }
+.live-timer-big .live-dot-mark { width: 14px; height: 14px }
 .live-dot-mark { width: 8px; height: 8px; border-radius: 50%; background: #d33030; box-shadow: 0 0 0 0 #d3303066; animation: live-pulse 1.6s ease-out infinite }
 @keyframes live-pulse { 0% { box-shadow: 0 0 0 0 #d3303066 } 70% { box-shadow: 0 0 0 6px #d3303000 } 100% { box-shadow: 0 0 0 0 #d3303000 } }
 .rest-controls { display: flex; align-items: center; gap: 8px }
