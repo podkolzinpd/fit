@@ -226,9 +226,17 @@ function formatFactSet(set: WorkoutSet) {
 
 
 function LiveSetFields({ inputKind, set }: { inputKind: ExerciseSnapshot['inputKind']; set: WorkoutSet }) {
-  if (inputKind === 'strength') return <div className="set-row"><input aria-label="Фактический вес" name="weightKg" type="number" min="0" step="0.5" defaultValue={set.fact.weightKg} placeholder={set.weightKg === undefined ? 'кг' : `${set.weightKg} кг`} /><input aria-label="Фактические повторы" name="reps" type="number" min="0" defaultValue={set.fact.reps} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
-  if (inputKind === 'reps') return <div className="set-row"><input aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" defaultValue={set.fact.durationMin} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input aria-label="Фактические повторы" name="reps" type="number" min="0" defaultValue={set.fact.reps} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
-  return <div className="set-row"><input aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" defaultValue={set.fact.durationMin} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input aria-label="Фактическая дистанция" name="distanceKm" type="number" min="0" step="0.1" defaultValue={set.fact.distanceKm} placeholder={set.distanceKm === undefined ? 'км' : `${set.distanceKm} км`} /></div>
+  // После подтверждения показываем зафиксированный результат (факт, иначе план)
+  // как обычное яркое значение в заблокированном поле, а не тусклый placeholder.
+  const locked = Boolean(set.confirmedAt)
+  const rowClass = locked ? 'set-row locked' : 'set-row'
+  // Ключ по locked ремоунтит поля при подтверждении, чтобы неконтролируемый
+  // defaultValue пересчитался и показал зафиксированное значение.
+  const k = locked ? 'locked' : 'edit'
+  const value = (fact: number | undefined, plan: number | undefined) => (locked ? (fact ?? plan) : fact)
+  if (inputKind === 'strength') return <div className={rowClass}><input key={`w-${k}`} aria-label="Фактический вес" name="weightKg" type="number" min="0" step="0.5" disabled={locked} defaultValue={value(set.fact.weightKg, set.weightKg)} placeholder={set.weightKg === undefined ? 'кг' : `${set.weightKg} кг`} /><input key={`r-${k}`} aria-label="Фактические повторы" name="reps" type="number" min="0" disabled={locked} defaultValue={value(set.fact.reps, set.reps)} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
+  if (inputKind === 'reps') return <div className={rowClass}><input key={`d-${k}`} aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" disabled={locked} defaultValue={value(set.fact.durationMin, set.durationMin)} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input key={`r-${k}`} aria-label="Фактические повторы" name="reps" type="number" min="0" disabled={locked} defaultValue={value(set.fact.reps, set.reps)} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
+  return <div className={rowClass}><input key={`d-${k}`} aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" disabled={locked} defaultValue={value(set.fact.durationMin, set.durationMin)} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input key={`dist-${k}`} aria-label="Фактическая дистанция" name="distanceKm" type="number" min="0" step="0.1" disabled={locked} defaultValue={value(set.fact.distanceKm, set.distanceKm)} placeholder={set.distanceKm === undefined ? 'км' : `${set.distanceKm} км`} /></div>
 }
 
 const REST_SECONDS = 90
@@ -248,15 +256,16 @@ function formatElapsed(seconds: number): string {
   return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`
 }
 
-function WorkoutTimer({ startedAt }: { startedAt: string | null }) {
+function WorkoutTimer({ startedAt, variant = 'chip' }: { startedAt: string | null; variant?: 'chip' | 'big' }) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
   }, [])
-  if (!startedAt) return <span className="live-timer">● LIVE</span>
+  const className = variant === 'big' ? 'live-timer-big' : 'live-timer'
+  if (!startedAt) return <span className={className}><span className="live-dot-mark" aria-hidden="true" />LIVE</span>
   const elapsed = Math.max(0, Math.floor((now - Date.parse(startedAt)) / 1000))
-  return <span className="live-timer"><span className="live-dot-mark" aria-hidden="true" />{formatElapsed(elapsed)}</span>
+  return <span className={className}><span className="live-dot-mark" aria-hidden="true" />{formatElapsed(elapsed)}</span>
 }
 
 export function LiveWorkoutPage() {
@@ -330,9 +339,10 @@ export function LiveWorkoutPage() {
     return () => window.clearInterval(timer)
   }, [restActive])
   const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? finish.error
-  return <Page title="Live-тренировка" action={<WorkoutTimer startedAt={query.data?.startedAt ?? null} />}>
+  return <Page title="Live-тренировка">
     <AsyncView loading={query.isLoading} error={query.error}>{query.data && <>
       <p>{query.data.clientName}</p>
+      <WorkoutTimer startedAt={query.data.startedAt ?? null} variant="big" />
       {restRemaining !== null && <div className="rest-timer">
         <strong>Отдых {formatRest(restRemaining)}</strong>
         <div className="rest-controls">
