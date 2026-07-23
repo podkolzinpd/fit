@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -15,6 +15,7 @@ import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { VoiceNoteField } from '../voice-input'
 import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
 import { createLiveSetCoordinator } from './live-set-coordinator'
+import { LoadMoreButton } from './LoadMoreButton'
 import { workoutCountLabel } from './workout-count-label'
 
 type ScheduleView = 'week' | 'month'
@@ -43,11 +44,18 @@ export function SchedulePage() {
     setPeriod(view, view === 'month' ? addMonths(anchor, direction) : addDays(anchor, direction * 7))
   }
 
-  const query = useQuery({ queryKey: ['workouts', from, to], queryFn: () => workoutsRepository.list(from, to) })
-  const byDate = useMemo(() => (query.data ?? []).reduce<Record<string, typeof query.data>>((groups, item) => {
+  const query = useInfiniteQuery({
+    queryKey: ['workouts', from, to],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => workoutsRepository.listPage(from, to, undefined, pageParam),
+    getNextPageParam: (page) => page.nextOffset,
+  })
+  const items = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data])
+  const totalCount = query.data?.pages[0]?.totalCount ?? 0
+  const byDate = useMemo(() => items.reduce<Record<string, typeof items>>((groups, item) => {
     groups[item.workoutDate] = [...(groups[item.workoutDate] ?? []), item]
     return groups
-  }, {}), [query.data])
+  }, {}), [items])
 
   return <Page title="Расписание" action={<Link className="button" to="/workouts/new">Добавить</Link>}>
     <div className="schedule-controls">
@@ -61,12 +69,13 @@ export function SchedulePage() {
         <button type="button" className="secondary" aria-label="Следующий период" onClick={() => shift(1)}>›</button>
       </div>
       <div className="schedule-meta">
-        <span className="schedule-count">{query.isLoading ? 'Загружаем…' : workoutCountLabel(query.data?.length ?? 0)}</span>
+        <span className="schedule-count">{query.isLoading ? 'Загружаем…' : workoutCountLabel(totalCount)}</span>
         <button type="button" className="link" onClick={() => setPeriod(view, todayLocalDate())}>Сегодня</button>
       </div>
     </div>
-    <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}>
+    <AsyncView loading={query.isLoading} error={query.error} empty={!items.length} onRetry={() => void query.refetch()}>
       <div className="timeline">{Object.entries(byDate).map(([date, workouts]) => <section key={date}><h2>{formatLocalDate(localDate(date))}</h2>{workouts?.map((workout) => <Link className="card" to={`/workouts/${workout.id}`} key={workout.id}><div><strong>{workout.startTime?.slice(0, 5) ?? 'Без времени'} · {workout.clientName}</strong><p>{workout.exercises.length} упражнений</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>)}</section>)}</div>
+      <LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} />
     </AsyncView>
   </Page>
 }
@@ -75,8 +84,14 @@ function statusLabel(status: string) { return status === 'planned' ? 'План' 
 
 export function ClientWorkoutsPage() {
   const { clientId = '' } = useParams()
-  const query = useQuery({ queryKey: ['workouts', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
-  return <Page title="Тренировки" action={<Link className="button" to={`/workouts/new?client=${clientId}`}>Добавить</Link>}><AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}><div className="cards">{query.data?.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{workout.exercises.map((item) => item.name).join(', ') || 'Без упражнений'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>)}</div></AsyncView></Page>
+  const query = useInfiniteQuery({
+    queryKey: ['workouts', clientId],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => workoutsRepository.listPage(undefined, undefined, clientId, pageParam),
+    getNextPageParam: (page) => page.nextOffset,
+  })
+  const items = query.data?.pages.flatMap((page) => page.items) ?? []
+  return <Page title="Тренировки" action={<Link className="button" to={`/workouts/new?client=${clientId}`}>Добавить</Link>}><AsyncView loading={query.isLoading} error={query.error} empty={!items.length} onRetry={() => void query.refetch()}><div className="cards">{items.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{workout.exercises.map((item) => item.name).join(', ') || 'Без упражнений'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>)}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
 }
 
 export function WorkoutFormPage() {

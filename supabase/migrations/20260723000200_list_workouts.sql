@@ -19,6 +19,7 @@ returns table (
   status text,
   notes text,
   version bigint,
+  total_count bigint,
   exercises jsonb
 )
 language plpgsql
@@ -49,6 +50,7 @@ begin
     workout.status,
     workout.notes,
     workout.version,
+    count(*) over(),
     coalesce((
       select jsonb_agg(
         jsonb_build_object(

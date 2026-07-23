@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(18);
 
 select has_index(
   'public',
@@ -57,6 +57,7 @@ select is((select string_agg(item->>'exercise_ref', ',' order by ordinal) from p
 select is((select string_agg(item->>'position', ',' order by ordinal) from public.list_workouts(null, null, null), jsonb_array_elements(exercises->0->'sets') with ordinality as nested(item, ordinal) where id = '7c000000-0000-4000-8000-000000000001'), '0,1', 'sets preserve position order');
 select is((select count(*) from public.list_workouts(null, null, null, 1, 0)), 1::bigint, 'aggregate page size is bounded');
 select is((select id from public.list_workouts(null, null, null, 1, 1)), '7c000000-0000-4000-8000-000000000002'::uuid, 'aggregate offset returns the next stable row');
+select is((select total_count from public.list_workouts(null, null, null, 1, 0)), 2::bigint, 'page reports the complete filtered workout count');
 select is((select count(*) from public.list_workout_summaries('7a000000-0000-4000-8000-000000000001')), 2::bigint, 'summary RPC returns active workouts without nested aggregates');
 select is((select count(*) from public.list_workout_summaries('7b000000-0000-4000-8000-000000000001')), 0::bigint, 'summary RPC cannot cross tenants');
 reset role;

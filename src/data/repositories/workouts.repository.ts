@@ -85,7 +85,10 @@ function mapWorkout(row: WorkoutListRow): Workout {
 async function listPage(from?: string, to?: string, clientId?: string, offset = 0, pageSize = 50) {
   const result = await workoutQueries.listPage(from, to, clientId, pageSize + 1, offset)
   if (result.error) throw repositoryError(result.error)
-  return pageFromLookahead(result.data.map(mapWorkout), pageSize, offset)
+  return {
+    ...pageFromLookahead(result.data.map(mapWorkout), pageSize, offset),
+    totalCount: Number(result.data[0]?.total_count ?? 0),
+  }
 }
 
 export const workoutsRepository = {
