@@ -53,6 +53,8 @@ p { margin: 6px 0 }
 .cards, .timeline { display: flex; flex-direction: column; gap: 10px }
 .card { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 15px; border: 1px solid var(--border); border-radius: 17px; text-decoration: none; color: inherit; background: linear-gradient(145deg, #292631, #211f28); box-shadow: 0 10px 24px #00000024; transition: border-color .18s ease, transform .18s ease }
 .card:hover { border-color: #4c465a; transform: translateY(-1px) }
+.card.editing { display: block }
+.card.editing:hover { transform: none }
 .card p { font-size: 14px; margin-top: 4px }
 .badge { font-size: 12px; padding: 5px 8px; border-radius: 99px; color: #c3bdcf; background: #2b2933; white-space: nowrap }
 .badge.in_progress { color: #ffc06b; background: #3a2b1d }.badge.done { color: #69dc8c; background: #1d3626 }.badge.planned { color: #aa99ff; background: #2b2549 }
