@@ -2,7 +2,7 @@ import type { ExerciseSnapshot, LiveSetDraft, WorkoutDraft } from '../../shared/
 import { supabase } from './client'
 import { toJson } from './json'
 
-const rootColumns = 'id,client_id,workout_date,start_time,end_time,status,notes,version'
+const rootColumns = 'id,client_id,workout_date,start_time,end_time,started_at,completed_at,status,notes,version'
 
 export const workoutQueries = {
   listPage: (from: string | undefined, to: string | undefined, clientId: string | undefined, limit: number, offset: number) => supabase.rpc('list_workouts', {

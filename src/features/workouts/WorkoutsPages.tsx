@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { clientsRepository } from '../../data/repositories/clients.repository'
-import { chartUnitFor, copyWorkout, exerciseChartPoints, splitClientWorkouts, workoutsRepository } from '../../data/repositories/workouts.repository'
+import { chartUnitFor, copyWorkout, exerciseChartPoints, splitClientWorkouts, workoutDurationLabel, workoutsRepository } from '../../data/repositories/workouts.repository'
+import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -121,7 +122,7 @@ export function ClientWorkoutsPage() {
   })
   const items = query.data?.pages.flatMap((page) => page.items) ?? []
   const history = splitClientWorkouts(items, todayLocalDate()).history
-  return <Page title="История тренировок" action={<Link className="button" to={`/workouts/new?client=${clientId}`}>Добавить</Link>}><AsyncView loading={query.isLoading} error={query.error} empty={!history.length} onRetry={() => void query.refetch()}><div className="cards">{history.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{workout.exercises.map((item) => item.name).join(', ') || 'Без упражнений'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>)}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
+  return <Page title="История тренировок" back={-1} action={<Link className="button" to={`/workouts/new?client=${clientId}`}>Добавить</Link>}><AsyncView loading={query.isLoading} error={query.error} empty={!history.length} onRetry={() => void query.refetch()}><div className="cards">{history.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{workout.exercises.map((item) => item.name).join(', ') || 'Без упражнений'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>)}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
 }
 
 export function WorkoutFormPage() {
@@ -151,7 +152,7 @@ export function WorkoutFormPage() {
   }
   const loading = source.isLoading || clients.isLoading
   const error = source.error ?? clients.error
-  return <Page title={workoutId ? 'Редактировать тренировку' : params.has('copy') ? 'Копия тренировки' : 'Новая тренировка'}>
+  return <Page title={workoutId ? 'Редактировать тренировку' : params.has('copy') ? 'Копия тренировки' : 'Новая тренировка'} back={-1}>
     <AsyncView loading={loading} error={error}><form className="stack" onSubmit={(event) => void submit(event)}>
       <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} required><option value="">Выберите</option>{clients.data?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>
       <div className="split"><Field label="Дата"><input name="date" type="date" defaultValue={initial?.workoutDate ?? todayLocalDate()} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} /></Field></div>
@@ -169,10 +170,47 @@ export function WorkoutDetailPage() {
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   const start = useMutation({ mutationFn: () => workoutsRepository.start(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }); navigate(`/workouts/${workoutId}/live`) } })
   const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workouts'] }); navigate('/schedule') } })
-  return <Page title="Тренировка"><AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <><section className="workout-title"><div><h2>{query.data.clientName}</h2><p>{formatLocalDate(query.data.workoutDate)} · {query.data.startTime?.slice(0, 5) ?? 'без времени'}</p></div><span className={`badge ${query.data.status}`}>{statusLabel(query.data.status)}</span></section><div className="cards">{query.data.exercises.map((exercise) => <article className="exercise" key={exercise.id}><Link className="exercise-name-link" to={`/workouts/${query.data!.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>{exercise.sets.map((set) => <p key={set.id}>{formatSet(set)}</p>)}</article>)}</div>{query.data.notes && <p>{query.data.notes}</p>}<div className="actions">{query.data.status === 'planned' && <button onClick={() => start.mutate()}>Начать</button>}{query.data.status === 'in_progress' && <Link className="button" to={`/workouts/${workoutId}/live`}>Продолжить</Link>}{query.data.status === 'planned' && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>Изменить</Link>}<Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link></div><button className="danger secondary wide" onClick={() => remove.mutate()}>Удалить тренировку</button></>}</AsyncView></Page>
+  const workout = query.data
+  const done = workout?.status === 'done'
+  const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt) : null
+  const groups = workout ? muscleGroupLabels(workout) : []
+  return <Page title="Тренировка" back={-1}>
+    <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
+      <section className="workout-title">
+        <div><h2>{workout.clientName}</h2><p>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</p></div>
+        <span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span>
+      </section>
+      {done && <section className="summary done-summary">
+        <div><span>Время по таймеру</span><strong>{duration ?? '—'}</strong></div>
+        <div><span>Группы мышц</span><strong>{groups.length ? groups.join(', ') : '—'}</strong></div>
+      </section>}
+      {done
+        ? <div className="cards">{workout.exercises.map((exercise) => <Link className="exercise-name-link exercise" key={exercise.id} to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>)}</div>
+        : <div className="cards">{workout.exercises.map((exercise) => <article className="exercise" key={exercise.id}><Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>{exercise.sets.map((set) => <p key={set.id}>{formatSet(set)}</p>)}</article>)}</div>}
+      {workout.notes && <p>{workout.notes}</p>}
+      <div className="actions">
+        {workout.status === 'planned' && <button onClick={() => start.mutate()}>Начать</button>}
+        {workout.status === 'in_progress' && <Link className="button" to={`/workouts/${workoutId}/live`}>Продолжить</Link>}
+        {workout.status === 'planned' && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>Изменить</Link>}
+        <Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link>
+      </div>
+      <button className="danger secondary wide" onClick={() => remove.mutate()}>Удалить тренировку</button>
+    </>}</AsyncView>
+  </Page>
 }
 
 function formatSet(set: WorkoutSet) { const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, set.distanceKm && `${set.distanceKm} км`, set.durationMin && `${set.durationMin} мин`].filter(Boolean).join(' × '); return plan || 'Подход без плана' }
+
+// Ordered, de-duplicated muscle-group labels for a workout's exercises.
+function muscleGroupLabels(workout: Workout): string[] {
+  const seen = new Set<string>()
+  const labels: string[] = []
+  for (const exercise of workout.exercises) {
+    const label = MUSCLE_GROUP_LABELS[exercise.muscleGroup]
+    if (!seen.has(label)) { seen.add(label); labels.push(label) }
+  }
+  return labels
+}
 
 function LiveSetFields({ inputKind, set }: { inputKind: ExerciseSnapshot['inputKind']; set: WorkoutSet }) {
   if (inputKind === 'strength') return <div className="set-row"><input aria-label="Фактический вес" name="weightKg" type="number" min="0" step="0.5" defaultValue={set.fact.weightKg} placeholder={set.weightKg === undefined ? 'кг' : `${set.weightKg} кг`} /><input aria-label="Фактические повторы" name="reps" type="number" min="0" defaultValue={set.fact.reps} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
@@ -181,9 +219,31 @@ function LiveSetFields({ inputKind, set }: { inputKind: ExerciseSnapshot['inputK
 }
 
 const REST_SECONDS = 90
+const REST_STEP = 15
 
 function formatRest(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+}
+
+// Live elapsed workout time counting up from the start timestamp, "42:07".
+function formatElapsed(seconds: number): string {
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const secs = seconds % 60
+  const mm = String(minutes).padStart(2, '0')
+  const ss = String(secs).padStart(2, '0')
+  return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`
+}
+
+function WorkoutTimer({ startedAt }: { startedAt: string | null }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+  if (!startedAt) return <span className="live-timer">● LIVE</span>
+  const elapsed = Math.max(0, Math.floor((now - Date.parse(startedAt)) / 1000))
+  return <span className="live-timer"><span className="live-dot-mark" aria-hidden="true" />{formatElapsed(elapsed)}</span>
 }
 
 export function LiveWorkoutPage() {
@@ -216,6 +276,13 @@ export function LiveWorkoutPage() {
     restEndsAt.current = null
     setRestRemaining(null)
   }
+  // Shift the running rest deadline by ±step, never below zero.
+  function adjustRest(deltaSeconds: number) {
+    if (restEndsAt.current === null) return
+    const nextEnd = Math.max(Date.now(), restEndsAt.current + deltaSeconds * 1000)
+    restEndsAt.current = nextEnd
+    setRestRemaining(Math.max(0, Math.round((nextEnd - Date.now()) / 1000)))
+  }
   const appendSet = useMutation({ mutationFn: (exerciseId: string) => workoutsRepository.appendLiveSet(query.data!, exerciseId), onSuccess: async () => { await query.refetch() } })
   const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => workoutsRepository.appendLiveExercise(query.data!, exercise), onSuccess: async () => { await query.refetch() } })
   const finish = useMutation({ mutationFn: () => workoutsRepository.finish(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }); navigate(`/workouts/${workoutId}`) } })
@@ -239,10 +306,17 @@ export function LiveWorkoutPage() {
     return () => window.clearInterval(timer)
   }, [restActive])
   const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? finish.error
-  return <Page title="Live-тренировка" action={<span className="live-dot">● LIVE</span>}>
+  return <Page title="Live-тренировка" action={<WorkoutTimer startedAt={query.data?.startedAt ?? null} />}>
     <AsyncView loading={query.isLoading} error={query.error}>{query.data && <>
       <p>{query.data.clientName} · черновик сохраняется отдельно от плана</p>
-      {restRemaining !== null && <div className="rest-timer"><strong>Отдых {formatRest(restRemaining)}</strong><button type="button" className="link" onClick={stopRest}>Пропустить</button></div>}
+      {restRemaining !== null && <div className="rest-timer">
+        <strong>Отдых {formatRest(restRemaining)}</strong>
+        <div className="rest-controls">
+          <button type="button" className="rest-step" aria-label="Минус 15 секунд" onClick={() => adjustRest(-REST_STEP)}>−15с</button>
+          <button type="button" className="rest-step" aria-label="Плюс 15 секунд" onClick={() => adjustRest(REST_STEP)}>+15с</button>
+          <button type="button" className="link" onClick={stopRest}>Пропустить</button>
+        </div>
+      </div>}
       {query.data.exercises.map((exercise) => <section key={exercise.id}>
         <h2>{exercise.name}</h2>
         {exercise.sets.map((set, index) => <form className={`exercise ${set.confirmedAt ? 'confirmed' : ''}`} key={set.id} onBlur={(event) => {
@@ -275,7 +349,7 @@ export function ExerciseHistoryPage() {
   const inputKind = history.data?.[0]?.exercises.find((item) => item.ref === exerciseRef)?.inputKind ?? 'strength'
   const chart = useMemo(() => exerciseChartPoints(history.data ?? [], exerciseRef).map((point) => ({ date: point.date.slice(5), value: point.value })), [history.data, exerciseRef])
   const unit = chartUnitFor(inputKind)
-  return <Page title="История упражнения" action={<Link className="button secondary" to={`/workouts/${workoutId}`}>← Назад</Link>}>
+  return <Page title="История упражнения" back={`/workouts/${workoutId}`}>
     <AsyncView loading={current.isLoading || history.isLoading} error={current.error ?? history.error} empty={!history.data?.length}>
       {chart.length > 1 && <section className="chart"><h2>Динамика ({unit})</h2><ResponsiveContainer width="100%" height={220}><LineChart data={chart}><XAxis dataKey="date" /><YAxis domain={['dataMin - 2', 'dataMax + 2']} /><Tooltip /><Line type="monotone" dataKey="value" stroke="#735cff" strokeWidth={3} /></LineChart></ResponsiveContainer></section>}
       <div className="timeline">{[...(history.data ?? [])].sort((a, b) => (a.workoutDate < b.workoutDate ? 1 : -1)).map((workout) => { const exercise = workout.exercises.find((item) => item.ref === exerciseRef); return <article key={workout.id} className="card"><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{exercise?.sets.map(formatSet).join(', ')}</p></div></article> })}</div>
