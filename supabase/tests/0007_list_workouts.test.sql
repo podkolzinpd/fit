@@ -66,7 +66,7 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', '73000000-0000-4000-8000-000000000003', true);
 select throws_ok(
   'select * from public.list_workouts(null, null, null)',
-  'P0001', 'trainer_not_initialized',
+  'PT422', 'trainer_not_initialized',
   'linked client cannot call trainer list RPC'
 );
 reset role;

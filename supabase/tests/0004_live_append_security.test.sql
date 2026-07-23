@@ -32,7 +32,7 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', '60000000-0000-4000-8000-000000000006', true);
 select throws_ok(
   $$select public.append_live_set('e0000000-0000-4000-8000-000000000005', 1)$$,
-  'P0002', 'exercise_not_found', 'trainer B cannot append a set to trainer A workout'
+  'PT404', 'exercise_not_found', 'trainer B cannot append a set to trainer A workout'
 );
 select throws_ok(
   $$select public.append_live_exercise(
