@@ -1,4 +1,5 @@
 import type { WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
+import { nextSetDraft } from '../../data/repositories/workout-rules'
 
 export function roundToStep(value: number, step: number): number {
   return Math.round(value / step) * step
@@ -43,7 +44,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker }: Wor
   }
   function addSet(exerciseIndex: number) {
     onChange(exercises.map((exercise, current) => current === exerciseIndex ? {
-      ...exercise, sets: [...exercise.sets, { position: exercise.sets.length }],
+      ...exercise, sets: [...exercise.sets, nextSetDraft(exercise.sets, exercise.inputKind)],
     } : exercise))
   }
   function removeSet(exerciseIndex: number, setIndex: number) {

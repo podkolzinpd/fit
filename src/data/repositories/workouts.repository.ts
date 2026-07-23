@@ -5,7 +5,7 @@ import { clientsRepository } from './clients.repository'
 import { collectPages, pageFromLookahead } from './collect-pages'
 import { repositoryError } from './error'
 import { workoutQueries } from '../queries/workouts.queries'
-export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, splitClientWorkouts, workoutDurationLabel, muscleGroupLabels, bmiValue, bmiLabel, workoutTonnage, tonnageLabel } from './workout-rules'
+export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, splitClientWorkouts, workoutDurationLabel, muscleGroupLabels, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel } from './workout-rules'
 export type { ExerciseChartPoint } from './workout-rules'
 
 async function get(id: string): Promise<Workout> {

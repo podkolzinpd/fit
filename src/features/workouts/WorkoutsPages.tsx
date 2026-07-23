@@ -298,7 +298,18 @@ export function LiveWorkoutPage() {
   }
   const appendSet = useMutation({ mutationFn: (exerciseId: string) => workoutsRepository.appendLiveSet(query.data!, exerciseId), onSuccess: async () => { await query.refetch() } })
   const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => workoutsRepository.appendLiveExercise(query.data!, exercise), onSuccess: async () => { await query.refetch() } })
-  const finish = useMutation({ mutationFn: () => workoutsRepository.finish(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }); navigate(`/workouts/${workoutId}`) } })
+  const finish = useMutation({ mutationFn: () => workoutsRepository.finish(query.data!), onSuccess: async () => {
+    const clientId = query.data?.clientId
+    // Освежаем не только саму тренировку, но и статистику клиента и списки
+    // тренировок (карточка, история, расписание), иначе кол-во/% выполнения
+    // на карточке клиента обновляются только после перезагрузки.
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }),
+      queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+      clientId ? queryClient.invalidateQueries({ queryKey: ['client-stats', clientId] }) : Promise.resolve(),
+    ])
+    navigate(`/workouts/${workoutId}`)
+  } })
   function draftFrom(form: HTMLFormElement): LiveSetDraft { const values = new FormData(form); return { weightKg: numberValue(values.get('weightKg')), reps: numberValue(values.get('reps')), distanceKm: numberValue(values.get('distanceKm')), durationMin: numberValue(values.get('durationMin')) } }
   // Derive the countdown from a wall-clock deadline so it stays correct even
   // when the tab is backgrounded and timers are throttled by the browser.
