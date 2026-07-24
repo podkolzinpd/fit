@@ -13,7 +13,7 @@ const exercises: WorkoutExerciseDraft[] = [{
 
 function EditorHarness({ onOpenPicker }: { onOpenPicker: () => void }) {
   const [draft, setDraft] = useState(exercises)
-  return <WorkoutExerciseEditor exercises={draft} onChange={setDraft} onOpenPicker={onOpenPicker} />
+  return <WorkoutExerciseEditor exercises={draft} onChange={setDraft} onOpenPicker={onOpenPicker} onReplaceExercise={vi.fn()} />
 }
 
 describe('workout exercise editor rules', () => {
@@ -58,7 +58,7 @@ describe('workout exercise editor rules', () => {
       { source: 'system', ref: 'burpees', name: 'Берпи', muscleGroup: 'cardio', inputKind: 'reps', position: 1, sets: [{ position: 0 }] },
       { source: 'system', ref: 'running', name: 'Бег', muscleGroup: 'cardio', inputKind: 'distance', position: 2, sets: [{ position: 0 }] },
     ]
-    render(<WorkoutExerciseEditor exercises={mixed} onChange={onChange} onOpenPicker={vi.fn()} />)
+    render(<WorkoutExerciseEditor exercises={mixed} onChange={onChange} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />)
     expect(screen.getAllByLabelText('Время, подход 1')).toHaveLength(2)
     expect(screen.getByLabelText('Расстояние, подход 1')).toBeInTheDocument()
 

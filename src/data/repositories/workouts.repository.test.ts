@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, formatFactVsPlan, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, mergeBlockWithNext, moveBlock, muscleGroupLabels, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockType, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, formatFactVsPlan, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, mergeBlockWithNext, moveBlock, muscleGroupLabels, replaceExercise, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockType, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -482,5 +482,45 @@ describe('moveBlock', () => {
     const start = [draft('a', 'b1', 'single'), draft('b', 'b2', 'single')]
     expect(moveBlock(start, 'a', -1).map((e) => e.ref)).toEqual(['a', 'b'])
     expect(moveBlock(start, 'b', 1).map((e) => e.ref)).toEqual(['a', 'b'])
+  })
+})
+
+describe('replaceExercise', () => {
+  const bench: ExerciseSnapshot = { source: 'system', ref: 'bench', name: 'Жим лёжа', muscleGroup: 'chest', inputKind: 'strength' }
+  const run: ExerciseSnapshot = { source: 'system', ref: 'run', name: 'Бег', muscleGroup: 'cardio', inputKind: 'distance' }
+
+  it('подменяет идентичность, сохраняя position/блок/подходы при том же типе', () => {
+    const start: WorkoutExerciseDraft[] = [
+      { source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: 'b1', blockType: 'superset', blockRounds: 3, sets: [{ position: 0, weightKg: 50, reps: 10 }, { position: 1, weightKg: 55, reps: 8 }] },
+      { source: 'system', ref: 'row', name: 'Тяга', muscleGroup: 'back', inputKind: 'strength', position: 1, blockId: 'b1', blockType: 'superset', blockRounds: 3, sets: [{ position: 0 }] },
+    ]
+    const out = replaceExercise(start, 0, bench)
+    expect(out[0]).toMatchObject({ ref: 'bench', name: 'Жим лёжа', muscleGroup: 'chest', inputKind: 'strength', position: 0, blockId: 'b1', blockType: 'superset', blockRounds: 3 })
+    // Тот же тип — значения подходов сохраняются.
+    expect(out[0]!.sets).toEqual([{ position: 0, weightKg: 50, reps: 10 }, { position: 1, weightKg: 55, reps: 8 }])
+    // Остальные упражнения не тронуты.
+    expect(out[1]).toEqual(start[1])
+  })
+
+  it('очищает значения подходов при смене типа, сохраняя их число', () => {
+    const start: WorkoutExerciseDraft[] = [
+      { source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: 'b1', blockType: 'single', blockRounds: 1, sets: [{ position: 0, weightKg: 50, reps: 10 }, { position: 1, weightKg: 55, reps: 8 }] },
+    ]
+    const out = replaceExercise(start, 0, run)
+    expect(out[0]).toMatchObject({ ref: 'run', inputKind: 'distance', position: 0, blockId: 'b1' })
+    // Число подходов то же, значения очищены.
+    expect(out[0]!.sets).toEqual([{ position: 0 }, { position: 1 }])
+  })
+
+  it('сохраняет customExerciseId при замене на кастомное и убирает при системном', () => {
+    const custom: ExerciseSnapshot = { source: 'custom', ref: 'x', customExerciseId: 'cust-1', name: 'Своё', muscleGroup: 'legs', inputKind: 'strength' }
+    const start: WorkoutExerciseDraft[] = [{ source: 'custom', ref: 'y', customExerciseId: 'cust-0', name: 'Старое', muscleGroup: 'legs', inputKind: 'strength', position: 0, sets: [{ position: 0 }] }]
+    expect(replaceExercise(start, 0, custom)[0]).toMatchObject({ source: 'custom', customExerciseId: 'cust-1' })
+    expect(replaceExercise(start, 0, bench)[0]!.customExerciseId).toBeUndefined()
+  })
+
+  it('несуществующий индекс — список без изменений', () => {
+    const start = [draft('a')]
+    expect(replaceExercise(start, 5, bench)).toEqual(start)
   })
 })

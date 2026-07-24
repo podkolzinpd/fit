@@ -1,4 +1,4 @@
-// schema-sha256: 88f903fa67c135495b9bdea2cbbf4a7043a257b070f0cfa95f570938290823aa
+// schema-sha256: 59a617a4561e3c3253770a0bc10cffe93dc11254d5dc3aa7d6467774fa7253c7
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
@@ -55,6 +55,7 @@ export interface Database {
       append_live_exercise: { Args: { p_workout_id: string; p_exercise: Json; p_expected_version: number }; Returns: number }
       append_live_set: { Args: { p_workout_exercise_id: string; p_expected_version: number }; Returns: number }
       reorder_live_block: { Args: { p_workout_id: string; p_block_id: string; p_direction: number; p_expected_version: number }; Returns: number }
+      replace_live_exercise: { Args: { p_workout_id: string; p_exercise_id: string; p_exercise: Json; p_expected_version: number }; Returns: number }
       finish_workout: { Args: { p_workout_id: string; p_expected_version: number }; Returns: number }
       save_progress: { Args: { p_progress: Json; p_expected_version?: number | null }; Returns: string }
       soft_delete_workout: { Args: { p_workout_id: string; p_expected_version: number }; Returns: undefined }
