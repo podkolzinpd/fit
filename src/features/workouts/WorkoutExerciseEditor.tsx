@@ -1,5 +1,5 @@
 import type { BlockType, WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
-import { groupDraftsIntoBlocks, mergeBlockWithNext, nextSetDraft, setBlockType, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
+import { groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, setBlockType, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
 
 export function roundToStep(value: number, step: number): number {
   return Math.round(value / step) * step
@@ -70,10 +70,18 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker }: Wor
     </div>
   }
 
+  // Стрелки перемещения блока вверх/вниз (задизейблены на границах).
+  function reorderButtons(blockId: string, isFirst: boolean, isLast: boolean) {
+    return <span className="block-reorder">
+      <button type="button" className="reorder-btn" aria-label="Вверх" disabled={isFirst} onClick={() => onChange(moveBlock([...exercises], blockId, -1))}>↑</button>
+      <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast} onClick={() => onChange(moveBlock([...exercises], blockId, 1))}>↓</button>
+    </span>
+  }
+
   // Одиночное упражнение (вне блока): подходы + «＋ Подход» + «Объединить».
-  function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean) {
+  function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode) {
     return <article className="exercise" key={`${exercise.ref}-${exerciseIndex}`}>
-      <header><strong>{exercise.name}</strong><button type="button" className="link danger" onClick={() => removeExercise(exerciseIndex)}>Удалить</button></header>
+      <header><strong>{exercise.name}</strong><span className="exercise-head-actions">{reorder}<button type="button" className="link danger" onClick={() => removeExercise(exerciseIndex)}>Удалить</button></span></header>
       {exercise.sets.map((_set, setIndex) => <div className="planned-set" key={setIndex}>
         <div className="planned-set-heading"><span>Подход {setIndex + 1}</span>{exercise.sets.length > 1 && <button type="button" className="link danger" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}>×</button>}</div>
         {setFields(exercise, exerciseIndex, setIndex)}
@@ -85,14 +93,16 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker }: Wor
 
   return <section>
     <div className="workout-editor-heading"><h2>Упражнения</h2>{exercises.length > 0 && <div className="workout-tools"><button type="button" className="link" onClick={() => onChange(clearWorkoutLoad(exercises))}>Сбросить значения</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, .95))}>−5%</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, 1.05))}>+5%</button></div>}</div>
-    {blocks.map((block) => {
+    {blocks.map((block, blockIndex) => {
       const lastIndex = exercises.length - 1
+      const isFirst = blockIndex === 0
+      const isLast = blockIndex === blocks.length - 1
       // «Объединить» показываем на последнем упражнении блока, если дальше есть ещё.
       const blockLastIndex = block.items[block.items.length - 1]!.index
       const canMerge = (index: number) => index === blockLastIndex && index < lastIndex
       if (block.items.length === 1) {
         const { exercise, index } = block.items[0]!
-        return renderExercise(exercise, index, canMerge(index))
+        return renderExercise(exercise, index, canMerge(index), blocks.length > 1 ? reorderButtons(block.blockId, isFirst, isLast) : undefined)
       }
       // Многоэлементный блок: раскладка ПО КРУГАМ (круг = все упражнения по очереди).
       const rounds = draftBlockRoundsView(block)
@@ -105,6 +115,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker }: Wor
             <option value="circuit">Круговая</option>
           </select>
           <label className="block-rounds">Кругов<input aria-label="Кругов" type="number" min="1" max="20" value={block.blockRounds} onChange={(event) => onChange(syncBlockRounds([...exercises], block.blockId, Number(event.target.value) || 1))} /></label>
+          {blocks.length > 1 && reorderButtons(block.blockId, isFirst, isLast)}
           <button type="button" className="link" onClick={() => onChange(splitBlock([...exercises], block.blockId))}>Разбить</button>
         </div>
         {/* Список упражнений блока с удалением (значения — ниже по кругам). */}
