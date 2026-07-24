@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, mergeBlockWithNext, muscleGroupLabels, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockType, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, formatFactVsPlan, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, mergeBlockWithNext, muscleGroupLabels, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockType, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -134,21 +134,21 @@ describe('exerciseChartPoints', () => {
     expect(exerciseChartPoints(workouts, 'squat')).toEqual([{ date: '2026-07-05', value: 50 }])
   })
 
-  it('берёт план как fallback, если факт не заполнен', () => {
+  it('строго по факту: подход только с планом (без факта) пропускается', () => {
     const workouts = [workoutWith('2026-07-15', 'squat', 'strength', [planSet(70), planSet(75, 1)])]
-    expect(exerciseChartPoints(workouts, 'squat')).toEqual([{ date: '2026-07-15', value: 75 }])
+    expect(exerciseChartPoints(workouts, 'squat')).toEqual([])
   })
 
-  it('берёт плановую дистанцию как fallback', () => {
+  it('строго по факту: плановая дистанция без факта не даёт точку', () => {
     const plan: WorkoutSet = { id: 'pd', position: 0, distanceKm: 8, fact: {}, confirmedAt: null, version: 1 }
     const workouts = [workoutWith('2026-07-15', 'run', 'distance', [plan])]
-    expect(exerciseChartPoints(workouts, 'run')).toEqual([{ date: '2026-07-15', value: 8 }])
+    expect(exerciseChartPoints(workouts, 'run')).toEqual([])
   })
 
-  it('берёт плановые повторы как fallback', () => {
+  it('строго по факту: плановые повторы без факта не дают точку', () => {
     const plan: WorkoutSet = { id: 'pr', position: 0, reps: 30, fact: {}, confirmedAt: null, version: 1 }
     const workouts = [workoutWith('2026-07-15', 'burpee', 'reps', [plan])]
-    expect(exerciseChartPoints(workouts, 'burpee')).toEqual([{ date: '2026-07-15', value: 30 }])
+    expect(exerciseChartPoints(workouts, 'burpee')).toEqual([])
   })
 
   it('учитывает только завершённые тренировки', () => {
@@ -439,5 +439,24 @@ describe('draftBlockRoundsView', () => {
       { round: 1, items: [{ ref: 'a', exerciseIndex: 0, setIndex: 0 }, { ref: 'b', exerciseIndex: 1, setIndex: 0 }] },
       { round: 2, items: [{ ref: 'a', exerciseIndex: 0, setIndex: 1 }, { ref: 'b', exerciseIndex: 1, setIndex: 1 }] },
     ])
+  })
+})
+
+describe('formatFactVsPlan', () => {
+  const mk = (plan: Partial<WorkoutSet>, fact: WorkoutSet['fact']): WorkoutSet => ({ id: 's', position: 0, ...plan, fact, confirmedAt: 'now', version: 1 })
+  it('факт = план → без приписки', () => {
+    expect(formatFactVsPlan(mk({ weightKg: 50, reps: 10 }, { weightKg: 50, reps: 10 }))).toEqual({ fact: '50 кг × 10 повт.', planNote: null })
+  })
+  it('вес отличается → приписка плана', () => {
+    expect(formatFactVsPlan(mk({ weightKg: 50, reps: 10 }, { weightKg: 45, reps: 10 }))).toEqual({ fact: '45 кг × 10 повт.', planNote: 'план 50 кг × 10 повт.' })
+  })
+  it('повторы отличаются → приписка плана', () => {
+    expect(formatFactVsPlan(mk({ weightKg: 50, reps: 10 }, { weightKg: 50, reps: 8 }))).toEqual({ fact: '50 кг × 8 повт.', planNote: 'план 50 кг × 10 повт.' })
+  })
+  it('факт не введён → показываем план как факт, без приписки', () => {
+    expect(formatFactVsPlan(mk({ weightKg: 50, reps: 10 }, {}))).toEqual({ fact: '50 кг × 10 повт.', planNote: null })
+  })
+  it('нет ни плана, ни факта → «Без результата»', () => {
+    expect(formatFactVsPlan(mk({}, {}))).toEqual({ fact: 'Без результата', planNote: null })
   })
 })
