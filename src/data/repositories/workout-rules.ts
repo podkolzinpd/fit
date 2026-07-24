@@ -1,4 +1,4 @@
-import type { BlockType, ClientStats, InputKind, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet, WorkoutSetDraft, WorkoutSummary } from '../../shared/domain'
+import type { BlockType, ClientStats, InputKind, Workout, WorkoutDraft, WorkoutExercise, WorkoutExerciseDraft, WorkoutSet, WorkoutSetDraft, WorkoutSummary } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 
@@ -47,6 +47,83 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   superset: 'Суперсет',
   triset: 'Трисет',
   circuit: 'Круговая',
+}
+
+// --- Блоки на черновике (форма плана) -------------------------------------
+// Черновик упражнений может не иметь blockId/blockType; хелперы ниже работают
+// с ним, гарантируя корректную группировку для редактора.
+
+export interface DraftBlock {
+  blockId: string
+  blockType: BlockType
+  items: { exercise: WorkoutExerciseDraft; index: number }[]
+}
+
+// Гарантирует blockId/blockType у каждого упражнения черновика: без блока —
+// собственный одиночный блок. Не меняет уже проставленные значения.
+export function ensureBlockIds(exercises: WorkoutExerciseDraft[]): WorkoutExerciseDraft[] {
+  return exercises.map((exercise) => ({
+    ...exercise,
+    blockId: exercise.blockId ?? crypto.randomUUID(),
+    blockType: exercise.blockType ?? 'single',
+  }))
+}
+
+// Группирует черновик по blockId в порядке следования (сохраняя исходный
+// индекс каждого упражнения). Соседние упражнения одного блока объединяются.
+export function groupDraftsIntoBlocks(exercises: WorkoutExerciseDraft[]): DraftBlock[] {
+  const blocks: DraftBlock[] = []
+  const byId = new Map<string, DraftBlock>()
+  exercises.forEach((exercise, index) => {
+    const blockId = exercise.blockId ?? `__solo-${index}`
+    const existing = byId.get(blockId)
+    if (existing) {
+      existing.items.push({ exercise, index })
+    } else {
+      const block: DraftBlock = { blockId, blockType: exercise.blockType ?? 'single', items: [{ exercise, index }] }
+      byId.set(blockId, block)
+      blocks.push(block)
+    }
+  })
+  return blocks
+}
+
+// Объединяет блок упражнения по индексу со следующим упражнением в один блок
+// (по умолчанию суперсет). Общий blockId = у первого блока; тип: если один из
+// блоков уже многоэлементный — берём его тип, иначе superset.
+export function mergeBlockWithNext(exercises: WorkoutExerciseDraft[], index: number): WorkoutExerciseDraft[] {
+  const list = ensureBlockIds(exercises)
+  const current = list[index]
+  const next = list[index + 1]
+  if (!current || !next || current.blockId === next.blockId) return list
+  const currentSize = list.filter((e) => e.blockId === current.blockId).length
+  const nextSize = list.filter((e) => e.blockId === next.blockId).length
+  const currentType = current.blockType ?? 'single'
+  const nextType = next.blockType ?? 'single'
+  const targetType: BlockType = currentSize > 1 && currentType !== 'single' ? currentType
+    : nextSize > 1 && nextType !== 'single' ? nextType
+    : 'superset'
+  const targetId = current.blockId!
+  const fromId = next.blockId!
+  return list.map((exercise) =>
+    exercise.blockId === targetId || exercise.blockId === fromId
+      ? { ...exercise, blockId: targetId, blockType: targetType }
+      : exercise,
+  )
+}
+
+// Разбивает блок на одиночные: каждому упражнению блока — свой blockId и single.
+export function splitBlock(exercises: WorkoutExerciseDraft[], blockId: string): WorkoutExerciseDraft[] {
+  return ensureBlockIds(exercises).map((exercise) =>
+    exercise.blockId === blockId ? { ...exercise, blockId: crypto.randomUUID(), blockType: 'single' } : exercise,
+  )
+}
+
+// Меняет тип блока для всех упражнений с данным blockId.
+export function setBlockType(exercises: WorkoutExerciseDraft[], blockId: string, blockType: BlockType): WorkoutExerciseDraft[] {
+  return ensureBlockIds(exercises).map((exercise) =>
+    exercise.blockId === blockId ? { ...exercise, blockType } : exercise,
+  )
 }
 
 // A new set for "＋ Подход" that inherits the relevant params of the last set

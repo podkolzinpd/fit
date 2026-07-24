@@ -1,5 +1,5 @@
-import type { WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
-import { nextSetDraft } from '../../data/repositories/workout-rules'
+import type { BlockType, WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
+import { groupDraftsIntoBlocks, mergeBlockWithNext, nextSetDraft, setBlockType, splitBlock } from '../../data/repositories/workout-rules'
 
 export function roundToStep(value: number, step: number): number {
   return Math.round(value / step) * step
@@ -57,9 +57,10 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker }: Wor
     onChange(exercises.filter((_, index) => index !== exerciseIndex).map((exercise, position) => ({ ...exercise, position })))
   }
 
-  return <section>
-    <div className="workout-editor-heading"><h2>Упражнения</h2>{exercises.length > 0 && <div className="workout-tools"><button type="button" className="link" onClick={() => onChange(clearWorkoutLoad(exercises))}>Сбросить значения</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, .95))}>−5%</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, 1.05))}>+5%</button></div>}</div>
-    {exercises.map((exercise, exerciseIndex) => <article className="exercise" key={`${exercise.ref}-${exerciseIndex}`}>
+  const blocks = groupDraftsIntoBlocks([...exercises])
+
+  function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean) {
+    return <article className="exercise" key={`${exercise.ref}-${exerciseIndex}`}>
       <header><strong>{exercise.name}</strong><button type="button" className="link danger" onClick={() => removeExercise(exerciseIndex)}>Удалить</button></header>
       {exercise.sets.map((set, setIndex) => <div className="planned-set" key={setIndex}>
         <div className="planned-set-heading"><span>Подход {setIndex + 1}</span>{exercise.sets.length > 1 && <button type="button" className="link danger" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}>×</button>}</div>
@@ -70,7 +71,34 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker }: Wor
         </div>
       </div>)}
       <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
-    </article>)}
+      {canMergeNext && <button type="button" className="link block-merge" onClick={() => onChange(mergeBlockWithNext([...exercises], exerciseIndex))}>⛓ Объединить со следующим в блок</button>}
+    </article>
+  }
+
+  return <section>
+    <div className="workout-editor-heading"><h2>Упражнения</h2>{exercises.length > 0 && <div className="workout-tools"><button type="button" className="link" onClick={() => onChange(clearWorkoutLoad(exercises))}>Сбросить значения</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, .95))}>−5%</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, 1.05))}>+5%</button></div>}</div>
+    {blocks.map((block) => {
+      const lastIndex = exercises.length - 1
+      // «Объединить» показываем на последнем упражнении блока, если дальше есть ещё.
+      const blockLastIndex = block.items[block.items.length - 1]!.index
+      const canMerge = (index: number) => index === blockLastIndex && index < lastIndex
+      if (block.items.length === 1) {
+        const { exercise, index } = block.items[0]!
+        return renderExercise(exercise, index, canMerge(index))
+      }
+      // Многоэлементный блок: обёртка с выбором типа и «Разбить».
+      return <div className="exercise-block" key={block.blockId}>
+        <div className="exercise-block-head">
+          <select aria-label="Тип блока" value={block.blockType} onChange={(event) => onChange(setBlockType([...exercises], block.blockId, event.target.value as BlockType))}>
+            <option value="superset">Суперсет</option>
+            <option value="triset">Трисет</option>
+            <option value="circuit">Круговая</option>
+          </select>
+          <button type="button" className="link" onClick={() => onChange(splitBlock([...exercises], block.blockId))}>Разбить блок</button>
+        </div>
+        {block.items.map(({ exercise, index }) => renderExercise(exercise, index, canMerge(index)))}
+      </div>
+    })}
     <button type="button" className="secondary wide" onClick={onOpenPicker}>＋ Упражнение</button>
   </section>
 }

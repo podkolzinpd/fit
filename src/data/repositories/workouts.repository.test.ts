@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { InputKind, Workout, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, exerciseChartPoints, groupIntoBlocks, isLastSetOfBlock, muscleGroupLabels, nextSetDraft, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import type { InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, mergeBlockWithNext, muscleGroupLabels, nextSetDraft, setBlockType, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -324,5 +324,53 @@ describe('copyWorkout blocks', () => {
     // оба упражнения блока получили один и тот же новый blockId
     expect(draft.exercises[0]?.blockId).toBe(draft.exercises[1]?.blockId)
     expect(draft.exercises[0]?.blockId).not.toBe('b1')
+  })
+})
+
+function draft(ref: string, blockId?: string, blockType?: 'single'|'superset'|'triset'|'circuit'): WorkoutExerciseDraft {
+  return { source: 'system', ref, name: ref, muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId, blockType, sets: [{ position: 0 }] }
+}
+
+describe('draft blocks', () => {
+  it('ensureBlockIds проставляет id и single там, где нет', () => {
+    const out = ensureBlockIds([draft('a'), draft('b', 'x', 'superset')])
+    expect(out[0]?.blockId).toBeTruthy()
+    expect(out[0]?.blockType).toBe('single')
+    expect(out[1]?.blockId).toBe('x')
+    expect(out[1]?.blockType).toBe('superset')
+  })
+
+  it('mergeBlockWithNext объединяет два одиночных в суперсет с общим id', () => {
+    const out = mergeBlockWithNext([draft('a', 'b1', 'single'), draft('b', 'b2', 'single')], 0)
+    expect(out[0]?.blockId).toBe(out[1]?.blockId)
+    expect(out[0]?.blockType).toBe('superset')
+    expect(out[1]?.blockType).toBe('superset')
+  })
+
+  it('mergeBlockWithNext присоединяет к существующему многоэлементному блоку с его типом', () => {
+    // a,b — трисет b1; c — одиночный. Объединяем b(index1) со следующим c.
+    const start = [draft('a', 'b1', 'triset'), draft('b', 'b1', 'triset'), draft('c', 'b2', 'single')]
+    const out = mergeBlockWithNext(start, 1)
+    expect(new Set(out.map((e) => e.blockId)).size).toBe(1)
+    expect(out.every((e) => e.blockType === 'triset')).toBe(true)
+  })
+
+  it('splitBlock разбивает блок на одиночные', () => {
+    const out = splitBlock([draft('a', 'b1', 'superset'), draft('b', 'b1', 'superset')], 'b1')
+    expect(out[0]?.blockId).not.toBe(out[1]?.blockId)
+    expect(out.every((e) => e.blockType === 'single')).toBe(true)
+  })
+
+  it('setBlockType меняет тип всего блока', () => {
+    const out = setBlockType([draft('a', 'b1', 'superset'), draft('b', 'b1', 'superset')], 'b1', 'circuit')
+    expect(out.every((e) => e.blockType === 'circuit')).toBe(true)
+  })
+
+  it('groupDraftsIntoBlocks группирует по blockId, сохраняя индексы', () => {
+    const blocks = groupDraftsIntoBlocks([draft('a', 'b1', 'superset'), draft('b', 'b1', 'superset'), draft('c', 'b2', 'single')])
+    expect(blocks.map((b) => ({ type: b.blockType, refs: b.items.map((i) => i.exercise.ref), idx: b.items.map((i) => i.index) }))).toEqual([
+      { type: 'superset', refs: ['a', 'b'], idx: [0, 1] },
+      { type: 'single', refs: ['c'], idx: [2] },
+    ])
   })
 })
