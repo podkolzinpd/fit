@@ -1,11 +1,12 @@
-import type { ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
+import type { BlockType, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import type { WorkoutListRow } from '../database.types'
 import { clientsRepository } from './clients.repository'
 import { collectPages, pageFromLookahead } from './collect-pages'
 import { repositoryError } from './error'
 import { workoutQueries } from '../queries/workouts.queries'
-export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, splitClientWorkouts, workoutDurationLabel, muscleGroupLabels, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel } from './workout-rules'
+export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, splitClientWorkouts, workoutDurationLabel, muscleGroupLabels, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, BLOCK_TYPE_LABELS, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockType, syncBlockRounds } from './workout-rules'
+export type { ExerciseBlock, DraftBlock, BlockRound } from './workout-rules'
 export type { ExerciseChartPoint } from './workout-rules'
 
 async function get(id: string): Promise<Workout> {
@@ -31,6 +32,7 @@ async function get(id: string): Promise<Workout> {
     id: row.id, position: row.position, source: row.exercise_source as 'system' | 'custom', ref: row.exercise_ref,
     customExerciseId: row.custom_exercise_id ?? undefined, name: row.exercise_name,
     muscleGroup: row.muscle_group as MuscleGroup, inputKind: row.input_kind as InputKind,
+    blockId: row.block_id, blockType: row.block_type as BlockType, blockRounds: row.block_rounds,
     sets: grouped.get(row.id) ?? [],
   }))
   const client = await clientsRepository.get(root.data.client_id)
@@ -65,6 +67,9 @@ function mapWorkout(row: WorkoutListRow): Workout {
       name: exercise.exercise_name,
       muscleGroup: exercise.muscle_group as MuscleGroup,
       inputKind: exercise.input_kind as InputKind,
+      blockId: exercise.block_id,
+      blockType: exercise.block_type as BlockType,
+      blockRounds: exercise.block_rounds,
       sets: exercise.sets.map((set) => ({
         id: set.id,
         position: set.position,

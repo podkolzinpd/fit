@@ -4,6 +4,12 @@ import type { ProgressEntry } from '../../shared/domain'
 import { formatLocalDate, localDate, type LocalDate } from '../../shared/local-date'
 
 export type MetricKey = 'weightKg' | 'chestCm' | 'waistCm' | 'hipCm'
+export type MetricSelector = MetricKey | { customMetricId: string }
+
+export function valueFor(entry: ProgressEntry, metric: MetricSelector): number | undefined {
+  if (typeof metric === 'string') return entry[metric]
+  return entry.customMetrics.find((item) => item.metricId === metric.customMetricId)?.value
+}
 
 const WINDOW_DAYS = 28
 
@@ -23,8 +29,9 @@ export function clampDate(date: LocalDate, min: LocalDate, max: LocalDate): Loca
 
 export function computeYDomain(values: number[]): [number, number] {
   const min = Math.min(...values); const max = Math.max(...values)
-  if (min === max) { const pad = Math.max(Math.abs(min) * 0.1, 1); return [min - pad, max + pad] }
-  const range = max - min; const pad = range * 0.15
+  // Always floor/ceil to whole numbers: unrounded bounds (e.g. 2.3 ± 1 = 1.2999999999999998)
+  // leak floating-point noise into recharts' auto-generated axis ticks.
+  const pad = min === max ? Math.max(Math.abs(min) * 0.1, 1) : (max - min) * 0.15
   return [Math.floor(min - pad), Math.ceil(max + pad)]
 }
 
@@ -75,7 +82,7 @@ export function renderChartDot(props: { cx?: number; cy?: number; index?: number
 
 export interface ProgressChartProps {
   entries: ProgressEntry[]
-  metric: MetricKey
+  metric: MetricSelector
   label: string
   unit: string
   windowEnd: LocalDate | null
@@ -88,8 +95,8 @@ export function ProgressChart({ entries, metric, label, unit, windowEnd, onWindo
   const [isDragging, setIsDragging] = useState(false)
 
   const chartData = entries
-    .filter((entry) => entry[metric] !== undefined)
-    .map((entry) => ({ date: entry.recordedOn, value: entry[metric] as number }))
+    .map((entry) => ({ date: entry.recordedOn, value: valueFor(entry, metric) }))
+    .filter((point): point is { date: LocalDate; value: number } => point.value !== undefined)
     .sort((a, b) => a.date.localeCompare(b.date))
 
   if (chartData.length === 0) return <p className="muted">Нет данных для отображения</p>

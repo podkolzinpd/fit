@@ -1,6 +1,180 @@
-import type { ClientStats, InputKind, Workout, WorkoutDraft, WorkoutSet, WorkoutSetDraft, WorkoutSummary } from '../../shared/domain'
+import type { BlockType, ClientStats, InputKind, Workout, WorkoutDraft, WorkoutExercise, WorkoutExerciseDraft, WorkoutSet, WorkoutSetDraft, WorkoutSummary } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
+
+export interface ExerciseBlock {
+  blockId: string
+  blockType: BlockType
+  blockRounds: number
+  exercises: WorkoutExercise[]
+}
+
+// Группирует упражнения тренировки в блоки по blockId, сохраняя порядок
+// (по позиции первого упражнения блока). Соседние упражнения одного блока
+// объединяются; порядок упражнений внутри блока — по позиции.
+export function groupIntoBlocks(exercises: WorkoutExercise[]): ExerciseBlock[] {
+  const ordered = [...exercises].sort((a, b) => a.position - b.position)
+  const blocks: ExerciseBlock[] = []
+  const byId = new Map<string, ExerciseBlock>()
+  for (const exercise of ordered) {
+    const existing = byId.get(exercise.blockId)
+    if (existing) {
+      existing.exercises.push(exercise)
+    } else {
+      const block: ExerciseBlock = { blockId: exercise.blockId, blockType: exercise.blockType, blockRounds: exercise.blockRounds, exercises: [exercise] }
+      byId.set(exercise.blockId, block)
+      blocks.push(block)
+    }
+  }
+  return blocks
+}
+
+// True, если подход — последний подтверждаемый в своём блоке: последний сет
+// последнего (по позиции) упражнения блока. Используется в live, чтобы отдых
+// стартовал только после всего блока (суперсет/трисет/круговая).
+export function isLastSetOfBlock(workout: Workout, exerciseId: string, setId: string): boolean {
+  const exercise = workout.exercises.find((item) => item.id === exerciseId)
+  if (!exercise) return false
+  const block = groupIntoBlocks(workout.exercises).find((b) => b.blockId === exercise.blockId)
+  if (!block) return false
+  const lastExercise = block.exercises[block.exercises.length - 1]
+  if (!lastExercise || lastExercise.id !== exerciseId) return false
+  const lastSet = [...exercise.sets].sort((a, b) => a.position - b.position)[exercise.sets.length - 1]
+  return Boolean(lastSet && lastSet.id === setId)
+}
+
+export interface BlockRound {
+  round: number // 1-based номер круга
+  items: { exercise: WorkoutExercise; set: WorkoutSet }[]
+}
+
+// Раскладывает многоэлементный блок «по кругам»: круг R = по одному подходу
+// (позиция R-1) каждого упражнения блока, в порядке упражнений. Число кругов
+// = максимум подходов среди упражнений блока (1 круг = 1 подход каждого).
+export function blockRoundsView(block: ExerciseBlock): BlockRound[] {
+  const roundCount = Math.max(block.blockRounds, ...block.exercises.map((e) => e.sets.length), 1)
+  const rounds: BlockRound[] = []
+  for (let r = 0; r < roundCount; r++) {
+    const items: BlockRound['items'] = []
+    for (const exercise of block.exercises) {
+      const set = [...exercise.sets].sort((a, b) => a.position - b.position)[r]
+      if (set) items.push({ exercise, set })
+    }
+    if (items.length) rounds.push({ round: r + 1, items })
+  }
+  return rounds
+}
+
+// Индекс (0-based) текущего круга: первого, где есть неподтверждённый подход.
+// Если все круги подтверждены — возвращает последний.
+export function currentRoundIndex(rounds: BlockRound[]): number {
+  const idx = rounds.findIndex((round) => round.items.some(({ set }) => !set.confirmedAt))
+  return idx === -1 ? Math.max(0, rounds.length - 1) : idx
+}
+
+export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
+  single: 'Обычный',
+  superset: 'Суперсет',
+  triset: 'Трисет',
+  circuit: 'Круговая',
+}
+
+// --- Блоки на черновике (форма плана) -------------------------------------
+// Черновик упражнений может не иметь blockId/blockType; хелперы ниже работают
+// с ним, гарантируя корректную группировку для редактора.
+
+export interface DraftBlock {
+  blockId: string
+  blockType: BlockType
+  blockRounds: number
+  items: { exercise: WorkoutExerciseDraft; index: number }[]
+}
+
+// Гарантирует blockId/blockType/blockRounds у каждого упражнения черновика:
+// без блока — собственный одиночный блок, 1 круг. Не трогает проставленное.
+export function ensureBlockIds(exercises: WorkoutExerciseDraft[]): WorkoutExerciseDraft[] {
+  return exercises.map((exercise) => ({
+    ...exercise,
+    blockId: exercise.blockId ?? crypto.randomUUID(),
+    blockType: exercise.blockType ?? 'single',
+    blockRounds: exercise.blockRounds ?? 1,
+  }))
+}
+
+// Группирует черновик по blockId в порядке следования (сохраняя исходный
+// индекс каждого упражнения). Соседние упражнения одного блока объединяются.
+export function groupDraftsIntoBlocks(exercises: WorkoutExerciseDraft[]): DraftBlock[] {
+  const blocks: DraftBlock[] = []
+  const byId = new Map<string, DraftBlock>()
+  exercises.forEach((exercise, index) => {
+    const blockId = exercise.blockId ?? `__solo-${index}`
+    const existing = byId.get(blockId)
+    if (existing) {
+      existing.items.push({ exercise, index })
+    } else {
+      const block: DraftBlock = { blockId, blockType: exercise.blockType ?? 'single', blockRounds: exercise.blockRounds ?? 1, items: [{ exercise, index }] }
+      byId.set(blockId, block)
+      blocks.push(block)
+    }
+  })
+  return blocks
+}
+
+// Синхронизирует раунды блока: у всех упражнений блока blockRounds=rounds и
+// ровно `rounds` подходов (1 круг = 1 подход каждого). Недостающие подходы
+// добавляются по образцу последнего, лишние — срезаются. rounds >= 1.
+export function syncBlockRounds(exercises: WorkoutExerciseDraft[], blockId: string, rounds: number): WorkoutExerciseDraft[] {
+  const target = Math.max(1, Math.round(rounds))
+  return ensureBlockIds(exercises).map((exercise) => {
+    if (exercise.blockId !== blockId) return exercise
+    const sets = [...exercise.sets]
+    while (sets.length < target) sets.push(nextSetDraft(sets, exercise.inputKind))
+    sets.length = target
+    return { ...exercise, blockRounds: target, sets: sets.map((set, position) => ({ ...set, position })) }
+  })
+}
+
+// Объединяет блок упражнения по индексу со следующим упражнением в один блок
+// (по умолчанию суперсет). Общий blockId = у первого блока; тип: если один из
+// блоков уже многоэлементный — берём его тип, иначе superset.
+export function mergeBlockWithNext(exercises: WorkoutExerciseDraft[], index: number): WorkoutExerciseDraft[] {
+  const list = ensureBlockIds(exercises)
+  const current = list[index]
+  const next = list[index + 1]
+  if (!current || !next || current.blockId === next.blockId) return list
+  const currentSize = list.filter((e) => e.blockId === current.blockId).length
+  const nextSize = list.filter((e) => e.blockId === next.blockId).length
+  const currentType = current.blockType ?? 'single'
+  const nextType = next.blockType ?? 'single'
+  const targetType: BlockType = currentSize > 1 && currentType !== 'single' ? currentType
+    : nextSize > 1 && nextType !== 'single' ? nextType
+    : 'superset'
+  const targetId = current.blockId!
+  const fromId = next.blockId!
+  const merged = list.map((exercise) =>
+    exercise.blockId === targetId || exercise.blockId === fromId
+      ? { ...exercise, blockId: targetId, blockType: targetType }
+      : exercise,
+  )
+  // Раунды блока = максимум подходов среди упражнений блока (1 круг = 1 подход).
+  const rounds = Math.max(1, ...merged.filter((e) => e.blockId === targetId).map((e) => e.sets.length))
+  return syncBlockRounds(merged, targetId, rounds)
+}
+
+// Разбивает блок на одиночные: каждому упражнению блока — свой blockId, single,
+// blockRounds=1 (одиночные управляют подходами вручную, а не кругами).
+export function splitBlock(exercises: WorkoutExerciseDraft[], blockId: string): WorkoutExerciseDraft[] {
+  return ensureBlockIds(exercises).map((exercise) =>
+    exercise.blockId === blockId ? { ...exercise, blockId: crypto.randomUUID(), blockType: 'single', blockRounds: 1 } : exercise,
+  )
+}
+
+// Меняет тип блока для всех упражнений с данным blockId.
+export function setBlockType(exercises: WorkoutExerciseDraft[], blockId: string, blockType: BlockType): WorkoutExerciseDraft[] {
+  return ensureBlockIds(exercises).map((exercise) =>
+    exercise.blockId === blockId ? { ...exercise, blockType } : exercise,
+  )
+}
 
 // A new set for "＋ Подход" that inherits the relevant params of the last set
 // (by input kind), so the trainer doesn't retype identical weight/reps. When
@@ -155,6 +329,16 @@ export function exerciseChartPoints(workouts: Workout[], exerciseRef: string): E
 }
 
 export function copyWorkout(source: Workout, workoutDate = source.workoutDate): WorkoutDraft {
+  // Копия сохраняет структуру блоков (тип), но получает свежие block_id,
+  // чтобы не конфликтовать с исходной тренировкой.
+  const blockIdMap = new Map<string, string>()
+  const nextBlockId = (sourceBlockId: string): string => {
+    const existing = blockIdMap.get(sourceBlockId)
+    if (existing) return existing
+    const fresh = crypto.randomUUID()
+    blockIdMap.set(sourceBlockId, fresh)
+    return fresh
+  }
   return {
     clientId: source.clientId, workoutDate, startTime: source.startTime ?? undefined,
     endTime: source.endTime ?? undefined, notes: source.notes ?? undefined,
@@ -162,6 +346,7 @@ export function copyWorkout(source: Workout, workoutDate = source.workoutDate): 
       source: exercise.source, ref: exercise.ref, customExerciseId: exercise.customExerciseId,
       name: exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind,
       position: exercise.position,
+      blockId: nextBlockId(exercise.blockId), blockType: exercise.blockType, blockRounds: exercise.blockRounds,
       sets: exercise.sets.map((set) => ({ position: set.position, weightKg: set.weightKg,
         reps: set.reps, durationMin: set.durationMin, distanceKm: set.distanceKm })),
     })),

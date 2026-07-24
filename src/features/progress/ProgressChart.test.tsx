@@ -29,7 +29,11 @@ describe('date helpers', () => {
 
   it('computes a padded y-domain, with a fallback pad when all values are equal', () => {
     expect(computeYDomain([70, 80])).toEqual([Math.floor(70 - 1.5), Math.ceil(80 + 1.5)])
-    expect(computeYDomain([75, 75])).toEqual([75 - 7.5, 75 + 7.5])
+    expect(computeYDomain([75, 75])).toEqual([Math.floor(75 - 7.5), Math.ceil(75 + 7.5)])
+  })
+
+  it('floors/ceils the domain even for small decimal values, to avoid floating-point noise in axis ticks', () => {
+    expect(computeYDomain([2.3])).toEqual([1, 4])
   })
 
   it('formats short dates and axis ticks as day/month without a year', () => {
