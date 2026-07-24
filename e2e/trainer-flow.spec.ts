@@ -231,6 +231,53 @@ test('live: порядок упражнений меняется стрелка�
   await expect(page.locator('.live-exercise-head h2').first()).toContainText('Жим лёжа')
 })
 
+test('замена упражнения: в форме плана и в live', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await page.getByLabel('Имя').fill('Замена Клиент')
+  await page.getByLabel('Начальный вес, кг').fill('80')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Замена Клиент' })).toBeVisible()
+
+  await page.getByRole('link', { name: /Запланировать/ }).click()
+  await page.getByLabel('Клиент').selectOption({ label: 'Замена Клиент' })
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  // Добавляем «Присед», задаём подход.
+  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Присед со штангой')
+  await page.getByRole('button', { name: /Присед со штангой/ }).first().click()
+  await page.getByLabel('Вес, подход 1').fill('50')
+  await page.getByLabel('Повторы, подход 1').fill('10')
+
+  // Заменяем на «Жим лёжа» (тот же тип) — значения подхода сохраняются.
+  await page.getByRole('button', { name: 'Заменить' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
+  await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
+  await expect(page.locator('.exercise header strong').first()).toContainText('Жим лёжа')
+  await expect(page.getByLabel('Вес, подход 1')).toHaveValue('50')
+
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+
+  // Live: заменяем нетронутое упражнение на «Тяга верхнего блока».
+  await page.getByRole('button', { name: 'Начать' }).click()
+  await expect(page.locator('.live-timer-big')).toBeVisible()
+  await expect(page.locator('.live-exercise-head h2').first()).toContainText('Жим лёжа')
+  await page.getByRole('button', { name: 'Заменить' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Тяга верхнего блока')
+  await page.getByRole('button', { name: /Тяга верхнего блока/ }).first().click()
+  await expect(page.locator('.live-exercise-head h2').first()).toContainText('Тяга верхнего блока')
+  // После подтверждения подхода «Заменить» пропадает (начатое заменять нельзя).
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await expect(page.getByRole('button', { name: 'Заменить' })).toHaveCount(0)
+})
+
 test('план: два упражнения объединяются в суперсет, тип виден в просмотре', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')

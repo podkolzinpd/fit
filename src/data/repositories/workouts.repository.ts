@@ -5,7 +5,7 @@ import { clientsRepository } from './clients.repository'
 import { collectPages, pageFromLookahead } from './collect-pages'
 import { repositoryError } from './error'
 import { workoutQueries } from '../queries/workouts.queries'
-export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, formatFactVsPlan, splitClientWorkouts, workoutDurationLabel, muscleGroupLabels, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, BLOCK_TYPE_LABELS, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockType, syncBlockRounds, draftBlockRoundsView, moveBlock } from './workout-rules'
+export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, formatFactVsPlan, splitClientWorkouts, workoutDurationLabel, muscleGroupLabels, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, BLOCK_TYPE_LABELS, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockType, syncBlockRounds, draftBlockRoundsView, moveBlock, replaceExercise } from './workout-rules'
 export type { ExerciseBlock, DraftBlock, DraftBlockRound, BlockRound } from './workout-rules'
 export type { ExerciseChartPoint } from './workout-rules'
 
@@ -144,6 +144,11 @@ export const workoutsRepository = {
   },
   async reorderLiveBlock(workout: Workout, blockId: string, direction: -1 | 1): Promise<number> {
     const result = await workoutQueries.reorderLiveBlock(workout.id, blockId, direction, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
+  async replaceLiveExercise(workout: Workout, exerciseId: string, exercise: ExerciseSnapshot): Promise<number> {
+    const result = await workoutQueries.replaceLiveExercise(workout.id, exerciseId, exercise, workout.version)
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
