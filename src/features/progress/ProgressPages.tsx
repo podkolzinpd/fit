@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { clientsRepository } from '../../data/repositories/clients.repository'
@@ -28,6 +28,9 @@ export function ProgressPage() {
   const [windowEnd, setWindowEnd] = useState<LocalDate | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [metricSheetOpen, setMetricSheetOpen] = useState(false)
+  const tabsRef = useRef<HTMLDivElement>(null)
+  const tabsDragOriginRef = useRef<{ x: number; scrollLeft: number } | null>(null)
+  const tabsDraggedRef = useRef(false)
   useEffect(() => { setSelectedMetric('weightKg'); setWindowEnd(null); setHistoryOpen(false); setMetricSheetOpen(false) }, [clientId])
   const client = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
   const entries = useQuery({ queryKey: ['progress', clientId], queryFn: () => progressRepository.list(clientId) })
@@ -44,11 +47,29 @@ export function ProgressPage() {
   const chartMetric: MetricSelector = activeBuiltin ? activeBuiltin.key : { customMetricId: selectedMetric }
   const chartLabel = activeBuiltin?.label ?? activeCustom?.name ?? METRIC_TABS[0]!.label
   const chartUnit = activeBuiltin?.unit ?? activeCustom?.unit ?? ''
+  function handleTabsPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.pointerType !== 'mouse' || !tabsRef.current) return
+    tabsDragOriginRef.current = { x: event.clientX, scrollLeft: tabsRef.current.scrollLeft }
+    tabsDraggedRef.current = false
+  }
+  function handleTabsPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const origin = tabsDragOriginRef.current
+    if (!origin || !tabsRef.current) return
+    const delta = event.clientX - origin.x
+    if (Math.abs(delta) > 4) tabsDraggedRef.current = true
+    tabsRef.current.scrollLeft = origin.scrollLeft - delta
+  }
+  function handleTabsPointerUp() { tabsDragOriginRef.current = null }
+  function selectMetricTab(action: () => void) {
+    if (tabsDraggedRef.current) { tabsDraggedRef.current = false; return }
+    action()
+  }
   return <Page title={client.data ? `Прогресс · ${client.data.fullName}` : 'Прогресс'}><AsyncView loading={loading} error={error}>{client.data && <>
     {entries.data && entries.data.length > 0 && <>
-      <div className="metric-tabs">
-        {METRIC_TABS.map((tab) => <button key={tab.key} type="button" className={`metric-tab${tab.key === selectedMetric ? ' active' : ''}`} onClick={() => setSelectedMetric(tab.key)}>{tab.label}</button>)}
-        {overflowMetrics.length > 0 && <button type="button" className={`metric-tab${activeCustom ? ' active' : ''}`} onClick={() => setMetricSheetOpen(true)}>{activeCustom ? `⋯ ${activeCustom.name}` : '⋯'}</button>}
+      <div className="metric-tabs" ref={tabsRef}
+        onPointerDown={handleTabsPointerDown} onPointerMove={handleTabsPointerMove} onPointerUp={handleTabsPointerUp} onPointerLeave={handleTabsPointerUp}>
+        {METRIC_TABS.map((tab) => <button key={tab.key} type="button" className={`metric-tab${tab.key === selectedMetric ? ' active' : ''}`} onClick={() => selectMetricTab(() => setSelectedMetric(tab.key))}>{tab.label}</button>)}
+        {overflowMetrics.length > 0 && <button type="button" className={`metric-tab${activeCustom ? ' active' : ''}`} onClick={() => selectMetricTab(() => setMetricSheetOpen(true))}>{activeCustom ? `⋯ ${activeCustom.name}` : '⋯'}</button>}
       </div>
       <ProgressChart entries={entries.data} metric={chartMetric} label={chartLabel} unit={chartUnit} windowEnd={windowEnd} onWindowChange={setWindowEnd} />
     </>}

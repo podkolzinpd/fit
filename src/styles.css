@@ -144,7 +144,8 @@ p { margin: 6px 0 }
 .chart-drag-area { touch-action: pan-y; cursor: grab }
 .chart-drag-area.dragging { cursor: grabbing }
 .chart-empty-window { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 18px; text-align: center }
-.metric-tabs { display: flex; gap: 6px; margin: 12px -8px 0; overflow-x: auto }
+.metric-tabs { display: flex; gap: 6px; margin: 12px -8px 0; overflow-x: auto; scrollbar-width: none; touch-action: pan-x }.metric-tabs::-webkit-scrollbar { display: none }
+@media (pointer: fine) { .metric-tabs { cursor: grab } .metric-tabs:active { cursor: grabbing } }
 .metric-tab { padding: 7px 14px; border: 1px solid var(--border); border-radius: 99px; background: var(--surface-raised); color: var(--muted); font-size: 13px; white-space: nowrap }
 .metric-tab.active { border-color: var(--accent); color: #fff; background: var(--accent) }
 .measure-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
