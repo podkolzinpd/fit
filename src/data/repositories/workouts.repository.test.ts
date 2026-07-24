@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { InputKind, Workout, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, exerciseChartPoints, muscleGroupLabels, nextSetDraft, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, exerciseChartPoints, groupIntoBlocks, isLastSetOfBlock, muscleGroupLabels, nextSetDraft, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -27,7 +27,7 @@ describe('workouts repository rules', () => {
     const source: Workout = {
       id: 'w1', clientId: 'c1', clientName: 'Анна', workoutDate: localDate('2026-07-21'),
       startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'done', notes: null, version: 3,
-      exercises: [{ id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0,
+      exercises: [{ id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: 'b1', blockType: 'single',
         sets: [{ id: 's1', position: 0, weightKg: 50, reps: 10, fact: { weightKg: 55, reps: 9 }, confirmedAt: 'now', version: 2 }] }],
     }
     const copy = copyWorkout(source, localDate('2026-07-22'))
@@ -100,7 +100,7 @@ function workoutWith(date: string, ref: string, inputKind: InputKind, sets: Work
   return {
     id: `w-${date}`, clientId: 'c1', clientName: 'Клиент', workoutDate: localDate(date),
     startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'done', notes: null, version: 1,
-    exercises: [{ id: `e-${date}`, source: 'system', ref, name: ref, muscleGroup: 'legs', inputKind, position: 0, sets }],
+    exercises: [{ id: `e-${date}`, source: 'system', ref, name: ref, muscleGroup: 'legs', inputKind, position: 0, blockId: `b-${date}`, blockType: 'single', sets }],
   }
 }
 
@@ -242,9 +242,9 @@ describe('muscleGroupLabels', () => {
     const workout: Workout = {
       ...workoutWith('2026-07-20', 'squat', 'strength', [set({ weightKg: 60 })]),
       exercises: [
-        { id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, sets: [] },
-        { id: 'e2', source: 'system', ref: 'bench', name: 'Жим', muscleGroup: 'chest', inputKind: 'strength', position: 1, sets: [] },
-        { id: 'e3', source: 'system', ref: 'lunge', name: 'Выпад', muscleGroup: 'legs', inputKind: 'strength', position: 2, sets: [] },
+        { id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: 'b1', blockType: 'single', sets: [] },
+        { id: 'e2', source: 'system', ref: 'bench', name: 'Жим', muscleGroup: 'chest', inputKind: 'strength', position: 1, blockId: 'b2', blockType: 'single', sets: [] },
+        { id: 'e3', source: 'system', ref: 'lunge', name: 'Выпад', muscleGroup: 'legs', inputKind: 'strength', position: 2, blockId: 'b3', blockType: 'single', sets: [] },
       ],
     }
     expect(muscleGroupLabels(workout)).toEqual(['Ноги', 'Грудь'])
@@ -270,5 +270,59 @@ describe('nextSetDraft', () => {
   })
   it('пустой список → пустой подход на позиции 0', () => {
     expect(nextSetDraft([], 'strength')).toEqual({ position: 0 })
+  })
+})
+
+function exercise(id: string, position: number, blockId: string, blockType: 'single'|'superset'|'triset'|'circuit', sets: WorkoutSet[] = []): Workout['exercises'][number] {
+  return { id, source: 'system', ref: id, name: id, muscleGroup: 'legs', inputKind: 'strength', position, blockId, blockType, sets }
+}
+function workoutWithExercises(exercises: Workout['exercises']): Workout {
+  return { id: 'w', clientId: 'c1', clientName: 'К', workoutDate: localDate('2026-07-20'), startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'in_progress', notes: null, version: 1, exercises }
+}
+
+describe('groupIntoBlocks', () => {
+  it('группирует упражнения по blockId, сохраняя порядок', () => {
+    const blocks = groupIntoBlocks([
+      exercise('a', 0, 'b1', 'single'),
+      exercise('b', 1, 'b2', 'superset'),
+      exercise('c', 2, 'b2', 'superset'),
+      exercise('d', 3, 'b3', 'single'),
+    ])
+    expect(blocks.map((b) => ({ type: b.blockType, ids: b.exercises.map((e) => e.id) }))).toEqual([
+      { type: 'single', ids: ['a'] },
+      { type: 'superset', ids: ['b', 'c'] },
+      { type: 'single', ids: ['d'] },
+    ])
+  })
+})
+
+describe('isLastSetOfBlock', () => {
+  const s = (id: string, position: number): WorkoutSet => ({ id, position, fact: {}, confirmedAt: null, version: 1 })
+  it('single-блок: последний сет упражнения — последний в блоке', () => {
+    const w = workoutWithExercises([exercise('a', 0, 'b1', 'single', [s('s1', 0), s('s2', 1)])])
+    expect(isLastSetOfBlock(w, 'a', 's2')).toBe(true)
+    expect(isLastSetOfBlock(w, 'a', 's1')).toBe(false)
+  })
+  it('суперсет: отдых только после последнего упражнения блока', () => {
+    const w = workoutWithExercises([
+      exercise('a', 0, 'b1', 'superset', [s('a1', 0)]),
+      exercise('b', 1, 'b1', 'superset', [s('b1', 0)]),
+    ])
+    expect(isLastSetOfBlock(w, 'a', 'a1')).toBe(false) // первое упражнение блока
+    expect(isLastSetOfBlock(w, 'b', 'b1')).toBe(true)  // последнее упражнение блока
+  })
+})
+
+describe('copyWorkout blocks', () => {
+  it('сохраняет тип блока и объединяет упражнения одного блока новым общим id', () => {
+    const source = workoutWithExercises([
+      exercise('a', 0, 'b1', 'superset', [{ id: 'x', position: 0, weightKg: 50, fact: {}, confirmedAt: null, version: 1 }]),
+      exercise('b', 1, 'b1', 'superset', [{ id: 'y', position: 0, weightKg: 40, fact: {}, confirmedAt: null, version: 1 }]),
+    ])
+    const draft = copyWorkout(source)
+    expect(draft.exercises.map((e) => e.blockType)).toEqual(['superset', 'superset'])
+    // оба упражнения блока получили один и тот же новый blockId
+    expect(draft.exercises[0]?.blockId).toBe(draft.exercises[1]?.blockId)
+    expect(draft.exercises[0]?.blockId).not.toBe('b1')
   })
 })

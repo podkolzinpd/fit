@@ -5,6 +5,8 @@ export type WorkoutStatus = 'planned' | 'in_progress' | 'done'
 export type Gender = 'male' | 'female'
 export type MuscleGroup = 'legs' | 'chest' | 'back' | 'shoulders' | 'arms' | 'core' | 'cardio' | 'other'
 export type InputKind = 'strength' | 'distance' | 'reps'
+// Тип блока упражнений внутри тренировки: одиночное, суперсет, трисет, круговая.
+export type BlockType = 'single' | 'superset' | 'triset' | 'circuit'
 
 export interface SessionActor {
   userId: UUID
@@ -64,6 +66,8 @@ export interface WorkoutSetDraft {
 
 export interface WorkoutExerciseDraft extends ExerciseSnapshot {
   position: number
+  blockId?: UUID
+  blockType?: BlockType
   sets: WorkoutSetDraft[]
 }
 
@@ -95,6 +99,8 @@ export interface WorkoutSet extends WorkoutSetDraft {
 export interface WorkoutExercise extends ExerciseSnapshot {
   id: UUID
   position: number
+  blockId: UUID
+  blockType: BlockType
   sets: WorkoutSet[]
 }
 
