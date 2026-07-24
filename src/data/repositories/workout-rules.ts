@@ -90,6 +90,28 @@ export interface DraftBlock {
   items: { exercise: WorkoutExerciseDraft; index: number }[]
 }
 
+export interface DraftBlockRound {
+  round: number // 1-based номер круга
+  // exerciseIndex — плоский индекс упражнения в exercises (для updateSet);
+  // setIndex — позиция подхода = номер круга − 1.
+  items: { exercise: WorkoutExerciseDraft; exerciseIndex: number; setIndex: number }[]
+}
+
+// Раскладывает многоэлементный черновик-блок «по кругам» для формы плана:
+// круг R = по одному подходу (позиция R-1) каждого упражнения блока по очереди.
+export function draftBlockRoundsView(block: DraftBlock): DraftBlockRound[] {
+  const roundCount = Math.max(block.blockRounds, ...block.items.map(({ exercise }) => exercise.sets.length), 1)
+  const rounds: DraftBlockRound[] = []
+  for (let r = 0; r < roundCount; r++) {
+    const items: DraftBlockRound['items'] = []
+    for (const { exercise, index } of block.items) {
+      if (exercise.sets[r]) items.push({ exercise, exerciseIndex: index, setIndex: r })
+    }
+    if (items.length) rounds.push({ round: r + 1, items })
+  }
+  return rounds
+}
+
 // Гарантирует blockId/blockType/blockRounds у каждого упражнения черновика:
 // без блока — собственный одиночный блок, 1 круг. Не трогает проставленное.
 export function ensureBlockIds(exercises: WorkoutExerciseDraft[]): WorkoutExerciseDraft[] {

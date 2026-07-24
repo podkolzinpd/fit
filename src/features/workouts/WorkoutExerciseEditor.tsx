@@ -1,5 +1,5 @@
 import type { BlockType, WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
-import { groupDraftsIntoBlocks, mergeBlockWithNext, nextSetDraft, setBlockType, splitBlock, syncBlockRounds } from '../../data/repositories/workout-rules'
+import { groupDraftsIntoBlocks, mergeBlockWithNext, nextSetDraft, setBlockType, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
 
 export function roundToStep(value: number, step: number): number {
   return Math.round(value / step) * step
@@ -59,18 +59,26 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker }: Wor
 
   const blocks = groupDraftsIntoBlocks([...exercises])
 
-  function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, inBlock = false) {
+  // Поля одного подхода (вес/повторы или мин/дистанция по типу упражнения).
+  function setFields(exercise: WorkoutExerciseDraft, exerciseIndex: number, setIndex: number) {
+    const set = exercise.sets[setIndex]
+    if (!set) return null
+    return <div className="set-row" key={setIndex}>
+      {exercise.inputKind === 'strength' && <><input aria-label={`Вес, подход ${setIndex + 1}`} type="number" min="0" step="0.5" placeholder="кг" value={set.weightKg ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { weightKg: inputNumber(event.target.value) })} /><input aria-label={`Повторы, подход ${setIndex + 1}`} type="number" min="0" placeholder="повт." value={set.reps ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} /></>}
+      {exercise.inputKind === 'reps' && <><input aria-label={`Время, подход ${setIndex + 1}`} type="number" min="0" step="0.5" placeholder="мин" value={set.durationMin ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationMin: inputNumber(event.target.value) })} /><input aria-label={`Повторы, подход ${setIndex + 1}`} type="number" min="0" placeholder="повт." value={set.reps ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} /></>}
+      {exercise.inputKind === 'distance' && <><input aria-label={`Время, подход ${setIndex + 1}`} type="number" min="0" step="0.5" placeholder="мин" value={set.durationMin ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationMin: inputNumber(event.target.value) })} /><input aria-label={`Расстояние, подход ${setIndex + 1}`} type="number" min="0" step="0.1" placeholder="км" value={set.distanceKm ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { distanceKm: inputNumber(event.target.value) })} /></>}
+    </div>
+  }
+
+  // Одиночное упражнение (вне блока): подходы + «＋ Подход» + «Объединить».
+  function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean) {
     return <article className="exercise" key={`${exercise.ref}-${exerciseIndex}`}>
       <header><strong>{exercise.name}</strong><button type="button" className="link danger" onClick={() => removeExercise(exerciseIndex)}>Удалить</button></header>
-      {exercise.sets.map((set, setIndex) => <div className="planned-set" key={setIndex}>
-        <div className="planned-set-heading"><span>{inBlock ? `Круг ${setIndex + 1}` : `Подход ${setIndex + 1}`}</span>{!inBlock && exercise.sets.length > 1 && <button type="button" className="link danger" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}>×</button>}</div>
-        <div className="set-row">
-          {exercise.inputKind === 'strength' && <><input aria-label={`Вес, подход ${setIndex + 1}`} type="number" min="0" step="0.5" placeholder="кг" value={set.weightKg ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { weightKg: inputNumber(event.target.value) })} /><input aria-label={`Повторы, подход ${setIndex + 1}`} type="number" min="0" placeholder="повт." value={set.reps ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} /></>}
-          {exercise.inputKind === 'reps' && <><input aria-label={`Время, подход ${setIndex + 1}`} type="number" min="0" step="0.5" placeholder="мин" value={set.durationMin ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationMin: inputNumber(event.target.value) })} /><input aria-label={`Повторы, подход ${setIndex + 1}`} type="number" min="0" placeholder="повт." value={set.reps ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} /></>}
-          {exercise.inputKind === 'distance' && <><input aria-label={`Время, подход ${setIndex + 1}`} type="number" min="0" step="0.5" placeholder="мин" value={set.durationMin ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationMin: inputNumber(event.target.value) })} /><input aria-label={`Расстояние, подход ${setIndex + 1}`} type="number" min="0" step="0.1" placeholder="км" value={set.distanceKm ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { distanceKm: inputNumber(event.target.value) })} /></>}
-        </div>
+      {exercise.sets.map((_set, setIndex) => <div className="planned-set" key={setIndex}>
+        <div className="planned-set-heading"><span>Подход {setIndex + 1}</span>{exercise.sets.length > 1 && <button type="button" className="link danger" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}>×</button>}</div>
+        {setFields(exercise, exerciseIndex, setIndex)}
       </div>)}
-      {!inBlock && <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>}
+      <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
       {canMergeNext && <button type="button" className="link block-merge" onClick={() => onChange(mergeBlockWithNext([...exercises], exerciseIndex))}>⛓ Объединить со следующим в блок</button>}
     </article>
   }
@@ -86,7 +94,9 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker }: Wor
         const { exercise, index } = block.items[0]!
         return renderExercise(exercise, index, canMerge(index))
       }
-      // Многоэлементный блок: обёртка с выбором типа, числом кругов и «Разбить».
+      // Многоэлементный блок: раскладка ПО КРУГАМ (круг = все упражнения по очереди).
+      const rounds = draftBlockRoundsView(block)
+      const blockMergeIndex = blockLastIndex < lastIndex ? blockLastIndex : -1
       return <div className="exercise-block" key={block.blockId}>
         <div className="exercise-block-head">
           <select aria-label="Тип блока" value={block.blockType} onChange={(event) => onChange(setBlockType([...exercises], block.blockId, event.target.value as BlockType))}>
@@ -97,7 +107,16 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker }: Wor
           <label className="block-rounds">Кругов<input aria-label="Кругов" type="number" min="1" max="20" value={block.blockRounds} onChange={(event) => onChange(syncBlockRounds([...exercises], block.blockId, Number(event.target.value) || 1))} /></label>
           <button type="button" className="link" onClick={() => onChange(splitBlock([...exercises], block.blockId))}>Разбить</button>
         </div>
-        {block.items.map(({ exercise, index }) => renderExercise(exercise, index, canMerge(index), true))}
+        {/* Список упражнений блока с удалением (значения — ниже по кругам). */}
+        <div className="block-exercises">{block.items.map(({ exercise, index }) => <div className="block-exercise-row" key={exercise.blockId ? `${exercise.ref}-${index}` : index}><strong>{exercise.name}</strong><button type="button" className="link danger" onClick={() => removeExercise(index)}>Удалить</button></div>)}</div>
+        {rounds.map((round) => <div className="planned-round" key={round.round}>
+          <div className="planned-round-label">Круг {round.round}</div>
+          {round.items.map(({ exercise, exerciseIndex, setIndex }) => <div className="planned-round-exercise" key={`${exercise.ref}-${exerciseIndex}`}>
+            <span className="planned-round-exercise-name">{exercise.name}</span>
+            {setFields(exercise, exerciseIndex, setIndex)}
+          </div>)}
+        </div>)}
+        {blockMergeIndex >= 0 && <button type="button" className="link block-merge" onClick={() => onChange(mergeBlockWithNext([...exercises], blockMergeIndex))}>⛓ Объединить со следующим в блок</button>}
       </div>
     })}
     <button type="button" className="secondary wide" onClick={onOpenPicker}>＋ Упражнение</button>
