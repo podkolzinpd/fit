@@ -43,6 +43,35 @@ export function isLastSetOfBlock(workout: Workout, exerciseId: string, setId: st
   return Boolean(lastSet && lastSet.id === setId)
 }
 
+export interface BlockRound {
+  round: number // 1-based номер круга
+  items: { exercise: WorkoutExercise; set: WorkoutSet }[]
+}
+
+// Раскладывает многоэлементный блок «по кругам»: круг R = по одному подходу
+// (позиция R-1) каждого упражнения блока, в порядке упражнений. Число кругов
+// = максимум подходов среди упражнений блока (1 круг = 1 подход каждого).
+export function blockRoundsView(block: ExerciseBlock): BlockRound[] {
+  const roundCount = Math.max(block.blockRounds, ...block.exercises.map((e) => e.sets.length), 1)
+  const rounds: BlockRound[] = []
+  for (let r = 0; r < roundCount; r++) {
+    const items: BlockRound['items'] = []
+    for (const exercise of block.exercises) {
+      const set = [...exercise.sets].sort((a, b) => a.position - b.position)[r]
+      if (set) items.push({ exercise, set })
+    }
+    if (items.length) rounds.push({ round: r + 1, items })
+  }
+  return rounds
+}
+
+// Индекс (0-based) текущего круга: первого, где есть неподтверждённый подход.
+// Если все круги подтверждены — возвращает последний.
+export function currentRoundIndex(rounds: BlockRound[]): number {
+  const idx = rounds.findIndex((round) => round.items.some(({ set }) => !set.confirmedAt))
+  return idx === -1 ? Math.max(0, rounds.length - 1) : idx
+}
+
 export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   single: 'Обычный',
   superset: 'Суперсет',

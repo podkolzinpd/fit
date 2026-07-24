@@ -123,6 +123,18 @@ p { margin: 6px 0 }
 .exercise-block-head select { padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700 }
 .block-badge { align-self: flex-start; padding: 3px 10px; border-radius: 99px; background: #2f2850; border: 1px solid #4b3f83; color: var(--purple); font-size: 12px; font-weight: 700 }
 .block-rounds { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 600 }
+/* Live «по кругам»: шапка со счётчиком и точками прогресса. */
+.circuit-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
+.circuit-counter { font-weight: 800; font-size: 15px; color: var(--fg) }
+.circuit-dots { display: inline-flex; gap: 6px; margin-left: auto }
+.circuit-dot { width: 10px; height: 10px; border-radius: 50%; background: #3a3352; border: 1px solid #4b3f83 }
+.circuit-dot.active { background: var(--purple); border-color: var(--purple) }
+.circuit-dot.done { background: var(--success); border-color: var(--success) }
+.circuit-round { border: 1px solid var(--border); border-radius: 12px; padding: 8px; background: #1b1826; opacity: .6 }
+.circuit-round.active { opacity: 1; border-color: #4b3f83 }
+.circuit-round-label { font-size: 12px; font-weight: 700; color: var(--purple); margin-bottom: 4px }
+.circuit-round h3 { margin: 8px 0 4px; font-size: 15px }
+.circuit-round .exercise { margin: 0 }
 .block-rounds input { width: 56px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700; text-align: center }
 .block-merge { align-self: flex-start; margin-top: 8px; color: var(--purple) }
 .exercise-name-link { display: inline-flex; align-items: baseline; gap: 8px; text-decoration: none; color: var(--fg) }
