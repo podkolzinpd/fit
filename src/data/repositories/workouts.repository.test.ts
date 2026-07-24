@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, formatFactVsPlan, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, mergeBlockWithNext, muscleGroupLabels, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockType, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, formatFactVsPlan, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, mergeBlockWithNext, moveBlock, muscleGroupLabels, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockType, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -458,5 +458,29 @@ describe('formatFactVsPlan', () => {
   })
   it('нет ни плана, ни факта → «Без результата»', () => {
     expect(formatFactVsPlan(mk({}, {}))).toEqual({ fact: 'Без результата', planNote: null })
+  })
+})
+
+describe('moveBlock', () => {
+  it('двигает одиночный блок вниз, пересчитывая position', () => {
+    const out = moveBlock([draft('a', 'b1', 'single'), draft('b', 'b2', 'single'), draft('c', 'b3', 'single')], 'b1', 1)
+    expect(out.map((e) => ({ ref: e.ref, position: e.position }))).toEqual([
+      { ref: 'b', position: 0 }, { ref: 'a', position: 1 }, { ref: 'c', position: 2 },
+    ])
+  })
+  it('двигает блок вверх', () => {
+    const out = moveBlock([draft('a', 'b1', 'single'), draft('b', 'b2', 'single'), draft('c', 'b3', 'single')], 'b3', -1)
+    expect(out.map((e) => e.ref)).toEqual(['a', 'c', 'b'])
+  })
+  it('многоэлементный блок двигается целиком, сохраняя внутренний порядок', () => {
+    const start = [draft('x', 'solo', 'single'), draft('a', 'sup', 'superset'), draft('b', 'sup', 'superset')]
+    const out = moveBlock(start, 'sup', -1)
+    expect(out.map((e) => e.ref)).toEqual(['a', 'b', 'x'])
+    expect(out.map((e) => e.position)).toEqual([0, 1, 2])
+  })
+  it('на границах — без изменений', () => {
+    const start = [draft('a', 'b1', 'single'), draft('b', 'b2', 'single')]
+    expect(moveBlock(start, 'a', -1).map((e) => e.ref)).toEqual(['a', 'b'])
+    expect(moveBlock(start, 'b', 1).map((e) => e.ref)).toEqual(['a', 'b'])
   })
 })

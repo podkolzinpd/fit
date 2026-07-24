@@ -198,6 +198,22 @@ export function setBlockType(exercises: WorkoutExerciseDraft[], blockId: string,
   )
 }
 
+// Перемещает блок (целиком, со всеми его упражнениями) на одну позицию вверх/вниз,
+// меняя его местами с соседним блоком. На границах — без изменений. position
+// пересчитывается по итоговому порядку; внутренний порядок блока сохраняется.
+export function moveBlock(exercises: WorkoutExerciseDraft[], blockId: string, direction: -1 | 1): WorkoutExerciseDraft[] {
+  const list = ensureBlockIds(exercises)
+  const blocks = groupDraftsIntoBlocks(list)
+  const from = blocks.findIndex((b) => b.blockId === blockId)
+  const to = from + direction
+  if (from === -1 || to < 0 || to >= blocks.length) return list
+  const reordered = [...blocks]
+  ;[reordered[from], reordered[to]] = [reordered[to]!, reordered[from]!]
+  return reordered
+    .flatMap((block) => block.items.map(({ exercise }) => exercise))
+    .map((exercise, position) => ({ ...exercise, position }))
+}
+
 // A new set for "＋ Подход" that inherits the relevant params of the last set
 // (by input kind), so the trainer doesn't retype identical weight/reps. When
 // there are no sets yet, returns an empty set at position 0.
