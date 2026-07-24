@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { clientsRepository } from '../../data/repositories/clients.repository'
-import { chartUnitFor, copyWorkout, exerciseChartPoints, muscleGroupLabels, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
+import { BLOCK_TYPE_LABELS, chartUnitFor, copyWorkout, exerciseChartPoints, groupIntoBlocks, muscleGroupLabels, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -147,7 +147,7 @@ export function WorkoutFormPage() {
   const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => workoutsRepository.save(draft), onSuccess: async (id) => { await queryClient.invalidateQueries({ queryKey: ['workouts'] }); navigate(`/workouts/${id}`) } })
 
   function addExercise(selected: ExerciseSnapshot) {
-    setDraftExercises([...exercises, { ...selected, position: exercises.length, sets: [{ position: 0 }] }])
+    setDraftExercises([...exercises, { ...selected, position: exercises.length, blockId: crypto.randomUUID(), blockType: 'single', sets: [{ position: 0 }] }])
     setPickerOpen(false)
   }
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -197,10 +197,14 @@ export function WorkoutDetailPage() {
         <div><span>Тоннаж</span><strong>{tonnageLabel(tonnage)}</strong></div>
         <div><span>Группы мышц</span><strong>{groups.length ? groups.join(', ') : '—'}</strong></div>
       </section>}
-      <div className="cards">{workout.exercises.map((exercise) => <article className="exercise" key={exercise.id}>
-        <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
-        {exercise.sets.map((set) => <p key={set.id}>{done ? formatFactSet(set) : formatSet(set)}</p>)}
-      </article>)}</div>
+      <div className="cards">{groupIntoBlocks(workout.exercises).map((block) => {
+        const articles = block.exercises.map((exercise) => <article className="exercise" key={exercise.id}>
+          <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
+          {exercise.sets.map((set) => <p key={set.id}>{done ? formatFactSet(set) : formatSet(set)}</p>)}
+        </article>)
+        if (block.blockType === 'single' || block.exercises.length === 1) return articles
+        return <div className="exercise-block view" key={block.blockId}><span className="block-badge">{BLOCK_TYPE_LABELS[block.blockType]}</span>{articles}</div>
+      })}</div>
       {workout.notes && <p>{workout.notes}</p>}
       <div className="actions">
         {workout.status === 'planned' && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>Изменить</Link>}

@@ -158,6 +158,38 @@ test('live: планка вводится в минутах, таймер зак
   await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
 })
 
+test('план: два упражнения объединяются в суперсет, тип виден в просмотре', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await page.getByLabel('Имя').fill('Суперсет Клиент')
+  await page.getByLabel('Начальный вес, кг').fill('80')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Суперсет Клиент' })).toBeVisible()
+
+  await page.getByRole('link', { name: /Запланировать/ }).click()
+  await page.getByLabel('Клиент').selectOption({ label: 'Суперсет Клиент' })
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  for (const q of ['Присед со штангой', 'Жим лёжа']) {
+    await page.getByRole('button', { name: '＋ Упражнение' }).click()
+    await page.getByLabel('Поиск упражнения').fill(q)
+    await page.getByRole('button', { name: new RegExp(q) }).first().click()
+  }
+  // Объединяем первое упражнение со следующим в блок → появляется селектор типа.
+  await page.getByRole('button', { name: /Объединить со следующим/ }).first().click()
+  await expect(page.getByLabel('Тип блока')).toBeVisible()
+  await expect(page.getByLabel('Тип блока')).toHaveValue('superset')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  // В просмотре тренировки виден бейдж «Суперсет».
+  await expect(page.locator('.block-badge')).toHaveText('Суперсет')
+})
+
 test('profile Cancel resets unsaved edits', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
