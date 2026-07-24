@@ -294,8 +294,18 @@ export function LiveWorkoutPage() {
   const save = useMutation({ mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.save(set, draft) })
   const confirm = useMutation({
     mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.confirm(set, draft),
-    onSuccess: () => {
-      startRest()
+    onSuccess: (_data, { set }) => {
+      // Одиночное упражнение — отдых после каждого подхода (как раньше).
+      // Многоэлементный блок (суперсет/трисет/круговая) — отдых только после
+      // последнего упражнения блока, а не между упражнениями внутри него.
+      const workout = query.data
+      const exercise = workout?.exercises.find((item) => item.sets.some((s) => s.id === set.id))
+      if (workout && exercise) {
+        const block = groupIntoBlocks(workout.exercises).find((b) => b.blockId === exercise.blockId)
+        const multi = Boolean(block && block.exercises.length > 1)
+        const lastExerciseOfBlock = !block || block.exercises[block.exercises.length - 1]?.id === exercise.id
+        if (!multi || lastExerciseOfBlock) startRest()
+      }
       void query.refetch()
     },
   })
@@ -360,25 +370,29 @@ export function LiveWorkoutPage() {
           <button type="button" className="link" onClick={stopRest}>Пропустить</button>
         </div>
       </div>}
-      {query.data.exercises.map((exercise) => <section key={exercise.id}>
-        <h2>{exercise.name}</h2>
-        {exercise.sets.map((set, index) => { const isEditing = editingSets.has(set.id); return <form className={`exercise ${set.confirmedAt && !isEditing ? 'confirmed' : ''}`} key={set.id} onBlur={(event) => {
-          if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
-          if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
-          save.mutate({ set, draft: draftFrom(event.currentTarget) })
-        }}>
-          <div className="set-head"><span className="muted">Подход {index + 1}</span>{set.confirmedAt && !isEditing && <button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}</div>
-          <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} />
-          {set.confirmedAt && isEditing
-            ? <button type="button" className="secondary" disabled={save.isPending}
-                onPointerDown={() => { skipBlurForSet.current = set.id }}
-                onClick={(event) => { const form = event.currentTarget.form; if (form) save.mutate({ set, draft: draftFrom(form) }); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}>Сохранить</button>
-            : <button type="button" className="secondary" disabled={Boolean(set.confirmedAt) || confirm.isPending}
-                onPointerDown={() => { skipBlurForSet.current = set.id }}
-                onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>{set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'}</button>}
-        </form> })}
-        <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
-      </section>)}
+      {groupIntoBlocks(query.data.exercises).map((block) => {
+        const sections = block.exercises.map((exercise) => <section key={exercise.id}>
+          <h2>{exercise.name}</h2>
+          {exercise.sets.map((set, index) => { const isEditing = editingSets.has(set.id); return <form className={`exercise ${set.confirmedAt && !isEditing ? 'confirmed' : ''}`} key={set.id} onBlur={(event) => {
+            if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
+            if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
+            save.mutate({ set, draft: draftFrom(event.currentTarget) })
+          }}>
+            <div className="set-head"><span className="muted">Подход {index + 1}</span>{set.confirmedAt && !isEditing && <button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}</div>
+            <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} />
+            {set.confirmedAt && isEditing
+              ? <button type="button" className="secondary" disabled={save.isPending}
+                  onPointerDown={() => { skipBlurForSet.current = set.id }}
+                  onClick={(event) => { const form = event.currentTarget.form; if (form) save.mutate({ set, draft: draftFrom(form) }); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}>Сохранить</button>
+              : <button type="button" className="secondary" disabled={Boolean(set.confirmedAt) || confirm.isPending}
+                  onPointerDown={() => { skipBlurForSet.current = set.id }}
+                  onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>{set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'}</button>}
+          </form> })}
+          <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
+        </section>)
+        if (block.blockType === 'single' || block.exercises.length === 1) return sections
+        return <div className="exercise-block live" key={block.blockId}><span className="block-badge">{BLOCK_TYPE_LABELS[block.blockType]} · отдых после блока</span>{sections}</div>
+      })}
       <button type="button" className="secondary wide" onClick={() => setPickerOpen(true)}>＋ Ещё упражнение</button>
       {error && <p className="error">{error.message}</p>}
       <button className="wide" disabled={finish.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => exercise.sets.some((set) => !set.confirmedAt)); if (!incomplete || window.confirm('Есть незавершённые подходы. Завершить тренировку частично?')) finish.mutate() }}>Завершить тренировку</button>
