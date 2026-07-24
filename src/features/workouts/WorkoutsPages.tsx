@@ -321,6 +321,7 @@ export function LiveWorkoutPage() {
   }
   const appendSet = useMutation({ mutationFn: (exerciseId: string) => workoutsRepository.appendLiveSet(query.data!, exerciseId), onSuccess: async () => { await query.refetch() } })
   const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => workoutsRepository.appendLiveExercise(query.data!, exercise), onSuccess: async () => { await query.refetch() } })
+  const reorderBlock = useMutation({ mutationFn: ({ blockId, direction }: { blockId: string; direction: -1 | 1 }) => workoutsRepository.reorderLiveBlock(query.data!, blockId, direction), onSuccess: async () => { await query.refetch() } })
   const finish = useMutation({ mutationFn: () => workoutsRepository.finish(query.data!), onSuccess: async () => {
     const clientId = query.data?.clientId
     // Освежаем не только саму тренировку, но и статистику клиента и списки
@@ -352,7 +353,14 @@ export function LiveWorkoutPage() {
     }, 250)
     return () => window.clearInterval(timer)
   }, [restActive])
-  const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? finish.error
+  const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? reorderBlock.error ?? finish.error
+  // Стрелки ↑/↓ для перестановки блока в live (задизейблены на границах).
+  function liveReorder(blockId: string, isFirst: boolean, isLast: boolean) {
+    return <span className="block-reorder">
+      <button type="button" className="reorder-btn" aria-label="Вверх" disabled={isFirst || reorderBlock.isPending} onClick={() => reorderBlock.mutate({ blockId, direction: -1 })}>↑</button>
+      <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast || reorderBlock.isPending} onClick={() => reorderBlock.mutate({ blockId, direction: 1 })}>↓</button>
+    </span>
+  }
   // Форма одного подхода в live: подтверждение / правка / автосохранение по blur.
   function renderLiveSet(exercise: WorkoutExercise, set: WorkoutSet, label?: string, current = false) {
     const isEditing = editingSets.has(set.id)
@@ -387,14 +395,17 @@ export function LiveWorkoutPage() {
           <button type="button" className="link" onClick={stopRest}>Пропустить</button>
         </div>
       </div>}
-      {groupIntoBlocks(query.data.exercises).map((block) => {
+      {(() => { const liveBlocks = groupIntoBlocks(query.data.exercises); return liveBlocks.map((block, blockIndex) => {
+        // ↑/↓ показываем только когда блоков больше одного; двигать можно любые
+        // блоки (в т.ч. с завершёнными подходами), кроме упора в границу.
+        const reorder = liveBlocks.length > 1 ? liveReorder(block.blockId, blockIndex === 0, blockIndex === liveBlocks.length - 1) : null
         // Одиночное упражнение (или блок из одного) — как раньше, по подходам.
         // Текущий подход (первый неподтверждённый) подсвечивается серым.
         if (block.blockType === 'single' || block.exercises.length === 1) {
           return block.exercises.map((exercise) => {
             const currentSetIndex = exercise.sets.findIndex((set) => !set.confirmedAt)
             return <section key={exercise.id}>
-              <h2>{exercise.name}</h2>
+              <div className="live-exercise-head"><h2>{exercise.name}</h2>{reorder}</div>
               {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex))}
               <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
             </section>
@@ -408,6 +419,7 @@ export function LiveWorkoutPage() {
             <span className="block-badge">{BLOCK_TYPE_LABELS[block.blockType]}</span>
             <span className="circuit-counter">Круг {rounds[current]?.round ?? 1} из {rounds.length}</span>
             <span className="circuit-dots" aria-hidden="true">{rounds.map((r, i) => <span key={r.round} className={`circuit-dot ${r.items.every(({ set }) => set.confirmedAt) ? 'done' : i === current ? 'current' : ''}`} />)}</span>
+            {reorder}
           </div>
           {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt); return <div className={`circuit-round ${roundDone ? 'done' : roundIndex === current ? 'current' : ''}`} key={round.round}>
             <div className="circuit-round-label">Круг {round.round}</div>
@@ -417,7 +429,7 @@ export function LiveWorkoutPage() {
             </section>)}
           </div> })}
         </div>
-      })}
+      }) })()}
       <button type="button" className="secondary wide" onClick={() => setPickerOpen(true)}>＋ Ещё упражнение</button>
       {error && <p className="error">{error.message}</p>}
       <button className="wide" disabled={finish.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => exercise.sets.some((set) => !set.confirmedAt)); if (!incomplete || window.confirm('Есть незавершённые подходы. Завершить тренировку частично?')) finish.mutate() }}>Завершить тренировку</button>

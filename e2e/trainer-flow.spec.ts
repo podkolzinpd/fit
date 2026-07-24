@@ -193,6 +193,44 @@ test('план: порядок упражнений меняется стрел�
   await expect(page.locator('.cards .exercise strong').first()).toContainText('Жим лёжа')
 })
 
+test('live: порядок упражнений меняется стрелками во время тренировки', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await page.getByLabel('Имя').fill('Live Порядок')
+  await page.getByLabel('Начальный вес, кг').fill('80')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Live Порядок' })).toBeVisible()
+
+  await page.getByRole('link', { name: /Запланировать/ }).click()
+  await page.getByLabel('Клиент').selectOption({ label: 'Live Порядок' })
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  for (const q of ['Присед со штангой', 'Жим лёжа']) {
+    await page.getByRole('button', { name: '＋ Упражнение' }).click()
+    await page.getByLabel('Поиск упражнения').fill(q)
+    await page.getByRole('button', { name: new RegExp(q) }).first().click()
+  }
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Начать' }).click()
+  await expect(page.locator('.live-timer-big')).toBeVisible()
+  // Границы: первое «Вверх» и последнее «Вниз» задизейблены.
+  await expect(page.getByRole('button', { name: 'Вверх' }).first()).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Вниз' }).last()).toBeDisabled()
+  // Первым идёт «Присед…», двигаем второе (Жим) вверх.
+  await expect(page.locator('.live-exercise-head h2').first()).toContainText('Присед')
+  // Подтверждаем подход первого упражнения — двигать завершённые блоки можно.
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await page.getByRole('button', { name: 'Вверх' }).nth(1).click()
+  await expect(page.locator('.live-exercise-head h2').first()).toContainText('Жим лёжа')
+})
+
 test('план: два упражнения объединяются в суперсет, тип виден в просмотре', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')

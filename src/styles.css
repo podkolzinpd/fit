@@ -127,6 +127,8 @@ p { margin: 6px 0 }
 .reorder-btn { width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-raised); color: var(--fg); font-size: 15px; line-height: 1; cursor: pointer }
 .reorder-btn:hover:not(:disabled) { border-color: #4b3f83 }
 .reorder-btn:disabled { opacity: .35; cursor: default }
+.live-exercise-head { display: flex; align-items: center; justify-content: space-between; gap: 10px }
+.live-exercise-head h2 { margin: 0 }
 .block-badge { align-self: flex-start; padding: 3px 10px; border-radius: 99px; background: #2f2850; border: 1px solid #4b3f83; color: var(--purple); font-size: 12px; font-weight: 700 }
 .block-rounds { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 600 }
 /* Live «по кругам»: шапка со счётчиком и точками прогресса. */

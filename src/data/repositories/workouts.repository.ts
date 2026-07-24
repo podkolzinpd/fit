@@ -142,6 +142,11 @@ export const workoutsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
+  async reorderLiveBlock(workout: Workout, blockId: string, direction: -1 | 1): Promise<number> {
+    const result = await workoutQueries.reorderLiveBlock(workout.id, blockId, direction, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
   async finish(workout: Workout): Promise<number> {
     const result = await workoutQueries.finish(workout.id, workout.version)
     if (result.error) throw repositoryError(result.error)
