@@ -1,4 +1,4 @@
-import type { BlockType, ClientStats, InputKind, Workout, WorkoutDraft, WorkoutExercise, WorkoutExerciseDraft, WorkoutSet, WorkoutSetDraft, WorkoutSummary } from '../../shared/domain'
+import type { BlockType, ClientStats, ExerciseSnapshot, InputKind, Workout, WorkoutDraft, WorkoutExercise, WorkoutExerciseDraft, WorkoutSet, WorkoutSetDraft, WorkoutSummary } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 
@@ -212,6 +212,33 @@ export function moveBlock(exercises: WorkoutExerciseDraft[], blockId: string, di
   return reordered
     .flatMap((block) => block.items.map(({ exercise }) => exercise))
     .map((exercise, position) => ({ ...exercise, position }))
+}
+
+// Заменяет упражнение по индексу на другое из каталога, сохраняя место
+// (position), принадлежность блоку и число подходов. Если тип ввода меняется
+// (strength↔reps↔distance), значения подходов очищаются — их поля больше не
+// подходят под новый тип; тренер вводит заново.
+export function replaceExercise(
+  exercises: WorkoutExerciseDraft[],
+  index: number,
+  snapshot: ExerciseSnapshot,
+): WorkoutExerciseDraft[] {
+  return exercises.map((exercise, current) => {
+    if (current !== index) return exercise
+    const sets = exercise.inputKind === snapshot.inputKind
+      ? exercise.sets
+      : exercise.sets.map((set) => ({ position: set.position }))
+    return {
+      ...exercise,
+      source: snapshot.source,
+      ref: snapshot.ref,
+      customExerciseId: snapshot.customExerciseId,
+      name: snapshot.name,
+      muscleGroup: snapshot.muscleGroup,
+      inputKind: snapshot.inputKind,
+      sets,
+    }
+  })
 }
 
 // A new set for "＋ Подход" that inherits the relevant params of the last set

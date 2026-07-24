@@ -37,6 +37,9 @@ export const workoutQueries = {
   reorderLiveBlock: (workoutId: string, blockId: string, direction: -1 | 1, version: number) => supabase.rpc('reorder_live_block', {
     p_workout_id: workoutId, p_block_id: blockId, p_direction: direction, p_expected_version: version,
   }),
+  replaceLiveExercise: (workoutId: string, exerciseId: string, exercise: ExerciseSnapshot, version: number) => supabase.rpc('replace_live_exercise', {
+    p_workout_id: workoutId, p_exercise_id: exerciseId, p_exercise: toJson(exercise), p_expected_version: version,
+  }),
   finish: (id: string, version: number) => supabase.rpc('finish_workout', { p_workout_id: id, p_expected_version: version }),
   remove: (id: string, version: number) => supabase.rpc('soft_delete_workout', { p_workout_id: id, p_expected_version: version }),
 }

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { clientsRepository } from '../../data/repositories/clients.repository'
-import { BLOCK_TYPE_LABELS, chartUnitFor, copyWorkout, exerciseChartPoints, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
+import { BLOCK_TYPE_LABELS, chartUnitFor, copyWorkout, exerciseChartPoints, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -142,14 +142,18 @@ export function WorkoutFormPage() {
   const catalog = useExerciseCatalog()
   const [draftExercises, setDraftExercises] = useState<WorkoutDraft['exercises'] | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
+  const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const initial = source.data ? (workoutId ? { ...copyWorkout(source.data), id: source.data.id, version: source.data.version } : copyWorkout(source.data, todayLocalDate())) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
   const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => workoutsRepository.save(draft), onSuccess: async (id) => { await queryClient.invalidateQueries({ queryKey: ['workouts'] }); navigate(`/workouts/${id}`) } })
 
-  function addExercise(selected: ExerciseSnapshot) {
-    setDraftExercises([...exercises, { ...selected, position: exercises.length, blockId: crypto.randomUUID(), blockType: 'single', blockRounds: 1, sets: [{ position: 0 }] }])
-    setPickerOpen(false)
+  function pickExercise(selected: ExerciseSnapshot) {
+    if (replaceIndex !== null) setDraftExercises(replaceExercise(exercises, replaceIndex, selected))
+    else setDraftExercises([...exercises, { ...selected, position: exercises.length, blockId: crypto.randomUUID(), blockType: 'single', blockRounds: 1, sets: [{ position: 0 }] }])
+    closePicker()
   }
+  function closePicker() { setPickerOpen(false); setReplaceIndex(null) }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget)
     const clientId = String(form.get('clientId')); const date = localDate(String(form.get('date')))
@@ -163,11 +167,11 @@ export function WorkoutFormPage() {
       <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} required><option value="">Выберите</option>{clients.data?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>
       <div className="split"><Field label="Дата"><input name="date" type="date" defaultValue={initial?.workoutDate ?? todayLocalDate()} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} /></Field></div>
       <VoiceNoteField name="notes" defaultValue={initial?.notes ?? ''} />
-      <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => setPickerOpen(true)} />
+      <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} />
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
     </form></AsyncView>
-    {pickerOpen && <ExercisePicker catalog={catalog} onPick={addExercise} onClose={() => setPickerOpen(false)} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} onPick={pickExercise} onClose={closePicker} />}
   </Page>
 }
 
@@ -282,6 +286,8 @@ export function LiveWorkoutPage() {
   ))
   const skipBlurForSet = useRef<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  // Упражнение, которое заменяем через пикер; null — режим добавления.
+  const [replaceExerciseId, setReplaceExerciseId] = useState<string | null>(null)
   // Подтверждённые подходы, временно разблокированные для правки (по карандашику).
   const [editingSets, setEditingSets] = useState<Set<string>>(() => new Set())
   const [restRemaining, setRestRemaining] = useState<number | null>(null)
@@ -322,6 +328,13 @@ export function LiveWorkoutPage() {
   const appendSet = useMutation({ mutationFn: (exerciseId: string) => workoutsRepository.appendLiveSet(query.data!, exerciseId), onSuccess: async () => { await query.refetch() } })
   const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => workoutsRepository.appendLiveExercise(query.data!, exercise), onSuccess: async () => { await query.refetch() } })
   const reorderBlock = useMutation({ mutationFn: ({ blockId, direction }: { blockId: string; direction: -1 | 1 }) => workoutsRepository.reorderLiveBlock(query.data!, blockId, direction), onSuccess: async () => { await query.refetch() } })
+  const replaceLive = useMutation({ mutationFn: ({ exerciseId, exercise }: { exerciseId: string; exercise: ExerciseSnapshot }) => workoutsRepository.replaceLiveExercise(query.data!, exerciseId, exercise), onSuccess: async () => { await query.refetch() } })
+  function closePicker() { setPickerOpen(false); setReplaceExerciseId(null) }
+  function pickLiveExercise(exercise: ExerciseSnapshot) {
+    if (replaceExerciseId) replaceLive.mutate({ exerciseId: replaceExerciseId, exercise })
+    else appendExercise.mutate(exercise)
+    closePicker()
+  }
   const finish = useMutation({ mutationFn: () => workoutsRepository.finish(query.data!), onSuccess: async () => {
     const clientId = query.data?.clientId
     // Освежаем не только саму тренировку, но и статистику клиента и списки
@@ -353,7 +366,13 @@ export function LiveWorkoutPage() {
     }, 250)
     return () => window.clearInterval(timer)
   }, [restActive])
-  const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? reorderBlock.error ?? finish.error
+  const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? reorderBlock.error ?? replaceLive.error ?? finish.error
+  // Кнопка «Заменить»: доступна, пока у упражнения нет подтверждённых подходов
+  // (начатое заменять нельзя — факт относился к старому упражнению).
+  function replaceButton(exercise: WorkoutExercise) {
+    if (exercise.sets.some((set) => set.confirmedAt)) return null
+    return <button type="button" className="link" disabled={replaceLive.isPending} onClick={() => { setReplaceExerciseId(exercise.id); setPickerOpen(true) }}>Заменить</button>
+  }
   // Стрелки ↑/↓ для перестановки блока в live (задизейблены на границах).
   function liveReorder(blockId: string, isFirst: boolean, isLast: boolean) {
     return <span className="block-reorder">
@@ -405,7 +424,7 @@ export function LiveWorkoutPage() {
           return block.exercises.map((exercise) => {
             const currentSetIndex = exercise.sets.findIndex((set) => !set.confirmedAt)
             return <section key={exercise.id}>
-              <div className="live-exercise-head"><h2>{exercise.name}</h2>{reorder}</div>
+              <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions">{replaceButton(exercise)}{reorder}</span></div>
               {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex))}
               <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
             </section>
@@ -424,17 +443,17 @@ export function LiveWorkoutPage() {
           {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt); return <div className={`circuit-round ${roundDone ? 'done' : roundIndex === current ? 'current' : ''}`} key={round.round}>
             <div className="circuit-round-label">Круг {round.round}</div>
             {round.items.map(({ exercise, set }) => <section key={set.id}>
-              <h3>{exercise.name}</h3>
+              <div className="live-exercise-head"><h3>{exercise.name}</h3>{roundIndex === 0 && <span className="exercise-head-actions">{replaceButton(exercise)}</span>}</div>
               {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
             </section>)}
           </div> })}
         </div>
       }) })()}
-      <button type="button" className="secondary wide" onClick={() => setPickerOpen(true)}>＋ Ещё упражнение</button>
+      <button type="button" className="secondary wide" onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>
       {error && <p className="error">{error.message}</p>}
       <button className="wide" disabled={finish.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => exercise.sets.some((set) => !set.confirmedAt)); if (!incomplete || window.confirm('Есть незавершённые подходы. Завершить тренировку частично?')) finish.mutate() }}>Завершить тренировку</button>
     </>}</AsyncView>
-    {pickerOpen && <ExercisePicker catalog={catalog} onPick={(exercise) => { setPickerOpen(false); appendExercise.mutate(exercise) }} onClose={() => setPickerOpen(false)} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} onPick={pickLiveExercise} onClose={closePicker} />}
   </Page>
 }
 

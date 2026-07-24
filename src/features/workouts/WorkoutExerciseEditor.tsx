@@ -29,13 +29,14 @@ interface WorkoutExerciseEditorProps {
   exercises: readonly WorkoutExerciseDraft[]
   onChange: (exercises: WorkoutExerciseDraft[]) => void
   onOpenPicker: () => void
+  onReplaceExercise: (index: number) => void
 }
 
 function inputNumber(value: string): number | undefined {
   return value === '' ? undefined : Number(value)
 }
 
-export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker }: WorkoutExerciseEditorProps) {
+export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise }: WorkoutExerciseEditorProps) {
   function updateSet(exerciseIndex: number, setIndex: number, patch: Partial<WorkoutSetDraft>) {
     onChange(exercises.map((exercise, currentExercise) => currentExercise === exerciseIndex ? {
       ...exercise,
@@ -81,7 +82,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker }: Wor
   // Одиночное упражнение (вне блока): подходы + «＋ Подход» + «Объединить».
   function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode) {
     return <article className="exercise" key={`${exercise.ref}-${exerciseIndex}`}>
-      <header><strong>{exercise.name}</strong><span className="exercise-head-actions">{reorder}<button type="button" className="link danger" onClick={() => removeExercise(exerciseIndex)}>Удалить</button></span></header>
+      <header><strong>{exercise.name}</strong><span className="exercise-head-actions">{reorder}<button type="button" className="link" onClick={() => onReplaceExercise(exerciseIndex)}>Заменить</button><button type="button" className="link danger" onClick={() => removeExercise(exerciseIndex)}>Удалить</button></span></header>
       {exercise.sets.map((_set, setIndex) => <div className="planned-set" key={setIndex}>
         <div className="planned-set-heading"><span>Подход {setIndex + 1}</span>{exercise.sets.length > 1 && <button type="button" className="link danger" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}>×</button>}</div>
         {setFields(exercise, exerciseIndex, setIndex)}
@@ -119,7 +120,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker }: Wor
           <button type="button" className="link" onClick={() => onChange(splitBlock([...exercises], block.blockId))}>Разбить</button>
         </div>
         {/* Список упражнений блока с удалением (значения — ниже по кругам). */}
-        <div className="block-exercises">{block.items.map(({ exercise, index }) => <div className="block-exercise-row" key={exercise.blockId ? `${exercise.ref}-${index}` : index}><strong>{exercise.name}</strong><button type="button" className="link danger" onClick={() => removeExercise(index)}>Удалить</button></div>)}</div>
+        <div className="block-exercises">{block.items.map(({ exercise, index }) => <div className="block-exercise-row" key={exercise.blockId ? `${exercise.ref}-${index}` : index}><strong>{exercise.name}</strong><span className="exercise-head-actions"><button type="button" className="link" onClick={() => onReplaceExercise(index)}>Заменить</button><button type="button" className="link danger" onClick={() => removeExercise(index)}>Удалить</button></span></div>)}</div>
         {rounds.map((round) => <div className="planned-round" key={round.round}>
           <div className="planned-round-label">Круг {round.round}</div>
           {round.items.map(({ exercise, exerciseIndex, setIndex }) => <div className="planned-round-exercise" key={`${exercise.ref}-${exerciseIndex}`}>
