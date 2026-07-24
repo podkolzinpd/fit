@@ -4,8 +4,8 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { computeYDomain } from '../progress/ProgressChart'
-import { chartUnitFor, copyWorkout, exerciseChartPoints, muscleGroupLabels, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
-import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutSet } from '../../shared/domain'
+import { BLOCK_TYPE_LABELS, chartUnitFor, copyWorkout, exerciseChartPoints, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
+import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
   addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayLocalDate, weekdayShort,
@@ -148,7 +148,7 @@ export function WorkoutFormPage() {
   const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => workoutsRepository.save(draft), onSuccess: async (id) => { await queryClient.invalidateQueries({ queryKey: ['workouts'] }); navigate(`/workouts/${id}`) } })
 
   function addExercise(selected: ExerciseSnapshot) {
-    setDraftExercises([...exercises, { ...selected, position: exercises.length, sets: [{ position: 0 }] }])
+    setDraftExercises([...exercises, { ...selected, position: exercises.length, blockId: crypto.randomUUID(), blockType: 'single', blockRounds: 1, sets: [{ position: 0 }] }])
     setPickerOpen(false)
   }
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -198,10 +198,14 @@ export function WorkoutDetailPage() {
         <div><span>Тоннаж</span><strong>{tonnageLabel(tonnage)}</strong></div>
         <div><span>Группы мышц</span><strong>{groups.length ? groups.join(', ') : '—'}</strong></div>
       </section>}
-      <div className="cards">{workout.exercises.map((exercise) => <article className="exercise" key={exercise.id}>
-        <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
-        {exercise.sets.map((set) => <p key={set.id}>{done ? formatFactSet(set) : formatSet(set)}</p>)}
-      </article>)}</div>
+      <div className="cards">{groupIntoBlocks(workout.exercises).map((block) => {
+        const articles = block.exercises.map((exercise) => <article className="exercise" key={exercise.id}>
+          <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
+          {exercise.sets.map((set) => <p key={set.id}>{done ? <FactVsPlan set={set} /> : formatSet(set)}</p>)}
+        </article>)
+        if (block.blockType === 'single' || block.exercises.length === 1) return articles
+        return <div className="exercise-block view" key={block.blockId}><span className="block-badge">{BLOCK_TYPE_LABELS[block.blockType]} · {block.blockRounds} кр.</span>{articles}</div>
+      })}</div>
       {workout.notes && <p>{workout.notes}</p>}
       <div className="actions">
         {workout.status === 'planned' && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>Изменить</Link>}
@@ -214,27 +218,25 @@ export function WorkoutDetailPage() {
 
 function formatSet(set: WorkoutSet) { const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, set.distanceKm && `${set.distanceKm} км`, set.durationMin && `${set.durationMin} мин`].filter(Boolean).join(' × '); return plan || 'Подход без плана' }
 
-// Actual result of a set (fact), falling back to the plan when a value wasn't
-// recorded live — so completed workouts still show вес × повторы.
-function formatFactSet(set: WorkoutSet) {
-  const weight = set.fact.weightKg ?? set.weightKg
-  const reps = set.fact.reps ?? set.reps
-  const distance = set.fact.distanceKm ?? set.distanceKm
-  const duration = set.fact.durationMin ?? set.durationMin
-  const parts = [weight && `${weight} кг`, reps && `${reps} повт.`, distance && `${distance} км`, duration && `${duration} мин`].filter(Boolean)
-  return parts.join(' × ') || 'Без результата'
+// Строка результата подхода: факт + серая приписка плана (если факт≠план).
+function FactVsPlan({ set }: { set: WorkoutSet }) {
+  const { fact, planNote } = formatFactVsPlan(set)
+  return <>{fact}{planNote && <span className="plan-note"> · {planNote}</span>}</>
 }
 
 
-function LiveSetFields({ inputKind, set }: { inputKind: ExerciseSnapshot['inputKind']; set: WorkoutSet }) {
+function LiveSetFields({ inputKind, set, editing = false }: { inputKind: ExerciseSnapshot['inputKind']; set: WorkoutSet; editing?: boolean }) {
   // После подтверждения показываем зафиксированный результат (факт, иначе план)
   // как обычное яркое значение в заблокированном поле, а не тусклый placeholder.
-  const locked = Boolean(set.confirmedAt)
+  // Правка по карандашику временно разблокирует поля (editing).
+  const locked = Boolean(set.confirmedAt) && !editing
   const rowClass = locked ? 'set-row locked' : 'set-row'
-  // Ключ по locked ремоунтит поля при подтверждении, чтобы неконтролируемый
-  // defaultValue пересчитался и показал зафиксированное значение.
-  const k = locked ? 'locked' : 'edit'
-  const value = (fact: number | undefined, plan: number | undefined) => (locked ? (fact ?? plan) : fact)
+  // Ключ ремоунтит поля при смене режима (подтверждён / правка / ввод), чтобы
+  // неконтролируемый defaultValue пересчитался и показал нужное значение.
+  const k = locked ? 'locked' : editing ? 'editing' : 'edit'
+  // Для подтверждённого подхода (в т.ч. при правке) показываем факт, иначе план.
+  const confirmed = Boolean(set.confirmedAt)
+  const value = (fact: number | undefined, plan: number | undefined) => (confirmed ? (fact ?? plan) : fact)
   if (inputKind === 'strength') return <div className={rowClass}><input key={`w-${k}`} aria-label="Фактический вес" name="weightKg" type="number" min="0" step="0.5" disabled={locked} defaultValue={value(set.fact.weightKg, set.weightKg)} placeholder={set.weightKg === undefined ? 'кг' : `${set.weightKg} кг`} /><input key={`r-${k}`} aria-label="Фактические повторы" name="reps" type="number" min="0" disabled={locked} defaultValue={value(set.fact.reps, set.reps)} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
   if (inputKind === 'reps') return <div className={rowClass}><input key={`d-${k}`} aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" disabled={locked} defaultValue={value(set.fact.durationMin, set.durationMin)} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input key={`r-${k}`} aria-label="Фактические повторы" name="reps" type="number" min="0" disabled={locked} defaultValue={value(set.fact.reps, set.reps)} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
   return <div className={rowClass}><input key={`d-${k}`} aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" disabled={locked} defaultValue={value(set.fact.durationMin, set.durationMin)} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input key={`dist-${k}`} aria-label="Фактическая дистанция" name="distanceKm" type="number" min="0" step="0.1" disabled={locked} defaultValue={value(set.fact.distanceKm, set.distanceKm)} placeholder={set.distanceKm === undefined ? 'км' : `${set.distanceKm} км`} /></div>
@@ -281,13 +283,25 @@ export function LiveWorkoutPage() {
   ))
   const skipBlurForSet = useRef<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  // Подтверждённые подходы, временно разблокированные для правки (по карандашику).
+  const [editingSets, setEditingSets] = useState<Set<string>>(() => new Set())
   const [restRemaining, setRestRemaining] = useState<number | null>(null)
   const restEndsAt = useRef<number | null>(null)
   const save = useMutation({ mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.save(set, draft) })
   const confirm = useMutation({
     mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.confirm(set, draft),
-    onSuccess: () => {
-      startRest()
+    onSuccess: (_data, { set }) => {
+      // Одиночное упражнение — отдых после каждого подхода (как раньше).
+      // Многоэлементный блок (суперсет/трисет/круговая) — отдых только после
+      // последнего упражнения блока, а не между упражнениями внутри него.
+      const workout = query.data
+      const exercise = workout?.exercises.find((item) => item.sets.some((s) => s.id === set.id))
+      if (workout && exercise) {
+        const block = groupIntoBlocks(workout.exercises).find((b) => b.blockId === exercise.blockId)
+        const multi = Boolean(block && block.exercises.length > 1)
+        const lastExerciseOfBlock = !block || block.exercises[block.exercises.length - 1]?.id === exercise.id
+        if (!multi || lastExerciseOfBlock) startRest()
+      }
       void query.refetch()
     },
   })
@@ -308,6 +322,7 @@ export function LiveWorkoutPage() {
   }
   const appendSet = useMutation({ mutationFn: (exerciseId: string) => workoutsRepository.appendLiveSet(query.data!, exerciseId), onSuccess: async () => { await query.refetch() } })
   const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => workoutsRepository.appendLiveExercise(query.data!, exercise), onSuccess: async () => { await query.refetch() } })
+  const reorderBlock = useMutation({ mutationFn: ({ blockId, direction }: { blockId: string; direction: -1 | 1 }) => workoutsRepository.reorderLiveBlock(query.data!, blockId, direction), onSuccess: async () => { await query.refetch() } })
   const finish = useMutation({ mutationFn: () => workoutsRepository.finish(query.data!), onSuccess: async () => {
     const clientId = query.data?.clientId
     // Освежаем не только саму тренировку, но и статистику клиента и списки
@@ -339,7 +354,36 @@ export function LiveWorkoutPage() {
     }, 250)
     return () => window.clearInterval(timer)
   }, [restActive])
-  const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? finish.error
+  const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? reorderBlock.error ?? finish.error
+  // Стрелки ↑/↓ для перестановки блока в live (задизейблены на границах).
+  function liveReorder(blockId: string, isFirst: boolean, isLast: boolean) {
+    return <span className="block-reorder">
+      <button type="button" className="reorder-btn" aria-label="Вверх" disabled={isFirst || reorderBlock.isPending} onClick={() => reorderBlock.mutate({ blockId, direction: -1 })}>↑</button>
+      <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast || reorderBlock.isPending} onClick={() => reorderBlock.mutate({ blockId, direction: 1 })}>↓</button>
+    </span>
+  }
+  // Форма одного подхода в live: подтверждение / правка / автосохранение по blur.
+  function renderLiveSet(exercise: WorkoutExercise, set: WorkoutSet, label?: string, current = false) {
+    const isEditing = editingSets.has(set.id)
+    // «Закрыто» (подтверждён) — зелёный; «в работе» (текущий) — серый.
+    const stateClass = set.confirmedAt && !isEditing ? 'confirmed' : current && !isEditing ? 'current' : ''
+    return <form className={`exercise ${stateClass}`} key={set.id} onBlur={(event) => {
+      if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
+      if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
+      save.mutate({ set, draft: draftFrom(event.currentTarget) })
+    }}>
+      {label && <div className="set-head"><span className="muted">{label}</span>{set.confirmedAt && !isEditing && <button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}</div>}
+      {!label && set.confirmedAt && !isEditing && <div className="set-head"><span className="muted" />{<button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}</div>}
+      <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} />
+      {set.confirmedAt && isEditing
+        ? <button type="button" className="secondary" disabled={save.isPending}
+            onPointerDown={() => { skipBlurForSet.current = set.id }}
+            onClick={(event) => { const form = event.currentTarget.form; if (form) save.mutate({ set, draft: draftFrom(form) }); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}>Сохранить</button>
+        : <button type="button" className="secondary" disabled={Boolean(set.confirmedAt) || confirm.isPending}
+            onPointerDown={() => { skipBlurForSet.current = set.id }}
+            onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>{set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'}</button>}
+    </form>
+  }
   return <Page title="Live-тренировка">
     <AsyncView loading={query.isLoading} error={query.error}>{query.data && <>
       <p>{query.data.clientName}</p>
@@ -352,21 +396,41 @@ export function LiveWorkoutPage() {
           <button type="button" className="link" onClick={stopRest}>Пропустить</button>
         </div>
       </div>}
-      {query.data.exercises.map((exercise) => <section key={exercise.id}>
-        <h2>{exercise.name}</h2>
-        {exercise.sets.map((set, index) => <form className={`exercise ${set.confirmedAt ? 'confirmed' : ''}`} key={set.id} onBlur={(event) => {
-          if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
-          if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
-          save.mutate({ set, draft: draftFrom(event.currentTarget) })
-        }}>
-          <span className="muted">Подход {index + 1}</span>
-          <LiveSetFields inputKind={exercise.inputKind} set={set} />
-          <button type="button" className="secondary" disabled={Boolean(set.confirmedAt) || confirm.isPending}
-            onPointerDown={() => { skipBlurForSet.current = set.id }}
-            onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>{set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'}</button>
-        </form>)}
-        <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
-      </section>)}
+      {(() => { const liveBlocks = groupIntoBlocks(query.data.exercises); return liveBlocks.map((block, blockIndex) => {
+        // ↑/↓ показываем только когда блоков больше одного; двигать можно любые
+        // блоки (в т.ч. с завершёнными подходами), кроме упора в границу.
+        const reorder = liveBlocks.length > 1 ? liveReorder(block.blockId, blockIndex === 0, blockIndex === liveBlocks.length - 1) : null
+        // Одиночное упражнение (или блок из одного) — как раньше, по подходам.
+        // Текущий подход (первый неподтверждённый) подсвечивается серым.
+        if (block.blockType === 'single' || block.exercises.length === 1) {
+          return block.exercises.map((exercise) => {
+            const currentSetIndex = exercise.sets.findIndex((set) => !set.confirmedAt)
+            return <section key={exercise.id}>
+              <div className="live-exercise-head"><h2>{exercise.name}</h2>{reorder}</div>
+              {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex))}
+              <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
+            </section>
+          })
+        }
+        // Многоэлементный блок — по кругам, со счётчиком «Круг R из N».
+        const rounds = blockRoundsView(block)
+        const current = currentRoundIndex(rounds)
+        return <div className="exercise-block live" key={block.blockId}>
+          <div className="circuit-head">
+            <span className="block-badge">{BLOCK_TYPE_LABELS[block.blockType]}</span>
+            <span className="circuit-counter">Круг {rounds[current]?.round ?? 1} из {rounds.length}</span>
+            <span className="circuit-dots" aria-hidden="true">{rounds.map((r, i) => <span key={r.round} className={`circuit-dot ${r.items.every(({ set }) => set.confirmedAt) ? 'done' : i === current ? 'current' : ''}`} />)}</span>
+            {reorder}
+          </div>
+          {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt); return <div className={`circuit-round ${roundDone ? 'done' : roundIndex === current ? 'current' : ''}`} key={round.round}>
+            <div className="circuit-round-label">Круг {round.round}</div>
+            {round.items.map(({ exercise, set }) => <section key={set.id}>
+              <h3>{exercise.name}</h3>
+              {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
+            </section>)}
+          </div> })}
+        </div>
+      }) })()}
       <button type="button" className="secondary wide" onClick={() => setPickerOpen(true)}>＋ Ещё упражнение</button>
       {error && <p className="error">{error.message}</p>}
       <button className="wide" disabled={finish.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => exercise.sets.some((set) => !set.confirmedAt)); if (!incomplete || window.confirm('Есть незавершённые подходы. Завершить тренировку частично?')) finish.mutate() }}>Завершить тренировку</button>
@@ -387,7 +451,7 @@ export function ExerciseHistoryPage() {
   return <Page title="История упражнения" back={`/workouts/${workoutId}`}>
     <AsyncView loading={current.isLoading || history.isLoading} error={current.error ?? history.error} empty={!history.data?.length}>
       {chart.length > 1 && <section className="chart"><h2>Динамика ({unit})</h2><ResponsiveContainer width="100%" height={220}><LineChart data={chart}><XAxis dataKey="date" /><YAxis domain={computeYDomain(chart.map((point) => point.value))} allowDecimals /><Tooltip contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', borderRadius: 12 }} labelStyle={{ color: '#e9e4ed', fontWeight: 700 }} itemStyle={{ color: '#e9e4ed' }} /><Line type="monotone" dataKey="value" stroke="#735cff" strokeWidth={3} /></LineChart></ResponsiveContainer></section>}
-      <div className="timeline">{[...(history.data ?? [])].sort((a, b) => (a.workoutDate < b.workoutDate ? 1 : -1)).map((workout) => { const exercise = workout.exercises.find((item) => item.ref === exerciseRef); return <article key={workout.id} className="card"><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{exercise?.sets.map(formatSet).join(', ')}</p></div></article> })}</div>
+      <div className="timeline">{[...(history.data ?? [])].sort((a, b) => (a.workoutDate < b.workoutDate ? 1 : -1)).map((workout) => { const exercise = workout.exercises.find((item) => item.ref === exerciseRef); return <article key={workout.id} className="card"><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{exercise?.sets.map((set, index) => <span key={set.id}>{index > 0 && ', '}<FactVsPlan set={set} /></span>)}</p></div></article> })}</div>
     </AsyncView>
   </Page>
 }

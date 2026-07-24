@@ -117,20 +117,68 @@ p { margin: 6px 0 }
  .schedule-count { padding: 5px 9px; border: 1px solid var(--border); border-radius: 99px; color: var(--muted); background: var(--surface-raised); font-size: 12px; white-space: nowrap }
 .exercise { border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin: 10px 0; background: var(--surface-raised) }
 .cards > .exercise { margin: 0 }
+/* Блок упражнений (суперсет/трисет/круговая): рамка с левой акцентной линией. */
+.exercise-block { border: 1px solid #4b3f83; border-left: 3px solid var(--purple); border-radius: 14px; padding: 10px; margin: 10px 0; background: #211d2e; display: flex; flex-direction: column; gap: 8px }
+.exercise-block .exercise { margin: 0 }
+.exercise-block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px }
+.exercise-block-head select { padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700 }
+/* Стрелки перемещения блока/упражнения вверх-вниз. */
+.exercise-head-actions { display: inline-flex; align-items: center; gap: 8px }
+.block-reorder { display: inline-flex; gap: 4px }
+.reorder-btn { width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-raised); color: var(--fg); font-size: 15px; line-height: 1; cursor: pointer }
+.reorder-btn:hover:not(:disabled) { border-color: #4b3f83 }
+.reorder-btn:disabled { opacity: .35; cursor: default }
+.live-exercise-head { display: flex; align-items: center; justify-content: space-between; gap: 10px }
+.live-exercise-head h2 { margin: 0 }
+.block-badge { align-self: flex-start; padding: 3px 10px; border-radius: 99px; background: #2f2850; border: 1px solid #4b3f83; color: var(--purple); font-size: 12px; font-weight: 700 }
+.block-rounds { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 600 }
+/* Live «по кругам»: шапка со счётчиком и точками прогресса. */
+.circuit-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
+.circuit-counter { font-weight: 800; font-size: 15px; color: var(--fg) }
+.circuit-dots { display: inline-flex; gap: 6px; margin-left: auto }
+.circuit-dot { width: 10px; height: 10px; border-radius: 50%; background: #3a3352; border: 1px solid #4b3f83 }
+/* Точки прогресса: текущий круг (в работе) — серый, пройденный — зелёный. */
+.circuit-dot.current { background: #8a8399; border-color: #a29bb0 }
+.circuit-dot.done { background: var(--success); border-color: var(--success) }
+.circuit-round { border: 1px solid var(--border); border-radius: 12px; padding: 8px; background: #1b1826; opacity: .5 }
+/* Текущий круг (в работе) — серая подсветка; пройденный — зелёная. */
+.circuit-round.current { opacity: 1; border-color: #6f6a80; background: #24222c }
+.circuit-round.done { opacity: 1; border-color: #367b4b; background: #15271a }
+.circuit-round-label { font-size: 12px; font-weight: 700; color: var(--purple); margin-bottom: 4px }
+.circuit-round h3 { margin: 8px 0 4px; font-size: 15px }
+.circuit-round .exercise { margin: 0 }
+.block-rounds input { width: 56px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700; text-align: center }
+.block-merge { align-self: flex-start; margin-top: 8px; color: var(--purple) }
+/* Форма блока по кругам: список упражнений блока + группы-круги. */
+.block-exercises { display: flex; flex-direction: column; gap: 4px }
+.block-exercise-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 2px }
+.planned-round { border: 1px solid var(--border); border-radius: 12px; padding: 10px; background: #1b1826 }
+.planned-round-label { font-size: 12px; font-weight: 700; color: var(--purple); margin-bottom: 6px }
+.planned-round-exercise { margin-bottom: 8px }
+.planned-round-exercise:last-child { margin-bottom: 0 }
+.planned-round-exercise-name { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px }
 .exercise-name-link { display: inline-flex; align-items: baseline; gap: 8px; text-decoration: none; color: var(--fg) }
 .exercise-name-hint { font-size: 12px; color: var(--purple); font-weight: 600 }
+/* Приписка плана рядом с фактом (при расхождении) — тусклая. */
+.plan-note { color: var(--muted); font-size: 12px }
 .exercise header, .workout-title { display: flex; justify-content: space-between; align-items: center; gap: 12px }
 .workout-title { margin-bottom: 18px }
 .workout-title h2 { margin: 0 0 4px }
+.set-head { display: flex; align-items: center; justify-content: space-between; gap: 8px }
+.set-edit { padding: 2px 8px; font-size: 16px; line-height: 1; color: var(--purple) }
 .set-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0 }
 .set-row input { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 9px; color: #ece7f0; background: var(--input) }
 /* Зафиксированный подход: значения горят ярко, не тускнеют как disabled. */
 .set-row.locked input { color: #ece7f0; -webkit-text-fill-color: #ece7f0; opacity: 1; font-weight: 700; border-color: #367b4b; background: #15271a }
 .confirmed { border-color: #367b4b; background: #15271a }
+/* Текущий подход (в работе) — серая подсветка. */
+.exercise.current { border-color: #6f6a80; background: #24222c }
+.circuit-round.done .exercise, .circuit-round.done .exercise.confirmed { border-color: #367b4b; background: transparent }
 .live-dot { color: #d33030; font-weight: 800; font-size: 13px }
 .live-timer { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border: 1px solid #4b3f83; border-radius: 11px; background: #29223f; color: var(--fg); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14px }
 /* Крупный таймер по центру над подходами. */
-.live-timer-big { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 8px 0 18px; padding: 16px; border: 1px solid #4b3f83; border-radius: 16px; background: #29223f; color: var(--fg); font-weight: 800; font-variant-numeric: tabular-nums; font-size: 40px; letter-spacing: 1px }
+/* Крупный таймер закреплён вверху при скролле live-экрана. */
+.live-timer-big { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 0 18px; padding: 16px; border: 1px solid #4b3f83; border-radius: 16px; background: #29223f; color: var(--fg); font-weight: 800; font-variant-numeric: tabular-nums; font-size: 40px; letter-spacing: 1px; box-shadow: 0 6px 20px #17131f66 }
 .live-timer-big .live-dot-mark { width: 14px; height: 14px }
 .live-dot-mark { width: 8px; height: 8px; border-radius: 50%; background: #d33030; box-shadow: 0 0 0 0 #d3303066; animation: live-pulse 1.6s ease-out infinite }
 @keyframes live-pulse { 0% { box-shadow: 0 0 0 0 #d3303066 } 70% { box-shadow: 0 0 0 6px #d3303000 } 100% { box-shadow: 0 0 0 0 #d3303000 } }

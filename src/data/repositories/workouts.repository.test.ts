@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { InputKind, Workout, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, exerciseChartPoints, muscleGroupLabels, nextSetDraft, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import type { InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, formatFactVsPlan, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, mergeBlockWithNext, moveBlock, muscleGroupLabels, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockType, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -27,7 +27,7 @@ describe('workouts repository rules', () => {
     const source: Workout = {
       id: 'w1', clientId: 'c1', clientName: 'Анна', workoutDate: localDate('2026-07-21'),
       startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'done', notes: null, version: 3,
-      exercises: [{ id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0,
+      exercises: [{ id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: 'b1', blockType: 'single', blockRounds: 1,
         sets: [{ id: 's1', position: 0, weightKg: 50, reps: 10, fact: { weightKg: 55, reps: 9 }, confirmedAt: 'now', version: 2 }] }],
     }
     const copy = copyWorkout(source, localDate('2026-07-22'))
@@ -100,7 +100,7 @@ function workoutWith(date: string, ref: string, inputKind: InputKind, sets: Work
   return {
     id: `w-${date}`, clientId: 'c1', clientName: 'Клиент', workoutDate: localDate(date),
     startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'done', notes: null, version: 1,
-    exercises: [{ id: `e-${date}`, source: 'system', ref, name: ref, muscleGroup: 'legs', inputKind, position: 0, sets }],
+    exercises: [{ id: `e-${date}`, source: 'system', ref, name: ref, muscleGroup: 'legs', inputKind, position: 0, blockId: `b-${date}`, blockType: 'single', blockRounds: 1, sets }],
   }
 }
 
@@ -134,21 +134,21 @@ describe('exerciseChartPoints', () => {
     expect(exerciseChartPoints(workouts, 'squat')).toEqual([{ date: '2026-07-05', value: 50 }])
   })
 
-  it('берёт план как fallback, если факт не заполнен', () => {
+  it('строго по факту: подход только с планом (без факта) пропускается', () => {
     const workouts = [workoutWith('2026-07-15', 'squat', 'strength', [planSet(70), planSet(75, 1)])]
-    expect(exerciseChartPoints(workouts, 'squat')).toEqual([{ date: '2026-07-15', value: 75 }])
+    expect(exerciseChartPoints(workouts, 'squat')).toEqual([])
   })
 
-  it('берёт плановую дистанцию как fallback', () => {
+  it('строго по факту: плановая дистанция без факта не даёт точку', () => {
     const plan: WorkoutSet = { id: 'pd', position: 0, distanceKm: 8, fact: {}, confirmedAt: null, version: 1 }
     const workouts = [workoutWith('2026-07-15', 'run', 'distance', [plan])]
-    expect(exerciseChartPoints(workouts, 'run')).toEqual([{ date: '2026-07-15', value: 8 }])
+    expect(exerciseChartPoints(workouts, 'run')).toEqual([])
   })
 
-  it('берёт плановые повторы как fallback', () => {
+  it('строго по факту: плановые повторы без факта не дают точку', () => {
     const plan: WorkoutSet = { id: 'pr', position: 0, reps: 30, fact: {}, confirmedAt: null, version: 1 }
     const workouts = [workoutWith('2026-07-15', 'burpee', 'reps', [plan])]
-    expect(exerciseChartPoints(workouts, 'burpee')).toEqual([{ date: '2026-07-15', value: 30 }])
+    expect(exerciseChartPoints(workouts, 'burpee')).toEqual([])
   })
 
   it('учитывает только завершённые тренировки', () => {
@@ -242,9 +242,9 @@ describe('muscleGroupLabels', () => {
     const workout: Workout = {
       ...workoutWith('2026-07-20', 'squat', 'strength', [set({ weightKg: 60 })]),
       exercises: [
-        { id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, sets: [] },
-        { id: 'e2', source: 'system', ref: 'bench', name: 'Жим', muscleGroup: 'chest', inputKind: 'strength', position: 1, sets: [] },
-        { id: 'e3', source: 'system', ref: 'lunge', name: 'Выпад', muscleGroup: 'legs', inputKind: 'strength', position: 2, sets: [] },
+        { id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: 'b1', blockType: 'single', blockRounds: 1, sets: [] },
+        { id: 'e2', source: 'system', ref: 'bench', name: 'Жим', muscleGroup: 'chest', inputKind: 'strength', position: 1, blockId: 'b2', blockType: 'single', blockRounds: 1, sets: [] },
+        { id: 'e3', source: 'system', ref: 'lunge', name: 'Выпад', muscleGroup: 'legs', inputKind: 'strength', position: 2, blockId: 'b3', blockType: 'single', blockRounds: 1, sets: [] },
       ],
     }
     expect(muscleGroupLabels(workout)).toEqual(['Ноги', 'Грудь'])
@@ -270,5 +270,217 @@ describe('nextSetDraft', () => {
   })
   it('пустой список → пустой подход на позиции 0', () => {
     expect(nextSetDraft([], 'strength')).toEqual({ position: 0 })
+  })
+})
+
+function exercise(id: string, position: number, blockId: string, blockType: 'single'|'superset'|'triset'|'circuit', sets: WorkoutSet[] = []): Workout['exercises'][number] {
+  return { id, source: 'system', ref: id, name: id, muscleGroup: 'legs', inputKind: 'strength', position, blockId, blockType, blockRounds: Math.max(1, sets.length), sets }
+}
+function workoutWithExercises(exercises: Workout['exercises']): Workout {
+  return { id: 'w', clientId: 'c1', clientName: 'К', workoutDate: localDate('2026-07-20'), startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'in_progress', notes: null, version: 1, exercises }
+}
+
+describe('groupIntoBlocks', () => {
+  it('группирует упражнения по blockId, сохраняя порядок', () => {
+    const blocks = groupIntoBlocks([
+      exercise('a', 0, 'b1', 'single'),
+      exercise('b', 1, 'b2', 'superset'),
+      exercise('c', 2, 'b2', 'superset'),
+      exercise('d', 3, 'b3', 'single'),
+    ])
+    expect(blocks.map((b) => ({ type: b.blockType, ids: b.exercises.map((e) => e.id) }))).toEqual([
+      { type: 'single', ids: ['a'] },
+      { type: 'superset', ids: ['b', 'c'] },
+      { type: 'single', ids: ['d'] },
+    ])
+  })
+})
+
+describe('isLastSetOfBlock', () => {
+  const s = (id: string, position: number): WorkoutSet => ({ id, position, fact: {}, confirmedAt: null, version: 1 })
+  it('single-блок: последний сет упражнения — последний в блоке', () => {
+    const w = workoutWithExercises([exercise('a', 0, 'b1', 'single', [s('s1', 0), s('s2', 1)])])
+    expect(isLastSetOfBlock(w, 'a', 's2')).toBe(true)
+    expect(isLastSetOfBlock(w, 'a', 's1')).toBe(false)
+  })
+  it('суперсет: отдых только после последнего упражнения блока', () => {
+    const w = workoutWithExercises([
+      exercise('a', 0, 'b1', 'superset', [s('a1', 0)]),
+      exercise('b', 1, 'b1', 'superset', [s('b1', 0)]),
+    ])
+    expect(isLastSetOfBlock(w, 'a', 'a1')).toBe(false) // первое упражнение блока
+    expect(isLastSetOfBlock(w, 'b', 'b1')).toBe(true)  // последнее упражнение блока
+  })
+})
+
+describe('copyWorkout blocks', () => {
+  it('сохраняет тип блока и объединяет упражнения одного блока новым общим id', () => {
+    const source = workoutWithExercises([
+      exercise('a', 0, 'b1', 'superset', [{ id: 'x', position: 0, weightKg: 50, fact: {}, confirmedAt: null, version: 1 }]),
+      exercise('b', 1, 'b1', 'superset', [{ id: 'y', position: 0, weightKg: 40, fact: {}, confirmedAt: null, version: 1 }]),
+    ])
+    const draft = copyWorkout(source)
+    expect(draft.exercises.map((e) => e.blockType)).toEqual(['superset', 'superset'])
+    // оба упражнения блока получили один и тот же новый blockId
+    expect(draft.exercises[0]?.blockId).toBe(draft.exercises[1]?.blockId)
+    expect(draft.exercises[0]?.blockId).not.toBe('b1')
+  })
+})
+
+function draft(ref: string, blockId?: string, blockType?: 'single'|'superset'|'triset'|'circuit'): WorkoutExerciseDraft {
+  return { source: 'system', ref, name: ref, muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId, blockType, sets: [{ position: 0 }] }
+}
+
+describe('draft blocks', () => {
+  it('ensureBlockIds проставляет id и single там, где нет', () => {
+    const out = ensureBlockIds([draft('a'), draft('b', 'x', 'superset')])
+    expect(out[0]?.blockId).toBeTruthy()
+    expect(out[0]?.blockType).toBe('single')
+    expect(out[1]?.blockId).toBe('x')
+    expect(out[1]?.blockType).toBe('superset')
+  })
+
+  it('mergeBlockWithNext объединяет два одиночных в суперсет с общим id', () => {
+    const out = mergeBlockWithNext([draft('a', 'b1', 'single'), draft('b', 'b2', 'single')], 0)
+    expect(out[0]?.blockId).toBe(out[1]?.blockId)
+    expect(out[0]?.blockType).toBe('superset')
+    expect(out[1]?.blockType).toBe('superset')
+  })
+
+  it('mergeBlockWithNext присоединяет к существующему многоэлементному блоку с его типом', () => {
+    // a,b — трисет b1; c — одиночный. Объединяем b(index1) со следующим c.
+    const start = [draft('a', 'b1', 'triset'), draft('b', 'b1', 'triset'), draft('c', 'b2', 'single')]
+    const out = mergeBlockWithNext(start, 1)
+    expect(new Set(out.map((e) => e.blockId)).size).toBe(1)
+    expect(out.every((e) => e.blockType === 'triset')).toBe(true)
+  })
+
+  it('splitBlock разбивает блок на одиночные', () => {
+    const out = splitBlock([draft('a', 'b1', 'superset'), draft('b', 'b1', 'superset')], 'b1')
+    expect(out[0]?.blockId).not.toBe(out[1]?.blockId)
+    expect(out.every((e) => e.blockType === 'single')).toBe(true)
+  })
+
+  it('setBlockType меняет тип всего блока', () => {
+    const out = setBlockType([draft('a', 'b1', 'superset'), draft('b', 'b1', 'superset')], 'b1', 'circuit')
+    expect(out.every((e) => e.blockType === 'circuit')).toBe(true)
+  })
+
+  it('groupDraftsIntoBlocks группирует по blockId, сохраняя индексы', () => {
+    const blocks = groupDraftsIntoBlocks([draft('a', 'b1', 'superset'), draft('b', 'b1', 'superset'), draft('c', 'b2', 'single')])
+    expect(blocks.map((b) => ({ type: b.blockType, refs: b.items.map((i) => i.exercise.ref), idx: b.items.map((i) => i.index) }))).toEqual([
+      { type: 'superset', refs: ['a', 'b'], idx: [0, 1] },
+      { type: 'single', refs: ['c'], idx: [2] },
+    ])
+  })
+})
+
+describe('block rounds', () => {
+  it('syncBlockRounds выставляет N подходов всем упражнениям блока', () => {
+    const start = [draft('a', 'b1', 'superset'), draft('b', 'b1', 'superset')]
+    const out = syncBlockRounds(start, 'b1', 3)
+    expect(out.every((e) => e.blockRounds === 3)).toBe(true)
+    expect(out.every((e) => e.sets.length === 3)).toBe(true)
+    expect(out.map((e) => e.sets.map((s) => s.position))).toEqual([[0, 1, 2], [0, 1, 2]])
+  })
+
+  it('syncBlockRounds срезает лишние подходы и не опускается ниже 1', () => {
+    const withThree: WorkoutExerciseDraft = { ...draft('a', 'b1', 'superset'), sets: [{ position: 0 }, { position: 1 }, { position: 2 }] }
+    expect(syncBlockRounds([withThree], 'b1', 1)[0]?.sets.length).toBe(1)
+    expect(syncBlockRounds([withThree], 'b1', 0)[0]?.sets.length).toBe(1)
+  })
+
+  it('syncBlockRounds наследует параметры предыдущего подхода при добавлении', () => {
+    const withWeight: WorkoutExerciseDraft = { ...draft('a', 'b1', 'superset'), sets: [{ position: 0, weightKg: 50, reps: 10 }] }
+    const out = syncBlockRounds([withWeight], 'b1', 2)
+    expect(out[0]?.sets[1]).toMatchObject({ weightKg: 50, reps: 10 })
+  })
+
+  it('mergeBlockWithNext синхронизирует раунды по максимуму подходов', () => {
+    const a: WorkoutExerciseDraft = { ...draft('a', 'b1', 'single'), sets: [{ position: 0 }, { position: 1 }] }
+    const b: WorkoutExerciseDraft = { ...draft('b', 'b2', 'single'), sets: [{ position: 0 }] }
+    const out = mergeBlockWithNext([a, b], 0)
+    expect(out.every((e) => e.blockRounds === 2)).toBe(true)
+    expect(out.every((e) => e.sets.length === 2)).toBe(true)
+  })
+})
+
+describe('blockRoundsView / currentRoundIndex', () => {
+  const s = (id: string, position: number, confirmed = false): WorkoutSet => ({ id, position, fact: {}, confirmedAt: confirmed ? 'now' : null, version: 1 })
+  const block = {
+    blockId: 'b1', blockType: 'superset' as const, blockRounds: 2,
+    exercises: [exercise('a', 0, 'b1', 'superset', [s('a1', 0), s('a2', 1)]), exercise('b', 1, 'b1', 'superset', [s('b1', 0), s('b2', 1)])],
+  }
+  it('раскладывает блок по кругам: круг R = по одному подходу каждого упражнения', () => {
+    const rounds = blockRoundsView(block)
+    expect(rounds.map((r) => ({ round: r.round, sets: r.items.map((i) => i.set.id) }))).toEqual([
+      { round: 1, sets: ['a1', 'b1'] },
+      { round: 2, sets: ['a2', 'b2'] },
+    ])
+  })
+  it('currentRoundIndex — первый круг с неподтверждённым подходом', () => {
+    // круг 1 полностью подтверждён, круг 2 нет
+    const b = { ...block, exercises: [exercise('a', 0, 'b1', 'superset', [s('a1', 0, true), s('a2', 1)]), exercise('b', 1, 'b1', 'superset', [s('b1', 0, true), s('b2', 1)])] }
+    expect(currentRoundIndex(blockRoundsView(b))).toBe(1)
+  })
+  it('currentRoundIndex = последний, если все круги подтверждены', () => {
+    const b = { ...block, exercises: [exercise('a', 0, 'b1', 'superset', [s('a1', 0, true), s('a2', 1, true)]), exercise('b', 1, 'b1', 'superset', [s('b1', 0, true), s('b2', 1, true)])] }
+    expect(currentRoundIndex(blockRoundsView(b))).toBe(1)
+  })
+})
+
+describe('draftBlockRoundsView', () => {
+  it('раскладывает черновик-блок по кругам: круг = все упражнения по очереди', () => {
+    const a: WorkoutExerciseDraft = { ...draft('a', 'b1', 'superset'), sets: [{ position: 0, weightKg: 90 }, { position: 1, weightKg: 90 }] }
+    const b: WorkoutExerciseDraft = { ...draft('b', 'b1', 'superset'), sets: [{ position: 0, weightKg: 40 }, { position: 1, weightKg: 40 }] }
+    const block = groupDraftsIntoBlocks([a, b])[0]!
+    const rounds = draftBlockRoundsView(block)
+    expect(rounds.map((r) => ({ round: r.round, items: r.items.map((i) => ({ ref: i.exercise.ref, exerciseIndex: i.exerciseIndex, setIndex: i.setIndex })) }))).toEqual([
+      { round: 1, items: [{ ref: 'a', exerciseIndex: 0, setIndex: 0 }, { ref: 'b', exerciseIndex: 1, setIndex: 0 }] },
+      { round: 2, items: [{ ref: 'a', exerciseIndex: 0, setIndex: 1 }, { ref: 'b', exerciseIndex: 1, setIndex: 1 }] },
+    ])
+  })
+})
+
+describe('formatFactVsPlan', () => {
+  const mk = (plan: Partial<WorkoutSet>, fact: WorkoutSet['fact']): WorkoutSet => ({ id: 's', position: 0, ...plan, fact, confirmedAt: 'now', version: 1 })
+  it('факт = план → без приписки', () => {
+    expect(formatFactVsPlan(mk({ weightKg: 50, reps: 10 }, { weightKg: 50, reps: 10 }))).toEqual({ fact: '50 кг × 10 повт.', planNote: null })
+  })
+  it('вес отличается → приписка плана', () => {
+    expect(formatFactVsPlan(mk({ weightKg: 50, reps: 10 }, { weightKg: 45, reps: 10 }))).toEqual({ fact: '45 кг × 10 повт.', planNote: 'план 50 кг × 10 повт.' })
+  })
+  it('повторы отличаются → приписка плана', () => {
+    expect(formatFactVsPlan(mk({ weightKg: 50, reps: 10 }, { weightKg: 50, reps: 8 }))).toEqual({ fact: '50 кг × 8 повт.', planNote: 'план 50 кг × 10 повт.' })
+  })
+  it('факт не введён → показываем план как факт, без приписки', () => {
+    expect(formatFactVsPlan(mk({ weightKg: 50, reps: 10 }, {}))).toEqual({ fact: '50 кг × 10 повт.', planNote: null })
+  })
+  it('нет ни плана, ни факта → «Без результата»', () => {
+    expect(formatFactVsPlan(mk({}, {}))).toEqual({ fact: 'Без результата', planNote: null })
+  })
+})
+
+describe('moveBlock', () => {
+  it('двигает одиночный блок вниз, пересчитывая position', () => {
+    const out = moveBlock([draft('a', 'b1', 'single'), draft('b', 'b2', 'single'), draft('c', 'b3', 'single')], 'b1', 1)
+    expect(out.map((e) => ({ ref: e.ref, position: e.position }))).toEqual([
+      { ref: 'b', position: 0 }, { ref: 'a', position: 1 }, { ref: 'c', position: 2 },
+    ])
+  })
+  it('двигает блок вверх', () => {
+    const out = moveBlock([draft('a', 'b1', 'single'), draft('b', 'b2', 'single'), draft('c', 'b3', 'single')], 'b3', -1)
+    expect(out.map((e) => e.ref)).toEqual(['a', 'c', 'b'])
+  })
+  it('многоэлементный блок двигается целиком, сохраняя внутренний порядок', () => {
+    const start = [draft('x', 'solo', 'single'), draft('a', 'sup', 'superset'), draft('b', 'sup', 'superset')]
+    const out = moveBlock(start, 'sup', -1)
+    expect(out.map((e) => e.ref)).toEqual(['a', 'b', 'x'])
+    expect(out.map((e) => e.position)).toEqual([0, 1, 2])
+  })
+  it('на границах — без изменений', () => {
+    const start = [draft('a', 'b1', 'single'), draft('b', 'b2', 'single')]
+    expect(moveBlock(start, 'a', -1).map((e) => e.ref)).toEqual(['a', 'b'])
+    expect(moveBlock(start, 'b', 1).map((e) => e.ref)).toEqual(['a', 'b'])
   })
 })

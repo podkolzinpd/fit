@@ -66,6 +66,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // Завершённая тренировка показывает фактический результат (вес × повторы),
   // а не только название упражнения.
   await expect(page.getByText(/42\.5 кг × 9 повт\./)).toBeVisible()
+  // Факт (42.5×9) отличается от плана (40×10) → серая приписка плана.
+  await expect(page.locator('.plan-note').first()).toContainText('план 40 кг × 10 повт.')
   // Сводка завершённой тренировки: время, тоннаж, группы мышц.
   // Тоннаж: факт 42.5×9 + план 35×12 (п2) + план 35×12 (п3, унаследован live «＋ Подход») ≈ 1.2 т.
   await expect(page.locator('.done-summary-3')).toContainText('Тоннаж')
@@ -113,6 +115,176 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // История замеров свёрнута по умолчанию — разворачиваем, чтобы увидеть карточку.
   await page.getByRole('button', { name: 'Показать' }).click()
   await expect(page.getByText('61 кг')).toBeVisible()
+})
+
+test('live: планка вводится в минутах, таймер закреплён, подтверждённый подход правится карандашом', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await page.getByLabel('Имя').fill('Планка Клиент')
+  await page.getByLabel('Начальный вес, кг').fill('75')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Планка Клиент' })).toBeVisible()
+
+  await page.getByRole('link', { name: /Запланировать/ }).click()
+  await page.getByLabel('Клиент').selectOption({ label: 'Планка Клиент' })
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Планка')
+  await page.getByRole('button', { name: /^Планка/ }).click()
+  // #4: планка — время (мин), а не вес (кг).
+  await expect(page.getByLabel('Время, подход 1')).toBeVisible()
+  await expect(page.getByLabel('Время, подход 1')).toHaveAttribute('placeholder', 'мин')
+  await page.getByLabel('Время, подход 1').fill('1')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Начать' }).click()
+  await expect(page.locator('.live-timer-big')).toContainText(/\d\d:\d\d/)
+  // #3: таймер закреплён (sticky) — не уезжает при скролле контента.
+  await expect(page.locator('.live-timer-big')).toHaveCSS('position', 'sticky')
+  // #6: подтверждаем подход, затем правим карандашом.
+  await page.getByLabel('Фактическое время').first().fill('2')
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
+  await expect(page.getByLabel('Фактическое время').first()).toBeDisabled()
+  await page.getByRole('button', { name: 'Редактировать подход' }).first().click()
+  await expect(page.getByLabel('Фактическое время').first()).toBeEnabled()
+  await page.getByLabel('Фактическое время').first().fill('3')
+  await page.getByRole('button', { name: 'Сохранить' }).first().click()
+  await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
+})
+
+test('план: порядок упражнений меняется стрелками и сохраняется', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await page.getByLabel('Имя').fill('Порядок Клиент')
+  await page.getByLabel('Начальный вес, кг').fill('80')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Порядок Клиент' })).toBeVisible()
+
+  await page.getByRole('link', { name: /Запланировать/ }).click()
+  await page.getByLabel('Клиент').selectOption({ label: 'Порядок Клиент' })
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  for (const q of ['Присед со штангой', 'Жим лёжа']) {
+    await page.getByRole('button', { name: '＋ Упражнение' }).click()
+    await page.getByLabel('Поиск упражнения').fill(q)
+    await page.getByRole('button', { name: new RegExp(q) }).first().click()
+  }
+  // Первое «Вверх» задизейблено (граница), последнее «Вниз» — тоже.
+  await expect(page.getByRole('button', { name: 'Вверх' }).first()).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Вниз' }).last()).toBeDisabled()
+  // Двигаем второе упражнение вверх → порядок меняется.
+  await page.getByRole('button', { name: 'Вверх' }).nth(1).click()
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  // В просмотре первым идёт «Жим лёжа».
+  await expect(page.locator('.cards .exercise strong').first()).toContainText('Жим лёжа')
+})
+
+test('live: порядок упражнений меняется стрелками во время тренировки', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await page.getByLabel('Имя').fill('Live Порядок')
+  await page.getByLabel('Начальный вес, кг').fill('80')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Live Порядок' })).toBeVisible()
+
+  await page.getByRole('link', { name: /Запланировать/ }).click()
+  await page.getByLabel('Клиент').selectOption({ label: 'Live Порядок' })
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  for (const q of ['Присед со штангой', 'Жим лёжа']) {
+    await page.getByRole('button', { name: '＋ Упражнение' }).click()
+    await page.getByLabel('Поиск упражнения').fill(q)
+    await page.getByRole('button', { name: new RegExp(q) }).first().click()
+  }
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Начать' }).click()
+  await expect(page.locator('.live-timer-big')).toBeVisible()
+  // Границы: первое «Вверх» и последнее «Вниз» задизейблены.
+  await expect(page.getByRole('button', { name: 'Вверх' }).first()).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Вниз' }).last()).toBeDisabled()
+  // Первым идёт «Присед…», двигаем второе (Жим) вверх.
+  await expect(page.locator('.live-exercise-head h2').first()).toContainText('Присед')
+  // Подтверждаем подход первого упражнения — двигать завершённые блоки можно.
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await page.getByRole('button', { name: 'Вверх' }).nth(1).click()
+  await expect(page.locator('.live-exercise-head h2').first()).toContainText('Жим лёжа')
+})
+
+test('план: два упражнения объединяются в суперсет, тип виден в просмотре', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await page.getByLabel('Имя').fill('Суперсет Клиент')
+  await page.getByLabel('Начальный вес, кг').fill('80')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Суперсет Клиент' })).toBeVisible()
+
+  await page.getByRole('link', { name: /Запланировать/ }).click()
+  await page.getByLabel('Клиент').selectOption({ label: 'Суперсет Клиент' })
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  for (const q of ['Присед со штангой', 'Жим лёжа']) {
+    await page.getByRole('button', { name: '＋ Упражнение' }).click()
+    await page.getByLabel('Поиск упражнения').fill(q)
+    await page.getByRole('button', { name: new RegExp(q) }).first().click()
+  }
+  // Объединяем первое упражнение со следующим в блок → появляется селектор типа.
+  await page.getByRole('button', { name: /Объединить со следующим/ }).first().click()
+  await expect(page.getByLabel('Тип блока')).toBeVisible()
+  await expect(page.getByLabel('Тип блока')).toHaveValue('superset')
+  // Задаём 2 круга → форма раскладывается по кругам: «Круг 1» и «Круг 2»,
+  // каждый содержит оба упражнения; кнопки «＋ Подход» внутри блока нет.
+  await page.getByLabel('Кругов').fill('2')
+  await expect(page.locator('.planned-round')).toHaveCount(2)
+  await expect(page.locator('.planned-round').first().locator('.planned-round-exercise-name')).toHaveCount(2)
+  await expect(page.getByRole('button', { name: '＋ Подход' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  // В просмотре тренировки виден бейдж «Суперсет · 2 кр.».
+  await expect(page.locator('.block-badge').first()).toContainText('Суперсет · 2 кр.')
+
+  // Live идёт по кругам: круг 1 (упр.A → упр.B), потом круг 2. Счётчик показывает
+  // текущий круг; отдых — после завершения круга (последнего упражнения круга).
+  await page.getByRole('button', { name: 'Начать' }).click()
+  await expect(page.locator('.live-timer-big')).toBeVisible()
+  await expect(page.locator('.circuit-counter')).toHaveText('Круг 1 из 2')
+  // Первое упражнение круга 1 — отдых НЕ запускается (круг ещё не завершён).
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await expect(page.getByRole('button', { name: 'Подтверждено' })).toHaveCount(1)
+  await expect(page.getByText(/Отдых/)).toHaveCount(0)
+  // Второе (последнее) упражнение круга 1 — круг завершён, отдых запускается,
+  // счётчик переключается на «Круг 2 из 2».
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await expect(page.getByText(/Отдых/)).toBeVisible()
+  await expect(page.locator('.circuit-counter')).toHaveText('Круг 2 из 2')
+  // Подсветка: круг 1 закрыт (зелёный, done), круг 2 в работе (серый, current).
+  await expect(page.locator('.circuit-round').nth(0)).toHaveClass(/done/)
+  await expect(page.locator('.circuit-round').nth(1)).toHaveClass(/current/)
 })
 
 test('profile Cancel resets unsaved edits', async ({ page }) => {
