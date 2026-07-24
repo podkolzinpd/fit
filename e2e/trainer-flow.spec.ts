@@ -115,6 +115,49 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByText('61 кг')).toBeVisible()
 })
 
+test('live: планка вводится в минутах, таймер закреплён, подтверждённый подход правится карандашом', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await page.getByLabel('Имя').fill('Планка Клиент')
+  await page.getByLabel('Начальный вес, кг').fill('75')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Планка Клиент' })).toBeVisible()
+
+  await page.getByRole('link', { name: /Запланировать/ }).click()
+  await page.getByLabel('Клиент').selectOption({ label: 'Планка Клиент' })
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Планка')
+  await page.getByRole('button', { name: /^Планка/ }).click()
+  // #4: планка — время (мин), а не вес (кг).
+  await expect(page.getByLabel('Время, подход 1')).toBeVisible()
+  await expect(page.getByLabel('Время, подход 1')).toHaveAttribute('placeholder', 'мин')
+  await page.getByLabel('Время, подход 1').fill('1')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Начать' }).click()
+  await expect(page.locator('.live-timer-big')).toContainText(/\d\d:\d\d/)
+  // #3: таймер закреплён (sticky) — не уезжает при скролле контента.
+  await expect(page.locator('.live-timer-big')).toHaveCSS('position', 'sticky')
+  // #6: подтверждаем подход, затем правим карандашом.
+  await page.getByLabel('Фактическое время').first().fill('2')
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
+  await expect(page.getByLabel('Фактическое время').first()).toBeDisabled()
+  await page.getByRole('button', { name: 'Редактировать подход' }).first().click()
+  await expect(page.getByLabel('Фактическое время').first()).toBeEnabled()
+  await page.getByLabel('Фактическое время').first().fill('3')
+  await page.getByRole('button', { name: 'Сохранить' }).first().click()
+  await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
+})
+
 test('profile Cancel resets unsaved edits', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
