@@ -12,17 +12,18 @@ button, .button { border: 1px solid #8b76ff; border-radius: 12px; background: li
 button:disabled { opacity: .55; cursor: default }
 a { color: #a18fff }
 h1 { color: #e9e1ef; font-size: 30px; line-height: 1.08; letter-spacing: -.035em; margin: 0 }
+.page-header h1 { min-width: 0; overflow-wrap: break-word; font-size: clamp(20px, 7cqw, 30px) }
 h2 { font-size: 18px; letter-spacing: -.015em; margin: 24px 0 12px }
 p { margin: 6px 0 }
 .phone-frame { width: min(calc(100% - 32px), 440px); height: calc(100dvh - 32px); min-height: 0; margin: 16px auto; overflow: hidden; background: radial-gradient(circle at 86% -12%, #342957 0, transparent 36%), linear-gradient(180deg, #1d1a24, #17151c); display: flex; flex-direction: column; border: 1px solid #3a3544; border-radius: 26px; box-shadow: 0 18px 54px #17131f2b }
 .content { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 94px; scrollbar-width: none }.content::-webkit-scrollbar { display: none }
 .page { padding: 30px 18px 24px }
-.page-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px }
-.page-header .button { padding: 9px 13px; border-radius: 11px; font-size: 14px }
+.page-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; container-type: inline-size }
+.page-header .button { padding: 9px 13px; border-radius: 11px; font-size: 14px; flex-shrink: 0 }
 .page-back { flex: 0 0 auto; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 12px; background: #241f33; color: var(--fg); font-size: 20px; line-height: 1; cursor: pointer }
 .page-back:hover { border-color: #4b3f83 }
-/* Centered header: back on the left, title centered, action mirrored on the right. */
-.page-center .page-header { display: grid; grid-template-columns: 40px 1fr 40px; align-items: center }
+/* Centered header: back on the left, title centered, action mirrored on the right (action sized to its own content, not forced into 40px). */
+.page-center .page-header { display: grid; grid-template-columns: 40px 1fr auto; align-items: center }
 .page-center .page-header h1 { grid-column: 2; text-align: center; margin: 0 }
 .page-center .page-header .page-back { grid-column: 1 }
 .page-center .page-header > :not(h1):not(.page-back) { grid-column: 3; justify-self: end }
