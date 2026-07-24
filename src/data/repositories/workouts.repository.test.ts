@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, mergeBlockWithNext, muscleGroupLabels, syncBlockRounds, nextSetDraft, setBlockType, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, mergeBlockWithNext, muscleGroupLabels, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockType, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -426,5 +426,18 @@ describe('blockRoundsView / currentRoundIndex', () => {
   it('currentRoundIndex = последний, если все круги подтверждены', () => {
     const b = { ...block, exercises: [exercise('a', 0, 'b1', 'superset', [s('a1', 0, true), s('a2', 1, true)]), exercise('b', 1, 'b1', 'superset', [s('b1', 0, true), s('b2', 1, true)])] }
     expect(currentRoundIndex(blockRoundsView(b))).toBe(1)
+  })
+})
+
+describe('draftBlockRoundsView', () => {
+  it('раскладывает черновик-блок по кругам: круг = все упражнения по очереди', () => {
+    const a: WorkoutExerciseDraft = { ...draft('a', 'b1', 'superset'), sets: [{ position: 0, weightKg: 90 }, { position: 1, weightKg: 90 }] }
+    const b: WorkoutExerciseDraft = { ...draft('b', 'b1', 'superset'), sets: [{ position: 0, weightKg: 40 }, { position: 1, weightKg: 40 }] }
+    const block = groupDraftsIntoBlocks([a, b])[0]!
+    const rounds = draftBlockRoundsView(block)
+    expect(rounds.map((r) => ({ round: r.round, items: r.items.map((i) => ({ ref: i.exercise.ref, exerciseIndex: i.exerciseIndex, setIndex: i.setIndex })) }))).toEqual([
+      { round: 1, items: [{ ref: 'a', exerciseIndex: 0, setIndex: 0 }, { ref: 'b', exerciseIndex: 1, setIndex: 0 }] },
+      { round: 2, items: [{ ref: 'a', exerciseIndex: 0, setIndex: 1 }, { ref: 'b', exerciseIndex: 1, setIndex: 1 }] },
+    ])
   })
 })

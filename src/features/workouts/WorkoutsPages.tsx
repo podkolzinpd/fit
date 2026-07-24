@@ -359,9 +359,11 @@ export function LiveWorkoutPage() {
   }, [restActive])
   const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? finish.error
   // Форма одного подхода в live: подтверждение / правка / автосохранение по blur.
-  function renderLiveSet(exercise: WorkoutExercise, set: WorkoutSet, label?: string) {
+  function renderLiveSet(exercise: WorkoutExercise, set: WorkoutSet, label?: string, current = false) {
     const isEditing = editingSets.has(set.id)
-    return <form className={`exercise ${set.confirmedAt && !isEditing ? 'confirmed' : ''}`} key={set.id} onBlur={(event) => {
+    // «Закрыто» (подтверждён) — зелёный; «в работе» (текущий) — серый.
+    const stateClass = set.confirmedAt && !isEditing ? 'confirmed' : current && !isEditing ? 'current' : ''
+    return <form className={`exercise ${stateClass}`} key={set.id} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
       save.mutate({ set, draft: draftFrom(event.currentTarget) })
@@ -392,12 +394,16 @@ export function LiveWorkoutPage() {
       </div>}
       {groupIntoBlocks(query.data.exercises).map((block) => {
         // Одиночное упражнение (или блок из одного) — как раньше, по подходам.
+        // Текущий подход (первый неподтверждённый) подсвечивается серым.
         if (block.blockType === 'single' || block.exercises.length === 1) {
-          return block.exercises.map((exercise) => <section key={exercise.id}>
-            <h2>{exercise.name}</h2>
-            {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`))}
-            <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
-          </section>)
+          return block.exercises.map((exercise) => {
+            const currentSetIndex = exercise.sets.findIndex((set) => !set.confirmedAt)
+            return <section key={exercise.id}>
+              <h2>{exercise.name}</h2>
+              {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex))}
+              <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
+            </section>
+          })
         }
         // Многоэлементный блок — по кругам, со счётчиком «Круг R из N».
         const rounds = blockRoundsView(block)
@@ -406,15 +412,15 @@ export function LiveWorkoutPage() {
           <div className="circuit-head">
             <span className="block-badge">{BLOCK_TYPE_LABELS[block.blockType]}</span>
             <span className="circuit-counter">Круг {rounds[current]?.round ?? 1} из {rounds.length}</span>
-            <span className="circuit-dots" aria-hidden="true">{rounds.map((r, i) => <span key={r.round} className={`circuit-dot ${r.items.every(({ set }) => set.confirmedAt) ? 'done' : i === current ? 'active' : ''}`} />)}</span>
+            <span className="circuit-dots" aria-hidden="true">{rounds.map((r, i) => <span key={r.round} className={`circuit-dot ${r.items.every(({ set }) => set.confirmedAt) ? 'done' : i === current ? 'current' : ''}`} />)}</span>
           </div>
-          {rounds.map((round, roundIndex) => <div className={`circuit-round ${roundIndex === current ? 'active' : ''}`} key={round.round}>
+          {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt); return <div className={`circuit-round ${roundDone ? 'done' : roundIndex === current ? 'current' : ''}`} key={round.round}>
             <div className="circuit-round-label">Круг {round.round}</div>
             {round.items.map(({ exercise, set }) => <section key={set.id}>
               <h3>{exercise.name}</h3>
-              {renderLiveSet(exercise, set)}
+              {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
             </section>)}
-          </div>)}
+          </div> })}
         </div>
       })}
       <button type="button" className="secondary wide" onClick={() => setPickerOpen(true)}>＋ Ещё упражнение</button>

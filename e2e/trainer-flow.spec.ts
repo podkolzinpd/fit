@@ -184,10 +184,11 @@ test('план: два упражнения объединяются в супе
   await page.getByRole('button', { name: /Объединить со следующим/ }).first().click()
   await expect(page.getByLabel('Тип блока')).toBeVisible()
   await expect(page.getByLabel('Тип блока')).toHaveValue('superset')
-  // Задаём 2 круга → у каждого упражнения блока по 2 подхода («Круг 1/2»),
-  // кнопки «＋ Подход» внутри блока нет.
+  // Задаём 2 круга → форма раскладывается по кругам: «Круг 1» и «Круг 2»,
+  // каждый содержит оба упражнения; кнопки «＋ Подход» внутри блока нет.
   await page.getByLabel('Кругов').fill('2')
-  await expect(page.getByText('Круг 2').first()).toBeVisible()
+  await expect(page.locator('.planned-round')).toHaveCount(2)
+  await expect(page.locator('.planned-round').first().locator('.planned-round-exercise-name')).toHaveCount(2)
   await expect(page.getByRole('button', { name: '＋ Подход' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
@@ -208,6 +209,9 @@ test('план: два упражнения объединяются в супе
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByText(/Отдых/)).toBeVisible()
   await expect(page.locator('.circuit-counter')).toHaveText('Круг 2 из 2')
+  // Подсветка: круг 1 закрыт (зелёный, done), круг 2 в работе (серый, current).
+  await expect(page.locator('.circuit-round').nth(0)).toHaveClass(/done/)
+  await expect(page.locator('.circuit-round').nth(1)).toHaveClass(/current/)
 })
 
 test('profile Cancel resets unsaved edits', async ({ page }) => {
