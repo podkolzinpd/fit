@@ -151,7 +151,11 @@ export function ProgressChart({ entries, metric, label, unit, windowEnd, onWindo
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="date" stroke="var(--muted)" height={40} tick={AxisTick} interval={Math.max(0, Math.ceil(visibleData.length / 5) - 1)} />
               <YAxis stroke="var(--muted)" style={{ fontSize: '12px' }} domain={yDomain} allowDecimals />
-              {!isDragging && <Tooltip formatter={(value) => formatTooltipValue(Number(value), unit, label)} labelFormatter={(date) => formatTooltipLabel(String(date))} />}
+              {!isDragging && <Tooltip
+                contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', borderRadius: 12 }}
+                labelStyle={{ color: '#e9e4ed', fontWeight: 700 }}
+                itemStyle={{ color: '#e9e4ed' }}
+                formatter={(value) => formatTooltipValue(Number(value), unit, label)} labelFormatter={(date) => formatTooltipLabel(String(date))} />}
               <Line type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={3}
                 dot={(dotProps: { cx?: number; cy?: number; index?: number }) => renderChartDot(dotProps, minIndex, maxIndex, visibleData.length)}
                 activeDot={{ r: 7 }} isAnimationActive={false} />
