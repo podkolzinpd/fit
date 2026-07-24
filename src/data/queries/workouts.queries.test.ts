@@ -91,10 +91,11 @@ describe('workoutQueries lists', () => {
     workoutQueries.confirmLiveSet('set-id', 5)
     workoutQueries.appendLiveExercise('workout-id', exercise, 6)
     workoutQueries.appendLiveSet('exercise-id', 7)
-    workoutQueries.finish('workout-id', 8)
-    workoutQueries.remove('workout-id', 9)
+    workoutQueries.reorderLiveBlock('workout-id', 'block-id', -1, 8)
+    workoutQueries.finish('workout-id', 9)
+    workoutQueries.remove('workout-id', 10)
 
-    expect(rpc).toHaveBeenCalledTimes(8)
+    expect(rpc).toHaveBeenCalledTimes(9)
     expect(rpc).toHaveBeenNthCalledWith(1, 'save_workout', { p_workout: draft, p_expected_version: 3 })
     expect(rpc).toHaveBeenNthCalledWith(2, 'start_workout', { p_workout_id: 'workout-id', p_expected_version: 3 })
     expect(rpc).toHaveBeenNthCalledWith(3, 'save_live_set_draft', {
@@ -109,7 +110,8 @@ describe('workoutQueries lists', () => {
       p_expected_version: 6,
     })
     expect(rpc).toHaveBeenNthCalledWith(6, 'append_live_set', { p_workout_exercise_id: 'exercise-id', p_expected_version: 7 })
-    expect(rpc).toHaveBeenNthCalledWith(7, 'finish_workout', { p_workout_id: 'workout-id', p_expected_version: 8 })
-    expect(rpc).toHaveBeenNthCalledWith(8, 'soft_delete_workout', { p_workout_id: 'workout-id', p_expected_version: 9 })
+    expect(rpc).toHaveBeenNthCalledWith(7, 'reorder_live_block', { p_workout_id: 'workout-id', p_block_id: 'block-id', p_direction: -1, p_expected_version: 8 })
+    expect(rpc).toHaveBeenNthCalledWith(8, 'finish_workout', { p_workout_id: 'workout-id', p_expected_version: 9 })
+    expect(rpc).toHaveBeenNthCalledWith(9, 'soft_delete_workout', { p_workout_id: 'workout-id', p_expected_version: 10 })
   })
 })
