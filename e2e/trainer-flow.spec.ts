@@ -187,7 +187,24 @@ test('план: два упражнения объединяются в супе
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   // В просмотре тренировки виден бейдж «Суперсет».
-  await expect(page.locator('.block-badge')).toHaveText('Суперсет')
+  await expect(page.locator('.block-badge').first()).toContainText('Суперсет')
+
+  // Live: отдых стартует только после всего блока.
+  await page.getByRole('button', { name: 'Начать' }).click()
+  await expect(page.locator('.live-timer-big')).toBeVisible()
+  await expect(page.locator('.block-badge').first()).toContainText('Суперсет')
+  // Подтверждаем подход первого упражнения суперсета — отдых НЕ должен запуститься.
+  await page.getByLabel('Фактический вес').first().fill('60')
+  await page.getByLabel('Фактические повторы').first().fill('8')
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await expect(page.getByRole('button', { name: 'Подтверждено' }).first()).toBeVisible()
+  await expect(page.getByText(/Отдых/)).toHaveCount(0)
+  // Подтверждаем подход второго (последнего) упражнения блока — отдых запускается.
+  // Поле первого упражнения теперь заблокировано, второе — на позиции nth(1).
+  await page.getByLabel('Фактический вес').nth(1).fill('40')
+  await page.getByLabel('Фактические повторы').nth(1).fill('10')
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await expect(page.getByText(/Отдых/)).toBeVisible()
 })
 
 test('profile Cancel resets unsaved edits', async ({ page }) => {
