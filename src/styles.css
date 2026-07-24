@@ -122,6 +122,8 @@ p { margin: 6px 0 }
 .exercise-block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px }
 .exercise-block-head select { padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700 }
 .block-badge { align-self: flex-start; padding: 3px 10px; border-radius: 99px; background: #2f2850; border: 1px solid #4b3f83; color: var(--purple); font-size: 12px; font-weight: 700 }
+.block-rounds { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 600 }
+.block-rounds input { width: 56px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700; text-align: center }
 .block-merge { align-self: flex-start; margin-top: 8px; color: var(--purple) }
 .exercise-name-link { display: inline-flex; align-items: baseline; gap: 8px; text-decoration: none; color: var(--fg) }
 .exercise-name-hint { font-size: 12px; color: var(--purple); font-weight: 600 }

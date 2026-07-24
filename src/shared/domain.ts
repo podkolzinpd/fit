@@ -68,6 +68,7 @@ export interface WorkoutExerciseDraft extends ExerciseSnapshot {
   position: number
   blockId?: UUID
   blockType?: BlockType
+  blockRounds?: number
   sets: WorkoutSetDraft[]
 }
 
@@ -101,6 +102,7 @@ export interface WorkoutExercise extends ExerciseSnapshot {
   position: number
   blockId: UUID
   blockType: BlockType
+  blockRounds: number
   sets: WorkoutSet[]
 }
 
