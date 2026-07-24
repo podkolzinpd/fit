@@ -147,7 +147,7 @@ export function WorkoutFormPage() {
   const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => workoutsRepository.save(draft), onSuccess: async (id) => { await queryClient.invalidateQueries({ queryKey: ['workouts'] }); navigate(`/workouts/${id}`) } })
 
   function addExercise(selected: ExerciseSnapshot) {
-    setDraftExercises([...exercises, { ...selected, position: exercises.length, blockId: crypto.randomUUID(), blockType: 'single', sets: [{ position: 0 }] }])
+    setDraftExercises([...exercises, { ...selected, position: exercises.length, blockId: crypto.randomUUID(), blockType: 'single', blockRounds: 1, sets: [{ position: 0 }] }])
     setPickerOpen(false)
   }
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -203,7 +203,7 @@ export function WorkoutDetailPage() {
           {exercise.sets.map((set) => <p key={set.id}>{done ? formatFactSet(set) : formatSet(set)}</p>)}
         </article>)
         if (block.blockType === 'single' || block.exercises.length === 1) return articles
-        return <div className="exercise-block view" key={block.blockId}><span className="block-badge">{BLOCK_TYPE_LABELS[block.blockType]}</span>{articles}</div>
+        return <div className="exercise-block view" key={block.blockId}><span className="block-badge">{BLOCK_TYPE_LABELS[block.blockType]} · {block.blockRounds} кр.</span>{articles}</div>
       })}</div>
       {workout.notes && <p>{workout.notes}</p>}
       <div className="actions">
@@ -391,7 +391,7 @@ export function LiveWorkoutPage() {
           <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
         </section>)
         if (block.blockType === 'single' || block.exercises.length === 1) return sections
-        return <div className="exercise-block live" key={block.blockId}><span className="block-badge">{BLOCK_TYPE_LABELS[block.blockType]} · отдых после блока</span>{sections}</div>
+        return <div className="exercise-block live" key={block.blockId}><span className="block-badge">{BLOCK_TYPE_LABELS[block.blockType]} · {block.blockRounds} кр. · отдых после блока</span>{sections}</div>
       })}
       <button type="button" className="secondary wide" onClick={() => setPickerOpen(true)}>＋ Ещё упражнение</button>
       {error && <p className="error">{error.message}</p>}

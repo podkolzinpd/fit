@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(22);
 
 select has_index(
   'public',
@@ -72,14 +72,26 @@ select save_workout(jsonb_build_object(
   'clientId', '7a000000-0000-4000-8000-000000000001',
   'workoutDate', '2026-07-28',
   'exercises', jsonb_build_array(
-    jsonb_build_object('position', 0, 'source', 'system', 'ref', 'squat', 'name', 'Присед', 'muscleGroup', 'legs', 'inputKind', 'strength', 'blockId', 'aaaaaaaa-0000-4000-8000-000000000001', 'blockType', 'superset', 'sets', jsonb_build_array(jsonb_build_object('position', 0, 'weightKg', 60, 'reps', 8))),
-    jsonb_build_object('position', 1, 'source', 'system', 'ref', 'press', 'name', 'Жим', 'muscleGroup', 'chest', 'inputKind', 'strength', 'blockId', 'aaaaaaaa-0000-4000-8000-000000000001', 'blockType', 'superset', 'sets', jsonb_build_array(jsonb_build_object('position', 0, 'weightKg', 40, 'reps', 10)))
+    jsonb_build_object('position', 0, 'source', 'system', 'ref', 'squat', 'name', 'Присед', 'muscleGroup', 'legs', 'inputKind', 'strength', 'blockId', 'aaaaaaaa-0000-4000-8000-000000000001', 'blockType', 'superset', 'blockRounds', 3, 'sets', jsonb_build_array(jsonb_build_object('position', 0, 'weightKg', 60, 'reps', 8), jsonb_build_object('position', 1, 'weightKg', 60, 'reps', 8), jsonb_build_object('position', 2, 'weightKg', 60, 'reps', 8))),
+    jsonb_build_object('position', 1, 'source', 'system', 'ref', 'press', 'name', 'Жим', 'muscleGroup', 'chest', 'inputKind', 'strength', 'blockId', 'aaaaaaaa-0000-4000-8000-000000000001', 'blockType', 'superset', 'blockRounds', 3, 'sets', jsonb_build_array(jsonb_build_object('position', 0, 'weightKg', 40, 'reps', 10), jsonb_build_object('position', 1, 'weightKg', 40, 'reps', 10), jsonb_build_object('position', 2, 'weightKg', 40, 'reps', 10)))
   )
 ), null);
 select is(
   (select count(distinct block_id) from public.workout_exercises where block_id = 'aaaaaaaa-0000-4000-8000-000000000001' and block_type = 'superset'),
   1::bigint,
   'save_workout persists superset block for grouped exercises'
+);
+-- block_rounds сохраняется и одинаков у всех упражнений блока.
+select is(
+  (select array_agg(distinct block_rounds) from public.workout_exercises where block_id = 'aaaaaaaa-0000-4000-8000-000000000001'),
+  array[3]::smallint[],
+  'save_workout persists block_rounds equally across the block'
+);
+-- list_workouts возвращает block_rounds (single по умолчанию = 1).
+select is(
+  (select (item->>'block_rounds')::int from public.list_workouts(null, null, null), jsonb_array_elements(exercises) as item where id = '7c000000-0000-4000-8000-000000000001' limit 1),
+  1,
+  'list_workouts returns block_rounds (1 by default)'
 );
 reset role;
 

@@ -5,6 +5,7 @@ import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 export interface ExerciseBlock {
   blockId: string
   blockType: BlockType
+  blockRounds: number
   exercises: WorkoutExercise[]
 }
 
@@ -20,7 +21,7 @@ export function groupIntoBlocks(exercises: WorkoutExercise[]): ExerciseBlock[] {
     if (existing) {
       existing.exercises.push(exercise)
     } else {
-      const block: ExerciseBlock = { blockId: exercise.blockId, blockType: exercise.blockType, exercises: [exercise] }
+      const block: ExerciseBlock = { blockId: exercise.blockId, blockType: exercise.blockType, blockRounds: exercise.blockRounds, exercises: [exercise] }
       byId.set(exercise.blockId, block)
       blocks.push(block)
     }
@@ -56,16 +57,18 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
 export interface DraftBlock {
   blockId: string
   blockType: BlockType
+  blockRounds: number
   items: { exercise: WorkoutExerciseDraft; index: number }[]
 }
 
-// Гарантирует blockId/blockType у каждого упражнения черновика: без блока —
-// собственный одиночный блок. Не меняет уже проставленные значения.
+// Гарантирует blockId/blockType/blockRounds у каждого упражнения черновика:
+// без блока — собственный одиночный блок, 1 круг. Не трогает проставленное.
 export function ensureBlockIds(exercises: WorkoutExerciseDraft[]): WorkoutExerciseDraft[] {
   return exercises.map((exercise) => ({
     ...exercise,
     blockId: exercise.blockId ?? crypto.randomUUID(),
     blockType: exercise.blockType ?? 'single',
+    blockRounds: exercise.blockRounds ?? 1,
   }))
 }
 
@@ -80,12 +83,26 @@ export function groupDraftsIntoBlocks(exercises: WorkoutExerciseDraft[]): DraftB
     if (existing) {
       existing.items.push({ exercise, index })
     } else {
-      const block: DraftBlock = { blockId, blockType: exercise.blockType ?? 'single', items: [{ exercise, index }] }
+      const block: DraftBlock = { blockId, blockType: exercise.blockType ?? 'single', blockRounds: exercise.blockRounds ?? 1, items: [{ exercise, index }] }
       byId.set(blockId, block)
       blocks.push(block)
     }
   })
   return blocks
+}
+
+// Синхронизирует раунды блока: у всех упражнений блока blockRounds=rounds и
+// ровно `rounds` подходов (1 круг = 1 подход каждого). Недостающие подходы
+// добавляются по образцу последнего, лишние — срезаются. rounds >= 1.
+export function syncBlockRounds(exercises: WorkoutExerciseDraft[], blockId: string, rounds: number): WorkoutExerciseDraft[] {
+  const target = Math.max(1, Math.round(rounds))
+  return ensureBlockIds(exercises).map((exercise) => {
+    if (exercise.blockId !== blockId) return exercise
+    const sets = [...exercise.sets]
+    while (sets.length < target) sets.push(nextSetDraft(sets, exercise.inputKind))
+    sets.length = target
+    return { ...exercise, blockRounds: target, sets: sets.map((set, position) => ({ ...set, position })) }
+  })
 }
 
 // Объединяет блок упражнения по индексу со следующим упражнением в один блок
@@ -105,17 +122,21 @@ export function mergeBlockWithNext(exercises: WorkoutExerciseDraft[], index: num
     : 'superset'
   const targetId = current.blockId!
   const fromId = next.blockId!
-  return list.map((exercise) =>
+  const merged = list.map((exercise) =>
     exercise.blockId === targetId || exercise.blockId === fromId
       ? { ...exercise, blockId: targetId, blockType: targetType }
       : exercise,
   )
+  // Раунды блока = максимум подходов среди упражнений блока (1 круг = 1 подход).
+  const rounds = Math.max(1, ...merged.filter((e) => e.blockId === targetId).map((e) => e.sets.length))
+  return syncBlockRounds(merged, targetId, rounds)
 }
 
-// Разбивает блок на одиночные: каждому упражнению блока — свой blockId и single.
+// Разбивает блок на одиночные: каждому упражнению блока — свой blockId, single,
+// blockRounds=1 (одиночные управляют подходами вручную, а не кругами).
 export function splitBlock(exercises: WorkoutExerciseDraft[], blockId: string): WorkoutExerciseDraft[] {
   return ensureBlockIds(exercises).map((exercise) =>
-    exercise.blockId === blockId ? { ...exercise, blockId: crypto.randomUUID(), blockType: 'single' } : exercise,
+    exercise.blockId === blockId ? { ...exercise, blockId: crypto.randomUUID(), blockType: 'single', blockRounds: 1 } : exercise,
   )
 }
 
@@ -296,7 +317,7 @@ export function copyWorkout(source: Workout, workoutDate = source.workoutDate): 
       source: exercise.source, ref: exercise.ref, customExerciseId: exercise.customExerciseId,
       name: exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind,
       position: exercise.position,
-      blockId: nextBlockId(exercise.blockId), blockType: exercise.blockType,
+      blockId: nextBlockId(exercise.blockId), blockType: exercise.blockType, blockRounds: exercise.blockRounds,
       sets: exercise.sets.map((set) => ({ position: set.position, weightKg: set.weightKg,
         reps: set.reps, durationMin: set.durationMin, distanceKm: set.distanceKm })),
     })),

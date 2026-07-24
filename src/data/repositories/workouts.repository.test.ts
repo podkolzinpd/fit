@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, mergeBlockWithNext, muscleGroupLabels, nextSetDraft, setBlockType, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, mergeBlockWithNext, muscleGroupLabels, syncBlockRounds, nextSetDraft, setBlockType, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -27,7 +27,7 @@ describe('workouts repository rules', () => {
     const source: Workout = {
       id: 'w1', clientId: 'c1', clientName: 'Анна', workoutDate: localDate('2026-07-21'),
       startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'done', notes: null, version: 3,
-      exercises: [{ id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: 'b1', blockType: 'single',
+      exercises: [{ id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: 'b1', blockType: 'single', blockRounds: 1,
         sets: [{ id: 's1', position: 0, weightKg: 50, reps: 10, fact: { weightKg: 55, reps: 9 }, confirmedAt: 'now', version: 2 }] }],
     }
     const copy = copyWorkout(source, localDate('2026-07-22'))
@@ -100,7 +100,7 @@ function workoutWith(date: string, ref: string, inputKind: InputKind, sets: Work
   return {
     id: `w-${date}`, clientId: 'c1', clientName: 'Клиент', workoutDate: localDate(date),
     startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'done', notes: null, version: 1,
-    exercises: [{ id: `e-${date}`, source: 'system', ref, name: ref, muscleGroup: 'legs', inputKind, position: 0, blockId: `b-${date}`, blockType: 'single', sets }],
+    exercises: [{ id: `e-${date}`, source: 'system', ref, name: ref, muscleGroup: 'legs', inputKind, position: 0, blockId: `b-${date}`, blockType: 'single', blockRounds: 1, sets }],
   }
 }
 
@@ -242,9 +242,9 @@ describe('muscleGroupLabels', () => {
     const workout: Workout = {
       ...workoutWith('2026-07-20', 'squat', 'strength', [set({ weightKg: 60 })]),
       exercises: [
-        { id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: 'b1', blockType: 'single', sets: [] },
-        { id: 'e2', source: 'system', ref: 'bench', name: 'Жим', muscleGroup: 'chest', inputKind: 'strength', position: 1, blockId: 'b2', blockType: 'single', sets: [] },
-        { id: 'e3', source: 'system', ref: 'lunge', name: 'Выпад', muscleGroup: 'legs', inputKind: 'strength', position: 2, blockId: 'b3', blockType: 'single', sets: [] },
+        { id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: 'b1', blockType: 'single', blockRounds: 1, sets: [] },
+        { id: 'e2', source: 'system', ref: 'bench', name: 'Жим', muscleGroup: 'chest', inputKind: 'strength', position: 1, blockId: 'b2', blockType: 'single', blockRounds: 1, sets: [] },
+        { id: 'e3', source: 'system', ref: 'lunge', name: 'Выпад', muscleGroup: 'legs', inputKind: 'strength', position: 2, blockId: 'b3', blockType: 'single', blockRounds: 1, sets: [] },
       ],
     }
     expect(muscleGroupLabels(workout)).toEqual(['Ноги', 'Грудь'])
@@ -274,7 +274,7 @@ describe('nextSetDraft', () => {
 })
 
 function exercise(id: string, position: number, blockId: string, blockType: 'single'|'superset'|'triset'|'circuit', sets: WorkoutSet[] = []): Workout['exercises'][number] {
-  return { id, source: 'system', ref: id, name: id, muscleGroup: 'legs', inputKind: 'strength', position, blockId, blockType, sets }
+  return { id, source: 'system', ref: id, name: id, muscleGroup: 'legs', inputKind: 'strength', position, blockId, blockType, blockRounds: Math.max(1, sets.length), sets }
 }
 function workoutWithExercises(exercises: Workout['exercises']): Workout {
   return { id: 'w', clientId: 'c1', clientName: 'К', workoutDate: localDate('2026-07-20'), startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'in_progress', notes: null, version: 1, exercises }
@@ -372,5 +372,35 @@ describe('draft blocks', () => {
       { type: 'superset', refs: ['a', 'b'], idx: [0, 1] },
       { type: 'single', refs: ['c'], idx: [2] },
     ])
+  })
+})
+
+describe('block rounds', () => {
+  it('syncBlockRounds выставляет N подходов всем упражнениям блока', () => {
+    const start = [draft('a', 'b1', 'superset'), draft('b', 'b1', 'superset')]
+    const out = syncBlockRounds(start, 'b1', 3)
+    expect(out.every((e) => e.blockRounds === 3)).toBe(true)
+    expect(out.every((e) => e.sets.length === 3)).toBe(true)
+    expect(out.map((e) => e.sets.map((s) => s.position))).toEqual([[0, 1, 2], [0, 1, 2]])
+  })
+
+  it('syncBlockRounds срезает лишние подходы и не опускается ниже 1', () => {
+    const withThree: WorkoutExerciseDraft = { ...draft('a', 'b1', 'superset'), sets: [{ position: 0 }, { position: 1 }, { position: 2 }] }
+    expect(syncBlockRounds([withThree], 'b1', 1)[0]?.sets.length).toBe(1)
+    expect(syncBlockRounds([withThree], 'b1', 0)[0]?.sets.length).toBe(1)
+  })
+
+  it('syncBlockRounds наследует параметры предыдущего подхода при добавлении', () => {
+    const withWeight: WorkoutExerciseDraft = { ...draft('a', 'b1', 'superset'), sets: [{ position: 0, weightKg: 50, reps: 10 }] }
+    const out = syncBlockRounds([withWeight], 'b1', 2)
+    expect(out[0]?.sets[1]).toMatchObject({ weightKg: 50, reps: 10 })
+  })
+
+  it('mergeBlockWithNext синхронизирует раунды по максимуму подходов', () => {
+    const a: WorkoutExerciseDraft = { ...draft('a', 'b1', 'single'), sets: [{ position: 0 }, { position: 1 }] }
+    const b: WorkoutExerciseDraft = { ...draft('b', 'b2', 'single'), sets: [{ position: 0 }] }
+    const out = mergeBlockWithNext([a, b], 0)
+    expect(out.every((e) => e.blockRounds === 2)).toBe(true)
+    expect(out.every((e) => e.sets.length === 2)).toBe(true)
   })
 })
