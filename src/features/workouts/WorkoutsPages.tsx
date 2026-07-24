@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { clientsRepository } from '../../data/repositories/clients.repository'
-import { BLOCK_TYPE_LABELS, chartUnitFor, copyWorkout, exerciseChartPoints, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
+import { BLOCK_TYPE_LABELS, chartUnitFor, copyWorkout, exerciseChartPoints, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -200,7 +200,7 @@ export function WorkoutDetailPage() {
       <div className="cards">{groupIntoBlocks(workout.exercises).map((block) => {
         const articles = block.exercises.map((exercise) => <article className="exercise" key={exercise.id}>
           <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
-          {exercise.sets.map((set) => <p key={set.id}>{done ? formatFactSet(set) : formatSet(set)}</p>)}
+          {exercise.sets.map((set) => <p key={set.id}>{done ? <FactVsPlan set={set} /> : formatSet(set)}</p>)}
         </article>)
         if (block.blockType === 'single' || block.exercises.length === 1) return articles
         return <div className="exercise-block view" key={block.blockId}><span className="block-badge">{BLOCK_TYPE_LABELS[block.blockType]} · {block.blockRounds} кр.</span>{articles}</div>
@@ -217,15 +217,10 @@ export function WorkoutDetailPage() {
 
 function formatSet(set: WorkoutSet) { const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, set.distanceKm && `${set.distanceKm} км`, set.durationMin && `${set.durationMin} мин`].filter(Boolean).join(' × '); return plan || 'Подход без плана' }
 
-// Actual result of a set (fact), falling back to the plan when a value wasn't
-// recorded live — so completed workouts still show вес × повторы.
-function formatFactSet(set: WorkoutSet) {
-  const weight = set.fact.weightKg ?? set.weightKg
-  const reps = set.fact.reps ?? set.reps
-  const distance = set.fact.distanceKm ?? set.distanceKm
-  const duration = set.fact.durationMin ?? set.durationMin
-  const parts = [weight && `${weight} кг`, reps && `${reps} повт.`, distance && `${distance} км`, duration && `${duration} мин`].filter(Boolean)
-  return parts.join(' × ') || 'Без результата'
+// Строка результата подхода: факт + серая приписка плана (если факт≠план).
+function FactVsPlan({ set }: { set: WorkoutSet }) {
+  const { fact, planNote } = formatFactVsPlan(set)
+  return <>{fact}{planNote && <span className="plan-note"> · {planNote}</span>}</>
 }
 
 
@@ -443,7 +438,7 @@ export function ExerciseHistoryPage() {
   return <Page title="История упражнения" back={`/workouts/${workoutId}`}>
     <AsyncView loading={current.isLoading || history.isLoading} error={current.error ?? history.error} empty={!history.data?.length}>
       {chart.length > 1 && <section className="chart"><h2>Динамика ({unit})</h2><ResponsiveContainer width="100%" height={220}><LineChart data={chart}><XAxis dataKey="date" /><YAxis domain={['dataMin - 2', 'dataMax + 2']} /><Tooltip /><Line type="monotone" dataKey="value" stroke="#735cff" strokeWidth={3} /></LineChart></ResponsiveContainer></section>}
-      <div className="timeline">{[...(history.data ?? [])].sort((a, b) => (a.workoutDate < b.workoutDate ? 1 : -1)).map((workout) => { const exercise = workout.exercises.find((item) => item.ref === exerciseRef); return <article key={workout.id} className="card"><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{exercise?.sets.map(formatSet).join(', ')}</p></div></article> })}</div>
+      <div className="timeline">{[...(history.data ?? [])].sort((a, b) => (a.workoutDate < b.workoutDate ? 1 : -1)).map((workout) => { const exercise = workout.exercises.find((item) => item.ref === exerciseRef); return <article key={workout.id} className="card"><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{exercise?.sets.map((set, index) => <span key={set.id}>{index > 0 && ', '}<FactVsPlan set={set} /></span>)}</p></div></article> })}</div>
     </AsyncView>
   </Page>
 }

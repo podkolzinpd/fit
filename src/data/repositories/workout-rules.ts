@@ -279,6 +279,28 @@ export function chartUnitFor(inputKind: InputKind): string {
   return 'кг'
 }
 
+function setLine(weightKg?: number, reps?: number, distanceKm?: number, durationMin?: number): string {
+  return [weightKg && `${weightKg} кг`, reps && `${reps} повт.`, distanceKm && `${distanceKm} км`, durationMin && `${durationMin} мин`].filter(Boolean).join(' × ')
+}
+
+// Результат подхода: строка факта (факт, иначе план) и приписка плана — только
+// если факт был введён и отличается от плана хоть по одному параметру.
+// Совпал факт с планом или факта нет вовсе → planNote = null.
+export function formatFactVsPlan(set: WorkoutSet): { fact: string; planNote: string | null } {
+  const weight = set.fact.weightKg ?? set.weightKg
+  const reps = set.fact.reps ?? set.reps
+  const distance = set.fact.distanceKm ?? set.distanceKm
+  const duration = set.fact.durationMin ?? set.durationMin
+  const fact = setLine(weight, reps, distance, duration) || 'Без результата'
+  const differs =
+    (set.fact.weightKg !== undefined && set.fact.weightKg !== set.weightKg) ||
+    (set.fact.reps !== undefined && set.fact.reps !== set.reps) ||
+    (set.fact.distanceKm !== undefined && set.fact.distanceKm !== set.distanceKm) ||
+    (set.fact.durationMin !== undefined && set.fact.durationMin !== set.durationMin)
+  const planNote = differs ? `план ${setLine(set.weightKg, set.reps, set.distanceKm, set.durationMin)}` : null
+  return { fact, planNote }
+}
+
 // Ordered, de-duplicated muscle-group labels for a workout's exercises.
 export function muscleGroupLabels(workout: Workout): string[] {
   const seen = new Set<string>()
@@ -324,12 +346,12 @@ export function tonnageLabel(kg: number): string {
   return `${Math.round(kg)} кг`
 }
 
-// Actual result if recorded, otherwise the plan — so completed workouts
-// marked done without live fact entry still appear on the chart.
+// Строго фактический результат подхода (без подмены планом): график прогрессии
+// отражает только реально выполненное. Подходы без факта отфильтровываются.
 function setMetric(inputKind: InputKind, set: WorkoutSet): number | undefined {
-  if (inputKind === 'distance') return set.fact.distanceKm ?? set.distanceKm
-  if (inputKind === 'reps') return set.fact.reps ?? set.reps
-  return set.fact.weightKg ?? set.weightKg
+  if (inputKind === 'distance') return set.fact.distanceKm
+  if (inputKind === 'reps') return set.fact.reps
+  return set.fact.weightKg
 }
 
 // Best result per completed workout for one exercise, oldest first, for the
