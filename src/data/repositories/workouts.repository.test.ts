@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, mergeBlockWithNext, muscleGroupLabels, syncBlockRounds, nextSetDraft, setBlockType, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, mergeBlockWithNext, muscleGroupLabels, syncBlockRounds, nextSetDraft, setBlockType, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -402,5 +402,29 @@ describe('block rounds', () => {
     const out = mergeBlockWithNext([a, b], 0)
     expect(out.every((e) => e.blockRounds === 2)).toBe(true)
     expect(out.every((e) => e.sets.length === 2)).toBe(true)
+  })
+})
+
+describe('blockRoundsView / currentRoundIndex', () => {
+  const s = (id: string, position: number, confirmed = false): WorkoutSet => ({ id, position, fact: {}, confirmedAt: confirmed ? 'now' : null, version: 1 })
+  const block = {
+    blockId: 'b1', blockType: 'superset' as const, blockRounds: 2,
+    exercises: [exercise('a', 0, 'b1', 'superset', [s('a1', 0), s('a2', 1)]), exercise('b', 1, 'b1', 'superset', [s('b1', 0), s('b2', 1)])],
+  }
+  it('раскладывает блок по кругам: круг R = по одному подходу каждого упражнения', () => {
+    const rounds = blockRoundsView(block)
+    expect(rounds.map((r) => ({ round: r.round, sets: r.items.map((i) => i.set.id) }))).toEqual([
+      { round: 1, sets: ['a1', 'b1'] },
+      { round: 2, sets: ['a2', 'b2'] },
+    ])
+  })
+  it('currentRoundIndex — первый круг с неподтверждённым подходом', () => {
+    // круг 1 полностью подтверждён, круг 2 нет
+    const b = { ...block, exercises: [exercise('a', 0, 'b1', 'superset', [s('a1', 0, true), s('a2', 1)]), exercise('b', 1, 'b1', 'superset', [s('b1', 0, true), s('b2', 1)])] }
+    expect(currentRoundIndex(blockRoundsView(b))).toBe(1)
+  })
+  it('currentRoundIndex = последний, если все круги подтверждены', () => {
+    const b = { ...block, exercises: [exercise('a', 0, 'b1', 'superset', [s('a1', 0, true), s('a2', 1, true)]), exercise('b', 1, 'b1', 'superset', [s('b1', 0, true), s('b2', 1, true)])] }
+    expect(currentRoundIndex(blockRoundsView(b))).toBe(1)
   })
 })

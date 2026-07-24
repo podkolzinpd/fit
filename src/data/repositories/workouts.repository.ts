@@ -5,8 +5,8 @@ import { clientsRepository } from './clients.repository'
 import { collectPages, pageFromLookahead } from './collect-pages'
 import { repositoryError } from './error'
 import { workoutQueries } from '../queries/workouts.queries'
-export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, splitClientWorkouts, workoutDurationLabel, muscleGroupLabels, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, BLOCK_TYPE_LABELS, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockType, syncBlockRounds } from './workout-rules'
-export type { ExerciseBlock, DraftBlock } from './workout-rules'
+export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, splitClientWorkouts, workoutDurationLabel, muscleGroupLabels, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, BLOCK_TYPE_LABELS, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockType, syncBlockRounds } from './workout-rules'
+export type { ExerciseBlock, DraftBlock, BlockRound } from './workout-rules'
 export type { ExerciseChartPoint } from './workout-rules'
 
 async function get(id: string): Promise<Workout> {

@@ -3,8 +3,8 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { clientsRepository } from '../../data/repositories/clients.repository'
-import { BLOCK_TYPE_LABELS, chartUnitFor, copyWorkout, exerciseChartPoints, groupIntoBlocks, muscleGroupLabels, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
-import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutSet } from '../../shared/domain'
+import { BLOCK_TYPE_LABELS, chartUnitFor, copyWorkout, exerciseChartPoints, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
+import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
   addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayLocalDate, weekdayShort,
@@ -358,6 +358,26 @@ export function LiveWorkoutPage() {
     return () => window.clearInterval(timer)
   }, [restActive])
   const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? finish.error
+  // Форма одного подхода в live: подтверждение / правка / автосохранение по blur.
+  function renderLiveSet(exercise: WorkoutExercise, set: WorkoutSet, label?: string) {
+    const isEditing = editingSets.has(set.id)
+    return <form className={`exercise ${set.confirmedAt && !isEditing ? 'confirmed' : ''}`} key={set.id} onBlur={(event) => {
+      if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
+      if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
+      save.mutate({ set, draft: draftFrom(event.currentTarget) })
+    }}>
+      {label && <div className="set-head"><span className="muted">{label}</span>{set.confirmedAt && !isEditing && <button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}</div>}
+      {!label && set.confirmedAt && !isEditing && <div className="set-head"><span className="muted" />{<button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}</div>}
+      <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} />
+      {set.confirmedAt && isEditing
+        ? <button type="button" className="secondary" disabled={save.isPending}
+            onPointerDown={() => { skipBlurForSet.current = set.id }}
+            onClick={(event) => { const form = event.currentTarget.form; if (form) save.mutate({ set, draft: draftFrom(form) }); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}>Сохранить</button>
+        : <button type="button" className="secondary" disabled={Boolean(set.confirmedAt) || confirm.isPending}
+            onPointerDown={() => { skipBlurForSet.current = set.id }}
+            onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>{set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'}</button>}
+    </form>
+  }
   return <Page title="Live-тренировка">
     <AsyncView loading={query.isLoading} error={query.error}>{query.data && <>
       <p>{query.data.clientName}</p>
@@ -371,27 +391,31 @@ export function LiveWorkoutPage() {
         </div>
       </div>}
       {groupIntoBlocks(query.data.exercises).map((block) => {
-        const sections = block.exercises.map((exercise) => <section key={exercise.id}>
-          <h2>{exercise.name}</h2>
-          {exercise.sets.map((set, index) => { const isEditing = editingSets.has(set.id); return <form className={`exercise ${set.confirmedAt && !isEditing ? 'confirmed' : ''}`} key={set.id} onBlur={(event) => {
-            if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
-            if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
-            save.mutate({ set, draft: draftFrom(event.currentTarget) })
-          }}>
-            <div className="set-head"><span className="muted">Подход {index + 1}</span>{set.confirmedAt && !isEditing && <button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}</div>
-            <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} />
-            {set.confirmedAt && isEditing
-              ? <button type="button" className="secondary" disabled={save.isPending}
-                  onPointerDown={() => { skipBlurForSet.current = set.id }}
-                  onClick={(event) => { const form = event.currentTarget.form; if (form) save.mutate({ set, draft: draftFrom(form) }); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}>Сохранить</button>
-              : <button type="button" className="secondary" disabled={Boolean(set.confirmedAt) || confirm.isPending}
-                  onPointerDown={() => { skipBlurForSet.current = set.id }}
-                  onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>{set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'}</button>}
-          </form> })}
-          <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
-        </section>)
-        if (block.blockType === 'single' || block.exercises.length === 1) return sections
-        return <div className="exercise-block live" key={block.blockId}><span className="block-badge">{BLOCK_TYPE_LABELS[block.blockType]} · {block.blockRounds} кр. · отдых после блока</span>{sections}</div>
+        // Одиночное упражнение (или блок из одного) — как раньше, по подходам.
+        if (block.blockType === 'single' || block.exercises.length === 1) {
+          return block.exercises.map((exercise) => <section key={exercise.id}>
+            <h2>{exercise.name}</h2>
+            {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`))}
+            <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
+          </section>)
+        }
+        // Многоэлементный блок — по кругам, со счётчиком «Круг R из N».
+        const rounds = blockRoundsView(block)
+        const current = currentRoundIndex(rounds)
+        return <div className="exercise-block live" key={block.blockId}>
+          <div className="circuit-head">
+            <span className="block-badge">{BLOCK_TYPE_LABELS[block.blockType]}</span>
+            <span className="circuit-counter">Круг {rounds[current]?.round ?? 1} из {rounds.length}</span>
+            <span className="circuit-dots" aria-hidden="true">{rounds.map((r, i) => <span key={r.round} className={`circuit-dot ${r.items.every(({ set }) => set.confirmedAt) ? 'done' : i === current ? 'active' : ''}`} />)}</span>
+          </div>
+          {rounds.map((round, roundIndex) => <div className={`circuit-round ${roundIndex === current ? 'active' : ''}`} key={round.round}>
+            <div className="circuit-round-label">Круг {round.round}</div>
+            {round.items.map(({ exercise, set }) => <section key={set.id}>
+              <h3>{exercise.name}</h3>
+              {renderLiveSet(exercise, set)}
+            </section>)}
+          </div>)}
+        </div>
       })}
       <button type="button" className="secondary wide" onClick={() => setPickerOpen(true)}>＋ Ещё упражнение</button>
       {error && <p className="error">{error.message}</p>}

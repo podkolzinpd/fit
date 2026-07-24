@@ -194,21 +194,20 @@ test('план: два упражнения объединяются в супе
   // В просмотре тренировки виден бейдж «Суперсет · 2 кр.».
   await expect(page.locator('.block-badge').first()).toContainText('Суперсет · 2 кр.')
 
-  // Live: отдых стартует только после всего блока (последнего упражнения).
-  // Суперсет из 2 упражнений × 2 круга = подходы ex1×2, потом ex2×2.
+  // Live идёт по кругам: круг 1 (упр.A → упр.B), потом круг 2. Счётчик показывает
+  // текущий круг; отдых — после завершения круга (последнего упражнения круга).
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer-big')).toBeVisible()
-  await expect(page.locator('.block-badge').first()).toContainText('Суперсет')
-  // Подтверждаем оба подхода первого упражнения — отдых НЕ должен запускаться.
+  await expect(page.locator('.circuit-counter')).toHaveText('Круг 1 из 2')
+  // Первое упражнение круга 1 — отдых НЕ запускается (круг ещё не завершён).
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Подтверждено' })).toHaveCount(1)
   await expect(page.getByText(/Отдых/)).toHaveCount(0)
-  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
-  await expect(page.getByRole('button', { name: 'Подтверждено' })).toHaveCount(2)
-  await expect(page.getByText(/Отдых/)).toHaveCount(0)
-  // Подтверждаем подход второго (последнего) упражнения блока — отдых запускается.
+  // Второе (последнее) упражнение круга 1 — круг завершён, отдых запускается,
+  // счётчик переключается на «Круг 2 из 2».
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByText(/Отдых/)).toBeVisible()
+  await expect(page.locator('.circuit-counter')).toHaveText('Круг 2 из 2')
 })
 
 test('profile Cancel resets unsaved edits', async ({ page }) => {
