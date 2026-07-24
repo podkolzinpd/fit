@@ -225,15 +225,18 @@ function formatFactSet(set: WorkoutSet) {
 }
 
 
-function LiveSetFields({ inputKind, set }: { inputKind: ExerciseSnapshot['inputKind']; set: WorkoutSet }) {
+function LiveSetFields({ inputKind, set, editing = false }: { inputKind: ExerciseSnapshot['inputKind']; set: WorkoutSet; editing?: boolean }) {
   // После подтверждения показываем зафиксированный результат (факт, иначе план)
   // как обычное яркое значение в заблокированном поле, а не тусклый placeholder.
-  const locked = Boolean(set.confirmedAt)
+  // Правка по карандашику временно разблокирует поля (editing).
+  const locked = Boolean(set.confirmedAt) && !editing
   const rowClass = locked ? 'set-row locked' : 'set-row'
-  // Ключ по locked ремоунтит поля при подтверждении, чтобы неконтролируемый
-  // defaultValue пересчитался и показал зафиксированное значение.
-  const k = locked ? 'locked' : 'edit'
-  const value = (fact: number | undefined, plan: number | undefined) => (locked ? (fact ?? plan) : fact)
+  // Ключ ремоунтит поля при смене режима (подтверждён / правка / ввод), чтобы
+  // неконтролируемый defaultValue пересчитался и показал нужное значение.
+  const k = locked ? 'locked' : editing ? 'editing' : 'edit'
+  // Для подтверждённого подхода (в т.ч. при правке) показываем факт, иначе план.
+  const confirmed = Boolean(set.confirmedAt)
+  const value = (fact: number | undefined, plan: number | undefined) => (confirmed ? (fact ?? plan) : fact)
   if (inputKind === 'strength') return <div className={rowClass}><input key={`w-${k}`} aria-label="Фактический вес" name="weightKg" type="number" min="0" step="0.5" disabled={locked} defaultValue={value(set.fact.weightKg, set.weightKg)} placeholder={set.weightKg === undefined ? 'кг' : `${set.weightKg} кг`} /><input key={`r-${k}`} aria-label="Фактические повторы" name="reps" type="number" min="0" disabled={locked} defaultValue={value(set.fact.reps, set.reps)} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
   if (inputKind === 'reps') return <div className={rowClass}><input key={`d-${k}`} aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" disabled={locked} defaultValue={value(set.fact.durationMin, set.durationMin)} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input key={`r-${k}`} aria-label="Фактические повторы" name="reps" type="number" min="0" disabled={locked} defaultValue={value(set.fact.reps, set.reps)} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
   return <div className={rowClass}><input key={`d-${k}`} aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" disabled={locked} defaultValue={value(set.fact.durationMin, set.durationMin)} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input key={`dist-${k}`} aria-label="Фактическая дистанция" name="distanceKm" type="number" min="0" step="0.1" disabled={locked} defaultValue={value(set.fact.distanceKm, set.distanceKm)} placeholder={set.distanceKm === undefined ? 'км' : `${set.distanceKm} км`} /></div>
@@ -280,6 +283,8 @@ export function LiveWorkoutPage() {
   ))
   const skipBlurForSet = useRef<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  // Подтверждённые подходы, временно разблокированные для правки (по карандашику).
+  const [editingSets, setEditingSets] = useState<Set<string>>(() => new Set())
   const [restRemaining, setRestRemaining] = useState<number | null>(null)
   const restEndsAt = useRef<number | null>(null)
   const save = useMutation({ mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.save(set, draft) })
@@ -353,17 +358,21 @@ export function LiveWorkoutPage() {
       </div>}
       {query.data.exercises.map((exercise) => <section key={exercise.id}>
         <h2>{exercise.name}</h2>
-        {exercise.sets.map((set, index) => <form className={`exercise ${set.confirmedAt ? 'confirmed' : ''}`} key={set.id} onBlur={(event) => {
+        {exercise.sets.map((set, index) => { const isEditing = editingSets.has(set.id); return <form className={`exercise ${set.confirmedAt && !isEditing ? 'confirmed' : ''}`} key={set.id} onBlur={(event) => {
           if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
           if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
           save.mutate({ set, draft: draftFrom(event.currentTarget) })
         }}>
-          <span className="muted">Подход {index + 1}</span>
-          <LiveSetFields inputKind={exercise.inputKind} set={set} />
-          <button type="button" className="secondary" disabled={Boolean(set.confirmedAt) || confirm.isPending}
-            onPointerDown={() => { skipBlurForSet.current = set.id }}
-            onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>{set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'}</button>
-        </form>)}
+          <div className="set-head"><span className="muted">Подход {index + 1}</span>{set.confirmedAt && !isEditing && <button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}</div>
+          <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} />
+          {set.confirmedAt && isEditing
+            ? <button type="button" className="secondary" disabled={save.isPending}
+                onPointerDown={() => { skipBlurForSet.current = set.id }}
+                onClick={(event) => { const form = event.currentTarget.form; if (form) save.mutate({ set, draft: draftFrom(form) }); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}>Сохранить</button>
+            : <button type="button" className="secondary" disabled={Boolean(set.confirmedAt) || confirm.isPending}
+                onPointerDown={() => { skipBlurForSet.current = set.id }}
+                onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>{set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'}</button>}
+        </form> })}
         <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
       </section>)}
       <button type="button" className="secondary wide" onClick={() => setPickerOpen(true)}>＋ Ещё упражнение</button>
