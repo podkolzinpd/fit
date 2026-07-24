@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(23);
 
 select has_table('public', 'profiles', 'profiles exists');
 select has_table('public', 'trainers', 'trainers exists');
@@ -15,6 +15,12 @@ select has_pk('public', 'clients', 'clients has pk');
 select col_type_is('public', 'clients', 'id', 'uuid', 'client id is uuid');
 select col_type_is('public', 'workouts', 'id', 'uuid', 'workout id is uuid');
 select col_type_is('public', 'client_progress', 'id', 'uuid', 'progress id is uuid');
+select has_index(
+  'public',
+  'client_progress_custom',
+  'client_progress_custom_client_progress_idx',
+  'custom progress values have a client lookup index'
+);
 select has_function('public', 'initialize_trainer', array['text', 'text', 'text'], 'initialize RPC exists');
 select has_function('public', 'save_workout', array['jsonb', 'bigint'], 'workout RPC exists');
 select has_function('public', 'start_workout', array['uuid', 'bigint'], 'start RPC exists');
