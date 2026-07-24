@@ -2,7 +2,7 @@ import type { CustomMetric, ProgressDraft, ProgressEntry } from '../../shared/do
 import { localDate } from '../../shared/local-date'
 import { progressQueries } from '../queries/progress.queries'
 import { repositoryError } from './error'
-import { roundMetric } from './progress-rules'
+import { groupCustomMetricValues, roundMetric } from './progress-rules'
 export { roundMetric } from './progress-rules'
 
 export const progressRepository = {
@@ -10,13 +10,13 @@ export const progressRepository = {
     const [result, custom] = await Promise.all([progressQueries.list(clientId), progressQueries.listCustomValues(clientId)])
     if (result.error) throw repositoryError(result.error)
     if (custom.error) throw repositoryError(custom.error)
+    const customMetricsByProgressId = groupCustomMetricValues(custom.data)
     return result.data.map((row) => ({
       id: row.id, clientId: row.client_id, recordedOn: localDate(row.recorded_on),
       weightKg: row.weight_kg ?? undefined, chestCm: row.chest_cm ?? undefined,
       waistCm: row.waist_cm ?? undefined, hipCm: row.hip_cm ?? undefined,
       notes: row.notes ?? undefined,
-      customMetrics: custom.data.filter((value) => value.progress_id === row.id)
-        .map((value) => ({ metricId: value.metric_id, value: Number(value.value) })),
+      customMetrics: customMetricsByProgressId.get(row.id) ?? [],
       version: row.version,
     }))
   },
