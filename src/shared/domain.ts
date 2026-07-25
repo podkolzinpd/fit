@@ -54,6 +54,14 @@ export interface ExerciseSnapshot {
   name: string
   muscleGroup: MuscleGroup
   inputKind: InputKind
+  // Метаданные каталога для отображения (не сохраняются с тренировкой):
+  // оборудование, детальные мышцы, картинка, уровень.
+  equipment?: string
+  equipmentRef?: string
+  primaryMuscleDetail?: string
+  secondaryMuscles?: string[]
+  level?: string | null
+  imageUrl?: string
 }
 
 export interface WorkoutSetDraft {

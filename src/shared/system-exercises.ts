@@ -1,6 +1,18 @@
 import type { ExerciseSnapshot, MuscleGroup } from './domain'
+import { IMPORTED_EXERCISES } from './system-exercises.generated'
 
 export const SYSTEM_EXERCISE_CATALOG_VERSION = 1
+
+// Форма импортированного упражнения (генерируется scripts/import-exercises.mjs).
+export interface ImportedExercise extends ExerciseSnapshot {
+  source: 'system'
+  equipment: string
+  equipmentRef: string
+  primaryMuscleDetail: string
+  secondaryMuscles: string[]
+  level: string | null
+  imageUrl: string
+}
 
 export const MUSCLE_GROUPS: readonly MuscleGroup[] = [
   'legs', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio',
@@ -74,3 +86,11 @@ export const SYSTEM_EXERCISES = [
   { source: 'system', ref: 'jump-rope', name: 'Прыжки со скакалкой', muscleGroup: 'cardio', inputKind: 'reps' },
   { source: 'system', ref: 'burpees', name: 'Берпи', muscleGroup: 'cardio', inputKind: 'reps' },
 ] as const satisfies readonly ExerciseSnapshot[]
+
+// Полный системный каталог: рукописные базовые + импортированные из открытой
+// базы. Импортированные добавляются в конец, дубли по ref отсекаются.
+const SEEN_REFS = new Set<string>(SYSTEM_EXERCISES.map((exercise) => exercise.ref))
+export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = [
+  ...SYSTEM_EXERCISES,
+  ...IMPORTED_EXERCISES.filter((exercise) => !SEEN_REFS.has(exercise.ref)),
+]
