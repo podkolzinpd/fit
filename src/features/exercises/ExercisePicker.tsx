@@ -63,7 +63,7 @@ export function ExercisePicker({ catalog, onPick, onClose }: ExercisePickerProps
         <button type="button" className="picker-create" onClick={() => setCreating(true)}>＋ Создать своё упражнение</button>
         {catalog.loading && <p className="state">Загрузка…</p>}
         {catalog.error && <div className="state"><p className="error">{catalog.error.message}</p><button type="button" className="secondary" onClick={catalog.retry}>Повторить</button></div>}
-        {!catalog.loading && <div className="picker-list">{filtered.length ? filtered.map((exercise) => <button type="button" className="picker-item" key={`${exercise.source}-${exercise.ref}`} onClick={() => onPick(exercise)}><span>{exercise.name}</span><small>{MUSCLE_GROUP_LABELS[exercise.muscleGroup]}</small></button>) : <p className="state">Ничего не найдено</p>}</div>}
+        {!catalog.loading && <div className="picker-list">{filtered.length ? filtered.map((exercise) => <button type="button" className="picker-item" key={`${exercise.source}-${exercise.ref}`} onClick={() => onPick(exercise)}>{exercise.imageUrl ? <img className="picker-thumb" src={exercise.imageUrl} alt="" loading="lazy" /> : <span className="picker-thumb picker-thumb-empty" aria-hidden="true" />}<span className="picker-item-name">{exercise.name}</span><small>{MUSCLE_GROUP_LABELS[exercise.muscleGroup]}</small></button>) : <p className="state">Ничего не найдено</p>}</div>}
       </>}
     </section>
   </div>
