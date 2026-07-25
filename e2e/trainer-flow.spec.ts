@@ -21,7 +21,9 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await expect(page.getByRole('button', { name: /Присед со штангой/ })).toBeVisible()
-  await expect(page).toHaveScreenshot('exercise-picker-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03 })
+  // Список упражнений маскируем: миниатюры-фото волатильны и различаются по ОС.
+  // Под визуальным контролем — «хром» пикера (шапка, поиск, категории).
+  await expect(page).toHaveScreenshot('exercise-picker-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03, mask: [page.locator('.picker-list')] })
   await page.getByLabel('Поиск упражнения').fill('Болгарский')
   await page.getByRole('button', { name: /Болгарский присед/ }).click()
   await page.getByLabel('Вес, подход 1').fill('40')
