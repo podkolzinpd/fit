@@ -7,7 +7,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-3-4-sit-up",
-    "name": "3/4 Sit-Up",
+    "name": "Подъём корпуса на 3/4 (Своё тело)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -20,7 +20,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-alternating-cable-shoulder-press",
-    "name": "Alternating Cable Shoulder Press",
+    "name": "Попеременный жим над головой (Блок)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -35,7 +35,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-alternating-floor-press",
-    "name": "Alternating Floor Press",
+    "name": "Попеременный жим с пола (Гиря)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Гири",
@@ -52,7 +52,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-barbell-side-split-squat",
-    "name": "Barbell Side Split Squat",
+    "name": "Боковой сплит-присед (Штанга)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -69,7 +69,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-bench-dips",
-    "name": "Bench Dips",
+    "name": "Обратные отжимания от скамьи (Своё тело)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -85,7 +85,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-bent-over-barbell-row",
-    "name": "Bent Over Barbell Row",
+    "name": "Тяга штанги в наклоне (Штанга)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -102,7 +102,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-air-bike",
-    "name": "Air Bike",
+    "name": "Велосипед лёжа (Своё тело)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -115,7 +115,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-anti-gravity-press",
-    "name": "Anti-Gravity Press",
+    "name": "Антигравитационный жим (Штанга)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -132,7 +132,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-barbell-bench-press-medium-grip",
-    "name": "Barbell Bench Press - Medium Grip",
+    "name": "Жим лёжа средним хватом (Штанга)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -147,26 +147,8 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
-    "ref": "fedb-barbell-squat",
-    "name": "Barbell Squat",
-    "muscleGroup": "legs",
-    "inputKind": "strength",
-    "equipment": "Штанга",
-    "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Квадрицепс",
-    "secondaryMuscles": [
-      "Икры",
-      "Ягодицы",
-      "Бицепс бедра",
-      "Поясница"
-    ],
-    "level": "beginner",
-    "imageUrl": "/exercises/fedb-barbell-squat.jpg"
-  },
-  {
-    "source": "system",
     "ref": "fedb-close-grip-barbell-bench-press",
-    "name": "Close-Grip Barbell Bench Press",
+    "name": "Жим лёжа узким хватом (Штанга)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -182,7 +164,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-bent-over-one-arm-long-bar-row",
-    "name": "Bent Over One-Arm Long Bar Row",
+    "name": "Тяга Т-грифа одной рукой в наклоне (Штанга)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -200,7 +182,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-bent-knee-hip-raise",
-    "name": "Bent-Knee Hip Raise",
+    "name": "Подъём таза с согнутыми коленями (Своё тело)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -213,7 +195,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-barbell-incline-shoulder-raise",
-    "name": "Barbell Incline Shoulder Raise",
+    "name": "Подъём плеч на наклонной (Штанга)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -228,7 +210,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-barbell-incline-bench-press-medium-grip",
-    "name": "Barbell Incline Bench Press - Medium Grip",
+    "name": "Жим на наклонной средним хватом (Штанга)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -244,7 +226,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-barbell-walking-lunge",
-    "name": "Barbell Walking Lunge",
+    "name": "Выпады в ходьбе (Штанга)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -261,7 +243,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-close-grip-dumbbell-press",
-    "name": "Close-Grip Dumbbell Press",
+    "name": "Жим гантелей узким хватом (Гантели)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -277,7 +259,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-bent-over-two-dumbbell-row",
-    "name": "Bent Over Two-Dumbbell Row",
+    "name": "Тяга двух гантелей в наклоне (Гантели)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -294,7 +276,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-bottoms-up",
-    "name": "Bottoms Up",
+    "name": "Подъём таза лёжа (Своё тело)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -307,7 +289,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-barbell-rear-delt-row",
-    "name": "Barbell Rear Delt Row",
+    "name": "Тяга на заднюю дельту в наклоне (Штанга)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -324,7 +306,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-cable-chest-press",
-    "name": "Cable Chest Press",
+    "name": "Жим от груди в кроссовере (Блок)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -340,7 +322,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-bodyweight-squat",
-    "name": "Bodyweight Squat",
+    "name": "Приседания без веса (Своё тело)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -356,7 +338,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-dip-machine",
-    "name": "Dip Machine",
+    "name": "Отжимания в тренажёре (Тренажёр)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -372,7 +354,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-bent-over-two-dumbbell-row-with-palms-in",
-    "name": "Bent Over Two-Dumbbell Row With Palms In",
+    "name": "Тяга гантелей в наклоне нейтральным хватом (Гантели)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -388,7 +370,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-butt-ups",
-    "name": "Butt-Ups",
+    "name": "Подъём таза с прямыми ногами (Своё тело)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -401,7 +383,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-bradford-rocky-presses",
-    "name": "Bradford/Rocky Presses",
+    "name": "Жим Брэдфорда (Штанга)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -416,7 +398,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-decline-barbell-bench-press",
-    "name": "Decline Barbell Bench Press",
+    "name": "Жим на скамье с отрицательным наклоном (Штанга)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -432,7 +414,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-cable-deadlifts",
-    "name": "Cable Deadlifts",
+    "name": "Становая тяга в блоке (Блок)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -450,7 +432,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-dips-triceps-version",
-    "name": "Dips - Triceps Version",
+    "name": "Отжимания на брусьях (трицепс) (Своё тело)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -465,25 +447,8 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
-    "ref": "fedb-chin-up",
-    "name": "Chin-Up",
-    "muscleGroup": "back",
-    "inputKind": "strength",
-    "equipment": "Своё тело",
-    "equipmentRef": "body only",
-    "primaryMuscleDetail": "Широчайшие",
-    "secondaryMuscles": [
-      "Бицепс",
-      "Предплечья",
-      "Середина спины"
-    ],
-    "level": "beginner",
-    "imageUrl": "/exercises/fedb-chin-up.jpg"
-  },
-  {
-    "source": "system",
     "ref": "fedb-cable-judo-flip",
-    "name": "Cable Judo Flip",
+    "name": "Бросок дзюдо в блоке (Блок)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -496,7 +461,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-cable-internal-rotation",
-    "name": "Cable Internal Rotation",
+    "name": "Внутренняя ротация плеча в блоке (Блок)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -509,7 +474,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-decline-dumbbell-bench-press",
-    "name": "Decline Dumbbell Bench Press",
+    "name": "Жим гантелей на скамье с отрицательным наклоном (Гантели)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -525,7 +490,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-chair-squat",
-    "name": "Chair Squat",
+    "name": "Приседания к стулу (Тренажёр)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -542,7 +507,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-incline-push-up-close-grip",
-    "name": "Incline Push-Up Close-Grip",
+    "name": "Отжимания на возвышении узким хватом (Своё тело)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -558,7 +523,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-close-grip-front-lat-pulldown",
-    "name": "Close-Grip Front Lat Pulldown",
+    "name": "Тяга верхнего блока узким хватом (Блок)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -575,7 +540,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-cable-russian-twists",
-    "name": "Cable Russian Twists",
+    "name": "Русский твист в блоке (Блок)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -588,7 +553,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-cable-rope-rear-delt-rows",
-    "name": "Cable Rope Rear-Delt Rows",
+    "name": "Тяга каната на заднюю дельту (Блок)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -604,7 +569,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-decline-dumbbell-flyes",
-    "name": "Decline Dumbbell Flyes",
+    "name": "Разводка гантелей на отрицательном наклоне (Гантели)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -617,7 +582,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-dumbbell-lunges",
-    "name": "Dumbbell Lunges",
+    "name": "Выпады с гантелями (Гантели)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -634,7 +599,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-jm-press",
-    "name": "JM Press",
+    "name": "Жим Джей-Эм (Штанга)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -650,7 +615,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-dumbbell-incline-row",
-    "name": "Dumbbell Incline Row",
+    "name": "Тяга гантелей лёжа на наклонной (Гантели)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -668,7 +633,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-cocoons",
-    "name": "Cocoons",
+    "name": "Складка лёжа «кокон» (Своё тело)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -681,7 +646,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-cable-shoulder-press",
-    "name": "Cable Shoulder Press",
+    "name": "Жим над головой в блоке (Блок)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -696,7 +661,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-decline-smith-press",
-    "name": "Decline Smith Press",
+    "name": "Жим в Смите на отрицательном наклоне (Тренажёр)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -712,7 +677,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-dumbbell-squat",
-    "name": "Dumbbell Squat",
+    "name": "Приседания с гантелями (Гантели)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -730,7 +695,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-smith-machine-close-grip-bench-press",
-    "name": "Smith Machine Close-Grip Bench Press",
+    "name": "Жим узким хватом в Смите (Тренажёр)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -746,7 +711,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-kneeling-high-pulley-row",
-    "name": "Kneeling High Pulley Row",
+    "name": "Тяга верхнего блока с колен (Блок)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -762,7 +727,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-cross-body-crunch",
-    "name": "Cross-Body Crunch",
+    "name": "Косые скручивания (Своё тело)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -775,7 +740,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-dumbbell-raise",
-    "name": "Dumbbell Raise",
+    "name": "Подъём гантелей вперёд (Гантели)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -789,24 +754,8 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
-    "ref": "fedb-dumbbell-bench-press",
-    "name": "Dumbbell Bench Press",
-    "muscleGroup": "chest",
-    "inputKind": "strength",
-    "equipment": "Гантели",
-    "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Грудь",
-    "secondaryMuscles": [
-      "Плечи",
-      "Трицепс"
-    ],
-    "level": "beginner",
-    "imageUrl": "/exercises/fedb-dumbbell-bench-press.jpg"
-  },
-  {
-    "source": "system",
     "ref": "fedb-flutter-kicks",
-    "name": "Flutter Kicks",
+    "name": "Ножницы (Своё тело)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -821,7 +770,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-bench-press-powerlifting",
-    "name": "Bench Press - Powerlifting",
+    "name": "Жим лёжа (пауэрлифтинг) (Штанга)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -839,7 +788,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-kneeling-single-arm-high-pulley-row",
-    "name": "Kneeling Single-Arm High Pulley Row",
+    "name": "Тяга верхнего блока одной рукой с колен (Блок)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -855,7 +804,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-dead-bug",
-    "name": "Dead Bug",
+    "name": "Упражнение «мёртвый жук» (Своё тело)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -868,7 +817,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-kettlebell-pirate-ships",
-    "name": "Kettlebell Pirate Ships",
+    "name": "Маятник с гирей (Гиря)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Гири",
@@ -883,7 +832,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-dumbbell-bench-press-with-neutral-grip",
-    "name": "Dumbbell Bench Press with Neutral Grip",
+    "name": "Жим гантелей нейтральным хватом (Гантели)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -899,7 +848,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-glute-kickback",
-    "name": "Glute Kickback",
+    "name": "Махи ногой назад (Своё тело)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -914,7 +863,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-bench-press-with-chains",
-    "name": "Bench Press with Chains",
+    "name": "Жим лёжа с цепями (Штанга)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -931,7 +880,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-leverage-high-row",
-    "name": "Leverage High Row",
+    "name": "Верхняя тяга в рычажном тренажёре (Тренажёр)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -946,7 +895,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-decline-oblique-crunch",
-    "name": "Decline Oblique Crunch",
+    "name": "Косые скручивания на отрицательном наклоне (Своё тело)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -959,7 +908,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-leverage-shoulder-press",
-    "name": "Leverage Shoulder Press",
+    "name": "Жим над головой в рычажном тренажёре (Тренажёр)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -974,7 +923,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-extended-range-one-arm-kettlebell-floor-press",
-    "name": "Extended Range One-Arm Kettlebell Floor Press",
+    "name": "Жим гири с пола одной рукой (Гиря)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Гири",
@@ -990,7 +939,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-goblet-squat",
-    "name": "Goblet Squat",
+    "name": "Гоблет-присед (Гиря)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Гири",
@@ -1008,7 +957,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-board-press",
-    "name": "Board Press",
+    "name": "Жим с бруска (Штанга)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -1026,7 +975,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-leverage-iso-row",
-    "name": "Leverage Iso Row",
+    "name": "Горизонтальная тяга в рычажном тренажёре (Тренажёр)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -1042,7 +991,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-decline-reverse-crunch",
-    "name": "Decline Reverse Crunch",
+    "name": "Обратные скручивания на отрицательном наклоне (Своё тело)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -1055,7 +1004,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-low-pulley-row-to-neck",
-    "name": "Low Pulley Row To Neck",
+    "name": "Тяга нижнего блока к шее (Блок)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -1072,7 +1021,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-front-raise-and-pullover",
-    "name": "Front Raise And Pullover",
+    "name": "Подъём вперёд с пуловером (Штанга)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -1089,7 +1038,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-hack-squat",
-    "name": "Hack Squat",
+    "name": "Гакк-присед (Тренажёр)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -1106,7 +1055,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-bottoms-up-clean-from-the-hang-position",
-    "name": "Bottoms-Up Clean From The Hang Position",
+    "name": "Взятие гири донышком вверх с виса (Гиря)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Гири",
@@ -1122,7 +1071,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-one-arm-lat-pulldown",
-    "name": "One Arm Lat Pulldown",
+    "name": "Тяга верхнего блока одной рукой (Блок)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -1138,7 +1087,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-elbow-to-knee",
-    "name": "Elbow to Knee",
+    "name": "Скручивания локоть к колену (Своё тело)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -1151,7 +1100,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-machine-shoulder-military-press",
-    "name": "Machine Shoulder (Military) Press",
+    "name": "Армейский жим в тренажёре (Тренажёр)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -1166,7 +1115,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-hammer-grip-incline-db-bench-press",
-    "name": "Hammer Grip Incline DB Bench Press",
+    "name": "Жим гантелей на наклонной нейтральным хватом (Гантели)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -1181,25 +1130,8 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
-    "ref": "fedb-leg-press",
-    "name": "Leg Press",
-    "muscleGroup": "legs",
-    "inputKind": "strength",
-    "equipment": "Тренажёр",
-    "equipmentRef": "machine",
-    "primaryMuscleDetail": "Квадрицепс",
-    "secondaryMuscles": [
-      "Икры",
-      "Ягодицы",
-      "Бицепс бедра"
-    ],
-    "level": "beginner",
-    "imageUrl": "/exercises/fedb-leg-press.jpg"
-  },
-  {
-    "source": "system",
     "ref": "fedb-close-grip-push-up-off-of-a-dumbbell",
-    "name": "Close-Grip Push-Up off of a Dumbbell",
+    "name": "Отжимания узким хватом на гантелях (Своё тело)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -1216,7 +1148,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-one-arm-dumbbell-row",
-    "name": "One-Arm Dumbbell Row",
+    "name": "Тяга гантели одной рукой (Гантели)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -1233,7 +1165,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-flat-bench-leg-pull-in",
-    "name": "Flat Bench Leg Pull-In",
+    "name": "Подтягивание ног лёжа на скамье (Своё тело)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -1246,7 +1178,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-seated-cable-shoulder-press",
-    "name": "Seated Cable Shoulder Press",
+    "name": "Жим над головой сидя в блоке (Блок)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -1261,7 +1193,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-incline-cable-chest-press",
-    "name": "Incline Cable Chest Press",
+    "name": "Жим на наклонной в кроссовере (Блок)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -1277,7 +1209,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-leverage-deadlift",
-    "name": "Leverage Deadlift",
+    "name": "Становая тяга в рычажном тренажёре (Тренажёр)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -1293,7 +1225,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-decline-close-grip-bench-to-skull-crusher",
-    "name": "Decline Close-Grip Bench To Skull Crusher",
+    "name": "Французский жим узким хватом на наклоне (Штанга)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -1309,7 +1241,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-one-arm-long-bar-row",
-    "name": "One-Arm Long Bar Row",
+    "name": "Тяга Т-грифа одной рукой (Штанга)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -1325,7 +1257,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-jackknife-sit-up",
-    "name": "Jackknife Sit-Up",
+    "name": "Складка «складной нож» (Своё тело)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -1337,23 +1269,8 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
-    "ref": "fedb-seated-dumbbell-press",
-    "name": "Seated Dumbbell Press",
-    "muscleGroup": "shoulders",
-    "inputKind": "strength",
-    "equipment": "Гантели",
-    "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Плечи",
-    "secondaryMuscles": [
-      "Трицепс"
-    ],
-    "level": "beginner",
-    "imageUrl": "/exercises/fedb-seated-dumbbell-press.jpg"
-  },
-  {
-    "source": "system",
     "ref": "fedb-incline-dumbbell-bench-with-palms-facing-in",
-    "name": "Incline Dumbbell Bench With Palms Facing In",
+    "name": "Жим гантелей на наклонной ладонями внутрь (Гантели)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -1369,7 +1286,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-plie-dumbbell-squat",
-    "name": "Plie Dumbbell Squat",
+    "name": "Присед плие с гантелью (Гантели)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -1387,7 +1304,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-drag-curl",
-    "name": "Drag Curl",
+    "name": "Протягивающий подъём на бицепс (Штанга)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -1401,24 +1318,8 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
-    "ref": "fedb-pullups",
-    "name": "Pullups",
-    "muscleGroup": "back",
-    "inputKind": "strength",
-    "equipment": "Своё тело",
-    "equipmentRef": "body only",
-    "primaryMuscleDetail": "Широчайшие",
-    "secondaryMuscles": [
-      "Бицепс",
-      "Середина спины"
-    ],
-    "level": "beginner",
-    "imageUrl": "/exercises/fedb-pullups.jpg"
-  },
-  {
-    "source": "system",
     "ref": "fedb-landmine-180s",
-    "name": "Landmine 180's",
+    "name": "Повороты «180» с грифом (Штанга)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -1435,7 +1336,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-smith-machine-one-arm-upright-row",
-    "name": "Smith Machine One-Arm Upright Row",
+    "name": "Тяга к подбородку одной рукой в Смите (Тренажёр)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -1451,7 +1352,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-incline-dumbbell-flyes",
-    "name": "Incline Dumbbell Flyes",
+    "name": "Разводка гантелей на наклонной (Гантели)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -1466,7 +1367,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-pull-through",
-    "name": "Pull Through",
+    "name": "Протяжка между ног в блоке (Блок)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -1482,7 +1383,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-dumbbell-floor-press",
-    "name": "Dumbbell Floor Press",
+    "name": "Жим гантелей с пола (Гантели)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -1497,25 +1398,8 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
-    "ref": "fedb-seated-cable-rows",
-    "name": "Seated Cable Rows",
-    "muscleGroup": "back",
-    "inputKind": "strength",
-    "equipment": "Блок",
-    "equipmentRef": "cable",
-    "primaryMuscleDetail": "Середина спины",
-    "secondaryMuscles": [
-      "Бицепс",
-      "Широчайшие",
-      "Плечи"
-    ],
-    "level": "beginner",
-    "imageUrl": "/exercises/fedb-seated-cable-rows.jpg"
-  },
-  {
-    "source": "system",
     "ref": "fedb-leg-pull-in",
-    "name": "Leg Pull-In",
+    "name": "Подтягивание ног лёжа (Своё тело)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -1528,7 +1412,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-smith-machine-overhead-shoulder-press",
-    "name": "Smith Machine Overhead Shoulder Press",
+    "name": "Жим над головой в Смите (Тренажёр)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -1543,7 +1427,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-incline-dumbbell-flyes-with-a-twist",
-    "name": "Incline Dumbbell Flyes - With A Twist",
+    "name": "Разводка гантелей на наклонной с поворотом (Гантели)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -1558,7 +1442,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-smith-machine-squat",
-    "name": "Smith Machine Squat",
+    "name": "Приседания в Смите (Тренажёр)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -1576,7 +1460,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-floor-press",
-    "name": "Floor Press",
+    "name": "Жим с пола (Штанга)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -1592,7 +1476,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-shotgun-row",
-    "name": "Shotgun Row",
+    "name": "Тяга одной рукой в блоке (Блок)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -1608,7 +1492,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-pallof-press-with-rotation",
-    "name": "Pallof Press With Rotation",
+    "name": "Жим Паллоффа с поворотом (Блок)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -1625,7 +1509,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-smith-machine-upright-row",
-    "name": "Smith Machine Upright Row",
+    "name": "Тяга к подбородку в Смите (Тренажёр)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -1642,7 +1526,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-incline-dumbbell-press",
-    "name": "Incline Dumbbell Press",
+    "name": "Жим гантелей на наклонной (Гантели)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -1658,7 +1542,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-smith-machine-stiff-legged-deadlift",
-    "name": "Smith Machine Stiff-Legged Deadlift",
+    "name": "Становая на прямых ногах в Смите (Тренажёр)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -1674,7 +1558,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-floor-press-with-chains",
-    "name": "Floor Press with Chains",
+    "name": "Жим с пола с цепями (Штанга)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -1690,7 +1574,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-smith-machine-bent-over-row",
-    "name": "Smith Machine Bent Over Row",
+    "name": "Тяга в наклоне в Смите (Тренажёр)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -1707,7 +1591,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-seated-flat-bench-leg-pull-in",
-    "name": "Seated Flat Bench Leg Pull-In",
+    "name": "Подтягивание ног сидя на скамье (Своё тело)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -1720,7 +1604,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-standing-alternating-dumbbell-press",
-    "name": "Standing Alternating Dumbbell Press",
+    "name": "Попеременный жим гантелей стоя (Гантели)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -1735,7 +1619,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-incline-push-up",
-    "name": "Incline Push-Up",
+    "name": "Отжимания на возвышении (Своё тело)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -1751,7 +1635,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-smith-single-leg-split-squat",
-    "name": "Smith Single-Leg Split Squat",
+    "name": "Сплит-присед на одной ноге в Смите (Тренажёр)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Тренажёр",
@@ -1768,7 +1652,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-high-cable-curls",
-    "name": "High Cable Curls",
+    "name": "Подъём на бицепс в верхнем блоке (Блок)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Блок",
@@ -1781,7 +1665,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-stiff-leg-barbell-good-morning",
-    "name": "Stiff Leg Barbell Good Morning",
+    "name": "Гудмонинг на прямых ногах (Штанга)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -1797,7 +1681,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-side-jackknife",
-    "name": "Side Jackknife",
+    "name": "Боковая складка (Своё тело)",
     "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -1810,7 +1694,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-standing-bradford-press",
-    "name": "Standing Bradford Press",
+    "name": "Жим Брэдфорда стоя (Штанга)",
     "muscleGroup": "shoulders",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -1825,7 +1709,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-incline-push-up-medium",
-    "name": "Incline Push-Up Medium",
+    "name": "Отжимания на среднем возвышении (Своё тело)",
     "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Своё тело",
@@ -1842,7 +1726,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-split-squat-with-dumbbells",
-    "name": "Split Squat with Dumbbells",
+    "name": "Сплит-присед с гантелями (Гантели)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Гантели",
@@ -1858,7 +1742,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-one-arm-floor-press",
-    "name": "One Arm Floor Press",
+    "name": "Жим с пола одной рукой (Штанга)",
     "muscleGroup": "arms",
     "inputKind": "strength",
     "equipment": "Штанга",
@@ -1874,7 +1758,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
     "ref": "fedb-straight-bar-bench-mid-rows",
-    "name": "Straight Bar Bench Mid Rows",
+    "name": "Тяга к скамье прямым грифом (Штанга)",
     "muscleGroup": "back",
     "inputKind": "strength",
     "equipment": "Штанга",

@@ -41,4 +41,14 @@ describe('system exercise catalog', () => {
       expect(exercise.imageUrl).toMatch(/^\/exercises\/fedb-.+\.jpg$/)
     }
   })
+
+  it('импортированные названия переведены на русский в формате «Упражнение (Оборудование)»', () => {
+    for (const exercise of IMPORTED_EXERCISES) {
+      // Нет латиницы (кроме допустимых аббревиатур в скобках нет) и есть «(…)».
+      expect(exercise.name).not.toMatch(/[A-Za-z]/)
+      expect(exercise.name).toMatch(/\([^)]+\)$/)
+    }
+    // Названия уникальны.
+    expect(new Set(IMPORTED_EXERCISES.map((exercise) => exercise.name)).size).toBe(IMPORTED_EXERCISES.length)
+  })
 })
