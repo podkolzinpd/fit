@@ -62,6 +62,7 @@ export interface ExerciseSnapshot {
   secondaryMuscles?: string[]
   level?: string | null
   imageUrl?: string
+  instructions?: string[]
 }
 
 export interface WorkoutSetDraft {

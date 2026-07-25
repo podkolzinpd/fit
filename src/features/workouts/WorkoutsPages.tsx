@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { clientsRepository } from '../../data/repositories/clients.repository'
+import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { computeYDomain } from '../progress/ProgressChart'
 import { BLOCK_TYPE_LABELS, chartUnitFor, copyWorkout, exerciseChartPoints, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
@@ -460,17 +461,49 @@ export function LiveWorkoutPage() {
 
 function numberValue(value: FormDataEntryValue | null) { return value ? Number(value) : undefined }
 
+type ExerciseCardTab = 'stats' | 'history' | 'how'
+
 export function ExerciseHistoryPage() {
   const { workoutId = '', exerciseRef = '' } = useParams()
+  const [tab, setTab] = useState<ExerciseCardTab>('stats')
   const current = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   const history = useQuery({ queryKey: ['exercise-history', current.data?.clientId, exerciseRef], queryFn: async () => (await workoutsRepository.list(undefined, undefined, current.data!.clientId)).filter((workout) => workout.status === 'done' && workout.exercises.some((exercise) => exercise.ref === exerciseRef)), enabled: Boolean(current.data) })
-  const inputKind = history.data?.[0]?.exercises.find((item) => item.ref === exerciseRef)?.inputKind ?? 'strength'
+  // Метаданные упражнения из каталога (картинка/оборудование/мышцы/инструкции).
+  const meta = exercisesRepository.system.find((exercise) => exercise.ref === exerciseRef)
+  const inputKind = meta?.inputKind ?? history.data?.[0]?.exercises.find((item) => item.ref === exerciseRef)?.inputKind ?? 'strength'
+  const name = meta?.name ?? history.data?.[0]?.exercises.find((item) => item.ref === exerciseRef)?.name ?? 'Упражнение'
   const chart = useMemo(() => exerciseChartPoints(history.data ?? [], exerciseRef).map((point) => ({ date: point.date.slice(5), value: point.value })), [history.data, exerciseRef])
   const unit = chartUnitFor(inputKind)
-  return <Page title="История упражнения" back={`/workouts/${workoutId}`}>
-    <AsyncView loading={current.isLoading || history.isLoading} error={current.error ?? history.error} empty={!history.data?.length}>
-      {chart.length > 1 && <section className="chart"><h2>Динамика ({unit})</h2><ResponsiveContainer width="100%" height={220}><LineChart data={chart}><XAxis dataKey="date" /><YAxis domain={computeYDomain(chart.map((point) => point.value))} allowDecimals /><Tooltip contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', borderRadius: 12 }} labelStyle={{ color: '#e9e4ed', fontWeight: 700 }} itemStyle={{ color: '#e9e4ed' }} /><Line type="monotone" dataKey="value" stroke="#735cff" strokeWidth={3} /></LineChart></ResponsiveContainer></section>}
-      <div className="timeline">{[...(history.data ?? [])].sort((a, b) => (a.workoutDate < b.workoutDate ? 1 : -1)).map((workout) => { const exercise = workout.exercises.find((item) => item.ref === exerciseRef); return <article key={workout.id} className="card"><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{exercise?.sets.map((set, index) => <span key={set.id}>{index > 0 && ', '}<FactVsPlan set={set} /></span>)}</p></div></article> })}</div>
+  const instructions = meta?.instructions ?? []
+  return <Page title="Упражнение" back={`/workouts/${workoutId}`}>
+    <AsyncView loading={current.isLoading || history.isLoading} error={current.error ?? history.error}>
+      <section className="exercise-card-head card">
+        {meta?.imageUrl && <img className="exercise-card-image" src={meta.imageUrl} alt={name} />}
+        <div className="exercise-card-meta">
+          <h2>{name}</h2>
+          {meta?.equipment && <p><span className="muted">Оборудование:</span> {meta.equipment}</p>}
+          {meta?.primaryMuscleDetail && <p><span className="muted">Основная группа мышц:</span> {meta.primaryMuscleDetail}</p>}
+          {meta?.secondaryMuscles?.length ? <p><span className="muted">Вторичная группа мышц:</span> {meta.secondaryMuscles.join(', ')}</p> : null}
+        </div>
+      </section>
+
+      <div className="tabs" role="tablist">
+        <button type="button" role="tab" aria-selected={tab === 'stats'} className={tab === 'stats' ? 'tab active' : 'tab'} onClick={() => setTab('stats')}>Статистика</button>
+        <button type="button" role="tab" aria-selected={tab === 'history'} className={tab === 'history' ? 'tab active' : 'tab'} onClick={() => setTab('history')}>История</button>
+        <button type="button" role="tab" aria-selected={tab === 'how'} className={tab === 'how' ? 'tab active' : 'tab'} onClick={() => setTab('how')}>Как</button>
+      </div>
+
+      {tab === 'stats' && (chart.length > 1
+        ? <section className="chart"><h2>Динамика ({unit})</h2><ResponsiveContainer width="100%" height={220}><LineChart data={chart}><XAxis dataKey="date" /><YAxis domain={computeYDomain(chart.map((point) => point.value))} allowDecimals /><Tooltip contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', borderRadius: 12 }} labelStyle={{ color: '#e9e4ed', fontWeight: 700 }} itemStyle={{ color: '#e9e4ed' }} /><Line type="monotone" dataKey="value" stroke="#735cff" strokeWidth={3} /></LineChart></ResponsiveContainer></section>
+        : <p className="muted empty-hint">Пока нет данных. График появится после проведённых тренировок с фактом.</p>)}
+
+      {tab === 'history' && (history.data?.length
+        ? <div className="timeline">{[...history.data].sort((a, b) => (a.workoutDate < b.workoutDate ? 1 : -1)).map((workout) => { const exercise = workout.exercises.find((item) => item.ref === exerciseRef); return <article key={workout.id} className="card"><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{exercise?.sets.map((set, index) => <span key={set.id}>{index > 0 && ', '}<FactVsPlan set={set} /></span>)}</p></div></article> })}</div>
+        : <p className="muted empty-hint">Ещё нет истории по этому упражнению.</p>)}
+
+      {tab === 'how' && (instructions.length
+        ? <ol className="how-steps">{instructions.map((step, index) => <li key={index}>{step}</li>)}</ol>
+        : <p className="muted empty-hint">Описание техники пока не добавлено.</p>)}
     </AsyncView>
   </Page>
 }

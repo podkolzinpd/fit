@@ -210,7 +210,21 @@ p { margin: 6px 0 }
 .picker-category { flex: 0 0 auto; padding: 9px 14px; border: 1px solid var(--border); border-radius: 99px; background: #1b1921; color: #d9d5df; font-weight: 500; box-shadow: none }.picker-category.active { border-color: #8a72ff; background: #6f54ef; color: white }
 .picker-create { flex: 0 0 auto; border: 1px dashed #4c4758; background: #19171e; color: #b2acba; box-shadow: none }
 .picker-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px }
-.picker-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 15px; border: 1px solid var(--border); background: var(--surface-raised); color: #ece7f0; text-align: left; font-weight: 500; box-shadow: none }.picker-item small { color: var(--muted); font-weight: 400 }
+.picker-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 12px 15px; border: 1px solid var(--border); background: var(--surface-raised); color: #ece7f0; text-align: left; font-weight: 500; box-shadow: none }.picker-item small { color: var(--muted); font-weight: 400 }
+.picker-item-name { flex: 1 1 auto; min-width: 0 }
+.picker-thumb { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 8px; object-fit: cover; background: #fff }
+.picker-thumb-empty { background: var(--surface); border: 1px solid var(--border) }
+/* Карточка упражнения: шапка (картинка + метаданные) + табы. */
+.exercise-card-head { display: flex; gap: 14px; align-items: flex-start }
+.exercise-card-image { flex: 0 0 auto; width: 96px; height: 96px; border-radius: 12px; object-fit: cover; background: #fff }
+.exercise-card-meta h2 { margin: 0 0 8px }
+.exercise-card-meta p { margin: 3px 0; font-size: 14px }
+.tabs { display: flex; gap: 6px; margin: 14px 0 12px; border-bottom: 1px solid var(--border) }
+.tab { padding: 10px 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 600; cursor: pointer; box-shadow: none }
+.tab.active { color: var(--fg); border-bottom-color: var(--purple) }
+.how-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px }
+.how-steps li { line-height: 1.5 }
+.empty-hint { padding: 24px 8px; text-align: center }
 .workout-editor-heading, .planned-set-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px }.workout-editor-heading h2 { margin-right: auto }
 .workout-tools { display: flex; gap: 6px }.workout-tools .link { font-size: 13px }
 .planned-set { padding-top: 10px; border-top: 1px solid var(--border) }.planned-set:first-of-type { border-top: 0 }.planned-set-heading { color: var(--muted); font-size: 13px }

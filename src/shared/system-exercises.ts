@@ -12,6 +12,7 @@ export interface ImportedExercise extends ExerciseSnapshot {
   secondaryMuscles: string[]
   level: string | null
   imageUrl: string
+  instructions: string[]
 }
 
 export const MUSCLE_GROUPS: readonly MuscleGroup[] = [

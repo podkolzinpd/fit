@@ -267,6 +267,7 @@ async function main() {
       secondaryMuscles: secondary,
       level: ex.level ?? null,
       imageUrl: `/exercises/${imageName}`,
+      instructions: ex.instructions ?? [],
     })
   }
 

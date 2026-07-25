@@ -100,7 +100,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // Заходим в аналитику упражнения и возвращаемся: «назад» с тренировки не должен
   // пинг-понгить обратно в историю упражнения (регресс петли навигации).
   await page.locator('.exercise-name-link').first().click()
-  await expect(page.getByRole('heading', { name: 'История упражнения' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   await page.locator('.page-back').click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await page.locator('.page-back').click()
@@ -276,6 +276,44 @@ test('замена упражнения: в форме плана и в live', a
   // После подтверждения подхода «Заменить» пропадает (начатое заменять нельзя).
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Заменить' })).toHaveCount(0)
+})
+
+test('карточка упражнения: шапка с оборудованием/мышцами и табы', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await page.getByLabel('Имя').fill('Карточка Клиент')
+  await page.getByLabel('Начальный вес, кг').fill('80')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Карточка Клиент' })).toBeVisible()
+
+  await page.getByRole('link', { name: /Запланировать/ }).click()
+  await page.getByLabel('Клиент').selectOption({ label: 'Карточка Клиент' })
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  // Импортированное упражнение с картинкой/оборудованием/мышцами.
+  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await page.getByLabel('Поиск упражнения').fill('тяга штанги в наклоне (штанга)')
+  await page.getByRole('button', { name: /Тяга штанги в наклоне \(Штанга\)/ }).first().click()
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+
+  // Открываем карточку упражнения через ссылку «↗ история».
+  await page.getByRole('link', { name: /Тяга штанги в наклоне/ }).first().click()
+  await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
+  // Шапка: оборудование и группы мышц из каталога.
+  await expect(page.getByText('Оборудование: Штанга')).toBeVisible()
+  await expect(page.getByText(/Основная группа мышц:/)).toBeVisible()
+  // Табы: Статистика (по умолчанию), История, Как.
+  await expect(page.getByRole('tab', { name: 'Статистика' })).toHaveAttribute('aria-selected', 'true')
+  await page.getByRole('tab', { name: 'Как' }).click()
+  await expect(page.getByRole('tab', { name: 'Как' })).toHaveAttribute('aria-selected', 'true')
+  // Инструкции техники присутствуют (нумерованный список).
+  await expect(page.locator('.how-steps li').first()).toBeVisible()
 })
 
 test('план: два упражнения объединяются в суперсет, тип виден в просмотре', async ({ page }) => {
