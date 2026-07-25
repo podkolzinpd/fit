@@ -1,5 +1,5 @@
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
-import { SYSTEM_EXERCISES } from '../../shared/system-exercises'
+import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
 import { exerciseQueries } from '../queries/exercises.queries'
 import { repositoryError } from './error'
 
@@ -12,7 +12,7 @@ function map(row: { id: string; name: string; muscle_group: string; input_kind: 
 }
 
 export const exercisesRepository = {
-  system: SYSTEM_EXERCISES,
+  system: SYSTEM_EXERCISE_CATALOG,
   async list(): Promise<CustomExercise[]> {
     const result = await exerciseQueries.list()
     if (result.error) throw repositoryError(result.error)
