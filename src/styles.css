@@ -225,6 +225,9 @@ p { margin: 6px 0 }
 .how-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px }
 .how-steps li { line-height: 1.5 }
 .empty-hint { padding: 24px 8px; text-align: center }
+.stat-single { display: flex; flex-direction: column; gap: 4px; align-items: flex-start }
+.stat-single strong { font-size: 28px }
+.stat-single p { margin: 4px 0 0; font-size: 13px }
 .workout-editor-heading, .planned-set-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px }.workout-editor-heading h2 { margin-right: auto }
 .workout-tools { display: flex; gap: 6px }.workout-tools .link { font-size: 13px }
 .planned-set { padding-top: 10px; border-top: 1px solid var(--border) }.planned-set:first-of-type { border-top: 0 }.planned-set-heading { color: var(--muted); font-size: 13px }
