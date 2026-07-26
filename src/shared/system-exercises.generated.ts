@@ -62,10 +62,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-alternating-floor-press.jpg",
     "instructions": [
-      "Lie on the floor with two kettlebells next to your shoulders.",
-      "Position one in place on your chest and then the other, gripping the kettlebells on the handle with the palms facing forward.",
-      "Extend both arms, so that the kettlebells are being held above your chest. Lower one kettlebell, bringing it to your chest and turn the wrist in the direction of the locked out kettlebell.",
-      "Raise the kettlebell and repeat on the opposite side."
+      "Лягте на пол, гири у груди, ладони вперёд.",
+      "Поочерёдно выжимайте одну гирю вверх, вторая остаётся у груди.",
+      "Плавно опустите руку и смените сторону."
     ]
   },
   {
@@ -129,10 +128,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bent-over-barbell-row.jpg",
     "instructions": [
-      "Holding a barbell with a pronated grip (palms facing down), bend your knees slightly and bring your torso forward, by bending at the waist, while keeping the back straight until it is almost parallel to the floor. Tip: Make sure that you keep the head up. The barbell should hang directly in front of you as your arms hang perpendicular to the floor and your torso. This is your starting position.",
-      "Now, while keeping the torso stationary, breathe out and lift the barbell to you. Keep the elbows close to the body and only use the forearms to hold the weight. At the top contracted position, squeeze the back muscles and hold for a brief pause.",
-      "Then inhale and slowly lower the barbell back to the starting position.",
-      "Repeat for the recommended amount of repetitions."
+      "Наклонитесь от таза, спина прямая, штанга в прямом хвате.",
+      "На выдохе подтяните штангу к низу живота, сводя лопатки.",
+      "На вдохе плавно опустите штангу."
     ]
   },
   {
@@ -195,11 +193,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-bench-press-medium-grip.jpg",
     "instructions": [
-      "Lie back on a flat bench. Using a medium width grip (a grip that creates a 90-degree angle in the middle of the movement between the forearms and the upper arms), lift the bar from the rack and hold it straight over you with your arms locked. This will be your starting position.",
-      "From the starting position, breathe in and begin coming down slowly until the bar touches your middle chest.",
-      "After a brief pause, push the bar back to the starting position as you breathe out. Focus on pushing the bar using your chest muscles. Lock your arms and squeeze your chest in the contracted position at the top of the motion, hold for a second and then start coming down slowly again. Tip: Ideally, lowering the weight should take about twice as long as raising it.",
-      "Repeat the movement for the prescribed amount of repetitions.",
-      "When you are done, place the bar back in the rack."
+      "Лягте на скамью, штанга средним хватом (предплечья вертикально в нижней точке).",
+      "На вдохе опустите штангу к середине груди.",
+      "На выдохе выжмите штангу вверх усилием грудных."
     ]
   },
   {
@@ -243,12 +239,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bent-over-one-arm-long-bar-row.jpg",
     "instructions": [
-      "Put weight on one of the ends of an Olympic barbell. Make sure that you either place the other end of the barbell in the corner of two walls; or put a heavy object on the ground so the barbell cannot slide backward.",
-      "Bend forward until your torso is as close to parallel with the floor as you can and keep your knees slightly bent.",
-      "Now grab the bar with one arm just behind the plates on the side where the weight was placed and put your other hand on your knee. This will be your starting position.",
-      "Pull the bar straight up with your elbow in (to maximize back stimulation) until the plates touch your lower chest. Squeeze the back muscles as you lift the weight up and hold for a second at the top of the movement. Breathe out as you lift the weight. Tip: Do not allow for any swinging of the torso. Only the arm should move.",
-      "Slowly lower the bar to the starting position getting a nice stretch on the lats. Tip: Do not let the plates touch the floor. To ensure the best range of motion, I recommend using small plates (25-lb ones) as opposed to larger plates (like 35-45lb ones).",
-      "Repeat for the recommended amount of repetitions and switch arms."
+      "Т-гриф между ног, наклон вперёд, одна рука на грифе, спина прямая.",
+      "На выдохе подтяните гриф к поясу, отводя локоть назад.",
+      "На вдохе плавно опустите. Повторите на другую сторону."
     ]
   },
   {
@@ -308,11 +301,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-incline-bench-press-medium-grip.jpg",
     "instructions": [
-      "Lie back on an incline bench. Using a medium-width grip (a grip that creates a 90-degree angle in the middle of the movement between the forearms and the upper arms), lift the bar from the rack and hold it straight over you with your arms locked. This will be your starting position.",
-      "As you breathe in, come down slowly until you feel the bar on you upper chest.",
-      "After a second pause, bring the bar back to the starting position as you breathe out and push the bar using your chest muscles. Lock your arms in the contracted position, squeeze your chest, hold for a second and then start coming down slowly again. Tip: it should take at least twice as long to go down than to come up.",
-      "Repeat the movement for the prescribed amount of repetitions.",
-      "When you are done, place the bar back in the rack."
+      "Скамья под наклоном, штанга средним хватом.",
+      "На вдохе опустите штангу к верху груди.",
+      "На выдохе выжмите вверх усилием верха груди."
     ]
   },
   {
@@ -377,10 +368,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bent-over-two-dumbbell-row.jpg",
     "instructions": [
-      "With a dumbbell in each hand (palms facing your torso), bend your knees slightly and bring your torso forward by bending at the waist; as you bend make sure to keep your back straight until it is almost parallel to the floor. Tip: Make sure that you keep the head up. The weights should hang directly in front of you as your arms hang perpendicular to the floor and your torso. This is your starting position.",
-      "While keeping the torso stationary, lift the dumbbells to your side (as you breathe out), keeping the elbows close to the body (do not exert any force with the forearm other than holding the weights). On the top contracted position, squeeze the back muscles and hold for a second.",
-      "Slowly lower the weight again to the starting position as you inhale.",
-      "Repeat for the recommended amount of repetitions."
+      "Наклонитесь от таза, спина прямая, гантели в опущенных руках.",
+      "На выдохе подтяните обе гантели к поясу, сводя лопатки.",
+      "На вдохе плавно опустите гантели."
     ]
   },
   {
@@ -441,10 +431,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-chest-press.jpg",
     "instructions": [
-      "Adjust the weight to an appropriate amount and be seated, grasping the handles. Your upper arms should be about 45 degrees to the body, with your head and chest up. The elbows should be bent to about 90 degrees. This will be your starting position.",
-      "Begin by extending through the elbow, pressing the handles together straight in front of you. Keep your shoulder blades retracted as you execute the movement.",
-      "After pausing at full extension, return to th starting position, keeping tension on the cables.",
-      "You can also execute this movement with your back off the pad, at an incline or decline, or alternate hands."
+      "Встаньте между блоков, рукояти у груди, шаг вперёд.",
+      "На выдохе выжмите рукояти вперёд, сводя грудные.",
+      "На вдохе плавно верните руки к груди."
     ]
   },
   {
@@ -507,10 +496,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bent-over-two-dumbbell-row-with-palms-in.jpg",
     "instructions": [
-      "With a dumbbell in each hand (palms facing each other), bend your knees slightly and bring your torso forward, by bending at the waist, while keeping the back straight until it is almost parallel to the floor. Tip: Make sure that you keep the head up. The weights should hang directly in front of you as your arms hang perpendicular to the floor and your torso. This is your starting position.",
-      "While keeping the torso stationary, lift the dumbbells to your side as you breathe out, squeezing your shoulder blades together. On the top contracted position, squeeze the back muscles and hold for a second.",
-      "Slowly lower the weight again to the starting position as you inhale.",
-      "Repeat for the recommended amount of repetitions."
+      "Наклон вперёд, спина прямая, гантели нейтральным хватом (ладони внутрь).",
+      "На выдохе подтяните гантели к поясу, локти вдоль тела.",
+      "На вдохе плавно опустите гантели."
     ]
   },
   {
@@ -572,12 +560,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-decline-barbell-bench-press.jpg",
     "instructions": [
-      "Secure your legs at the end of the decline bench and slowly lay down on the bench.",
-      "Using a medium width grip (a grip that creates a 90-degree angle in the middle of the movement between the forearms and the upper arms), lift the bar from the rack and hold it straight over you with your arms locked. The arms should be perpendicular to the floor. This will be your starting position. Tip: In order to protect your rotator cuff, it is best if you have a spotter help you lift the barbell off the rack.",
-      "As you breathe in, come down slowly until you feel the bar on your lower chest.",
-      "After a second pause, bring the bar back to the starting position as you breathe out and push the bar using your chest muscles. Lock your arms and squeeze your chest in the contracted position, hold for a second and then start coming down slowly again. Tip: It should take at least twice as long to go down than to come up).",
-      "Repeat the movement for the prescribed amount of repetitions.",
-      "When you are done, place the bar back in the rack."
+      "Скамья с отрицательным наклоном, штанга хватом чуть шире плеч.",
+      "На вдохе опустите штангу к низу груди.",
+      "На выдохе выжмите вверх усилием низа груди."
     ]
   },
   {
@@ -681,12 +666,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-decline-dumbbell-bench-press.jpg",
     "instructions": [
-      "Secure your legs at the end of the decline bench and lie down with a dumbbell on each hand on top of your thighs. The palms of your hand will be facing each other.",
-      "Once you are laying down, move the dumbbells in front of you at shoulder width.",
-      "Once at shoulder width, rotate your wrists forward so that the palms of your hands are facing away from you. This will be your starting position.",
-      "Bring down the weights slowly to your side as you breathe out. Keep full control of the dumbbells at all times. Tip: Throughout the motion, the forearms should always be perpendicular to the floor.",
-      "As you breathe out, push the dumbbells up using your pectoral muscles. Lock your arms in the contracted position, squeeze your chest, hold for a second and then start coming down slowly. Tip: It should take at least twice as long to go down than to come up..",
-      "Repeat the movement for the prescribed amount of repetitions of your training program."
+      "Скамья с отрицательным наклоном, гантели у низа груди.",
+      "На вдохе опустите гантели по бокам груди.",
+      "На выдохе выжмите вверх, сводя гантели."
     ]
   },
   {
@@ -751,12 +733,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-close-grip-front-lat-pulldown.jpg",
     "instructions": [
-      "Sit down on a pull-down machine with a wide bar attached to the top pulley. Make sure that you adjust the knee pad of the machine to fit your height. These pads will prevent your body from being raised by the resistance attached to the bar.",
-      "Grab the bar with the palms facing forward using the prescribed grip. Note on grips: For a wide grip, your hands need to be spaced out at a distance wider than your shoulder width. For a medium grip, your hands need to be spaced out at a distance equal to your shoulder width and for a close grip at a distance smaller than your shoulder width.",
-      "As you have both arms extended in front of you - while holding the bar at the chosen grip width - bring your torso back around 30 degrees or so while creating a curvature on your lower back and sticking your chest out. This is your starting position.",
-      "As you breathe out, bring the bar down until it touches your upper chest by drawing the shoulders and the upper arms down and back. Tip: Concentrate on squeezing the back muscles once you reach the full contracted position. The upper torso should remain stationary (only the arms should move). The forearms should do no other work except for holding the bar; therefore do not try to pull the bar down using the forearms.",
-      "After a second in the contracted position, while squeezing your shoulder blades together, slowly raise the bar back to the starting position when your arms are fully extended and the lats are fully stretched. Inhale during this portion of the movement.",
-      "6. Repeat this motion for the prescribed amount of repetitions."
+      "Сядьте в тренажёр, узкий параллельный хват рукояти.",
+      "На выдохе притяните рукоять к верху груди, сводя лопатки.",
+      "На вдохе плавно верните рукоять вверх."
     ]
   },
   {
@@ -818,11 +797,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-decline-dumbbell-flyes.jpg",
     "instructions": [
-      "Secure your legs at the end of the decline bench and lie down with a dumbbell on each hand on top of your thighs. The palms of your hand will be facing each other.",
-      "Once you are laying down, move the dumbbells in front of you at shoulder width. The palms of the hands should be facing each other and the arms should be perpendicular to the floor and fully extended. This will be your starting position.",
-      "With a slight bend on your elbows in order to prevent stress at the biceps tendon, lower your arms out at both sides in a wide arc until you feel a stretch on your chest. Breathe in as you perform this portion of the movement. Tip: Keep in mind that throughout the movement, the arms should remain stationary; the movement should only occur at the shoulder joint.",
-      "Return your arms back to the starting position as you squeeze your chest muscles and breathe out. Tip: Make sure to use the same arc of motion used to lower the weights.",
-      "Hold for a second at the contracted position and repeat the movement for the prescribed amount of repetitions."
+      "Скамья с отрицательным наклоном, гантели над грудью, локти слегка согнуты.",
+      "На вдохе разведите руки по дуге до растяжения грудных.",
+      "На выдохе сведите гантели над грудью."
     ]
   },
   {
@@ -888,10 +865,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-incline-row.jpg",
     "instructions": [
-      "Using a neutral grip, lean into an incline bench.",
-      "Take a dumbbell in each hand with a neutral grip, beginning with the arms straight. This will be your starting position.",
-      "Retract the shoulder blades and flex the elbows to row the dumbbells to your side.",
-      "Pause at the top of the motion, and then return to the starting position."
+      "Лягте грудью на наклонную скамью, гантели в опущенных руках.",
+      "На выдохе подтяните гантели к поясу, сводя лопатки.",
+      "На вдохе плавно опустите гантели."
     ]
   },
   {
@@ -949,11 +925,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-decline-smith-press.jpg",
     "instructions": [
-      "Place a decline bench underneath the Smith machine. Now place the barbell at a height that you can reach when lying down and your arms are almost fully extended. Using a pronated grip that is wider than shoulder width, unlock the bar from the rack and hold it straight over you with your arms extended. This will be your starting position.",
-      "As you inhale, lower the bar under control by allowing the elbows to flex, lightly contacting the torso.",
-      "After a brief pause, bring the bar back to the starting position by extending the elbows, exhaling as you do so.",
-      "Repeat the movement for the prescribed amount of repetitions.",
-      "When the set is complete, lock the bar back in the rack."
+      "Скамья с отрицательным наклоном под грифом Смита.",
+      "На вдохе опустите гриф к низу груди.",
+      "На выдохе выжмите вверх усилием низа груди."
     ]
   },
   {
@@ -1018,9 +992,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-kneeling-high-pulley-row.jpg",
     "instructions": [
-      "Select the appropriate weight using a pulley that is above your head. Attach a rope to the cable and kneel a couple of feet away, holding the rope out in front of you with both arms extended. This will be your starting position.",
-      "Initiate the movement by flexing the elbows and fully retracting your shoulders, pulling the rope toward your upper chest with your elbows out.",
-      "After pausing briefly, slowly return to the starting position."
+      "Встаньте на колени лицом к верхнему блоку, возьмите рукоять.",
+      "На выдохе притяните рукоять к груди, сводя лопатки и отводя локти назад.",
+      "На вдохе плавно верните рукоять вперёд."
     ]
   },
   {
@@ -1124,10 +1098,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-kneeling-single-arm-high-pulley-row.jpg",
     "instructions": [
-      "Attach a single handle to a high pulley and make your weight selection.",
-      "Kneel in front of the cable tower, taking the cable with one hand with your arm extended. This will be your starting position.",
-      "Starting with your palm facing forward, pull the weight down to your torso by flexing the elbow and retract the shoulder blade. As you do so, rotate the wrist so that at the completion of the movement, your palm is now facing you.",
-      "After a brief pause, return to the starting position."
+      "На колене лицом к верхнему блоку, рукоять в одной руке.",
+      "На выдохе притяните рукоять к плечу, отводя локоть назад.",
+      "На вдохе плавно верните. Повторите на другую руку."
     ]
   },
   {
@@ -1189,10 +1162,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-bench-press-with-neutral-grip.jpg",
     "instructions": [
-      "Take a dumbbell in each hand and lay back onto a flat bench. Your feet should be flat on the floor and your shoulder blades retracted.",
-      "Maintaining a neutral grip, palms facing each other, begin with your arms extended directly above you, perpendicular to the floor. This will be your starting position.",
-      "Begin the movement by flexing the elbow, lowering the upper arms to the side. Descend until the dumbbells are to your torso.",
-      "Pause, then extend the elbow and return to the starting position."
+      "Лягте на скамью, гантели у груди нейтральным хватом (ладони друг к другу).",
+      "На вдохе опустите гантели по бокам груди.",
+      "На выдохе выжмите вверх, сохраняя нейтральный хват."
     ]
   },
   {
@@ -1253,10 +1225,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-leverage-high-row.jpg",
     "instructions": [
-      "Load an appropriate weight onto the pins and adjust the seat height so that you can just reach the handles above you. Adjust the knee pad to help keep you down. Grasp the handles with a pronated grip. This will be your starting position.",
-      "Pull the handles towards your torso, retracting your shoulder blades as you flex the elbow.",
-      "Pause at the bottom of the motion, and then slowly return the handles to the starting position.",
-      "For multiple repetitions, avoid completely returning the weight to the stops to keep tension on the muscles being worked."
+      "Сядьте в рычажный тренажёр грудью к упору, возьмите верхние рукояти.",
+      "На выдохе притяните рукояти вниз-назад, сводя лопатки.",
+      "На вдохе плавно верните руки вперёд."
     ]
   },
   {
@@ -1316,8 +1287,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-extended-range-one-arm-kettlebell-floor-press.jpg",
     "instructions": [
-      "Lie on the floor and position a kettlebell for one arm to press. The kettlebell should be held by the handle. The leg on the same side that you are pressing should be bent, with the knee crossing over the midline of the body.",
-      "Press the kettlebell by extending the elbow and adducting the arm, pressing it above your body. Return to the starting position."
+      "Лягте на пол, гиря у груди одной рукой.",
+      "На выдохе выжмите гирю вверх до прямой руки.",
+      "На вдохе плавно опустите до касания локтем пола. Повторите на другую руку."
     ]
   },
   {
@@ -1383,9 +1355,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-leverage-iso-row.jpg",
     "instructions": [
-      "Load an appropriate weight onto the pins and adjust the seat height so that the handles are at chest level. Grasp the handles with either a neutral or pronated grip. This will be your starting position.",
-      "Pull the handles towards your torso, retracting your shoulder blades as you flex the elbow.",
-      "Pause at the bottom of the motion, and then slowly return the handles to the starting position. For multiple repetitions, avoid completely returning the weight to the stops to keep tension on the muscles being worked."
+      "Сядьте в рычажный тренажёр грудью к упору, возьмите рукояти.",
+      "На выдохе притяните рукояти к корпусу, сводя лопатки.",
+      "На вдохе плавно верните руки вперёд."
     ]
   },
   {
@@ -1449,11 +1421,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-front-raise-and-pullover.jpg",
     "instructions": [
-      "Lie on a flat bench while holding a barbell using a palms down grip that is about 15 inches apart.",
-      "Place the bar on your upper thighs, extend your arms and lock them while keeping a slight bend on the elbows. This will be your starting position.",
-      "Now raise the weight using a semicircular motion and keeping your arms straight as you inhale. Continue the same movement until the bar is on the other side above your head . (Tip: the bar will travel approximately 180-degrees). At this point your arms should be parallel to the floor with the palms of your hands facing the ceiling.",
-      "Now return the barbell to the starting position by reversing the motion as you exhale.",
-      "Repeat for the recommended amount of repetitions."
+      "Лягте на скамью, штанга над грудью на прямых руках.",
+      "Отведите штангу за голову по дуге до растяжения груди и широчайших.",
+      "Верните штангу над грудью тем же движением."
     ]
   },
   {
@@ -1514,10 +1484,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-one-arm-lat-pulldown.jpg",
     "instructions": [
-      "Select an appropriate weight and adjust the knee pad to help keep you down. Grasp the handle with a pronated grip. This will be your starting position.",
-      "Pull the handle down, squeezing your elbow to your side as you flex the elbow.",
-      "Pause at the bottom of the motion, and then slowly return the handle to the starting position.",
-      "For multiple repetitions, avoid completely returning the weight to keep tension on the muscles being worked."
+      "Сядьте у верхнего блока, рукоять в одной руке.",
+      "На выдохе притяните рукоять к плечу, отводя локоть вниз-назад.",
+      "На вдохе плавно верните руку вверх. Повторите на другую."
     ]
   },
   {
@@ -1576,13 +1545,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-hammer-grip-incline-db-bench-press.jpg",
     "instructions": [
-      "Lie back on an incline bench with a dumbbell on each hand on top of your thighs. The palms of your hand will be facing each other.",
-      "By using your thighs to help you get the dumbbells up, clean the dumbbells one arm at a time so that you can hold them at shoulder width.",
-      "Once at shoulder width, keep the palms of your hands with a neutral grip (palms facing each other). Keep your elbows flared out with the upper arms in line with the shoulders (perpendicular to the torso) and the elbows bent creating a 90-degree angle between the upper arm and the forearm. This will be your starting position.",
-      "Now bring down the weights slowly to your side as you breathe in. Keep full control of the dumbbells at all times.",
-      "As you breathe out, push the dumbbells up using your pectoral muscles. Lock your arms in the contracted position, hold for a second and then start coming down slowly. Tip: It should take at least twice as long to go down than to come up.",
-      "Repeat the movement for the prescribed amount of repetitions.",
-      "When you are done, place the dumbbells back in your thighs and then on the floor. This is the safest manner to dispose of the dumbbells."
+      "Скамья под наклоном, гантели у верха груди нейтральным хватом.",
+      "На вдохе опустите гантели по бокам груди.",
+      "На выдохе выжмите вверх, сохраняя нейтральный хват."
     ]
   },
   {
@@ -1625,13 +1590,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-one-arm-dumbbell-row.jpg",
     "instructions": [
-      "Choose a flat bench and place a dumbbell on each side of it.",
-      "Place the right leg on top of the end of the bench, bend your torso forward from the waist until your upper body is parallel to the floor, and place your right hand on the other end of the bench for support.",
-      "Use the left hand to pick up the dumbbell on the floor and hold the weight while keeping your lower back straight. The palm of the hand should be facing your torso. This will be your starting position.",
-      "Pull the resistance straight up to the side of your chest, keeping your upper arm close to your side and keeping the torso stationary. Breathe out as you perform this step. Tip: Concentrate on squeezing the back muscles once you reach the full contracted position. Also, make sure that the force is performed with the back muscles and not the arms. Finally, the upper torso should remain stationary and only the arms should move. The forearms should do no other work except for holding the dumbbell; therefore do not try to pull the dumbbell up using the forearms.",
-      "Lower the resistance straight down to the starting position. Breathe in as you perform this step.",
-      "Repeat the movement for the specified amount of repetitions.",
-      "Switch sides and repeat again with the other arm."
+      "Колено и рука на скамье, спина прямая, гантель в свободной руке.",
+      "На выдохе подтяните гантель к поясу, отводя локоть назад.",
+      "На вдохе плавно опустите. Повторите на другую сторону."
     ]
   },
   {
@@ -1691,9 +1652,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-cable-chest-press.jpg",
     "instructions": [
-      "Adjust the weight to an appropriate amount and be seated, grasping the handles. Your upper arms should be about 45 degrees to the body, with your head and chest up. The elbows should be bent to about 90 degrees. This will be your starting position.",
-      "Begin by extending through the elbow, pressing the handles together straight in front of you. Keep your shoulder blades retracted as you execute the movement.",
-      "After pausing at full extension, return to the starting position, keeping tension on the cables."
+      "Наклонная скамья между блоков, рукояти у верха груди.",
+      "На выдохе выжмите рукояти вперёд-вверх, сводя грудные.",
+      "На вдохе плавно верните руки в исходное."
     ]
   },
   {
@@ -1758,11 +1719,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-one-arm-long-bar-row.jpg",
     "instructions": [
-      "Position a bar into a landmine or in a corner to keep it from moving. Load an appropriate weight onto your end.",
-      "Stand next to the bar, and take a grip with one hand close to the collar. Using your hips and legs, rise to a standing position.",
-      "Assume a bent-knee stance with your hips back and your chest up. Your arm should be extended. This will be your starting position.",
-      "Pull the weight to your side by retracting the shoulder and flexing the elbow. Do not jerk the weight or cheat during the movement.",
-      "After a brief pause, return to the starting position."
+      "Т-гриф между ног, стоя в наклоне, одна рука на конце грифа.",
+      "На выдохе подтяните гриф к поясу, отводя локоть назад.",
+      "На вдохе плавно опустите. Повторите на другую руку."
     ]
   },
   {
@@ -1800,13 +1759,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-dumbbell-bench-with-palms-facing-in.jpg",
     "instructions": [
-      "Lie back on an incline bench with a dumbbell on each hand on top of your thighs. The palms of your hand will be facing each other.",
-      "By using your thighs to help you get the dumbbells up, clean the dumbbells one arm at a time so that you can hold them at shoulder width.",
-      "Once at shoulder width, keep the palms of your hands with a neutral grip (palms facing each other). Keep your elbows flared out with the upper arms in line with the shoulders (perpendicular to the torso) and the elbows bent creating a 90-degree angle between the upper arm and the forearm. This will be your starting position.",
-      "Now bring down the weights slowly to your side as you breathe in. Keep full control of the dumbbells at all times.",
-      "As you breathe out, push the dumbbells up using your pectoral muscles. Lock your arms in the contracted position, hold for a second and then start coming down slowly. Tip: It should take at least twice as long to go down than to come up.",
-      "Repeat the movement for the prescribed amount of repetitions.",
-      "When you are done, place the dumbbells back in your thighs and then on the floor. This is the safest manner to dispose of the dumbbells."
+      "Наклонная скамья, гантели у верха груди ладонями внутрь.",
+      "На вдохе опустите гантели по бокам груди.",
+      "На выдохе выжмите вверх, сохраняя нейтральный хват."
     ]
   },
   {
@@ -1915,12 +1870,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-dumbbell-flyes.jpg",
     "instructions": [
-      "Hold a dumbbell on each hand and lie on an incline bench that is set to an incline angle of no more than 30 degrees.",
-      "Extend your arms above you with a slight bend at the elbows.",
-      "Now rotate the wrists so that the palms of your hands are facing you. Tip: The pinky fingers should be next to each other. This will be your starting position.",
-      "As you breathe in, start to slowly lower the arms to the side while keeping the arms extended and while rotating the wrists until the palms of the hand are facing each other. Tip: At the end of the movement the arms will be by your side with the palms facing the ceiling.",
-      "As you exhale start to bring the dumbbells back up to the starting position by reversing the motion and rotating the hands so that the pinky fingers are next to each other again. Tip: Keep in mind that the movement will only happen at the shoulder joint and at the wrist. There is no motion that happens at the elbow joint.",
-      "Repeat for the recommended amount of repetitions."
+      "Наклонная скамья, гантели над грудью, локти слегка согнуты.",
+      "На вдохе разведите руки по дуге до растяжения верха груди.",
+      "На выдохе сведите гантели над грудью."
     ]
   },
   {
@@ -2021,12 +1973,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-dumbbell-flyes-with-a-twist.jpg",
     "instructions": [
-      "Hold a dumbbell in each hand and lie on an incline bench that is set to an incline angle of no more than 30 degrees.",
-      "Extend your arms above you with a slight bend at the elbows.",
-      "Now rotate the wrists so that the palms of your hands are facing you. Tip: The pinky fingers should be next to each other. This will be your starting position.",
-      "As you breathe in, start to slowly lower the arms to the side while keeping the arms extended and while rotating the wrists until the palms of the hand are facing each other. Tip: At the end of the movement the arms will be by your side with the palms facing the ceiling.",
-      "As you exhale start to bring the dumbbells back up to the starting position by reversing the motion and rotating the hands so that the pinky fingers are next to each other again. Tip: Keep in mind that the movement will only happen at the shoulder joint and at the wrist. There is no motion that happens at the elbow joint.",
-      "Repeat for the recommended amount of repetitions."
+      "Наклонная скамья, гантели над грудью нейтральным хватом.",
+      "На вдохе разведите руки по дуге до растяжения груди.",
+      "На выдохе сведите гантели и разверните ладони внутрь в верхней точке."
     ]
   },
   {
@@ -2089,10 +2038,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-shotgun-row.jpg",
     "instructions": [
-      "Attach a single handle to a low cable.",
-      "After selecting the correct weight, stand a couple feet back with a wide-split stance. Your arm should be extended and your shoulder forward. This will be your starting position.",
-      "Perform the movement by retracting the shoulder and flexing the elbow. As you pull, supinate the wrist, turning the palm upward as you go.",
-      "After a brief pause, return to the starting position."
+      "Встаньте лицом к блоку, рукоять в одной руке, шаг назад.",
+      "На выдохе притяните рукоять к боку, отводя локоть назад и разворачивая корпус.",
+      "На вдохе плавно верните руку вперёд. Повторите на другую сторону."
     ]
   },
   {
@@ -2163,13 +2111,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-dumbbell-press.jpg",
     "instructions": [
-      "Lie back on an incline bench with a dumbbell in each hand atop your thighs. The palms of your hands will be facing each other.",
-      "Then, using your thighs to help push the dumbbells up, lift the dumbbells one at a time so that you can hold them at shoulder width.",
-      "Once you have the dumbbells raised to shoulder width, rotate your wrists forward so that the palms of your hands are facing away from you. This will be your starting position.",
-      "Be sure to keep full control of the dumbbells at all times. Then breathe out and push the dumbbells up with your chest.",
-      "Lock your arms at the top, hold for a second, and then start slowly lowering the weight. Tip Ideally, lowering the weights should take about twice as long as raising them.",
-      "Repeat the movement for the prescribed amount of repetitions.",
-      "When you are done, place the dumbbells back on your thighs and then on the floor. This is the safest manner to release the dumbbells."
+      "Наклонная скамья, гантели у верха груди, ладони вперёд.",
+      "На вдохе опустите гантели по бокам груди.",
+      "На выдохе выжмите вверх, сводя гантели."
     ]
   },
   {
@@ -2232,12 +2176,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-machine-bent-over-row.jpg",
     "instructions": [
-      "Set the barbell attached to the smith machine to a height that is about 2 inches below your knees.",
-      "Bend your knees slightly and bring your torso forward, by bending at the waist, while keeping the back straight until it is almost parallel to the floor. Tip: Make sure that you keep the head up.",
-      "Now grasp the barbell using an overhand (pronated) grip and unlock it from the smith machine rack. Then let it hang directly in front of you as your arms hang extended perpendicular to the floor and your torso. This is your starting position.",
-      "While keeping the torso stationary, lift the barbell as you breathe out, keeping the elbows close to the body and not doing any force with the forearm other than holding the weights. On the top contracted position, squeeze the back muscles and hold for a second.",
-      "Slowly lower the weight again to the starting position as you inhale.",
-      "Repeat for the recommended amount of repetitions."
+      "Наклонитесь от таза, спина прямая, гриф Смита в прямом хвате.",
+      "На выдохе подтяните гриф к низу живота, сводя лопатки.",
+      "На вдохе плавно опустите гриф."
     ]
   },
   {
@@ -2296,9 +2237,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-push-up.jpg",
     "instructions": [
-      "Stand facing bench or sturdy elevated platform. Place hands on edge of bench or platform, slightly wider than shoulder width.",
-      "Position forefoot back from bench or platform with arms and body straight. Arms should be perpendicular to body. Keeping body straight, lower chest to edge of box or platform by bending arms.",
-      "Push body up until arms are extended. Repeat."
+      "Ладони на возвышении (скамья), тело прямая линия, ноги на полу.",
+      "На вдохе опуститесь, сгибая локти, до касания грудью опоры.",
+      "На выдохе выжмите себя вверх."
     ]
   },
   {
@@ -2358,12 +2299,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-stiff-leg-barbell-good-morning.jpg",
     "instructions": [
-      "This exercise is best performed inside a squat rack for safety purposes. To begin, first set the bar on a rack that best matches your height. Once the correct height is chosen and the bar is loaded, step under the bar and place the back of your shoulders (slightly below the neck) across it.",
-      "Hold on to the bar using both arms at each side and lift it off the rack by first pushing with your legs and at the same time straightening your torso.",
-      "Step away from the rack and position your legs using a shoulder width medium stance. Keep your head up at all times as looking down will get you off balance and also maintain a straight back. This will be your starting position.",
-      "Keeping your legs stationary, move your torso forward by bending at the hips while inhaling. Lower your torso until it is parallel with the floor.",
-      "Begin to raise the bar as you exhale by elevating your torso back to the starting position.",
-      "Repeat for the recommended amount of repetitions."
+      "Штанга на трапециях, ноги прямые (колени фиксированы).",
+      "Наклонитесь от таза вперёд, спина прямая, до растяжения задней поверхности бедра.",
+      "Выпрямитесь усилием ягодиц и бицепса бедра."
     ]
   },
   {
@@ -2420,11 +2358,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-push-up-medium.jpg",
     "instructions": [
-      "Stand facing a Smith machine bar or sturdy elevated platform at an appropriate height.",
-      "Place your hands on the bar, with your hands about shoulder width apart.",
-      "Position your feet back from the bar with arms and body straight. This will be your starting position.",
-      "Keeping your body straight, lower your chest to the bar by bending the arms.",
-      "Return to the starting position by extending the elbows, pressing yourself back up."
+      "Ладони на невысоком возвышении чуть шире плеч, тело прямое.",
+      "На вдохе опуститесь до касания грудью опоры.",
+      "На выдохе выжмите себя вверх, не прогибая поясницу."
     ]
   },
   {
@@ -2489,9 +2425,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-straight-bar-bench-mid-rows.jpg",
     "instructions": [
-      "Place a loaded barbell on the end of a bench. Standing on the bench behind the bar, take a medium, pronated grip. Stand with your hips back and chest up, maintaining a neutral spine. This will be your starting position.",
-      "Row the bar to your torso by retracting the shoulder blades and flexing the elbows. Use a controlled movement with no jerking.",
-      "After a brief pause, slowly return the bar to the starting position, ensuring to go all the way down."
+      "Наклонитесь к скамье, прямой гриф в опущенных руках, спина прямая.",
+      "На выдохе подтяните гриф к скамье, сводя лопатки.",
+      "На вдохе плавно опустите гриф."
     ]
   }
 ]

@@ -250,11 +250,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "beginner",
     "instructions": [
-      "Lie back on a flat bench. Using a medium width grip (a grip that creates a 90-degree angle in the middle of the movement between the forearms and the upper arms), lift the bar from the rack and hold it straight over you with your arms locked. This will be your starting position.",
-      "From the starting position, breathe in and begin coming down slowly until the bar touches your middle chest.",
-      "After a brief pause, push the bar back to the starting position as you breathe out. Focus on pushing the bar using your chest muscles. Lock your arms and squeeze your chest in the contracted position at the top of the motion, hold for a second and then start coming down slowly again. Tip: Ideally, lowering the weight should take about twice as long as raising it.",
-      "Repeat the movement for the prescribed amount of repetitions.",
-      "When you are done, place the bar back in the rack."
+      "Лягте на скамью, возьмите штангу хватом чуть шире плеч, снимите со стоек.",
+      "На вдохе опустите штангу к середине груди, локти под углом ~45° к корпусу.",
+      "На выдохе выжмите штангу вверх, сводя грудные, до почти прямых рук."
     ]
   },
   {
@@ -273,11 +271,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "beginner",
     "instructions": [
-      "Lie down on a flat bench with a dumbbell in each hand resting on top of your thighs. The palms of your hands will be facing each other.",
-      "Then, using your thighs to help raise the dumbbells up, lift the dumbbells one at a time so that you can hold them in front of you at shoulder width.",
-      "Once at shoulder width, rotate your wrists forward so that the palms of your hands are facing away from you. The dumbbells should be just to the sides of your chest, with your upper arm and forearm creating a 90 degree angle. Be sure to maintain full control of the dumbbells at all times. This will be your starting position.",
-      "Then, as you breathe out, use your chest to push the dumbbells up. Lock your arms at the top of the lift and squeeze your chest, hold for a second and then begin coming down slowly. Tip: Ideally, lowering the weight should take about twice as long as raising it.",
-      "Repeat the movement for the prescribed amount of repetitions of your training program."
+      "Лягте на скамью, гантели у груди, ладони вперёд.",
+      "На вдохе опустите гантели по бокам груди до растяжения грудных.",
+      "На выдохе выжмите гантели вверх, сводя их над грудью."
     ]
   },
   {
@@ -296,11 +292,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "beginner",
     "instructions": [
-      "Lie back on an incline bench. Using a medium-width grip (a grip that creates a 90-degree angle in the middle of the movement between the forearms and the upper arms), lift the bar from the rack and hold it straight over you with your arms locked. This will be your starting position.",
-      "As you breathe in, come down slowly until you feel the bar on you upper chest.",
-      "After a second pause, bring the bar back to the starting position as you breathe out and push the bar using your chest muscles. Lock your arms in the contracted position, squeeze your chest, hold for a second and then start coming down slowly again. Tip: it should take at least twice as long to go down than to come up.",
-      "Repeat the movement for the prescribed amount of repetitions.",
-      "When you are done, place the bar back in the rack."
+      "Скамья под наклоном 30–45°, штанга хватом чуть шире плеч.",
+      "На вдохе опустите штангу к верху груди, локти под углом ~45°.",
+      "На выдохе выжмите штангу вверх усилием верха груди."
     ]
   },
   {
@@ -316,11 +310,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
-      "Lie down on a flat bench with a dumbbell on each hand resting on top of your thighs. The palms of your hand will be facing each other.",
-      "Then using your thighs to help raise the dumbbells, lift the dumbbells one at a time so you can hold them in front of you at shoulder width with the palms of your hands facing each other. Raise the dumbbells up like you're pressing them, but stop and hold just before you lock out. This will be your starting position.",
-      "With a slight bend on your elbows in order to prevent stress at the biceps tendon, lower your arms out at both sides in a wide arc until you feel a stretch on your chest. Breathe in as you perform this portion of the movement. Tip: Keep in mind that throughout the movement, the arms should remain stationary; the movement should only occur at the shoulder joint.",
-      "Return your arms back to the starting position as you squeeze your chest muscles and breathe out. Tip: Make sure to use the same arc of motion used to lower the weights.",
-      "Hold for a second at the contracted position and repeat the movement for the prescribed amount of repetitions."
+      "Лягте на скамью, гантели над грудью, локти слегка согнуты.",
+      "На вдохе разведите руки в стороны по дуге до растяжения грудных.",
+      "На выдохе сведите гантели над грудью тем же движением по дуге."
     ]
   },
   {
@@ -339,10 +331,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "beginner",
     "instructions": [
-      "Lie on the floor face down and place your hands about 36 inches apart while holding your torso up at arms length.",
-      "Next, lower yourself downward until your chest almost touches the floor as you inhale.",
-      "Now breathe out and press your upper body back up to the starting position while squeezing your chest.",
-      "After a brief pause at the top contracted position, you can begin to lower yourself downward again for as many repetitions as needed."
+      "Упор лёжа, ладони чуть шире плеч, тело прямая линия от головы до пяток.",
+      "На вдохе опуститесь, сгибая локти, почти до касания грудью пола.",
+      "На выдохе выжмите себя вверх, не прогибая поясницу."
     ]
   },
   {
@@ -361,10 +352,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "intermediate",
     "instructions": [
-      "For this exercise you will need access to parallel bars. To get yourself into the starting position, hold your body at arms length (arms locked) above the bars.",
-      "While breathing in, lower yourself slowly with your torso leaning forward around 30 degrees or so and your elbows flared out slightly until you feel a slight stretch in the chest.",
-      "Once you feel the stretch, use your chest to bring your body back to the starting position as you breathe out. Tip: Remember to squeeze the chest at the top of the movement for a second.",
-      "Repeat the movement for the prescribed amount of repetitions."
+      "На брусьях, руки прямые, корпус слегка наклонён вперёд (акцент на грудь).",
+      "На вдохе опуститесь, сгибая локти, до растяжения груди.",
+      "На выдохе выжмите себя вверх до прямых рук."
     ]
   },
   {
@@ -380,11 +370,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
-      "Sit on the machine with your back flat on the pad.",
-      "Take hold of the handles. Tip: Your upper arms should be positioned parallel to the floor; adjust the machine accordingly. This will be your starting position.",
-      "Push the handles together slowly as you squeeze your chest in the middle. Breathe out during this part of the motion and hold the contraction for a second.",
-      "Return back to the starting position slowly as you inhale until your chest muscles are fully stretched.",
-      "Repeat for the recommended amount of repetitions."
+      "Сядьте в тренажёр, предплечья на подушках, локти на уровне плеч.",
+      "На выдохе сведите руки перед собой, сжимая грудные.",
+      "На вдохе плавно разведите руки в исходное, контролируя растяжение."
     ]
   },
   {
@@ -404,10 +392,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "beginner",
     "instructions": [
-      "Holding a barbell with a pronated grip (palms facing down), bend your knees slightly and bring your torso forward, by bending at the waist, while keeping the back straight until it is almost parallel to the floor. Tip: Make sure that you keep the head up. The barbell should hang directly in front of you as your arms hang perpendicular to the floor and your torso. This is your starting position.",
-      "Now, while keeping the torso stationary, breathe out and lift the barbell to you. Keep the elbows close to the body and only use the forearms to hold the weight. At the top contracted position, squeeze the back muscles and hold for a brief pause.",
-      "Then inhale and slowly lower the barbell back to the starting position.",
-      "Repeat for the recommended amount of repetitions."
+      "Наклонитесь от таза, спина прямая, штанга в прямом хвате чуть шире плеч.",
+      "На выдохе подтяните штангу к низу живота, сводя лопатки, локти вдоль тела.",
+      "На вдохе плавно опустите штангу, контролируя вес."
     ]
   },
   {
@@ -427,13 +414,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "beginner",
     "instructions": [
-      "Choose a flat bench and place a dumbbell on each side of it.",
-      "Place the right leg on top of the end of the bench, bend your torso forward from the waist until your upper body is parallel to the floor, and place your right hand on the other end of the bench for support.",
-      "Use the left hand to pick up the dumbbell on the floor and hold the weight while keeping your lower back straight. The palm of the hand should be facing your torso. This will be your starting position.",
-      "Pull the resistance straight up to the side of your chest, keeping your upper arm close to your side and keeping the torso stationary. Breathe out as you perform this step. Tip: Concentrate on squeezing the back muscles once you reach the full contracted position. Also, make sure that the force is performed with the back muscles and not the arms. Finally, the upper torso should remain stationary and only the arms should move. The forearms should do no other work except for holding the dumbbell; therefore do not try to pull the dumbbell up using the forearms.",
-      "Lower the resistance straight down to the starting position. Breathe in as you perform this step.",
-      "Repeat the movement for the specified amount of repetitions.",
-      "Switch sides and repeat again with the other arm."
+      "Колено и рука на скамье, спина прямая, гантель в свободной руке.",
+      "На выдохе подтяните гантель к поясу, отводя локоть назад и сводя лопатку.",
+      "На вдохе плавно опустите гантель. Повторите на другую сторону."
     ]
   },
   {
@@ -452,11 +435,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "beginner",
     "instructions": [
-      "Grab the pull-up bar with the palms facing forward using the prescribed grip. Note on grips: For a wide grip, your hands need to be spaced out at a distance wider than your shoulder width. For a medium grip, your hands need to be spaced out at a distance equal to your shoulder width and for a close grip at a distance smaller than your shoulder width.",
-      "As you have both arms extended in front of you holding the bar at the chosen grip width, bring your torso back around 30 degrees or so while creating a curvature on your lower back and sticking your chest out. This is your starting position.",
-      "Pull your torso up until the bar touches your upper chest by drawing the shoulders and the upper arms down and back. Exhale as you perform this portion of the movement. Tip: Concentrate on squeezing the back muscles once you reach the full contracted position. The upper torso should remain stationary as it moves through space and only the arms should move. The forearms should do no other work other than hold the bar.",
-      "After a second on the contracted position, start to inhale and slowly lower your torso back to the starting position when your arms are fully extended and the lats are fully stretched.",
-      "Repeat this motion for the prescribed amount of repetitions."
+      "Вис на перекладине прямым хватом чуть шире плеч.",
+      "На выдохе подтянитесь, сводя лопатки, до подбородка над перекладиной.",
+      "На вдохе плавно опуститесь до полного виса."
     ]
   },
   {
@@ -476,12 +457,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "beginner",
     "instructions": [
-      "Sit down on a pull-down machine with a wide bar attached to the top pulley. Make sure that you adjust the knee pad of the machine to fit your height. These pads will prevent your body from being raised by the resistance attached to the bar.",
-      "Grab the bar with the palms facing forward using the prescribed grip. Note on grips: For a wide grip, your hands need to be spaced out at a distance wider than shoulder width. For a medium grip, your hands need to be spaced out at a distance equal to your shoulder width and for a close grip at a distance smaller than your shoulder width.",
-      "As you have both arms extended in front of you holding the bar at the chosen grip width, bring your torso back around 30 degrees or so while creating a curvature on your lower back and sticking your chest out. This is your starting position.",
-      "As you breathe out, bring the bar down until it touches your upper chest by drawing the shoulders and the upper arms down and back. Tip: Concentrate on squeezing the back muscles once you reach the full contracted position. The upper torso should remain stationary and only the arms should move. The forearms should do no other work except for holding the bar; therefore do not try to pull down the bar using the forearms.",
-      "After a second at the contracted position squeezing your shoulder blades together, slowly raise the bar back to the starting position when your arms are fully extended and the lats are fully stretched. Inhale during this portion of the movement.",
-      "Repeat this motion for the prescribed amount of repetitions."
+      "Сядьте в тренажёр, возьмите рукоять широким хватом, корпус слегка отклонён.",
+      "На выдохе притяните рукоять к верху груди, сводя лопатки.",
+      "На вдохе плавно верните рукоять вверх."
     ]
   },
   {
@@ -501,11 +479,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "beginner",
     "instructions": [
-      "For this exercise you will need access to a low pulley row machine with a V-bar. Note: The V-bar will enable you to have a neutral grip where the palms of your hands face each other. To get into the starting position, first sit down on the machine and place your feet on the front platform or crossbar provided making sure that your knees are slightly bent and not locked.",
-      "Lean over as you keep the natural alignment of your back and grab the V-bar handles.",
-      "With your arms extended pull back until your torso is at a 90-degree angle from your legs. Your back should be slightly arched and your chest should be sticking out. You should be feeling a nice stretch on your lats as you hold the bar in front of you. This is the starting position of the exercise.",
-      "Keeping the torso stationary, pull the handles back towards your torso while keeping the arms close to it until you touch the abdominals. Breathe out as you perform that movement. At that point you should be squeezing your back muscles hard. Hold that contraction for a second and slowly go back to the original position while breathing in.",
-      "Repeat for the recommended amount of repetitions."
+      "Сядьте, стопы в упор, возьмите рукоять, спина прямая.",
+      "На выдохе притяните рукоять к животу, сводя лопатки, локти вдоль тела.",
+      "На вдохе плавно отпустите рукоять вперёд, не округляя спину."
     ]
   },
   {
@@ -530,11 +506,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "intermediate",
     "instructions": [
-      "Stand in front of a loaded barbell.",
-      "While keeping the back as straight as possible, bend your knees, bend forward and grasp the bar using a medium (shoulder width) overhand grip. This will be the starting position of the exercise. Tip: If it is difficult to hold on to the bar with this grip, alternate your grip or use wrist straps.",
-      "While holding the bar, start the lift by pushing with your legs while simultaneously getting your torso to the upright position as you breathe out. In the upright position, stick your chest out and contract the back by bringing the shoulder blades back. Think of how the soldiers in the military look when they are in standing in attention.",
-      "Go back to the starting position by bending at the knees while simultaneously leaning the torso forward at the waist while keeping the back straight. When the weights on the bar touch the floor you are back at the starting position and ready to perform another repetition.",
-      "Perform the amount of repetitions prescribed in the program."
+      "Штанга у голеней, хват чуть шире плеч, спина прямая, таз отведён.",
+      "На выдохе поднимите штангу, разгибая ноги и корпус, гриф вдоль ног.",
+      "На вдохе опустите штангу тем же движением, отводя таз назад."
     ]
   },
   {
@@ -554,9 +528,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "intermediate",
     "instructions": [
-      "Begin with a bar on a rack at shoulder height. Rack the bar across the rear of your shoulders as you would a power squat, not on top of your shoulders. Keep your back tight, shoulder blades pinched together, and your knees slightly bent. Step back from the rack.",
-      "Begin by bending at the hips, moving them back as you bend over to near parallel. Keep your back arched and your cervical spine in proper alignment.",
-      "Reverse the motion by extending through the hips with your glutes and hamstrings. Continue until you have returned to the starting position."
+      "Штанга на трапециях, ноги на ширине плеч, колени слегка согнуты.",
+      "Наклонитесь от таза вперёд, спина прямая, до растяжения задней поверхности бедра.",
+      "Выпрямитесь усилием ягодиц и бицепса бедра."
     ]
   },
   {
