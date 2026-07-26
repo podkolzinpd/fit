@@ -407,7 +407,8 @@ test('schedule shows week strip and hour grid with day/week navigation', async (
   await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
+  // Заголовок «Расписание» намеренно скрыт (sr-only) — он дублирует таб-бар;
+  // признак экрана — счётчик тренировок и недельная лента.
   await expect(page.locator('.schedule-count')).toHaveText(/\d+ трениров/)
 
   // Week strip has 7 day buttons, hour grid is rendered.
@@ -448,7 +449,7 @@ test('расписание: создание тренировки из расп�
 
   // Идём в расписание и создаём тренировку прямо оттуда.
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
+  await expect(page.locator('.schedule-count')).toBeVisible()
   await page.getByRole('link', { name: 'Новая тренировка' }).click()
   // Форма открылась; дата предзаполнена (не пустая), клиента выбираем.
   await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
@@ -459,6 +460,42 @@ test('расписание: создание тренировки из расп�
   await page.getByRole('button', { name: /Присед со штангой/ }).first().click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+})
+
+test('расписание: карточка события — время, имя клиента, до двух упражнений', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByLabel('Имя').fill('Карточка Клиент')
+  await page.getByLabel('Начальный вес, кг').fill('80')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Карточка Клиент' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Расписание', exact: true }).click()
+  await page.getByRole('link', { name: 'Новая тренировка' }).click()
+  await page.getByLabel('Клиент').selectOption({ label: 'Карточка Клиент' })
+  await page.getByLabel('Время').fill('09:00')
+  // Три упражнения — на карточке должны показаться максимум два и « …».
+  for (const q of ['присед со штангой', 'жим ногами', 'подтягивания']) {
+    await page.getByRole('button', { name: '＋ Упражнение' }).click()
+    await page.getByLabel('Поиск упражнения').fill(q)
+    await page.locator('.picker-item').first().click()
+  }
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Расписание', exact: true }).click()
+  const card = page.locator('.day-grid-event').filter({ hasText: 'Карточка Клиент' }).first()
+  await expect(card.locator('.day-grid-event-time')).toHaveText('09:00')
+  await expect(card.locator('.day-grid-event-name')).toHaveText('Карточка Клиент')
+  // Превью упражнений: перечисляем не больше двух названий, дальше « …».
+  const groups = card.locator('.day-grid-event-groups')
+  await expect(groups).toContainText('…')
+  await expect(groups).not.toContainText('Подтягивания')
 })
 
 test('комментарий тренера к упражнению: план → live → история', async ({ page }) => {

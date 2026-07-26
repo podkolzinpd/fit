@@ -62,7 +62,7 @@ export function SchedulePage() {
     scrollRef.current.scrollTop = (Math.min(firstStart, 7 * 60) / 60) * HOUR_HEIGHT
   }, [query.isLoading, selected])
 
-  return <Page className="schedule-page" title="Расписание" action={
+  return <Page className="schedule-page" title="Расписание" hideTitle action={
      <div className="schedule-actions">
        <span className="schedule-count">{query.isLoading ? 'Загружаем…' : workoutCountLabel(totalCount)}</span>
        <button type="button" className="secondary schedule-today" disabled={selected === today} onClick={() => selectDate(today)}>Сегодня</button>
@@ -100,11 +100,13 @@ export function SchedulePage() {
             const endMin = workout.endTime ? minutesOf(workout.endTime.slice(0, 5)) : startMin + 60
             const top = (startMin / 60) * HOUR_HEIGHT
             const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 28)
-            const exercises = exerciseSummary(workout).map((e) => e.name).join(', ')
+            // Плашка: время → имя клиента → 2 упражнения и «…», если их больше.
+            const names = exerciseSummary(workout).map((e) => e.name)
+            const preview = names.slice(0, 2).join(', ') + (names.length > 2 ? ' …' : '')
             return <Link key={workout.id} className={`day-grid-event ${workout.status}`} style={{ top, height }} to={`/workouts/${workout.id}`}>
               <span className="day-grid-event-time">{eventTime(workout)}</span>
               <span className="day-grid-event-name">{workout.clientName}</span>
-              {exercises && <span className="day-grid-event-groups">{exercises}</span>}
+              {names.length > 0 && <span className="day-grid-event-groups">{preview}</span>}
             </Link>
           })}
          </div>

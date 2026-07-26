@@ -1,15 +1,17 @@
 import type { PropsWithChildren, ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-export function Page({ title, action, back, center, className, children }: PropsWithChildren<{
-  title: string; action?: ReactNode; back?: string | number; center?: boolean; className?: string
+export function Page({ title, action, back, center, hideTitle, className, children }: PropsWithChildren<{
+  title: string; action?: ReactNode; back?: string | number; center?: boolean; hideTitle?: boolean; className?: string
 }>) {
   const navigate = useNavigate()
   const classes = ['page', center ? 'page-center' : '', className].filter(Boolean).join(' ')
   return <main className={classes}>
     <header className="page-header">
       {back !== undefined && <button type="button" className="page-back" aria-label="Назад" onClick={() => navigate(back as never)}>←</button>}
-      <h1>{title}</h1>
+      {/* hideTitle — заголовок дублируется таб-баром (напр. «Расписание»);
+          прячем визуально, но оставляем для скринридеров. */}
+      <h1 className={hideTitle ? 'sr-only' : undefined}>{title}</h1>
       {action}
     </header>
     {children}
