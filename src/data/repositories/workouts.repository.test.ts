@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, mergeBlockWithNext, moveBlock, muscleGroupLabels, replaceExercise, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockType, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, mergeBlockWithNext, moveBlock, muscleGroupLabels, replaceExercise, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockType, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -248,6 +248,22 @@ describe('muscleGroupLabels', () => {
       ],
     }
     expect(muscleGroupLabels(workout)).toEqual(['Ноги', 'Грудь'])
+  })
+})
+
+describe('exerciseSummary', () => {
+  const wk = (exercises: Workout['exercises']): Workout => ({ ...workoutWith('2026-07-20', 'squat', 'strength', []), exercises })
+  const ex = (id: string, name: string, comment?: string): Workout['exercises'][number] =>
+    ({ id, source: 'system', ref: id, name, muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: id, blockType: 'single', blockRounds: 1, trainerComment: comment, sets: [] })
+
+  it('возвращает список названий упражнений без дублей', () => {
+    expect(exerciseSummary(wk([ex('a', 'Присед'), ex('b', 'Жим'), ex('c', 'Присед')])).exerciseNames).toEqual(['Присед', 'Жим'])
+  })
+  it('берёт первый комментарий тренера для preview', () => {
+    expect(exerciseSummary(wk([ex('a', 'Присед'), ex('b', 'Жим', 'Держи спину')])).comment).toBe('Держи спину')
+  })
+  it('нет комментариев → comment = null', () => {
+    expect(exerciseSummary(wk([ex('a', 'Присед')])).comment).toBeNull()
   })
 })
 

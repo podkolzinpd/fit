@@ -5,7 +5,7 @@ import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'rec
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { computeYDomain } from '../progress/ProgressChart'
-import { BLOCK_TYPE_LABELS, chartUnitFor, copyWorkout, exerciseChartPoints, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
+import { BLOCK_TYPE_LABELS, chartUnitFor, copyWorkout, exerciseChartPoints, exerciseSummary, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -86,7 +86,7 @@ export function SchedulePage() {
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       <div className="day-grid-scroll" ref={scrollRef}>
         {untimed.length > 0 && <div className="day-untimed">{untimed.map((workout) => (
-          <Link key={workout.id} className="card" to={`/workouts/${workout.id}`}><div><strong>{workout.clientName}</strong><p>{muscleGroupLabels(workout).join(', ') || 'без времени'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
+          <Link key={workout.id} className="card" to={`/workouts/${workout.id}`}><div><strong>{workout.clientName}</strong><p>{exerciseSummary(workout).exerciseNames.join(', ') || 'без упражнений'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
         ))}</div>}
         <div className="day-grid" style={{ height: HOURS.length * HOUR_HEIGHT }}>
           {HOURS.map((hour) => (
@@ -100,11 +100,11 @@ export function SchedulePage() {
             const endMin = workout.endTime ? minutesOf(workout.endTime.slice(0, 5)) : startMin + 60
             const top = (startMin / 60) * HOUR_HEIGHT
             const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 28)
-            const groups = muscleGroupLabels(workout).join(', ')
+            const exercises = exerciseSummary(workout).exerciseNames.join(', ')
             return <Link key={workout.id} className={`day-grid-event ${workout.status}`} style={{ top, height }} to={`/workouts/${workout.id}`}>
               <span className="day-grid-event-time">{eventTime(workout)}</span>
               <span className="day-grid-event-name">{workout.clientName}</span>
-              {groups && <span className="day-grid-event-groups">{groups}</span>}
+              {exercises && <span className="day-grid-event-groups">{exercises}</span>}
             </Link>
           })}
          </div>
@@ -130,7 +130,8 @@ export function ClientWorkoutsPage() {
     const duration = workoutDurationLabel(workout.startedAt, workout.completedAt)
     const tonnage = workoutTonnage(workout)
     const meta = workout.status === 'done' ? [duration, tonnage > 0 ? tonnageLabel(tonnage) : null].filter(Boolean).join(' · ') : ''
-    return <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{muscleGroupLabels(workout).join(', ') || 'Без упражнений'}</p>{meta && <p className="card-meta">{meta}</p>}</div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
+    const summary = exerciseSummary(workout)
+    return <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{summary.exerciseNames.length ? <>{summary.exerciseNames.join(', ')}{summary.comment && ' 💬'}</> : 'Без упражнений'}</p>{summary.comment && <p className="card-comment">💬 {summary.comment}</p>}{meta && <p className="card-meta">{meta}</p>}</div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
   })}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
 }
 

@@ -365,6 +365,23 @@ export function muscleGroupLabels(workout: Workout): string[] {
   return labels
 }
 
+// Краткая сводка тренировки для карточки истории/расписания: список названий
+// упражнений (по порядку, без дублей) + первый комментарий тренера для preview.
+export interface WorkoutSummaryView {
+  exerciseNames: string[]
+  comment: string | null
+}
+export function exerciseSummary(workout: Workout): WorkoutSummaryView {
+  const seen = new Set<string>()
+  const exerciseNames: string[] = []
+  let comment: string | null = null
+  for (const exercise of workout.exercises) {
+    if (!seen.has(exercise.name)) { seen.add(exercise.name); exerciseNames.push(exercise.name) }
+    if (comment === null && exercise.trainerComment) comment = exercise.trainerComment
+  }
+  return { exerciseNames, comment }
+}
+
 // Body Mass Index = weight(kg) / height(m)². Null when data is missing/invalid.
 export function bmiValue(heightCm: number, weightKg: number | null): number | null {
   if (!weightKg || weightKg <= 0 || !heightCm || heightCm <= 0) return null

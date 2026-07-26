@@ -73,6 +73,7 @@ p { margin: 6px 0 }
 .summary.done-summary-3 { grid-template-columns: repeat(3, 1fr) }
 .summary.done-summary-3 strong { font-size: 14px }
 .card-meta { color: var(--muted); font-size: 12px; margin-top: 2px }
+.card-comment { color: var(--muted); font-size: 12px; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical }
 .day-grid-event-groups { font-size: 11px; color: #c9c2e6; line-height: 1.15 }
 .summary.stats-3 { grid-template-columns: repeat(3, 1fr) }
 .client-actions { display: flex; flex-direction: column; gap: 10px; margin: 20px 0 }
