@@ -1,11 +1,14 @@
-import type { BlockType, ClientStats, ExerciseSnapshot, InputKind, Workout, WorkoutDraft, WorkoutExercise, WorkoutExerciseDraft, WorkoutSet, WorkoutSetDraft, WorkoutSummary } from '../../shared/domain'
+import type { BlockPreset, BlockType, ClientStats, ExerciseSnapshot, InputKind, Workout, WorkoutDraft, WorkoutExercise, WorkoutExerciseDraft, WorkoutSet, WorkoutSetDraft, WorkoutSummary } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 
 export interface ExerciseBlock {
   blockId: string
   blockType: BlockType
+  blockPreset: BlockPreset
   blockRounds: number
+  restBetweenExercisesSec: number
+  restBetweenRoundsSec: number
   exercises: WorkoutExercise[]
 }
 
@@ -21,7 +24,7 @@ export function groupIntoBlocks(exercises: WorkoutExercise[]): ExerciseBlock[] {
     if (existing) {
       existing.exercises.push(exercise)
     } else {
-      const block: ExerciseBlock = { blockId: exercise.blockId, blockType: exercise.blockType, blockRounds: exercise.blockRounds, exercises: [exercise] }
+      const block: ExerciseBlock = { blockId: exercise.blockId, blockType: exercise.blockType, blockPreset: exercise.blockPreset, blockRounds: exercise.blockRounds, restBetweenExercisesSec: exercise.restBetweenExercisesSec, restBetweenRoundsSec: exercise.restBetweenRoundsSec, exercises: [exercise] }
       byId.set(exercise.blockId, block)
       blocks.push(block)
     }
@@ -72,12 +75,21 @@ export function currentRoundIndex(rounds: BlockRound[]): number {
   return idx === -1 ? Math.max(0, rounds.length - 1) : idx
 }
 
-export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
-  single: 'Обычный',
-  superset: 'Суперсет',
-  triset: 'Трисет',
+// Ярлык группы определяется пресетом (Сет/Круговая), одиночное — «Обычный».
+export const BLOCK_PRESET_LABELS: Record<BlockPreset, string> = {
+  set: 'Сет',
   circuit: 'Круговая',
 }
+export function blockLabel(blockType: BlockType, blockPreset: BlockPreset): string {
+  return blockType === 'single' ? 'Обычный' : BLOCK_PRESET_LABELS[blockPreset]
+}
+
+// Дефолты отдыха по пресету (сек): между упражнениями / между кругами.
+export const PRESET_REST_DEFAULTS: Record<BlockPreset, { betweenExercises: number; betweenRounds: number }> = {
+  set: { betweenExercises: 0, betweenRounds: 90 },
+  circuit: { betweenExercises: 15, betweenRounds: 60 },
+}
+export const DEFAULT_REST_BETWEEN_SETS = 90
 
 // --- Блоки на черновике (форма плана) -------------------------------------
 // Черновик упражнений может не иметь blockId/blockType; хелперы ниже работают
@@ -86,7 +98,10 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
 export interface DraftBlock {
   blockId: string
   blockType: BlockType
+  blockPreset: BlockPreset
   blockRounds: number
+  restBetweenExercisesSec: number
+  restBetweenRoundsSec: number
   items: { exercise: WorkoutExerciseDraft; index: number }[]
 }
 
@@ -134,7 +149,7 @@ export function groupDraftsIntoBlocks(exercises: WorkoutExerciseDraft[]): DraftB
     if (existing) {
       existing.items.push({ exercise, index })
     } else {
-      const block: DraftBlock = { blockId, blockType: exercise.blockType ?? 'single', blockRounds: exercise.blockRounds ?? 1, items: [{ exercise, index }] }
+      const block: DraftBlock = { blockId, blockType: exercise.blockType ?? 'single', blockPreset: exercise.blockPreset ?? 'set', blockRounds: exercise.blockRounds ?? 1, restBetweenExercisesSec: exercise.restBetweenExercisesSec ?? 0, restBetweenRoundsSec: exercise.restBetweenRoundsSec ?? 90, items: [{ exercise, index }] }
       byId.set(blockId, block)
       blocks.push(block)
     }
@@ -156,9 +171,9 @@ export function syncBlockRounds(exercises: WorkoutExerciseDraft[], blockId: stri
   })
 }
 
-// Объединяет блок упражнения по индексу со следующим упражнением в один блок
-// (по умолчанию суперсет). Общий blockId = у первого блока; тип: если один из
-// блоков уже многоэлементный — берём его тип, иначе superset.
+// Объединяет блок упражнения по индексу со следующим в одну группу. Если один
+// из блоков уже группа — сохраняем его пресет/отдых, иначе новый пресет «Сет»
+// с дефолтами отдыха.
 export function mergeBlockWithNext(exercises: WorkoutExerciseDraft[], index: number): WorkoutExerciseDraft[] {
   const list = ensureBlockIds(exercises)
   const current = list[index]
@@ -166,16 +181,16 @@ export function mergeBlockWithNext(exercises: WorkoutExerciseDraft[], index: num
   if (!current || !next || current.blockId === next.blockId) return list
   const currentSize = list.filter((e) => e.blockId === current.blockId).length
   const nextSize = list.filter((e) => e.blockId === next.blockId).length
-  const currentType = current.blockType ?? 'single'
-  const nextType = next.blockType ?? 'single'
-  const targetType: BlockType = currentSize > 1 && currentType !== 'single' ? currentType
-    : nextSize > 1 && nextType !== 'single' ? nextType
-    : 'superset'
+  const seed = currentSize > 1 ? current : nextSize > 1 ? next : null
+  const preset: BlockPreset = seed?.blockPreset ?? 'set'
+  const defaults = PRESET_REST_DEFAULTS[preset]
   const targetId = current.blockId!
   const fromId = next.blockId!
   const merged = list.map((exercise) =>
     exercise.blockId === targetId || exercise.blockId === fromId
-      ? { ...exercise, blockId: targetId, blockType: targetType }
+      ? { ...exercise, blockId: targetId, blockType: 'group' as BlockType, blockPreset: preset,
+          restBetweenExercisesSec: seed?.restBetweenExercisesSec ?? defaults.betweenExercises,
+          restBetweenRoundsSec: seed?.restBetweenRoundsSec ?? defaults.betweenRounds }
       : exercise,
   )
   // Раунды блока = максимум подходов среди упражнений блока (1 круг = 1 подход).
@@ -191,11 +206,27 @@ export function splitBlock(exercises: WorkoutExerciseDraft[], blockId: string): 
   )
 }
 
-// Меняет тип блока для всех упражнений с данным blockId.
-export function setBlockType(exercises: WorkoutExerciseDraft[], blockId: string, blockType: BlockType): WorkoutExerciseDraft[] {
+// Меняет пресет группы (Сет/Круговая) и подставляет дефолты отдыха пресета.
+export function setBlockPreset(exercises: WorkoutExerciseDraft[], blockId: string, preset: BlockPreset): WorkoutExerciseDraft[] {
+  const defaults = PRESET_REST_DEFAULTS[preset]
   return ensureBlockIds(exercises).map((exercise) =>
-    exercise.blockId === blockId ? { ...exercise, blockType } : exercise,
+    exercise.blockId === blockId
+      ? { ...exercise, blockPreset: preset, restBetweenExercisesSec: defaults.betweenExercises, restBetweenRoundsSec: defaults.betweenRounds }
+      : exercise,
   )
+}
+
+// Задаёт произвольное время отдыха у блока (переопределяет дефолты пресета).
+export function setBlockRest(exercises: WorkoutExerciseDraft[], blockId: string, patch: { betweenExercises?: number; betweenRounds?: number; betweenSets?: number }): WorkoutExerciseDraft[] {
+  return ensureBlockIds(exercises).map((exercise) => {
+    if (exercise.blockId !== blockId) return exercise
+    return {
+      ...exercise,
+      ...(patch.betweenExercises !== undefined ? { restBetweenExercisesSec: Math.max(0, patch.betweenExercises) } : {}),
+      ...(patch.betweenRounds !== undefined ? { restBetweenRoundsSec: Math.max(0, patch.betweenRounds) } : {}),
+      ...(patch.betweenSets !== undefined ? { restBetweenSetsSec: Math.max(0, patch.betweenSets) } : {}),
+    }
+  })
 }
 
 // Перемещает блок (целиком, со всеми его упражнениями) на одну позицию вверх/вниз,
@@ -460,7 +491,8 @@ export function copyWorkout(source: Workout, workoutDate = source.workoutDate): 
       source: exercise.source, ref: exercise.ref, customExerciseId: exercise.customExerciseId,
       name: exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind,
       position: exercise.position,
-      blockId: nextBlockId(exercise.blockId), blockType: exercise.blockType, blockRounds: exercise.blockRounds,
+      blockId: nextBlockId(exercise.blockId), blockType: exercise.blockType, blockPreset: exercise.blockPreset, blockRounds: exercise.blockRounds,
+      restBetweenExercisesSec: exercise.restBetweenExercisesSec, restBetweenRoundsSec: exercise.restBetweenRoundsSec, restBetweenSetsSec: exercise.restBetweenSetsSec,
       trainerComment: exercise.trainerComment,
       sets: exercise.sets.map((set) => ({ position: set.position, weightKg: set.weightKg,
         reps: set.reps, durationMin: set.durationMin, distanceKm: set.distanceKm })),

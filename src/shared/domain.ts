@@ -5,8 +5,11 @@ export type WorkoutStatus = 'planned' | 'in_progress' | 'done'
 export type Gender = 'male' | 'female'
 export type MuscleGroup = 'legs' | 'chest' | 'back' | 'shoulders' | 'arms' | 'core' | 'cardio' | 'other'
 export type InputKind = 'strength' | 'distance' | 'reps'
-// Тип блока упражнений внутри тренировки: одиночное, суперсет, трисет, круговая.
-export type BlockType = 'single' | 'superset' | 'triset' | 'circuit'
+// Тип блока: одиночное упражнение или объединённая группа. Механика группы одна
+// (упражнения по кругу); «Сет» и «Круговая» — пресеты (блок различаются только
+// названием и дефолтами отдыха).
+export type BlockType = 'single' | 'group'
+export type BlockPreset = 'set' | 'circuit'
 
 export interface SessionActor {
   userId: UUID
@@ -77,7 +80,11 @@ export interface WorkoutExerciseDraft extends ExerciseSnapshot {
   position: number
   blockId?: UUID
   blockType?: BlockType
+  blockPreset?: BlockPreset
   blockRounds?: number
+  restBetweenExercisesSec?: number
+  restBetweenRoundsSec?: number
+  restBetweenSetsSec?: number
   trainerComment?: string
   sets: WorkoutSetDraft[]
 }
@@ -112,7 +119,11 @@ export interface WorkoutExercise extends ExerciseSnapshot {
   position: number
   blockId: UUID
   blockType: BlockType
+  blockPreset: BlockPreset
   blockRounds: number
+  restBetweenExercisesSec: number
+  restBetweenRoundsSec: number
+  restBetweenSetsSec: number
   trainerComment?: string
   sets: WorkoutSet[]
 }

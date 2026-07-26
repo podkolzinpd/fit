@@ -348,7 +348,7 @@ test('план: два упражнения объединяются в супе
   // Объединяем первое упражнение со следующим в блок → появляется селектор типа.
   await page.getByRole('button', { name: /Объединить со следующим/ }).first().click()
   await expect(page.getByLabel('Тип блока')).toBeVisible()
-  await expect(page.getByLabel('Тип блока')).toHaveValue('superset')
+  await expect(page.getByLabel('Тип блока')).toHaveValue('set')
   // Задаём 2 круга → форма раскладывается по кругам: «Круг 1» и «Круг 2»,
   // каждый содержит оба упражнения; кнопки «＋ Подход» внутри блока нет.
   await page.getByLabel('Кругов').fill('2')
@@ -357,8 +357,8 @@ test('план: два упражнения объединяются в супе
   await expect(page.getByRole('button', { name: '＋ Подход' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
-  // В просмотре тренировки виден бейдж «Суперсет · 2 кр.».
-  await expect(page.locator('.block-badge').first()).toContainText('Суперсет · 2 кр.')
+  // В просмотре тренировки виден бейдж «Сет · 2 кр.».
+  await expect(page.locator('.block-badge').first()).toContainText('Сет · 2 кр.')
 
   // Live идёт по кругам: круг 1 (упр.A → упр.B), потом круг 2. Счётчик показывает
   // текущий круг; отдых — после завершения круга (последнего упражнения круга).

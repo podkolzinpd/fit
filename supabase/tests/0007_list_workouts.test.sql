@@ -72,14 +72,14 @@ select save_workout(jsonb_build_object(
   'clientId', '7a000000-0000-4000-8000-000000000001',
   'workoutDate', '2026-07-28',
   'exercises', jsonb_build_array(
-    jsonb_build_object('position', 0, 'source', 'system', 'ref', 'squat', 'name', 'Присед', 'muscleGroup', 'legs', 'inputKind', 'strength', 'blockId', 'aaaaaaaa-0000-4000-8000-000000000001', 'blockType', 'superset', 'blockRounds', 3, 'sets', jsonb_build_array(jsonb_build_object('position', 0, 'weightKg', 60, 'reps', 8), jsonb_build_object('position', 1, 'weightKg', 60, 'reps', 8), jsonb_build_object('position', 2, 'weightKg', 60, 'reps', 8))),
-    jsonb_build_object('position', 1, 'source', 'system', 'ref', 'press', 'name', 'Жим', 'muscleGroup', 'chest', 'inputKind', 'strength', 'blockId', 'aaaaaaaa-0000-4000-8000-000000000001', 'blockType', 'superset', 'blockRounds', 3, 'sets', jsonb_build_array(jsonb_build_object('position', 0, 'weightKg', 40, 'reps', 10), jsonb_build_object('position', 1, 'weightKg', 40, 'reps', 10), jsonb_build_object('position', 2, 'weightKg', 40, 'reps', 10)))
+    jsonb_build_object('position', 0, 'source', 'system', 'ref', 'squat', 'name', 'Присед', 'muscleGroup', 'legs', 'inputKind', 'strength', 'blockId', 'aaaaaaaa-0000-4000-8000-000000000001', 'blockType', 'group', 'blockRounds', 3, 'sets', jsonb_build_array(jsonb_build_object('position', 0, 'weightKg', 60, 'reps', 8), jsonb_build_object('position', 1, 'weightKg', 60, 'reps', 8), jsonb_build_object('position', 2, 'weightKg', 60, 'reps', 8))),
+    jsonb_build_object('position', 1, 'source', 'system', 'ref', 'press', 'name', 'Жим', 'muscleGroup', 'chest', 'inputKind', 'strength', 'blockId', 'aaaaaaaa-0000-4000-8000-000000000001', 'blockType', 'group', 'blockRounds', 3, 'sets', jsonb_build_array(jsonb_build_object('position', 0, 'weightKg', 40, 'reps', 10), jsonb_build_object('position', 1, 'weightKg', 40, 'reps', 10), jsonb_build_object('position', 2, 'weightKg', 40, 'reps', 10)))
   )
 ), null);
 select is(
-  (select count(distinct block_id) from public.workout_exercises where block_id = 'aaaaaaaa-0000-4000-8000-000000000001' and block_type = 'superset'),
+  (select count(distinct block_id) from public.workout_exercises where block_id = 'aaaaaaaa-0000-4000-8000-000000000001' and block_type = 'group'),
   1::bigint,
-  'save_workout persists superset block for grouped exercises'
+  'save_workout persists group block for grouped exercises'
 );
 -- block_rounds сохраняется и одинаков у всех упражнений блока.
 select is(

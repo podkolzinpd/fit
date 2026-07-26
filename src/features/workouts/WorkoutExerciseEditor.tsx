@@ -1,5 +1,5 @@
-import type { BlockType, WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
-import { groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, setBlockType, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
+import type { BlockPreset, WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
+import { groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
 
 export function roundToStep(value: number, step: number): number {
   return Math.round(value / step) * step
@@ -95,6 +95,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         {setFields(exercise, exerciseIndex, setIndex)}
       </div>)}
       <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
+      <label className="block-rest-field solo-rest">Отдых между подходами, с<input aria-label="Отдых между подходами, с" type="number" min="0" max="600" value={exercise.restBetweenSetsSec ?? 90} onChange={(event) => exercise.blockId && onChange(setBlockRest([...exercises], exercise.blockId, { betweenSets: Number(event.target.value) || 0 }))} /></label>
       {commentField(exercise, exerciseIndex)}
       {canMergeNext && <button type="button" className="link block-merge" onClick={() => onChange(mergeBlockWithNext([...exercises], exerciseIndex))}>⛓ Объединить со следующим в блок</button>}
     </article>
@@ -118,14 +119,17 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       const blockMergeIndex = blockLastIndex < lastIndex ? blockLastIndex : -1
       return <div className="exercise-block" key={block.blockId}>
         <div className="exercise-block-head">
-          <select aria-label="Тип блока" value={block.blockType} onChange={(event) => onChange(setBlockType([...exercises], block.blockId, event.target.value as BlockType))}>
-            <option value="superset">Суперсет</option>
-            <option value="triset">Трисет</option>
+          <select aria-label="Тип блока" value={block.blockPreset} onChange={(event) => onChange(setBlockPreset([...exercises], block.blockId, event.target.value as BlockPreset))}>
+            <option value="set">Сет</option>
             <option value="circuit">Круговая</option>
           </select>
           <label className="block-rounds">Кругов<input aria-label="Кругов" type="number" min="1" max="20" value={block.blockRounds} onChange={(event) => onChange(syncBlockRounds([...exercises], block.blockId, Number(event.target.value) || 1))} /></label>
           {blocks.length > 1 && reorderButtons(block.blockId, isFirst, isLast)}
           <button type="button" className="link" onClick={() => onChange(splitBlock([...exercises], block.blockId))}>Разбить</button>
+        </div>
+        <div className="block-rest">
+          <label className="block-rest-field">Отдых между упр., с<input aria-label="Отдых между упражнениями, с" type="number" min="0" max="600" value={block.restBetweenExercisesSec} onChange={(event) => onChange(setBlockRest([...exercises], block.blockId, { betweenExercises: Number(event.target.value) || 0 }))} /></label>
+          <label className="block-rest-field">Отдых между кругами, с<input aria-label="Отдых между кругами, с" type="number" min="0" max="600" value={block.restBetweenRoundsSec} onChange={(event) => onChange(setBlockRest([...exercises], block.blockId, { betweenRounds: Number(event.target.value) || 0 }))} /></label>
         </div>
         {/* Список упражнений блока с удалением (значения — ниже по кругам). */}
         <div className="block-exercises">{block.items.map(({ exercise, index }) => <div className="block-exercise-row" key={exercise.blockId ? `${exercise.ref}-${index}` : index}><div className="block-exercise-head"><strong>{exercise.name}</strong><span className="exercise-head-actions"><button type="button" className="link" onClick={() => onReplaceExercise(index)}>Заменить</button><button type="button" className="link danger" onClick={() => removeExercise(index)}>Удалить</button></span></div>{commentField(exercise, index)}</div>)}</div>

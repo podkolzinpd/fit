@@ -150,6 +150,10 @@ p { margin: 6px 0 }
 .circuit-round h3 { margin: 8px 0 4px; font-size: 15px }
 .circuit-round .exercise { margin: 0 }
 .block-rounds input { width: 56px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700; text-align: center }
+.block-rest { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 2px }
+.block-rest-field { display: inline-flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 12px; font-weight: 600 }
+.block-rest-field input { width: 72px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700; text-align: center }
+.solo-rest { margin-top: 8px }
 .block-merge { align-self: flex-start; margin-top: 8px; color: var(--purple) }
 /* Форма блока по кругам: список упражнений блока + группы-круги. */
 .block-exercises { display: flex; flex-direction: column; gap: 4px }
