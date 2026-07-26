@@ -218,6 +218,7 @@ p { margin: 6px 0 }
 .picker-muscle { flex: 0 0 auto; padding: 6px 12px; border: 1px solid var(--border); border-radius: 99px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 500; box-shadow: none }.picker-muscle.active { border-color: #8a72ff; color: #cbbcff }
 .picker-create { flex: 0 0 auto; border: 1px dashed #4c4758; background: #19171e; color: #b2acba; box-shadow: none }
 .picker-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px }
+.picker-section-label { margin: 4px 2px 0; color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em }
 .picker-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 12px 15px; border: 1px solid var(--border); background: var(--surface-raised); color: #ece7f0; text-align: left; font-weight: 500; box-shadow: none }.picker-item small { color: var(--muted); font-weight: 400 }
 .picker-item-name { flex: 1 1 auto; min-width: 0 }
 .picker-thumb { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 8px; object-fit: cover; background: #fff }
