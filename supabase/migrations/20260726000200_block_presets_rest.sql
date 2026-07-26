@@ -10,7 +10,13 @@ alter table public.workout_exercises
   add column if not exists rest_between_rounds_sec smallint not null default 90,
   add column if not exists rest_between_sets_sec smallint not null default 90;
 
--- Миграция существующих типов в single|group (+ preset).
+-- Сначала снимаем старое ограничение block_type (single/superset/triset/circuit):
+-- иначе UPDATE до 'group' нарушит его на существующих строках прода (локально
+-- не всплывало — db reset накатывает на пустую БД без старых блоков).
+alter table public.workout_exercises
+  drop constraint if exists workout_exercises_block_type_allowed;
+
+-- Миграция существующих типов в single|group (+ preset и дефолты отдыха).
 update public.workout_exercises
   set block_preset = case when block_type = 'circuit' then 'circuit' else 'set' end,
       rest_between_exercises_sec = case when block_type = 'circuit' then 15 else 0 end,
@@ -20,10 +26,8 @@ update public.workout_exercises
   set block_type = 'group'
   where block_type in ('superset', 'triset', 'circuit');
 
--- Обновляем ограничения: block_type ∈ {single, group}, preset ∈ {set, circuit},
--- отдых неотрицательный.
-alter table public.workout_exercises
-  drop constraint if exists workout_exercises_block_type_allowed;
+-- Теперь ставим новые ограничения: block_type ∈ {single, group},
+-- preset ∈ {set, circuit}, отдых неотрицательный.
 alter table public.workout_exercises
   add constraint workout_exercises_block_type_allowed check (block_type in ('single', 'group'));
 alter table public.workout_exercises
