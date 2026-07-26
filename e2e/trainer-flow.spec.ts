@@ -374,6 +374,13 @@ test('план: два упражнения объединяются в супе
   // Подсветка: круг 1 закрыт (зелёный, done), круг 2 в работе (серый, current).
   await expect(page.locator('.circuit-round').nth(0)).toHaveClass(/done/)
   await expect(page.locator('.circuit-round').nth(1)).toHaveClass(/current/)
+
+  // Круг 2: упр.A → отдыха нет; упр.B — последнее упражнение последнего круга,
+  // блок завершён → отдых НЕ запускается (регресс: раньше запускался лишний).
+  await page.getByRole('button', { name: 'Пропустить' }).click()
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await expect(page.getByText(/Отдых/)).toHaveCount(0)
 })
 
 test('profile Cancel resets unsaved edits', async ({ page }) => {
