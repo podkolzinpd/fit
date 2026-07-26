@@ -208,6 +208,9 @@ p { margin: 6px 0 }
 .picker-search { flex: 0 0 auto; width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: 13px; color: #ece7f0; background: var(--input); font-size: 18px; outline: none }
 .picker-categories { flex: 0 0 auto; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none }.picker-categories::-webkit-scrollbar { display: none }
 .picker-category { flex: 0 0 auto; padding: 9px 14px; border: 1px solid var(--border); border-radius: 99px; background: #1b1921; color: #d9d5df; font-weight: 500; box-shadow: none }.picker-category.active { border-color: #8a72ff; background: #6f54ef; color: white }
+/* Второй уровень: детальные мышцы выбранной группы (компактнее и приглушённее). */
+.picker-muscles { flex: 0 0 auto; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none }.picker-muscles::-webkit-scrollbar { display: none }
+.picker-muscle { flex: 0 0 auto; padding: 6px 12px; border: 1px solid var(--border); border-radius: 99px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 500; box-shadow: none }.picker-muscle.active { border-color: #8a72ff; color: #cbbcff }
 .picker-create { flex: 0 0 auto; border: 1px dashed #4c4758; background: #19171e; color: #b2acba; box-shadow: none }
 .picker-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px }
 .picker-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 12px 15px; border: 1px solid var(--border); background: var(--surface-raised); color: #ece7f0; text-align: left; font-weight: 500; box-shadow: none }.picker-item small { color: var(--muted); font-weight: 400 }
