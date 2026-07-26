@@ -65,11 +65,12 @@ test('trainer can create client, complete workout and save progress', async ({ p
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   await expect(page.getByText('Готово', { exact: true })).toBeVisible()
-  // Завершённая тренировка показывает фактический результат (вес × повторы),
-  // а не только название упражнения.
+  // Завершённая тренировка показывает фактический результат (вес × повторы)
+  // только по подтверждённым подходам, а не только название упражнения.
   await expect(page.getByText(/42\.5 кг × 9 повт\./)).toBeVisible()
-  // Факт (42.5×9) отличается от плана (40×10) → серая приписка плана.
-  await expect(page.locator('.plan-note').first()).toContainText('план 40 кг × 10 повт.')
+  // Неподтверждённые подходы (план без факта) помечены «не выполнено», план
+  // за факт не выдаётся.
+  await expect(page.locator('.plan-note').first()).toContainText('не выполнено')
   // Сводка завершённой тренировки: время, тоннаж, группы мышц.
   // Тоннаж: факт 42.5×9 + план 35×12 (п2) + план 35×12 (п3, унаследован live «＋ Подход») ≈ 1.2 т.
   await expect(page.locator('.done-summary-3')).toContainText('Тоннаж')

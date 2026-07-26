@@ -5,7 +5,7 @@ import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'rec
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { computeYDomain } from '../progress/ProgressChart'
-import { BLOCK_TYPE_LABELS, chartUnitFor, copyWorkout, exerciseChartPoints, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
+import { BLOCK_TYPE_LABELS, chartUnitFor, copyWorkout, exerciseChartPoints, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -223,10 +223,12 @@ export function WorkoutDetailPage() {
 
 function formatSet(set: WorkoutSet) { const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, set.distanceKm && `${set.distanceKm} км`, set.durationMin && `${set.durationMin} мин`].filter(Boolean).join(' × '); return plan || 'Подход без плана' }
 
-// Строка результата подхода: факт + серая приписка плана (если факт≠план).
+// Результат подхода в завершённой тренировке: подтверждённый — только факт;
+// неподтверждённый — план с пометкой «не выполнено» (план за факт не выдаём).
 function FactVsPlan({ set }: { set: WorkoutSet }) {
-  const { fact, planNote } = formatFactVsPlan(set)
-  return <>{fact}{planNote && <span className="plan-note"> · {planNote}</span>}</>
+  const fact = factLine(set)
+  if (fact) return <>{fact}</>
+  return <>{formatSet(set)}<span className="plan-note"> · не выполнено</span></>
 }
 
 
@@ -499,9 +501,21 @@ export function ExerciseHistoryPage() {
         ? <section className="stat-single card"><span className="muted">Текущий результат</span><strong>{chart[0]!.value} {unit}</strong><p className="muted">График динамики появится после второй проведённой тренировки.</p></section>
         : <p className="muted empty-hint">Пока нет данных. График появится после проведённых тренировок с фактом.</p>)}
 
-      {tab === 'history' && (history.data?.length
-        ? <div className="timeline">{[...history.data].sort((a, b) => (a.workoutDate < b.workoutDate ? 1 : -1)).map((workout) => { const exercise = workout.exercises.find((item) => item.ref === exerciseRef); return <article key={workout.id} className="card"><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{exercise?.sets.map((set, index) => <span key={set.id}>{index > 0 && ', '}<FactVsPlan set={set} /></span>)}</p></div></article> })}</div>
-        : <p className="muted empty-hint">Ещё нет истории по этому упражнению.</p>)}
+      {tab === 'history' && (() => {
+        // История строго по факту: показываем только подтверждённые подходы;
+        // тренировки без единого факта скрываем (иначе расходится с графиком).
+        const rows = [...(history.data ?? [])]
+          .sort((a, b) => (a.workoutDate < b.workoutDate ? 1 : -1))
+          .map((workout) => {
+            const exercise = workout.exercises.find((item) => item.ref === exerciseRef)
+            const facts = (exercise?.sets ?? []).map((set) => factLine(set)).filter((line): line is string => line !== null)
+            return { workout, facts }
+          })
+          .filter((row) => row.facts.length > 0)
+        return rows.length
+          ? <div className="timeline">{rows.map(({ workout, facts }) => <article key={workout.id} className="card"><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{facts.join(', ')}</p></div></article>)}</div>
+          : <p className="muted empty-hint">Ещё нет выполненных подходов по этому упражнению.</p>
+      })()}
 
       {tab === 'how' && (instructions.length
         ? <ol className="how-steps">{instructions.map((step, index) => <li key={index}>{step}</li>)}</ol>
