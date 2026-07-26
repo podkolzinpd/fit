@@ -10,6 +10,7 @@
 // (сгенерированный .ts + картинки) коммитится в репозиторий.
 import { mkdir, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
+import { INSTRUCTIONS_RU } from './instructions-ru.mjs'
 
 const SOURCE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json'
 const RAW_IMAGES = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/'
@@ -327,7 +328,7 @@ async function main() {
       secondaryMuscles: secondary,
       level: ex.level ?? null,
       imageUrl: `/exercises/${imageName}`,
-      instructions: ex.instructions ?? [],
+      instructions: INSTRUCTIONS_RU[ref] ?? ex.instructions ?? [],
     })
   }
 
@@ -375,7 +376,7 @@ async function generateBase(byId) {
       row.primaryMuscleDetail = muscleLabelFor(ex.primaryMuscles[0])
       row.secondaryMuscles = (ex.secondaryMuscles ?? []).map(muscleLabelFor)
       row.level = ex.level ?? null
-      row.instructions = ex.instructions ?? []
+      row.instructions = INSTRUCTIONS_RU[base.ref] ?? ex.instructions ?? []
     } else {
       // Placeholder (кардио/берпи): метаданные из маппинга, без картинки.
       row.equipment = match.equipment
@@ -383,7 +384,7 @@ async function generateBase(byId) {
       row.primaryMuscleDetail = match.detail
       row.secondaryMuscles = []
       row.level = 'beginner'
-      row.instructions = match.instructions
+      row.instructions = INSTRUCTIONS_RU[base.ref] ?? match.instructions
     }
     rows.push(row)
   }
