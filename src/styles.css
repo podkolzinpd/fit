@@ -152,7 +152,11 @@ p { margin: 6px 0 }
 .block-merge { align-self: flex-start; margin-top: 8px; color: var(--purple) }
 /* Форма блока по кругам: список упражнений блока + группы-круги. */
 .block-exercises { display: flex; flex-direction: column; gap: 4px }
-.block-exercise-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 2px }
+.block-exercise-row { display: flex; flex-direction: column; gap: 6px; padding: 6px 2px }
+.block-exercise-head { display: flex; align-items: center; justify-content: space-between; gap: 10px }
+.exercise-comment { width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--fg); font: inherit; font-size: 13px; resize: vertical; box-sizing: border-box }
+.exercise-comment::placeholder { color: var(--muted) }
+.exercise-comment-note { color: var(--muted); font-size: 13px; margin-top: 4px }
 .planned-round { border: 1px solid var(--border); border-radius: 12px; padding: 10px; background: #1b1826 }
 .planned-round-label { font-size: 12px; font-weight: 700; color: var(--purple); margin-bottom: 6px }
 .planned-round-exercise { margin-bottom: 8px }

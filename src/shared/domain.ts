@@ -78,6 +78,7 @@ export interface WorkoutExerciseDraft extends ExerciseSnapshot {
   blockId?: UUID
   blockType?: BlockType
   blockRounds?: number
+  trainerComment?: string
   sets: WorkoutSetDraft[]
 }
 
@@ -112,6 +113,7 @@ export interface WorkoutExercise extends ExerciseSnapshot {
   blockId: UUID
   blockType: BlockType
   blockRounds: number
+  trainerComment?: string
   sets: WorkoutSet[]
 }
 

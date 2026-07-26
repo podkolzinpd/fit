@@ -455,3 +455,47 @@ test('расписание: создание тренировки из расп�
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 })
+
+test('комментарий тренера к упражнению: план → live → история', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await page.getByLabel('Имя').fill('Коммент Клиент')
+  await page.getByLabel('Начальный вес, кг').fill('80')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Коммент Клиент' })).toBeVisible()
+
+  await page.getByRole('link', { name: /Запланировать/ }).click()
+  await page.getByLabel('Клиент').selectOption({ label: 'Коммент Клиент' })
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await page.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await page.getByRole('button', { name: /Присед со штангой/ }).first().click()
+  await page.getByLabel('Вес, подход 1').fill('90')
+  await page.getByLabel('Повторы, подход 1').fill('8')
+  // Комментарий тренера к упражнению в форме плана.
+  await page.getByLabel('Комментарий к упражнению').fill('Держи спину прямо')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+
+  // Проводим тренировку; в live поле комментария доступно.
+  await page.getByRole('button', { name: 'Начать' }).click()
+  await expect(page.locator('.live-timer-big')).toBeVisible()
+  await expect(page.getByLabel(/Комментарий: Присед/)).toBeVisible()
+  await page.getByLabel('Фактический вес').first().fill('92.5')
+  await page.getByLabel('Фактические повторы').first().fill('8')
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await page.getByRole('button', { name: 'Завершить тренировку' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+
+  // Комментарий виден в истории упражнения.
+  await page.locator('.exercise-name-link').first().click()
+  await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
+  await page.getByRole('tab', { name: 'История' }).click()
+  await expect(page.locator('.exercise-comment-note')).toContainText('Держи спину прямо')
+})
