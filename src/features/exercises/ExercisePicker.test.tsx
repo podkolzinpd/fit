@@ -1,9 +1,18 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { ExercisePicker, filterExercises } from './ExercisePicker'
+import { ExercisePicker, filterExercises, musclesForGroup } from './ExercisePicker'
 import type { ExerciseCatalogState } from './exercise-catalog'
 import { SYSTEM_EXERCISES } from '../../shared/system-exercises'
+import type { ExerciseSnapshot } from '../../shared/domain'
+
+// Обогащённая выборка для проверки иерархии группа→мышца→упражнение.
+const ENRICHED: ExerciseSnapshot[] = [
+  { source: 'system', ref: 'a', name: 'Присед (Штанга)', muscleGroup: 'legs', inputKind: 'strength', primaryMuscleDetail: 'Квадрицепс' },
+  { source: 'system', ref: 'b', name: 'Разгибание ног (Тренажёр)', muscleGroup: 'legs', inputKind: 'strength', primaryMuscleDetail: 'Квадрицепс' },
+  { source: 'system', ref: 'c', name: 'Сгибание ног (Тренажёр)', muscleGroup: 'legs', inputKind: 'strength', primaryMuscleDetail: 'Бицепс бедра' },
+  { source: 'system', ref: 'd', name: 'Жим лёжа (Штанга)', muscleGroup: 'chest', inputKind: 'strength', primaryMuscleDetail: 'Грудь' },
+]
 
 function catalog(overrides: Partial<ExerciseCatalogState> = {}): ExerciseCatalogState {
   return {
@@ -22,6 +31,28 @@ describe('ExercisePicker', () => {
     expect(filterExercises(SYSTEM_EXERCISES, 'legs', 'присед').map((exercise) => exercise.name))
       .toEqual(['Болгарский присед', 'Присед со штангой', 'Фронтальный присед'])
     expect(filterExercises(SYSTEM_EXERCISES, 'cardio', '')).toHaveLength(7)
+  })
+
+  it('строит список мышц группы по частоте и фильтрует по мышце', () => {
+    expect(musclesForGroup(ENRICHED, 'legs')).toEqual(['Квадрицепс', 'Бицепс бедра'])
+    expect(musclesForGroup(ENRICHED, 'chest')).toEqual(['Грудь'])
+    expect(filterExercises(ENRICHED, 'legs', '', 'Квадрицепс').map((exercise) => exercise.ref)).toEqual(['a', 'b'])
+    expect(filterExercises(ENRICHED, 'legs', '', 'Бицепс бедра').map((exercise) => exercise.ref)).toEqual(['c'])
+  })
+
+  it('иерархия в пикере: группа → мышца → упражнения', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    // Пока группа не выбрана — второго уровня нет.
+    expect(screen.queryByRole('button', { name: 'Все мышцы' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+    // Появились чипы мышц группы «Ноги».
+    expect(screen.getByRole('button', { name: 'Квадрицепс' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Бицепс бедра' })).toBeInTheDocument()
+    // Выбор мышцы сужает список.
+    await user.click(screen.getByRole('button', { name: 'Бицепс бедра' }))
+    expect(screen.getByRole('button', { name: /Сгибание ног/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Разгибание ног/ })).not.toBeInTheDocument()
   })
 
   it('searches exercises in the picker', async () => {
