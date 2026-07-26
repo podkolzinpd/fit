@@ -548,12 +548,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "beginner",
     "instructions": [
-      "Start by placing a barbell that is about chest high on a squat rack. Once you have selected the weights, grab the barbell using a pronated (palms facing forward) grip. Make sure to grip the bar wider than shoulder width apart from each other.",
-      "Slightly bend the knees and place the barbell on your collar bone. Lift the barbell up keeping it lying on your chest. Take a step back and position your feet shoulder width apart from each other.",
-      "Once you pick up the barbell with the correct grip length, lift the bar up over your head by locking your arms. Hold at about shoulder level and slightly in front of your head. This is your starting position.",
-      "Lower the bar down to the collarbone slowly as you inhale.",
-      "Lift the bar back up to the starting position as you exhale.",
-      "Repeat for the recommended amount of repetitions."
+      "Штанга на уровне ключиц хватом чуть шире плеч, корпус прямой.",
+      "На выдохе выжмите штангу над головой до прямых рук.",
+      "На вдохе плавно опустите штангу к ключицам."
     ]
   },
   {
@@ -571,12 +568,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "intermediate",
     "instructions": [
-      "While holding a dumbbell in each hand, sit on a military press bench or utility bench that has back support. Place the dumbbells upright on top of your thighs.",
-      "Now raise the dumbbells to shoulder height one at a time using your thighs to help propel them up into position.",
-      "Make sure to rotate your wrists so that the palms of your hands are facing forward. This is your starting position.",
-      "Now, exhale and push the dumbbells upward until they touch at the top.",
-      "Then, after a brief pause at the top contracted position, slowly lower the weights back down to the starting position while inhaling.",
-      "Repeat for the recommended amount of repetitions."
+      "Сядьте, спина прямая, гантели у плеч ладонями вперёд.",
+      "На выдохе выжмите гантели над головой, почти сводя их вверху.",
+      "На вдохе плавно опустите гантели к плечам."
     ]
   },
   {
@@ -592,10 +586,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
-      "Pick a couple of dumbbells and stand with a straight torso and the dumbbells by your side at arms length with the palms of the hand facing you. This will be your starting position.",
-      "While maintaining the torso in a stationary position (no swinging), lift the dumbbells to your side with a slight bend on the elbow and the hands slightly tilted forward as if pouring water in a glass. Continue to go up until you arms are parallel to the floor. Exhale as you execute this movement and pause for a second at the top.",
-      "Lower the dumbbells back down slowly to the starting position as you inhale.",
-      "Repeat for the recommended amount of repetitions."
+      "Гантели в опущенных руках вдоль тела, локти слегка согнуты.",
+      "На выдохе поднимите гантели через стороны до уровня плеч.",
+      "На вдохе плавно опустите гантели."
     ]
   },
   {
@@ -611,12 +604,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
-      "To begin, lie down on an incline bench with the chest and stomach pressing against the incline. Have the dumbbells in each hand with the palms facing each other (neutral grip).",
-      "Extend the arms in front of you so that they are perpendicular to the angle of the bench. The legs should be stationary while applying pressure with the ball of your toes. This is the starting position.",
-      "Maintaining the slight bend of the elbows, move the weights out and away from each other (to the side) in an arc motion while exhaling. Tip: Try to squeeze your shoulder blades together to get the best results from this exercise.",
-      "The arms should be elevated until they are parallel to the floor.",
-      "Feel the contraction and slowly lower the weights back down to the starting position while inhaling.",
-      "Repeat for the recommended amount of repetitions."
+      "Наклонитесь вперёд, спина прямая, гантели под грудью, локти слегка согнуты.",
+      "На выдохе разведите гантели в стороны, сводя лопатки, до уровня плеч.",
+      "На вдохе плавно опустите гантели."
     ]
   },
   {
@@ -634,10 +624,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "beginner",
     "instructions": [
-      "Grasp a barbell with an overhand grip that is slightly less than shoulder width. The bar should be resting on the top of your thighs with your arms extended and a slight bend in your elbows. Your back should also be straight. This will be your starting position.",
-      "Now exhale and use the sides of your shoulders to lift the bar, raising your elbows up and to the side. Keep the bar close to your body as you raise it. Continue to lift the bar until it nearly touches your chin. Tip: Your elbows should drive the motion, and should always be higher than your forearms. Remember to keep your torso stationary and pause for a second at the top of the movement.",
-      "Lower the bar back down slowly to the starting position. Inhale as you perform this portion of the movement.",
-      "Repeat for the recommended amount of repetitions."
+      "Штанга в опущенных руках узким хватом, у бёдер.",
+      "На выдохе подтяните штангу к подбородку, локти выше кистей.",
+      "На вдохе плавно опустите штангу."
     ]
   },
   {
@@ -653,10 +642,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
-      "Stand up straight with your feet at shoulder width as you hold a barbell with both hands in front of you using a pronated grip (palms facing the thighs). Tip: Your hands should be a little wider than shoulder width apart. You can use wrist wraps for this exercise for a better grip. This will be your starting position.",
-      "Raise your shoulders up as far as you can go as you breathe out and hold the contraction for a second. Tip: Refrain from trying to lift the barbell by using your biceps.",
-      "Slowly return to the starting position as you breathe in.",
-      "Repeat for the recommended amount of repetitions."
+      "Штанга в опущенных руках, руки прямые, спина прямая.",
+      "На выдохе поднимите плечи вверх к ушам, сжимая трапеции.",
+      "На вдохе плавно опустите плечи."
     ]
   },
   {
@@ -674,10 +662,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "beginner",
     "instructions": [
-      "Stand up straight with a dumbbell in each hand at arm's length. Keep your elbows close to your torso and rotate the palms of your hands until they are facing forward. This will be your starting position.",
-      "Now, keeping the upper arms stationary, exhale and curl the weights while contracting your biceps. Continue to raise the weights until your biceps are fully contracted and the dumbbells are at shoulder level. Hold the contracted position for a brief pause as you squeeze your biceps.",
-      "Then, inhale and slowly begin to lower the dumbbells back to the starting position.",
-      "Repeat for the recommended amount of repetitions."
+      "Гантели в опущенных руках, локти прижаты к корпусу, ладони вперёд.",
+      "На выдохе согните руки, поднимая гантели к плечам усилием бицепса.",
+      "На вдохе плавно опустите гантели, не раскачивая корпус."
     ]
   },
   {
@@ -693,11 +680,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
-      "Stand up with your torso upright and a dumbbell on each hand being held at arms length. The elbows should be close to the torso.",
-      "The palms of the hands should be facing your torso. This will be your starting position.",
-      "Now, while holding your upper arm stationary, exhale and curl the weight forward while contracting the biceps. Continue to raise the weight until the biceps are fully contracted and the dumbbell is at shoulder level. Hold the contracted position for a brief moment as you squeeze the biceps. Tip: Focus on keeping the elbow stationary and only moving your forearm.",
-      "After the brief pause, inhale and slowly begin the lower the dumbbells back down to the starting position.",
-      "Repeat for the recommended amount of repetitions."
+      "Гантели в опущенных руках нейтральным хватом (ладони внутрь), локти у корпуса.",
+      "На выдохе согните руки к плечам, сохраняя нейтральный хват.",
+      "На вдохе плавно опустите гантели."
     ]
   },
   {
@@ -715,11 +700,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "beginner",
     "instructions": [
-      "Stand up with your torso upright while holding a barbell at a shoulder-width grip. The palm of your hands should be facing forward and the elbows should be close to the torso. This will be your starting position.",
-      "While holding the upper arms stationary, curl the weights forward while contracting the biceps as you breathe out. Tip: Only the forearms should move.",
-      "Continue the movement until your biceps are fully contracted and the bar is at shoulder level. Hold the contracted position for a second and squeeze the biceps hard.",
-      "Slowly begin to bring the bar back to starting position as your breathe in.",
-      "Repeat for the recommended amount of repetitions."
+      "Штанга в опущенных руках хватом на ширине плеч, локти у корпуса.",
+      "На выдохе поднимите штангу к груди усилием бицепса.",
+      "На вдохе плавно опустите штангу, не раскачивая корпус."
     ]
   },
   {
@@ -735,11 +718,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "secondaryMuscles": [],
     "level": "intermediate",
     "instructions": [
-      "Lie on a flat bench with either an e-z bar (my preference) or a straight bar placed on the floor behind your head and your feet on the floor.",
-      "Grab the bar behind you, using a medium overhand (pronated) grip, and raise the bar in front of you at arms length. Tip: The arms should be perpendicular to the torso and the floor. The elbows should be tucked in. This is the starting position.",
-      "As you breathe in, slowly lower the weight until the bar lightly touches your forehead while keeping the upper arms and elbows stationary.",
-      "At that point, use the triceps to bring the weight back up to the starting position as you breathe out.",
-      "Repeat for the recommended amount of repetitions."
+      "Лягте на скамью, EZ-гриф над головой на прямых руках.",
+      "На вдохе согните локти, опуская гриф ко лбу, плечи неподвижны.",
+      "На выдохе разогните руки усилием трицепса."
     ]
   },
   {
@@ -755,11 +736,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
-      "Attach a straight or angled bar to a high pulley and grab with an overhand grip (palms facing down) at shoulder width.",
-      "Standing upright with the torso straight and a very small inclination forward, bring the upper arms close to your body and perpendicular to the floor. The forearms should be pointing up towards the pulley as they hold the bar. This is your starting position.",
-      "Using the triceps, bring the bar down until it touches the front of your thighs and the arms are fully extended perpendicular to the floor. The upper arms should always remain stationary next to your torso and only the forearms should move. Exhale as you perform this movement.",
-      "After a second hold at the contracted position, bring the bar slowly up to the starting point. Breathe in as you perform this step.",
-      "Repeat for the recommended amount of repetitions."
+      "Встаньте у верхнего блока, рукоять хватом сверху, локти прижаты к корпусу.",
+      "На выдохе разогните руки вниз до прямых, сжимая трицепс.",
+      "На вдохе плавно верните рукоять вверх, локти неподвижны."
     ]
   },
   {
@@ -778,10 +757,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "intermediate",
     "instructions": [
-      "Lie on the floor face down and place your hands closer than shoulder width for a close hand position. Make sure that you are holding your torso up at arms' length.",
-      "Lower yourself until your chest almost touches the floor as you inhale.",
-      "Using your triceps and some of your pectoral muscles, press your upper body back up to the starting position and squeeze your chest. Breathe out as you perform this step.",
-      "After a second pause at the contracted position, repeat the movement for the prescribed amount of repetitions."
+      "Упор лёжа, ладони узко под грудью, тело прямая линия.",
+      "На вдохе опуститесь, локти вдоль корпуса, почти до касания грудью пола.",
+      "На выдохе выжмите себя вверх усилием трицепса."
     ]
   },
   {
@@ -797,8 +775,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
-      "Get into a prone position on the floor, supporting your weight on your toes and your forearms. Your arms are bent and directly below the shoulder.",
-      "Keep your body straight at all times, and hold this position as long as possible. To increase difficulty, an arm or leg can be raised."
+      "Упор на предплечья и носки, тело прямая линия от головы до пяток.",
+      "Напрягите пресс и ягодицы, не прогибая и не поднимая таз.",
+      "Удерживайте положение заданное время, дыша ровно."
     ]
   },
   {
@@ -814,12 +793,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
-      "Lie flat on your back with your feet flat on the ground, or resting on a bench with your knees bent at a 90 degree angle. If you are resting your feet on a bench, place them three to four inches apart and point your toes inward so they touch.",
-      "Now place your hands lightly on either side of your head keeping your elbows in. Tip: Don't lock your fingers behind your head.",
-      "While pushing the small of your back down in the floor to better isolate your abdominal muscles, begin to roll your shoulders off the floor.",
-      "Continue to push down as hard as you can with your lower back as you contract your abdominals and exhale. Your shoulders should come up off the floor only about four inches, and your lower back should remain on the floor. At the top of the movement, contract your abdominals hard and keep the contraction for a second. Tip: Focus on slow, controlled movement - don't cheat yourself by using momentum.",
-      "After the one second contraction, begin to come down slowly again to the starting position as you inhale.",
-      "Repeat for the recommended amount of repetitions."
+      "Лягте на спину, колени согнуты, руки у висков или на груди.",
+      "На выдохе скрутите корпус, отрывая лопатки от пола усилием пресса.",
+      "На вдохе плавно опуститесь, не расслабляя пресс полностью."
     ]
   },
   {
@@ -835,10 +811,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
-      "Lie with your back flat on a bench and your legs extended in front of you off the end.",
-      "Place your hands either under your glutes with your palms down or by the sides holding on to the bench. This will be your starting position.",
-      "As you keep your legs extended, straight as possible with your knees slightly bent but locked raise your legs until they make a 90-degree angle with the floor. Exhale as you perform this portion of the movement and hold the contraction at the top for a second.",
-      "Now, as you inhale, slowly lower your legs back down to the starting position."
+      "Лягте на спину, руки вдоль тела, ноги прямые.",
+      "На выдохе поднимите прямые ноги до вертикали, поясница прижата.",
+      "На вдохе плавно опустите ноги, не касаясь пола."
     ]
   },
   {
@@ -856,11 +831,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "intermediate",
     "instructions": [
-      "Lie down on the floor placing your feet either under something that will not move or by having a partner hold them. Your legs should be bent at the knees.",
-      "Elevate your upper body so that it creates an imaginary V-shape with your thighs. Your arms should be fully extended in front of you perpendicular to your torso and with the hands clasped. This is the starting position.",
-      "Twist your torso to the right side until your arms are parallel with the floor while breathing out.",
-      "Hold the contraction for a second and move back to the starting position while breathing out. Now move to the opposite side performing the same techniques you applied to the right side.",
-      "Repeat for the recommended amount of repetitions."
+      "Сядьте, корпус отклонён назад, ноги на весу, руки перед собой.",
+      "Поворачивайте корпус из стороны в сторону, касаясь пола у бедра.",
+      "Держите пресс напряжённым, движение из корпуса, а не из рук."
     ]
   },
   {
@@ -877,7 +850,11 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
       "Плечи"
     ],
     "level": "beginner",
-    "instructions": []
+    "instructions": [
+      "Лягте на бок, опора на предплечье, ноги вытянуты одна на другой.",
+      "Поднимите таз, выстроив тело в прямую линию от головы до стоп.",
+      "Удерживайте положение заданное время, затем повторите на другую сторону."
+    ]
   },
   {
     "source": "system",
@@ -975,8 +952,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "intermediate",
     "instructions": [
-      "Hold an end of the rope in each hand. Position the rope behind you on the ground. Raise your arms up and turn the rope over your head bringing it down in front of you. When it reaches the ground, jump over it. Find a good turning pace that can be maintained. Different speeds and techniques can be used to introduce variation.",
-      "Rope jumping is exciting, challenges your coordination, and requires a lot of energy. A 150 lb person will burn about 350 calories jumping rope for 30 minutes, compared to over 450 calories running."
+      "Возьмите скакалку, локти у корпуса, вращайте кистями.",
+      "Прыгайте на носках невысоко, синхронно с вращением скакалки.",
+      "Держите ритм, дышите ровно."
     ]
   },
   {
