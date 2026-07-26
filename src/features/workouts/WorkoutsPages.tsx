@@ -334,6 +334,7 @@ export function LiveWorkoutPage() {
   const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => workoutsRepository.appendLiveExercise(query.data!, exercise), onSuccess: async () => { await query.refetch() } })
   const reorderBlock = useMutation({ mutationFn: ({ blockId, direction }: { blockId: string; direction: -1 | 1 }) => workoutsRepository.reorderLiveBlock(query.data!, blockId, direction), onSuccess: async () => { await query.refetch() } })
   const replaceLive = useMutation({ mutationFn: ({ exerciseId, exercise }: { exerciseId: string; exercise: ExerciseSnapshot }) => workoutsRepository.replaceLiveExercise(query.data!, exerciseId, exercise), onSuccess: async () => { await query.refetch() } })
+  const commentLive = useMutation({ mutationFn: ({ exerciseId, comment }: { exerciseId: string; comment: string }) => workoutsRepository.setExerciseComment(query.data!, exerciseId, comment), onSuccess: async () => { await query.refetch() } })
   function closePicker() { setPickerOpen(false); setReplaceExerciseId(null) }
   function pickLiveExercise(exercise: ExerciseSnapshot) {
     if (replaceExerciseId) replaceLive.mutate({ exerciseId: replaceExerciseId, exercise })
@@ -371,7 +372,12 @@ export function LiveWorkoutPage() {
     }, 250)
     return () => window.clearInterval(timer)
   }, [restActive])
-  const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? reorderBlock.error ?? replaceLive.error ?? finish.error
+  const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? reorderBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
+  // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
+  function liveCommentField(exercise: WorkoutExercise) {
+    return <textarea className="exercise-comment" aria-label={`Комментарий: ${exercise.name}`} placeholder="Комментарий к упражнению…" rows={1} defaultValue={exercise.trainerComment ?? ''} disabled={commentLive.isPending}
+      onBlur={(event) => { const next = event.target.value.trim(); if (next !== (exercise.trainerComment ?? '')) commentLive.mutate({ exerciseId: exercise.id, comment: next }) }} />
+  }
   // Кнопка «Заменить»: доступна, пока у упражнения нет подтверждённых подходов
   // (начатое заменять нельзя — факт относился к старому упражнению).
   function replaceButton(exercise: WorkoutExercise) {
@@ -432,6 +438,7 @@ export function LiveWorkoutPage() {
               <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions">{replaceButton(exercise)}{reorder}</span></div>
               {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex))}
               <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
+              {liveCommentField(exercise)}
             </section>
           })
         }
@@ -450,6 +457,7 @@ export function LiveWorkoutPage() {
             {round.items.map(({ exercise, set }) => <section key={set.id}>
               <div className="live-exercise-head"><h3>{exercise.name}</h3>{roundIndex === 0 && <span className="exercise-head-actions">{replaceButton(exercise)}</span>}</div>
               {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
+              {roundIndex === 0 && liveCommentField(exercise)}
             </section>)}
           </div> })}
         </div>
@@ -503,18 +511,18 @@ export function ExerciseHistoryPage() {
         : <p className="muted empty-hint">Пока нет данных. График появится после проведённых тренировок с фактом.</p>)}
 
       {tab === 'history' && (() => {
-        // История строго по факту: показываем только подтверждённые подходы;
-        // тренировки без единого факта скрываем (иначе расходится с графиком).
+        // История строго по факту: показываем только подтверждённые подходы.
+        // Тренировку показываем, если есть факт ИЛИ комментарий тренера.
         const rows = [...(history.data ?? [])]
           .sort((a, b) => (a.workoutDate < b.workoutDate ? 1 : -1))
           .map((workout) => {
             const exercise = workout.exercises.find((item) => item.ref === exerciseRef)
             const facts = (exercise?.sets ?? []).map((set) => factLine(set)).filter((line): line is string => line !== null)
-            return { workout, facts }
+            return { workout, facts, comment: exercise?.trainerComment }
           })
-          .filter((row) => row.facts.length > 0)
+          .filter((row) => row.facts.length > 0 || row.comment)
         return rows.length
-          ? <div className="timeline">{rows.map(({ workout, facts }) => <article key={workout.id} className="card"><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{facts.join(', ')}</p></div></article>)}</div>
+          ? <div className="timeline">{rows.map(({ workout, facts, comment }) => <article key={workout.id} className="card"><div><strong>{formatLocalDate(workout.workoutDate)}</strong>{facts.length > 0 && <p>{facts.join(', ')}</p>}{comment && <p className="exercise-comment-note">💬 {comment}</p>}</div></article>)}</div>
           : <p className="muted empty-hint">Ещё нет выполненных подходов по этому упражнению.</p>
       })()}
 

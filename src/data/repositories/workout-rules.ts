@@ -444,6 +444,7 @@ export function copyWorkout(source: Workout, workoutDate = source.workoutDate): 
       name: exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind,
       position: exercise.position,
       blockId: nextBlockId(exercise.blockId), blockType: exercise.blockType, blockRounds: exercise.blockRounds,
+      trainerComment: exercise.trainerComment,
       sets: exercise.sets.map((set) => ({ position: set.position, weightKg: set.weightKg,
         reps: set.reps, durationMin: set.durationMin, distanceKm: set.distanceKm })),
     })),

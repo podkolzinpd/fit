@@ -33,6 +33,7 @@ async function get(id: string): Promise<Workout> {
     customExerciseId: row.custom_exercise_id ?? undefined, name: row.exercise_name,
     muscleGroup: row.muscle_group as MuscleGroup, inputKind: row.input_kind as InputKind,
     blockId: row.block_id, blockType: row.block_type as BlockType, blockRounds: row.block_rounds,
+    trainerComment: row.trainer_comment ?? undefined,
     sets: grouped.get(row.id) ?? [],
   }))
   const client = await clientsRepository.get(root.data.client_id)
@@ -70,6 +71,7 @@ function mapWorkout(row: WorkoutListRow): Workout {
       blockId: exercise.block_id,
       blockType: exercise.block_type as BlockType,
       blockRounds: exercise.block_rounds,
+      trainerComment: exercise.trainer_comment ?? undefined,
       sets: exercise.sets.map((set) => ({
         id: set.id,
         position: set.position,
@@ -144,6 +146,11 @@ export const workoutsRepository = {
   },
   async reorderLiveBlock(workout: Workout, blockId: string, direction: -1 | 1): Promise<number> {
     const result = await workoutQueries.reorderLiveBlock(workout.id, blockId, direction, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
+  async setExerciseComment(workout: Workout, exerciseId: string, comment: string): Promise<number> {
+    const result = await workoutQueries.setExerciseComment(exerciseId, comment, workout.version)
     if (result.error) throw repositoryError(result.error)
     return result.data
   },

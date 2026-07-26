@@ -15,7 +15,7 @@ export const workoutQueries = {
   listSummaries: (clientId: string) => supabase.rpc('list_workout_summaries', { p_client_id: clientId }),
   getRoot: (id: string) => supabase.from('workouts').select(rootColumns).eq('id', id).is('deleted_at', null).single(),
   getExercises: (id: string) => supabase.from('workout_exercises')
-    .select('id,position,exercise_source,exercise_ref,custom_exercise_id,exercise_name,muscle_group,input_kind,block_id,block_type,block_rounds')
+    .select('id,position,exercise_source,exercise_ref,custom_exercise_id,exercise_name,muscle_group,input_kind,block_id,block_type,block_rounds,trainer_comment')
     .eq('workout_id', id).order('position'),
   getSets: (exerciseIds: string[]) => supabase.from('workout_sets')
     .select('id,workout_exercise_id,position,plan_weight_kg,plan_reps,plan_duration_min,plan_distance_km,fact_weight_kg,fact_reps,fact_duration_min,fact_distance_km,confirmed_at,version')
@@ -36,6 +36,9 @@ export const workoutQueries = {
   }),
   reorderLiveBlock: (workoutId: string, blockId: string, direction: -1 | 1, version: number) => supabase.rpc('reorder_live_block', {
     p_workout_id: workoutId, p_block_id: blockId, p_direction: direction, p_expected_version: version,
+  }),
+  setExerciseComment: (exerciseId: string, comment: string, version: number) => supabase.rpc('set_exercise_comment', {
+    p_exercise_id: exerciseId, p_comment: comment, p_expected_version: version,
   }),
   replaceLiveExercise: (workoutId: string, exerciseId: string, exercise: ExerciseSnapshot, version: number) => supabase.rpc('replace_live_exercise', {
     p_workout_id: workoutId, p_exercise_id: exerciseId, p_exercise: toJson(exercise), p_expected_version: version,

@@ -37,6 +37,13 @@ function inputNumber(value: string): number | undefined {
 }
 
 export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise }: WorkoutExerciseEditorProps) {
+  function updateComment(exerciseIndex: number, comment: string) {
+    onChange(exercises.map((exercise, current) => current === exerciseIndex ? { ...exercise, trainerComment: comment || undefined } : exercise))
+  }
+  // Поле комментария тренера к упражнению (техника/ограничения/заметка).
+  function commentField(exercise: WorkoutExerciseDraft, exerciseIndex: number) {
+    return <textarea className="exercise-comment" aria-label="Комментарий к упражнению" placeholder="Комментарий к упражнению…" rows={1} value={exercise.trainerComment ?? ''} onChange={(event) => updateComment(exerciseIndex, event.target.value)} />
+  }
   function updateSet(exerciseIndex: number, setIndex: number, patch: Partial<WorkoutSetDraft>) {
     onChange(exercises.map((exercise, currentExercise) => currentExercise === exerciseIndex ? {
       ...exercise,
@@ -88,6 +95,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         {setFields(exercise, exerciseIndex, setIndex)}
       </div>)}
       <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
+      {commentField(exercise, exerciseIndex)}
       {canMergeNext && <button type="button" className="link block-merge" onClick={() => onChange(mergeBlockWithNext([...exercises], exerciseIndex))}>⛓ Объединить со следующим в блок</button>}
     </article>
   }
@@ -120,7 +128,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
           <button type="button" className="link" onClick={() => onChange(splitBlock([...exercises], block.blockId))}>Разбить</button>
         </div>
         {/* Список упражнений блока с удалением (значения — ниже по кругам). */}
-        <div className="block-exercises">{block.items.map(({ exercise, index }) => <div className="block-exercise-row" key={exercise.blockId ? `${exercise.ref}-${index}` : index}><strong>{exercise.name}</strong><span className="exercise-head-actions"><button type="button" className="link" onClick={() => onReplaceExercise(index)}>Заменить</button><button type="button" className="link danger" onClick={() => removeExercise(index)}>Удалить</button></span></div>)}</div>
+        <div className="block-exercises">{block.items.map(({ exercise, index }) => <div className="block-exercise-row" key={exercise.blockId ? `${exercise.ref}-${index}` : index}><div className="block-exercise-head"><strong>{exercise.name}</strong><span className="exercise-head-actions"><button type="button" className="link" onClick={() => onReplaceExercise(index)}>Заменить</button><button type="button" className="link danger" onClick={() => removeExercise(index)}>Удалить</button></span></div>{commentField(exercise, index)}</div>)}</div>
         {rounds.map((round) => <div className="planned-round" key={round.round}>
           <div className="planned-round-label">Круг {round.round}</div>
           {round.items.map(({ exercise, exerciseIndex, setIndex }) => <div className="planned-round-exercise" key={`${exercise.ref}-${exerciseIndex}`}>
