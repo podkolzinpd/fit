@@ -426,3 +426,32 @@ test('schedule shows week strip and hour grid with day/week navigation', async (
   await expect(page.locator('.week-day .day-num').first()).toHaveText(firstDayBefore)
   await expect(page.getByRole('button', { name: 'Сегодня' })).toBeDisabled()
 })
+
+test('расписание: создание тренировки из расписания с датой выбранного дня', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await page.getByLabel('Имя').fill('Расписание Клиент')
+  await page.getByLabel('Начальный вес, кг').fill('80')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Расписание Клиент' })).toBeVisible()
+
+  // Идём в расписание и создаём тренировку прямо оттуда.
+  await page.getByRole('link', { name: 'Расписание', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
+  await page.getByRole('link', { name: 'Новая тренировка' }).click()
+  // Форма открылась; дата предзаполнена (не пустая), клиента выбираем.
+  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await expect(page.getByLabel('Дата')).not.toHaveValue('')
+  await page.getByLabel('Клиент').selectOption({ label: 'Расписание Клиент' })
+  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await page.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await page.getByRole('button', { name: /Присед со штангой/ }).first().click()
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+})
