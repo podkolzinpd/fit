@@ -103,6 +103,9 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // пинг-понгить обратно в историю упражнения (регресс петли навигации).
   await page.locator('.exercise-name-link').first().click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
+  // После одной проведённой тренировки статистика показывает текущий результат
+  // (не пустоту): график линии появится со второй тренировки.
+  await expect(page.locator('.stat-single')).toContainText('Текущий результат')
   await page.locator('.page-back').click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await page.locator('.page-back').click()
@@ -310,10 +313,10 @@ test('карточка упражнения: шапка с оборудован�
   // Шапка: оборудование и группы мышц из каталога.
   await expect(page.getByText('Оборудование: Штанга')).toBeVisible()
   await expect(page.getByText(/Основная группа мышц:/)).toBeVisible()
-  // Табы: Статистика (по умолчанию), История, Как.
+  // Табы: Статистика (по умолчанию), История, Техника.
   await expect(page.getByRole('tab', { name: 'Статистика' })).toHaveAttribute('aria-selected', 'true')
-  await page.getByRole('tab', { name: 'Как' }).click()
-  await expect(page.getByRole('tab', { name: 'Как' })).toHaveAttribute('aria-selected', 'true')
+  await page.getByRole('tab', { name: 'Техника' }).click()
+  await expect(page.getByRole('tab', { name: 'Техника' })).toHaveAttribute('aria-selected', 'true')
   // Инструкции техники присутствуют (нумерованный список).
   await expect(page.locator('.how-steps li').first()).toBeVisible()
 })
