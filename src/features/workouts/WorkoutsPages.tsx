@@ -5,7 +5,7 @@ import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'rec
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { computeYDomain } from '../progress/ProgressChart'
-import { BLOCK_TYPE_LABELS, chartUnitFor, copyWorkout, exerciseChartPoints, exerciseSummary, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, copyWorkout, exerciseChartPoints, exerciseSummary, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -211,7 +211,7 @@ export function WorkoutDetailPage() {
           {exercise.sets.map((set) => <p key={set.id}>{done ? <FactVsPlan set={set} /> : formatSet(set)}</p>)}
         </article>)
         if (block.blockType === 'single' || block.exercises.length === 1) return articles
-        return <div className="exercise-block view" key={block.blockId}><span className="block-badge">{BLOCK_TYPE_LABELS[block.blockType]} · {block.blockRounds} кр.</span>{articles}</div>
+        return <div className="exercise-block view" key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
       })}</div>
       {workout.notes && <p>{workout.notes}</p>}
       <div className="actions">
@@ -251,7 +251,6 @@ function LiveSetFields({ inputKind, set, editing = false }: { inputKind: Exercis
   return <div className={rowClass}><input key={`d-${k}`} aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" disabled={locked} defaultValue={value(set.fact.durationMin, set.durationMin)} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input key={`dist-${k}`} aria-label="Фактическая дистанция" name="distanceKm" type="number" min="0" step="0.1" disabled={locked} defaultValue={value(set.fact.distanceKm, set.distanceKm)} placeholder={set.distanceKm === undefined ? 'км' : `${set.distanceKm} км`} /></div>
 }
 
-const REST_SECONDS = 90
 const REST_STEP = 15
 
 function formatRest(seconds: number): string {
@@ -302,23 +301,34 @@ export function LiveWorkoutPage() {
   const confirm = useMutation({
     mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.confirm(set, draft),
     onSuccess: (_data, { set }) => {
-      // Одиночное упражнение — отдых после каждого подхода (как раньше).
-      // Многоэлементный блок (суперсет/трисет/круговая) — отдых только после
-      // последнего упражнения блока, а не между упражнениями внутри него.
+      // Отдых берётся из настроек блока (Этап A), не хардкод:
+      // - одиночное упражнение → отдых между подходами;
+      // - группа: между упражнениями внутри круга → restBetweenExercisesSec;
+      //   после последнего упражнения круга → restBetweenRoundsSec.
       const workout = query.data
       const exercise = workout?.exercises.find((item) => item.sets.some((s) => s.id === set.id))
       if (workout && exercise) {
         const block = groupIntoBlocks(workout.exercises).find((b) => b.blockId === exercise.blockId)
         const multi = Boolean(block && block.exercises.length > 1)
-        const lastExerciseOfBlock = !block || block.exercises[block.exercises.length - 1]?.id === exercise.id
-        if (!multi || lastExerciseOfBlock) startRest()
+        const sec = !multi
+          ? exercise.restBetweenSetsSec
+          : block && block.exercises[block.exercises.length - 1]?.id === exercise.id
+          ? block.restBetweenRoundsSec
+          : block?.restBetweenExercisesSec ?? 0
+        startRestUntil(restDeadline(sec), sec)
       }
       void query.refetch()
     },
   })
-  function startRest() {
-    restEndsAt.current = Date.now() + REST_SECONDS * 1000
-    setRestRemaining(REST_SECONDS)
+  // Запускает отдых до абсолютного момента endsAt (мс). null — отдыха нет
+  // (напр. между упражнениями суперсета, seconds=0): таймер не показываем.
+  function startRestUntil(endsAt: number | null, seconds: number) {
+    restEndsAt.current = endsAt
+    setRestRemaining(endsAt === null ? null : seconds)
+  }
+  // Отдых на seconds секунд от текущего момента (вызывается из обработчика).
+  function restDeadline(seconds: number): number | null {
+    return seconds > 0 ? Date.now() + seconds * 1000 : null
   }
   function stopRest() {
     restEndsAt.current = null
@@ -448,7 +458,7 @@ export function LiveWorkoutPage() {
         const current = currentRoundIndex(rounds)
         return <div className="exercise-block live" key={block.blockId}>
           <div className="circuit-head">
-            <span className="block-badge">{BLOCK_TYPE_LABELS[block.blockType]}</span>
+            <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
             <span className="circuit-counter">Круг {rounds[current]?.round ?? 1} из {rounds.length}</span>
             <span className="circuit-dots" aria-hidden="true">{rounds.map((r, i) => <span key={r.round} className={`circuit-dot ${r.items.every(({ set }) => set.confirmedAt) ? 'done' : i === current ? 'current' : ''}`} />)}</span>
             {reorder}
