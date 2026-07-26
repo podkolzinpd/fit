@@ -86,7 +86,7 @@ export function SchedulePage() {
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       <div className="day-grid-scroll" ref={scrollRef}>
         {untimed.length > 0 && <div className="day-untimed">{untimed.map((workout) => (
-          <Link key={workout.id} className="card" to={`/workouts/${workout.id}`}><div><strong>{workout.clientName}</strong><p>{exerciseSummary(workout).exerciseNames.join(', ') || 'без упражнений'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
+          <Link key={workout.id} className="card" to={`/workouts/${workout.id}`}><div><strong>{workout.clientName}</strong><p>{exerciseSummary(workout).map((e) => e.name).join(', ') || 'без упражнений'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
         ))}</div>}
         <div className="day-grid" style={{ height: HOURS.length * HOUR_HEIGHT }}>
           {HOURS.map((hour) => (
@@ -100,7 +100,7 @@ export function SchedulePage() {
             const endMin = workout.endTime ? minutesOf(workout.endTime.slice(0, 5)) : startMin + 60
             const top = (startMin / 60) * HOUR_HEIGHT
             const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 28)
-            const exercises = exerciseSummary(workout).exerciseNames.join(', ')
+            const exercises = exerciseSummary(workout).map((e) => e.name).join(', ')
             return <Link key={workout.id} className={`day-grid-event ${workout.status}`} style={{ top, height }} to={`/workouts/${workout.id}`}>
               <span className="day-grid-event-time">{eventTime(workout)}</span>
               <span className="day-grid-event-name">{workout.clientName}</span>
@@ -116,6 +116,18 @@ export function SchedulePage() {
 
 function statusLabel(status: string) { return status === 'planned' ? 'План' : status === 'in_progress' ? 'Идёт' : 'Готово' }
 
+// Список упражнений тренировки для карточки (история/предстоящие): каждое
+// на своей строке, у упражнений с комментарием — сам комментарий ниже.
+// Одинаково в плане и в истории.
+export function WorkoutExercisesSummary({ workout }: { workout: Workout }) {
+  const items = exerciseSummary(workout)
+  if (!items.length) return <p className="muted">Без упражнений</p>
+  return <ul className="workout-exercise-list">{items.map((item, index) => <li key={index}>
+    <span className="workout-exercise-name">{item.name}{item.comment && ' 💬'}</span>
+    {item.comment && <span className="workout-exercise-comment">💬 {item.comment}</span>}
+  </li>)}</ul>
+}
+
 export function ClientWorkoutsPage() {
   const { clientId = '' } = useParams()
   const query = useInfiniteQuery({
@@ -130,8 +142,7 @@ export function ClientWorkoutsPage() {
     const duration = workoutDurationLabel(workout.startedAt, workout.completedAt)
     const tonnage = workoutTonnage(workout)
     const meta = workout.status === 'done' ? [duration, tonnage > 0 ? tonnageLabel(tonnage) : null].filter(Boolean).join(' · ') : ''
-    const summary = exerciseSummary(workout)
-    return <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p>{summary.exerciseNames.length ? <>{summary.exerciseNames.join(', ')}{summary.comment && ' 💬'}</> : 'Без упражнений'}</p>{summary.comment && <p className="card-comment">💬 {summary.comment}</p>}{meta && <p className="card-meta">{meta}</p>}</div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
+    return <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><WorkoutExercisesSummary workout={workout} />{meta && <p className="card-meta">{meta}</p>}</div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
   })}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
 }
 
@@ -189,9 +200,10 @@ export function WorkoutDetailPage() {
   const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt) : null
   const groups = workout ? muscleGroupLabels(workout) : []
   const tonnage = workout ? workoutTonnage(workout) : 0
-  // Явный путь назад (история тренировок клиента), а не -1 по истории браузера:
-  // -1 создавал петлю тренировка ↔ история упражнения после захода в аналитику.
-  const backTo = workout ? `/clients/${workout.clientId}/workouts` : undefined
+  // «Назад» ведёт в расписание (все запланированные), а не -1 по истории
+  // браузера: -1 создавал петлю тренировка ↔ история упражнения после захода
+  // в аналитику.
+  const backTo = '/schedule'
   return <Page title="Тренировка" back={backTo}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       <section className="workout-title">

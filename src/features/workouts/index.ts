@@ -1,1 +1,1 @@
-export { SchedulePage, ClientWorkoutsPage, WorkoutFormPage, WorkoutDetailPage, LiveWorkoutPage, ExerciseHistoryPage } from './WorkoutsPages'
+export { SchedulePage, ClientWorkoutsPage, WorkoutFormPage, WorkoutDetailPage, LiveWorkoutPage, ExerciseHistoryPage, WorkoutExercisesSummary } from './WorkoutsPages'

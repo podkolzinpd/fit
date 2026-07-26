@@ -256,14 +256,19 @@ describe('exerciseSummary', () => {
   const ex = (id: string, name: string, comment?: string): Workout['exercises'][number] =>
     ({ id, source: 'system', ref: id, name, muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: id, blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90, trainerComment: comment, sets: [] })
 
-  it('возвращает список названий упражнений без дублей', () => {
-    expect(exerciseSummary(wk([ex('a', 'Присед'), ex('b', 'Жим'), ex('c', 'Присед')])).exerciseNames).toEqual(['Присед', 'Жим'])
+  it('возвращает упражнения без дублей, каждое со своим комментарием', () => {
+    expect(exerciseSummary(wk([ex('a', 'Присед', 'Спина прямо'), ex('b', 'Жим'), ex('c', 'Присед')]))).toEqual([
+      { name: 'Присед', comment: 'Спина прямо' },
+      { name: 'Жим', comment: null },
+    ])
   })
-  it('берёт первый комментарий тренера для preview', () => {
-    expect(exerciseSummary(wk([ex('a', 'Присед'), ex('b', 'Жим', 'Держи спину')])).comment).toBe('Держи спину')
+  it('дубль по имени подтягивает комментарий, если у первого его не было', () => {
+    expect(exerciseSummary(wk([ex('a', 'Присед'), ex('c', 'Присед', 'Глубже')]))).toEqual([
+      { name: 'Присед', comment: 'Глубже' },
+    ])
   })
-  it('нет комментариев → comment = null', () => {
-    expect(exerciseSummary(wk([ex('a', 'Присед')])).comment).toBeNull()
+  it('без упражнений → пустой список', () => {
+    expect(exerciseSummary(wk([]))).toEqual([])
   })
 })
 

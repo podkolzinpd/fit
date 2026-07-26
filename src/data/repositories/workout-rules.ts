@@ -396,21 +396,28 @@ export function muscleGroupLabels(workout: Workout): string[] {
   return labels
 }
 
-// Краткая сводка тренировки для карточки истории/расписания: список названий
-// упражнений (по порядку, без дублей) + первый комментарий тренера для preview.
-export interface WorkoutSummaryView {
-  exerciseNames: string[]
+// Сводка тренировки для карточки истории/предстоящих/расписания: список
+// упражнений (по порядку, без дублей), у каждого — свой комментарий тренера.
+// Используется одинаково в плане и в истории.
+export interface SummaryExercise {
+  name: string
   comment: string | null
 }
-export function exerciseSummary(workout: Workout): WorkoutSummaryView {
-  const seen = new Set<string>()
-  const exerciseNames: string[] = []
-  let comment: string | null = null
+export function exerciseSummary(workout: Workout): SummaryExercise[] {
+  const seen = new Map<string, SummaryExercise>()
+  const list: SummaryExercise[] = []
   for (const exercise of workout.exercises) {
-    if (!seen.has(exercise.name)) { seen.add(exercise.name); exerciseNames.push(exercise.name) }
-    if (comment === null && exercise.trainerComment) comment = exercise.trainerComment
+    const existing = seen.get(exercise.name)
+    if (existing) {
+      // Дубль по имени: подтягиваем комментарий, если у первого его не было.
+      if (!existing.comment && exercise.trainerComment) existing.comment = exercise.trainerComment
+      continue
+    }
+    const item: SummaryExercise = { name: exercise.name, comment: exercise.trainerComment ?? null }
+    seen.set(exercise.name, item)
+    list.push(item)
   }
-  return { exerciseNames, comment }
+  return list
 }
 
 // Body Mass Index = weight(kg) / height(m)². Null when data is missing/invalid.
