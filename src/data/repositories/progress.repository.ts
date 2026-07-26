@@ -1,7 +1,7 @@
 import type { CustomMetric, ProgressDraft, ProgressEntry } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { progressQueries } from '../queries/progress.queries'
-import { repositoryError } from './error'
+import { RepositoryError, repositoryError } from './error'
 import { groupCustomMetricValues, roundMetric } from './progress-rules'
 export { roundMetric } from './progress-rules'
 
@@ -24,6 +24,12 @@ export const progressRepository = {
     const result = await progressQueries.save({ ...draft,
       customMetrics: draft.customMetrics.map((metric) => ({ ...metric, value: roundMetric(metric.value) })),
     })
+    if (result.error?.code === '23505') {
+      throw new RepositoryError(
+        'progress_date_conflict',
+        'Замер за эту дату уже существует. Измените существующий замер.',
+      )
+    }
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
