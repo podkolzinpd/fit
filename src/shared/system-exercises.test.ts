@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SYSTEM_EXERCISES, SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISE_CATALOG_VERSION } from './system-exercises'
 import { IMPORTED_EXERCISES } from './system-exercises.generated'
+import { BASE_EXERCISES } from './system-exercises.base.generated'
 
 describe('system exercise catalog', () => {
   it('matches the V1 baseline catalog', () => {
@@ -50,5 +51,24 @@ describe('system exercise catalog', () => {
     }
     // Названия уникальны.
     expect(new Set(IMPORTED_EXERCISES.map((exercise) => exercise.name)).size).toBe(IMPORTED_EXERCISES.length)
+  })
+
+  it('базовые упражнения обогащены до идеального формата', () => {
+    // Обогащённых базовых столько же, сколько рукописных, ref совпадают.
+    expect(BASE_EXERCISES.length).toBe(SYSTEM_EXERCISES.length)
+    expect(new Set(BASE_EXERCISES.map((exercise) => exercise.ref)))
+      .toEqual(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.ref)))
+    for (const exercise of BASE_EXERCISES) {
+      expect(exercise.name).toMatch(/\([^)]+\)$/)  // «Название (Оборудование)»
+      expect(exercise.equipment).toBeTruthy()
+      expect(exercise.primaryMuscleDetail).toBeTruthy()
+    }
+    // Большинство базовых получили картинку (кардио-тренажёры/берпи — без).
+    expect(BASE_EXERCISES.filter((exercise) => exercise.imageUrl).length).toBeGreaterThanOrEqual(40)
+  })
+
+  it('каталог = обогащённые базовые + импортированные без дублей', () => {
+    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(BASE_EXERCISES.length + IMPORTED_EXERCISES.length)
+    expect(new Set(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.ref)).size).toBe(SYSTEM_EXERCISE_CATALOG.length)
   })
 })
