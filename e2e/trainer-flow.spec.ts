@@ -532,6 +532,9 @@ test('комментарий тренера к упражнению: план �
   await page.getByLabel('Фактический вес').first().fill('92.5')
   await page.getByLabel('Фактические повторы').first().fill('8')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  // Ждём, пока подход реально подтвердится (RPC), иначе «Завершить» словит
+  // подтверждение частичного завершения (window.confirm) и не сработает.
+  await expect(page.getByRole('button', { name: 'Подтверждено' }).first()).toBeVisible()
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
@@ -543,7 +546,10 @@ test('комментарий тренера к упражнению: план �
 
   // Комментарий виден и в карточке истории тренировок клиента (список упр.).
   await page.getByRole('link', { name: 'Клиенты', exact: true }).click()
-  await page.getByText('Коммент Клиент').first().click()
+  await page.getByText('Коммент Клиент', { exact: true }).first().click()
+  await expect(page.getByRole('heading', { name: 'Коммент Клиент' })).toBeVisible()
   await page.getByRole('link', { name: 'История', exact: true }).click()
+  // Дожидаемся, что история подгрузилась (не пустой экран), потом ищем коммент.
+  await expect(page.locator('.card').first()).toBeVisible()
   await expect(page.locator('.workout-exercise-comment').first()).toContainText('Держи спину прямо')
 })
