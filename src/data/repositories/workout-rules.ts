@@ -344,6 +344,16 @@ export function formatFactVsPlan(set: WorkoutSet): { fact: string; planNote: str
   return { fact, planNote }
 }
 
+// Фактический результат подтверждённого подхода — строка вида «90 кг × 8 повт.».
+// Возвращает null, если подход не подтверждён (confirmedAt пуст) или у него нет
+// ни одного фактического значения: такой подход не выполнялся, план за факт не
+// выдаём (иначе история расходится с графиком «строго по факту»).
+export function factLine(set: WorkoutSet): string | null {
+  if (!set.confirmedAt) return null
+  const line = setLine(set.fact.weightKg, set.fact.reps, set.fact.distanceKm, set.fact.durationMin)
+  return line || null
+}
+
 // Ordered, de-duplicated muscle-group labels for a workout's exercises.
 export function muscleGroupLabels(workout: Workout): string[] {
   const seen = new Set<string>()
