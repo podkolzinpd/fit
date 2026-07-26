@@ -72,10 +72,11 @@ describe('system exercise catalog', () => {
     expect(new Set(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.ref)).size).toBe(SYSTEM_EXERCISE_CATALOG.length)
   })
 
-  it('инструкции группы «Ноги» переведены на русский', () => {
-    const legs = SYSTEM_EXERCISE_CATALOG.filter((exercise) => exercise.muscleGroup === 'legs')
-    expect(legs.length).toBeGreaterThan(0)
-    for (const exercise of legs) {
+  it('инструкции групп Ноги/Грудь/Спина переведены на русский', () => {
+    const translated = SYSTEM_EXERCISE_CATALOG.filter((exercise) =>
+      ['legs', 'chest', 'back'].includes(exercise.muscleGroup))
+    expect(translated.length).toBeGreaterThan(0)
+    for (const exercise of translated) {
       expect(exercise.instructions?.length).toBeGreaterThan(0)
       // Нет длинных латинских слов (остатков английского) в шагах техники.
       for (const step of exercise.instructions ?? []) expect(step).not.toMatch(/[A-Za-z]{4,}/)
