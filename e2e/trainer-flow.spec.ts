@@ -76,14 +76,11 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.done-summary-3')).toContainText('Тоннаж')
   await expect(page.locator('.done-summary-3')).toContainText('1.2 т')
 
-  // Без перезагрузки: после завершения тренировки статистика клиента обновляется
-  // (finish инвалидирует client-stats). Возвращаемся SPA-навигацией, не goto.
+  // «Назад» с завершённой тренировки ведёт в расписание (все запланированные).
   await page.locator('.page-back').click()
-  await expect(page.getByRole('heading', { name: 'История тренировок' })).toBeVisible()
-  await page.locator('.page-back').click()
-  await expect(page.locator('.summary.stats')).toContainText('1')
-  await expect(page.locator('.summary.stats')).toContainText('100%')
+  await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
 
+  // После завершения тренировки статистика клиента обновлена.
   await page.goto(clientUrl)
   await expect(page.getByText('Тренировок', { exact: true })).toBeVisible()
   await expect(page.locator('.summary.stats')).toContainText('1')
@@ -101,20 +98,20 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.card-meta').first()).toContainText('1.2 т')
   await page.locator('.card').first().click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
-  // Заходим в аналитику упражнения и возвращаемся: «назад» с тренировки не должен
-  // пинг-понгить обратно в историю упражнения (регресс петли навигации).
+  // Заходим в аналитику упражнения и возвращаемся: «назад» с упражнения ведёт
+  // на тренировку, «назад» с тренировки — в расписание (без петли).
   await page.locator('.exercise-name-link').first().click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
-  // После одной проведённой тренировки статистика показывает текущий результат
-  // (не пустоту): график линии появится со второй тренировки.
+  // После одной проведённой тренировки статистика показывает текущий результат.
   await expect(page.locator('.stat-single')).toContainText('Текущий результат')
   await page.locator('.page-back').click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await page.locator('.page-back').click()
-  await expect(page.getByRole('heading', { name: 'История тренировок' })).toBeVisible()
-  await page.locator('.page-back').click()
-  await expect(page.locator('.summary.stats')).toContainText('100%')
+  await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
 
+  // Прогресс сохраняем из карточки клиента («Замеры и аналитика»).
+  await page.goto(clientUrl)
+  await expect(page.getByRole('heading', { name: 'Анна Тестова' })).toBeVisible()
   await page.getByRole('link', { name: 'Замеры и аналитика' }).click()
   await page.getByLabel('Дата').fill('2026-07-20')
   await page.getByLabel('Вес, кг').fill('61')
@@ -500,9 +497,9 @@ test('комментарий тренера к упражнению: план �
   await page.getByRole('tab', { name: 'История' }).click()
   await expect(page.locator('.exercise-comment-note')).toContainText('Держи спину прямо')
 
-  // Комментарий-preview виден и в карточке истории тренировок клиента.
+  // Комментарий виден и в карточке истории тренировок клиента (список упр.).
   await page.getByRole('link', { name: 'Клиенты', exact: true }).click()
   await page.getByText('Коммент Клиент').first().click()
   await page.getByRole('link', { name: 'История', exact: true }).click()
-  await expect(page.locator('.card-comment').first()).toContainText('Держи спину прямо')
+  await expect(page.locator('.workout-exercise-comment').first()).toContainText('Держи спину прямо')
 })
