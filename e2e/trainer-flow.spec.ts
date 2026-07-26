@@ -96,7 +96,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('link', { name: 'История', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'История тренировок' })).toBeVisible()
   await expect(page.locator('.card').first()).toBeVisible()
-  // На карточке истории — тоннаж завершённой тренировки.
+  // На карточке истории — список упражнений (а не группы мышц) и тоннаж.
+  await expect(page.locator('.cards .card').first()).toContainText('Болгарский присед')
   await expect(page.locator('.card-meta').first()).toContainText('1.2 т')
   await page.locator('.card').first().click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
@@ -498,4 +499,10 @@ test('комментарий тренера к упражнению: план �
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   await page.getByRole('tab', { name: 'История' }).click()
   await expect(page.locator('.exercise-comment-note')).toContainText('Держи спину прямо')
+
+  // Комментарий-preview виден и в карточке истории тренировок клиента.
+  await page.getByRole('link', { name: 'Клиенты', exact: true }).click()
+  await page.getByText('Коммент Клиент').first().click()
+  await page.getByRole('link', { name: 'История', exact: true }).click()
+  await expect(page.locator('.card-comment').first()).toContainText('Держи спину прямо')
 })
