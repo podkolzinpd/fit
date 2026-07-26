@@ -70,13 +70,15 @@ const BASE_MATCH = {
   'russian-twist':       { id: 'Russian_Twist', name: 'Русский твист (Своё тело)' },
   'side-plank':          { id: 'Side_Bridge', name: 'Боковая планка (Своё тело)' },
   'jump-rope':           { id: 'Rope_Jumping', name: 'Прыжки со скакалкой (Скакалка)' },
-  // Кардио-тренажёры и берпи: аналога в источнике нет — без картинки, метаданные вручную.
-  'running':             { id: null, name: 'Бег (Кардио)', equipment: 'Кардио', detail: 'Кардио', instructions: ['Бегите в равномерном темпе, удерживая корпус прямым, руки согнуты под углом ~90°.', 'Дышите ритмично; контролируйте пульс по плану тренировки.'] },
-  'stationary-bike':     { id: null, name: 'Велотренажёр (Кардио)', equipment: 'Кардио', detail: 'Кардио', instructions: ['Настройте посадку и сопротивление под план.', 'Крутите педали в равномерном темпе, удерживая корпус стабильным.'] },
-  'elliptical':          { id: null, name: 'Эллипс (Кардио)', equipment: 'Кардио', detail: 'Кардио', instructions: ['Встаньте на платформы, возьмитесь за рукояти.', 'Двигайтесь плавно, согласуя движения рук и ног, без рывков.'] },
-  'rowing-machine':      { id: null, name: 'Гребной тренажёр (Кардио)', equipment: 'Кардио', detail: 'Кардио', instructions: ['Оттолкнитесь ногами, затем подтяните рукоять к корпусу.', 'Вернитесь в исходное в обратном порядке: руки — корпус — ноги.'] },
-  'walking':             { id: null, name: 'Ходьба (Кардио)', equipment: 'Кардио', detail: 'Кардио', instructions: ['Идите в заданном темпе, держите корпус прямым.', 'Контролируйте продолжительность и дистанцию по плану.'] },
-  'burpees':             { id: null, name: 'Берпи (Своё тело)', equipment: 'Своё тело', detail: 'Всё тело', instructions: ['Из положения стоя присядьте и поставьте ладони на пол.', 'Прыжком отведите ноги назад в упор лёжа, сделайте отжимание.', 'Прыжком верните ноги к рукам и выпрыгните вверх с хлопком над головой.'] },
+  // Кардио и берпи: точного аналога-упражнения в источнике нет, поэтому
+  // метаданные (оборудование/мышца/инструкции) задаём вручную, но картинку
+  // берём из близкого аналога (imageId) — Free Exercise DB, public domain.
+  'running':             { id: null, imageId: 'Running_Treadmill', name: 'Бег (Кардио)', equipment: 'Кардио', detail: 'Кардио', instructions: ['Бегите в равномерном темпе, удерживая корпус прямым, руки согнуты под углом ~90°.', 'Дышите ритмично; контролируйте пульс по плану тренировки.'] },
+  'stationary-bike':     { id: null, imageId: 'Bicycling_Stationary', name: 'Велотренажёр (Кардио)', equipment: 'Кардио', detail: 'Кардио', instructions: ['Настройте посадку и сопротивление под план.', 'Крутите педали в равномерном темпе, удерживая корпус стабильным.'] },
+  'elliptical':          { id: null, imageId: 'Elliptical_Trainer', name: 'Эллипс (Кардио)', equipment: 'Кардио', detail: 'Кардио', instructions: ['Встаньте на платформы, возьмитесь за рукояти.', 'Двигайтесь плавно, согласуя движения рук и ног, без рывков.'] },
+  'rowing-machine':      { id: null, imageId: 'Rowing_Stationary', name: 'Гребной тренажёр (Кардио)', equipment: 'Кардио', detail: 'Кардио', instructions: ['Оттолкнитесь ногами, затем подтяните рукоять к корпусу.', 'Вернитесь в исходное в обратном порядке: руки — корпус — ноги.'] },
+  'walking':             { id: null, imageId: 'Walking_Treadmill', name: 'Ходьба (Кардио)', equipment: 'Кардио', detail: 'Кардио', instructions: ['Идите в заданном темпе, держите корпус прямым.', 'Контролируйте продолжительность и дистанцию по плану.'] },
+  'burpees':             { id: null, imageId: 'Mountain_Climbers', name: 'Берпи (Своё тело)', equipment: 'Своё тело', detail: 'Всё тело', instructions: ['Из положения стоя присядьте и поставьте ладони на пол.', 'Прыжком отведите ноги назад в упор лёжа, сделайте отжимание.', 'Прыжком верните ноги к рукам и выпрыгните вверх с хлопком над головой.'] },
 }
 
 // Детальная мышца Free Exercise DB -> наш укрупнённый MuscleGroup.
@@ -378,13 +380,25 @@ async function generateBase(byId) {
       row.level = ex.level ?? null
       row.instructions = INSTRUCTIONS_RU[base.ref] ?? ex.instructions ?? []
     } else {
-      // Placeholder (кардио/берпи): метаданные из маппинга, без картинки.
+      // Кардио/берпи: метаданные из маппинга. Картинку берём из близкого
+      // аналога (match.imageId), если задан.
       row.equipment = match.equipment
       row.equipmentRef = 'other'
       row.primaryMuscleDetail = match.detail
       row.secondaryMuscles = []
       row.level = 'beginner'
       row.instructions = INSTRUCTIONS_RU[base.ref] ?? match.instructions
+      if (match.imageId) {
+        const source = byId[match.imageId]
+        const imageName = `base-${base.ref}.jpg`
+        const response = source && await fetch(RAW_IMAGES + source.images[0])
+        if (response && response.ok) {
+          await writeFile(new URL(imageName, imagesDir), Buffer.from(await response.arrayBuffer()))
+          row.imageUrl = `/exercises/${imageName}`
+        } else {
+          console.warn(`  нет картинки-аналога: ${base.ref} (${match.imageId})`)
+        }
+      }
     }
     rows.push(row)
   }

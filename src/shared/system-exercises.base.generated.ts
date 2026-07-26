@@ -870,7 +870,8 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "instructions": [
       "Бегите в равномерном темпе, удерживая корпус прямым, руки согнуты под углом ~90°.",
       "Дышите ритмично; контролируйте пульс по плану тренировки."
-    ]
+    ],
+    "imageUrl": "/exercises/base-running.jpg"
   },
   {
     "source": "system",
@@ -886,7 +887,8 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "instructions": [
       "Настройте посадку и сопротивление под план.",
       "Крутите педали в равномерном темпе, удерживая корпус стабильным."
-    ]
+    ],
+    "imageUrl": "/exercises/base-stationary-bike.jpg"
   },
   {
     "source": "system",
@@ -902,7 +904,8 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "instructions": [
       "Встаньте на платформы, возьмитесь за рукояти.",
       "Двигайтесь плавно, согласуя движения рук и ног, без рывков."
-    ]
+    ],
+    "imageUrl": "/exercises/base-elliptical.jpg"
   },
   {
     "source": "system",
@@ -918,7 +921,8 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "instructions": [
       "Оттолкнитесь ногами, затем подтяните рукоять к корпусу.",
       "Вернитесь в исходное в обратном порядке: руки — корпус — ноги."
-    ]
+    ],
+    "imageUrl": "/exercises/base-rowing-machine.jpg"
   },
   {
     "source": "system",
@@ -934,7 +938,8 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "instructions": [
       "Идите в заданном темпе, держите корпус прямым.",
       "Контролируйте продолжительность и дистанцию по плану."
-    ]
+    ],
+    "imageUrl": "/exercises/base-walking.jpg"
   },
   {
     "source": "system",
@@ -972,6 +977,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
       "Из положения стоя присядьте и поставьте ладони на пол.",
       "Прыжком отведите ноги назад в упор лёжа, сделайте отжимание.",
       "Прыжком верните ноги к рукам и выпрыгните вверх с хлопком над головой."
-    ]
+    ],
+    "imageUrl": "/exercises/base-burpees.jpg"
   }
 ]

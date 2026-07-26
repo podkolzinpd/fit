@@ -63,8 +63,12 @@ describe('system exercise catalog', () => {
       expect(exercise.equipment).toBeTruthy()
       expect(exercise.primaryMuscleDetail).toBeTruthy()
     }
-    // Большинство базовых получили картинку (кардио-тренажёры/берпи — без).
-    expect(BASE_EXERCISES.filter((exercise) => exercise.imageUrl).length).toBeGreaterThanOrEqual(40)
+    // Все базовые получили картинку (кардио/берпи — из близкого аналога).
+    expect(BASE_EXERCISES.every((exercise) => exercise.imageUrl)).toBe(true)
+  })
+
+  it('весь каталог имеет картинку', () => {
+    expect(SYSTEM_EXERCISE_CATALOG.every((exercise) => exercise.imageUrl)).toBe(true)
   })
 
   it('каталог = обогащённые базовые + импортированные без дублей', () => {
