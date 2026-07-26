@@ -82,7 +82,7 @@ p { margin: 6px 0 }
 .workout-exercise-list li { display: flex; flex-direction: column }
 .workout-exercise-name { font-size: 14px; color: var(--fg) }
 .workout-exercise-comment { color: var(--muted); font-size: 12px; margin-top: 1px }
-.day-grid-event-groups { font-size: 11px; color: #c9c2e6; line-height: 1.15 }
+.day-grid-event-groups { font-size: 11px; color: #c9c2e6; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; width: 100% }
 .summary.stats-3 { grid-template-columns: repeat(3, 1fr) }
 .client-actions { display: flex; flex-direction: column; gap: 10px; margin: 20px 0 }
 .client-actions-row { display: flex; gap: 10px }
@@ -98,8 +98,9 @@ p { margin: 6px 0 }
 .schedule-page > .day-grid-scroll { flex: 1; min-height: 0; padding-bottom: 100px }
 /* Шапка расписания: заголовок не переносим по буквам; действия при нехватке
    ширины уходят на новую строку, а не сжимают «Расписание». */
-.schedule-page .page-header { flex-wrap: wrap; margin-bottom: 14px }
-.schedule-page .page-header h1 { white-space: nowrap; overflow-wrap: normal }
+/* Заголовок «Расписание» скрыт (дублирует таб-бар) — действия на всю ширину. */
+.schedule-page .page-header { margin-bottom: 14px }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0 }
 .schedule-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; margin-left: auto }
 .schedule-today { padding: 9px 13px; border-radius: 11px; font-size: 14px }
 .schedule-jump { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-raised); font-size: 20px; cursor: pointer; position: relative }
