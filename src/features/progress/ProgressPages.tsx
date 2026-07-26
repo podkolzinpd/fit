@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type FormEvent, type PointerEvent as React
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { clientsRepository } from '../../data/repositories/clients.repository'
+import { findProgressDateConflict } from '../../data/repositories/progress-rules'
 import { progressRepository } from '../../data/repositories/progress.repository'
 import type { CustomMetric, ProgressEntry } from '../../shared/domain'
 import { formatLocalDate, localDate, type LocalDate, todayLocalDate } from '../../shared/local-date'
@@ -28,10 +29,11 @@ export function ProgressPage() {
   const [windowEnd, setWindowEnd] = useState<LocalDate | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [metricSheetOpen, setMetricSheetOpen] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
   const tabsRef = useRef<HTMLDivElement>(null)
   const tabsDragOriginRef = useRef<{ x: number; scrollLeft: number } | null>(null)
   const tabsDraggedRef = useRef(false)
-  useEffect(() => { setSelectedMetric('weightKg'); setWindowEnd(null); setHistoryOpen(false); setMetricSheetOpen(false) }, [clientId])
+  useEffect(() => { setSelectedMetric('weightKg'); setWindowEnd(null); setHistoryOpen(false); setMetricSheetOpen(false); setCreateError(null) }, [clientId])
   const client = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
   const entries = useQuery({ queryKey: ['progress', clientId], queryFn: () => progressRepository.list(clientId) })
   const metrics = useQuery({ queryKey: ['metrics', clientId], queryFn: () => progressRepository.listMetrics(clientId) })
@@ -47,6 +49,19 @@ export function ProgressPage() {
   const chartMetric: MetricSelector = activeBuiltin ? activeBuiltin.key : { customMetricId: selectedMetric }
   const chartLabel = activeBuiltin?.label ?? activeCustom?.name ?? METRIC_TABS[0]!.label
   const chartUnit = activeBuiltin?.unit ?? activeCustom?.unit ?? ''
+  function saveNewProgress(form: HTMLFormElement) {
+    const data = new FormData(form)
+    const recordedOn = localDate(String(data.get('recordedOn')))
+    const conflict = findProgressDateConflict(entries.data ?? [], recordedOn)
+    if (conflict) {
+      setCreateError(`Замер за ${formatLocalDate(recordedOn)} уже существует. Открыли его для редактирования.`)
+      setHistoryOpen(true)
+      setEditing(conflict)
+      return
+    }
+    setCreateError(null)
+    save.mutate(form)
+  }
   function handleTabsPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.pointerType !== 'mouse' || !tabsRef.current) return
     tabsDragOriginRef.current = { x: event.clientX, scrollLeft: tabsRef.current.scrollLeft }
@@ -73,14 +88,14 @@ export function ProgressPage() {
       </div>
       <ProgressChart entries={entries.data} metric={chartMetric} label={chartLabel} unit={chartUnit} windowEnd={windowEnd} onWindowChange={setWindowEnd} />
     </>}
-    <ProgressForm entry={null} metrics={metrics.data ?? []} busy={save.isPending} error={save.error} onSubmit={(form) => save.mutate(form)} />
+    <ProgressForm entry={null} metrics={metrics.data ?? []} busy={save.isPending} errorMessage={createError ?? save.error?.message ?? null} onDateChange={() => { setCreateError(null); save.reset() }} onSubmit={saveNewProgress} />
     <section>
       <div className="workout-editor-heading">
         <h2>История замеров ({entries.data?.length ?? 0})</h2>
         {entries.data && entries.data.length > 0 && <button type="button" className="link" onClick={() => setHistoryOpen((value) => !value)}>{historyOpen ? 'Скрыть' : 'Показать'}</button>}
       </div>
       {historyOpen && entries.data?.map((entry) => editing?.id === entry.id
-        ? <article className="card editing" key={entry.id}><ProgressForm entry={entry} metrics={metrics.data ?? []} busy={save.isPending} error={save.error} onSubmit={(form) => save.mutate(form)} onCancel={() => setEditing(null)} /></article>
+        ? <article className="card editing" key={entry.id}><ProgressForm entry={entry} metrics={metrics.data ?? []} busy={save.isPending} errorMessage={save.error?.message ?? null} onSubmit={(form) => save.mutate(form)} onCancel={() => setEditing(null)} /></article>
         : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{entrySummaryParts(entry, metrics.data ?? []).join(' · ')}</p></div><div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" onClick={() => remove.mutate(entry)}>Удалить</button></div></article>)}
     </section>
     <MetricsManager metrics={metrics.data ?? []} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />
@@ -97,8 +112,8 @@ function MetricOverflowSheet({ metrics, onPick, onClose }: { metrics: CustomMetr
   </div>
 }
 
-function ProgressForm({ entry, metrics, busy, error, onSubmit, onCancel }: { entry: ProgressEntry | null; metrics: CustomMetric[]; busy: boolean; error: Error | null; onSubmit: (form: HTMLFormElement) => void; onCancel?: () => void }) {
-  return <section><h2>{entry ? 'Изменить замер' : 'Новый замер'}</h2><form className="stack compact" onSubmit={(event) => { event.preventDefault(); onSubmit(event.currentTarget) }}><Field label="Дата"><input name="recordedOn" type="date" defaultValue={entry?.recordedOn ?? todayLocalDate()} required /></Field><div className="measure-grid"><Field label="Вес, кг"><input name="weightKg" type="number" step="0.1" defaultValue={entry?.weightKg} /></Field><Field label="Грудь, см"><input name="chestCm" type="number" step="0.1" defaultValue={entry?.chestCm} /></Field><Field label="Талия, см"><input name="waistCm" type="number" step="0.1" defaultValue={entry?.waistCm} /></Field><Field label="Бёдра, см"><input name="hipCm" type="number" step="0.1" defaultValue={entry?.hipCm} /></Field></div>{metrics.filter((metric) => !metric.archivedAt).map((metric) => <Field key={metric.id} label={`${metric.name}${metric.unit ? `, ${metric.unit}` : ''}`}><input name={`metric-${metric.id}`} type="number" step="0.001" defaultValue={entry?.customMetrics.find((value) => value.metricId === metric.id)?.value} /></Field>)}<Field label="Заметка"><textarea name="notes" defaultValue={entry?.notes} /></Field>{error && <p className="error">{error.message}</p>}<div className="actions">{onCancel && <button type="button" className="secondary" onClick={onCancel}>Отмена</button>}<button disabled={busy}>Сохранить замер</button></div></form></section>
+function ProgressForm({ entry, metrics, busy, errorMessage, onSubmit, onCancel, onDateChange }: { entry: ProgressEntry | null; metrics: CustomMetric[]; busy: boolean; errorMessage: string | null; onSubmit: (form: HTMLFormElement) => void; onCancel?: () => void; onDateChange?: () => void }) {
+  return <section><h2>{entry ? 'Изменить замер' : 'Новый замер'}</h2><form className="stack compact" onSubmit={(event) => { event.preventDefault(); onSubmit(event.currentTarget) }}><Field label="Дата"><input name="recordedOn" type="date" defaultValue={entry?.recordedOn ?? todayLocalDate()} onChange={onDateChange} required /></Field><div className="measure-grid"><Field label="Вес, кг"><input name="weightKg" type="number" step="0.1" defaultValue={entry?.weightKg} /></Field><Field label="Грудь, см"><input name="chestCm" type="number" step="0.1" defaultValue={entry?.chestCm} /></Field><Field label="Талия, см"><input name="waistCm" type="number" step="0.1" defaultValue={entry?.waistCm} /></Field><Field label="Бёдра, см"><input name="hipCm" type="number" step="0.1" defaultValue={entry?.hipCm} /></Field></div>{metrics.filter((metric) => !metric.archivedAt).map((metric) => <Field key={metric.id} label={`${metric.name}${metric.unit ? `, ${metric.unit}` : ''}`}><input name={`metric-${metric.id}`} type="number" step="0.001" defaultValue={entry?.customMetrics.find((value) => value.metricId === metric.id)?.value} /></Field>)}<Field label="Заметка"><textarea name="notes" defaultValue={entry?.notes} /></Field>{errorMessage && <p className="error">{errorMessage}</p>}<div className="actions">{onCancel && <button type="button" className="secondary" onClick={onCancel}>Отмена</button>}<button disabled={busy}>Сохранить замер</button></div></form></section>
 }
 
 function MetricsManager({ metrics, onCreate, onArchive }: { metrics: CustomMetric[]; onCreate: (name: string, unit: string | null) => void; onArchive: (metric: CustomMetric) => void }) {
