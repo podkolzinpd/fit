@@ -18,6 +18,65 @@ const TARGET_COUNT = 120
 const projectRoot = new URL('..', import.meta.url)
 const imagesDir = new URL('public/exercises/', projectRoot)
 const generatedFile = new URL('src/shared/system-exercises.generated.ts', projectRoot)
+const baseGeneratedFile = new URL('src/shared/system-exercises.base.generated.ts', projectRoot)
+
+// Наши 49 базовых упражнений: ref -> аналог в Free Exercise DB (id) + русское
+// имя в формате «Название (Оборудование)». Из аналога берём картинку,
+// оборудование, детальную мышцу и инструкции — приводим базовые к тому же
+// идеальному виду, что и импортированные. sourceId: null — аналога нет
+// (кардио-тренажёры), картинки не будет, метаданные задаём вручную.
+const BASE_MATCH = {
+  'barbell-squat':       { id: 'Barbell_Squat', name: 'Присед со штангой (Штанга)' },
+  'front-squat':         { id: 'Front_Barbell_Squat', name: 'Фронтальный присед (Штанга)' },
+  'leg-press':           { id: 'Leg_Press', name: 'Жим ногами (Тренажёр)' },
+  'romanian-deadlift':   { id: 'Romanian_Deadlift', name: 'Румынская тяга (Штанга)' },
+  'stiff-leg-deadlift':  { id: 'Stiff-Legged_Barbell_Deadlift', name: 'Становая на прямых ногах (Штанга)' },
+  'lunges':              { id: 'Barbell_Lunge', name: 'Выпады (Штанга)' },
+  'bulgarian-split-squat': { id: 'One_Leg_Barbell_Squat', name: 'Болгарский присед (Штанга)' },
+  'leg-curl':            { id: 'Lying_Leg_Curls', name: 'Сгибание ног лёжа (Тренажёр)' },
+  'leg-extension':       { id: 'Leg_Extensions', name: 'Разгибание ног (Тренажёр)' },
+  'calf-raise':          { id: 'Standing_Calf_Raises', name: 'Подъём на носки стоя (Тренажёр)' },
+  'hyperextension':      { id: 'Hyperextensions_Back_Extensions', name: 'Гиперэкстензия (Своё тело)' },
+  'bench-press':         { id: 'Barbell_Bench_Press_-_Medium_Grip', name: 'Жим лёжа (Штанга)' },
+  'dumbbell-bench-press':{ id: 'Dumbbell_Bench_Press', name: 'Жим гантелей лёжа (Гантели)' },
+  'incline-bench-press': { id: 'Barbell_Incline_Bench_Press_-_Medium_Grip', name: 'Жим на наклонной (Штанга)' },
+  'dumbbell-fly':        { id: 'Dumbbell_Flyes', name: 'Разводка гантелей (Гантели)' },
+  'push-ups':            { id: 'Pushups', name: 'Отжимания (Своё тело)' },
+  'dips':                { id: 'Dips_-_Chest_Version', name: 'Отжимания на брусьях (Своё тело)' },
+  'pec-deck':            { id: 'Butterfly', name: 'Сведение в тренажёре (Тренажёр)' },
+  'barbell-row':         { id: 'Bent_Over_Barbell_Row', name: 'Тяга штанги в наклоне (Штанга)' },
+  'dumbbell-row':        { id: 'One-Arm_Dumbbell_Row', name: 'Тяга гантели в наклоне (Гантели)' },
+  'pull-ups':            { id: 'Pullups', name: 'Подтягивания (Своё тело)' },
+  'lat-pulldown':        { id: 'Wide-Grip_Lat_Pulldown', name: 'Тяга верхнего блока (Блок)' },
+  'seated-cable-row':    { id: 'Seated_Cable_Rows', name: 'Тяга нижнего блока (Блок)' },
+  'deadlift':            { id: 'Barbell_Deadlift', name: 'Становая тяга (Штанга)' },
+  'good-morning':        { id: 'Good_Morning', name: 'Гудмонинг (Штанга)' },
+  'overhead-press':      { id: 'Standing_Military_Press', name: 'Жим штанги стоя (Штанга)' },
+  'seated-dumbbell-press': { id: 'Dumbbell_Shoulder_Press', name: 'Жим гантелей сидя (Гантели)' },
+  'lateral-raise':       { id: 'Side_Lateral_Raise', name: 'Разводка в стороны (Гантели)' },
+  'rear-delt-fly':       { id: 'Reverse_Flyes', name: 'Разводка на заднюю дельту (Гантели)' },
+  'upright-row':         { id: 'Upright_Barbell_Row', name: 'Тяга к подбородку (Штанга)' },
+  'shrugs':              { id: 'Barbell_Shrug', name: 'Шраги (Штанга)' },
+  'biceps-curl':         { id: 'Dumbbell_Bicep_Curl', name: 'Сгибание на бицепс (Гантели)' },
+  'hammer-curl':         { id: 'Hammer_Curls', name: 'Молоток (Гантели)' },
+  'barbell-curl':        { id: 'Barbell_Curl', name: 'Подъём штанги на бицепс (Штанга)' },
+  'french-press':        { id: 'Lying_Triceps_Press', name: 'Французский жим (EZ-гриф)' },
+  'triceps-pushdown':    { id: 'Triceps_Pushdown', name: 'Разгибание на трицепс (Блок)' },
+  'close-grip-push-up':  { id: 'Push-Ups_-_Close_Triceps_Position', name: 'Отжимания узким хватом (Своё тело)' },
+  'plank':               { id: 'Plank', name: 'Планка (Своё тело)' },
+  'crunches':            { id: 'Crunches', name: 'Скручивания (Своё тело)' },
+  'leg-raise':           { id: 'Flat_Bench_Lying_Leg_Raise', name: 'Подъём ног лёжа (Своё тело)' },
+  'russian-twist':       { id: 'Russian_Twist', name: 'Русский твист (Своё тело)' },
+  'side-plank':          { id: 'Side_Bridge', name: 'Боковая планка (Своё тело)' },
+  'jump-rope':           { id: 'Rope_Jumping', name: 'Прыжки со скакалкой (Скакалка)' },
+  // Кардио-тренажёры и берпи: аналога в источнике нет — без картинки, метаданные вручную.
+  'running':             { id: null, name: 'Бег (Кардио)', equipment: 'Кардио', detail: 'Кардио', instructions: ['Бегите в равномерном темпе, удерживая корпус прямым, руки согнуты под углом ~90°.', 'Дышите ритмично; контролируйте пульс по плану тренировки.'] },
+  'stationary-bike':     { id: null, name: 'Велотренажёр (Кардио)', equipment: 'Кардио', detail: 'Кардио', instructions: ['Настройте посадку и сопротивление под план.', 'Крутите педали в равномерном темпе, удерживая корпус стабильным.'] },
+  'elliptical':          { id: null, name: 'Эллипс (Кардио)', equipment: 'Кардио', detail: 'Кардио', instructions: ['Встаньте на платформы, возьмитесь за рукояти.', 'Двигайтесь плавно, согласуя движения рук и ног, без рывков.'] },
+  'rowing-machine':      { id: null, name: 'Гребной тренажёр (Кардио)', equipment: 'Кардио', detail: 'Кардио', instructions: ['Оттолкнитесь ногами, затем подтяните рукоять к корпусу.', 'Вернитесь в исходное в обратном порядке: руки — корпус — ноги.'] },
+  'walking':             { id: null, name: 'Ходьба (Кардио)', equipment: 'Кардио', detail: 'Кардио', instructions: ['Идите в заданном темпе, держите корпус прямым.', 'Контролируйте продолжительность и дистанцию по плану.'] },
+  'burpees':             { id: null, name: 'Берпи (Своё тело)', equipment: 'Своё тело', detail: 'Всё тело', instructions: ['Из положения стоя присядьте и поставьте ладони на пол.', 'Прыжком отведите ноги назад в упор лёжа, сделайте отжимание.', 'Прыжком верните ноги к рукам и выпрыгните вверх с хлопком над головой.'] },
+}
 
 // Детальная мышца Free Exercise DB -> наш укрупнённый MuscleGroup.
 const MUSCLE_GROUP = {
@@ -205,6 +264,7 @@ function score(ex) {
 async function main() {
   console.log('Загружаю базу упражнений...')
   const all = await (await fetch(SOURCE)).json()
+  const byId = Object.fromEntries(all.map((ex) => [ex.id, ex]))
 
   // Отбираем ~TARGET_COUNT популярных с балансом по группам мышц: сортируем по
   // score, затем round-robin по группам, чтобы ни одна не была пустой.
@@ -278,6 +338,76 @@ async function main() {
     `export const IMPORTED_EXERCISES: readonly ImportedExercise[] = ${JSON.stringify(rows, null, 2)}\n`
   await writeFile(fileURLToPath(generatedFile), header)
   console.log(`Готово: ${rows.length} упражнений, картинки в public/exercises/, данные в system-exercises.generated.ts`)
+
+  await generateBase(byId)
+}
+
+// Обогащает наши 49 базовых до идеального вида: картинка/оборудование/детальная
+// мышца/инструкции из аналога Free Exercise DB, имя в формате «(Оборудование)».
+// muscleGroup/inputKind берём из исходного каталога (не меняем семантику).
+async function generateBase(byId) {
+  const baseCatalog = await loadBaseCatalog()
+  const rows = []
+  for (const base of baseCatalog) {
+    const match = BASE_MATCH[base.ref]
+    if (!match) { console.warn(`  базовый без маппинга: ${base.ref}`); rows.push(base); continue }
+
+    const row = {
+      source: 'system',
+      ref: base.ref,
+      name: match.name,
+      muscleGroup: base.muscleGroup,
+      inputKind: base.inputKind,
+    }
+    if (match.id) {
+      const ex = byId[match.id]
+      if (!ex) { console.warn(`  аналог не найден: ${base.ref} -> ${match.id}`); rows.push(base); continue }
+      const imageName = `base-${base.ref}.jpg`
+      const response = await fetch(RAW_IMAGES + ex.images[0])
+      if (response.ok) {
+        await writeFile(new URL(imageName, imagesDir), Buffer.from(await response.arrayBuffer()))
+        row.imageUrl = `/exercises/${imageName}`
+      } else {
+        console.warn(`  нет картинки: ${base.ref}`)
+      }
+      row.equipment = equipmentLabelFor(ex.equipment)
+      row.equipmentRef = ex.equipment
+      row.primaryMuscleDetail = muscleLabelFor(ex.primaryMuscles[0])
+      row.secondaryMuscles = (ex.secondaryMuscles ?? []).map(muscleLabelFor)
+      row.level = ex.level ?? null
+      row.instructions = ex.instructions ?? []
+    } else {
+      // Placeholder (кардио/берпи): метаданные из маппинга, без картинки.
+      row.equipment = match.equipment
+      row.equipmentRef = 'other'
+      row.primaryMuscleDetail = match.detail
+      row.secondaryMuscles = []
+      row.level = 'beginner'
+      row.instructions = match.instructions
+    }
+    rows.push(row)
+  }
+
+  const header = `// АВТОГЕНЕРАЦИЯ — не редактировать вручную.\n` +
+    `// Базовые упражнения, обогащённые из Free Exercise DB (public domain).\n` +
+    `// Обновление: node scripts/import-exercises.mjs\n` +
+    `import type { ExerciseSnapshot } from './domain'\n\n` +
+    `export const BASE_EXERCISES: readonly ExerciseSnapshot[] = ${JSON.stringify(rows, null, 2)}\n`
+  await writeFile(fileURLToPath(baseGeneratedFile), header)
+  const withImg = rows.filter((r) => r.imageUrl).length
+  console.log(`Базовые: ${rows.length} упражнений (${withImg} с картинками), данные в system-exercises.base.generated.ts`)
+}
+
+// Читает ref/name/muscleGroup/inputKind рукописных базовых из system-exercises.ts.
+async function loadBaseCatalog() {
+  const source = await (await import('node:fs/promises')).readFile(
+    fileURLToPath(new URL('src/shared/system-exercises.ts', projectRoot)), 'utf8')
+  const block = source.slice(source.indexOf('SYSTEM_EXERCISES = ['), source.indexOf('] as const'))
+  const rows = []
+  const re = /ref: '([^']+)', name: '([^']+)', muscleGroup: '([^']+)', inputKind: '([^']+)'/g
+  let m
+  while ((m = re.exec(block))) rows.push({ source: 'system', ref: m[1], name: m[2], muscleGroup: m[3], inputKind: m[4] })
+  return rows
 }
 
 main().catch((error) => { console.error(error); process.exit(1) })

@@ -1,5 +1,6 @@
 import type { ExerciseSnapshot, MuscleGroup } from './domain'
 import { IMPORTED_EXERCISES } from './system-exercises.generated'
+import { BASE_EXERCISES } from './system-exercises.base.generated'
 
 export const SYSTEM_EXERCISE_CATALOG_VERSION = 1
 
@@ -91,7 +92,10 @@ export const SYSTEM_EXERCISES = [
 // Полный системный каталог: рукописные базовые + импортированные из открытой
 // базы. Импортированные добавляются в конец, дубли по ref отсекаются.
 const SEEN_REFS = new Set<string>(SYSTEM_EXERCISES.map((exercise) => exercise.ref))
+// Каталог: обогащённые базовые (картинки/оборудование/мышцы/инструкции) +
+// импортированные. SYSTEM_EXERCISES (рукописный литерал) остаётся источником
+// ref/name/muscleGroup/inputKind для генератора базовых и для тестов.
 export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = [
-  ...SYSTEM_EXERCISES,
+  ...BASE_EXERCISES,
   ...IMPORTED_EXERCISES.filter((exercise) => !SEEN_REFS.has(exercise.ref)),
 ]
