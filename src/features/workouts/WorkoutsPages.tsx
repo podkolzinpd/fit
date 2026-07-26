@@ -322,10 +322,17 @@ export function LiveWorkoutPage() {
       if (workout && exercise) {
         const block = groupIntoBlocks(workout.exercises).find((b) => b.blockId === exercise.blockId)
         const multi = Boolean(block && block.exercises.length > 1)
-        const sec = !multi
-          ? exercise.restBetweenSetsSec
-          : block && block.exercises[block.exercises.length - 1]?.id === exercise.id
-          ? block.restBetweenRoundsSec
+        const lastExerciseOfRound = block && block.exercises[block.exercises.length - 1]?.id === exercise.id
+        const lastSetOfExercise = [...exercise.sets].sort((a, b) => a.position - b.position).at(-1)?.id === set.id
+        // Блок/упражнение полностью завершены этим подходом → отдыха не нужно
+        // (для группы: последнее упражнение последнего круга; для одиночного:
+        // последний подход). Иначе — отдых по правилам блока.
+        const blockFinished = multi
+          ? lastExerciseOfRound && lastSetOfExercise && block!.exercises.every((ex) => ex.sets.every((s) => s.id === set.id || s.confirmedAt))
+          : lastSetOfExercise
+        const sec = blockFinished ? 0
+          : !multi ? exercise.restBetweenSetsSec
+          : lastExerciseOfRound ? block!.restBetweenRoundsSec
           : block?.restBetweenExercisesSec ?? 0
         startRestUntil(restDeadline(sec), sec)
       }
