@@ -3,6 +3,7 @@ import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/doma
 import { CloseIcon } from '../../shared/icons'
 import { MUSCLE_GROUP_LABELS, MUSCLE_GROUPS } from '../../shared/system-exercises'
 import type { ExerciseCatalogState } from './exercise-catalog'
+import { readRecentKeys, recordRecent, resolveRecent } from './recent-exercises'
 
 export function filterExercises(
   exercises: readonly ExerciseSnapshot[],
@@ -56,6 +57,18 @@ export function ExercisePicker({ catalog, onPick, onClose }: ExercisePickerProps
     () => (category === 'all' ? [] : musclesForGroup(catalog.exercises, category)),
     [catalog.exercises, category],
   )
+  // Недавние показываем только в исходном виде списка (без поиска/фильтра),
+  // чтобы не мешать целенаправленному выбору по группе/мышце/названию.
+  const recent = useMemo(
+    () => (category === 'all' && !search.trim() ? resolveRecent(readRecentKeys(), catalog.exercises) : []),
+    [category, search, catalog.exercises],
+  )
+  // Запоминаем выбор как недавний и передаём наверх.
+  function pick(exercise: ExerciseSnapshot) { recordRecent(exercise); onPick(exercise) }
+  // Одна строка списка (используется и для недавних, и для основного списка).
+  function item(exercise: ExerciseSnapshot, keyPrefix: string) {
+    return <button type="button" className="picker-item" key={`${keyPrefix}-${exercise.source}-${exercise.ref}`} onClick={() => pick(exercise)}>{exercise.imageUrl ? <img className="picker-thumb" src={exercise.imageUrl} alt="" loading="lazy" /> : <span className="picker-thumb picker-thumb-empty" aria-hidden="true" />}<span className="picker-item-name">{exercise.name}</span><small>{MUSCLE_GROUP_LABELS[exercise.muscleGroup]}</small></button>
+  }
   // Выбор группы сбрасывает выбранную мышцу (иначе останется от прошлой группы).
   function selectGroup(next: 'all' | MuscleGroup) { setCategory(next); setMuscle(null) }
   function stopPropagation(event: MouseEvent) { event.stopPropagation() }
@@ -65,7 +78,7 @@ export function ExercisePicker({ catalog, onPick, onClose }: ExercisePickerProps
       const exercise = await catalog.create({
         name: name.trim(), muscleGroup: group, inputKind: group === 'cardio' ? inputKind : 'strength',
       })
-      onPick(exercise)
+      pick(exercise)
     } catch {
       // Mutation state exposes the normalized repository error in the picker.
     }
@@ -87,7 +100,10 @@ export function ExercisePicker({ catalog, onPick, onClose }: ExercisePickerProps
         <button type="button" className="picker-create" onClick={() => setCreating(true)}>＋ Создать своё упражнение</button>
         {catalog.loading && <p className="state">Загрузка…</p>}
         {catalog.error && <div className="state"><p className="error">{catalog.error.message}</p><button type="button" className="secondary" onClick={catalog.retry}>Повторить</button></div>}
-        {!catalog.loading && <div className="picker-list">{filtered.length ? filtered.map((exercise) => <button type="button" className="picker-item" key={`${exercise.source}-${exercise.ref}`} onClick={() => onPick(exercise)}>{exercise.imageUrl ? <img className="picker-thumb" src={exercise.imageUrl} alt="" loading="lazy" /> : <span className="picker-thumb picker-thumb-empty" aria-hidden="true" />}<span className="picker-item-name">{exercise.name}</span><small>{MUSCLE_GROUP_LABELS[exercise.muscleGroup]}</small></button>) : <p className="state">Ничего не найдено</p>}</div>}
+        {!catalog.loading && <div className="picker-list">
+          {recent.length > 0 && <><p className="picker-section-label">Недавние</p>{recent.map((exercise) => item(exercise, 'recent'))}<p className="picker-section-label">Все упражнения</p></>}
+          {filtered.length ? filtered.map((exercise) => item(exercise, 'all')) : <p className="state">Ничего не найдено</p>}
+        </div>}
       </>}
     </section>
   </div>
