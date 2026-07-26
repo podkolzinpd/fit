@@ -22,12 +22,10 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "beginner",
     "instructions": [
-      "This exercise is best performed inside a squat rack for safety purposes. To begin, first set the bar on a rack to just below shoulder level. Once the correct height is chosen and the bar is loaded, step under the bar and place the back of your shoulders (slightly below the neck) across it.",
-      "Hold on to the bar using both arms at each side and lift it off the rack by first pushing with your legs and at the same time straightening your torso.",
-      "Step away from the rack and position your legs using a shoulder width medium stance with the toes slightly pointed out. Keep your head up at all times and also maintain a straight back. This will be your starting position. (Note: For the purposes of this discussion we will use the medium stance described above which targets overall development; however you can choose any of the three stances discussed in the foot stances section).",
-      "Begin to slowly lower the bar by bending the knees and hips as you maintain a straight posture with the head up. Continue down until the angle between the upper leg and the calves becomes slightly less than 90-degrees. Inhale as you perform this portion of the movement. Tip: If you performed the exercise correctly, the front of the knees should make an imaginary straight line with the toes that is perpendicular to the front. If your knees are past that imaginary line (if they are past your toes) then you are placing undue stress on the knee and the exercise has been performed incorrectly.",
-      "Begin to raise the bar as you exhale by pushing the floor with the heel of your foot as you straighten the legs again and go back to the starting position.",
-      "Repeat for the recommended amount of repetitions."
+      "Разместите штангу на верхе трапеций, снимите со стоек, отойдите. Стопы на ширине плеч, носки чуть врозь.",
+      "На вдохе присядьте, сгибая колени и таз, спина прямая, взгляд вперёд — до параллели бёдер с полом.",
+      "На выдохе выжмите себя вверх через пятки, полностью выпрямляя ноги.",
+      "Колени не выходят за носки и не заваливаются внутрь."
     ]
   },
   {
@@ -47,12 +45,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "expert",
     "instructions": [
-      "This exercise is best performed inside a squat rack for safety purposes. To begin, first set the bar on a rack that best matches your height. Once the correct height is chosen and the bar is loaded, bring your arms up under the bar while keeping the elbows high and the upper arm slightly above parallel to the floor. Rest the bar on top of the deltoids and cross your arms while grasping the bar for total control.",
-      "Lift the bar off the rack by first pushing with your legs and at the same time straightening your torso.",
-      "Step away from the rack and position your legs using a shoulder width medium stance with the toes slightly pointed out. Keep your head up at all times as looking down will get you off balance and also maintain a straight back. This will be your starting position. (Note: For the purposes of this discussion we will use the medium stance described above which targets overall development; however you can choose any of the three stances described in the foot positioning section).",
-      "Begin to slowly lower the bar by bending the knees as you maintain a straight posture with the head up. Continue down until the angle between the upper leg and the calves becomes slightly less than 90-degrees (which is the point in which the upper legs are below parallel to the floor). Inhale as you perform this portion of the movement. Tip: If you performed the exercise correctly, the front of the knees should make an imaginary straight line with the toes that is perpendicular to the front. If your knees are past that imaginary line (if they are past your toes) then you are placing undue stress on the knee and the exercise has been performed incorrectly.",
-      "Begin to raise the bar as you exhale by pushing the floor mainly with the middle of your foot as you straighten the legs again and go back to the starting position.",
-      "Repeat for the recommended amount of repetitions."
+      "Держите штангу на передних дельтах, локти высоко, руки скрещены на грифе. Стопы на ширине плеч.",
+      "На вдохе присядьте, колени вперёд, корпус вертикально — до параллели бёдер с полом.",
+      "На выдохе выжмите вверх через середину стопы, выпрямляя ноги."
     ]
   },
   {
@@ -72,11 +67,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "beginner",
     "instructions": [
-      "Using a leg press machine, sit down on the machine and place your legs on the platform directly in front of you at a medium (shoulder width) foot stance. (Note: For the purposes of this discussion we will use the medium stance described above which targets overall development; however you can choose any of the three stances described in the foot positioning section).",
-      "Lower the safety bars holding the weighted platform in place and press the platform all the way up until your legs are fully extended in front of you. Tip: Make sure that you do not lock your knees. Your torso and the legs should make a perfect 90-degree angle. This will be your starting position.",
-      "As you inhale, slowly lower the platform until your upper and lower legs make a 90-degree angle.",
-      "Pushing mainly with the heels of your feet and using the quadriceps go back to the starting position as you exhale.",
-      "Repeat for the recommended amount of repetitions and ensure to lock the safety pins properly once you are done. You do not want that platform falling on you fully loaded."
+      "Сядьте в тренажёр, стопы на платформе на ширине плеч. Выжмите платформу, колени не разгибайте до упора.",
+      "На вдохе опустите платформу, пока бёдра и голени не образуют угол ~90°.",
+      "На выдохе выжмите платформу через пятки усилием квадрицепсов."
     ]
   },
   {
@@ -96,11 +89,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "intermediate",
     "instructions": [
-      "Put a barbell in front of you on the ground and grab it using a pronated (palms facing down) grip that a little wider than shoulder width. Tip: Depending on the weight used, you may need wrist wraps to perform the exercise and also a raised platform in order to allow for better range of motion.",
-      "Bend the knees slightly and keep the shins vertical, hips back and back straight. This will be your starting position.",
-      "Keeping your back and arms completely straight at all times, use your hips to lift the bar as you exhale. Tip: The movement should not be fast but steady and under control.",
-      "Once you are standing completely straight up, lower the bar by pushing the hips back, only slightly bending the knees, unlike when squatting. Tip: Take a deep breath at the start of the movement and keep your chest up. Hold your breath as you lower and exhale as you complete the movement.",
-      "Repeat for the recommended amount of repetitions."
+      "Возьмите штангу хватом чуть шире плеч, колени слегка согнуты, спина прямая.",
+      "Отводя таз назад, опустите штангу вдоль ног до растяжения задней поверхности бедра.",
+      "Выпрямитесь, выводя таз вперёд усилием ягодиц и бицепса бедра."
     ]
   },
   {
@@ -119,11 +110,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "intermediate",
     "instructions": [
-      "Grasp a bar using an overhand grip (palms facing down). You may need some wrist wraps if using a significant amount of weight.",
-      "Stand with your torso straight and your legs spaced using a shoulder width or narrower stance. The knees should be slightly bent. This is your starting position.",
-      "Keeping the knees stationary, lower the barbell to over the top of your feet by bending at the hips while keeping your back straight. Keep moving forward as if you were going to pick something from the floor until you feel a stretch on the hamstrings. Inhale as you perform this movement.",
-      "Start bringing your torso up straight again by extending your hips until you are back at the starting position. Exhale as you perform this movement.",
-      "Repeat for the recommended amount of repetitions."
+      "Возьмите штангу прямым хватом, ноги на ширине плеч, колени почти прямые (фиксированы).",
+      "На вдохе наклонитесь от таза, опуская штангу вдоль ног, спина прямая — до растяжения бёдер.",
+      "На выдохе выпрямитесь усилием задней поверхности бедра и ягодиц."
     ]
   },
   {
@@ -143,11 +132,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "intermediate",
     "instructions": [
-      "This exercise is best performed inside a squat rack for safety purposes. To begin, first set the bar on a rack just below shoulder level. Once the correct height is chosen and the bar is loaded, step under the bar and place the back of your shoulders (slightly below the neck) across it.",
-      "Hold on to the bar using both arms at each side and lift it off the rack by first pushing with your legs and at the same time straightening your torso.",
-      "Step away from the rack and step forward with your right leg and squat down through your hips, while keeping the torso upright and maintaining balance. Inhale as you go down. Note: Do not allow your knee to go forward beyond your toes as you come down, as this will put undue stress on the knee joint. li>",
-      "Using mainly the heel of your foot, push up and go back to the starting position as you exhale.",
-      "Repeat the movement for the recommended amount of repetitions and then perform with the left leg."
+      "Штанга на трапециях, корпус прямой. Сделайте шаг вперёд.",
+      "На вдохе опуститесь, сгибая оба колена до ~90°, заднее колено к полу.",
+      "На выдохе оттолкнитесь передней ногой назад в исходное. Повторите на другую ногу."
     ]
   },
   {
@@ -167,13 +154,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "expert",
     "instructions": [
-      "Start by standing about 2 to 3 feet in front of a flat bench with your back facing the bench. Have a barbell in front of you on the floor. Tip: Your feet should be shoulder width apart from each other.",
-      "Bend the knees and use a pronated grip with your hands being wider than shoulder width apart from each other to lift the barbell up until you can rest it on your chest.",
-      "Then lift the barbell over your head and rest it on the base of your neck. Move one foot back so that your toe is resting on the flat bench. Your other foot should be stationary in front of you. Keep your head up at all times as looking down will get you off balance and also maintain a straight back. Tip: Make sure your back is straight and chest is out while performing this exercise.",
-      "As you inhale, slowly lower your leg until your thigh is parallel to the floor. At this point, your knee should be over your toes. Your chest should be directly above the middle of your thigh.",
-      "Leading with the chest and hips and contracting the quadriceps, elevate your leg back to the starting position as you exhale.",
-      "Repeat for the recommended amount of repetitions.",
-      "Switch legs and repeat the movement."
+      "Задняя нога на скамье позади, штанга на трапециях (или гантели в руках).",
+      "На вдохе опуститесь на передней ноге, сгибая колено до ~90°.",
+      "На выдохе выжмите себя вверх через пятку передней ноги."
     ]
   },
   {
@@ -189,10 +172,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
-      "Adjust the machine lever to fit your height and lie face down on the leg curl machine with the pad of the lever on the back of your legs (just a few inches under the calves). Tip: Preferably use a leg curl machine that is angled as opposed to flat since an angled position is more favorable for hamstrings recruitment.",
-      "Keeping the torso flat on the bench, ensure your legs are fully stretched and grab the side handles of the machine. Position your toes straight (or you can also use any of the other two stances described on the foot positioning section). This will be your starting position.",
-      "As you exhale, curl your legs up as far as possible without lifting the upper legs from the pad. Once you hit the fully contracted position, hold it for a second.",
-      "As you inhale, bring the legs back to the initial position. Repeat for the recommended amount of repetitions."
+      "Лягте лицом вниз в тренажёр, валик над пятками, ноги прямые.",
+      "На выдохе согните ноги, подтягивая валик к ягодицам усилием бицепса бедра.",
+      "На вдохе плавно верните в исходное, не бросая вес."
     ]
   },
   {
@@ -208,10 +190,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
-      "For this exercise you will need to use a leg extension machine. First choose your weight and sit on the machine with your legs under the pad (feet pointed forward) and the hands holding the side bars. This will be your starting position. Tip: You will need to adjust the pad so that it falls on top of your lower leg (just above your feet). Also, make sure that your legs form a 90-degree angle between the lower and upper leg. If the angle is less than 90-degrees then that means the knee is over the toes which in turn creates undue stress at the knee joint. If the machine is designed that way, either look for another machine or just make sure that when you start executing the exercise you stop going down once you hit the 90-degree angle.",
-      "Using your quadriceps, extend your legs to the maximum as you exhale. Ensure that the rest of the body remains stationary on the seat. Pause a second on the contracted position.",
-      "Slowly lower the weight back to the original position as you inhale, ensuring that you do not go past the 90-degree angle limit.",
-      "Repeat for the recommended amount of times."
+      "Сядьте в тренажёр, валик над стопами, спина прижата.",
+      "На выдохе разогните ноги до прямой линии усилием квадрицепса.",
+      "На вдохе плавно опустите вес в исходное."
     ]
   },
   {
@@ -227,11 +208,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
-      "Adjust the padded lever of the calf raise machine to fit your height.",
-      "Place your shoulders under the pads provided and position your toes facing forward (or using any of the two other positions described at the beginning of the chapter). The balls of your feet should be secured on top of the calf block with the heels extending off it. Push the lever up by extending your hips and knees until your torso is standing erect. The knees should be kept with a slight bend; never locked. Toes should be facing forward, outwards or inwards as described at the beginning of the chapter. This will be your starting position.",
-      "Raise your heels as you breathe out by extending your ankles as high as possible and flexing your calf. Ensure that the knee is kept stationary at all times. There should be no bending at any time. Hold the contracted position by a second before you start to go back down.",
-      "Go back slowly to the starting position as you breathe in by lowering your heels as you bend the ankles until calves are stretched.",
-      "Repeat for the recommended amount of repetitions."
+      "Встаньте носками на возвышение, пятки на весу, спина прямая.",
+      "На выдохе поднимитесь как можно выше на носки, сжимая икры.",
+      "На вдохе плавно опуститесь, растягивая икры ниже уровня опоры."
     ]
   },
   {
@@ -250,12 +229,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     ],
     "level": "beginner",
     "instructions": [
-      "Lie face down on a hyperextension bench, tucking your ankles securely under the footpads.",
-      "Adjust the upper pad if possible so your upper thighs lie flat across the wide pad, leaving enough room for you to bend at the waist without any restriction.",
-      "With your body straight, cross your arms in front of you (my preference) or behind your head. This will be your starting position. Tip: You can also hold a weight plate for extra resistance in front of you under your crossed arms.",
-      "Start bending forward slowly at the waist as far as you can while keeping your back flat. Inhale as you perform this movement. Keep moving forward until you feel a nice stretch on the hamstrings and you can no longer keep going without a rounding of the back. Tip: Never round the back as you perform this exercise. Also, some people can go farther than others. The key thing is that you go as far as your body allows you to without rounding the back.",
-      "Slowly raise your torso back to the initial position as you inhale. Tip: Avoid the temptation to arch your back past a straight line. Also, do not swing the torso at any time in order to protect the back from injury.",
-      "Repeat for the recommended amount of repetitions."
+      "Расположитесь в тренажёре, бёдра на подушке, корпус свободно свисает.",
+      "На выдохе поднимите корпус до прямой линии с ногами усилием поясницы и ягодиц.",
+      "На вдохе плавно опустите корпус, не округляя спину."
     ]
   },
   {

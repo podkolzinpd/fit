@@ -85,10 +85,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-side-split-squat.jpg",
     "instructions": [
-      "Stand up straight while holding a barbell placed on the back of your shoulders (slightly below the neck). Your feet should be placed wide apart with the foot of the lead leg angled out to the side. This will be your starting position.",
-      "Lower your body towards the side of your angled foot by bending the knee and hip of your lead leg and while keeping the opposite leg only slightly bent. Breathe in as you lower your body.",
-      "Return to the starting position by extending the hip and knee of the lead leg. Breathe out as you perform this movement.",
-      "After performing the recommended amount of reps, repeat the movement with the opposite leg."
+      "Штанга на трапециях, ноги широко. Перенесите вес на одну ногу.",
+      "Присядьте на рабочей ноге, вторая прямая, — до параллели бедра с полом.",
+      "Выжмите себя обратно и перенесите вес на другую ногу."
     ]
   },
   {
@@ -333,10 +332,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-walking-lunge.jpg",
     "instructions": [
-      "Begin standing with your feet shoulder width apart and a barbell across your upper back.",
-      "Step forward with one leg, flexing the knees to drop your hips. Descend until your rear knee nearly touches the ground. Your posture should remain upright, and your front knee should stay above the front foot.",
-      "Drive through the heel of your lead foot and extend both knees to raise yourself back up.",
-      "Step forward with your rear foot, repeating the lunge on the opposite leg."
+      "Штанга на трапециях. Сделайте шаг вперёд и опуститесь в выпад, заднее колено к полу.",
+      "Оттолкнитесь передней ногой и шагните вперёд другой ногой в следующий выпад.",
+      "Продолжайте двигаться выпадами, сохраняя корпус прямым."
     ]
   },
   {
@@ -465,9 +463,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bodyweight-squat.jpg",
     "instructions": [
-      "Stand with your feet shoulder width apart. You can place your hands behind your head. This will be your starting position.",
-      "Begin the movement by flexing your knees and hips, sitting back with your hips.",
-      "Continue down to full depth if you are able,and quickly reverse the motion until you return to the starting position. As you squat, keep your head and chest up and push your knees out."
+      "Стопы на ширине плеч, носки чуть врозь, руки вперёд для баланса.",
+      "На вдохе присядьте, отводя таз назад, спина прямая — до параллели бёдер.",
+      "На выдохе выпрямитесь через пятки."
     ]
   },
   {
@@ -600,10 +598,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-deadlifts.jpg",
     "instructions": [
-      "Move the cables to the bottom of the towers and select an appropriate weight. Stand directly in between the uprights.",
-      "To begin, squat down be flexing your hips and knees until you can reach the handles.",
-      "After grasping them, begin your ascent. Driving through your heels extend your hips and knees keeping your hands hanging at your side. Keep your head and chest up throughout the movement.",
-      "After reaching a full standing position, Return to the starting position and repeat."
+      "Встаньте лицом к нижнему блоку, возьмите рукоять, колени слегка согнуты, спина прямая.",
+      "Отводя таз назад, наклонитесь до растяжения задней поверхности бедра.",
+      "Выпрямитесь, выводя таз вперёд усилием ягодиц."
     ]
   },
   {
@@ -709,12 +706,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-chair-squat.jpg",
     "instructions": [
-      "To begin, first set the bar to a position that best matches your height. Once the bar is loaded, step under it and position it across the back of your shoulders.",
-      "Take the bar with your hands facing forward, unlock it and lift it off the rack by extending your legs.",
-      "Move your feet forward about 18 inches in front of the bar. Position your legs using a shoulder width stance with the toes slightly pointed out. Look forward at all times and maintain a neutral or slightly arched spine. This will be your starting position.",
-      "Slowly lower the bar by bending the knees as you maintain a straight posture with the head up. Continue down until the angle between the upper and lower leg breaks 90 degrees.",
-      "Begin to raise the bar as you exhale by pushing the floor with the heels of your feet, extending the knees and returning to the starting position.",
-      "Repeat for the recommended amount of repetitions."
+      "Встаньте перед стулом, стопы на ширине плеч, руки вперёд для баланса.",
+      "Отводя таз назад, присядьте до лёгкого касания стула.",
+      "Выжмите себя вверх через пятки в исходное."
     ]
   },
   {
@@ -848,10 +842,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-lunges.jpg",
     "instructions": [
-      "Stand with your torso upright holding two dumbbells in your hands by your sides. This will be your starting position.",
-      "Step forward with your right leg around 2 feet or so from the foot being left stationary behind and lower your upper body down, while keeping the torso upright and maintaining balance. Inhale as you go down. Note: As in the other exercises, do not allow your knee to go forward beyond your toes as you come down, as this will put undue stress on the knee joint. Make sure that you keep your front shin perpendicular to the ground.",
-      "Using mainly the heel of your foot, push up and go back to the starting position as you exhale.",
-      "Repeat the movement for the recommended amount of repetitions and then perform with the left leg."
+      "Гантели в руках вдоль тела, корпус прямой. Сделайте шаг вперёд.",
+      "Опуститесь, сгибая оба колена до ~90°, заднее колено к полу.",
+      "Оттолкнитесь передней ногой в исходное. Повторите на другую ногу."
     ]
   },
   {
@@ -981,11 +974,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-squat.jpg",
     "instructions": [
-      "Stand up straight while holding a dumbbell on each hand (palms facing the side of your legs).",
-      "Position your legs using a shoulder width medium stance with the toes slightly pointed out. Keep your head up at all times as looking down will get you off balance and also maintain a straight back. This will be your starting position. Note: For the purposes of this discussion we will use the medium stance described above which targets overall development; however you can choose any of the three stances discussed in the foot stances section.",
-      "Begin to slowly lower your torso by bending the knees as you maintain a straight posture with the head up. Continue down until your thighs are parallel to the floor. Tip: If you performed the exercise correctly, the front of the knees should make an imaginary straight line with the toes that is perpendicular to the front. If your knees are past that imaginary line (if they are past your toes) then you are placing undue stress on the knee and the exercise has been performed incorrectly.",
-      "Begin to raise your torso as you exhale by pushing the floor with the heel of your foot mainly as you straighten the legs again and go back to the starting position.",
-      "Repeat for the recommended amount of repetitions."
+      "Гантели в руках вдоль тела, стопы на ширине плеч, носки чуть врозь.",
+      "На вдохе присядьте, сгибая колени и таз, спина прямая — до параллели бёдер.",
+      "На выдохе выжмите себя вверх через пятки."
     ]
   },
   {
@@ -1088,11 +1079,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-flutter-kicks.jpg",
     "instructions": [
-      "On a flat bench lie facedown with the hips on the edge of the bench, the legs straight with toes high off the floor and with the arms on top of the bench holding on to the front edge.",
-      "Squeeze your glutes and hamstrings and straighten the legs until they are level with the hips. This will be your starting position.",
-      "Start the movement by lifting the left leg higher than the right leg.",
-      "Then lower the left leg as you lift the right leg.",
-      "Continue alternating in this manner (as though you are doing a flutter kick in water) until you have done the recommended amount of repetitions for each leg. Make sure that you keep a controlled movement at all times. Tip: You will breathe normally as you perform this movement."
+      "Лягте на спину, руки вдоль тела, ноги подняты и выпрямлены.",
+      "Попеременно опускайте и поднимайте прямые ноги короткими движениями.",
+      "Поясница прижата к полу, пресс напряжён на протяжении всего подхода."
     ]
   },
   {
@@ -1221,10 +1210,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-glute-kickback.jpg",
     "instructions": [
-      "Kneel on the floor or an exercise mat and bend at the waist with your arms extended in front of you (perpendicular to the torso) in order to get into a kneeling push-up position but with the arms spaced at shoulder width. Your head should be looking forward and the bend of the knees should create a 90-degree angle between the hamstrings and the calves. This will be your starting position.",
-      "As you exhale, lift up your right leg until the hamstrings are in line with the back while maintaining the 90-degree angle bend. Contract the glutes throughout this movement and hold the contraction at the top for a second. Tip: At the end of the movement the upper leg should be parallel to the floor while the calf should be perpendicular to it.",
-      "Go back to the initial position as you inhale and now repeat with the left leg.",
-      "Continue to alternate legs until all of the recommended repetitions have been performed."
+      "Встаньте на четвереньки, опора на предплечья и колени, спина прямая.",
+      "На выдохе отведите одну ногу назад-вверх, сжимая ягодицу, до прямой линии с корпусом.",
+      "На вдохе плавно верните колено вниз. Повторите на другую ногу."
     ]
   },
   {
@@ -1350,9 +1338,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-goblet-squat.jpg",
     "instructions": [
-      "Stand holding a light kettlebell by the horns close to your chest. This will be your starting position.",
-      "Squat down between your legs until your hamstrings are on your calves. Keep your chest and head up and your back straight.",
-      "At the bottom position, pause and use your elbows to push your knees out. Return to the starting position, and repeat for 10-20 repetitions."
+      "Держите гирю у груди обеими руками, стопы чуть шире плеч.",
+      "На вдохе присядьте между бёдер, локти внутри коленей, спина прямая.",
+      "На выдохе выжмите себя вверх через пятки."
     ]
   },
   {
@@ -1485,13 +1473,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-hack-squat.jpg",
     "instructions": [
-      "Place the back of your torso against the back pad of the machine and hook your shoulders under the shoulder pads provided.",
-      "Position your legs in the platform using a shoulder width medium stance with the toes slightly pointed out. Tip: Keep your head up at all times and also maintain the back on the pad at all times.",
-      "Place your arms on the side handles of the machine and disengage the safety bars (which on most designs is done by moving the side handles from a facing front position to a diagonal position).",
-      "Now straighten your legs without locking the knees. This will be your starting position. (Note: For the purposes of this discussion we will use the medium stance described above which targets overall development; however you can choose any of the three stances described in the foot positioning section).",
-      "Begin to slowly lower the unit by bending the knees as you maintain a straight posture with the head up (back on the pad at all times). Continue down until the angle between the upper leg and the calves becomes slightly less than 90-degrees (which is the point in which the upper legs are below parallel to the floor). Inhale as you perform this portion of the movement. Tip: If you performed the exercise correctly, the front of the knees should make an imaginary straight line with the toes that is perpendicular to the front. If your knees are past that imaginary line (if they are past your toes) then you are placing undue stress on the knee and the exercise has been performed incorrectly.",
-      "Begin to raise the unit as you exhale by pushing the floor with mainly with the heel of your foot as you straighten the legs again and go back to the starting position.",
-      "Repeat for the recommended amount of repetitions."
+      "Встаньте в гакк-тренажёр, спина к платформе, стопы на ширине плеч.",
+      "На вдохе присядьте, сгибая колени до ~90°.",
+      "На выдохе выжмите платформу через пятки, не разгибая колени до упора."
     ]
   },
   {
@@ -1728,8 +1712,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-leverage-deadlift.jpg",
     "instructions": [
-      "Load the pins to an appropriate weight. Position yourself directly between the handles. Grasp the bottom handles with a comfortable grip, and then lower your hips as you take a breath. Look forward with your head and keep your chest up. This will be your starting position.",
-      "Return the weight to the starting position."
+      "Встаньте в рычажный тренажёр, возьмите рукояти, спина прямая, колени согнуты.",
+      "Выпрямитесь усилием ног и спины, выводя таз вперёд.",
+      "Плавно вернитесь в исходное, отводя таз назад."
     ]
   },
   {
@@ -1842,11 +1827,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-plie-dumbbell-squat.jpg",
     "instructions": [
-      "Hold a dumbbell at the base with both hands and stand straight up. Move your legs so that they are wider than shoulder width apart from each other with your knees slightly bent.",
-      "Your toes should be facing out. Note: Your arms should be stationary while performing the exercise. This is the starting position.",
-      "Slowly bend the knees and lower your legs until your thighs are parallel to the floor. Make sure to inhale as this is the eccentric part of the exercise.",
-      "Press mainly with the heel of the foot to bring the body back to the starting position while exhaling.",
-      "Repeat for the recommended amount of repetitions."
+      "Ноги шире плеч, носки развёрнуты наружу, гантель держите обеими руками перед собой.",
+      "На вдохе присядьте, колени в стороны по линии носков, спина прямая.",
+      "На выдохе выжмите себя вверх, сжимая ягодицы и внутреннюю поверхность бёдер."
     ]
   },
   {
@@ -1956,8 +1939,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-pull-through.jpg",
     "instructions": [
-      "Begin standing a few feet in front of a low pulley with a rope or handle attached. Face away from the machine, straddling the cable, with your feet set wide apart.",
-      "Begin the movement by reaching through your legs as far as possible, bending at the hips. Keep your knees slightly bent. Keeping your arms straight, extend through the hip to stand straight up. Avoid pulling upward through the shoulders; all of the motion should originate through the hips."
+      "Встаньте спиной к нижнему блоку, канат между ног, шаг вперёд. Наклонитесь, отводя таз назад.",
+      "Выпрямитесь, протягивая канат вперёд усилием ягодиц.",
+      "Плавно вернитесь в наклон, контролируя вес."
     ]
   },
   {
@@ -2063,12 +2047,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-machine-squat.jpg",
     "instructions": [
-      "To begin, first set the bar on the height that best matches your height. Once the correct height is chosen and the bar is loaded, step under the bar and place the back of your shoulders (slightly below the neck) across it.",
-      "Hold on to the bar using both arms at each side (palms facing forward), unlock it and lift it off the rack by first pushing with your legs and at the same time straightening your torso.",
-      "Position your legs using a shoulder width medium stance with the toes slightly pointed out. Keep your head up at all times and also maintain a straight back. This will be your starting position. (Note: For the purposes of this discussion we will use the medium stance which targets overall development; however you can choose any of the three stances discussed in the foot stances section).",
-      "Begin to slowly lower the bar by bending the knees as you maintain a straight posture with the head up. Continue down until the angle between the upper leg and the calves becomes slightly less than 90-degrees (which is the point in which the upper legs are below parallel to the floor). Inhale as you perform this portion of the movement. Tip: If you performed the exercise correctly, the front of the knees should make an imaginary straight line with the toes that is perpendicular to the front. If your knees are past that imaginary line (if they are past your toes) then you are placing undue stress on the knee and the exercise has been performed incorrectly.",
-      "Begin to raise the bar as you exhale by pushing the floor with the heel of your foot as you straighten the legs again and go back to the starting position.",
-      "Repeat for the recommended amount of repetitions."
+      "Гриф Смита на трапециях, стопы чуть впереди проекции грифа.",
+      "На вдохе присядьте до параллели бёдер, спина прямая.",
+      "На выдохе выжмите себя вверх через пятки."
     ]
   },
   {
@@ -2207,11 +2188,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-machine-stiff-legged-deadlift.jpg",
     "instructions": [
-      "To begin, set the bar on the smith machine to a height that is around the middle of your thighs. Once the correct height is chosen and the bar is loaded, grasp the bar using a pronated (palms forward) grip that is shoulder width apart. You may need some wrist wraps if using a significant amount of weight.",
-      "Lift the bar up by fully extending your arms while keeping your back straight. Stand with your torso straight and your legs spaced using a shoulder width or narrower stance. The knees should be slightly bent. This is your starting position.",
-      "Keeping the knees stationary, lower the barbell to over the top of your feet by bending at the waist while keeping your back straight. Keep moving forward as if you were going to pick something from the floor until you feel a stretch on the hamstrings. Exhale as you perform this movement",
-      "Start bringing your torso up straight again as soon as you feel the hamstrings stretch by extending your hips and waist until you are back at the starting position. Inhale as you perform this movement.",
-      "Repeat for the recommended amount of repetitions."
+      "Гриф Смита в руках прямым хватом, ноги на ширине плеч, колени почти прямые.",
+      "Наклонитесь от таза, опуская гриф вдоль ног, до растяжения задней поверхности бедра.",
+      "Выпрямитесь усилием бицепса бедра и ягодиц."
     ]
   },
   {
@@ -2339,13 +2318,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-single-leg-split-squat.jpg",
     "instructions": [
-      "To begin, place a flat bench 2-3 feet behind the smith machine. Then, set the bar on the height that best matches your height. Once the correct height is chosen and the bar is loaded, step under the bar and place the back of your shoulders (slightly below the neck) across it.",
-      "Hold on to the bar using both arms at each side (palms facing forward), unlock it and lift it off the rack by first pushing with your legs and at the same time straightening your torso.",
-      "Position your legs by placing one foot slightly forward under the bar and extending your other leg back and place the top of your foot on the bench. This will be your starting position",
-      "Begin to slowly lower the bar by bending the knee as you maintain a straight posture with the head up. Continue down until the angle between the upper leg and the calf becomes slightly less than 90-degrees (which is the point in which the upper legs are below parallel to the floor). Inhale as you perform this portion of the movement. Tip: If you performed the exercise correctly, the front of the knee should make an imaginary straight line with the toes that is perpendicular to the front. If your knee is past that imaginary line (if it is past your toes) then you are placing undue stress on the knee and the exercise has been performed incorrectly.",
-      "Begin to raise the bar as you exhale by pushing the floor with the heel of your foot mainly as you straighten your leg again and go back to the starting position.",
-      "Repeat for the recommended amount of repetitions.",
-      "Switch legs and repeat the movement."
+      "Гриф Смита на трапециях, одна нога впереди, другая позади на носке.",
+      "Опуститесь на передней ноге, сгибая колено до ~90°.",
+      "Выжмите себя вверх через пятку передней ноги."
     ]
   },
   {
@@ -2468,10 +2443,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "level": "beginner",
     "imageUrl": "/exercises/fedb-split-squat-with-dumbbells.jpg",
     "instructions": [
-      "Position yourself into a staggered stance with the rear foot elevated and front foot forward.",
-      "Hold a dumbbell in each hand, letting them hang at the sides. This will be your starting position.",
-      "Begin by descending, flexing your knee and hip to lower your body down. Maintain good posture througout the movement. Keep the front knee in line with the foot as you perform the exercise.",
-      "At the bottom of the movement, drive through the heel to extend the knee and hip to return to the starting position."
+      "Гантели в руках, одна нога впереди, другая позади на носке.",
+      "Опуститесь, сгибая переднее колено до ~90°, корпус вертикально.",
+      "Выжмите себя вверх через пятку передней ноги. Повторите на другую ногу."
     ]
   },
   {
