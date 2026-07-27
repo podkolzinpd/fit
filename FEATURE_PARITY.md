@@ -15,6 +15,8 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Live | Start, autosave, confirm, rest, append, resume, partial finish | Implemented: rest, transactional append and non-retryable optimistic conflicts covered; wider resume acceptance pending |
 | History | Done workouts only, set list and max-value chart | Implemented: set list and max-value progression chart (по типу упражнения) covered unit; broader visual pending |
 | Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; broader visual/E2E matrix pending |
+| AI progress | Period progress summary, separate trainer/client copy, trainer review and publication, client-only read view | Implemented locally: structured YandexGPT contract, publication RPC, role routing and RLS/E2E coverage; hosted deploy pending |
+| Client access | Trainer invitation, linked-client role resolution and isolated client navigation | Implemented locally: server-side invitation and client progress/profile shell; production SMTP and invite smoke pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; acceptance matrix pending |
 
 Статус меняется на Done только после component/E2E и, где применимо, DB/RLS теста.
@@ -30,3 +32,12 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - План поддерживает несколько подходов, удаление, сброс значений и изменение веса на ±5% с округлением до 2,5 кг.
 - Live поддерживает добавление подхода и упражнения отдельными транзакционными RPC, autosave факта, подтверждение, отдых 90 секунд и частичное завершение с предупреждением. Таймер отдыха считается от абсолютной метки времени и остаётся корректным при сворачивании вкладки.
 - Обязательные проверки: уникальность полного каталога, component search/filter/create, RPC rollback/cross-tenant, mobile visual snapshot и E2E plan → multi-set → live append → partial finish.
+
+## AI progress acceptance contract
+
+- Метрики считаются детерминированно на сервере за выбранные 1/3/6 месяцев; модель не получает ФИО, контакты, заметки тренера и замеры тела.
+- Один вызов модели возвращает две согласованные структуры: внутреннюю версию тренера и безопасную версию клиента.
+- Внутренняя версия недоступна клиенту даже прямым Data API запросом. Клиент читает только отдельную безопасную таблицу без тренерских полей.
+- Клиент может сам запросить или обновить сводку. Тренерская публикация/правка остаётся необязательной; клиент не может редактировать внутреннюю версию, публиковать или скрывать анализ.
+- Роль определяется по защищённым строкам `trainers` / `clients.auth_user_id`, а не по `user_metadata`.
+- Приглашение создаётся Edge Function с server-only ключом и привязывает только нового приглашённого Auth-пользователя. Уже существующий email не связывается без отдельного proof-of-control flow.

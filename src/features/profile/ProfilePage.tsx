@@ -8,7 +8,11 @@ import { Field, Page } from '../../shared/ui'
 export function ProfilePage() {
   const { actor, refresh } = useAuth(); const navigate = useNavigate(); const [saved, setSaved] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
-  const update = useMutation({ mutationFn: async (form: HTMLFormElement) => { const data = new FormData(form); await authRepository.updateProfile({ ...actor!, firstName: String(data.get('firstName') || '') || null, lastName: String(data.get('lastName') || '') || null, timezone: String(data.get('timezone')) }) }, onSuccess: async () => { setSaved(true); await refresh() } })
+  const update = useMutation({ mutationFn: async (form: HTMLFormElement) => {
+    if (!actor || actor.kind !== 'trainer') throw new Error('Профиль тренера недоступен')
+    const data = new FormData(form)
+    await authRepository.updateProfile({ ...actor, firstName: String(data.get('firstName') || '') || null, lastName: String(data.get('lastName') || '') || null, timezone: String(data.get('timezone')) })
+  }, onSuccess: async () => { setSaved(true); await refresh() } })
   async function logout() { await authRepository.signOut(); navigate('/auth') }
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); update.mutate(event.currentTarget) }
   // Отмена сбрасывает несохранённые правки к текущим значениям профиля.

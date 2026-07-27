@@ -12,7 +12,7 @@ export function AuthPage() {
   const [error, setError] = useState<string | null>(null)
   const { actor } = useAuth()
   const location = useLocation()
-  if (actor) return <Navigate to={(location.state as { from?: string } | null)?.from ?? '/clients'} replace />
+  if (actor) return <Navigate to={(location.state as { from?: string } | null)?.from ?? (actor.kind === 'client' ? '/me/progress' : '/clients')} replace />
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError(null)
@@ -27,8 +27,8 @@ export function AuthPage() {
   }
 
   return <main className="auth-screen">
-    <div className="brand">FIT</div><h1>{mode === 'login' ? 'Вход для тренера' : 'Регистрация'}</h1>
-    <p className="muted">Планируйте тренировки и следите за прогрессом клиентов.</p>
+    <div className="brand">FIT</div><h1>{mode === 'login' ? 'Вход' : 'Регистрация тренера'}</h1>
+    <p className="muted">{mode === 'login' ? 'Для тренеров и приглашённых клиентов.' : 'Планируйте тренировки и следите за прогрессом клиентов.'}</p>
     <form className="stack" onSubmit={(event) => void submit(event)}>
       {mode === 'register' && <Field label="Имя"><input name="firstName" autoComplete="given-name" required /></Field>}
       <Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>
@@ -37,7 +37,7 @@ export function AuthPage() {
       <button disabled={busy}>{busy ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}</button>
     </form>
     <button className="secondary" onClick={() => void authRepository.signInWithGoogle()}>Продолжить с Google</button>
-    <div className="auth-links"><button className="link" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>{mode === 'login' ? 'Создать аккаунт' : 'У меня есть аккаунт'}</button>{mode === 'login' && <Link to="/auth/forgot">Забыли пароль?</Link>}</div>
+    <div className="auth-links"><button className="link" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>{mode === 'login' ? 'Создать аккаунт тренера' : 'У меня есть аккаунт'}</button>{mode === 'login' && <Link to="/auth/forgot">Забыли пароль?</Link>}</div>
   </main>
 }
 
@@ -53,10 +53,10 @@ export function ForgotPasswordPage() {
 }
 
 export function ResetPasswordPage() {
-  const navigate = useNavigate(); const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate(); const { actor } = useAuth(); const [error, setError] = useState<string | null>(null)
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    try { await authRepository.updatePassword(String(new FormData(event.currentTarget).get('password'))); navigate('/clients') }
+    try { await authRepository.updatePassword(String(new FormData(event.currentTarget).get('password'))); navigate(actor?.kind === 'client' ? '/me/progress' : '/clients') }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Ошибка') }
   }
   return <main className="auth-screen"><h1>Новый пароль</h1><form className="stack" onSubmit={(e) => void submit(e)}><Field label="Пароль"><input name="password" type="password" minLength={8} required /></Field>{error && <p className="error">{error}</p>}<button>Сохранить</button></form></main>
@@ -64,6 +64,6 @@ export function ResetPasswordPage() {
 
 export function AuthCallbackPage() {
   const { loading, error, actor } = useAuth()
-  if (actor) return <Navigate to="/clients" replace />
+  if (actor) return <Navigate to={actor.kind === 'client' ? '/me/progress' : '/clients'} replace />
   return <main className="auth-screen"><h1>Завершаем вход</h1><p>{loading ? 'Проверяем сессию…' : error ?? 'Не удалось получить сессию.'}</p><Link to="/auth">Вернуться</Link></main>
 }

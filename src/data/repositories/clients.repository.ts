@@ -8,7 +8,7 @@ type ClientListRow = NonNullable<Awaited<ReturnType<typeof clientQueries.list>>[
 
 function fromListRow(row: ClientListRow): Client {
   return {
-    id: row.id, fullName: row.full_name, gender: row.gender as Gender,
+    id: row.id, authUserId: null, fullName: row.full_name, gender: row.gender as Gender,
     ageYears: row.age_years, ageUpdatedAt: localDate(row.age_updated_at), heightCm: Number(row.height_cm),
     goal: row.goal, note: row.note, currentWeightKg: row.current_weight_kg === null ? null : Number(row.current_weight_kg),
     archivedAt: row.archived_at, version: row.version,
@@ -20,7 +20,7 @@ async function enrich(row: NonNullable<ClientRow>): Promise<Client> {
   if (note.error) throw repositoryError(note.error)
   if (weight.error) throw repositoryError(weight.error)
   return {
-    id: row.id, fullName: row.full_name, gender: row.gender as Gender,
+    id: row.id, authUserId: row.auth_user_id, fullName: row.full_name, gender: row.gender as Gender,
     ageYears: row.age_years, ageUpdatedAt: localDate(row.age_updated_at), heightCm: Number(row.height_cm),
     goal: row.goal, note: note.data?.note ?? null, currentWeightKg: weight.data?.weight_kg === null || weight.data?.weight_kg === undefined ? null : Number(weight.data.weight_kg),
     archivedAt: row.archived_at, version: row.version,
@@ -52,4 +52,20 @@ export const clientsRepository = {
     if (result.error) throw repositoryError(result.error)
     return enrich(result.data)
   },
+  async invite(clientId: string, email: string): Promise<void> {
+    const result = await clientQueries.invite(clientId, email)
+    if (result.error) throw repositoryError(result.error)
+    const payload = result.data as { error?: string } | null
+    if (payload?.error) throw new Error(inviteErrorMessage(payload.error))
+  },
+}
+
+function inviteErrorMessage(code: string): string {
+  if (code === 'client_already_linked') return 'У клиента уже есть доступ к приложению.'
+  if (code === 'email_already_registered') {
+    return 'Этот email уже зарегистрирован. Для безопасности существующий аккаунт нельзя привязать без подтверждения владельца.'
+  }
+  if (code === 'invite_delivery_failed') return 'Не удалось отправить приглашение. Попробуйте ещё раз.'
+  if (code === 'client_link_conflict') return 'Доступ уже был изменён. Обновите карточку клиента.'
+  return 'Не удалось пригласить клиента.'
 }

@@ -2,7 +2,7 @@ import type { CreateClientInput, UpdateClientInput } from '../../shared/domain'
 import { supabase } from './client'
 import { toJson } from './json'
 
-const clientColumns = 'id,full_name,gender,age_years,age_updated_at,height_cm,goal,archived_at,version'
+const clientColumns = 'id,auth_user_id,full_name,gender,age_years,age_updated_at,height_cm,goal,archived_at,version'
 
 export const clientQueries = {
   list: (includeArchived = false) => supabase.rpc('list_clients', { p_include_archived: includeArchived }),
@@ -18,4 +18,7 @@ export const clientQueries = {
   setArchived: (id: string, version: number, archived: boolean) => supabase.from('clients')
     .update({ archived_at: archived ? new Date().toISOString() : null, version: version + 1 })
     .eq('id', id).eq('version', version).select(clientColumns).single(),
+  invite: (clientId: string, email: string) => supabase.functions.invoke('invite-client', {
+    body: { client_id: clientId, email },
+  }),
 }

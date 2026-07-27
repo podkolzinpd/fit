@@ -5,9 +5,13 @@ export class RepositoryError extends Error {
   }
 }
 
-export function repositoryError(error: { code?: string; message: string } | null): RepositoryError {
-  if (!error) return new RepositoryError('unknown', 'Неизвестная ошибка')
-  const code = error.code ?? 'database_error'
+export function repositoryError(error: unknown): RepositoryError {
+  if (!error || typeof error !== 'object') {
+    return new RepositoryError('unknown', 'Неизвестная ошибка')
+  }
+  const candidate = error as { code?: unknown; message?: unknown }
+  const code = typeof candidate.code === 'string' ? candidate.code : 'database_error'
+  const message = typeof candidate.message === 'string' ? candidate.message : 'Неизвестная ошибка'
   if (code === 'PT409' || code === '40001') {
     return new RepositoryError(code, 'Данные уже изменились. Обновите страницу и повторите.')
   }
@@ -17,5 +21,5 @@ export function repositoryError(error: { code?: string; message: string } | null
   if (code === 'PT422') {
     return new RepositoryError(code, 'Операцию нельзя выполнить с текущими данными.')
   }
-  return new RepositoryError(code, error.message)
+  return new RepositoryError(code, message)
 }

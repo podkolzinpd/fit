@@ -28,7 +28,7 @@ vi.mock('../data/repositories/auth.repository', () => ({
 }))
 
 const user = { id: 'user-1', email: 'trainer@example.com', user_metadata: { first_name: 'Анна' } }
-const actor = { userId: user.id, email: user.email, firstName: 'Анна', lastName: null, timezone: 'Europe/Moscow' }
+const actor = { kind: 'trainer' as const, userId: user.id, email: user.email, firstName: 'Анна', lastName: null, timezone: 'Europe/Moscow' }
 
 function AuthProbe() {
   const state = useAuth()

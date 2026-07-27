@@ -9,6 +9,7 @@ import { formatLocalDate, localDate, type LocalDate, todayLocalDate } from '../.
 import { CloseIcon } from '../../shared/icons'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ProgressChart, type MetricKey, type MetricSelector } from './ProgressChart'
+import { TrainerTrainingSummaryCard } from './TrainingSummaryCard'
 
 const METRIC_TABS: Array<{ key: MetricKey; label: string; unit: string }> = [
   { key: 'weightKg', label: 'Вес', unit: 'кг' },
@@ -45,6 +46,7 @@ export function ProgressPage() {
   const chartLabel = activeBuiltin?.label ?? activeCustom?.name ?? METRIC_TABS[0]!.label
   const chartUnit = activeBuiltin?.unit ?? activeCustom?.unit ?? ''
   return <Page title={client.data ? `Прогресс · ${client.data.fullName}` : 'Прогресс'}><AsyncView loading={loading} error={error}>{client.data && <>
+    <TrainerTrainingSummaryCard clientId={clientId} />
     {entries.data && entries.data.length > 0 && <>
       <div className="metric-tabs">
         {METRIC_TABS.map((tab) => <button key={tab.key} type="button" className={`metric-tab${tab.key === selectedMetric ? ' active' : ''}`} onClick={() => setSelectedMetric(tab.key)}>{tab.label}</button>)}
