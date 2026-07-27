@@ -571,7 +571,17 @@ const handler = withSupabase({ auth: "user" }, async (req, ctx) => {
 
       const input = parseRequest(await req.json())
       const actorId = ctx.userClaims?.sub
+      console.log("summary auth diagnostics", {
+        authorizationPresent: Boolean(req.headers.get("authorization")),
+        actorIdPresent: Boolean(actorId),
+        authMode: ctx.authMode,
+        clientId: input.client_id,
+      })
       if (!actorId) {
+        console.error("summary authentication_required", {
+          authorizationPresent: Boolean(req.headers.get("authorization")),
+          authMode: ctx.authMode,
+        })
         throw new HttpError(401, "authentication_required")
       }
 
