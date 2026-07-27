@@ -6,6 +6,8 @@ test('linked client sees only the published client progress view', async ({ page
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
 
+  await expect(page).toHaveURL(/\/me$/)
+  await page.goto('/me/progress')
   await expect(page).toHaveURL(/\/me\/progress$/)
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
   await expect(page.getByText('Твой прогресс', { exact: true })).toBeVisible()
@@ -15,7 +17,7 @@ test('linked client sees only the published client progress view', async ({ page
   await expect(page.getByRole('button', { name: 'Обновить мой прогресс' })).toBeVisible()
 
   await page.goto('/clients')
-  await expect(page).toHaveURL(/\/me\/progress$/)
+  await expect(page).toHaveURL(/\/me$/)
 })
 
 test('trainer reviews the client copy separately from internal attention items', async ({ page }) => {

@@ -10,7 +10,7 @@ test('auth shell matches mobile baseline', async ({ page }) => {
 test('trainer registers without surname or email confirmation', async ({ page }, testInfo) => {
   const email = `mvp-signup-${testInfo.workerIndex}-${Date.now()}@fit.local`
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт тренера' }).click()
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
 
   await expect(page.getByLabel('Имя')).toBeVisible()
   await expect(page.getByLabel('Фамилия')).toHaveCount(0)
