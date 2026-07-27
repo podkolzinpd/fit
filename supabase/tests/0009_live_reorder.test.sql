@@ -66,7 +66,7 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', '60000000-0000-4000-8000-00000000000a', true);
 select throws_ok(
   $$select public.reorder_live_block('d0000000-0000-4000-8000-000000000009', 'b2000000-0000-4000-8000-000000000009', (1)::smallint, 3)$$,
-  'PT409', 'workout_conflict', 'foreign trainer cannot reorder blocks'
+  'PT403', 'workout_access_denied', 'foreign trainer cannot reorder blocks'
 );
 reset role;
 

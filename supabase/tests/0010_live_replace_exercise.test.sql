@@ -68,7 +68,7 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', '60000000-0000-4000-8000-00000000000c', true);
 select throws_ok(
   $$select public.replace_live_exercise('d0000000-0000-4000-8000-00000000000b', 'a0000000-0000-4000-8000-00000000000b', '{"source":"system","ref":"row","name":"Тяга","muscleGroup":"back","inputKind":"strength"}', 2)$$,
-  'PT409', 'workout_conflict', 'foreign trainer cannot replace'
+  'PT403', 'workout_access_denied', 'foreign trainer cannot replace'
 );
 reset role;
 

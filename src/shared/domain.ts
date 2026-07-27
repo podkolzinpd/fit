@@ -215,6 +215,7 @@ export interface ProgressDraft {
 
 export interface ProgressEntry extends ProgressDraft {
   id: UUID
+  createdBy: UUID | null
   version: number
 }
 

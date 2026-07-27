@@ -43,6 +43,7 @@ export function ProgressPage() {
   const createMetric = useMutation({ mutationFn: ({ name, unit }: { name: string; unit: string | null }) => progressRepository.createMetric(actor!.userId, clientId, name, unit), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }) })
   const archiveMetric = useMutation({ mutationFn: (metric: CustomMetric) => progressRepository.setMetricArchived(metric, !metric.archivedAt), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }) })
   const loading = client.isLoading || entries.isLoading || metrics.isLoading; const error = client.error ?? entries.error ?? metrics.error
+  const canManage = (entry: ProgressEntry) => actor?.role === 'client' || entry.createdBy === actor?.userId
   const filledCustomIds = new Set(entries.data?.flatMap((entry) => entry.customMetrics.map((item) => item.metricId)) ?? [])
   const overflowMetrics = (metrics.data ?? []).filter((metric) => filledCustomIds.has(metric.id))
   const activeBuiltin = METRIC_TABS.find((tab) => tab.key === selectedMetric)
@@ -98,7 +99,7 @@ export function ProgressPage() {
       </div>
       {historyOpen && <div className="cards">{entries.data?.map((entry) => editing?.id === entry.id
         ? <article className="card editing" key={entry.id}><ProgressForm entry={entry} metrics={metrics.data ?? []} busy={save.isPending} errorMessage={save.error?.message ?? null} onSubmit={(form) => save.mutate(form)} onCancel={() => setEditing(null)} /></article>
-        : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{entrySummaryParts(entry, metrics.data ?? []).join(' · ')}</p></div><div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" onClick={() => remove.mutate(entry)}>Удалить</button></div></article>)}</div>}
+        : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{entrySummaryParts(entry, metrics.data ?? []).join(' · ')}</p></div>{canManage(entry) && <div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" onClick={() => remove.mutate(entry)}>Удалить</button></div>}</article>)}</div>}
     </section>
     <MetricsManager metrics={metrics.data ?? []} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />
     {metricSheetOpen && <MetricOverflowSheet metrics={overflowMetrics} onPick={(id) => { setSelectedMetric(id); setMetricSheetOpen(false) }} onClose={() => setMetricSheetOpen(false)} />}

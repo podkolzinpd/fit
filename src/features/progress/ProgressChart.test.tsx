@@ -10,7 +10,7 @@ import {
 } from './ProgressChart'
 
 function entry(recordedOn: string, weightKg: number): ProgressEntry {
-  return { id: recordedOn, clientId: 'client-1', recordedOn: localDate(recordedOn), weightKg, customMetrics: [], version: 1 }
+  return { id: recordedOn, clientId: 'client-1', createdBy: 'trainer-1', recordedOn: localDate(recordedOn), weightKg, customMetrics: [], version: 1 }
 }
 
 describe('date helpers', () => {

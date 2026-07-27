@@ -1,4 +1,4 @@
-// schema-sha256: c34f1363890b7df6781bc50a6435f30898f27cf26a3ebdd9675092936128adee
+// schema-sha256: 5fa6f41e1f010a2e4eafb32ca57e8fdc269e44372182b2204875da110fa33c7e
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
@@ -16,7 +16,7 @@ type CustomExerciseRow = { id: string; trainer_id: string; name: string; muscle_
 type WorkoutRow = { id: string; trainer_id: string; client_id: string; created_by: string | null; workout_date: string; start_time: string | null; end_time: string | null; status: string; notes: string | null; started_at: string | null; completed_at: string | null; deleted_at: string | null; version: number; created_at: string; updated_at: string }
 type WorkoutExerciseRow = { id: string; workout_id: string; trainer_id: string; client_id: string; position: number; exercise_source: string; exercise_ref: string; custom_exercise_id: string | null; exercise_name: string; muscle_group: string; input_kind: string; block_id: string; block_type: string; block_preset: string; block_rounds: number; rest_between_exercises_sec: number; rest_between_rounds_sec: number; rest_between_sets_sec: number; trainer_comment: string | null; created_at: string; updated_at: string }
 type WorkoutSetRow = { id: string; workout_exercise_id: string; trainer_id: string; client_id: string; position: number; plan_weight_kg: number | null; plan_reps: number | null; plan_duration_min: number | null; plan_distance_km: number | null; fact_weight_kg: number | null; fact_reps: number | null; fact_duration_min: number | null; fact_distance_km: number | null; confirmed_at: string | null; version: number; created_at: string; updated_at: string }
-type ProgressRow = { id: string; trainer_id: string; client_id: string; recorded_on: string; weight_kg: number | null; chest_cm: number | null; waist_cm: number | null; hip_cm: number | null; notes: string | null; deleted_at: string | null; version: number; created_at: string; updated_at: string }
+type ProgressRow = { id: string; trainer_id: string; client_id: string; created_by: string | null; recorded_on: string; weight_kg: number | null; chest_cm: number | null; waist_cm: number | null; hip_cm: number | null; notes: string | null; deleted_at: string | null; version: number; created_at: string; updated_at: string }
 type MetricRow = { id: string; trainer_id: string; client_id: string; name: string; unit: string | null; archived_at: string | null; version: number; created_at: string; updated_at: string }
 type ProgressCustomRow = { id: string; trainer_id: string; client_id: string; progress_id: string; metric_id: string; value: number; created_at: string; updated_at: string }
 type ClientTrainerRow = { client_id: string; trainer_id: string; joined_at: string }
@@ -104,6 +104,7 @@ export type Database = {
       initialize_trainer: { Args: { p_first_name?: string | null; p_last_name?: string | null; p_timezone?: string }; Returns: TrainerRow }
       get_my_client: { Args: Record<string, never>; Returns: MyClientRow[] }
       can_access_client: { Args: { p_client_id: string }; Returns: boolean }
+      can_read_workout: { Args: { p_workout_id: string }; Returns: boolean }
       create_client_invitation: { Args: { p_client_id: string; p_target_role: string }; Returns: string }
       claim_client_invitation: { Args: { p_code: string }; Returns: string }
       revoke_client_invitation: { Args: { p_invitation_id: string }; Returns: undefined }

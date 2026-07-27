@@ -77,7 +77,7 @@ select is(
 select is(public.confirm_live_set('98000000-0000-4000-8000-000000000008', 2), 3::bigint, 'client owner confirms live set');
 select throws_ok(
   $$select public.append_live_set('97000000-0000-4000-8000-000000000007', 2)$$,
-  'PT403', 'client_access_denied', 'client owner cannot change workout structure'
+  'PT403', 'workout_access_denied', 'client owner cannot change trainer workout structure'
 );
 select is(public.finish_workout('96000000-0000-4000-8000-000000000006', 2), 3::bigint, 'client owner finishes workout');
 reset role;
