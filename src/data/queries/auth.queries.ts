@@ -11,19 +11,19 @@ export const authQueries = {
       return Promise.resolve()
     }),
   signIn: (email: string, password: string) => supabase.auth.signInWithPassword({ email, password }),
-  signUp: (email: string, password: string, firstName: string) =>
-    supabase.auth.signUp({ email, password, options: { data: { first_name: firstName } } }),
+  signUp: (email: string, password: string, firstName: string, role: 'trainer' | 'client') =>
+    supabase.auth.signUp({ email, password, options: { data: { first_name: firstName, account_role: role } } }),
   signInWithGoogle: (redirectTo: string) => supabase.auth.signInWithOAuth({
     provider: 'google', options: { redirectTo },
   }),
   resetPassword: (email: string, redirectTo: string) => supabase.auth.resetPasswordForEmail(email, { redirectTo }),
   updatePassword: (password: string) => supabase.auth.updateUser({ password }),
   signOut: () => supabase.auth.signOut(),
-  initializeTrainer: (firstName?: string, lastName?: string) => supabase.rpc('initialize_trainer', {
-    p_first_name: firstName ?? null, p_last_name: lastName ?? null,
+  initializeAccount: (role: 'trainer' | 'client', firstName?: string, lastName?: string) => supabase.rpc('initialize_account', {
+    p_role: role, p_first_name: firstName ?? null, p_last_name: lastName ?? null,
   }),
   getProfile: (id: string) => supabase.from('profiles')
-    .select('id,first_name,last_name,timezone,created_at,updated_at').eq('id', id).single(),
+    .select('id,account_role,first_name,last_name,timezone,created_at,updated_at').eq('id', id).maybeSingle(),
   updateProfile: (id: string, values: { first_name: string | null; last_name: string | null; timezone: string }) =>
-    supabase.from('profiles').update(values).eq('id', id).select('id,first_name,last_name,timezone,created_at,updated_at').single(),
+    supabase.from('profiles').update(values).eq('id', id).select('id,account_role,first_name,last_name,timezone,created_at,updated_at').single(),
 }

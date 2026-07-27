@@ -18,7 +18,7 @@ route/page → feature UI/hooks → repository → query → Supabase Data API/R
 - TanStack Query: server state и invalidation.
 - React Hook Form: form drafts и validation.
 - Local component state: sheet/modal/timer.
-- Auth provider: `SessionActor` и lifecycle сессии.
+- Auth provider: `SessionActor` с неизменяемой ролью `trainer | client` и lifecycle сессии.
 
 ## База данных
 
@@ -31,7 +31,8 @@ route/page → feature UI/hooks → repository → query → Supabase Data API/R
 ## Решения
 
 - UUIDv4 для PK/FK бизнес-сущностей.
-- Один тренер на клиента; nullable client auth link зарезервирован.
+- Один тренер на клиента остаётся текущим data-контрактом; `auth_user_id` связывает карточку с клиентским аккаунтом. Переход к нескольким тренерам выполняется отдельной membership-миграцией.
+- Роль аккаунта выбирается при регистрации и после инициализации не меняется. Клиентский аккаунт не создаёт tenant-запись тренера.
 - Возраст — число лет; дата рождения не хранится.
 - Вес — только временной ряд progress; карточка показывает последний замер.
 - System exercises — versioned application catalog; workout хранит snapshot.

@@ -23,6 +23,26 @@ export function ClientsPage() {
   </Page>
 }
 
+export function MyClientPage() {
+  const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
+  return <Page title="Мой кабинет">
+    <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
+      {query.data ? <div className="stack">
+        <section className="summary">
+          <div><span>Возраст</span><strong>{query.data.ageYears}</strong></div>
+          <div><span>Рост</span><strong>{query.data.heightCm} см</strong></div>
+          <div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div>
+        </section>
+        <section><h2>{query.data.fullName}</h2>{query.data.goal && <><h3>Цель</h3><p>{query.data.goal}</p></>}</section>
+        <p className="muted">Карточка связана с аккаунтом. Расписание и совместное редактирование будут подключены следующим этапом.</p>
+      </div> : <div className="state">
+        <h2>Карточка ещё не подключена</h2>
+        <p>Попросите тренера привязать ваш аккаунт. Приглашения по коду появятся следующим этапом.</p>
+      </div>}
+    </AsyncView>
+  </Page>
+}
+
 import { useState } from 'react'
 
 type ClientValues = z.input<typeof clientSchema>

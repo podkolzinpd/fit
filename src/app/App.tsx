@@ -2,7 +2,7 @@ import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } fr
 import { useAuth } from './auth-context'
 import { AppLayout } from './AppLayout'
 import { AuthCallbackPage, AuthPage, ForgotPasswordPage, ResetPasswordPage } from '../features/auth'
-import { ClientDetailPage, ClientFormPage, ClientsPage } from '../features/clients'
+import { ClientDetailPage, ClientFormPage, ClientsPage, MyClientPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { AnalyticsPage, ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
@@ -16,27 +16,40 @@ function Protected() {
   return <Outlet />
 }
 
+function TrainerOnly() {
+  const { actor } = useAuth()
+  return actor?.role === 'trainer' ? <Outlet /> : <Navigate to="/me" replace />
+}
+
+function Home() {
+  const { actor } = useAuth()
+  return <Navigate to={actor?.role === 'client' ? '/me' : '/clients'} replace />
+}
+
 const router = createBrowserRouter([
   { path: '/auth', element: <AuthPage /> },
   { path: '/auth/forgot', element: <ForgotPasswordPage /> },
   { path: '/auth/reset', element: <ResetPasswordPage /> },
   { path: '/auth/callback', element: <AuthCallbackPage /> },
   { element: <Protected />, children: [{ element: <AppLayout />, children: [
-    { index: true, element: <Navigate to="/clients" replace /> },
-    { path: '/clients', element: <ClientsPage /> },
-    { path: '/clients/new', element: <ClientFormPage /> },
-    { path: '/clients/:clientId', element: <ClientDetailPage /> },
-    { path: '/clients/:clientId/edit', element: <ClientFormPage /> },
-    { path: '/clients/:clientId/workouts', element: <ClientWorkoutsPage /> },
-    { path: '/schedule', element: <SchedulePage /> },
-    { path: '/workouts/new', element: <WorkoutFormPage /> },
-    { path: '/workouts/:workoutId', element: <WorkoutDetailPage /> },
-    { path: '/workouts/:workoutId/edit', element: <WorkoutFormPage /> },
-    { path: '/workouts/:workoutId/live', element: <LiveWorkoutPage /> },
-    { path: '/workouts/:workoutId/history/:exerciseRef', element: <ExerciseHistoryPage /> },
-    { path: '/analytics', element: <AnalyticsPage /> },
-    { path: '/progress/:clientId', element: <ProgressPage /> },
-    { path: '/exercises', element: <ExercisesPage /> },
+    { index: true, element: <Home /> },
+    { path: '/me', element: <MyClientPage /> },
+    { element: <TrainerOnly />, children: [
+      { path: '/clients', element: <ClientsPage /> },
+      { path: '/clients/new', element: <ClientFormPage /> },
+      { path: '/clients/:clientId', element: <ClientDetailPage /> },
+      { path: '/clients/:clientId/edit', element: <ClientFormPage /> },
+      { path: '/clients/:clientId/workouts', element: <ClientWorkoutsPage /> },
+      { path: '/schedule', element: <SchedulePage /> },
+      { path: '/workouts/new', element: <WorkoutFormPage /> },
+      { path: '/workouts/:workoutId', element: <WorkoutDetailPage /> },
+      { path: '/workouts/:workoutId/edit', element: <WorkoutFormPage /> },
+      { path: '/workouts/:workoutId/live', element: <LiveWorkoutPage /> },
+      { path: '/workouts/:workoutId/history/:exerciseRef', element: <ExerciseHistoryPage /> },
+      { path: '/analytics', element: <AnalyticsPage /> },
+      { path: '/progress/:clientId', element: <ProgressPage /> },
+      { path: '/exercises', element: <ExercisesPage /> },
+    ] },
     { path: '/profile', element: <ProfilePage /> },
   ] }] },
   { path: '*', element: <Navigate to="/" replace /> },

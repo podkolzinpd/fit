@@ -1,4 +1,4 @@
-import type { SessionActor } from '../../shared/domain'
+import type { AccountRole, SessionActor } from '../../shared/domain'
 import { authQueries } from '../queries/auth.queries'
 import { repositoryError } from './error'
 
@@ -11,15 +11,16 @@ export const authRepository = {
     const { error } = await authQueries.signIn(email, password)
     if (error) throw repositoryError(error)
   },
-  async signUp(email: string, password: string, firstName: string) {
-    const { data, error } = await authQueries.signUp(email, password, firstName)
+  async signUp(email: string, password: string, firstName: string, role: AccountRole) {
+    const { data, error } = await authQueries.signUp(email, password, firstName, role)
     if (error?.code === 'user_already_exists' || error?.message === 'User already registered') {
       throw new Error(signupFailedMessage)
     }
     if (error) throw repositoryError(error)
     if (!data.session) throw new Error(signupFailedMessage)
   },
-  async signInWithGoogle() {
+  async signInWithGoogle(role: AccountRole = 'trainer') {
+    sessionStorage.setItem('fit.pendingAccountRole', role)
     const redirect = `${window.location.origin}/auth/callback`
     const { error } = await authQueries.signInWithGoogle(redirect)
     if (error) throw repositoryError(error)
@@ -39,12 +40,24 @@ export const authRepository = {
   async initialize(user: { id: string; email?: string; user_metadata: Record<string, unknown> }): Promise<SessionActor> {
     const firstName = typeof user.user_metadata.first_name === 'string' ? user.user_metadata.first_name : undefined
     const lastName = typeof user.user_metadata.last_name === 'string' ? user.user_metadata.last_name : undefined
-    const initialized = await authQueries.initializeTrainer(firstName, lastName)
+    const existing = await authQueries.getProfile(user.id)
+    if (existing.error) throw repositoryError(existing.error)
+    const metadataRole = user.user_metadata.account_role
+    const pendingRole = sessionStorage.getItem('fit.pendingAccountRole')
+    const role: AccountRole = existing.data?.account_role === 'client' || existing.data?.account_role === 'trainer'
+      ? existing.data.account_role
+      : metadataRole === 'client' || metadataRole === 'trainer'
+        ? metadataRole
+        : pendingRole === 'client' ? 'client' : 'trainer'
+    const initialized = await authQueries.initializeAccount(role, firstName, lastName)
     if (initialized.error) throw repositoryError(initialized.error)
+    sessionStorage.removeItem('fit.pendingAccountRole')
     const profile = await authQueries.getProfile(user.id)
     if (profile.error) throw repositoryError(profile.error)
+    if (!profile.data) throw new Error('Профиль пользователя не найден')
     return {
       userId: user.id,
+      role,
       email: user.email ?? null,
       firstName: profile.data.first_name,
       lastName: profile.data.last_name,
