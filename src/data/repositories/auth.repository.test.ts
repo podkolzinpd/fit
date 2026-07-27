@@ -4,7 +4,7 @@ import { authRepository } from './auth.repository'
 const queries = vi.hoisted(() => ({
   getLinkedClient: vi.fn(),
   getTrainer: vi.fn(),
-  initializeTrainer: vi.fn(),
+  initializeAccount: vi.fn(),
   getProfile: vi.fn(),
 }))
 
@@ -12,7 +12,7 @@ vi.mock('../queries/auth.queries', () => ({
   authQueries: {
     getLinkedClient: queries.getLinkedClient,
     getTrainer: queries.getTrainer,
-    initializeTrainer: queries.initializeTrainer,
+    initializeAccount: queries.initializeAccount,
     getProfile: queries.getProfile,
   },
 }))
@@ -21,7 +21,7 @@ describe('authRepository.initialize', () => {
   beforeEach(() => {
     queries.getLinkedClient.mockReset()
     queries.getTrainer.mockReset()
-    queries.initializeTrainer.mockReset()
+    queries.initializeAccount.mockReset()
     queries.getProfile.mockReset()
   })
 
@@ -43,6 +43,7 @@ describe('authRepository.initialize', () => {
 
     expect(actor).toEqual({
       kind: 'client',
+      role: 'client',
       userId: 'auth-client-1',
       email: 'client@example.test',
       firstName: 'Анна',
@@ -53,13 +54,13 @@ describe('authRepository.initialize', () => {
       fullName: 'Анна Смирнова',
     })
     expect(queries.getTrainer).not.toHaveBeenCalled()
-    expect(queries.initializeTrainer).not.toHaveBeenCalled()
+    expect(queries.initializeAccount).not.toHaveBeenCalled()
   })
 
   it('initializes an unlinked account as a trainer', async () => {
     queries.getLinkedClient.mockResolvedValue({ data: null, error: null })
     queries.getTrainer.mockResolvedValue({ data: null, error: null })
-    queries.initializeTrainer.mockResolvedValue({ data: { profile_id: 'trainer-1' }, error: null })
+    queries.initializeAccount.mockResolvedValue({ data: null, error: null })
     queries.getProfile.mockResolvedValue({
       data: {
         first_name: 'Ирина',
@@ -76,6 +77,6 @@ describe('authRepository.initialize', () => {
     })
 
     expect(actor.kind).toBe('trainer')
-    expect(queries.initializeTrainer).toHaveBeenCalledWith('Ирина', undefined)
+    expect(queries.initializeAccount).toHaveBeenCalledWith('trainer', 'Ирина', undefined)
   })
 })

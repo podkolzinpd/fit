@@ -1,19 +1,11 @@
-// schema-sha256: fa91304fd7904a73f171d67d8b35223b48bc446dd27a506fa7101fe560fbecfd
+// schema-sha256: c555b869d2bc0a432ce7f0cd321e5246af46c822d76b6792608762440ae47a46
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
-type WorkoutListSetRow = {
-  id: string
-  position: number
-  plan_weight_kg: number | null
-  plan_reps: number | null
-  plan_duration_min: number | null
-  plan_distance_km: number | null
-  fact_weight_kg: number | null
-  fact_reps: number | null
-  fact_duration_min: number | null
-  fact_distance_km: number | null
-  confirmed_at: string | null
-  version: number
+type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
+  Row: Row
+  Insert: Insert
+  Update: Update
+  Relationships: []
 }
 
 type ProfileRow = { id: string; account_role: 'trainer' | 'client'; first_name: string | null; last_name: string | null; timezone: string; created_at: string; updated_at: string }
@@ -36,20 +28,29 @@ type WorkoutListExerciseRow = Pick<WorkoutExerciseRow, 'id' | 'position' | 'exer
 export type WorkoutListRow = Pick<WorkoutRow, 'id' | 'client_id' | 'workout_date' | 'start_time' | 'end_time' | 'started_at' | 'completed_at' | 'status' | 'notes' | 'version'> & { client_name: string; total_count: number; exercises: WorkoutListExerciseRow[] }
 type WorkoutSummaryRow = Pick<WorkoutRow, 'id' | 'workout_date' | 'status'>
 
-export type WorkoutListRow = {
+type TrainingSummaryRow = {
   id: string
   client_id: string
-  client_name: string
-  workout_date: string
-  start_time: string | null
-  end_time: string | null
-  started_at: string | null
-  completed_at: string | null
-  status: string
-  notes: string | null
+  trainer_id: string
+  period_start: string
+  period_end: string
+  trainer_summary: Json
+  client_summary: Json
+  display_metrics: Json
+  generated_at: string
   version: number
-  total_count: number
-  exercises: WorkoutListExerciseRow[]
+}
+type PublishedTrainingSummaryRow = {
+  id: string
+  source_summary_id: string
+  client_id: string
+  trainer_id: string
+  period_start: string
+  period_end: string
+  summary: Json
+  display_metrics: Json
+  generated_at: string
+  published_at: string
 }
 
 export type Database = {
@@ -93,7 +94,10 @@ export type Database = {
       client_progress_custom: Table<ProgressCustomRow, Pick<ProgressCustomRow, 'trainer_id' | 'client_id' | 'progress_id' | 'metric_id' | 'value'> & Partial<ProgressCustomRow>>
       client_trainers: Table<ClientTrainerRow, Pick<ClientTrainerRow, 'client_id' | 'trainer_id'> & Partial<ClientTrainerRow>>
       client_invitations: Table<ClientInvitationRow, Pick<ClientInvitationRow, 'client_id' | 'created_by' | 'target_role' | 'code_hash' | 'expires_at'> & Partial<ClientInvitationRow>>
+      client_training_summaries: Table<TrainingSummaryRow>
+      client_published_training_summaries: Table<PublishedTrainingSummaryRow>
     }
+    Views: Record<string, never>
     Functions: {
       initialize_account: { Args: { p_role: string; p_first_name?: string | null; p_last_name?: string | null; p_timezone?: string }; Returns: ProfileRow }
       initialize_trainer: { Args: { p_first_name?: string | null; p_last_name?: string | null; p_timezone?: string }; Returns: TrainerRow }
@@ -123,7 +127,11 @@ export type Database = {
       save_progress: { Args: { p_progress: Json; p_expected_version?: number | null }; Returns: string }
       soft_delete_workout: { Args: { p_workout_id: string; p_expected_version: number }; Returns: undefined }
       soft_delete_progress: { Args: { p_progress_id: string; p_expected_version: number }; Returns: undefined }
+      publish_training_summary: { Args: { p_summary_id: string; p_client_summary: Json; p_expected_version: number }; Returns: number[] }
+      unpublish_training_summary: { Args: { p_summary_id: string; p_expected_version: number }; Returns: number }
     }
+    Enums: Record<string, never>
+    CompositeTypes: Record<string, never>
   }
 }
 

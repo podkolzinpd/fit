@@ -1,5 +1,6 @@
 import type { BlockPreset, BlockType, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
+import type { WorkoutListRow } from '../database.types'
 import { clientsRepository } from './clients.repository'
 import { collectPages, pageFromLookahead } from './collect-pages'
 import { repositoryError } from './error'

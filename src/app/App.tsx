@@ -7,7 +7,6 @@ import { ExercisesPage } from '../features/exercises'
 import { AnalyticsPage, ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
-import { ClientProfilePage, ClientProgressPage } from '../features/client-app'
 
 function Protected() {
   const { actor, loading, error } = useAuth(); const location = useLocation()

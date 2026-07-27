@@ -123,10 +123,6 @@ export function ClientDetailPage() {
         </div>
         <Link className="button secondary wide" to={`/progress/${clientId}`}>Замеры и аналитика</Link>
       </div>
-      <ClientAccessPanel
-        client={query.data}
-        onInvited={() => query.refetch()}
-      />
       {query.data.goal && <section><h2>Цель</h2><p>{query.data.goal}</p></section>}{query.data.note && <section><h2>Заметка</h2><p>{query.data.note}</p></section>}
       {upcoming.length > 0 && <section><h2>Предстоит</h2><div className="cards">{upcoming.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}{workout.startTime ? ` · ${workout.startTime.slice(0, 5)}` : ''}</strong><WorkoutExercisesSummary workout={workout} /></div><span className={`badge ${workout.status}`}>{workout.status === 'in_progress' ? 'Идёт' : 'План'}</span></Link>)}</div></section>}
       <div className="page-actions">
@@ -137,37 +133,4 @@ export function ClientDetailPage() {
       </div>
     </>}</AsyncView>
   </Page>
-}
-
-function ClientAccessPanel({ client, onInvited }: {
-  client: Client
-  onInvited: () => Promise<unknown>
-}) {
-  const [sentTo, setSentTo] = useState<string | null>(null)
-  const invite = useMutation({
-    mutationFn: (email: string) => clientsRepository.invite(client.id, email),
-    onSuccess: async (_, email) => { setSentTo(email); await onInvited() },
-  })
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const email = String(new FormData(event.currentTarget).get('email') ?? '').trim()
-    if (email) invite.mutate(email)
-  }
-
-  if (client.authUserId) {
-    return <section className="client-access-card connected">
-      <div><span aria-hidden="true">✓</span><div><strong>Доступ клиента подключён</strong><p>Клиент видит только свою безопасную версию и может сам запросить обновление.</p></div></div>
-    </section>
-  }
-
-  return <section className="client-access-card">
-    <div><span aria-hidden="true">↗</span><div><strong>Доступ клиента</strong><p>Приглашение создаст отдельный клиентский вход.</p></div></div>
-    <form className="client-invite-form" onSubmit={(event) => void submit(event)}>
-      <Field label="Email клиента"><input name="email" type="email" placeholder="client@example.com" required /></Field>
-      {invite.error && <p className="error" role="alert">{invite.error.message}</p>}
-      {sentTo && <p className="success">Приглашение отправлено на {sentTo}</p>}
-      <button disabled={invite.isPending}>{invite.isPending ? 'Отправляем…' : 'Пригласить в приложение'}</button>
-    </form>
-  </section>
 }

@@ -1,4 +1,4 @@
-import type { AccountRole, SessionActor } from '../../shared/domain'
+import type { AccountRole, SessionActor, TrainerActor } from '../../shared/domain'
 import { authQueries } from '../queries/auth.queries'
 import { repositoryError } from './error'
 
@@ -44,6 +44,7 @@ export const authRepository = {
       const [firstName, ...lastNameParts] = linkedClient.data.full_name.trim().split(/\s+/)
       return {
         kind: 'client',
+        role: 'client',
         userId: user.id,
         email: user.email ?? null,
         firstName: firstName || null,
