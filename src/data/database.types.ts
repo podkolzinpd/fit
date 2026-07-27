@@ -1,4 +1,4 @@
-// schema-sha256: b257f135ef633d0eb5c0c86f5a1fe45d20529be56171d4642ea6107f11c721cd
+// schema-sha256: b16451e07802669a7e48d25296f5b8a63bdae38149117d9538063891234ace8a
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {

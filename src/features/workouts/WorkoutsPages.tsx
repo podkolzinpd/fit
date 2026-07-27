@@ -19,6 +19,7 @@ import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
 import { createLiveSetCoordinator } from './live-set-coordinator'
 import { LoadMoreButton } from './LoadMoreButton'
 import { workoutCountLabel } from './workout-count-label'
+import { useAuth } from '../../app/auth-context'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -205,6 +206,7 @@ export function WorkoutFormPage() {
 
 export function WorkoutDetailPage() {
   const { workoutId = '' } = useParams(); const navigate = useNavigate(); const queryClient = useQueryClient()
+  const { actor } = useAuth()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   const start = useMutation({ mutationFn: () => workoutsRepository.start(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }); navigate(`/workouts/${workoutId}/live`) } })
   const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workouts'] }); navigate('/schedule') } })
@@ -216,15 +218,16 @@ export function WorkoutDetailPage() {
   // «Назад» ведёт в расписание (все запланированные), а не -1 по истории
   // браузера: -1 создавал петлю тренировка ↔ история упражнения после захода
   // в аналитику.
-  const backTo = '/schedule'
+  const clientMode = actor?.role === 'client'
+  const backTo = clientMode ? '/me/workouts' : '/schedule'
   return <Page title="Тренировка" back={backTo}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       <section className="workout-title">
         <div><h2>{workout.clientName}</h2><p>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</p></div>
         <span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span>
       </section>
-      {workout.status === 'planned' && <button className="wide" onClick={() => start.mutate()}>Начать тренировку</button>}
-      {workout.status === 'in_progress' && <Link className="button wide" to={`/workouts/${workoutId}/live`}>Продолжить тренировку</Link>}
+      {!clientMode && workout.status === 'planned' && <button className="wide" onClick={() => start.mutate()}>Начать тренировку</button>}
+      {!clientMode && workout.status === 'in_progress' && <Link className="button wide" to={`/workouts/${workoutId}/live`}>Продолжить тренировку</Link>}
       {done && <section className="summary done-summary done-summary-3">
         <div><span>Время</span><strong>{duration ?? '—'}</strong></div>
         <div><span>Тоннаж</span><strong>{tonnageLabel(tonnage)}</strong></div>
@@ -240,11 +243,11 @@ export function WorkoutDetailPage() {
         return <div className="exercise-block view" key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
       })}</div>
       {workout.notes && <p>{workout.notes}</p>}
-      <div className="actions">
+      {!clientMode && <><div className="actions">
         {workout.status === 'planned' && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>Изменить</Link>}
         <Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link>
       </div>
-      <button className="danger secondary wide" onClick={() => remove.mutate()}>Удалить тренировку</button>
+      <button className="danger secondary wide" onClick={() => remove.mutate()}>Удалить тренировку</button></>}
     </>}</AsyncView>
   </Page>
 }

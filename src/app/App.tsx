@@ -2,7 +2,7 @@ import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } fr
 import { useAuth } from './auth-context'
 import { AppLayout } from './AppLayout'
 import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage } from '../features/auth'
-import { ClientDetailPage, ClientFormPage, ClientsPage, MyClientPage } from '../features/clients'
+import { ClientDetailPage, ClientFormPage, ClientsPage, MyClientPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { AnalyticsPage, ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
@@ -35,6 +35,9 @@ const router = createBrowserRouter([
     { index: true, element: <Home /> },
     { path: '/join', element: <JoinPage /> },
     { path: '/me', element: <MyClientPage /> },
+    { path: '/me/workouts', element: <MyWorkoutsPage /> },
+    { path: '/me/progress', element: <MyProgressPage /> },
+    { path: '/workouts/:workoutId', element: <WorkoutDetailPage /> },
     { element: <TrainerOnly />, children: [
       { path: '/clients', element: <ClientsPage /> },
       { path: '/clients/new', element: <ClientFormPage /> },
@@ -43,7 +46,6 @@ const router = createBrowserRouter([
       { path: '/clients/:clientId/workouts', element: <ClientWorkoutsPage /> },
       { path: '/schedule', element: <SchedulePage /> },
       { path: '/workouts/new', element: <WorkoutFormPage /> },
-      { path: '/workouts/:workoutId', element: <WorkoutDetailPage /> },
       { path: '/workouts/:workoutId/edit', element: <WorkoutFormPage /> },
       { path: '/workouts/:workoutId/live', element: <LiveWorkoutPage /> },
       { path: '/workouts/:workoutId/history/:exerciseRef', element: <ExerciseHistoryPage /> },
