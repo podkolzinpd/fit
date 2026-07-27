@@ -1,0 +1,42 @@
+import type { ClientTrainingSummary } from '../../shared/domain'
+import { supabase } from './client'
+import { toJson } from './json'
+
+const internalColumns = 'id,client_id,period_start,period_end,trainer_summary,client_summary,display_metrics,generated_at,version'
+
+const publishedColumns = 'id,source_summary_id,client_id,period_start,period_end,summary,display_metrics,generated_at,published_at'
+
+export const trainingSummaryQueries = {
+  listInternal: (clientId: string) => supabase.from('client_training_summaries')
+    .select(internalColumns)
+    .eq('client_id', clientId)
+    .order('period_end', { ascending: false })
+    .order('generated_at', { ascending: false }),
+  listPublished: (clientId: string) => supabase.from('client_published_training_summaries')
+    .select(publishedColumns)
+    .eq('client_id', clientId)
+    .order('period_end', { ascending: false }),
+  generate: (clientId: string, periodStart: string, periodEnd: string, force: boolean) =>
+    supabase.functions.invoke('summarize-client-training', {
+      body: {
+        client_id: clientId,
+        period_start: periodStart,
+        period_end: periodEnd,
+        force,
+      },
+    }),
+  publish: (
+    summaryId: string,
+    clientSummary: ClientTrainingSummary,
+    expectedVersion: number,
+  ) => supabase.rpc('publish_training_summary', {
+    p_summary_id: summaryId,
+    p_client_summary: toJson(clientSummary),
+    p_expected_version: expectedVersion,
+  }),
+  unpublish: (summaryId: string, expectedVersion: number) =>
+    supabase.rpc('unpublish_training_summary', {
+      p_summary_id: summaryId,
+      p_expected_version: expectedVersion,
+    }),
+}

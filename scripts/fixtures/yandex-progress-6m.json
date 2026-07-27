@@ -1,0 +1,103 @@
+{
+  "period": {
+    "start": "2026-01-28",
+    "end": "2026-07-27",
+    "days": 181
+  },
+  "consistency": {
+    "completed_workouts": 24,
+    "workouts_per_week": 0.9,
+    "active_weeks": 20,
+    "first_workout_date": "2026-01-28",
+    "last_workout_date": "2026-07-27",
+    "longest_gap_days": 21
+  },
+  "exercises": [
+    {
+      "name": "Жим лёжа",
+      "kind": "weight_reps",
+      "session_count": 12,
+      "first_session": {
+        "date": "2026-01-28",
+        "set_count": 3,
+        "max_weight_kg": 60,
+        "total_reps": 30,
+        "volume_kg": 1800
+      },
+      "last_session": {
+        "date": "2026-07-27",
+        "set_count": 3,
+        "max_weight_kg": 75,
+        "total_reps": 30,
+        "volume_kg": 2250
+      },
+      "change_percent": {
+        "max_weight": 25,
+        "volume": 25,
+        "total_reps": 0
+      },
+      "best": {
+        "max_weight_kg": 75,
+        "volume_kg": 2250,
+        "total_reps": 30
+      }
+    },
+    {
+      "name": "Приседания",
+      "kind": "weight_reps",
+      "session_count": 11,
+      "first_session": {
+        "date": "2026-02-04",
+        "set_count": 3,
+        "max_weight_kg": 80,
+        "total_reps": 24,
+        "volume_kg": 1920
+      },
+      "last_session": {
+        "date": "2026-07-20",
+        "set_count": 3,
+        "max_weight_kg": 100,
+        "total_reps": 24,
+        "volume_kg": 2400
+      },
+      "change_percent": {
+        "max_weight": 25,
+        "volume": 25,
+        "total_reps": 0
+      },
+      "best": {
+        "max_weight_kg": 100,
+        "volume_kg": 2400,
+        "total_reps": 24
+      }
+    },
+    {
+      "name": "Бег",
+      "kind": "distance",
+      "session_count": 8,
+      "first_session": {
+        "date": "2026-02-11",
+        "set_count": 1,
+        "total_duration_min": 20,
+        "total_distance_km": 3,
+        "pace_min_per_km": 6.67
+      },
+      "last_session": {
+        "date": "2026-07-13",
+        "set_count": 1,
+        "total_duration_min": 30,
+        "total_distance_km": 5,
+        "pace_min_per_km": 6
+      },
+      "change_percent": {
+        "distance": 66.67,
+        "duration": 50,
+        "pace": -10.04
+      },
+      "best": {
+        "distance_km": 5,
+        "pace_min_per_km": 6
+      }
+    }
+  ]
+}

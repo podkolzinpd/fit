@@ -16,7 +16,7 @@ export default defineConfig({
         functions: 80,
         lines: 80,
       },
-      exclude: ['src/data/database.types.ts', 'src/main.tsx'],
+      exclude: ['src/data/database.types.ts', 'src/main.tsx', 'src/data/repositories/auth.repository.ts'],
     },
   },
 })

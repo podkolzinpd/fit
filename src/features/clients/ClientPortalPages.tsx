@@ -8,6 +8,7 @@ import { splitClientWorkouts, workoutsRepository } from '../../data/repositories
 import { formatLocalDate, localDate, todayLocalDate } from '../../shared/local-date'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ProgressChart } from '../progress/ProgressChart'
+import { ClientTrainingSummaryCard } from '../progress/TrainingSummaryCard'
 import { WorkoutExercisesSummary } from '../workouts'
 
 function useMine() {
@@ -49,7 +50,7 @@ export function MyProgressPage() {
   const remove = useMutation({ mutationFn: (entry: Parameters<typeof progressRepository.remove>[0]) => progressRepository.remove(entry), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['progress', mine.data?.id] }) })
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); save.mutate(event.currentTarget) }
   return <Page title="Мой прогресс" back="/me"><AsyncView loading={mine.isLoading || entries.isLoading} error={mine.error ?? entries.error} onRetry={() => { void mine.refetch(); void entries.refetch() }}>
-    {entries.data && <><section><h2>Новый замер</h2><form className="stack compact" onSubmit={(event) => void submit(event)}>
+    {entries.data && mine.data && <><ClientTrainingSummaryCard clientId={mine.data.id} /><section><h2>Новый замер</h2><form className="stack compact" onSubmit={(event) => void submit(event)}>
       <Field label="Дата"><input name="recordedOn" type="date" defaultValue={todayLocalDate()} required /></Field>
       <div className="measure-grid"><Field label="Вес, кг"><input name="weightKg" type="number" step="0.1" /></Field><Field label="Грудь, см"><input name="chestCm" type="number" step="0.1" /></Field><Field label="Талия, см"><input name="waistCm" type="number" step="0.1" /></Field><Field label="Бёдра, см"><input name="hipCm" type="number" step="0.1" /></Field></div>
       {save.error && <p className="error">{save.error.message}</p>}<button disabled={save.isPending}>Сохранить замер</button>
