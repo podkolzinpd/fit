@@ -1,5 +1,6 @@
 import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } from 'react-router-dom'
 import { useAuth } from './auth-context'
+import { trackPageView } from '../shared/yandex-metrika'
 import { AppLayout } from './AppLayout'
 import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage } from '../features/auth'
 import { ClientDetailPage, ClientFormPage, ClientsPage, MyClientPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
@@ -57,5 +58,13 @@ const router = createBrowserRouter([
   ] }] },
   { path: '*', element: <Navigate to="/" replace /> },
 ])
+
+// Счётчик init уже отправил хит для первой загрузки — трекаем только
+// последующие переходы между роутами SPA.
+let isFirstRouterUpdate = true
+router.subscribe((state) => {
+  if (isFirstRouterUpdate) { isFirstRouterUpdate = false; return }
+  trackPageView(state.location.pathname + state.location.search)
+})
 
 export function App() { return <RouterProvider router={router} /> }
