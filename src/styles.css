@@ -95,7 +95,11 @@ p { margin: 6px 0 }
 .workout-exercise-comment { color: var(--muted); font-size: 12px; margin-top: 1px }
 /* Одна строка — карточка в 1 час вмещает время+имя+одну строку упражнений
    без обрезки букв по нижнему краю; лишнее прячем в «…». */
-.day-grid-event-groups { font-size: 11px; color: #c9c2e6; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+/* Время + имя клиента в одну строку; упражнения — столбиком, каждое обрезается. */
+.day-grid-event-top { display: flex; align-items: baseline; gap: 8px; min-width: 0 }
+.day-grid-event-top .day-grid-event-name { flex: 1 1 auto }
+.day-grid-event-groups { display: flex; flex-direction: column; font-size: 11px; color: #c9c2e6; line-height: 1.25 }
+.day-grid-event-exercise { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100% }
 .summary.stats-3 { grid-template-columns: repeat(3, 1fr) }
 .client-actions { display: flex; flex-direction: column; gap: 10px; margin: 20px 0 }
 .client-actions-row { display: flex; gap: 10px }
@@ -194,6 +198,8 @@ p { margin: 6px 0 }
 .set-add-row > .secondary { flex: 0 0 auto }
 .set-add-row .block-rest-field { flex-direction: row; align-items: center; gap: 8px }
 .set-add-row .block-rest-field input { flex: 0 0 auto }
+/* Отступ от строки «＋ Подход / Отдых» до комментария в форме плана. */
+.set-add-row + .exercise-comment { margin-top: 16px }
 .block-merge { align-self: flex-start; margin-top: 8px; color: var(--purple) }
 /* Форма блока по кругам: список упражнений блока + группы-круги. */
 .block-exercises { display: flex; flex-direction: column; gap: 4px }
