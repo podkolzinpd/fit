@@ -98,6 +98,22 @@ const MUSCLE_LABEL = {
   quadriceps: 'Квадрицепс', hamstrings: 'Бицепс бедра', glutes: 'Ягодицы',
   calves: 'Икры', adductors: 'Приводящие', abductors: 'Отводящие', abdominals: 'Пресс',
 }
+// Ручные исправления классификации (ref -> переопределение группы/детали).
+// Free Exercise DB иногда тегирует упражнение по вторичной мышце. Здесь
+// правим по прайм-муверу (общепринятая спортивная анатомия). Применяется и к
+// импортированным, и к базовым — переживает повторный импорт из БД.
+const RECLASSIFY = {
+  // Разгибание спины — прайм-мувер erector spinae (поясница), не ноги.
+  hyperextension: { muscleGroup: 'back', primaryMuscleDetail: 'Поясница' },
+  // Динамика на прямую мышцу живота + hip flexors, не ягодицы.
+  'fedb-flutter-kicks': { muscleGroup: 'core', primaryMuscleDetail: 'Пресс' },
+  // Пауэрлифтерский жим лёжа / жим с цепями — грудной жим, не изолированный трицепс.
+  'fedb-bench-press-powerlifting': { muscleGroup: 'chest', primaryMuscleDetail: 'Грудь' },
+  'fedb-bench-press-with-chains': { muscleGroup: 'chest', primaryMuscleDetail: 'Грудь' },
+  // Становая (hip hinge) — задняя цепь, прайм-мувер бицепс бедра, не квадрицепс.
+  'fedb-cable-deadlifts': { primaryMuscleDetail: 'Бицепс бедра' },
+  'fedb-leverage-deadlift': { primaryMuscleDetail: 'Бицепс бедра' },
+}
 // Оборудование -> русский лейбл.
 const EQUIPMENT_LABEL = {
   barbell: 'Штанга', dumbbell: 'Гантели', machine: 'Тренажёр', cable: 'Блок',
@@ -318,15 +334,16 @@ async function main() {
 
     const detail = ex.primaryMuscles[0]
     const secondary = (ex.secondaryMuscles ?? []).map(muscleLabelFor)
+    const fix = RECLASSIFY[ref] ?? {}
     rows.push({
       source: 'system',
       ref,
       name,
-      muscleGroup: muscleGroupFor(detail),
+      muscleGroup: fix.muscleGroup ?? muscleGroupFor(detail),
       inputKind: inputKindFor(ex.category),
       equipment: equipmentLabelFor(ex.equipment),
       equipmentRef: ex.equipment,
-      primaryMuscleDetail: muscleLabelFor(detail),
+      primaryMuscleDetail: fix.primaryMuscleDetail ?? muscleLabelFor(detail),
       secondaryMuscles: secondary,
       level: ex.level ?? null,
       imageUrl: `/exercises/${imageName}`,
@@ -355,11 +372,12 @@ async function generateBase(byId) {
     const match = BASE_MATCH[base.ref]
     if (!match) { console.warn(`  базовый без маппинга: ${base.ref}`); rows.push(base); continue }
 
+    const fix = RECLASSIFY[base.ref] ?? {}
     const row = {
       source: 'system',
       ref: base.ref,
       name: match.name,
-      muscleGroup: base.muscleGroup,
+      muscleGroup: fix.muscleGroup ?? base.muscleGroup,
       inputKind: base.inputKind,
     }
     if (match.id) {
@@ -375,7 +393,7 @@ async function generateBase(byId) {
       }
       row.equipment = equipmentLabelFor(ex.equipment)
       row.equipmentRef = ex.equipment
-      row.primaryMuscleDetail = muscleLabelFor(ex.primaryMuscles[0])
+      row.primaryMuscleDetail = fix.primaryMuscleDetail ?? muscleLabelFor(ex.primaryMuscles[0])
       row.secondaryMuscles = (ex.secondaryMuscles ?? []).map(muscleLabelFor)
       row.level = ex.level ?? null
       row.instructions = INSTRUCTIONS_RU[base.ref] ?? ex.instructions ?? []
