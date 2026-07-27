@@ -4,14 +4,17 @@ import { toJson } from './json'
 
 const rootColumns = 'id,client_id,workout_date,start_time,end_time,started_at,completed_at,status,notes,version'
 
+export type { WorkoutListRow } from '../database.types'
+
 export const workoutQueries = {
-  listPage: (from: string | undefined, to: string | undefined, clientId: string | undefined, limit: number, offset: number) => supabase.rpc('list_workouts', {
-    p_from: from ?? null,
-    p_to: to ?? null,
-    p_client_id: clientId ?? null,
-    p_limit: limit,
-    p_offset: offset,
-  }),
+  listPage: (from: string | undefined, to: string | undefined, clientId: string | undefined, limit: number, offset: number) =>
+    supabase.rpc('list_workouts', {
+      p_from: from ?? null,
+      p_to: to ?? null,
+      p_client_id: clientId ?? null,
+      p_limit: limit,
+      p_offset: offset,
+    }),
   listSummaries: (clientId: string) => supabase.rpc('list_workout_summaries', { p_client_id: clientId }),
   getRoot: (id: string) => supabase.from('workouts').select(rootColumns).eq('id', id).is('deleted_at', null).single(),
   getExercises: (id: string) => supabase.from('workout_exercises')

@@ -376,12 +376,9 @@ enabled = true
 # Supported request policies: `oneshot`, `per_worker`.
 # `per_worker` (default) — enables hot reload during local development.
 # `oneshot` — fallback mode if hot reload causes issues (e.g. in large repos or with symlinks).
-policy = "per_worker"
+policy = "oneshot"
 # Port to attach the Chrome inspector for debugging edge functions.
 inspector_port = 8083
-# The Deno major version to use.
-deno_version = 2
-
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
@@ -412,3 +409,11 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+[functions.summarize-client-training]
+enabled = true
+verify_jwt = true
+
+[functions.invite-client]
+enabled = true
+verify_jwt = true

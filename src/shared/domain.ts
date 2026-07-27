@@ -13,7 +13,7 @@ export type BlockPreset = 'set' | 'circuit'
 
 export type AccountRole = 'trainer' | 'client'
 
-export interface SessionActor {
+interface SessionActorBase {
   userId: UUID
   role: AccountRole
   email: string | null
@@ -21,6 +21,19 @@ export interface SessionActor {
   lastName: string | null
   timezone: string
 }
+
+export interface TrainerActor extends SessionActorBase {
+  kind: 'trainer'
+}
+
+export interface ClientActor extends SessionActorBase {
+  kind: 'client'
+  clientId: UUID
+  trainerId: UUID
+  fullName: string
+}
+
+export type SessionActor = TrainerActor | ClientActor
 
 export interface Client {
   id: UUID
@@ -186,4 +199,50 @@ export interface ProgressDraft {
 export interface ProgressEntry extends ProgressDraft {
   id: UUID
   version: number
+}
+
+export interface TrainerTrainingSummary {
+  headline: string
+  progress: string[]
+  consistency: string
+  attention: string[]
+}
+
+export interface ClientTrainingSummary {
+  headline: string
+  achievements: string[]
+  consistency: string
+  encouragement: string
+}
+
+export interface TrainingSummaryMetrics {
+  completedWorkouts: number
+  workoutsPerWeek: number
+  activeWeeks: number
+  longestGapDays: number | null
+}
+
+export interface TrainingSummary {
+  id: UUID
+  clientId: UUID
+  periodStart: LocalDate
+  periodEnd: LocalDate
+  trainer: TrainerTrainingSummary
+  client: ClientTrainingSummary
+  metrics: TrainingSummaryMetrics
+  generatedAt: string
+  version: number
+  published: boolean
+}
+
+export interface PublishedTrainingSummary {
+  id: UUID
+  sourceSummaryId: UUID
+  clientId: UUID
+  periodStart: LocalDate
+  periodEnd: LocalDate
+  summary: ClientTrainingSummary
+  metrics: TrainingSummaryMetrics
+  generatedAt: string
+  publishedAt: string
 }

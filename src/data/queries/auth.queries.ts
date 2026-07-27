@@ -22,6 +22,14 @@ export const authQueries = {
   initializeAccount: (role: 'trainer' | 'client', firstName?: string, lastName?: string) => supabase.rpc('initialize_account', {
     p_role: role, p_first_name: firstName ?? null, p_last_name: lastName ?? null,
   }),
+  getLinkedClient: (userId: string) => supabase.from('clients')
+    .select('id,trainer_id,full_name')
+    .eq('auth_user_id', userId)
+    .maybeSingle(),
+  getTrainer: (userId: string) => supabase.from('trainers')
+    .select('profile_id')
+    .eq('profile_id', userId)
+    .maybeSingle(),
   getProfile: (id: string) => supabase.from('profiles')
     .select('id,account_role,first_name,last_name,timezone,created_at,updated_at').eq('id', id).maybeSingle(),
   updateProfile: (id: string, values: { first_name: string | null; last_name: string | null; timezone: string }) =>

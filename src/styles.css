@@ -78,6 +78,7 @@ p { margin: 6px 0 }
 .tab-bar a { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 3px; border-radius: 12px; text-align: center; text-decoration: none; color: #777180; font-size: 11px; transition: color .18s ease, background .18s ease }
 .tab-bar a svg { width: 21px; height: 21px; opacity: .82; transition: opacity .18s ease, transform .18s ease }
 .tab-bar a.active { color: #a793ff; background: #211d31; font-weight: 700 }.tab-bar a.active svg { opacity: 1; transform: translateY(-1px) }
+.client-shell .tab-bar { grid-template-columns: repeat(2, 1fr) }
 .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px }
 .summary div { background: var(--surface-raised); border: 1px solid var(--border); padding: 13px 8px; border-radius: 14px; display: flex; flex-direction: column; gap: 3px; text-align: center }
 .summary span { color: var(--muted); font-size: 12px }
@@ -266,6 +267,70 @@ p { margin: 6px 0 }
 @media (pointer: fine) { .metric-tabs { cursor: grab } .metric-tabs:active { cursor: grabbing } }
 .metric-tab { padding: 7px 14px; border: 1px solid var(--border); border-radius: 99px; background: var(--surface-raised); color: var(--muted); font-size: 13px; white-space: nowrap }
 .metric-tab.active { border-color: var(--accent); color: #fff; background: var(--accent) }
+.ai-progress-card { margin: 0 -2px 24px; overflow: hidden; border: 1px solid #51468a; border-radius: 20px; background: radial-gradient(circle at 90% -10%, #765cff30, transparent 38%), linear-gradient(155deg, #262139, #1d1a25 62%); box-shadow: 0 16px 40px #08060d45 }
+.ai-progress-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 17px 17px 12px }
+.ai-progress-title { display: flex; align-items: center; gap: 11px }
+.ai-progress-title h2 { margin: 0; font-size: 18px }
+.ai-progress-title p { margin: 2px 0 0; color: var(--muted); font-size: 12px }
+.ai-progress-mark { width: 36px; height: 36px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid #9b88ff80; border-radius: 12px; background: linear-gradient(145deg, #8a72ff, #583bd5); color: white; box-shadow: 0 8px 24px #5236d34d; font-size: 18px }
+.ai-progress-demo { padding: 4px 8px; border: 1px solid #5d5480; border-radius: 99px; color: #bcb1eb; background: #2c2740; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase }
+.ai-progress-demo.published { border-color: #367b4b; color: #8ce7a6; background: #193122 }
+.ai-progress-periods { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 0 17px 15px; padding: 4px; border: 1px solid #3f394d; border-radius: 12px; background: #17151d99 }
+.ai-progress-periods button { padding: 7px 4px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); box-shadow: none; font-size: 12px }
+.ai-progress-periods button.active { background: #694fe3; color: white; box-shadow: 0 6px 18px #3f2ca45c }
+.ai-progress-hero { display: flex; flex-direction: column; gap: 5px; padding: 15px 17px; border-block: 1px solid #3d374b; background: #18151f7d }
+.ai-progress-hero span, .ai-progress-regularity span { color: #a997ff; font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase }
+.ai-progress-hero strong { font-size: 15px; line-height: 1.4 }
+.ai-progress-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; border-bottom: 1px solid #3d374b; background: #3d374b }
+.ai-progress-stats div { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 12px 7px; background: #211d2b; text-align: center }
+.ai-progress-stats strong { font-size: 16px; font-variant-numeric: tabular-nums }
+.ai-progress-stats strong.positive { color: var(--success) }
+.ai-progress-stats span { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap }
+.ai-progress-section { padding: 14px 17px 0 }
+.ai-progress-section h3 { margin: 0 0 8px; font-size: 13px }
+.ai-progress-section ul { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none }
+.ai-progress-section li { position: relative; padding-left: 16px; color: #d9d3df; font-size: 12px; line-height: 1.45 }
+.ai-progress-section li::before { content: ''; position: absolute; top: .55em; left: 1px; width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px #62d7861f }
+.ai-progress-regularity { display: block; margin: 14px 17px 0; padding: 12px; border: 1px solid #443d56; border-radius: 13px; background: #1a1821 }
+.ai-progress-regularity div { display: flex; align-items: center; justify-content: space-between; gap: 10px }
+.ai-progress-regularity strong { font-size: 13px }
+.ai-progress-regularity p { margin: 4px 0 0; color: var(--muted); font-size: 11px }
+.ai-progress-attention { display: flex; align-items: flex-start; gap: 9px; margin: 10px 17px 0; padding: 10px 11px; border: 1px solid #76592f; border-radius: 12px; background: #302619 }
+.ai-progress-attention > span { width: 20px; height: 20px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; color: #1b140b; background: #eab65d; font-size: 12px; font-weight: 900 }
+.ai-progress-attention p { margin: 1px 0 0; color: #e8d6b6; font-size: 11px; line-height: 1.4 }
+.ai-progress-attention > div { display: flex; flex-direction: column; gap: 5px }
+.ai-progress-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 15px; padding: 12px 17px; border-top: 1px solid #3d374b; background: #17151db3 }
+.ai-progress-footer > span { color: var(--muted); font-size: 10px }
+.ai-progress-footer button { flex: 0 0 auto; padding: 7px 10px; border-radius: 9px; font-size: 11px }
+.ai-progress-empty { display: flex; min-height: 150px; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 24px 22px; border-block: 1px solid #3d374b; color: #ded7e7; text-align: center; background: #18151f7d }
+.ai-progress-empty p { color: var(--muted); font-size: 12px }
+.ai-progress-error { margin: 0; padding: 0 17px 14px; font-size: 12px }
+.client-copy-toggle { display: flex; justify-content: center; padding: 12px 17px 0 }
+.client-copy-editor { display: flex; flex-direction: column; gap: 12px; margin: 12px 12px 0; padding: 14px; border: 1px solid #51468a; border-radius: 15px; background: #17151ee6 }
+.client-copy-editor .field { font-size: 12px }
+.client-copy-editor textarea { min-height: 68px; font-size: 12px; line-height: 1.4 }
+.client-copy-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px }
+.client-copy-heading p { margin-top: 2px; color: var(--muted); font-size: 10px }
+.client-copy-heading > span { padding: 4px 7px; border-radius: 99px; color: #bcb1eb; background: #2c2740; font-size: 9px; font-weight: 800; white-space: nowrap }
+.client-progress-card { border-color: #426b58; background: radial-gradient(circle at 90% -10%, #55d68a24, transparent 38%), linear-gradient(155deg, #222d2a, #1d1a25 62%) }
+.client-progress-card .ai-progress-mark { border-color: #80e7a580; background: linear-gradient(145deg, #54ce7e, #318252); box-shadow: 0 8px 24px #2b9a5740 }
+.client-encouragement { display: flex; align-items: flex-start; gap: 9px; margin: 12px 17px 0; padding: 11px 12px; border: 1px solid #386d4b; border-radius: 12px; background: #193022 }
+.client-encouragement > span { color: #75dc96 }
+.client-encouragement p { margin: 0; color: #d2ead9; font-size: 12px; line-height: 1.45 }
+.client-welcome { margin: -6px 0 18px; padding: 17px; border: 1px solid #3e3a49; border-radius: 18px; background: linear-gradient(145deg, #28252f, #201e27) }
+.client-welcome > span { color: #9c88ff; font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase }
+.client-welcome h2 { margin: 6px 0; font-size: 22px; line-height: 1.2 }
+.client-welcome p { color: var(--muted); font-size: 12px }
+.client-profile-card { display: flex; align-items: center; gap: 13px; margin-bottom: 18px; padding: 17px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface-raised) }
+.client-profile-avatar { width: 50px; height: 50px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 16px; color: white; background: linear-gradient(145deg, #59ce80, #258f4a); font-weight: 900 }
+.client-profile-card p { color: var(--muted); font-size: 13px }
+.client-access-card { display: flex; flex-direction: column; gap: 13px; margin: 16px 0; padding: 15px; border: 1px solid #4b3f83; border-radius: 16px; background: #211d2e }
+.client-access-card > div { display: flex; align-items: flex-start; gap: 10px }
+.client-access-card > div > span { width: 28px; height: 28px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 9px; color: #c7bcff; background: #342b5b; font-weight: 900 }
+.client-access-card p { color: var(--muted); font-size: 12px }
+.client-access-card.connected { border-color: #367b4b; background: #19291f }
+.client-access-card.connected > div > span { color: #b5edc5; background: #255438 }
+.client-invite-form { display: flex; flex-direction: column; gap: 10px }
 .measure-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
 .inline-form { display: grid; grid-template-columns: 1.3fr .7fr auto; gap: 7px }
 .metric { display: flex; justify-content: space-between; padding: 10px 2px; border-bottom: 1px solid var(--border) }

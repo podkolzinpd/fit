@@ -10,6 +10,7 @@ import { formatLocalDate, localDate, type LocalDate, todayLocalDate } from '../.
 import { CloseIcon } from '../../shared/icons'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ProgressChart, type MetricKey, type MetricSelector } from './ProgressChart'
+import { TrainerTrainingSummaryCard } from './TrainingSummaryCard'
 
 const METRIC_TABS: Array<{ key: MetricKey; label: string; unit: string }> = [
   { key: 'weightKg', label: 'Вес', unit: 'кг' },
@@ -80,6 +81,7 @@ export function ProgressPage() {
     action()
   }
   return <Page title={client.data ? `Прогресс · ${client.data.fullName}` : 'Прогресс'} back="/analytics"><AsyncView loading={loading} error={error}>{client.data && <>
+    <TrainerTrainingSummaryCard clientId={clientId} />
     {entries.data && entries.data.length > 0 && <>
       <div className="metric-tabs" ref={tabsRef}
         onPointerDown={handleTabsPointerDown} onPointerMove={handleTabsPointerMove} onPointerUp={handleTabsPointerUp} onPointerLeave={handleTabsPointerUp}>
