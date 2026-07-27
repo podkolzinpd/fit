@@ -387,7 +387,10 @@ test('план: два упражнения объединяются в супе
   // блок завершён → отдых НЕ запускается (регресс: раньше запускался лишний).
   await page.getByRole('button', { name: 'Пропустить' }).click()
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
-  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await expect(page.getByRole('button', { name: 'Подтверждено' })).toHaveCount(3)
+  const finalSet = page.getByRole('button', { name: 'Готово, отдых' }).first()
+  await finalSet.focus()
+  await finalSet.press('Enter')
   await expect(page.getByText(/Отдых/)).toHaveCount(0)
 })
 
