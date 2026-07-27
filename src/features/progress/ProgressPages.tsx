@@ -10,6 +10,7 @@ import { formatLocalDate, localDate, type LocalDate, todayLocalDate } from '../.
 import { CloseIcon } from '../../shared/icons'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ProgressChart, type MetricKey, type MetricSelector } from './ProgressChart'
+import { MEASURE_PRESETS, groupMetricRows, presetMetricNames } from './measure-presets'
 import { TrainerTrainingSummaryCard } from './TrainingSummaryCard'
 
 const METRIC_TABS: Array<{ key: MetricKey; label: string; unit: string }> = [
@@ -18,6 +19,11 @@ const METRIC_TABS: Array<{ key: MetricKey; label: string; unit: string }> = [
   { key: 'waistCm', label: 'Талия', unit: 'см' },
   { key: 'hipCm', label: 'Бёдра', unit: 'см' },
 ]
+
+function metricField(metric: CustomMetric, entry: ProgressEntry | null, placeholder?: string) {
+  return <input name={`metric-${metric.id}`} type="number" step="0.001" placeholder={placeholder}
+    defaultValue={entry?.customMetrics.find((value) => value.metricId === metric.id)?.value} />
+}
 
 export function AnalyticsPage() {
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
@@ -116,12 +122,37 @@ function MetricOverflowSheet({ metrics, onPick, onClose }: { metrics: CustomMetr
 }
 
 function ProgressForm({ entry, metrics, busy, errorMessage, onSubmit, onCancel, onDateChange }: { entry: ProgressEntry | null; metrics: CustomMetric[]; busy: boolean; errorMessage: string | null; onSubmit: (form: HTMLFormElement) => void; onCancel?: () => void; onDateChange?: () => void }) {
-  return <section><h2>{entry ? 'Изменить замер' : 'Новый замер'}</h2><form className="stack compact" onSubmit={(event) => { event.preventDefault(); onSubmit(event.currentTarget) }}><Field label="Дата"><input name="recordedOn" type="date" defaultValue={entry?.recordedOn ?? todayLocalDate()} onChange={onDateChange} required /></Field><div className="measure-grid"><Field label="Вес, кг"><input name="weightKg" type="number" step="0.1" defaultValue={entry?.weightKg} /></Field><Field label="Грудь, см"><input name="chestCm" type="number" step="0.1" defaultValue={entry?.chestCm} /></Field><Field label="Талия, см"><input name="waistCm" type="number" step="0.1" defaultValue={entry?.waistCm} /></Field><Field label="Бёдра, см"><input name="hipCm" type="number" step="0.1" defaultValue={entry?.hipCm} /></Field></div>{metrics.filter((metric) => !metric.archivedAt).map((metric) => <Field key={metric.id} label={`${metric.name}${metric.unit ? `, ${metric.unit}` : ''}`}><input name={`metric-${metric.id}`} type="number" step="0.001" defaultValue={entry?.customMetrics.find((value) => value.metricId === metric.id)?.value} /></Field>)}<Field label="Заметка"><textarea name="notes" defaultValue={entry?.notes} /></Field>{errorMessage && <p className="error">{errorMessage}</p>}<div className="actions">{onCancel && <button type="button" className="secondary" onClick={onCancel}>Отмена</button>}<button disabled={busy}>Сохранить замер</button></div></form></section>
+  return <section><h2>{entry ? 'Изменить замер' : 'Новый замер'}</h2><form className="stack compact" onSubmit={(event) => { event.preventDefault(); onSubmit(event.currentTarget) }}><Field label="Дата"><input name="recordedOn" type="date" defaultValue={entry?.recordedOn ?? todayLocalDate()} onChange={onDateChange} required /></Field><div className="measure-grid"><Field label="Вес, кг"><input name="weightKg" type="number" step="0.1" defaultValue={entry?.weightKg} /></Field><Field label="Грудь, см"><input name="chestCm" type="number" step="0.1" defaultValue={entry?.chestCm} /></Field><Field label="Талия, см"><input name="waistCm" type="number" step="0.1" defaultValue={entry?.waistCm} /></Field><Field label="Бёдра, см"><input name="hipCm" type="number" step="0.1" defaultValue={entry?.hipCm} /></Field></div>{groupMetricRows(metrics.filter((metric) => !metric.archivedAt)).map((row) => row.kind === 'single'
+      ? <Field key={row.metric.id} label={`${row.metric.name}${row.metric.unit ? `, ${row.metric.unit}` : ''}`}>{metricField(row.metric, entry)}</Field>
+      : <Field key={row.base} label={`${row.base}${row.unit ? `, ${row.unit}` : ''}`}><div className="measure-pair">{row.left && metricField(row.left, entry, 'Л')}{row.right && metricField(row.right, entry, 'П')}</div></Field>
+    )}<Field label="Заметка"><textarea name="notes" defaultValue={entry?.notes} /></Field>{errorMessage && <p className="error">{errorMessage}</p>}<div className="actions">{onCancel && <button type="button" className="secondary" onClick={onCancel}>Отмена</button>}<button disabled={busy}>Сохранить замер</button></div></form></section>
 }
 
 function MetricsManager({ metrics, onCreate, onArchive }: { metrics: CustomMetric[]; onCreate: (name: string, unit: string | null) => void; onArchive: (metric: CustomMetric) => void }) {
+  const [preset, setPreset] = useState('')
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const data = new FormData(event.currentTarget); onCreate(String(data.get('name')), String(data.get('unit') || '') || null); event.currentTarget.reset() }
-  return <section><h2>Свои метрики</h2><form className="inline-form" onSubmit={(event) => void submit(event)}><input name="name" placeholder="Название" required /><input name="unit" placeholder="Единица" /><button>Добавить</button></form>{metrics.map((metric) => <div className="metric" key={metric.id}><span>{metric.name}{metric.unit ? `, ${metric.unit}` : ''}</span><button className="link danger" onClick={() => onArchive(metric)}>{metric.archivedAt ? 'Вернуть' : 'В архив'}</button></div>)}</section>
+  // Уже добавленные (в т.ч. в архиве) метрики — по имени, чтобы не плодить дубли.
+  const existing = new Set(metrics.map((metric) => metric.name))
+  const available = MEASURE_PRESETS.filter((option) => presetMetricNames(option).some((name) => !existing.has(name)))
+  function addPreset() {
+    const option = MEASURE_PRESETS.find((item) => item.id === preset)
+    if (!option) return
+    // Для парного создаём обе стороны; пропускаем уже существующие.
+    presetMetricNames(option).forEach((name) => { if (!existing.has(name)) onCreate(name, option.unit) })
+    setPreset('')
+  }
+  return <section><h2>Свои метрики</h2>
+    {available.length > 0 && <div className="metric-preset-row">
+      <select aria-label="Готовый замер" value={preset} onChange={(event) => setPreset(event.target.value)}>
+        <option value="">Выберите замер…</option>
+        {available.map((option) => <option key={option.id} value={option.id}>{option.base}, {option.unit}{option.paired ? ' (Л + П)' : ''}</option>)}
+      </select>
+      <button type="button" className="secondary" disabled={!preset} onClick={addPreset}>Добавить</button>
+    </div>}
+    <p className="muted metric-manual-hint">Или своя:</p>
+    <form className="inline-form" onSubmit={(event) => void submit(event)}><input name="name" placeholder="Название" required /><input name="unit" placeholder="Единица" /><button>Добавить</button></form>
+    {metrics.map((metric) => <div className="metric" key={metric.id}><span>{metric.name}{metric.unit ? `, ${metric.unit}` : ''}</span><button className="link danger" onClick={() => onArchive(metric)}>{metric.archivedAt ? 'Вернуть' : 'В архив'}</button></div>)}
+  </section>
 }
 
 function numberValue(value: FormDataEntryValue | null) { return value ? Number(value) : undefined }

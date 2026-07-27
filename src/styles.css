@@ -333,6 +333,11 @@ p { margin: 6px 0 }
 .client-invite-form { display: flex; flex-direction: column; gap: 10px }
 .measure-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
 .inline-form { display: grid; grid-template-columns: 1.3fr .7fr auto; gap: 7px }
+/* Пресеты замеров: выпадашка + «Добавить» в ряд; подпись «Или своя» перед ручным вводом. */
+.metric-preset-row { display: grid; grid-template-columns: 1fr auto; gap: 7px; margin: 12px 0 4px }
+.metric-manual-hint { font-size: 13px; margin: 10px 0 4px }
+/* Парный замер: два поля Л/П в одну строку. */
+.measure-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
 .metric { display: flex; justify-content: space-between; padding: 10px 2px; border-bottom: 1px solid var(--border) }
 .sheet-overlay { position: fixed; z-index: 30; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-top: 32px; background: #000000b8; backdrop-filter: blur(5px) }
 .exercise-picker { width: min(100%, 440px); max-height: calc(100dvh - 32px); overflow: hidden; display: flex; flex-direction: column; gap: 16px; padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); border: 1px solid #464150; border-bottom: 0; border-radius: 28px 28px 0 0; background: #201d26; box-shadow: 0 -24px 70px #00000080 }
