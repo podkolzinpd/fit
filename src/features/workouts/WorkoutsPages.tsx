@@ -479,15 +479,18 @@ export function LiveWorkoutPage() {
   return <Page title="Live-тренировка">
     <AsyncView loading={query.isLoading} error={query.error}>{query.data && <>
       <p>{query.data.clientName}</p>
-      <WorkoutTimer startedAt={query.data.startedAt ?? null} variant="big" />
-      {restRemaining !== null && <div className="rest-timer">
-        <strong>Отдых {formatRest(restRemaining)}</strong>
-        <div className="rest-controls">
-          <button type="button" className="rest-step" aria-label="Минус 15 секунд" onClick={() => adjustRest(-REST_STEP)}>−15с</button>
-          <button type="button" className="rest-step" aria-label="Плюс 15 секунд" onClick={() => adjustRest(REST_STEP)}>+15с</button>
-          <button type="button" className="link" onClick={stopRest}>Пропустить</button>
-        </div>
-      </div>}
+      {/* Закреплённый блок: таймер тренировки + отдых под ним (всегда на виду). */}
+      <div className="live-pinned">
+        <WorkoutTimer startedAt={query.data.startedAt ?? null} variant="big" />
+        {restRemaining !== null && <div className="rest-timer">
+          <strong>Отдых {formatRest(restRemaining)}</strong>
+          <div className="rest-controls">
+            <button type="button" className="rest-step" aria-label="Минус 15 секунд" onClick={() => adjustRest(-REST_STEP)}>−15с</button>
+            <button type="button" className="rest-step" aria-label="Плюс 15 секунд" onClick={() => adjustRest(REST_STEP)}>+15с</button>
+            <button type="button" className="link" onClick={stopRest}>Пропустить</button>
+          </div>
+        </div>}
+      </div>
       {(() => { const liveBlocks = groupIntoBlocks(query.data.exercises); return liveBlocks.map((block, blockIndex) => {
         // ↑/↓ показываем только когда блоков больше одного; двигать можно любые
         // блоки (в т.ч. с завершёнными подходами), кроме упора в границу.

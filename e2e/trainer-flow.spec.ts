@@ -150,8 +150,8 @@ test('live: планка вводится в минутах, таймер зак
 
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer-big')).toContainText(/\d\d:\d\d/)
-  // #3: таймер закреплён (sticky) — не уезжает при скролле контента.
-  await expect(page.locator('.live-timer-big')).toHaveCSS('position', 'sticky')
+  // #3: закреплённый блок с таймером (и отдыхом) sticky — не уезжает при скролле.
+  await expect(page.locator('.live-pinned')).toHaveCSS('position', 'sticky')
   // #6: подтверждаем подход, затем правим карандашом.
   await page.getByLabel('Фактическое время').first().fill('2')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
@@ -601,4 +601,40 @@ test('live: удаление подхода и наследование факт
   page.once('dialog', (d) => d.accept())
   await page.getByRole('button', { name: 'Удалить подход' }).nth(1).click()
   await expect(page.locator('.exercise')).toHaveCount(1)
+})
+
+test('live: «Готово» без ввода факта — подход считается выполненным по плану', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByLabel('Имя').fill('Готово Клиент')
+  await page.getByLabel('Начальный вес, кг').fill('80')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Готово Клиент' })).toBeVisible()
+
+  await page.getByRole('link', { name: /Запланировать/ }).click()
+  await page.getByLabel('Клиент').selectOption({ label: 'Готово Клиент' })
+  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await page.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await page.locator('.picker-item').first().click()
+  await page.getByLabel('Вес, подход 1').fill('100')
+  await page.getByLabel('Повторы, подход 1').fill('5')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Начать' }).click()
+  await expect(page.locator('.live-timer-big')).toBeVisible()
+  // Не вводим факт — сразу «Готово»: план должен стать фактом.
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await expect(page.getByRole('button', { name: 'Подтверждено' }).first()).toBeVisible()
+  await page.getByRole('button', { name: 'Завершить тренировку' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+
+  // В завершённой тренировке подход выполнен по плану, без пометки «не выполнено».
+  await expect(page.getByText('не выполнено')).toHaveCount(0)
+  await expect(page.locator('main')).toContainText('100 кг')
 })

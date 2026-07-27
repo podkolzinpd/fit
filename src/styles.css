@@ -188,12 +188,11 @@ p { margin: 6px 0 }
 .block-rest { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 2px }
 .block-rest-field { display: inline-flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 12px; font-weight: 600 }
 .block-rest-field input { width: 72px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700; text-align: center }
-/* «＋ Подход» сверху во всю ширину, поле отдыха — отдельной строкой под ним
-   (подпись слева, поле справа). Так на узком экране ничего не жмётся и не
-   плавает: раньше кнопка и поле делили ряд и налезали друг на друга. */
-.set-add-row { display: flex; flex-direction: column; align-items: stretch; gap: 12px; margin-top: 10px }
-.set-add-row > .secondary { align-self: flex-start }
-.set-add-row .block-rest-field { flex-direction: row; align-items: center; gap: 10px }
+/* «＋ Подход» и короткое поле «Отдых, с [90]» в один ряд (подпись и поле —
+   горизонтально). Короткая подпись помещается рядом с кнопкой без налезания. */
+.set-add-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-top: 10px }
+.set-add-row > .secondary { flex: 0 0 auto }
+.set-add-row .block-rest-field { flex-direction: row; align-items: center; gap: 8px }
 .set-add-row .block-rest-field input { flex: 0 0 auto }
 .block-merge { align-self: flex-start; margin-top: 8px; color: var(--purple) }
 /* Форма блока по кругам: список упражнений блока + группы-круги. */
@@ -201,6 +200,10 @@ p { margin: 6px 0 }
 .block-exercise-row { display: flex; flex-direction: column; gap: 6px; padding: 6px 2px }
 .block-exercise-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 10px; flex-wrap: wrap }
 .block-exercise-head strong { flex: 1 1 auto; min-width: 0 }
+/* Больше воздуха в live: отступ под «＋ Подход» и до комментария. Секция live —
+   это <section> с .live-exercise-head; целимся в его кнопку добавления и коммент. */
+.live-exercise-head ~ .secondary { margin: 14px 0 4px }
+.live-exercise-head ~ .exercise-comment { margin-top: 14px }
 .exercise-comment { width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--fg); font: inherit; font-size: 13px; resize: vertical; box-sizing: border-box }
 .exercise-comment::placeholder { color: var(--muted) }
 .exercise-comment-note { color: var(--muted); font-size: 13px; margin-top: 4px }
@@ -232,8 +235,9 @@ p { margin: 6px 0 }
 .live-dot { color: #d33030; font-weight: 800; font-size: 13px }
 .live-timer { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border: 1px solid #4b3f83; border-radius: 11px; background: #29223f; color: var(--fg); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14px }
 /* Крупный таймер по центру над подходами. */
-/* Крупный таймер закреплён вверху при скролле live-экрана. */
-.live-timer-big { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 0 18px; padding: 16px; border: 1px solid #4b3f83; border-radius: 16px; background: #29223f; color: var(--fg); font-weight: 800; font-variant-numeric: tabular-nums; font-size: 40px; letter-spacing: 1px; box-shadow: 0 6px 20px #17131f66 }
+/* Закреплённый блок live: таймер + отдых под ним, оба прилипают вверху вместе. */
+.live-pinned { position: sticky; top: 0; z-index: 3; margin: 0 0 18px; display: flex; flex-direction: column; gap: 10px; background: var(--surface); }
+.live-timer-big { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0; padding: 16px; border: 1px solid #4b3f83; border-radius: 16px; background: #29223f; color: var(--fg); font-weight: 800; font-variant-numeric: tabular-nums; font-size: 40px; letter-spacing: 1px; box-shadow: 0 6px 20px #17131f66 }
 .live-timer-big .live-dot-mark { width: 14px; height: 14px }
 .live-dot-mark { width: 8px; height: 8px; border-radius: 50%; background: #d33030; box-shadow: 0 0 0 0 #d3303066; animation: live-pulse 1.6s ease-out infinite }
 @keyframes live-pulse { 0% { box-shadow: 0 0 0 0 #d3303066 } 70% { box-shadow: 0 0 0 6px #d3303000 } 100% { box-shadow: 0 0 0 0 #d3303000 } }
@@ -290,7 +294,8 @@ p { margin: 6px 0 }
 .workout-editor-heading, .planned-set-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px }.workout-editor-heading h2 { margin-right: auto }
 .workout-tools { display: flex; gap: 6px }.workout-tools .link { font-size: 13px }
 .planned-set { padding-top: 10px; border-top: 1px solid var(--border) }.planned-set:first-of-type { border-top: 0 }.planned-set-heading { color: var(--muted); font-size: 13px }
-.rest-timer { position: sticky; top: 8px; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; padding: 12px 14px; border: 1px solid #4b3f83; border-radius: 13px; background: #29223f }
+/* Отдых внутри закреплённого блока (.live-pinned) — свой sticky не нужен. */
+.rest-timer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 12px 14px; border: 1px solid #ffc06b66; border-radius: 13px; background: #3a2f1d; color: #ffd9a0 }
 .voice-input { display: flex; flex-direction: column; align-items: flex-start; gap: 7px }
 .voice-input-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 9px 13px; font-size: 14px }
 .voice-input-button svg { width: 19px; height: 19px }
