@@ -42,7 +42,7 @@ export const SYSTEM_EXERCISES = [
   { source: 'system', ref: 'leg-curl', name: 'Сгибание ног', muscleGroup: 'legs', inputKind: 'strength' },
   { source: 'system', ref: 'leg-extension', name: 'Разгибание ног', muscleGroup: 'legs', inputKind: 'strength' },
   { source: 'system', ref: 'calf-raise', name: 'Подъём на носки', muscleGroup: 'legs', inputKind: 'strength' },
-  { source: 'system', ref: 'hyperextension', name: 'Гиперэкстензия', muscleGroup: 'legs', inputKind: 'strength' },
+  { source: 'system', ref: 'hyperextension', name: 'Гиперэкстензия', muscleGroup: 'back', inputKind: 'strength' },
 
   { source: 'system', ref: 'bench-press', name: 'Жим лёжа', muscleGroup: 'chest', inputKind: 'strength' },
   { source: 'system', ref: 'dumbbell-bench-press', name: 'Жим гантелей лёжа', muscleGroup: 'chest', inputKind: 'strength' },

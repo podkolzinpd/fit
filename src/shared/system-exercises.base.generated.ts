@@ -217,7 +217,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "source": "system",
     "ref": "hyperextension",
     "name": "Гиперэкстензия (Своё тело)",
-    "muscleGroup": "legs",
+    "muscleGroup": "back",
     "inputKind": "strength",
     "imageUrl": "/exercises/base-hyperextension.jpg",
     "equipment": "Другое",

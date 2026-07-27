@@ -549,7 +549,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Блок",
     "equipmentRef": "cable",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Бицепс бедра",
     "secondaryMuscles": [
       "Предплечья",
       "Ягодицы",
@@ -996,11 +996,11 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "source": "system",
     "ref": "fedb-flutter-kicks",
     "name": "Ножницы (Своё тело)",
-    "muscleGroup": "legs",
+    "muscleGroup": "core",
     "inputKind": "strength",
     "equipment": "Своё тело",
     "equipmentRef": "body only",
-    "primaryMuscleDetail": "Ягодицы",
+    "primaryMuscleDetail": "Пресс",
     "secondaryMuscles": [
       "Бицепс бедра"
     ],
@@ -1016,11 +1016,11 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "source": "system",
     "ref": "fedb-bench-press-powerlifting",
     "name": "Жим лёжа (пауэрлифтинг) (Штанга)",
-    "muscleGroup": "arms",
+    "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Трицепс",
+    "primaryMuscleDetail": "Грудь",
     "secondaryMuscles": [
       "Грудь",
       "Предплечья",
@@ -1139,11 +1139,11 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "source": "system",
     "ref": "fedb-bench-press-with-chains",
     "name": "Жим лёжа с цепями (Штанга)",
-    "muscleGroup": "arms",
+    "muscleGroup": "chest",
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Трицепс",
+    "primaryMuscleDetail": "Грудь",
     "secondaryMuscles": [
       "Грудь",
       "Широчайшие",
@@ -1599,7 +1599,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Бицепс бедра",
     "secondaryMuscles": [
       "Ягодицы",
       "Бицепс бедра"

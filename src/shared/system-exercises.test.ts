@@ -16,7 +16,8 @@ describe('system exercise catalog', () => {
     expect({
       legs: count('legs'), chest: count('chest'), back: count('back'),
       shoulders: count('shoulders'), arms: count('arms'), core: count('core'), cardio: count('cardio'),
-    }).toEqual({ legs: 11, chest: 7, back: 7, shoulders: 6, arms: 6, core: 5, cardio: 7 })
+      // Гиперэкстензия перенесена legs→back (разгибание спины, п.3a-ревизия).
+    }).toEqual({ legs: 10, chest: 7, back: 8, shoulders: 6, arms: 6, core: 5, cardio: 7 })
   })
 
   it('keeps the cardio input semantics', () => {
