@@ -553,3 +553,52 @@ test('комментарий тренера к упражнению: план �
   await expect(page.locator('.card').first()).toBeVisible()
   await expect(page.locator('.workout-exercise-comment').first()).toContainText('Держи спину прямо')
 })
+
+test('live: удаление подхода и наследование факта при добавлении', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByLabel('Имя').fill('Сет Клиент')
+  await page.getByLabel('Начальный вес, кг').fill('80')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Сет Клиент' })).toBeVisible()
+
+  await page.getByRole('link', { name: /Запланировать/ }).click()
+  await page.getByLabel('Клиент').selectOption({ label: 'Сет Клиент' })
+  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await page.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await page.locator('.picker-item').first().click()
+  await page.getByLabel('Вес, подход 1').fill('90')
+  await page.getByLabel('Повторы, подход 1').fill('8')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Начать' }).click()
+  await expect(page.locator('.live-timer-big')).toBeVisible()
+
+  // Подтверждаем факт 92.5×8.
+  await page.getByLabel('Фактический вес').first().fill('92.5')
+  await page.getByLabel('Фактические повторы').first().fill('8')
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await expect(page.getByRole('button', { name: 'Подтверждено' }).first()).toBeVisible()
+
+  // Правка подтверждённого подхода: 100×10 — значение должно сохраниться на экране.
+  await page.getByRole('button', { name: 'Редактировать подход' }).first().click()
+  await page.getByLabel('Фактический вес').first().fill('100')
+  await page.getByLabel('Фактические повторы').first().fill('10')
+  await page.getByRole('button', { name: 'Сохранить' }).first().click()
+  await expect(page.getByLabel('Фактический вес').first()).toHaveValue('100')
+
+  // Добавляем подход — наследует факт (100), а не план (90).
+  await page.getByRole('button', { name: '＋ Подход' }).first().click()
+  await expect(page.getByLabel('Фактический вес').nth(1)).toHaveAttribute('placeholder', '100 кг')
+
+  // Удаляем добавленный подход — остаётся один.
+  page.once('dialog', (d) => d.accept())
+  await page.getByRole('button', { name: 'Удалить подход' }).nth(1).click()
+  await expect(page.locator('.exercise')).toHaveCount(1)
+})

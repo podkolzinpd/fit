@@ -34,6 +34,9 @@ export const workoutQueries = {
   appendLiveSet: (exerciseId: string, version: number) => supabase.rpc('append_live_set', {
     p_workout_exercise_id: exerciseId, p_expected_version: version,
   }),
+  removeLiveSet: (setId: string, version: number) => supabase.rpc('remove_live_set', {
+    p_set_id: setId, p_expected_version: version,
+  }),
   reorderLiveBlock: (workoutId: string, blockId: string, direction: -1 | 1, version: number) => supabase.rpc('reorder_live_block', {
     p_workout_id: workoutId, p_block_id: blockId, p_direction: direction, p_expected_version: version,
   }),
