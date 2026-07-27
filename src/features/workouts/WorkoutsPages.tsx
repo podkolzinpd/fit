@@ -67,8 +67,12 @@ export function SchedulePage() {
        <span className="schedule-count">{query.isLoading ? 'Загружаем…' : workoutCountLabel(totalCount)}</span>
        <button type="button" className="secondary schedule-today" disabled={selected === today} onClick={() => selectDate(today)}>Сегодня</button>
        <div className="schedule-actions-right">
-        <label className="schedule-jump" aria-label="Выбрать дату">📅<input type="date" value={selected} onChange={(event) => event.target.value && selectDate(localDate(event.target.value))} /></label>
+        {/* ＋ первой и с увеличенным зазором: на iOS нативный input[type=date]
+            под 📅 раздувает свою tap-зону за CSS-границы и перехватывает соседний
+            тап — из-за этого по ＋ открывался календарь. Разводим и убираем
+            inset:0 у инпута (см. .schedule-jump input в styles.css). */}
         <Link className="schedule-add" to={`/workouts/new?date=${selected}`} aria-label="Новая тренировка">＋</Link>
+        <label className="schedule-jump" aria-label="Выбрать дату">📅<input type="date" value={selected} onChange={(event) => event.target.value && selectDate(localDate(event.target.value))} /></label>
        </div>
     </div>
   }>
