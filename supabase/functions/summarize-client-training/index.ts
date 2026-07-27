@@ -214,6 +214,20 @@ function serviceClient() {
   )
 }
 
+function requestClient(req: Request) {
+  const authorization = req.headers.get("authorization")
+  return createClient(
+    requiredSecret("SUPABASE_URL"),
+    requiredSecret("SUPABASE_PUBLISHABLE_KEY"),
+    {
+      global: {
+        headers: authorization ? { Authorization: authorization } : {},
+      },
+      auth: { persistSession: false, autoRefreshToken: false },
+    },
+  )
+}
+
 async function fingerprint(value: unknown): Promise<string> {
   const bytes = new TextEncoder().encode(JSON.stringify(value))
   const digest = await crypto.subtle.digest("SHA-256", bytes)
@@ -560,7 +574,7 @@ async function requestYandexSummary(
   throw new HttpError(502, "yandex_cloud_quality_check_failed")
 }
 
-const handler = withSupabase({ auth: "user" }, async (req, ctx) => {
+const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
     try {
       if (req.method !== "POST") {
         return Response.json(
@@ -570,22 +584,24 @@ const handler = withSupabase({ auth: "user" }, async (req, ctx) => {
       }
 
       const input = parseRequest(await req.json())
-      const actorId = ctx.userClaims?.sub
+      const userClient = requestClient(req)
+      const { data: { user }, error: authError } = await userClient.auth.getUser()
+      const actorId = user?.id
       console.log("summary auth diagnostics", {
         authorizationPresent: Boolean(req.headers.get("authorization")),
         actorIdPresent: Boolean(actorId),
-        authMode: ctx.authMode,
+        authError: authError?.message ?? null,
         clientId: input.client_id,
       })
       if (!actorId) {
         console.error("summary authentication_required", {
           authorizationPresent: Boolean(req.headers.get("authorization")),
-          authMode: ctx.authMode,
+          authError: authError?.message ?? null,
         })
         throw new HttpError(401, "authentication_required")
       }
 
-      const { data: client, error: clientError } = await ctx.supabase
+      const { data: client, error: clientError } = await userClient
         .from("clients")
         .select("id,trainer_id,auth_user_id")
         .eq("id", input.client_id)
@@ -601,7 +617,7 @@ const handler = withSupabase({ auth: "user" }, async (req, ctx) => {
       const { isTrainer, isClient, trainerId } = actor
 
       if (isClient && !input.force) {
-        const { data: cached, error: cacheError } = await ctx.supabase
+        const { data: cached, error: cacheError } = await userClient
           .from("client_published_training_summaries")
           .select(
             "id,source_summary_id,client_id,period_start,period_end,summary,display_metrics,generated_at,published_at",
@@ -616,7 +632,7 @@ const handler = withSupabase({ auth: "user" }, async (req, ctx) => {
         }
       }
 
-      const { data: workouts, error: workoutsError } = await ctx.supabase
+      const { data: workouts, error: workoutsError } = await userClient
         .from("workouts")
         .select("id,created_at")
         .eq("client_id", input.client_id)
@@ -636,7 +652,7 @@ const handler = withSupabase({ auth: "user" }, async (req, ctx) => {
       }
 
       const workoutIds = workouts.map((workout) => workout.id)
-      const { data: exercises, error: exercisesError } = await ctx.supabase
+        const { data: exercises, error: exercisesError } = await userClient
         .from("workout_exercises")
         .select("id,workout_id,exercise_ref,exercise_name,input_kind,position")
         .in("workout_id", workoutIds)
@@ -652,7 +668,7 @@ const handler = withSupabase({ auth: "user" }, async (req, ctx) => {
       const exerciseIds = exercises.map((exercise) => exercise.id)
       let sets: SetRow[] = []
       if (exerciseIds.length > 0) {
-        const { data, error } = await ctx.supabase
+        const { data, error } = await userClient
           .from("workout_sets")
           .select(
             "workout_exercise_id,position,fact_weight_kg,fact_reps,fact_duration_min,fact_distance_km",
@@ -680,7 +696,7 @@ const handler = withSupabase({ auth: "user" }, async (req, ctx) => {
       const inputFingerprint = await fingerprint(trainingData)
 
       if (isTrainer && !input.force) {
-        const { data: cached, error: cacheError } = await ctx.supabase
+        const { data: cached, error: cacheError } = await userClient
           .from("client_training_summaries")
           .select(
             "id,client_id,period_start,period_end,trainer_summary,client_summary,display_metrics,generated_at,version,input_fingerprint",
@@ -706,7 +722,7 @@ const handler = withSupabase({ auth: "user" }, async (req, ctx) => {
       )
       const displayMetrics = trainingData.consistency
 
-      const summaryStore = isClient ? serviceClient() : ctx.supabase
+      const summaryStore = isClient ? serviceClient() : userClient
       const { data: saved, error: saveError } = await summaryStore
         .from("client_training_summaries")
         .upsert({
