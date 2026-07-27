@@ -31,7 +31,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pin to the version used by package-lock.json. Resolving `latest`
+          # hits GitHub's unauthenticated release API and can be rate-limited.
+          version: 2.109.1
       - run: supabase start
       - run: supabase db reset --local
       - run: supabase test db --local
@@ -49,7 +51,7 @@ jobs:
       - run: npm ci
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.109.1
       - run: supabase start
       - run: supabase db reset --local
       - run: npx playwright install --with-deps chromium
