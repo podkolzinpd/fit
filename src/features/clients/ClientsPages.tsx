@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
+import { invitationsRepository } from '../../data/repositories/invitations.repository'
 import { bmiLabel, computeClientStats, splitClientWorkouts, workoutsRepository } from '../../data/repositories/workouts.repository'
 import { WorkoutExercisesSummary } from '../workouts'
 import type { Client, Gender } from '../../shared/domain'
@@ -25,6 +26,7 @@ export function ClientsPage() {
 
 export function MyClientPage() {
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
+  const invite = useMutation({ mutationFn: (clientId: string) => invitationsRepository.create(clientId, 'trainer') })
   return <Page title="Мой кабинет">
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {query.data ? <div className="stack">
@@ -34,7 +36,9 @@ export function MyClientPage() {
           <div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div>
         </section>
         <section><h2>{query.data.fullName}</h2>{query.data.goal && <><h3>Цель</h3><p>{query.data.goal}</p></>}</section>
-        <p className="muted">Карточка связана с аккаунтом. Расписание и совместное редактирование будут подключены следующим этапом.</p>
+        <button className="secondary" disabled={invite.isPending} onClick={() => invite.mutate(query.data!.id)}>Пригласить тренера</button>
+        {invite.data && <div className="card"><strong>Код для тренера: {invite.data}</strong><p>Код действует 7 дней и используется один раз.</p></div>}
+        {invite.error && <p className="error">{invite.error.message}</p>}
       </div> : <div className="state">
         <h2>Карточка ещё не подключена</h2>
         <p>Попросите тренера привязать ваш аккаунт. Приглашения по коду появятся следующим этапом.</p>
@@ -97,6 +101,7 @@ export function ClientDetailPage() {
   const workouts = useQuery({ queryKey: ['workouts', clientId, 'upcoming'], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
   const upcoming = workouts.data ? splitClientWorkouts(workouts.data, todayLocalDate()).upcoming : []
   const archive = useMutation({ mutationFn: (client: Client) => clientsRepository.setArchived(client, !client.archivedAt), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); await query.refetch() } })
+  const invite = useMutation({ mutationFn: () => invitationsRepository.create(clientId, 'client') })
   return <Page title={query.data?.fullName ?? 'Клиент'} center back="/clients" action={query.data && <Link className="button secondary" to={`/clients/${clientId}/edit`}>Изменить</Link>}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
       <section className="summary"><div><span>Возраст</span><strong>{query.data.ageYears}</strong></div><div><span>Рост</span><strong>{query.data.heightCm} см</strong></div><div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div></section>
@@ -118,6 +123,9 @@ export function ClientDetailPage() {
       {query.data.goal && <section><h2>Цель</h2><p>{query.data.goal}</p></section>}{query.data.note && <section><h2>Заметка</h2><p>{query.data.note}</p></section>}
       {upcoming.length > 0 && <section><h2>Предстоит</h2><div className="cards">{upcoming.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}{workout.startTime ? ` · ${workout.startTime.slice(0, 5)}` : ''}</strong><WorkoutExercisesSummary workout={workout} /></div><span className={`badge ${workout.status}`}>{workout.status === 'in_progress' ? 'Идёт' : 'План'}</span></Link>)}</div></section>}
       <div className="page-actions">
+        {query.data.hasAccount === false && <button className="secondary wide" disabled={invite.isPending} onClick={() => invite.mutate()}>Пригласить клиента</button>}
+        {invite.data && <div className="card"><strong>Код клиента: {invite.data}</strong><p>Передайте код клиенту. Он действует 7 дней и используется один раз.</p></div>}
+        {invite.error && <p className="error">{invite.error.message}</p>}
         <button className="danger secondary wide" disabled={archive.isPending} onClick={() => archive.mutate(query.data!)}>{query.data.archivedAt ? 'Вернуть из архива' : 'Архивировать клиента'}</button>
       </div>
     </>}</AsyncView>

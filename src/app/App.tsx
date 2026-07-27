@@ -1,7 +1,7 @@
 import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } from 'react-router-dom'
 import { useAuth } from './auth-context'
 import { AppLayout } from './AppLayout'
-import { AuthCallbackPage, AuthPage, ForgotPasswordPage, ResetPasswordPage } from '../features/auth'
+import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage } from '../features/auth'
 import { ClientDetailPage, ClientFormPage, ClientsPage, MyClientPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { AnalyticsPage, ProgressPage } from '../features/progress'
@@ -33,6 +33,7 @@ const router = createBrowserRouter([
   { path: '/auth/callback', element: <AuthCallbackPage /> },
   { element: <Protected />, children: [{ element: <AppLayout />, children: [
     { index: true, element: <Home /> },
+    { path: '/join', element: <JoinPage /> },
     { path: '/me', element: <MyClientPage /> },
     { element: <TrainerOnly />, children: [
       { path: '/clients', element: <ClientsPage /> },

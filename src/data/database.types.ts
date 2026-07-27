@@ -1,4 +1,4 @@
-// schema-sha256: 9d82d043b88f5cca35d37bcda8e24060dc28bbcec4024d0ae61f9ab3ab1785b1
+// schema-sha256: b257f135ef633d0eb5c0c86f5a1fe45d20529be56171d4642ea6107f11c721cd
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
@@ -19,6 +19,8 @@ type WorkoutSetRow = { id: string; workout_exercise_id: string; trainer_id: stri
 type ProgressRow = { id: string; trainer_id: string; client_id: string; recorded_on: string; weight_kg: number | null; chest_cm: number | null; waist_cm: number | null; hip_cm: number | null; notes: string | null; deleted_at: string | null; version: number; created_at: string; updated_at: string }
 type MetricRow = { id: string; trainer_id: string; client_id: string; name: string; unit: string | null; archived_at: string | null; version: number; created_at: string; updated_at: string }
 type ProgressCustomRow = { id: string; trainer_id: string; client_id: string; progress_id: string; metric_id: string; value: number; created_at: string; updated_at: string }
+type ClientTrainerRow = { client_id: string; trainer_id: string; joined_at: string }
+type ClientInvitationRow = { id: string; client_id: string; created_by: string; target_role: string; code_hash: string; expires_at: string; claimed_by: string | null; claimed_at: string | null; revoked_at: string | null; created_at: string }
 type ClientListRow = { id: string; full_name: string; gender: string; age_years: number; age_updated_at: string; height_cm: number; goal: string | null; note: string | null; current_weight_kg: number | null; archived_at: string | null; version: number }
 type MyClientRow = Omit<ClientListRow, 'note'>
 type WorkoutListSetRow = Pick<WorkoutSetRow, 'id' | 'position' | 'plan_weight_kg' | 'plan_reps' | 'plan_duration_min' | 'plan_distance_km' | 'fact_weight_kg' | 'fact_reps' | 'fact_duration_min' | 'fact_distance_km' | 'confirmed_at' | 'version'>
@@ -40,12 +42,20 @@ export interface Database {
       client_progress: Table<ProgressRow, Pick<ProgressRow, 'trainer_id' | 'client_id' | 'recorded_on'> & Partial<ProgressRow>>
       client_custom_metrics: Table<MetricRow, Pick<MetricRow, 'trainer_id' | 'client_id' | 'name'> & Partial<MetricRow>>
       client_progress_custom: Table<ProgressCustomRow, Pick<ProgressCustomRow, 'trainer_id' | 'client_id' | 'progress_id' | 'metric_id' | 'value'> & Partial<ProgressCustomRow>>
+      client_trainers: Table<ClientTrainerRow, Pick<ClientTrainerRow, 'client_id' | 'trainer_id'> & Partial<ClientTrainerRow>>
+      client_invitations: Table<ClientInvitationRow, Pick<ClientInvitationRow, 'client_id' | 'created_by' | 'target_role' | 'code_hash' | 'expires_at'> & Partial<ClientInvitationRow>>
     }
     Views: Record<string, never>
     Functions: {
       initialize_account: { Args: { p_role: string; p_first_name?: string | null; p_last_name?: string | null; p_timezone?: string }; Returns: ProfileRow }
       initialize_trainer: { Args: { p_first_name?: string | null; p_last_name?: string | null; p_timezone?: string }; Returns: TrainerRow }
       get_my_client: { Args: Record<string, never>; Returns: MyClientRow[] }
+      can_access_client: { Args: { p_client_id: string }; Returns: boolean }
+      create_client_invitation: { Args: { p_client_id: string; p_target_role: string }; Returns: string }
+      claim_client_invitation: { Args: { p_code: string }; Returns: string }
+      revoke_client_invitation: { Args: { p_invitation_id: string }; Returns: undefined }
+      remove_client_trainer: { Args: { p_client_id: string; p_trainer_id: string }; Returns: undefined }
+      leave_client_space: { Args: { p_client_id: string }; Returns: undefined }
       list_clients: { Args: { p_include_archived?: boolean }; Returns: ClientListRow[] }
       list_workouts: { Args: { p_from?: string | null; p_to?: string | null; p_client_id?: string | null; p_limit?: number; p_offset?: number }; Returns: WorkoutListRow[] }
       list_workout_summaries: { Args: { p_client_id: string }; Returns: WorkoutSummaryRow[] }

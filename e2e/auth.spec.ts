@@ -50,3 +50,38 @@ test('client registers without receiving trainer access', async ({ page }, testI
   await page.goto('/clients')
   await expect(page).toHaveURL(/\/me$/)
 })
+
+test('trainer invitation links a client account', async ({ page }, testInfo) => {
+  const suffix = `${testInfo.workerIndex}-${Date.now()}`
+  await page.goto('/auth')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Имя').fill('Тренер')
+  await page.getByLabel('Email').fill(`invite-trainer-${suffix}@fit.local`)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByLabel('Имя').fill('Связанный клиент')
+  await page.getByLabel('Начальный вес, кг').fill('60')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await page.getByRole('button', { name: 'Пригласить клиента' }).click()
+  const codeText = await page.getByText(/Код клиента:/).textContent()
+  const code = codeText?.match(/[A-F0-9]{12}/)?.[0]
+  expect(code).toBeTruthy()
+
+  await page.goto('/profile')
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Тип аккаунта').selectOption('client')
+  await page.getByLabel('Имя').fill('Клиент')
+  await page.getByLabel('Email').fill(`invite-client-${suffix}@fit.local`)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
+
+  await page.goto('/join')
+  await page.getByLabel('Код приглашения').fill(code!)
+  await page.getByRole('button', { name: 'Присоединиться' }).click()
+  await expect(page).toHaveURL(/\/me$/)
+  await expect(page.getByRole('heading', { name: 'Связанный клиент' })).toBeVisible()
+})
