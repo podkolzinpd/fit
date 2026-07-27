@@ -1,5 +1,35 @@
+import { useEffect, useState } from 'react'
 import type { BlockPreset, WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
 import { groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
+
+// Числовое поле, которое МОЖНО очистить курсором. Контролируемый input с value
+// снаружи «возвращал» старое число при пустом вводе (стереть можно было только
+// заменой выделенного). Держим локальный черновик-строку: во время ввода поле
+// может быть пустым (коммита нет). Валидное число фиксируем сразу (чтобы, напр.,
+// круги перерисовывались по мере ввода), а пустое поле зажимаем в min на blur.
+function ClampedNumberInput({ value, min, max, label, onCommit }: {
+  value: number; min: number; max?: number; label: string; onCommit: (next: number) => void
+}) {
+  const [draft, setDraft] = useState(String(value))
+  useEffect(() => { setDraft(String(value)) }, [value])
+  function clamp(n: number) { return Math.min(max ?? Infinity, Math.max(min, n)) }
+  return <input aria-label={label} type="number" min={min} max={max} value={draft}
+    onFocus={(event) => event.target.select()}
+    onChange={(event) => {
+      const raw = event.target.value
+      setDraft(raw)
+      if (raw === '') return // пустое поле во время ввода — не коммитим
+      const parsed = Number(raw)
+      if (!Number.isNaN(parsed)) { const next = clamp(parsed); if (next !== value) onCommit(next) }
+    }}
+    onBlur={() => { // ушли из пустого/битого поля → откатываем в min
+      const parsed = Number(draft)
+      const next = draft === '' || Number.isNaN(parsed) ? min : clamp(parsed)
+      setDraft(String(next))
+      if (next !== value) onCommit(next)
+    }}
+    onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }} />
+}
 
 export function roundToStep(value: number, step: number): number {
   return Math.round(value / step) * step
@@ -96,7 +126,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       </div>)}
       <div className="set-add-row">
         <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
-        <label className="block-rest-field"><input aria-label="Отдых между подходами, с" type="number" min="0" max="600" value={exercise.restBetweenSetsSec ?? 90} onFocus={(event) => event.target.select()} onChange={(event) => { const v = event.target.value; if (v !== '' && exercise.blockId) onChange(setBlockRest([...exercises], exercise.blockId, { betweenSets: Math.max(0, Number(v)) })) }} /><span>Отдых, с</span></label>
+        <label className="block-rest-field"><ClampedNumberInput label="Отдых между подходами, с" value={exercise.restBetweenSetsSec ?? 90} min={0} max={600} onCommit={(next) => { if (exercise.blockId) onChange(setBlockRest([...exercises], exercise.blockId, { betweenSets: next })) }} /><span>Отдых, с</span></label>
       </div>
       {commentField(exercise, exerciseIndex)}
       {canMergeNext && <button type="button" className="link block-merge" onClick={() => onChange(mergeBlockWithNext([...exercises], exerciseIndex))}>⛓ Объединить со следующим в блок</button>}
@@ -125,13 +155,13 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
             <option value="set">Сет</option>
             <option value="circuit">Круговая</option>
           </select>
-          <label className="block-rounds">Кругов<input aria-label="Кругов" type="number" min="1" max="20" value={block.blockRounds} onFocus={(event) => event.target.select()} onChange={(event) => { const v = event.target.value; if (v !== '') onChange(syncBlockRounds([...exercises], block.blockId, Math.max(1, Number(v)))) }} /></label>
+          <label className="block-rounds">Кругов<ClampedNumberInput label="Кругов" value={block.blockRounds} min={1} max={20} onCommit={(next) => onChange(syncBlockRounds([...exercises], block.blockId, next))} /></label>
           {blocks.length > 1 && reorderButtons(block.blockId, isFirst, isLast)}
           <button type="button" className="link" onClick={() => onChange(splitBlock([...exercises], block.blockId))}>Разбить</button>
         </div>
         <div className="block-rest">
-          <label className="block-rest-field">Отдых между упр., с<input aria-label="Отдых между упражнениями, с" type="number" min="0" max="600" value={block.restBetweenExercisesSec} onFocus={(event) => event.target.select()} onChange={(event) => { const v = event.target.value; if (v !== '') onChange(setBlockRest([...exercises], block.blockId, { betweenExercises: Math.max(0, Number(v)) })) }} /></label>
-          <label className="block-rest-field">Отдых между кругами, с<input aria-label="Отдых между кругами, с" type="number" min="0" max="600" value={block.restBetweenRoundsSec} onFocus={(event) => event.target.select()} onChange={(event) => { const v = event.target.value; if (v !== '') onChange(setBlockRest([...exercises], block.blockId, { betweenRounds: Math.max(0, Number(v)) })) }} /></label>
+          <label className="block-rest-field">Отдых между упр., с<ClampedNumberInput label="Отдых между упражнениями, с" value={block.restBetweenExercisesSec} min={0} max={600} onCommit={(next) => onChange(setBlockRest([...exercises], block.blockId, { betweenExercises: next }))} /></label>
+          <label className="block-rest-field">Отдых между кругами, с<ClampedNumberInput label="Отдых между кругами, с" value={block.restBetweenRoundsSec} min={0} max={600} onCommit={(next) => onChange(setBlockRest([...exercises], block.blockId, { betweenRounds: next }))} /></label>
         </div>
         {/* Список упражнений блока с удалением (значения — ниже по кругам). */}
         <div className="block-exercises">{block.items.map(({ exercise, index }) => <div className="block-exercise-row" key={exercise.blockId ? `${exercise.ref}-${index}` : index}><div className="block-exercise-head"><strong>{exercise.name}</strong><span className="exercise-head-actions"><button type="button" className="link" onClick={() => onReplaceExercise(index)}>Заменить</button><button type="button" className="link danger" onClick={() => removeExercise(index)}>Удалить</button></span></div>{commentField(exercise, index)}</div>)}</div>

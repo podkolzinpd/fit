@@ -352,6 +352,14 @@ test('план: два упражнения объединяются в супе
   await expect(page.locator('.planned-round')).toHaveCount(2)
   await expect(page.locator('.planned-round').first().locator('.planned-round-exercise-name')).toHaveCount(2)
   await expect(page.getByRole('button', { name: '＋ Подход' })).toHaveCount(0)
+  // «Кругов» стирается курсором (Backspace до пустого), а не только заменой
+  // выделенного — регресс контролируемого поля, «возвращавшего» старое число.
+  await page.getByLabel('Кругов').click()
+  await page.getByLabel('Кругов').press('End')
+  await page.getByLabel('Кругов').press('Backspace')
+  await expect(page.getByLabel('Кругов')).toHaveValue('')
+  await page.getByLabel('Кругов').type('2')
+  await expect(page.locator('.planned-round')).toHaveCount(2)
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   // В просмотре тренировки виден бейдж «Сет · 2 кр.».
