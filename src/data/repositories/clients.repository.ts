@@ -5,6 +5,7 @@ import { repositoryError } from './error'
 
 type ClientRow = Awaited<ReturnType<typeof clientQueries.get>>['data']
 type ClientListRow = NonNullable<Awaited<ReturnType<typeof clientQueries.list>>['data']>[number]
+type MyClientRow = NonNullable<Awaited<ReturnType<typeof clientQueries.getMine>>['data']>[number]
 
 function fromListRow(row: ClientListRow): Client {
   return {
@@ -28,6 +29,18 @@ async function enrich(row: NonNullable<ClientRow>): Promise<Client> {
 }
 
 export const clientsRepository = {
+  async getMine(): Promise<Client | null> {
+    const result = await clientQueries.getMine()
+    if (result.error) throw repositoryError(result.error)
+    const row: MyClientRow | undefined = result.data[0]
+    if (!row) return null
+    return {
+      id: row.id, fullName: row.full_name, gender: row.gender as Gender,
+      ageYears: row.age_years, ageUpdatedAt: localDate(row.age_updated_at), heightCm: Number(row.height_cm),
+      goal: row.goal, note: null, currentWeightKg: row.current_weight_kg === null ? null : Number(row.current_weight_kg),
+      archivedAt: row.archived_at, version: row.version,
+    }
+  },
   async list(includeArchived = false): Promise<Client[]> {
     const result = await clientQueries.list(includeArchived)
     if (result.error) throw repositoryError(result.error)

@@ -5,6 +5,7 @@ import { toJson } from './json'
 const clientColumns = 'id,full_name,gender,age_years,age_updated_at,height_cm,goal,archived_at,version'
 
 export const clientQueries = {
+  getMine: () => supabase.rpc('get_my_client'),
   list: (includeArchived = false) => supabase.rpc('list_clients', { p_include_archived: includeArchived }),
   get: (id: string) => supabase.from('clients').select(clientColumns).eq('id', id).single(),
   getNote: (id: string) => supabase.from('client_private_details').select('note').eq('client_id', id).maybeSingle(),

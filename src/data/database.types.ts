@@ -1,4 +1,4 @@
-// schema-sha256: bd8c97554863e10fd7a663038b40fedae3b00e92272808ebe696fed8bb6e2274
+// schema-sha256: 9d82d043b88f5cca35d37bcda8e24060dc28bbcec4024d0ae61f9ab3ab1785b1
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
@@ -8,7 +8,7 @@ type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
   Relationships: []
 }
 
-type ProfileRow = { id: string; first_name: string | null; last_name: string | null; timezone: string; created_at: string; updated_at: string }
+type ProfileRow = { id: string; account_role: 'trainer' | 'client'; first_name: string | null; last_name: string | null; timezone: string; created_at: string; updated_at: string }
 type TrainerRow = { profile_id: string; created_at: string; updated_at: string }
 type ClientRow = { id: string; trainer_id: string; auth_user_id: string | null; full_name: string; gender: string; age_years: number; age_updated_at: string; height_cm: number; goal: string | null; archived_at: string | null; version: number; created_at: string; updated_at: string }
 type PrivateRow = { client_id: string; trainer_id: string; note: string | null; created_at: string; updated_at: string }
@@ -20,6 +20,7 @@ type ProgressRow = { id: string; trainer_id: string; client_id: string; recorded
 type MetricRow = { id: string; trainer_id: string; client_id: string; name: string; unit: string | null; archived_at: string | null; version: number; created_at: string; updated_at: string }
 type ProgressCustomRow = { id: string; trainer_id: string; client_id: string; progress_id: string; metric_id: string; value: number; created_at: string; updated_at: string }
 type ClientListRow = { id: string; full_name: string; gender: string; age_years: number; age_updated_at: string; height_cm: number; goal: string | null; note: string | null; current_weight_kg: number | null; archived_at: string | null; version: number }
+type MyClientRow = Omit<ClientListRow, 'note'>
 type WorkoutListSetRow = Pick<WorkoutSetRow, 'id' | 'position' | 'plan_weight_kg' | 'plan_reps' | 'plan_duration_min' | 'plan_distance_km' | 'fact_weight_kg' | 'fact_reps' | 'fact_duration_min' | 'fact_distance_km' | 'confirmed_at' | 'version'>
 type WorkoutListExerciseRow = Pick<WorkoutExerciseRow, 'id' | 'position' | 'exercise_source' | 'exercise_ref' | 'custom_exercise_id' | 'exercise_name' | 'muscle_group' | 'input_kind' | 'block_id' | 'block_type' | 'block_preset' | 'block_rounds' | 'rest_between_exercises_sec' | 'rest_between_rounds_sec' | 'rest_between_sets_sec' | 'trainer_comment'> & { sets: WorkoutListSetRow[] }
 export type WorkoutListRow = Pick<WorkoutRow, 'id' | 'client_id' | 'workout_date' | 'start_time' | 'end_time' | 'started_at' | 'completed_at' | 'status' | 'notes' | 'version'> & { client_name: string; total_count: number; exercises: WorkoutListExerciseRow[] }
@@ -42,7 +43,9 @@ export interface Database {
     }
     Views: Record<string, never>
     Functions: {
+      initialize_account: { Args: { p_role: string; p_first_name?: string | null; p_last_name?: string | null; p_timezone?: string }; Returns: ProfileRow }
       initialize_trainer: { Args: { p_first_name?: string | null; p_last_name?: string | null; p_timezone?: string }; Returns: TrainerRow }
+      get_my_client: { Args: Record<string, never>; Returns: MyClientRow[] }
       list_clients: { Args: { p_include_archived?: boolean }; Returns: ClientListRow[] }
       list_workouts: { Args: { p_from?: string | null; p_to?: string | null; p_client_id?: string | null; p_limit?: number; p_offset?: number }; Returns: WorkoutListRow[] }
       list_workout_summaries: { Args: { p_client_id: string }; Returns: WorkoutSummaryRow[] }

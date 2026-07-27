@@ -11,8 +11,11 @@ export type InputKind = 'strength' | 'distance' | 'reps'
 export type BlockType = 'single' | 'group'
 export type BlockPreset = 'set' | 'circuit'
 
+export type AccountRole = 'trainer' | 'client'
+
 export interface SessionActor {
   userId: UUID
+  role: AccountRole
   email: string | null
   firstName: string | null
   lastName: string | null
