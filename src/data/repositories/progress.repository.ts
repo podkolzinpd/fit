@@ -12,7 +12,7 @@ export const progressRepository = {
     if (custom.error) throw repositoryError(custom.error)
     const customMetricsByProgressId = groupCustomMetricValues(custom.data)
     return result.data.map((row) => ({
-      id: row.id, clientId: row.client_id, recordedOn: localDate(row.recorded_on),
+      id: row.id, clientId: row.client_id, createdBy: row.created_by, recordedOn: localDate(row.recorded_on),
       weightKg: row.weight_kg ?? undefined, chestCm: row.chest_cm ?? undefined,
       waistCm: row.waist_cm ?? undefined, hipCm: row.hip_cm ?? undefined,
       notes: row.notes ?? undefined,

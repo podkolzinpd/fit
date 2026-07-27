@@ -50,7 +50,7 @@ select throws_ok(
 );
 select throws_ok(
   $$select public.append_live_set('e0000000-0000-4000-8000-000000000099', 1)$$,
-  'PT404', 'exercise_not_found', 'missing exercise is PT404'
+  'PT403', 'workout_access_denied', 'missing exercise is inaccessible'
 );
 select throws_ok(
   $$select public.save_workout(
@@ -62,7 +62,7 @@ select throws_ok(
     ),
     1
   )$$,
-  'PT404', 'workout_not_found', 'missing workout is PT404'
+  'PT403', 'workout_access_denied', 'missing workout is inaccessible'
 );
 select throws_ok(
   $$select public.append_live_exercise(
@@ -70,7 +70,7 @@ select throws_ok(
     '{"source":"invalid","ref":"running","name":"Бег","muscleGroup":"cardio","inputKind":"distance"}'::jsonb,
     1
   )$$,
-  'PT404', 'exercise_not_found', 'invalid exercise source is PT404'
+  'PT403', 'workout_access_denied', 'invalid exercise source is inaccessible'
 );
 select throws_ok(
   $$select public.save_progress(

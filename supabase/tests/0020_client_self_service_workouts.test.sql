@@ -72,11 +72,11 @@ select throws_ok(
       'workoutDate', current_date, 'exercises', '[]'::jsonb),
     1
   )$$,
-  'PT403', 'client_workout_edit_denied', 'client cannot edit trainer-created workout'
+  'PT403', 'workout_access_denied', 'client cannot edit trainer-created workout'
 );
 select throws_ok(
   $$select public.soft_delete_workout('b5000000-0000-4000-8000-000000000005', 1)$$,
-  'PT403', 'client_workout_delete_denied', 'client cannot delete trainer-created workout'
+  'PT403', 'workout_access_denied', 'client cannot delete trainer-created workout'
 );
 select lives_ok(
   format(
