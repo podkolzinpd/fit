@@ -162,12 +162,15 @@ export function ClientWorkoutsPage() {
 
 export function WorkoutFormPage() {
   const { workoutId } = useParams()
+  const { actor } = useAuth()
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const sourceId = workoutId ?? params.get('copy') ?? undefined
   const source = useQuery({ queryKey: ['workout', sourceId], queryFn: () => workoutsRepository.get(sourceId ?? ''), enabled: Boolean(sourceId) })
-  const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
+  const clientMode = actor?.role === 'client'
+  const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false), enabled: !clientMode })
+  const mine = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine(), enabled: clientMode })
   const catalog = useExerciseCatalog()
   const [draftExercises, setDraftExercises] = useState<WorkoutDraft['exercises'] | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -175,7 +178,13 @@ export function WorkoutFormPage() {
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const initial = source.data ? (workoutId ? { ...copyWorkout(source.data), id: source.data.id, version: source.data.version } : copyWorkout(source.data, todayLocalDate())) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
-  const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => workoutsRepository.save(draft), onSuccess: async (id) => { await queryClient.invalidateQueries({ queryKey: ['workouts'] }); navigate(`/workouts/${id}`) } })
+  const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => workoutsRepository.save(draft), onSuccess: async (id) => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['workout', id] }),
+      queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+    ])
+    navigate(`/workouts/${id}`)
+  } })
 
   function pickExercise(selected: ExerciseSnapshot) {
     if (replaceIndex !== null) setDraftExercises(replaceExercise(exercises, replaceIndex, selected))
@@ -189,17 +198,21 @@ export function WorkoutFormPage() {
     mutation.mutate({ id: workoutId, clientId, workoutDate: date, startTime: String(form.get('startTime') || '') || undefined,
       notes: String(form.get('notes') || '') || undefined, exercises, version: source.data?.version })
   }
-  const loading = source.isLoading || clients.isLoading
-  const error = source.error ?? clients.error
+  const availableClients = clientMode ? (mine.data ? [mine.data] : []) : clients.data
+  const editingDenied = Boolean(clientMode && workoutId && source.data && source.data.createdBy !== actor?.userId)
+  const loading = source.isLoading || clients.isLoading || mine.isLoading
+  const error = source.error ?? clients.error ?? mine.error
   return <Page title={workoutId ? 'Редактировать тренировку' : params.has('copy') ? 'Копия тренировки' : 'Новая тренировка'} back={-1}>
-    <AsyncView loading={loading} error={error}><form className="stack" onSubmit={(event) => void submit(event)}>
-      <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} required><option value="">Выберите</option>{clients.data?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>
+    <AsyncView loading={loading} error={error}>{editingDenied ? <div className="state"><h2>Редактирование недоступно</h2><p>Назначенную тренером тренировку может менять только тренер.</p></div> : clientMode && !mine.data ? <div className="state"><h2>Карточка ещё не подключена</h2><p>Создать тренировку можно после подключения клиентской карточки.</p></div> : <form className="stack" onSubmit={(event) => void submit(event)}>
+      {clientMode
+        ? <><input type="hidden" name="clientId" value={mine.data?.id ?? ''} /><Field label="Клиент"><input value={mine.data?.fullName ?? ''} disabled /></Field></>
+        : <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} required><option value="">Выберите</option>{availableClients?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>}
       <div className="split"><Field label="Дата"><input name="date" type="date" defaultValue={initial?.workoutDate ?? params.get('date') ?? todayLocalDate()} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} /></Field></div>
       <VoiceNoteField name="notes" defaultValue={initial?.notes ?? ''} />
-      <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} />
+      <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} />
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
-    </form></AsyncView>
+    </form>}</AsyncView>
     {pickerOpen && <ExercisePicker catalog={catalog} onPick={pickExercise} onClose={closePicker} />}
   </Page>
 }
@@ -209,7 +222,7 @@ export function WorkoutDetailPage() {
   const { actor } = useAuth()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   const start = useMutation({ mutationFn: () => workoutsRepository.start(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }); navigate(`/workouts/${workoutId}/live`) } })
-  const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workouts'] }); navigate('/schedule') } })
+  const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workouts'] }); navigate(actor?.role === 'client' ? '/me/workouts' : '/schedule') } })
   const workout = query.data
   const done = workout?.status === 'done'
   const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt) : null
@@ -219,6 +232,7 @@ export function WorkoutDetailPage() {
   // браузера: -1 создавал петлю тренировка ↔ история упражнения после захода
   // в аналитику.
   const clientMode = actor?.role === 'client'
+  const clientOwned = clientMode && workout?.createdBy === actor.userId
   const backTo = clientMode ? '/me/workouts' : '/schedule'
   return <Page title="Тренировка" back={backTo}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
@@ -227,6 +241,7 @@ export function WorkoutDetailPage() {
         <span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span>
       </section>
       {workout.status === 'planned' && <button className="wide" onClick={() => start.mutate()}>Начать тренировку</button>}
+      {start.error && <p className="error">{start.error.message}</p>}
       {workout.status === 'in_progress' && <Link className="button wide" to={`/workouts/${workoutId}/live`}>Продолжить тренировку</Link>}
       {done && <section className="summary done-summary done-summary-3">
         <div><span>Время</span><strong>{duration ?? '—'}</strong></div>
@@ -243,11 +258,13 @@ export function WorkoutDetailPage() {
         return <div className="exercise-block view" key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
       })}</div>
       {workout.notes && <p>{workout.notes}</p>}
-      {!clientMode && <><div className="actions">
+      {(!clientMode || clientOwned) && <><div className="actions">
         {workout.status === 'planned' && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>Изменить</Link>}
         <Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link>
       </div>
-      <button className="danger secondary wide" onClick={() => remove.mutate()}>Удалить тренировку</button></>}
+      <button className="danger secondary wide" disabled={remove.isPending} onClick={() => { if (window.confirm('Удалить тренировку?')) remove.mutate() }}>Удалить тренировку</button></>}
+      {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Создать свою копию</Link></div>}
+      {remove.error && <p className="error">{remove.error.message}</p>}
     </>}</AsyncView>
   </Page>
 }

@@ -37,6 +37,8 @@ const router = createBrowserRouter([
     { path: '/me', element: <MyClientPage /> },
     { path: '/me/workouts', element: <MyWorkoutsPage /> },
     { path: '/me/progress', element: <MyProgressPage /> },
+    { path: '/workouts/new', element: <WorkoutFormPage /> },
+    { path: '/workouts/:workoutId/edit', element: <WorkoutFormPage /> },
     { path: '/workouts/:workoutId', element: <WorkoutDetailPage /> },
     { path: '/workouts/:workoutId/live', element: <LiveWorkoutPage /> },
     { element: <TrainerOnly />, children: [
@@ -46,8 +48,6 @@ const router = createBrowserRouter([
       { path: '/clients/:clientId/edit', element: <ClientFormPage /> },
       { path: '/clients/:clientId/workouts', element: <ClientWorkoutsPage /> },
       { path: '/schedule', element: <SchedulePage /> },
-      { path: '/workouts/new', element: <WorkoutFormPage /> },
-      { path: '/workouts/:workoutId/edit', element: <WorkoutFormPage /> },
       { path: '/workouts/:workoutId/history/:exerciseRef', element: <ExerciseHistoryPage /> },
       { path: '/analytics', element: <AnalyticsPage /> },
       { path: '/progress/:clientId', element: <ProgressPage /> },

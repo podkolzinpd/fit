@@ -64,9 +64,9 @@ select lives_ok(
   $$select public.save_progress('{"clientId":"95000000-0000-4000-8000-000000000005","recordedOn":"2026-07-27","weightKg":67.5,"customMetrics":[]}', null)$$,
   'client owner saves own progress'
 );
-select throws_ok(
+select lives_ok(
   $$select public.save_workout('{"clientId":"95000000-0000-4000-8000-000000000005","workoutDate":"2026-07-28","exercises":[]}', null)$$,
-  'PT403', 'client_access_denied', 'client owner cannot create workout plan'
+  'client owner creates own workout plan'
 );
 select is(public.start_workout('96000000-0000-4000-8000-000000000006', 1), 2::bigint, 'client owner starts assigned workout');
 select is(

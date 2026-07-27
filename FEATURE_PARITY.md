@@ -5,7 +5,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Область | Обязательный результат V2 | Статус |
 |---|---|---|
 | Auth | Email/password без confirmation для MVP, Google OAuth, session restore, logout, password reset; постоянные роли trainer/client | Implemented; role-aware registration/session routing ready, production Google smoke passed, reset SMTP pending |
-| Client account | Клиент входит в тот же frontend, видит только связанную карточку; тренер и клиент подключаются одноразовым кодом; несколько тренеров получают membership-доступ | Implemented auth, invitations, realtime portal and role-scoped shared mutations: client performs assigned workouts and owns progress, manages trainer memberships and active invitations; membership trainers retain full workflow and can leave non-root memberships |
+| Client account | Клиент входит в тот же frontend, видит только связанную карточку; тренер и клиент подключаются одноразовым кодом; несколько тренеров получают membership-доступ | Implemented auth, invitations, realtime portal and role-scoped shared mutations: linked client performs assigned workouts, creates and manages own workouts, owns progress and manages memberships; membership trainers retain full workflow |
 | Profile | Просмотр и изменение имени, корректный Cancel | Partial: edit/logout ready, Cancel UX pending |
 | Clients | List/empty/error/retry, create, detail, edit, archive/restore | Implemented; aggregate list uses one tenant-scoped RPC; core E2E + RLS ready |
 | Client stats | Сводка на карточке: количество выполненных, % выполнения, дата последней тренировки, дней в работе (от первой тренировки), индикатор «требует внимания» при 14+ днях без тренировки | Implemented: pure aggregation covered unit + E2E |
@@ -29,6 +29,15 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - Основной тренер не может покинуть пространство клиента, чтобы карточка не осталась без root-владельца.
 - Создатель видит только свои активные неиспользованные приглашения и может отозвать их; использованные, просроченные и отозванные приглашения в активном списке не показываются.
 - Обязательные проверки: owner/member/root/cross-tenant SQL matrix, подтверждение необратимых действий в UI и E2E invite → join → leave/remove.
+
+## Client self-service workout acceptance contract
+
+- Клиент с подключённой карточкой создаёт тренировку только для себя, используя общий workout aggregate и системный каталог упражнений.
+- Клиент может редактировать и удалять только созданную им запланированную тренировку; назначенный тренером план остаётся защищённым.
+- Клиент может скопировать назначенный тренером план в новую собственную тренировку, но не может записывать trainer comments.
+- Подключённые тренеры видят клиентскую тренировку через существующий membership-доступ.
+- Полностью непривязанный аккаунт пока не создаёт карточку автоматически: изменение tenant-модели `clients.trainer_id` требует отдельного ADR.
+- Обязательные проверки: owner/trainer/cross-tenant SQL matrix и E2E client create → edit → perform → finish.
 
 ## Exercise acceptance contract
 
