@@ -16,15 +16,20 @@ export const trainingSummaryQueries = {
     .select(publishedColumns)
     .eq('client_id', clientId)
     .order('period_end', { ascending: false }),
-  generate: (clientId: string, periodStart: string, periodEnd: string, force: boolean) =>
-    supabase.functions.invoke('summarize-client-training', {
+  generate: async (clientId: string, periodStart: string, periodEnd: string, force: boolean) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    return supabase.functions.invoke('summarize-client-training', {
+      headers: session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : undefined,
       body: {
         client_id: clientId,
         period_start: periodStart,
         period_end: periodEnd,
         force,
       },
-    }),
+    })
+  },
   publish: (
     summaryId: string,
     clientSummary: ClientTrainingSummary,
