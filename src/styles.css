@@ -17,7 +17,10 @@ h2 { font-size: 18px; letter-spacing: -.015em; margin: 24px 0 12px }
 p { margin: 6px 0 }
 .phone-frame { width: min(calc(100% - 32px), 440px); height: calc(100dvh - 32px); min-height: 0; margin: 16px auto; overflow: hidden; background: radial-gradient(circle at 86% -12%, #342957 0, transparent 36%), linear-gradient(180deg, #1d1a24, #17151c); display: flex; flex-direction: column; border: 1px solid #3a3544; border-radius: 26px; box-shadow: 0 18px 54px #17131f2b }
 .content { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 94px; scrollbar-width: none }.content::-webkit-scrollbar { display: none }
-.page { padding: 30px 18px 24px }
+/* Верхний отступ учитывает вырез/Dynamic Island (safe-area). Без него в
+   полноэкранном мобильном режиме шапка (в т.ч. кнопка ＋) уходит под статус-бар
+   iPhone и не нажимается. На десктопе max() оставляет обычные 30px. */
+.page { padding: max(30px, calc(env(safe-area-inset-top) + 12px)) 18px 24px }
 .page-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; container-type: inline-size }
 .page-header .button { padding: 9px 13px; border-radius: 11px; font-size: 14px; flex-shrink: 0 }
 .page-back { flex: 0 0 auto; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 12px; background: #241f33; color: var(--fg); font-size: 20px; line-height: 1; cursor: pointer }
