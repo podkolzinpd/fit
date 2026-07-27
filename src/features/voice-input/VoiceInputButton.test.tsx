@@ -37,6 +37,7 @@ describe('VoiceInputButton', () => {
     const onTranscript = vi.fn()
     render(<VoiceInputButton
       onTranscript={onTranscript}
+      source="test"
       recorderFactory={() => audioRecorder}
       recognizerFactory={() => speechRecognizer}
       decodeAudio={vi.fn().mockResolvedValue(new ArrayBuffer(4))}
@@ -56,7 +57,7 @@ describe('VoiceInputButton', () => {
   it('shows microphone permission and recognition errors with retry available', async () => {
     const user = userEvent.setup()
     const denied = recorder({ start: vi.fn().mockRejectedValue(new DOMException('denied', 'NotAllowedError')) })
-    const { rerender } = render(<VoiceInputButton onTranscript={vi.fn()} recorderFactory={() => denied} />)
+    const { rerender } = render(<VoiceInputButton onTranscript={vi.fn()} source="test" recorderFactory={() => denied} />)
     await user.click(screen.getByRole('button', { name: 'Надиктовать заметку' }))
     expect(screen.getByText(/Нет доступа к микрофону/)).toBeVisible()
     expect(screen.getByRole('button', { name: 'Надиктовать заметку' })).toBeEnabled()
@@ -64,6 +65,7 @@ describe('VoiceInputButton', () => {
     const failedRecognizer = recognizer({ transcribe: vi.fn().mockRejectedValue(new Error('Речь не распознана.')) })
     rerender(<VoiceInputButton
       onTranscript={vi.fn()}
+      source="test"
       recorderFactory={() => recorder()}
       recognizerFactory={() => failedRecognizer}
       decodeAudio={vi.fn().mockResolvedValue(new ArrayBuffer(4))}
