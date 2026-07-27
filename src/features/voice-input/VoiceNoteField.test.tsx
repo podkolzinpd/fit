@@ -17,7 +17,7 @@ describe('appendTranscript', () => {
 
   it('replaces the existing note with recognized text and returns focus', async () => {
     const user = userEvent.setup()
-    render(<VoiceNoteField name="notes" defaultValue="Самочувствие хорошее" />)
+    render(<VoiceNoteField name="notes" source="test" defaultValue="Самочувствие хорошее" />)
 
     const textarea = screen.getByLabelText('Заметка')
     await user.click(screen.getByRole('button', { name: 'Надиктовать заметку' }))
@@ -29,7 +29,7 @@ describe('appendTranscript', () => {
   it('updates a controlled form field with the recognized text', async () => {
     const user = userEvent.setup()
     const onValueChange = vi.fn()
-    render(<VoiceNoteField name="note" label="Заметка тренера" value="Старый текст" onValueChange={onValueChange} />)
+    render(<VoiceNoteField name="note" source="test" label="Заметка тренера" value="Старый текст" onValueChange={onValueChange} />)
 
     await user.click(screen.getByRole('button', { name: 'Надиктовать заметку' }))
 

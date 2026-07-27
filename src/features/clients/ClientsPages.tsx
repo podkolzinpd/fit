@@ -130,7 +130,7 @@ function ClientForm({
       <Controller
         control={form.control}
         name="note"
-        render={({ field }) => <VoiceNoteField name={field.name} label="Общий комментарий" value={field.value ?? ''} onValueChange={field.onChange} />}
+        render={({ field }) => <VoiceNoteField name={field.name} source="client_form" label="Общий комментарий" value={field.value ?? ''} onValueChange={field.onChange} />}
       />
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions">{onCancel && <button type="button" className="secondary" onClick={onCancel}>Отмена</button>}<button disabled={mutation.isPending}>{createMode === 'self' ? 'Создать карточку' : 'Сохранить'}</button></div>
