@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { MicIcon, StopIcon } from '../../shared/icons'
+import { trackGoal } from '../../shared/yandex-metrika'
 import { BrowserAudioRecorder, decodeAudioToPcm16, type AudioRecorder } from './audio-recorder'
 import type { SpeechRecognizer } from './speech-recognizer'
 import { WhisperCppRecognizer } from './whisper-cpp-recognizer'
@@ -8,6 +9,9 @@ type Phase = 'idle' | 'recording' | 'preparing' | 'loading' | 'transcribing'
 
 interface VoiceInputButtonProps {
   onTranscript: (text: string) => void
+  // Экран/форма, где стоит кнопка — попадает в идентификатор цели Метрики,
+  // чтобы в отчётах было видно, где именно надиктовали заметку.
+  source: string
   recorderFactory?: () => AudioRecorder
   recognizerFactory?: () => SpeechRecognizer
   decodeAudio?: (blob: Blob) => Promise<ArrayBuffer>
@@ -16,6 +20,7 @@ interface VoiceInputButtonProps {
 
 export function VoiceInputButton({
   onTranscript,
+  source,
   recorderFactory = () => new BrowserAudioRecorder(),
   recognizerFactory = () => new WhisperCppRecognizer(),
   decodeAudio = decodeAudioToPcm16,
@@ -102,7 +107,11 @@ export function VoiceInputButton({
       type="button"
       className={`voice-input-button secondary ${recording ? 'recording' : ''}`}
       disabled={busy}
-      onClick={() => recording ? void finishRecording() : void startRecording()}
+      onClick={() => {
+        if (recording) { void finishRecording(); return }
+        trackGoal(`voice_note_start_click_${source}`)
+        void startRecording()
+      }}
     >
       {recording ? <StopIcon /> : <MicIcon />}
       {voiceButtonLabel(phase, elapsedSeconds, progress)}

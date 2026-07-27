@@ -3,13 +3,15 @@ import { VoiceInputButton } from './VoiceInputButton'
 
 interface VoiceNoteFieldProps {
   name: string
+  // Экран/форма, где стоит поле — см. VoiceInputButtonProps.source.
+  source: string
   defaultValue?: string
   value?: string
   onValueChange?: (value: string) => void
   label?: string
 }
 
-export function VoiceNoteField({ name, defaultValue, value, onValueChange, label = 'Заметка' }: VoiceNoteFieldProps) {
+export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, label = 'Заметка' }: VoiceNoteFieldProps) {
   const id = useId()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   return <div className="field voice-note-field">
@@ -22,7 +24,7 @@ export function VoiceNoteField({ name, defaultValue, value, onValueChange, label
       value={onValueChange ? value ?? '' : undefined}
       onChange={onValueChange ? (event) => onValueChange(event.target.value) : undefined}
     />
-    <VoiceInputButton onTranscript={(text) => {
+    <VoiceInputButton source={source} onTranscript={(text) => {
       if (!textareaRef.current) return
       const transcript = replaceWithTranscript(text)
       if (onValueChange) onValueChange(transcript)
