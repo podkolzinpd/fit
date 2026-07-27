@@ -258,7 +258,10 @@ function LiveSetFields({ inputKind, set, editing = false }: { inputKind: Exercis
   const rowClass = locked ? 'set-row locked' : 'set-row'
   // Ключ ремоунтит поля при смене режима (подтверждён / правка / ввод), чтобы
   // неконтролируемый defaultValue пересчитался и показал нужное значение.
-  const k = locked ? 'locked' : editing ? 'editing' : 'edit'
+  // В key добавлена version: после правки подтверждённого подхода факт меняется
+  // и версия бампится — иначе стабильный key оставил бы старое значение в поле.
+  const mode = locked ? 'locked' : editing ? 'editing' : 'edit'
+  const k = `${mode}-${set.version}`
   // Для подтверждённого подхода (в т.ч. при правке) показываем факт, иначе план.
   const confirmed = Boolean(set.confirmedAt)
   const value = (fact: number | undefined, plan: number | undefined) => (confirmed ? (fact ?? plan) : fact)
@@ -313,7 +316,11 @@ export function LiveWorkoutPage() {
   const [editingSets, setEditingSets] = useState<Set<string>>(() => new Set())
   const [restRemaining, setRestRemaining] = useState<number | null>(null)
   const restEndsAt = useRef<number | null>(null)
-  const save = useMutation({ mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.save(set, draft) })
+  // При правке ПОДТВЕРЖДЁННОГО подхода (карандаш → «Сохранить») значение пишется
+  // в БД, но без refetch локальный set остаётся старым и поле возвращает прежнее
+  // число. Освежаем только для подтверждённых (в обычном вводе по blur refetch не
+  // нужен и мешал бы: ремоунт полей по key сбросил бы текущий ввод).
+  const save = useMutation({ mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.save(set, draft), onSuccess: async (_v, { set }) => { if (set.confirmedAt) await query.refetch() } })
   const confirm = useMutation({
     mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.confirm(set, draft),
     onSuccess: (_data, { set }) => {
@@ -365,6 +372,7 @@ export function LiveWorkoutPage() {
     setRestRemaining(Math.max(0, Math.round((nextEnd - Date.now()) / 1000)))
   }
   const appendSet = useMutation({ mutationFn: (exerciseId: string) => workoutsRepository.appendLiveSet(query.data!, exerciseId), onSuccess: async () => { await query.refetch() } })
+  const removeSet = useMutation({ mutationFn: (setId: string) => workoutsRepository.removeLiveSet(query.data!, setId), onSuccess: async () => { await query.refetch() } })
   const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => workoutsRepository.appendLiveExercise(query.data!, exercise), onSuccess: async () => { await query.refetch() } })
   const reorderBlock = useMutation({ mutationFn: ({ blockId, direction }: { blockId: string; direction: -1 | 1 }) => workoutsRepository.reorderLiveBlock(query.data!, blockId, direction), onSuccess: async () => { await query.refetch() } })
   const replaceLive = useMutation({ mutationFn: ({ exerciseId, exercise }: { exerciseId: string; exercise: ExerciseSnapshot }) => workoutsRepository.replaceLiveExercise(query.data!, exerciseId, exercise), onSuccess: async () => { await query.refetch() } })
@@ -393,7 +401,10 @@ export function LiveWorkoutPage() {
   const restActive = restRemaining !== null
   useEffect(() => {
     if (!restActive) return
-    const timer = window.setInterval(() => {
+    // Один тик отсчёта. iOS Safari замораживает setInterval при блокировке
+    // экрана/фоне — на возврате пересчитываем от абсолютного дедлайна, иначе
+    // таймер «пропадает» (застыл и тут же гонг), а не тикает как надо.
+    const tick = () => {
       if (restEndsAt.current === null) return
       const left = Math.ceil((restEndsAt.current - Date.now()) / 1000)
       if (left <= 0) {
@@ -403,10 +414,19 @@ export function LiveWorkoutPage() {
       } else {
         setRestRemaining(left)
       }
-    }, 250)
-    return () => window.clearInterval(timer)
+    }
+    const timer = window.setInterval(tick, 250)
+    // pageshow — возврат из bfcache (iOS), visibilitychange — разблокировка/фокус.
+    const onWake = () => { if (document.visibilityState === 'visible') tick() }
+    document.addEventListener('visibilitychange', onWake)
+    window.addEventListener('pageshow', onWake)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', onWake)
+      window.removeEventListener('pageshow', onWake)
+    }
   }, [restActive])
-  const error = save.error ?? confirm.error ?? appendSet.error ?? appendExercise.error ?? reorderBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
+  const error = save.error ?? confirm.error ?? appendSet.error ?? removeSet.error ?? appendExercise.error ?? reorderBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
   function liveCommentField(exercise: WorkoutExercise) {
     return <textarea className="exercise-comment" aria-label={`Комментарий: ${exercise.name}`} placeholder="Комментарий к упражнению…" rows={1} defaultValue={exercise.trainerComment ?? ''} disabled={commentLive.isPending}
@@ -425,18 +445,23 @@ export function LiveWorkoutPage() {
       <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast || reorderBlock.isPending} onClick={() => reorderBlock.mutate({ blockId, direction: 1 })}>↓</button>
     </span>
   }
-  // Форма одного подхода в live: подтверждение / правка / автосохранение по blur.
-  function renderLiveSet(exercise: WorkoutExercise, set: WorkoutSet, label?: string, current = false) {
+  // Форма одного подхода в live: подтверждение / правка / удаление / автосейв по blur.
+  // canRemove — у упражнения больше одного подхода (последний убрать нельзя).
+  function renderLiveSet(exercise: WorkoutExercise, set: WorkoutSet, label?: string, current = false, canRemove = false) {
     const isEditing = editingSets.has(set.id)
     // «Закрыто» (подтверждён) — зелёный; «в работе» (текущий) — серый.
     const stateClass = set.confirmedAt && !isEditing ? 'confirmed' : current && !isEditing ? 'current' : ''
+    // Действия в шапке подхода: карандаш (правка подтверждённого) + крестик (удалить).
+    const headActions = <span className="set-head-actions">
+      {set.confirmedAt && !isEditing && <button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}
+      {canRemove && !isEditing && <button type="button" className="link set-remove" aria-label="Удалить подход" disabled={removeSet.isPending} onClick={() => { if (window.confirm('Удалить этот подход?')) removeSet.mutate(set.id) }}>✕</button>}
+    </span>
     return <form className={`exercise ${stateClass}`} key={set.id} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
       save.mutate({ set, draft: draftFrom(event.currentTarget) })
     }}>
-      {label && <div className="set-head"><span className="muted">{label}</span>{set.confirmedAt && !isEditing && <button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}</div>}
-      {!label && set.confirmedAt && !isEditing && <div className="set-head"><span className="muted" />{<button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}</div>}
+      <div className="set-head"><span className="muted">{label}</span>{headActions}</div>
       <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} />
       {set.confirmedAt && isEditing
         ? <button type="button" className="secondary" disabled={save.isPending}
@@ -470,7 +495,7 @@ export function LiveWorkoutPage() {
             const currentSetIndex = exercise.sets.findIndex((set) => !set.confirmedAt)
             return <section key={exercise.id}>
               <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions">{replaceButton(exercise)}{reorder}</span></div>
-              {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex))}
+              {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex, exercise.sets.length > 1))}
               <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
               {liveCommentField(exercise)}
             </section>

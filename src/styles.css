@@ -198,8 +198,10 @@ p { margin: 6px 0 }
 .exercise header > strong { flex: 1 1 auto; min-width: 0 }
 .workout-title { margin-bottom: 18px }
 .workout-title h2 { margin: 0 0 4px }
-.set-head { display: flex; align-items: center; justify-content: space-between; gap: 8px }
+.set-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 24px }
+.set-head-actions { display: inline-flex; align-items: center; gap: 4px; margin-left: auto }
 .set-edit { padding: 2px 8px; font-size: 16px; line-height: 1; color: var(--purple) }
+.set-remove { padding: 2px 8px; font-size: 16px; line-height: 1; color: var(--danger, #ff6b6b) }
 .set-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0 }
 .set-row input { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 9px; color: #ece7f0; background: var(--input) }
 /* Зафиксированный подход: значения горят ярко, не тускнеют как disabled. */
@@ -277,4 +279,8 @@ p { margin: 6px 0 }
 .voice-input small { line-height: 1.35 }
 .client-card { justify-content: flex-start }.client-card > .badge { margin-left: auto }.client-avatar { flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid #ffffff24; border-radius: 14px; color: white; background: linear-gradient(145deg, #8b75ff, #4e32d2); font-weight: 800; box-shadow: inset 0 1px #ffffff26 }.client-avatar.tone-1 { background: linear-gradient(145deg, #f16a7a, #b82f57) }.client-avatar.tone-2 { background: linear-gradient(145deg, #efb34d, #b96e25) }.client-avatar.tone-3 { background: linear-gradient(145deg, #59ce80, #258f4a) }
 @media (max-width: 480px) { .phone-frame { width: 100%; height: 100dvh; margin: 0; border: 0; border-radius: 0 }.auth-screen { width: 100%; min-height: 100dvh; margin: 0; border: 0; border-radius: 0 }.tab-bar { bottom: 0; width: 100%; border-radius: 0 } }
-@media (max-width: 360px) { .split, .measure-grid { grid-template-columns: 1fr }.inline-form { grid-template-columns: 1fr }.inline-form button { grid-column: 1 }.tab-bar a { font-size: 11px } }
+/* Узкий экран: дата/время в столбик. iOS Safari даёт input[type=date|time]
+   большую нативную min-width и не сжимает их флексом ниже неё — рядом они
+   вылезают за край, поэтому раскладываем по одному в строку. */
+@media (max-width: 460px) { .split { flex-direction: column }.split > * { flex: 1 1 auto } }
+@media (max-width: 360px) { .measure-grid { grid-template-columns: 1fr }.inline-form { grid-template-columns: 1fr }.inline-form button { grid-column: 1 }.tab-bar a { font-size: 11px } }
