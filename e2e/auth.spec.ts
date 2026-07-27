@@ -35,7 +35,7 @@ test('trainer registers without surname or email confirmation', async ({ page },
   )
 })
 
-test('client registers without receiving trainer access', async ({ page }, testInfo) => {
+test('client registers, creates a standalone card and own workout without trainer access', async ({ page }, testInfo) => {
   const email = `client-signup-${testInfo.workerIndex}-${Date.now()}@fit.local`
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
@@ -46,7 +46,23 @@ test('client registers without receiving trainer access', async ({ page }, testI
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
 
   await expect(page).toHaveURL(/\/me$/)
-  await expect(page.getByRole('heading', { name: 'Карточка ещё не подключена' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Создайте личную карточку' })).toBeVisible()
+  await expect(page.getByLabel('Имя')).toHaveValue('Клиент')
+  await page.getByLabel('Начальный вес, кг').fill('72.5')
+  await page.getByLabel('Цель').fill('Тренироваться самостоятельно')
+  await page.getByRole('button', { name: 'Создать карточку' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Клиент' })).toBeVisible()
+  await expect(page.getByText('72.5 кг')).toBeVisible()
+  await expect(page.getByText('Подключённых тренеров нет')).toBeVisible()
+  await page.getByRole('main').getByRole('link', { name: 'Тренировки' }).click()
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Бег')
+  await page.getByRole('button', { name: /^Бег / }).first().click()
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+
   await page.goto('/clients')
   await expect(page).toHaveURL(/\/me$/)
 })

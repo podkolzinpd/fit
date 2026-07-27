@@ -1,4 +1,4 @@
-// schema-sha256: 5fa6f41e1f010a2e4eafb32ca57e8fdc269e44372182b2204875da110fa33c7e
+// schema-sha256: 604738e0de1d53b2c864ba9120f99ed432421bfa607d01d3042e409015525894
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
@@ -115,6 +115,7 @@ export type Database = {
       list_workouts: { Args: { p_from?: string | null; p_to?: string | null; p_client_id?: string | null; p_limit?: number; p_offset?: number }; Returns: WorkoutListRow[] }
       list_workout_summaries: { Args: { p_client_id: string }; Returns: WorkoutSummaryRow[] }
       create_client: { Args: { p_client: Json }; Returns: string }
+      create_own_client: { Args: { p_client: Json }; Returns: string }
       update_client: { Args: { p_client: Json; p_expected_version: number }; Returns: number }
       save_workout: { Args: { p_workout: Json; p_expected_version?: number | null }; Returns: string }
       start_workout: { Args: { p_workout_id: string; p_expected_version: number }; Returns: number }
