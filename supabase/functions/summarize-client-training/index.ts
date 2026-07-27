@@ -28,7 +28,7 @@ type SummarizeRequest = {
 
 type WorkoutRow = {
   id: string
-  workout_date: string
+  created_at: string
 }
 
 type ExerciseRow = {
@@ -268,7 +268,7 @@ function buildProgressData(
   }
 
   const workoutDateById = new Map(
-    workouts.map((workout) => [workout.id, workout.workout_date]),
+    workouts.map((workout) => [workout.id, workout.created_at]),
   )
   const exerciseProgress = new Map<string, {
     name: string
@@ -348,7 +348,7 @@ function buildProgressData(
   }
 
   const workoutDates = workouts
-    .map((workout) => workout.workout_date)
+    .map((workout) => workout.created_at)
     .sort()
   const periodDays =
     (Date.parse(`${periodEnd}T00:00:00Z`) -
@@ -608,14 +608,12 @@ const handler = withSupabase({ auth: "user" }, async (req, ctx) => {
 
       const { data: workouts, error: workoutsError } = await ctx.supabase
         .from("workouts")
-        .select("id,workout_date")
+        .select("id,created_at")
         .eq("client_id", input.client_id)
         .eq("trainer_id", trainerId)
-        .eq("status", "done")
-        .is("deleted_at", null)
-        .gte("workout_date", input.period_start)
-        .lte("workout_date", input.period_end)
-        .order("workout_date")
+        .gte("created_at", `${input.period_start}T00:00:00.000Z`)
+        .lt("created_at", `${input.period_end}T23:59:59.999Z`)
+        .order("created_at")
         .limit(MAX_SOURCE_ROWS)
       if (workoutsError) {
         throw new HttpError(500, "workouts_lookup_failed")
