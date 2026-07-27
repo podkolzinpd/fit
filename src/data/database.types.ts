@@ -1,4 +1,4 @@
-// schema-sha256: 72a6999831d9bbb98a06bf1e51bcfff19a82e664b81df1aaf6dbc0fa8522bb5e
+// schema-sha256: a6cef98d693ff0300e13cd9ea7fb76d4b2c07f86613f5bf13c11c9bc0750b6cc
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
@@ -27,6 +27,7 @@ type WorkoutListSetRow = Pick<WorkoutSetRow, 'id' | 'position' | 'plan_weight_kg
 type WorkoutListExerciseRow = Pick<WorkoutExerciseRow, 'id' | 'position' | 'exercise_source' | 'exercise_ref' | 'custom_exercise_id' | 'exercise_name' | 'muscle_group' | 'input_kind' | 'block_id' | 'block_type' | 'block_preset' | 'block_rounds' | 'rest_between_exercises_sec' | 'rest_between_rounds_sec' | 'rest_between_sets_sec' | 'trainer_comment'> & { sets: WorkoutListSetRow[] }
 export type WorkoutListRow = Pick<WorkoutRow, 'id' | 'client_id' | 'workout_date' | 'start_time' | 'end_time' | 'started_at' | 'completed_at' | 'status' | 'notes' | 'version'> & { client_name: string; total_count: number; exercises: WorkoutListExerciseRow[] }
 type WorkoutSummaryRow = Pick<WorkoutRow, 'id' | 'workout_date' | 'status'>
+type TrainerMembershipRow = { trainer_id: string; first_name: string | null; last_name: string | null; joined_at: string; is_root: boolean }
 
 type TrainingSummaryRow = {
   id: string
@@ -108,6 +109,7 @@ export type Database = {
       revoke_client_invitation: { Args: { p_invitation_id: string }; Returns: undefined }
       remove_client_trainer: { Args: { p_client_id: string; p_trainer_id: string }; Returns: undefined }
       leave_client_space: { Args: { p_client_id: string }; Returns: undefined }
+      list_client_trainers: { Args: { p_client_id: string }; Returns: TrainerMembershipRow[] }
       list_clients: { Args: { p_include_archived?: boolean }; Returns: ClientListRow[] }
       list_workouts: { Args: { p_from?: string | null; p_to?: string | null; p_client_id?: string | null; p_limit?: number; p_offset?: number }; Returns: WorkoutListRow[] }
       list_workout_summaries: { Args: { p_client_id: string }; Returns: WorkoutSummaryRow[] }

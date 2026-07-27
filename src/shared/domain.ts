@@ -35,6 +35,22 @@ export interface ClientActor extends SessionActorBase {
 
 export type SessionActor = TrainerActor | ClientActor
 
+export interface TrainerMembership {
+  trainerId: UUID
+  firstName: string | null
+  lastName: string | null
+  joinedAt: string
+  isRoot: boolean
+}
+
+export interface ClientInvitation {
+  id: UUID
+  clientId: UUID
+  targetRole: AccountRole
+  expiresAt: string
+  createdAt: string
+}
+
 export interface Client {
   id: UUID
   hasAccount: boolean | null

@@ -5,7 +5,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Область | Обязательный результат V2 | Статус |
 |---|---|---|
 | Auth | Email/password без confirmation для MVP, Google OAuth, session restore, logout, password reset; постоянные роли trainer/client | Implemented; role-aware registration/session routing ready, production Google smoke passed, reset SMTP pending |
-| Client account | Клиент входит в тот же frontend, видит только связанную карточку; тренер и клиент подключаются одноразовым кодом; несколько тренеров получают membership-доступ | Implemented auth, invitations, realtime portal and role-scoped shared mutations: client performs assigned workouts and owns progress; membership trainers retain full workflow |
+| Client account | Клиент входит в тот же frontend, видит только связанную карточку; тренер и клиент подключаются одноразовым кодом; несколько тренеров получают membership-доступ | Implemented auth, invitations, realtime portal and role-scoped shared mutations: client performs assigned workouts and owns progress, manages trainer memberships and active invitations; membership trainers retain full workflow and can leave non-root memberships |
 | Profile | Просмотр и изменение имени, корректный Cancel | Partial: edit/logout ready, Cancel UX pending |
 | Clients | List/empty/error/retry, create, detail, edit, archive/restore | Implemented; aggregate list uses one tenant-scoped RPC; core E2E + RLS ready |
 | Client stats | Сводка на карточке: количество выполненных, % выполнения, дата последней тренировки, дней в работе (от первой тренировки), индикатор «требует внимания» при 14+ днях без тренировки | Implemented: pure aggregation covered unit + E2E |
@@ -21,6 +21,14 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 Статус меняется на Done только после component/E2E и, где применимо, DB/RLS теста.
 
 `Implemented` означает, что код сценария существует и его основной контракт покрыт тестами. Это не `Done`: релиз блокируют незакрытые acceptance tests, visual parity и пункты из `OPERATIONS.md`.
+
+## Client membership acceptance contract
+
+- Клиент видит основного и дополнительных тренеров своей карточки; чужие пользователи не могут получить этот список.
+- Основного тренера отключить нельзя. Дополнительного тренера клиент может отключить, а дополнительный тренер может самостоятельно покинуть пространство клиента.
+- Основной тренер не может покинуть пространство клиента, чтобы карточка не осталась без root-владельца.
+- Создатель видит только свои активные неиспользованные приглашения и может отозвать их; использованные, просроченные и отозванные приглашения в активном списке не показываются.
+- Обязательные проверки: owner/member/root/cross-tenant SQL matrix, подтверждение необратимых действий в UI и E2E invite → join → leave/remove.
 
 ## Exercise acceptance contract
 
