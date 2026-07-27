@@ -33,6 +33,22 @@ npm run db:test
 npm run check
 ```
 
+## iOS build (Capacitor)
+
+Веб-приложение оборачивается в нативный iOS-шелл через [Capacitor](https://capacitorjs.com) — без форка кода, тот же React-код работает внутри WKWebView. Нативный проект лежит в `ios/` (закоммичен, кроме build output/Pods — см. `ios/.gitignore`). Используется SPM-интеграция Capacitor (без CocoaPods/Podfile).
+
+1. Установите Xcode.
+2. `npm install`
+3. В `.env.local` (не коммитится) укажите production Supabase значения из Vercel — iOS-сборка использует их на этапе билда, приложение откроется с пустым экраном без ошибки, если их нет:
+   ```
+   VITE_SUPABASE_URL=https://xwfuzfkuhblswpdludbc.supabase.co
+   VITE_SUPABASE_PUBLISHABLE_KEY=<publishable key>
+   ```
+4. `npm run ios:open` — соберёт веб-приложение, засинкает его в `ios/` и откроет Xcode-проект. Запуск на симулятор/устройство — оттуда.
+5. После любых изменений в `src/` перезапустите `npm run ios:sync` (или `ios:open`) — Xcode не пересобирает веб-бандл сам.
+
+**Известное ограничение:** вход через Google не работает в iOS-сборке. Google блокирует OAuth внутри встроенных WebView (`disallowed_useragent`), `signInWithOAuth` нужно будет перенаправлять через системный браузер (`@capacitor/browser`) с custom URL scheme редиректом обратно в приложение — пока не реализовано. Вход по email/паролю работает штатно.
+
 ## Обязательные документы
 
 - [AGENTS.md](./AGENTS.md) — правила для людей и ИИ-агентов.
