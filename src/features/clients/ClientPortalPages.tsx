@@ -7,6 +7,7 @@ import { splitClientWorkouts, workoutsRepository } from '../../data/repositories
 import { formatLocalDate, todayLocalDate } from '../../shared/local-date'
 import { AsyncView, Page } from '../../shared/ui'
 import { ProgressChart } from '../progress/ProgressChart'
+import { ClientTrainingSummaryCard } from '../progress/TrainingSummaryCard'
 import { WorkoutExercisesSummary } from '../workouts'
 
 function useMine() {
@@ -33,6 +34,9 @@ export function MyProgressPage() {
   const mine = useMine()
   const entries = useQuery({ queryKey: ['progress', mine.data?.id], queryFn: () => progressRepository.list(mine.data!.id), enabled: Boolean(mine.data) })
   return <Page title="Мой прогресс" back="/me"><AsyncView loading={mine.isLoading || entries.isLoading} error={mine.error ?? entries.error} empty={entries.data?.length === 0} onRetry={() => { void mine.refetch(); void entries.refetch() }}>
-    {entries.data && <><ProgressChart entries={entries.data} metric="weightKg" label="Вес" unit="кг" windowEnd={null} onWindowChange={() => undefined} /><div className="cards">{entries.data.map((entry) => <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{entry.weightKg === undefined ? 'Вес не указан' : `${entry.weightKg} кг`}</p></div></article>)}</div></>}
+    {entries.data && mine.data && <>
+      <ClientTrainingSummaryCard clientId={mine.data.id} />
+      <ProgressChart entries={entries.data} metric="weightKg" label="Вес" unit="кг" windowEnd={null} onWindowChange={() => undefined} /><div className="cards">{entries.data.map((entry) => <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{entry.weightKg === undefined ? 'Вес не указан' : `${entry.weightKg} кг`}</p></div></article>)}</div>
+    </>}
   </AsyncView></Page>
 }
