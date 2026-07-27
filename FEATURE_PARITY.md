@@ -5,7 +5,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Область | Обязательный результат V2 | Статус |
 |---|---|---|
 | Auth | Email/password без confirmation для MVP, Google OAuth, session restore, logout, password reset; постоянные роли trainer/client | Implemented; role-aware registration/session routing ready, production Google smoke passed, reset SMTP pending |
-| Client account | Клиент входит в тот же frontend, видит только связанную с `auth_user_id` карточку; непривязанный аккаунт получает явный empty state | Implemented foundation; invitations, shared mutations and realtime are follow-up |
+| Client account | Клиент входит в тот же frontend, видит только связанную карточку; тренер и клиент подключаются одноразовым кодом; несколько тренеров получают membership-доступ | Implemented auth + invitation foundation; shared mutations and realtime are follow-up |
 | Profile | Просмотр и изменение имени, корректный Cancel | Partial: edit/logout ready, Cancel UX pending |
 | Clients | List/empty/error/retry, create, detail, edit, archive/restore | Implemented; aggregate list uses one tenant-scoped RPC; core E2E + RLS ready |
 | Client stats | Сводка на карточке: количество выполненных, % выполнения, дата последней тренировки, дней в работе (от первой тренировки), индикатор «требует внимания» при 14+ днях без тренировки | Implemented: pure aggregation covered unit + E2E |

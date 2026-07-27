@@ -9,7 +9,7 @@ type MyClientRow = NonNullable<Awaited<ReturnType<typeof clientQueries.getMine>>
 
 function fromListRow(row: ClientListRow): Client {
   return {
-    id: row.id, fullName: row.full_name, gender: row.gender as Gender,
+    id: row.id, hasAccount: null, fullName: row.full_name, gender: row.gender as Gender,
     ageYears: row.age_years, ageUpdatedAt: localDate(row.age_updated_at), heightCm: Number(row.height_cm),
     goal: row.goal, note: row.note, currentWeightKg: row.current_weight_kg === null ? null : Number(row.current_weight_kg),
     archivedAt: row.archived_at, version: row.version,
@@ -21,7 +21,7 @@ async function enrich(row: NonNullable<ClientRow>): Promise<Client> {
   if (note.error) throw repositoryError(note.error)
   if (weight.error) throw repositoryError(weight.error)
   return {
-    id: row.id, fullName: row.full_name, gender: row.gender as Gender,
+    id: row.id, hasAccount: row.auth_user_id !== null, fullName: row.full_name, gender: row.gender as Gender,
     ageYears: row.age_years, ageUpdatedAt: localDate(row.age_updated_at), heightCm: Number(row.height_cm),
     goal: row.goal, note: note.data?.note ?? null, currentWeightKg: weight.data?.weight_kg === null || weight.data?.weight_kg === undefined ? null : Number(weight.data.weight_kg),
     archivedAt: row.archived_at, version: row.version,
@@ -35,7 +35,7 @@ export const clientsRepository = {
     const row: MyClientRow | undefined = result.data[0]
     if (!row) return null
     return {
-      id: row.id, fullName: row.full_name, gender: row.gender as Gender,
+      id: row.id, hasAccount: true, fullName: row.full_name, gender: row.gender as Gender,
       ageYears: row.age_years, ageUpdatedAt: localDate(row.age_updated_at), heightCm: Number(row.height_cm),
       goal: row.goal, note: null, currentWeightKg: row.current_weight_kg === null ? null : Number(row.current_weight_kg),
       archivedAt: row.archived_at, version: row.version,

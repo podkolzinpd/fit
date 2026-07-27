@@ -24,6 +24,7 @@ export interface SessionActor {
 
 export interface Client {
   id: UUID
+  hasAccount: boolean | null
   fullName: string
   gender: Gender
   ageYears: number
