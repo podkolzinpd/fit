@@ -5,7 +5,7 @@
   --border: #3a3643; --danger: #ff7380; --success: #62d786; --input: #2a2732;
 }
 * { box-sizing: border-box }
-body { margin: 0; min-height: 100dvh; background: #fff; }
+body { margin: 0; min-height: 100dvh; background: #15131a; }
 ::selection { color: white; background: #735cff99 }
 button, input, textarea, select { font: inherit }
 button, .button { border: 1px solid #8b76ff; border-radius: 12px; background: linear-gradient(145deg, #8065ff, #6548e9); color: white; padding: 11px 16px; cursor: pointer; text-decoration: none; font-weight: 700; text-align: center; box-shadow: 0 8px 22px #4f36c42b }
@@ -16,7 +16,7 @@ h1 { color: #e9e1ef; font-size: 30px; line-height: 1.08; letter-spacing: -.035em
 h2 { font-size: 18px; letter-spacing: -.015em; margin: 24px 0 12px }
 p { margin: 6px 0 }
 .phone-frame { width: min(calc(100% - 32px), 440px); height: calc(100dvh - 32px); min-height: 0; margin: 16px auto; overflow: hidden; background: radial-gradient(circle at 86% -12%, #342957 0, transparent 36%), linear-gradient(180deg, #1d1a24, #17151c); display: flex; flex-direction: column; border: 1px solid #3a3544; border-radius: 26px; box-shadow: 0 18px 54px #17131f2b }
-.content { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 94px; scrollbar-width: none }.content::-webkit-scrollbar { display: none }
+.content { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-bottom: 94px; scrollbar-width: none }.content::-webkit-scrollbar { display: none }
 /* Верхний отступ учитывает вырез/Dynamic Island (safe-area). Без него в
    полноэкранном мобильном режиме шапка (в т.ч. кнопка ＋) уходит под статус-бар
    iPhone и не нажимается. На десктопе max() оставляет обычные 30px. */
@@ -30,7 +30,7 @@ p { margin: 6px 0 }
 .page-center .page-header h1 { grid-column: 2; text-align: center; margin: 0 }
 .page-center .page-header .page-back { grid-column: 1 }
 .page-center .page-header > :not(h1):not(.page-back) { grid-column: 3; justify-self: end }
-.auth-screen { width: min(calc(100% - 32px), 440px); min-height: calc(100dvh - 32px); margin: 16px auto; padding: 40px 24px; overflow: hidden; border: 1px solid #3a3544; border-radius: 26px; background: radial-gradient(circle at 86% -12%, #342957 0, transparent 36%), linear-gradient(180deg, #1d1a24, #17151c); display: flex; flex-direction: column; justify-content: center; gap: 18px; box-shadow: 0 18px 54px #17131f2b }
+.auth-screen { width: min(calc(100% - 32px), 440px); min-height: calc(100dvh - 32px); margin: 16px auto; padding: 40px 24px; overflow: hidden auto; border: 1px solid #3a3544; border-radius: 26px; background: radial-gradient(circle at 86% -12%, #342957 0, transparent 36%), linear-gradient(180deg, #1d1a24, #17151c); display: flex; flex-direction: column; justify-content: flex-start; gap: 18px; box-shadow: 0 18px 54px #17131f2b }
 .brand { width: 64px; height: 64px; display: grid; place-items: center; background: linear-gradient(145deg, #8c73ff, #5133d5); border: 1px solid #9a86ff; border-radius: 22px; box-shadow: 0 16px 40px #5e43e84d; font-size: 22px; font-weight: 900 }
 .stack { display: flex; flex-direction: column; gap: 16px }
 .compact { padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface-raised) }
@@ -66,7 +66,7 @@ p { margin: 6px 0 }
 .success { color: var(--success) }
 .auth-links { display: flex; justify-content: space-between; align-items: center }
 .state { min-height: 180px; display: grid; place-content: center; text-align: center; color: var(--muted); gap: 10px }
-.cards, .timeline { display: flex; flex-direction: column; gap: 10px }
+.cards, .timeline { display: flex; flex-direction: column; gap: 16px }
 .card { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 15px; border: 1px solid var(--border); border-radius: 17px; text-decoration: none; color: inherit; background: linear-gradient(145deg, #292631, #211f28); box-shadow: 0 10px 24px #00000024; transition: border-color .18s ease, transform .18s ease }
 .card:hover { border-color: #4c465a; transform: translateY(-1px) }
 .card.editing { display: block }
@@ -143,9 +143,9 @@ p { margin: 6px 0 }
 .day-grid-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none }.day-grid-scroll::-webkit-scrollbar { display: none }
 .day-untimed { display: flex; flex-direction: column; gap: 8px; padding-bottom: 10px }
 .day-grid { position: relative; margin: 0 2px }
-.day-grid-hour { position: absolute; left: 0; right: 0; display: flex; align-items: flex-start; gap: 8px; height: 0 }
+.day-grid-hour { position: absolute; left: 0; right: 0; z-index: 2; display: flex; align-items: flex-start; gap: 8px; height: 0; pointer-events: none }
 .day-grid-hour-label { width: 44px; flex-shrink: 0; font-size: 11px; color: var(--muted); transform: translateY(-6px) }
-.day-grid-hour-line { flex: 1; height: 1px; background: var(--border); margin-top: 2px }
+.day-grid-hour-line { flex: 1; height: 1px; background: #ffffff26; margin-top: 2px }
 .day-grid-event { position: absolute; left: 52px; right: 0; display: flex; flex-direction: column; align-items: stretch; gap: 1px; padding: 5px 10px; border-radius: 10px; background: #2b2549; border: 1px solid var(--accent); color: var(--fg); overflow: hidden; text-align: left; text-decoration: none; line-height: 1.15 }
 /* Все строки плашки не должны вылезать за правый край карточки. */
 .day-grid-event > * { min-width: 0; max-width: 100% }
