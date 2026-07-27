@@ -13,6 +13,7 @@ export const clientQueries = {
     .eq('client_id', id).is('deleted_at', null).not('weight_kg', 'is', null)
     .order('recorded_on', { ascending: false }).limit(1).maybeSingle(),
   create: (input: CreateClientInput) => supabase.rpc('create_client', { p_client: toJson(input) }),
+  createOwn: (input: CreateClientInput) => supabase.rpc('create_own_client', { p_client: toJson(input) }),
   update: (input: UpdateClientInput) => supabase.rpc('update_client', {
     p_client: toJson(input), p_expected_version: input.version,
   }),

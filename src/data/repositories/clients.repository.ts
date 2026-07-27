@@ -56,6 +56,11 @@ export const clientsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
+  async createOwn(input: CreateClientInput): Promise<string> {
+    const result = await clientQueries.createOwn(input)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
   async update(input: UpdateClientInput): Promise<void> {
     const result = await clientQueries.update(input)
     if (result.error) throw repositoryError(result.error)
