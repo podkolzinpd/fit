@@ -27,6 +27,7 @@ export function ClientsPage() {
 }
 
 export function MyClientPage() {
+  const { actor } = useAuth()
   const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
   useClientRealtime(query.data?.id)
@@ -58,9 +59,19 @@ export function MyClientPage() {
         {invitations.data && invitations.data.length > 0 && <section><h2>Активные приглашения</h2>{invitations.data.map((item) => <article className="card" key={item.id}><div><strong>Для тренера</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU')}</p></div><button className="link danger" disabled={revoke.isPending} onClick={() => { if (window.confirm('Отозвать это приглашение? Код больше нельзя будет использовать.')) revoke.mutate(item.id) }}>Отозвать</button></article>)}</section>}
         {invitations.error && <div><p className="error">{invitations.error.message}</p><button className="secondary" onClick={() => void invitations.refetch()}>Повторить</button></div>}
         {(removeTrainer.error || revoke.error) && <p className="error">{(removeTrainer.error ?? revoke.error)?.message}</p>}
-      </div> : <div className="state">
-        <h2>Карточка ещё не подключена</h2>
-        <p>Попросите тренера привязать ваш аккаунт. Приглашения по коду появятся следующим этапом.</p>
+      </div> : <div className="stack">
+        <div className="state">
+          <h2>Создайте личную карточку</h2>
+          <p>Она нужна для самостоятельных тренировок и замеров. Тренера можно пригласить позже.</p>
+        </div>
+        <ClientForm
+          createMode="self"
+          initialFullName={[actor?.firstName, actor?.lastName].filter(Boolean).join(' ')}
+          embedded
+          onSaved={async () => {
+            await queryClient.invalidateQueries({ queryKey: ['my-client'] })
+          }}
+        />
       </div>}
     </AsyncView>
   </Page>
@@ -77,11 +88,25 @@ export function ClientFormPage() {
   return <ClientForm existing={existing.data} onSaved={async (id) => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); navigate(`/clients/${id}`) }} onCancel={() => navigate(-1)} />
 }
 
-function ClientForm({ existing, onSaved, onCancel }: { existing?: Client; onSaved: (id: string) => Promise<void>; onCancel: () => void }) {
+function ClientForm({
+  existing,
+  initialFullName,
+  createMode = 'trainer',
+  embedded = false,
+  onSaved,
+  onCancel,
+}: {
+  existing?: Client
+  initialFullName?: string
+  createMode?: 'trainer' | 'self'
+  embedded?: boolean
+  onSaved: (id: string) => Promise<void>
+  onCancel?: () => void
+}) {
   const form = useForm<ClientValues>({ resolver: zodResolver(clientSchema), defaultValues: existing ? {
     fullName: existing.fullName, gender: existing.gender, ageYears: existing.ageYears, heightCm: existing.heightCm,
     goal: existing.goal ?? '', note: existing.note ?? '',
-  } : { gender: 'female', ageYears: 30, heightCm: 170 } })
+  } : { fullName: initialFullName, gender: 'female', ageYears: 30, heightCm: 170 } })
   const mutation = useMutation({ mutationFn: async (values: ClientValues) => {
     const parsed = clientSchema.parse(values)
     if (existing) {
@@ -90,13 +115,13 @@ function ClientForm({ existing, onSaved, onCancel }: { existing?: Client; onSave
         heightCm: parsed.heightCm, goal: parsed.goal, note: parsed.note })
       return existing.id
     }
-    return clientsRepository.create({ fullName: parsed.fullName, gender: parsed.gender as Gender,
+    const input = { fullName: parsed.fullName, gender: parsed.gender as Gender,
       ageYears: parsed.ageYears, ageUpdatedAt: todayLocalDate(), heightCm: parsed.heightCm,
       goal: parsed.goal, note: parsed.note, initialWeightKg: parsed.initialWeightKg,
-      initialWeightRecordedOn: todayLocalDate() })
+      initialWeightRecordedOn: todayLocalDate() }
+    return createMode === 'self' ? clientsRepository.createOwn(input) : clientsRepository.create(input)
   }, onSuccess: (id) => void onSaved(id) })
-  return <Page title={existing ? 'Редактировать клиента' : 'Новый клиент'}>
-    <form className="stack" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
+  const contents = <form className="stack" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
       <Field label="Имя" error={form.formState.errors.fullName?.message}><input {...form.register('fullName')} /></Field>
       <Field label="Пол"><select {...form.register('gender')}><option value="female">Женский</option><option value="male">Мужской</option></select></Field>
       <div className="split"><Field label="Возраст"><input type="number" {...form.register('ageYears')} /></Field><Field label="Рост, см"><input type="number" step="0.1" {...form.register('heightCm')} /></Field></div>
@@ -105,12 +130,12 @@ function ClientForm({ existing, onSaved, onCancel }: { existing?: Client; onSave
       <Controller
         control={form.control}
         name="note"
-        render={({ field }) => <VoiceNoteField name={field.name} label="Заметка тренера" value={field.value ?? ''} onValueChange={field.onChange} />}
+        render={({ field }) => <VoiceNoteField name={field.name} label="Общий комментарий" value={field.value ?? ''} onValueChange={field.onChange} />}
       />
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions"><button type="button" className="secondary" onClick={onCancel}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
+      <div className="actions">{onCancel && <button type="button" className="secondary" onClick={onCancel}>Отмена</button>}<button disabled={mutation.isPending}>{createMode === 'self' ? 'Создать карточку' : 'Сохранить'}</button></div>
     </form>
-  </Page>
+  return embedded ? contents : <Page title={existing ? 'Редактировать клиента' : 'Новый клиент'}>{contents}</Page>
 }
 
 export function ClientDetailPage() {
