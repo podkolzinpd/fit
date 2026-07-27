@@ -125,7 +125,7 @@ export const trainingSummariesRepository = {
     force = false,
   ): Promise<void> {
     const result = await trainingSummaryQueries.generate(clientId, periodStart, periodEnd, force)
-    if (result.error) throw repositoryError(result.error)
+    if (result.error) throw await summaryGenerationError(result.error)
     const payload = result.data as { error?: string } | null
     if (payload?.error) throw new Error(generationErrorMessage(payload.error))
   },
@@ -141,6 +141,23 @@ export const trainingSummariesRepository = {
   },
 }
 
+async function summaryGenerationError(error: unknown): Promise<Error> {
+  const context = error && typeof error === 'object' && 'context' in error
+    ? (error as { context?: unknown }).context
+    : undefined
+  if (context && typeof context === 'object' && 'json' in context && typeof context.json === 'function') {
+    try {
+      const payload = await (context as { json: () => Promise<unknown> }).json()
+      if (payload && typeof payload === 'object' && 'error' in payload && typeof payload.error === 'string') {
+        return new Error(generationErrorMessage(payload.error))
+      }
+    } catch {
+      // Fall back to the standard Supabase error below.
+    }
+  }
+  return repositoryError(error)
+}
+
 function generationErrorMessage(code: string): string {
   if (code === 'no_completed_workouts') return 'За выбранный период нет завершённых тренировок.'
   if (code === 'source_row_limit_reached') return 'Для этого периода слишком много данных. Выберите меньший период.'
@@ -148,6 +165,15 @@ function generationErrorMessage(code: string): string {
   if (code === 'yandex_cloud_invalid_json') return 'Модель вернула ответ в неожиданном формате. Попробуйте ещё раз.'
   if (code === 'yandex_cloud_quality_check_failed') {
     return 'Модель не прошла автоматическую проверку качества. Попробуйте ещё раз.'
+  }
+  if (code.startsWith('yandex_cloud_error_')) {
+    return 'YandexGPT временно не принял запрос. Проверьте настройки модели и повторите позже.'
+  }
+  if (code === 'yandex_cloud_unavailable' || code === 'yandex_cloud_timeout') {
+    return 'YandexGPT временно недоступен. Попробуйте ещё раз через минуту.'
+  }
+  if (code === 'summary_save_failed' || code === 'summary_visibility_save_failed') {
+    return 'Сводка сформирована, но не сохранилась в Supabase. Проверьте права таблиц и повторите.'
   }
   return 'Не удалось обновить AI-анализ.'
 }
