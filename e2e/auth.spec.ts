@@ -52,7 +52,7 @@ test('client registers without receiving trainer access', async ({ page }, testI
 })
 
 test('trainer invitation links a client account', async ({ page }, testInfo) => {
-  testInfo.setTimeout(60_000)
+  testInfo.setTimeout(90_000)
   const suffix = `${testInfo.workerIndex}-${Date.now()}`
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
@@ -119,4 +119,30 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByLabel('Вес, кг').fill('59.5')
   await page.getByRole('button', { name: 'Сохранить замер' }).click()
   await expect(page.getByText('59.5 кг')).toBeVisible()
+
+  await page.goto('/me')
+  await page.getByRole('button', { name: 'Пригласить тренера' }).click()
+  const trainerCodeText = await page.getByText(/Код для тренера:/).textContent()
+  const trainerCode = trainerCodeText?.match(/[A-F0-9]{12}/)?.[0]
+  expect(trainerCode).toBeTruthy()
+  await expect(page.getByRole('heading', { name: 'Активные приглашения' })).toBeVisible()
+
+  await page.goto('/profile')
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Имя').fill('Второй тренер')
+  await page.getByLabel('Email').fill(`member-trainer-${suffix}@fit.local`)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
+
+  await page.goto('/join')
+  await page.getByLabel('Код приглашения').fill(trainerCode!)
+  await page.getByRole('button', { name: 'Присоединиться' }).click()
+  await expect(page).toHaveURL(/\/clients\/[0-9a-f-]+$/)
+  const leaveButton = page.getByRole('button', { name: 'Покинуть пространство клиента' })
+  await expect(leaveButton).toBeVisible()
+  page.once('dialog', (dialog) => dialog.accept())
+  await leaveButton.click()
+  await expect(page).toHaveURL(/\/clients$/)
 })
