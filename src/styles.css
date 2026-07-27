@@ -194,12 +194,16 @@ p { margin: 6px 0 }
 .block-rest-field input { width: 72px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700; text-align: center }
 /* «＋ Подход» и короткое поле «Отдых, с [90]» в один ряд (подпись и поле —
    горизонтально). Короткая подпись помещается рядом с кнопкой без налезания. */
-.set-add-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-top: 10px }
-.set-add-row > .secondary { flex: 0 0 auto }
-.set-add-row .block-rest-field { flex-direction: row; align-items: center; gap: 8px }
-.set-add-row .block-rest-field input { flex: 0 0 auto }
+/* Строка добавления подхода = сетка как у .set-row (две колонки 1fr, gap 8px):
+   «＋ Подход» шириной с поле «КГ» слева, поле отдыха справа. */
+.set-add-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: stretch; margin-top: 10px }
+.set-add-row > .secondary { width: 100%; margin: 0 }
+/* Поле отдыха: инпут слева (высотой как кнопка), подпись «Отдых, с» справа. */
+.set-add-row .block-rest-field { flex-direction: row; align-items: center; gap: 8px; min-width: 0 }
+.set-add-row .block-rest-field input { width: 68px; height: 100%; min-height: 44px; flex: 0 0 auto; padding: 6px 8px }
+.set-add-row .block-rest-field > span { color: var(--muted); font-size: 12px; font-weight: 600 }
 /* Отступ от строки «＋ Подход / Отдых» до комментария в форме плана. */
-.set-add-row + .exercise-comment { margin-top: 16px }
+.set-add-row + .exercise-comment { margin-top: 22px }
 .block-merge { align-self: flex-start; margin-top: 8px; color: var(--purple) }
 /* Форма блока по кругам: список упражнений блока + группы-круги. */
 .block-exercises { display: flex; flex-direction: column; gap: 4px }
