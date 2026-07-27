@@ -492,10 +492,13 @@ test('расписание: карточка события — время, им
   const card = page.locator('.day-grid-event').filter({ hasText: 'Карточка Клиент' }).first()
   await expect(card.locator('.day-grid-event-time')).toHaveText('09:00')
   await expect(card.locator('.day-grid-event-name')).toHaveText('Карточка Клиент')
-  // Превью упражнений: перечисляем не больше двух названий, дальше « …».
-  const groups = card.locator('.day-grid-event-groups')
-  await expect(groups).toContainText('…')
-  await expect(groups).not.toContainText('Подтягивания')
+  // Время и имя — в одной строке (общий контейнер .day-grid-event-top).
+  await expect(card.locator('.day-grid-event-top .day-grid-event-name')).toBeVisible()
+  // Упражнения — отдельными строками (до двух), третье свёрнуто в « … ».
+  const exercises = card.locator('.day-grid-event-exercise')
+  await expect(exercises).toHaveCount(3)
+  await expect(exercises.last()).toHaveText('…')
+  await expect(card.locator('.day-grid-event-groups')).not.toContainText('Подтягивания')
 })
 
 test('комментарий тренера к упражнению: план → live → история', async ({ page }) => {

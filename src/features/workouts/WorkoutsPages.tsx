@@ -106,13 +106,18 @@ export function SchedulePage() {
             const endMin = workout.endTime ? minutesOf(workout.endTime.slice(0, 5)) : startMin + 60
             const top = (startMin / 60) * HOUR_HEIGHT
             const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 28)
-            // Плашка: время → имя клиента → 2 упражнения и «…», если их больше.
+            // Плашка: время и имя клиента в одну строку, ниже — упражнения
+            // столбиком (до двух, дальше «…»).
             const names = exerciseSummary(workout).map((e) => e.name)
-            const preview = names.slice(0, 2).join(', ') + (names.length > 2 ? ' …' : '')
             return <Link key={workout.id} className={`day-grid-event ${workout.status}`} style={{ top, height }} to={`/workouts/${workout.id}`}>
-              <span className="day-grid-event-time">{eventTime(workout)}</span>
-              <span className="day-grid-event-name">{workout.clientName}</span>
-              {names.length > 0 && <span className="day-grid-event-groups">{preview}</span>}
+              <span className="day-grid-event-top">
+                <span className="day-grid-event-time">{eventTime(workout)}</span>
+                <span className="day-grid-event-name">{workout.clientName}</span>
+              </span>
+              {names.length > 0 && <span className="day-grid-event-groups">
+                {names.slice(0, 2).map((name, i) => <span key={i} className="day-grid-event-exercise">{name}</span>)}
+                {names.length > 2 && <span className="day-grid-event-exercise">…</span>}
+              </span>}
             </Link>
           })}
          </div>
@@ -229,6 +234,7 @@ export function WorkoutDetailPage() {
         const articles = block.exercises.map((exercise) => <article className="exercise" key={exercise.id}>
           <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
           {exercise.sets.map((set) => <p key={set.id}>{done ? <FactVsPlan set={set} /> : formatSet(set)}</p>)}
+          {exercise.trainerComment && <p className="exercise-comment-note">💬 {exercise.trainerComment}</p>}
         </article>)
         if (block.blockType === 'single' || block.exercises.length === 1) return articles
         return <div className="exercise-block view" key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
