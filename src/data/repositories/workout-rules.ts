@@ -410,10 +410,10 @@ export function exerciseSummary(workout: Workout): SummaryExercise[] {
     const existing = seen.get(exercise.name)
     if (existing) {
       // Дубль по имени: подтягиваем комментарий, если у первого его не было.
-      if (!existing.comment && exercise.trainerComment) existing.comment = exercise.trainerComment
+      if (!existing.comment && exercise.comment) existing.comment = exercise.comment
       continue
     }
-    const item: SummaryExercise = { name: exercise.name, comment: exercise.trainerComment ?? null }
+    const item: SummaryExercise = { name: exercise.name, comment: exercise.comment ?? null }
     seen.set(exercise.name, item)
     list.push(item)
   }
@@ -500,7 +500,7 @@ export function copyWorkout(source: Workout, workoutDate = source.workoutDate): 
       position: exercise.position,
       blockId: nextBlockId(exercise.blockId), blockType: exercise.blockType, blockPreset: exercise.blockPreset, blockRounds: exercise.blockRounds,
       restBetweenExercisesSec: exercise.restBetweenExercisesSec, restBetweenRoundsSec: exercise.restBetweenRoundsSec, restBetweenSetsSec: exercise.restBetweenSetsSec,
-      trainerComment: exercise.trainerComment,
+      comment: exercise.comment,
       sets: exercise.sets.map((set) => ({ position: set.position, weightKg: set.weightKg,
         reps: set.reps, durationMin: set.durationMin, distanceKm: set.distanceKm })),
     })),

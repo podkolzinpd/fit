@@ -5,7 +5,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Область | Обязательный результат V2 | Статус |
 |---|---|---|
 | Auth | Email/password без confirmation для MVP, Google OAuth, session restore, logout, password reset; постоянные роли trainer/client | Implemented; role-aware registration/session routing ready, production Google smoke passed, reset SMTP pending |
-| Client account | Клиент входит в тот же frontend, видит только связанную карточку; тренер и клиент подключаются одноразовым кодом; несколько тренеров получают membership-доступ | Implemented auth, invitations, realtime portal and role-scoped shared mutations: linked client performs assigned workouts, creates and manages own workouts, owns progress and manages memberships; membership trainers retain full workflow |
+| Client account | Клиент входит в тот же frontend, видит только связанную карточку; тренер и клиент подключаются одноразовым кодом; несколько тренеров получают membership-доступ | Implemented auth, invitations, shared workout/progress mutations and client-space realtime: owner and membership trainers edit common data with optimistic concurrency |
 | Profile | Просмотр и изменение имени, корректный Cancel | Partial: edit/logout ready, Cancel UX pending |
 | Clients | List/empty/error/retry, create, detail, edit, archive/restore | Implemented; aggregate list uses one tenant-scoped RPC; core E2E + RLS ready |
 | Client stats | Сводка на карточке: количество выполненных, % выполнения, дата последней тренировки, дней в работе (от первой тренировки), индикатор «требует внимания» при 14+ днях без тренировки | Implemented: pure aggregation covered unit + E2E |
@@ -33,11 +33,12 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 ## Client self-service workout acceptance contract
 
 - Клиент с подключённой карточкой создаёт тренировку только для себя, используя общий workout aggregate и системный каталог упражнений.
-- Клиент может редактировать и удалять только созданную им запланированную тренировку; назначенный тренером план остаётся защищённым.
-- Клиент может скопировать назначенный тренером план в новую собственную тренировку, но не может записывать trainer comments.
+- Клиент и подключённые тренеры могут редактировать общий план, фактические результаты, прогресс и комментарии; `version` защищает aggregate от одновременного затирания.
+- Автор тренировки сохраняется для истории, но не ограничивает редактирование внутри пространства клиента.
 - Подключённые тренеры видят клиентскую тренировку через существующий membership-доступ.
 - Полностью непривязанный аккаунт пока не создаёт карточку автоматически: изменение tenant-модели `clients.trainer_id` требует отдельного ADR.
-- Обязательные проверки: owner/trainer/cross-tenant SQL matrix и E2E client create → edit → perform → finish.
+- Один realtime-канал подписан на открытое пространство клиента; события точечно инвалидируют связанные TanStack Query, объединяются debounce, подписка снимается в скрытой вкладке, а при возврате активные данные перечитываются.
+- Обязательные проверки: owner/member/cross-tenant SQL matrix, optimistic conflict и E2E client/trainer shared edit → perform → finish.
 
 ## Exercise acceptance contract
 

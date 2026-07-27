@@ -118,7 +118,7 @@ export interface WorkoutExerciseDraft extends ExerciseSnapshot {
   restBetweenExercisesSec?: number
   restBetweenRoundsSec?: number
   restBetweenSetsSec?: number
-  trainerComment?: string
+  comment?: string
   sets: WorkoutSetDraft[]
 }
 
@@ -157,7 +157,7 @@ export interface WorkoutExercise extends ExerciseSnapshot {
   restBetweenExercisesSec: number
   restBetweenRoundsSec: number
   restBetweenSetsSec: number
-  trainerComment?: string
+  comment?: string
   sets: WorkoutSet[]
 }
 

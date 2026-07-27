@@ -34,7 +34,7 @@ async function get(id: string): Promise<Workout> {
     muscleGroup: row.muscle_group as MuscleGroup, inputKind: row.input_kind as InputKind,
     blockId: row.block_id, blockType: row.block_type as BlockType, blockPreset: row.block_preset as BlockPreset, blockRounds: row.block_rounds,
     restBetweenExercisesSec: row.rest_between_exercises_sec, restBetweenRoundsSec: row.rest_between_rounds_sec, restBetweenSetsSec: row.rest_between_sets_sec,
-    trainerComment: row.trainer_comment ?? undefined,
+    comment: row.comment ?? undefined,
     sets: grouped.get(row.id) ?? [],
   }))
   const client = await clientsRepository.get(root.data.client_id)
@@ -77,7 +77,7 @@ function mapWorkout(row: WorkoutListRow): Workout {
       restBetweenExercisesSec: exercise.rest_between_exercises_sec,
       restBetweenRoundsSec: exercise.rest_between_rounds_sec,
       restBetweenSetsSec: exercise.rest_between_sets_sec,
-      trainerComment: exercise.trainer_comment ?? undefined,
+      comment: exercise.comment ?? undefined,
       sets: exercise.sets.map((set) => ({
         id: set.id,
         position: set.position,

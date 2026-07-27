@@ -254,7 +254,7 @@ describe('muscleGroupLabels', () => {
 describe('exerciseSummary', () => {
   const wk = (exercises: Workout['exercises']): Workout => ({ ...workoutWith('2026-07-20', 'squat', 'strength', []), exercises })
   const ex = (id: string, name: string, comment?: string): Workout['exercises'][number] =>
-    ({ id, source: 'system', ref: id, name, muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: id, blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90, trainerComment: comment, sets: [] })
+    ({ id, source: 'system', ref: id, name, muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: id, blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90, comment, sets: [] })
 
   it('возвращает упражнения без дублей, каждое со своим комментарием', () => {
     expect(exerciseSummary(wk([ex('a', 'Присед', 'Спина прямо'), ex('b', 'Жим'), ex('c', 'Присед')]))).toEqual([

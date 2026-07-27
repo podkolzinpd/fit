@@ -60,21 +60,21 @@ interface WorkoutExerciseEditorProps {
   onChange: (exercises: WorkoutExerciseDraft[]) => void
   onOpenPicker: () => void
   onReplaceExercise: (index: number) => void
-  showTrainerComments?: boolean
+  showComments?: boolean
 }
 
 function inputNumber(value: string): number | undefined {
   return value === '' ? undefined : Number(value)
 }
 
-export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, showTrainerComments = true }: WorkoutExerciseEditorProps) {
+export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, showComments = true }: WorkoutExerciseEditorProps) {
   function updateComment(exerciseIndex: number, comment: string) {
-    onChange(exercises.map((exercise, current) => current === exerciseIndex ? { ...exercise, trainerComment: comment || undefined } : exercise))
+    onChange(exercises.map((exercise, current) => current === exerciseIndex ? { ...exercise, comment: comment || undefined } : exercise))
   }
-  // Поле комментария тренера к упражнению (техника/ограничения/заметка).
+  // Общий комментарий пространства клиента (техника/ограничения/заметка).
   function commentField(exercise: WorkoutExerciseDraft, exerciseIndex: number) {
-    if (!showTrainerComments) return null
-    return <textarea className="exercise-comment" aria-label="Комментарий к упражнению" placeholder="Комментарий к упражнению…" rows={1} value={exercise.trainerComment ?? ''} onChange={(event) => updateComment(exerciseIndex, event.target.value)} />
+    if (!showComments) return null
+    return <textarea className="exercise-comment" aria-label="Комментарий к упражнению" placeholder="Комментарий к упражнению…" rows={1} value={exercise.comment ?? ''} onChange={(event) => updateComment(exerciseIndex, event.target.value)} />
   }
   function updateSet(exerciseIndex: number, setIndex: number, patch: Partial<WorkoutSetDraft>) {
     onChange(exercises.map((exercise, currentExercise) => currentExercise === exerciseIndex ? {

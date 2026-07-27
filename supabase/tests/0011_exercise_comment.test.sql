@@ -33,7 +33,7 @@ select is(
   2::bigint, 'set comment bumps version to 2'
 );
 select is(
-  (select trainer_comment from public.workout_exercises where id = 'a0000000-0000-4000-8000-00000000000d'),
+  (select comment from public.workout_exercises where id = 'a0000000-0000-4000-8000-00000000000d'),
   'Держи спину прямо', 'comment saved, trimmed'
 );
 
@@ -43,7 +43,7 @@ select is(
   3::bigint, 'clearing comment bumps version to 3'
 );
 select is(
-  (select trainer_comment from public.workout_exercises where id = 'a0000000-0000-4000-8000-00000000000d'),
+  (select comment from public.workout_exercises where id = 'a0000000-0000-4000-8000-00000000000d'),
   null::text, 'empty comment cleared to null'
 );
 reset role;

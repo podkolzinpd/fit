@@ -199,17 +199,16 @@ export function WorkoutFormPage() {
       notes: String(form.get('notes') || '') || undefined, exercises, version: source.data?.version })
   }
   const availableClients = clientMode ? (mine.data ? [mine.data] : []) : clients.data
-  const editingDenied = Boolean(clientMode && workoutId && source.data && source.data.createdBy !== actor?.userId)
   const loading = source.isLoading || clients.isLoading || mine.isLoading
   const error = source.error ?? clients.error ?? mine.error
   return <Page title={workoutId ? 'Редактировать тренировку' : params.has('copy') ? 'Копия тренировки' : 'Новая тренировка'} back={-1}>
-    <AsyncView loading={loading} error={error}>{editingDenied ? <div className="state"><h2>Редактирование недоступно</h2><p>Назначенную тренером тренировку может менять только тренер.</p></div> : clientMode && !mine.data ? <div className="state"><h2>Карточка ещё не подключена</h2><p>Создать тренировку можно после подключения клиентской карточки.</p></div> : <form className="stack" onSubmit={(event) => void submit(event)}>
+    <AsyncView loading={loading} error={error}>{clientMode && !mine.data ? <div className="state"><h2>Карточка ещё не подключена</h2><p>Создать тренировку можно после подключения клиентской карточки.</p></div> : <form className="stack" onSubmit={(event) => void submit(event)}>
       {clientMode
         ? <><input type="hidden" name="clientId" value={mine.data?.id ?? ''} /><Field label="Клиент"><input value={mine.data?.fullName ?? ''} disabled /></Field></>
         : <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} required><option value="">Выберите</option>{availableClients?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>}
       <div className="split"><Field label="Дата"><input name="date" type="date" defaultValue={initial?.workoutDate ?? params.get('date') ?? todayLocalDate()} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} /></Field></div>
       <VoiceNoteField name="notes" defaultValue={initial?.notes ?? ''} />
-      <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} />
+      <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} />
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
     </form>}</AsyncView>
@@ -232,7 +231,6 @@ export function WorkoutDetailPage() {
   // браузера: -1 создавал петлю тренировка ↔ история упражнения после захода
   // в аналитику.
   const clientMode = actor?.role === 'client'
-  const clientOwned = clientMode && workout?.createdBy === actor.userId
   const backTo = clientMode ? '/me/workouts' : '/schedule'
   return <Page title="Тренировка" back={backTo}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
@@ -252,18 +250,17 @@ export function WorkoutDetailPage() {
         const articles = block.exercises.map((exercise) => <article className="exercise" key={exercise.id}>
           <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
           {exercise.sets.map((set) => <p key={set.id}>{done ? <FactVsPlan set={set} /> : formatSet(set)}</p>)}
-          {exercise.trainerComment && <p className="exercise-comment-note">💬 {exercise.trainerComment}</p>}
+          {exercise.comment && <p className="exercise-comment-note">💬 {exercise.comment}</p>}
         </article>)
         if (block.blockType === 'single' || block.exercises.length === 1) return articles
         return <div className="exercise-block view" key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
       })}</div>
       {workout.notes && <p>{workout.notes}</p>}
-      {(!clientMode || clientOwned) && <><div className="actions">
+      <div className="actions">
         {workout.status === 'planned' && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>Изменить</Link>}
         <Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link>
       </div>
-      <button className="danger secondary wide" disabled={remove.isPending} onClick={() => { if (window.confirm('Удалить тренировку?')) remove.mutate() }}>Удалить тренировку</button></>}
-      {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Создать свою копию</Link></div>}
+      <button className="danger secondary wide" disabled={remove.isPending} onClick={() => { if (window.confirm('Удалить тренировку?')) remove.mutate() }}>Удалить тренировку</button>
       {remove.error && <p className="error">{remove.error.message}</p>}
     </>}</AsyncView>
   </Page>
@@ -330,8 +327,6 @@ function WorkoutTimer({ startedAt, variant = 'chip' }: { startedAt: string | nul
 
 export function LiveWorkoutPage() {
   const { workoutId = '' } = useParams()
-  const { actor } = useAuth()
-  const clientMode = actor?.role === 'client'
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
@@ -459,22 +454,19 @@ export function LiveWorkoutPage() {
     }
   }, [restActive])
   const error = save.error ?? confirm.error ?? appendSet.error ?? removeSet.error ?? appendExercise.error ?? reorderBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
-  // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
+  // Общий комментарий к упражнению в live — сохраняется по blur, если изменился.
   function liveCommentField(exercise: WorkoutExercise) {
-    if (clientMode) return null
-    return <textarea className="exercise-comment" aria-label={`Комментарий: ${exercise.name}`} placeholder="Комментарий к упражнению…" rows={1} defaultValue={exercise.trainerComment ?? ''} disabled={commentLive.isPending}
-      onBlur={(event) => { const next = event.target.value.trim(); if (next !== (exercise.trainerComment ?? '')) commentLive.mutate({ exerciseId: exercise.id, comment: next }) }} />
+    return <textarea className="exercise-comment" aria-label={`Комментарий: ${exercise.name}`} placeholder="Комментарий к упражнению…" rows={1} defaultValue={exercise.comment ?? ''} disabled={commentLive.isPending}
+      onBlur={(event) => { const next = event.target.value.trim(); if (next !== (exercise.comment ?? '')) commentLive.mutate({ exerciseId: exercise.id, comment: next }) }} />
   }
   // Кнопка «Заменить»: доступна, пока у упражнения нет подтверждённых подходов
   // (начатое заменять нельзя — факт относился к старому упражнению).
   function replaceButton(exercise: WorkoutExercise) {
-    if (clientMode) return null
     if (exercise.sets.some((set) => set.confirmedAt)) return null
     return <button type="button" className="link" disabled={replaceLive.isPending} onClick={() => { setReplaceExerciseId(exercise.id); setPickerOpen(true) }}>Заменить</button>
   }
   // Стрелки ↑/↓ для перестановки блока в live (задизейблены на границах).
   function liveReorder(blockId: string, isFirst: boolean, isLast: boolean) {
-    if (clientMode) return null
     return <span className="block-reorder">
       <button type="button" className="reorder-btn" aria-label="Вверх" disabled={isFirst || reorderBlock.isPending} onClick={() => reorderBlock.mutate({ blockId, direction: -1 })}>↑</button>
       <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast || reorderBlock.isPending} onClick={() => reorderBlock.mutate({ blockId, direction: 1 })}>↓</button>
@@ -489,7 +481,7 @@ export function LiveWorkoutPage() {
     // Действия в шапке подхода: карандаш (правка подтверждённого) + крестик (удалить).
     const headActions = <span className="set-head-actions">
       {set.confirmedAt && !isEditing && <button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}
-      {!clientMode && canRemove && !isEditing && <button type="button" className="link set-remove" aria-label="Удалить подход" disabled={removeSet.isPending} onClick={() => { if (window.confirm('Удалить этот подход?')) removeSet.mutate(set.id) }}>✕</button>}
+      {canRemove && !isEditing && <button type="button" className="link set-remove" aria-label="Удалить подход" disabled={removeSet.isPending} onClick={() => { if (window.confirm('Удалить этот подход?')) removeSet.mutate(set.id) }}>✕</button>}
     </span>
     return <form className={`exercise ${stateClass}`} key={set.id} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
@@ -534,7 +526,7 @@ export function LiveWorkoutPage() {
             return <section key={exercise.id}>
               <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions">{replaceButton(exercise)}{reorder}</span></div>
               {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex, exercise.sets.length > 1))}
-              {!clientMode && <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
+              <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
               {liveCommentField(exercise)}
             </section>
           })
@@ -559,11 +551,11 @@ export function LiveWorkoutPage() {
           </div> })}
         </div>
       }) })()}
-      {!clientMode && <button type="button" className="secondary wide" onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
+      <button type="button" className="secondary wide" onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>
       {error && <p className="error">{error.message}</p>}
       <button className="wide" disabled={finish.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => exercise.sets.some((set) => !set.confirmedAt)); if (!incomplete || window.confirm('Есть незавершённые подходы. Завершить тренировку частично?')) finish.mutate() }}>Завершить тренировку</button>
     </>}</AsyncView>
-    {!clientMode && pickerOpen && <ExercisePicker catalog={catalog} onPick={pickLiveExercise} onClose={closePicker} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} onPick={pickLiveExercise} onClose={closePicker} />}
   </Page>
 }
 
@@ -615,7 +607,7 @@ export function ExerciseHistoryPage() {
           .map((workout) => {
             const exercise = workout.exercises.find((item) => item.ref === exerciseRef)
             const facts = (exercise?.sets ?? []).map((set) => factLine(set)).filter((line): line is string => line !== null)
-            return { workout, facts, comment: exercise?.trainerComment }
+            return { workout, facts, comment: exercise?.comment }
           })
           .filter((row) => row.facts.length > 0 || row.comment)
         return rows.length

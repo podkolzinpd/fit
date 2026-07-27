@@ -30,7 +30,7 @@ select isnt(
       'exercises', jsonb_build_array(jsonb_build_object(
         'position', 0, 'source', 'system', 'ref', 'run', 'name', 'Бег',
         'muscleGroup', 'cardio', 'inputKind', 'distance',
-        'trainerComment', 'must not persist',
+        'comment', 'shared note',
         'sets', jsonb_build_array(jsonb_build_object('position', 0, 'durationMin', 20))
       ))
     ),
@@ -47,10 +47,10 @@ select is(
   'new workout records the client creator'
 );
 select is(
-  (select trainer_comment from public.workout_exercises
+  (select comment from public.workout_exercises
    where workout_id = (select id from public.workouts where created_by = 'b2000000-0000-4000-8000-000000000002')),
-  null::text,
-  'client cannot persist trainer comments'
+  'shared note',
+  'client persists a shared comment'
 );
 select isnt(
   public.save_workout(
@@ -65,18 +65,19 @@ select isnt(
   null::uuid,
   'client owner edits own planned workout'
 );
-select throws_ok(
-  $$select public.save_workout(
+select isnt(
+  public.save_workout(
     jsonb_build_object('id', 'b5000000-0000-4000-8000-000000000005',
       'clientId', 'b4000000-0000-4000-8000-000000000004',
       'workoutDate', current_date, 'exercises', '[]'::jsonb),
     1
-  )$$,
-  'PT403', 'client_workout_edit_denied', 'client cannot edit trainer-created workout'
+  ),
+  null::uuid,
+  'client edits a trainer-created shared workout'
 );
-select throws_ok(
-  $$select public.soft_delete_workout('b5000000-0000-4000-8000-000000000005', 1)$$,
-  'PT403', 'client_workout_delete_denied', 'client cannot delete trainer-created workout'
+select lives_ok(
+  $$select public.soft_delete_workout('b5000000-0000-4000-8000-000000000005', 2)$$,
+  'client deletes a trainer-created shared workout'
 );
 select lives_ok(
   format(
