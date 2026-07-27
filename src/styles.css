@@ -38,6 +38,12 @@ p { margin: 6px 0 }
 .field input, .field textarea, .field select, select[aria-label], .inline-form input { width: 100%; min-width: 0; padding: 12px 13px; border: 1px solid var(--border); border-radius: 11px; color: #ece7f0; background: var(--input); outline: none }
 .field input:focus, .field textarea:focus, .field select:focus, .inline-form input:focus, .picker-search:focus { border-color: #8067ff; box-shadow: 0 0 0 3px #765cff26 }
 .field textarea { min-height: 82px; resize: vertical }
+/* Нативные date/time на iOS Safari по умолчанию центрируют текст, имеют своё
+   оформление и разную высоту (пустое «Время» выше «Даты»). Нормализуем: снимаем
+   нативный вид, выравниваем влево, фиксируем высоту как у обычных полей.
+   ВАЖНО: в Playwright-WebKit этого не видно — только на реальном iOS. */
+.field input[type="date"], .field input[type="time"] { -webkit-appearance: none; appearance: none; text-align: left; min-height: 46px; line-height: 1.2; font-variant-numeric: tabular-nums }
+.field input[type="date"]::-webkit-date-and-time-value, .field input[type="time"]::-webkit-date-and-time-value { text-align: left }
 /* Дата и Время всегда рядом в одну строку (в т.ч. на телефоне). Нативные
    date/time инпуты в iOS держат большую min-width — поэтому flex-basis:0 +
    min-width:0 и на обёртке, и на самом инпуте, чтобы поля сжимались и не
@@ -182,10 +188,13 @@ p { margin: 6px 0 }
 .block-rest { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 2px }
 .block-rest-field { display: inline-flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 12px; font-weight: 600 }
 .block-rest-field input { width: 72px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700; text-align: center }
-/* «＋ Подход» и поле отдыха в один ряд с зазором; на узком экране поле отдыха
-   переносится под кнопку, а не жмётся к ней вплотную (было налезание). */
-.set-add-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-top: 8px }
-.set-add-row > .secondary { flex: 0 0 auto }
+/* «＋ Подход» сверху во всю ширину, поле отдыха — отдельной строкой под ним
+   (подпись слева, поле справа). Так на узком экране ничего не жмётся и не
+   плавает: раньше кнопка и поле делили ряд и налезали друг на друга. */
+.set-add-row { display: flex; flex-direction: column; align-items: stretch; gap: 12px; margin-top: 10px }
+.set-add-row > .secondary { align-self: flex-start }
+.set-add-row .block-rest-field { flex-direction: row; align-items: center; gap: 10px }
+.set-add-row .block-rest-field input { flex: 0 0 auto }
 .block-merge { align-self: flex-start; margin-top: 8px; color: var(--purple) }
 /* Форма блока по кругам: список упражнений блока + группы-круги. */
 .block-exercises { display: flex; flex-direction: column; gap: 4px }
