@@ -9,6 +9,7 @@ import type {
 } from '../../shared/domain'
 import { addDays, addMonths, formatLocalDate, todayLocalDate, type LocalDate } from '../../shared/local-date'
 import { AsyncView, Field } from '../../shared/ui'
+import { trackGoal } from '../../shared/yandex-metrika'
 
 type SummaryPeriod = '1m' | '3m' | '6m'
 
@@ -126,7 +127,10 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
         type="button"
         className="secondary"
         disabled={generate.isPending}
-        onClick={() => generate.mutate()}
+        onClick={() => {
+          trackGoal(summary ? 'refresh_training_summary_click' : 'create_training_summary_click')
+          generate.mutate()
+        }}
       >
         {generate.isPending ? 'Обновляем…' : summary ? 'Обновить' : 'Создать анализ'}
       </button>

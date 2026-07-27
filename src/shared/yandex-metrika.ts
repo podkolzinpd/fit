@@ -9,3 +9,9 @@ declare global {
 export function trackPageView(url: string) {
   window.ym?.(COUNTER_ID, 'hit', url)
 }
+
+// Клики и другие внутристраничные действия — через JS-событие. Имя должно
+// совпадать с целью «Целевое событие», заведённой в интерфейсе Метрики.
+export function trackGoal(name: string) {
+  window.ym?.(COUNTER_ID, 'reachGoal', name)
+}
