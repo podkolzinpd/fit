@@ -226,8 +226,8 @@ export function WorkoutDetailPage() {
         <div><h2>{workout.clientName}</h2><p>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</p></div>
         <span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span>
       </section>
-      {!clientMode && workout.status === 'planned' && <button className="wide" onClick={() => start.mutate()}>Начать тренировку</button>}
-      {!clientMode && workout.status === 'in_progress' && <Link className="button wide" to={`/workouts/${workoutId}/live`}>Продолжить тренировку</Link>}
+      {workout.status === 'planned' && <button className="wide" onClick={() => start.mutate()}>Начать тренировку</button>}
+      {workout.status === 'in_progress' && <Link className="button wide" to={`/workouts/${workoutId}/live`}>Продолжить тренировку</Link>}
       {done && <section className="summary done-summary done-summary-3">
         <div><span>Время</span><strong>{duration ?? '—'}</strong></div>
         <div><span>Тоннаж</span><strong>{tonnageLabel(tonnage)}</strong></div>
@@ -313,6 +313,8 @@ function WorkoutTimer({ startedAt, variant = 'chip' }: { startedAt: string | nul
 
 export function LiveWorkoutPage() {
   const { workoutId = '' } = useParams()
+  const { actor } = useAuth()
+  const clientMode = actor?.role === 'client'
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
@@ -442,17 +444,20 @@ export function LiveWorkoutPage() {
   const error = save.error ?? confirm.error ?? appendSet.error ?? removeSet.error ?? appendExercise.error ?? reorderBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
   function liveCommentField(exercise: WorkoutExercise) {
+    if (clientMode) return null
     return <textarea className="exercise-comment" aria-label={`Комментарий: ${exercise.name}`} placeholder="Комментарий к упражнению…" rows={1} defaultValue={exercise.trainerComment ?? ''} disabled={commentLive.isPending}
       onBlur={(event) => { const next = event.target.value.trim(); if (next !== (exercise.trainerComment ?? '')) commentLive.mutate({ exerciseId: exercise.id, comment: next }) }} />
   }
   // Кнопка «Заменить»: доступна, пока у упражнения нет подтверждённых подходов
   // (начатое заменять нельзя — факт относился к старому упражнению).
   function replaceButton(exercise: WorkoutExercise) {
+    if (clientMode) return null
     if (exercise.sets.some((set) => set.confirmedAt)) return null
     return <button type="button" className="link" disabled={replaceLive.isPending} onClick={() => { setReplaceExerciseId(exercise.id); setPickerOpen(true) }}>Заменить</button>
   }
   // Стрелки ↑/↓ для перестановки блока в live (задизейблены на границах).
   function liveReorder(blockId: string, isFirst: boolean, isLast: boolean) {
+    if (clientMode) return null
     return <span className="block-reorder">
       <button type="button" className="reorder-btn" aria-label="Вверх" disabled={isFirst || reorderBlock.isPending} onClick={() => reorderBlock.mutate({ blockId, direction: -1 })}>↑</button>
       <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast || reorderBlock.isPending} onClick={() => reorderBlock.mutate({ blockId, direction: 1 })}>↓</button>
@@ -467,7 +472,7 @@ export function LiveWorkoutPage() {
     // Действия в шапке подхода: карандаш (правка подтверждённого) + крестик (удалить).
     const headActions = <span className="set-head-actions">
       {set.confirmedAt && !isEditing && <button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}
-      {canRemove && !isEditing && <button type="button" className="link set-remove" aria-label="Удалить подход" disabled={removeSet.isPending} onClick={() => { if (window.confirm('Удалить этот подход?')) removeSet.mutate(set.id) }}>✕</button>}
+      {!clientMode && canRemove && !isEditing && <button type="button" className="link set-remove" aria-label="Удалить подход" disabled={removeSet.isPending} onClick={() => { if (window.confirm('Удалить этот подход?')) removeSet.mutate(set.id) }}>✕</button>}
     </span>
     return <form className={`exercise ${stateClass}`} key={set.id} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
@@ -512,7 +517,7 @@ export function LiveWorkoutPage() {
             return <section key={exercise.id}>
               <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions">{replaceButton(exercise)}{reorder}</span></div>
               {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex, exercise.sets.length > 1))}
-              <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>
+              {!clientMode && <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
               {liveCommentField(exercise)}
             </section>
           })
@@ -537,11 +542,11 @@ export function LiveWorkoutPage() {
           </div> })}
         </div>
       }) })()}
-      <button type="button" className="secondary wide" onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>
+      {!clientMode && <button type="button" className="secondary wide" onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
       {error && <p className="error">{error.message}</p>}
       <button className="wide" disabled={finish.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => exercise.sets.some((set) => !set.confirmedAt)); if (!incomplete || window.confirm('Есть незавершённые подходы. Завершить тренировку частично?')) finish.mutate() }}>Завершить тренировку</button>
     </>}</AsyncView>
-    {pickerOpen && <ExercisePicker catalog={catalog} onPick={pickLiveExercise} onClose={closePicker} />}
+    {!clientMode && pickerOpen && <ExercisePicker catalog={catalog} onPick={pickLiveExercise} onClose={closePicker} />}
   </Page>
 }
 
