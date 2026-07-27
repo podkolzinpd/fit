@@ -96,7 +96,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       </div>)}
       <div className="set-add-row">
         <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
-        <label className="block-rest-field">Отдых, с<input aria-label="Отдых между подходами, с" type="number" min="0" max="600" value={exercise.restBetweenSetsSec ?? 90} onFocus={(event) => event.target.select()} onChange={(event) => { const v = event.target.value; if (v !== '' && exercise.blockId) onChange(setBlockRest([...exercises], exercise.blockId, { betweenSets: Math.max(0, Number(v)) })) }} /></label>
+        <label className="block-rest-field"><input aria-label="Отдых между подходами, с" type="number" min="0" max="600" value={exercise.restBetweenSetsSec ?? 90} onFocus={(event) => event.target.select()} onChange={(event) => { const v = event.target.value; if (v !== '' && exercise.blockId) onChange(setBlockRest([...exercises], exercise.blockId, { betweenSets: Math.max(0, Number(v)) })) }} /><span>Отдых, с</span></label>
       </div>
       {commentField(exercise, exerciseIndex)}
       {canMergeNext && <button type="button" className="link block-merge" onClick={() => onChange(mergeBlockWithNext([...exercises], exerciseIndex))}>⛓ Объединить со следующим в блок</button>}
