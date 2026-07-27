@@ -94,8 +94,10 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         <div className="planned-set-heading"><span>Подход {setIndex + 1}</span>{exercise.sets.length > 1 && <button type="button" className="link danger" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}>×</button>}</div>
         {setFields(exercise, exerciseIndex, setIndex)}
       </div>)}
-      <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
-      <label className="block-rest-field solo-rest">Отдых между подходами, с<input aria-label="Отдых между подходами, с" type="number" min="0" max="600" value={exercise.restBetweenSetsSec ?? 90} onFocus={(event) => event.target.select()} onChange={(event) => { const v = event.target.value; if (v !== '' && exercise.blockId) onChange(setBlockRest([...exercises], exercise.blockId, { betweenSets: Math.max(0, Number(v)) })) }} /></label>
+      <div className="set-add-row">
+        <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
+        <label className="block-rest-field">Отдых между подходами, с<input aria-label="Отдых между подходами, с" type="number" min="0" max="600" value={exercise.restBetweenSetsSec ?? 90} onFocus={(event) => event.target.select()} onChange={(event) => { const v = event.target.value; if (v !== '' && exercise.blockId) onChange(setBlockRest([...exercises], exercise.blockId, { betweenSets: Math.max(0, Number(v)) })) }} /></label>
+      </div>
       {commentField(exercise, exerciseIndex)}
       {canMergeNext && <button type="button" className="link block-merge" onClick={() => onChange(mergeBlockWithNext([...exercises], exerciseIndex))}>⛓ Объединить со следующим в блок</button>}
     </article>
