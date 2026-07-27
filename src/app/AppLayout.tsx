@@ -17,3 +17,10 @@ export function AppLayout() {
     <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>
   </nav></div>
 }
+
+export function ClientAppLayout() {
+  return <div className="phone-frame client-shell"><div className="content"><Outlet /></div><nav className="tab-bar" aria-label="Навигация клиента">
+    <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
+    <NavLink to="/me/profile"><ProfileIcon />Профиль</NavLink>
+  </nav></div>
+}

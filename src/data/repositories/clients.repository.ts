@@ -65,4 +65,20 @@ export const clientsRepository = {
     if (result.error) throw repositoryError(result.error)
     return enrich(result.data)
   },
+  async invite(clientId: string, email: string): Promise<void> {
+    const result = await clientQueries.invite(clientId, email)
+    if (result.error) throw repositoryError(result.error)
+    const payload = result.data as { error?: string } | null
+    if (payload?.error) throw new Error(inviteErrorMessage(payload.error))
+  },
+}
+
+function inviteErrorMessage(code: string): string {
+  if (code === 'client_already_linked') return 'У клиента уже есть доступ к приложению.'
+  if (code === 'email_already_registered') {
+    return 'Этот email уже зарегистрирован. Для безопасности существующий аккаунт нельзя привязать без подтверждения владельца.'
+  }
+  if (code === 'invite_delivery_failed') return 'Не удалось отправить приглашение. Попробуйте ещё раз.'
+  if (code === 'client_link_conflict') return 'Доступ уже был изменён. Обновите карточку клиента.'
+  return 'Не удалось пригласить клиента.'
 }

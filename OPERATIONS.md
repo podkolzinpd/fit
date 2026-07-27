@@ -51,6 +51,35 @@ OAuth на произвольных preview-доменах по умолчани
 
 Password reset остаётся доступным технически, но не считается production-ready до подключения собственного домена и SMTP. После подключения SMTP решение об обязательном email confirmation оформляется отдельным изменением продукта и тестов.
 
+## Приглашения клиентов
+
+Клиентский аккаунт создаёт Edge Function `invite-client`; service role key
+никогда не передаётся frontend. В hosted environment задаётся:
+
+```text
+CLIENT_INVITE_REDIRECT_URL=https://<production-domain>/auth/callback
+```
+
+До production-релиза обязательны собственный SMTP, разрешённый redirect URL и
+smoke-тест письма. Уже зарегистрированный email функция намеренно не привязывает:
+для такого сценария нужен отдельный flow подтверждения владения аккаунтом.
+
+## YandexGPT
+
+`summarize-client-training` использует отдельный service account с ролью
+`ai.languageModels.user` и API-ключом scope
+`yc.ai.languageModels.execute`. В Supabase Edge Function secrets задаются:
+
+```text
+YANDEX_CLOUD_API_KEY=<server-only key>
+YANDEX_CLOUD_FOLDER_ID=<folder id>
+YANDEX_CLOUD_MODEL_ID=yandexgpt
+```
+
+Ключ нельзя добавлять в Vite/Vercel frontend variables. Функция отправляет в
+Yandex Cloud только агрегаты завершённых тренировок и сохраняет usage модели
+для контроля стоимости.
+
 ## Google OAuth
 
 Создайте отдельный Google Web OAuth client для V2 и добавьте redirect URI:

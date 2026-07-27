@@ -19,4 +19,7 @@ export const clientQueries = {
   setArchived: (id: string, version: number, archived: boolean) => supabase.from('clients')
     .update({ archived_at: archived ? new Date().toISOString() : null, version: version + 1 })
     .eq('id', id).eq('version', version).select(clientColumns).single(),
+  invite: (clientId: string, email: string) => supabase.functions.invoke('invite-client', {
+    body: { client_id: clientId, email },
+  }),
 }

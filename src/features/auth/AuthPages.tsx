@@ -60,7 +60,7 @@ export function ForgotPasswordPage() {
 }
 
 export function ResetPasswordPage() {
-  const navigate = useNavigate(); const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate(); const { actor } = useAuth(); const [error, setError] = useState<string | null>(null)
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     try { await authRepository.updatePassword(String(new FormData(event.currentTarget).get('password'))); navigate('/') }
