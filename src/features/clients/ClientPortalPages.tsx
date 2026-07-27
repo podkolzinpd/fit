@@ -25,7 +25,7 @@ export function MyWorkoutsPage() {
     enabled: Boolean(mine.data),
   })
   const items = workouts.data ? splitClientWorkouts(workouts.data, todayLocalDate()) : null
-  return <Page title="Мои тренировки" back="/me"><AsyncView loading={mine.isLoading || workouts.isLoading} error={mine.error ?? workouts.error} onRetry={() => { void mine.refetch(); void workouts.refetch() }}>
+  return <Page title="Мои тренировки" back="/me" action={mine.data && <Link className="button" to="/workouts/new">Добавить</Link>}><AsyncView loading={mine.isLoading || workouts.isLoading} error={mine.error ?? workouts.error} onRetry={() => { void mine.refetch(); void workouts.refetch() }}>
     {items && <><section><h2>Предстоит</h2>{items.upcoming.length ? <div className="cards">{items.upcoming.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><WorkoutExercisesSummary workout={workout} /></div><span className={`badge ${workout.status}`}>План</span></Link>)}</div> : <p className="muted">Нет запланированных тренировок</p>}</section>
     <section><h2>История</h2>{items.history.length ? <div className="cards">{items.history.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><WorkoutExercisesSummary workout={workout} /></div><span className={`badge ${workout.status}`}>Готово</span></Link>)}</div> : <p className="muted">История пока пуста</p>}</section></>}
   </AsyncView></Page>

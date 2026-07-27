@@ -165,6 +165,7 @@ export interface Workout {
   id: UUID
   clientId: UUID
   clientName: string
+  createdBy?: UUID | null
   workoutDate: LocalDate
   startTime: string | null
   endTime: string | null
