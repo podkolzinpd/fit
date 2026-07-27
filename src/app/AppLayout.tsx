@@ -6,6 +6,8 @@ export function AppLayout() {
   const { actor } = useAuth()
   if (actor?.role === 'client') return <div className="phone-frame"><div className="content"><Outlet /></div><nav className="tab-bar" aria-label="Основная навигация">
     <NavLink to="/me"><ClientsIcon />Кабинет</NavLink>
+    <NavLink to="/me/workouts"><ScheduleIcon />Тренировки</NavLink>
+    <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
     <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>
   </nav></div>
   return <div className="phone-frame"><div className="content"><Outlet /></div><nav className="tab-bar" aria-label="Основная навигация">

@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(14);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('81000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'invite-trainer-a@example.test', ''),
@@ -20,6 +20,8 @@ insert into public.clients (id, trainer_id, full_name, gender, age_years, height
 insert into public.client_trainers (client_id, trainer_id) values
   ('85000000-0000-4000-8000-000000000005', '81000000-0000-4000-8000-000000000001')
 on conflict do nothing;
+insert into public.workouts (trainer_id, client_id, workout_date)
+values ('81000000-0000-4000-8000-000000000001', '85000000-0000-4000-8000-000000000005', '2026-07-27');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '81000000-0000-4000-8000-000000000001', true);
@@ -53,6 +55,11 @@ select throws_ok(
   'PT404', 'invitation_invalid', 'invitation is single use'
 );
 select is((select count(*) from public.clients), 1::bigint, 'owner can read linked client');
+select is(
+  (select count(*) from public.list_workouts(null, null, '85000000-0000-4000-8000-000000000005', 50, 0)),
+  1::bigint,
+  'client owner can read workout aggregate'
+);
 select lives_ok(
   $$select public.create_client_invitation('85000000-0000-4000-8000-000000000005', 'trainer')$$,
   'owner creates trainer invitation'

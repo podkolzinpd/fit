@@ -97,10 +97,9 @@ reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '73000000-0000-4000-8000-000000000003', true);
-select throws_ok(
+select lives_ok(
   'select * from public.list_workouts(null, null, null)',
-  'PT422', 'trainer_not_initialized',
-  'linked client cannot call trainer list RPC'
+  'linked client can call accessible workout list RPC'
 );
 reset role;
 

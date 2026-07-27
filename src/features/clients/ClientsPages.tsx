@@ -12,6 +12,7 @@ import { AsyncView, Field, Page } from '../../shared/ui'
 import { clientSchema } from '../../shared/validation'
 import { VoiceNoteField } from '../voice-input'
 import type { z } from 'zod'
+import { useClientRealtime } from '../../app/use-client-realtime'
 
 export function ClientsPage() {
   const [showArchived, setShowArchived] = useState(false)
@@ -26,6 +27,7 @@ export function ClientsPage() {
 
 export function MyClientPage() {
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
+  useClientRealtime(query.data?.id)
   const invite = useMutation({ mutationFn: (clientId: string) => invitationsRepository.create(clientId, 'trainer') })
   return <Page title="Мой кабинет">
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
@@ -36,6 +38,7 @@ export function MyClientPage() {
           <div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div>
         </section>
         <section><h2>{query.data.fullName}</h2>{query.data.goal && <><h3>Цель</h3><p>{query.data.goal}</p></>}</section>
+        <div className="client-actions-row"><Link className="button" to="/me/workouts">Тренировки</Link><Link className="button secondary" to="/me/progress">Прогресс</Link></div>
         <button className="secondary" disabled={invite.isPending} onClick={() => invite.mutate(query.data!.id)}>Пригласить тренера</button>
         {invite.data && <div className="card"><strong>Код для тренера: {invite.data}</strong><p>Код действует 7 дней и используется один раз.</p></div>}
         {invite.error && <p className="error">{invite.error.message}</p>}
