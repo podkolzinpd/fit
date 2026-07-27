@@ -52,6 +52,7 @@ test('client registers without receiving trainer access', async ({ page }, testI
 })
 
 test('trainer invitation links a client account', async ({ page }, testInfo) => {
+  testInfo.setTimeout(60_000)
   const suffix = `${testInfo.workerIndex}-${Date.now()}`
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
@@ -63,7 +64,22 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByLabel('Имя').fill('Связанный клиент')
   await page.getByLabel('Начальный вес, кг').fill('60')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await Promise.all([
+    page.waitForURL(/\/clients\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Сохранить' }).click(),
+  ])
+  const clientDetailUrl = page.url()
+  await page.getByRole('link', { name: '＋ Запланировать' }).click()
+  await page.getByLabel('Клиент').selectOption({ label: 'Связанный клиент' })
+  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await page.getByRole('button', { name: 'Бег (Кардио) Кардио' }).click()
+  await Promise.all([
+    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Сохранить' }).click(),
+  ])
+  const workoutUrl = page.url()
+  expect(workoutUrl).toMatch(/\/workouts\/[0-9a-f-]+$/)
+  await page.goto(clientDetailUrl)
   await page.getByRole('button', { name: 'Пригласить клиента' }).click()
   const codeText = await page.getByText(/Код клиента:/).textContent()
   const code = codeText?.match(/[A-F0-9]{12}/)?.[0]
@@ -84,4 +100,23 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('button', { name: 'Присоединиться' }).click()
   await expect(page).toHaveURL(/\/me$/)
   await expect(page.getByRole('heading', { name: 'Связанный клиент' })).toBeVisible()
+
+  await page.goto(workoutUrl)
+  await page.getByRole('button', { name: 'Начать тренировку' }).click()
+  await expect(page).toHaveURL(/\/live$/)
+  await page.getByLabel('Фактическое время').fill('30')
+  await page.getByLabel('Фактическая дистанция').fill('5')
+  await page.getByRole('button', { name: 'Готово, отдых' }).click()
+  await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
+  await Promise.all([
+    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Завершить тренировку' }).click(),
+  ])
+
+  await page.goto('/me/progress')
+  const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
+  await page.getByLabel('Дата').fill(tomorrow)
+  await page.getByLabel('Вес, кг').fill('59.5')
+  await page.getByRole('button', { name: 'Сохранить замер' }).click()
+  await expect(page.getByText('59.5 кг')).toBeVisible()
 })

@@ -44,6 +44,9 @@ $$;
 
 revoke all on function public.authorize_client_mutation(uuid, boolean) from public, anon, authenticated;
 
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+
 alter function public.save_workout(jsonb, bigint) rename to legacy_save_workout;
 alter function public.start_workout(uuid, bigint) rename to legacy_start_workout;
 alter function public.save_live_set_draft(uuid, jsonb, bigint) rename to legacy_save_live_set_draft;
@@ -74,13 +77,28 @@ revoke all on function public.legacy_reorder_live_block(uuid, uuid, smallint, bi
 revoke all on function public.legacy_set_exercise_comment(uuid, text, bigint) from public, anon, authenticated;
 revoke all on function public.legacy_replace_live_exercise(uuid, uuid, jsonb, bigint) from public, anon, authenticated;
 
+alter function public.legacy_save_workout(jsonb, bigint) set schema private;
+alter function public.legacy_start_workout(uuid, bigint) set schema private;
+alter function public.legacy_save_live_set_draft(uuid, jsonb, bigint) set schema private;
+alter function public.legacy_confirm_live_set(uuid, bigint) set schema private;
+alter function public.legacy_finish_workout(uuid, bigint) set schema private;
+alter function public.legacy_save_progress(jsonb, bigint) set schema private;
+alter function public.legacy_soft_delete_workout(uuid, bigint) set schema private;
+alter function public.legacy_soft_delete_progress(uuid, bigint) set schema private;
+alter function public.legacy_append_live_exercise(uuid, jsonb, bigint) set schema private;
+alter function public.legacy_append_live_set(uuid, bigint) set schema private;
+alter function public.legacy_remove_live_set(uuid, bigint) set schema private;
+alter function public.legacy_reorder_live_block(uuid, uuid, smallint, bigint) set schema private;
+alter function public.legacy_set_exercise_comment(uuid, text, bigint) set schema private;
+alter function public.legacy_replace_live_exercise(uuid, uuid, jsonb, bigint) set schema private;
+
 create or replace function public.save_workout(p_workout jsonb, p_expected_version bigint default null)
 returns uuid language plpgsql security definer set search_path = '' as $$
 declare original_sub text := auth.uid()::text; root_trainer uuid; result uuid;
 begin
   root_trainer := public.authorize_client_mutation((p_workout->>'clientId')::uuid, false);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := public.legacy_save_workout(p_workout, p_expected_version);
+  begin result := private.legacy_save_workout(p_workout, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
 end $$;
@@ -92,7 +110,7 @@ begin
   select client_id into client_id_value from public.workouts where id = p_workout_id;
   root_trainer := public.authorize_client_mutation(client_id_value, true);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := public.legacy_start_workout(p_workout_id, p_expected_version);
+  begin result := private.legacy_start_workout(p_workout_id, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
 end $$;
@@ -104,7 +122,7 @@ begin
   select client_id into client_id_value from public.workout_sets where id = p_set_id;
   root_trainer := public.authorize_client_mutation(client_id_value, true);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := public.legacy_save_live_set_draft(p_set_id, p_draft, p_expected_version);
+  begin result := private.legacy_save_live_set_draft(p_set_id, p_draft, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
 end $$;
@@ -116,7 +134,7 @@ begin
   select client_id into client_id_value from public.workout_sets where id = p_set_id;
   root_trainer := public.authorize_client_mutation(client_id_value, true);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := public.legacy_confirm_live_set(p_set_id, p_expected_version);
+  begin result := private.legacy_confirm_live_set(p_set_id, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
 end $$;
@@ -128,7 +146,7 @@ begin
   select client_id into client_id_value from public.workouts where id = p_workout_id;
   root_trainer := public.authorize_client_mutation(client_id_value, true);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := public.legacy_finish_workout(p_workout_id, p_expected_version);
+  begin result := private.legacy_finish_workout(p_workout_id, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
 end $$;
@@ -139,7 +157,7 @@ declare original_sub text := auth.uid()::text; root_trainer uuid; result uuid;
 begin
   root_trainer := public.authorize_client_mutation((p_progress->>'clientId')::uuid, true);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := public.legacy_save_progress(p_progress, p_expected_version);
+  begin result := private.legacy_save_progress(p_progress, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
 end $$;
@@ -151,7 +169,7 @@ begin
   select client_id into client_id_value from public.workouts where id = p_workout_id;
   root_trainer := public.authorize_client_mutation(client_id_value, false);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin perform public.legacy_soft_delete_workout(p_workout_id, p_expected_version);
+  begin perform private.legacy_soft_delete_workout(p_workout_id, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true);
 end $$;
@@ -163,7 +181,7 @@ begin
   select client_id into client_id_value from public.client_progress where id = p_progress_id;
   root_trainer := public.authorize_client_mutation(client_id_value, true);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin perform public.legacy_soft_delete_progress(p_progress_id, p_expected_version);
+  begin perform private.legacy_soft_delete_progress(p_progress_id, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true);
 end $$;
@@ -175,7 +193,7 @@ begin
   select client_id into client_id_value from public.workouts where id = p_workout_id;
   root_trainer := public.authorize_client_mutation(client_id_value, false);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := public.legacy_append_live_exercise(p_workout_id, p_exercise, p_expected_version);
+  begin result := private.legacy_append_live_exercise(p_workout_id, p_exercise, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
 end $$;
@@ -187,7 +205,7 @@ begin
   select client_id into client_id_value from public.workout_exercises where id = p_workout_exercise_id;
   root_trainer := public.authorize_client_mutation(client_id_value, false);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := public.legacy_append_live_set(p_workout_exercise_id, p_expected_version);
+  begin result := private.legacy_append_live_set(p_workout_exercise_id, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
 end $$;
@@ -199,7 +217,7 @@ begin
   select client_id into client_id_value from public.workout_sets where id = p_set_id;
   root_trainer := public.authorize_client_mutation(client_id_value, false);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := public.legacy_remove_live_set(p_set_id, p_expected_version);
+  begin result := private.legacy_remove_live_set(p_set_id, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
 end $$;
@@ -211,7 +229,7 @@ begin
   select client_id into client_id_value from public.workouts where id = p_workout_id;
   root_trainer := public.authorize_client_mutation(client_id_value, false);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := public.legacy_reorder_live_block(p_workout_id, p_block_id, p_direction, p_expected_version);
+  begin result := private.legacy_reorder_live_block(p_workout_id, p_block_id, p_direction, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
 end $$;
@@ -223,7 +241,7 @@ begin
   select client_id into client_id_value from public.workout_exercises where id = p_exercise_id;
   root_trainer := public.authorize_client_mutation(client_id_value, false);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := public.legacy_set_exercise_comment(p_exercise_id, p_comment, p_expected_version);
+  begin result := private.legacy_set_exercise_comment(p_exercise_id, p_comment, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
 end $$;
@@ -237,7 +255,7 @@ begin
   select client_id into client_id_value from public.workouts where id = p_workout_id;
   root_trainer := public.authorize_client_mutation(client_id_value, false);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := public.legacy_replace_live_exercise(p_workout_id, p_exercise_id, p_exercise, p_expected_version);
+  begin result := private.legacy_replace_live_exercise(p_workout_id, p_exercise_id, p_exercise, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
 end $$;
