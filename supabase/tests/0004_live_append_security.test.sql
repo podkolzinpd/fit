@@ -32,7 +32,7 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', '60000000-0000-4000-8000-000000000006', true);
 select throws_ok(
   $$select public.append_live_set('e0000000-0000-4000-8000-000000000005', 1)$$,
-  'PT404', 'exercise_not_found', 'trainer B cannot append a set to trainer A workout'
+  'PT403', 'workout_access_denied', 'trainer B cannot append a set to trainer A workout'
 );
 select throws_ok(
   $$select public.append_live_exercise(
@@ -40,7 +40,7 @@ select throws_ok(
     '{"source":"system","ref":"running","name":"Бег","muscleGroup":"cardio","inputKind":"distance"}',
     1
   )$$,
-  'PT409', 'workout_conflict', 'trainer B cannot append an exercise to trainer A workout'
+  'PT403', 'workout_access_denied', 'trainer B cannot append an exercise to trainer A workout'
 );
 reset role;
 

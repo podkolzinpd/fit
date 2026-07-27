@@ -11,6 +11,7 @@ describe('findProgressDateConflict', () => {
   const entries: ProgressEntry[] = [{
     id: 'progress-1',
     clientId: 'client-1',
+    createdBy: 'trainer-1',
     recordedOn: localDate('2026-07-26'),
     weightKg: 80,
     customMetrics: [],

@@ -21,7 +21,7 @@ const METRIC_TABS: Array<{ key: MetricKey; label: string; unit: string }> = [
 
 export function AnalyticsPage() {
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
-  return <Page title="Аналитика"><AsyncView loading={clients.isLoading} error={clients.error} empty={!clients.data?.length}>{clients.data?.map((client) => <Link className="card" key={client.id} to={`/progress/${client.id}`}><div><strong>{client.fullName}</strong><p>{client.currentWeightKg ? `Текущий вес: ${client.currentWeightKg} кг` : 'Нет замеров веса'}</p></div><span>→</span></Link>)}</AsyncView></Page>
+  return <Page title="Аналитика"><AsyncView loading={clients.isLoading} error={clients.error} empty={!clients.data?.length}><div className="cards">{clients.data?.map((client) => <Link className="card" key={client.id} to={`/progress/${client.id}`}><div><strong>{client.fullName}</strong><p>{client.currentWeightKg ? `Текущий вес: ${client.currentWeightKg} кг` : 'Нет замеров веса'}</p></div><span>→</span></Link>)}</div></AsyncView></Page>
 }
 
 export function ProgressPage() {
@@ -43,6 +43,7 @@ export function ProgressPage() {
   const createMetric = useMutation({ mutationFn: ({ name, unit }: { name: string; unit: string | null }) => progressRepository.createMetric(actor!.userId, clientId, name, unit), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }) })
   const archiveMetric = useMutation({ mutationFn: (metric: CustomMetric) => progressRepository.setMetricArchived(metric, !metric.archivedAt), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }) })
   const loading = client.isLoading || entries.isLoading || metrics.isLoading; const error = client.error ?? entries.error ?? metrics.error
+  const canManage = (entry: ProgressEntry) => actor?.role === 'client' || entry.createdBy === actor?.userId
   const filledCustomIds = new Set(entries.data?.flatMap((entry) => entry.customMetrics.map((item) => item.metricId)) ?? [])
   const overflowMetrics = (metrics.data ?? []).filter((metric) => filledCustomIds.has(metric.id))
   const activeBuiltin = METRIC_TABS.find((tab) => tab.key === selectedMetric)
@@ -80,7 +81,7 @@ export function ProgressPage() {
     if (tabsDraggedRef.current) { tabsDraggedRef.current = false; return }
     action()
   }
-  return <Page title={client.data ? `Прогресс · ${client.data.fullName}` : 'Прогресс'}><AsyncView loading={loading} error={error}>{client.data && <>
+  return <Page title={client.data ? `Прогресс · ${client.data.fullName}` : 'Прогресс'} back="/analytics"><AsyncView loading={loading} error={error}>{client.data && <>
     <TrainerTrainingSummaryCard clientId={clientId} />
     {entries.data && entries.data.length > 0 && <>
       <div className="metric-tabs" ref={tabsRef}
@@ -96,9 +97,9 @@ export function ProgressPage() {
         <h2>История замеров ({entries.data?.length ?? 0})</h2>
         {entries.data && entries.data.length > 0 && <button type="button" className="link" onClick={() => setHistoryOpen((value) => !value)}>{historyOpen ? 'Скрыть' : 'Показать'}</button>}
       </div>
-      {historyOpen && entries.data?.map((entry) => editing?.id === entry.id
+      {historyOpen && <div className="cards">{entries.data?.map((entry) => editing?.id === entry.id
         ? <article className="card editing" key={entry.id}><ProgressForm entry={entry} metrics={metrics.data ?? []} busy={save.isPending} errorMessage={save.error?.message ?? null} onSubmit={(form) => save.mutate(form)} onCancel={() => setEditing(null)} /></article>
-        : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{entrySummaryParts(entry, metrics.data ?? []).join(' · ')}</p></div><div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" onClick={() => remove.mutate(entry)}>Удалить</button></div></article>)}
+        : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{entrySummaryParts(entry, metrics.data ?? []).join(' · ')}</p></div>{canManage(entry) && <div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" onClick={() => remove.mutate(entry)}>Удалить</button></div>}</article>)}</div>}
     </section>
     <MetricsManager metrics={metrics.data ?? []} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />
     {metricSheetOpen && <MetricOverflowSheet metrics={overflowMetrics} onPick={(id) => { setSelectedMetric(id); setMetricSheetOpen(false) }} onClose={() => setMetricSheetOpen(false)} />}

@@ -35,6 +35,22 @@ export interface ClientActor extends SessionActorBase {
 
 export type SessionActor = TrainerActor | ClientActor
 
+export interface TrainerMembership {
+  trainerId: UUID
+  firstName: string | null
+  lastName: string | null
+  joinedAt: string
+  isRoot: boolean
+}
+
+export interface ClientInvitation {
+  id: UUID
+  clientId: UUID
+  targetRole: AccountRole
+  expiresAt: string
+  createdAt: string
+}
+
 export interface Client {
   id: UUID
   hasAccount: boolean | null
@@ -149,6 +165,7 @@ export interface Workout {
   id: UUID
   clientId: UUID
   clientName: string
+  createdBy?: UUID | null
   workoutDate: LocalDate
   startTime: string | null
   endTime: string | null
@@ -198,6 +215,7 @@ export interface ProgressDraft {
 
 export interface ProgressEntry extends ProgressDraft {
   id: UUID
+  createdBy: UUID | null
   version: number
 }
 

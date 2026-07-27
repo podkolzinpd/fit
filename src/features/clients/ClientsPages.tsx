@@ -13,6 +13,7 @@ import { clientSchema } from '../../shared/validation'
 import { VoiceNoteField } from '../voice-input'
 import type { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
+import { useAuth } from '../../app/auth-context'
 
 export function ClientsPage() {
   const [showArchived, setShowArchived] = useState(false)
@@ -26,9 +27,14 @@ export function ClientsPage() {
 }
 
 export function MyClientPage() {
+  const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
   useClientRealtime(query.data?.id)
-  const invite = useMutation({ mutationFn: (clientId: string) => invitationsRepository.create(clientId, 'trainer') })
+  const trainers = useQuery({ queryKey: ['client-trainers', query.data?.id], queryFn: () => invitationsRepository.listTrainers(query.data!.id), enabled: Boolean(query.data) })
+  const invitations = useQuery({ queryKey: ['client-invitations', query.data?.id], queryFn: () => invitationsRepository.list(query.data!.id), enabled: Boolean(query.data) })
+  const invite = useMutation({ mutationFn: (clientId: string) => invitationsRepository.create(clientId, 'trainer'), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', query.data?.id] }) })
+  const revoke = useMutation({ mutationFn: (invitationId: string) => invitationsRepository.revoke(invitationId), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', query.data?.id] }) })
+  const removeTrainer = useMutation({ mutationFn: (trainerId: string) => invitationsRepository.removeTrainer(query.data!.id, trainerId), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-trainers', query.data?.id] }) })
   return <Page title="Мой кабинет">
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {query.data ? <div className="stack">
@@ -42,6 +48,16 @@ export function MyClientPage() {
         <button className="secondary" disabled={invite.isPending} onClick={() => invite.mutate(query.data!.id)}>Пригласить тренера</button>
         {invite.data && <div className="card"><strong>Код для тренера: {invite.data}</strong><p>Код действует 7 дней и используется один раз.</p></div>}
         {invite.error && <p className="error">{invite.error.message}</p>}
+        <section><h2>Мои тренеры</h2>
+          {trainers.isLoading && <p className="muted">Загрузка тренеров…</p>}
+          {trainers.error && <div><p className="error">{trainers.error.message}</p><button className="secondary" onClick={() => void trainers.refetch()}>Повторить</button></div>}
+          {trainers.data?.length === 0 && <p className="muted">Подключённых тренеров нет</p>}
+          {trainers.data?.map((trainer) => <article className="card" key={trainer.trainerId}><div><strong>{[trainer.firstName, trainer.lastName].filter(Boolean).join(' ') || 'Тренер'}</strong><p>{trainer.isRoot ? 'Основной тренер' : 'Подключённый тренер'}</p></div>{!trainer.isRoot && <button className="link danger" disabled={removeTrainer.isPending} onClick={() => { if (window.confirm('Отключить этого тренера? Он потеряет доступ к вашим тренировкам и прогрессу.')) removeTrainer.mutate(trainer.trainerId) }}>Отключить</button>}</article>)}
+        </section>
+        {invitations.isLoading && <p className="muted">Загрузка приглашений…</p>}
+        {invitations.data && invitations.data.length > 0 && <section><h2>Активные приглашения</h2>{invitations.data.map((item) => <article className="card" key={item.id}><div><strong>Для тренера</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU')}</p></div><button className="link danger" disabled={revoke.isPending} onClick={() => { if (window.confirm('Отозвать это приглашение? Код больше нельзя будет использовать.')) revoke.mutate(item.id) }}>Отозвать</button></article>)}</section>}
+        {invitations.error && <div><p className="error">{invitations.error.message}</p><button className="secondary" onClick={() => void invitations.refetch()}>Повторить</button></div>}
+        {(removeTrainer.error || revoke.error) && <p className="error">{(removeTrainer.error ?? revoke.error)?.message}</p>}
       </div> : <div className="state">
         <h2>Карточка ещё не подключена</h2>
         <p>Попросите тренера привязать ваш аккаунт. Приглашения по коду появятся следующим этапом.</p>
@@ -99,12 +115,18 @@ function ClientForm({ existing, onSaved, onCancel }: { existing?: Client; onSave
 
 export function ClientDetailPage() {
   const { clientId = '' } = useParams(); const queryClient = useQueryClient()
+  const { actor } = useAuth(); const navigate = useNavigate()
   const query = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
   const stats = useQuery({ queryKey: ['client-stats', clientId], queryFn: async () => computeClientStats(await workoutsRepository.listSummaries(clientId), todayLocalDate()) })
   const workouts = useQuery({ queryKey: ['workouts', clientId, 'upcoming'], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
   const upcoming = workouts.data ? splitClientWorkouts(workouts.data, todayLocalDate()).upcoming : []
   const archive = useMutation({ mutationFn: (client: Client) => clientsRepository.setArchived(client, !client.archivedAt), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); await query.refetch() } })
-  const invite = useMutation({ mutationFn: () => invitationsRepository.create(clientId, 'client') })
+  const invitations = useQuery({ queryKey: ['client-invitations', clientId], queryFn: () => invitationsRepository.list(clientId) })
+  const invite = useMutation({ mutationFn: () => invitationsRepository.create(clientId, 'client'), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', clientId] }) })
+  const revoke = useMutation({ mutationFn: (invitationId: string) => invitationsRepository.revoke(invitationId), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', clientId] }) })
+  const trainers = useQuery({ queryKey: ['client-trainers', clientId], queryFn: () => invitationsRepository.listTrainers(clientId) })
+  const currentMembership = trainers.data?.find((trainer) => trainer.trainerId === actor?.userId)
+  const leave = useMutation({ mutationFn: () => invitationsRepository.leave(clientId), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); navigate('/clients') } })
   return <Page title={query.data?.fullName ?? 'Клиент'} center back="/clients" action={query.data && <Link className="button secondary" to={`/clients/${clientId}/edit`}>Изменить</Link>}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
       <section className="summary"><div><span>Возраст</span><strong>{query.data.ageYears}</strong></div><div><span>Рост</span><strong>{query.data.heightCm} см</strong></div><div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div></section>
@@ -128,7 +150,11 @@ export function ClientDetailPage() {
       <div className="page-actions">
         {query.data.hasAccount === false && <button className="secondary wide" disabled={invite.isPending} onClick={() => invite.mutate()}>Пригласить клиента</button>}
         {invite.data && <div className="card"><strong>Код клиента: {invite.data}</strong><p>Передайте код клиенту. Он действует 7 дней и используется один раз.</p></div>}
+        {invitations.data?.map((item) => <article className="card" key={item.id}><div><strong>Активное приглашение клиента</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU')}</p></div><button className="link danger" disabled={revoke.isPending} onClick={() => { if (window.confirm('Отозвать это приглашение? Код больше нельзя будет использовать.')) revoke.mutate(item.id) }}>Отозвать</button></article>)}
         {invite.error && <p className="error">{invite.error.message}</p>}
+        {revoke.error && <p className="error">{revoke.error.message}</p>}
+        {currentMembership && !currentMembership.isRoot && <button className="danger secondary wide" disabled={leave.isPending} onClick={() => { if (window.confirm('Покинуть пространство клиента? Доступ к тренировкам и прогрессу будет закрыт.')) leave.mutate() }}>Покинуть пространство клиента</button>}
+        {leave.error && <p className="error">{leave.error.message}</p>}
         <button className="danger secondary wide" disabled={archive.isPending} onClick={() => archive.mutate(query.data!)}>{query.data.archivedAt ? 'Вернуть из архива' : 'Архивировать клиента'}</button>
       </div>
     </>}</AsyncView>

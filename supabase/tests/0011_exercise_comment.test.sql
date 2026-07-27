@@ -53,7 +53,7 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', '60000000-0000-4000-8000-00000000000e', true);
 select throws_ok(
   $$select public.set_exercise_comment('a0000000-0000-4000-8000-00000000000d', 'взлом', 3)$$,
-  'PT404', 'exercise_not_found', 'foreign trainer cannot comment'
+  'PT403', 'workout_access_denied', 'foreign trainer cannot comment'
 );
 reset role;
 

@@ -4,7 +4,7 @@ import { toJson } from './json'
 
 export const progressQueries = {
   list: (clientId: string) => supabase.from('client_progress')
-    .select('id,client_id,recorded_on,weight_kg,chest_cm,waist_cm,hip_cm,notes,version')
+    .select('id,client_id,created_by,recorded_on,weight_kg,chest_cm,waist_cm,hip_cm,notes,version')
     .eq('client_id', clientId).is('deleted_at', null).order('recorded_on', { ascending: false }),
   listCustomValues: (clientId: string) => supabase.from('client_progress_custom')
     .select('progress_id,metric_id,value').eq('client_id', clientId),

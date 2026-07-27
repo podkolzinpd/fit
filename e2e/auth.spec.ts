@@ -52,6 +52,7 @@ test('client registers without receiving trainer access', async ({ page }, testI
 })
 
 test('trainer invitation links a client account', async ({ page }, testInfo) => {
+  testInfo.setTimeout(120_000)
   const suffix = `${testInfo.workerIndex}-${Date.now()}`
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
@@ -63,7 +64,22 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByLabel('Имя').fill('Связанный клиент')
   await page.getByLabel('Начальный вес, кг').fill('60')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await Promise.all([
+    page.waitForURL(/\/clients\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Сохранить' }).click(),
+  ])
+  const clientDetailUrl = page.url()
+  await page.getByRole('link', { name: '＋ Запланировать' }).click()
+  await page.getByLabel('Клиент').selectOption({ label: 'Связанный клиент' })
+  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await page.getByRole('button', { name: 'Бег (Кардио) Кардио' }).first().click()
+  await Promise.all([
+    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Сохранить' }).click(),
+  ])
+  const workoutUrl = page.url()
+  expect(workoutUrl).toMatch(/\/workouts\/[0-9a-f-]+$/)
+  await page.goto(clientDetailUrl)
   await page.getByRole('button', { name: 'Пригласить клиента' }).click()
   const codeText = await page.getByText(/Код клиента:/).textContent()
   const code = codeText?.match(/[A-F0-9]{12}/)?.[0]
@@ -84,4 +100,75 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('button', { name: 'Присоединиться' }).click()
   await expect(page).toHaveURL(/\/me$/)
   await expect(page.getByRole('heading', { name: 'Связанный клиент' })).toBeVisible()
+
+  await page.goto('/me/workouts')
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await expect(page.getByLabel('Клиент')).toHaveValue('Связанный клиент')
+  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await page.getByRole('button', { name: 'Бег (Кардио) Кардио' }).first().click()
+  await Promise.all([
+    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Сохранить' }).click(),
+  ])
+  const ownWorkoutUrl = page.url()
+  await page.getByRole('link', { name: 'Изменить' }).click()
+  await page.getByLabel('Время', { exact: true }).fill('08:30')
+  await Promise.all([
+    page.waitForURL(ownWorkoutUrl),
+    page.getByRole('button', { name: 'Сохранить' }).click(),
+  ])
+  await page.getByRole('button', { name: 'Начать тренировку' }).click()
+  await page.getByLabel('Фактическое время').fill('25')
+  await page.getByLabel('Фактическая дистанция').fill('4')
+  await page.getByRole('button', { name: 'Готово, отдых' }).click()
+  await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
+  await Promise.all([
+    page.waitForURL(ownWorkoutUrl),
+    page.getByRole('button', { name: 'Завершить тренировку' }).click(),
+  ])
+
+  await page.goto(workoutUrl)
+  await page.getByRole('button', { name: 'Начать тренировку' }).click()
+  await expect(page).toHaveURL(/\/live$/)
+  await page.getByLabel('Фактическое время').fill('30')
+  await page.getByLabel('Фактическая дистанция').fill('5')
+  await page.getByRole('button', { name: 'Готово, отдых' }).click()
+  await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
+  await Promise.all([
+    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Завершить тренировку' }).click(),
+  ])
+
+  await page.goto('/me/progress')
+  const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
+  await page.getByLabel('Дата').fill(tomorrow)
+  await page.getByLabel('Вес, кг').fill('59.5')
+  await page.getByRole('button', { name: 'Сохранить замер' }).click()
+  await expect(page.getByText('59.5 кг')).toBeVisible()
+
+  await page.goto('/me')
+  await page.getByRole('button', { name: 'Пригласить тренера' }).click()
+  const trainerCodeText = await page.getByText(/Код для тренера:/).textContent()
+  const trainerCode = trainerCodeText?.match(/[A-F0-9]{12}/)?.[0]
+  expect(trainerCode).toBeTruthy()
+  await expect(page.getByRole('heading', { name: 'Активные приглашения' })).toBeVisible()
+
+  await page.goto('/profile')
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Имя').fill('Второй тренер')
+  await page.getByLabel('Email').fill(`member-trainer-${suffix}@fit.local`)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
+
+  await page.goto('/join')
+  await page.getByLabel('Код приглашения').fill(trainerCode!)
+  await page.getByRole('button', { name: 'Присоединиться' }).click()
+  await expect(page).toHaveURL(/\/clients\/[0-9a-f-]+$/)
+  const leaveButton = page.getByRole('button', { name: 'Покинуть пространство клиента' })
+  await expect(leaveButton).toBeVisible()
+  page.once('dialog', (dialog) => dialog.accept())
+  await leaveButton.click()
+  await expect(page).toHaveURL(/\/clients$/)
 })

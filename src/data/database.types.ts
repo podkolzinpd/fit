@@ -1,4 +1,4 @@
-// schema-sha256: 490ff64d0960f41295e603e093da0da3cdca8339e549b97bb6af6e0f32b02bcb
+// schema-sha256: 5fa6f41e1f010a2e4eafb32ca57e8fdc269e44372182b2204875da110fa33c7e
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
@@ -13,10 +13,10 @@ type TrainerRow = { profile_id: string; created_at: string; updated_at: string }
 type ClientRow = { id: string; trainer_id: string; auth_user_id: string | null; full_name: string; gender: string; age_years: number; age_updated_at: string; height_cm: number; goal: string | null; archived_at: string | null; version: number; created_at: string; updated_at: string }
 type PrivateRow = { client_id: string; trainer_id: string; note: string | null; created_at: string; updated_at: string }
 type CustomExerciseRow = { id: string; trainer_id: string; name: string; muscle_group: string; input_kind: string; archived_at: string | null; version: number; created_at: string; updated_at: string }
-type WorkoutRow = { id: string; trainer_id: string; client_id: string; workout_date: string; start_time: string | null; end_time: string | null; status: string; notes: string | null; started_at: string | null; completed_at: string | null; deleted_at: string | null; version: number; created_at: string; updated_at: string }
+type WorkoutRow = { id: string; trainer_id: string; client_id: string; created_by: string | null; workout_date: string; start_time: string | null; end_time: string | null; status: string; notes: string | null; started_at: string | null; completed_at: string | null; deleted_at: string | null; version: number; created_at: string; updated_at: string }
 type WorkoutExerciseRow = { id: string; workout_id: string; trainer_id: string; client_id: string; position: number; exercise_source: string; exercise_ref: string; custom_exercise_id: string | null; exercise_name: string; muscle_group: string; input_kind: string; block_id: string; block_type: string; block_preset: string; block_rounds: number; rest_between_exercises_sec: number; rest_between_rounds_sec: number; rest_between_sets_sec: number; trainer_comment: string | null; created_at: string; updated_at: string }
 type WorkoutSetRow = { id: string; workout_exercise_id: string; trainer_id: string; client_id: string; position: number; plan_weight_kg: number | null; plan_reps: number | null; plan_duration_min: number | null; plan_distance_km: number | null; fact_weight_kg: number | null; fact_reps: number | null; fact_duration_min: number | null; fact_distance_km: number | null; confirmed_at: string | null; version: number; created_at: string; updated_at: string }
-type ProgressRow = { id: string; trainer_id: string; client_id: string; recorded_on: string; weight_kg: number | null; chest_cm: number | null; waist_cm: number | null; hip_cm: number | null; notes: string | null; deleted_at: string | null; version: number; created_at: string; updated_at: string }
+type ProgressRow = { id: string; trainer_id: string; client_id: string; created_by: string | null; recorded_on: string; weight_kg: number | null; chest_cm: number | null; waist_cm: number | null; hip_cm: number | null; notes: string | null; deleted_at: string | null; version: number; created_at: string; updated_at: string }
 type MetricRow = { id: string; trainer_id: string; client_id: string; name: string; unit: string | null; archived_at: string | null; version: number; created_at: string; updated_at: string }
 type ProgressCustomRow = { id: string; trainer_id: string; client_id: string; progress_id: string; metric_id: string; value: number; created_at: string; updated_at: string }
 type ClientTrainerRow = { client_id: string; trainer_id: string; joined_at: string }
@@ -27,6 +27,7 @@ type WorkoutListSetRow = Pick<WorkoutSetRow, 'id' | 'position' | 'plan_weight_kg
 type WorkoutListExerciseRow = Pick<WorkoutExerciseRow, 'id' | 'position' | 'exercise_source' | 'exercise_ref' | 'custom_exercise_id' | 'exercise_name' | 'muscle_group' | 'input_kind' | 'block_id' | 'block_type' | 'block_preset' | 'block_rounds' | 'rest_between_exercises_sec' | 'rest_between_rounds_sec' | 'rest_between_sets_sec' | 'trainer_comment'> & { sets: WorkoutListSetRow[] }
 export type WorkoutListRow = Pick<WorkoutRow, 'id' | 'client_id' | 'workout_date' | 'start_time' | 'end_time' | 'started_at' | 'completed_at' | 'status' | 'notes' | 'version'> & { client_name: string; total_count: number; exercises: WorkoutListExerciseRow[] }
 type WorkoutSummaryRow = Pick<WorkoutRow, 'id' | 'workout_date' | 'status'>
+type TrainerMembershipRow = { trainer_id: string; first_name: string | null; last_name: string | null; joined_at: string; is_root: boolean }
 
 type TrainingSummaryRow = {
   id: string
@@ -103,11 +104,13 @@ export type Database = {
       initialize_trainer: { Args: { p_first_name?: string | null; p_last_name?: string | null; p_timezone?: string }; Returns: TrainerRow }
       get_my_client: { Args: Record<string, never>; Returns: MyClientRow[] }
       can_access_client: { Args: { p_client_id: string }; Returns: boolean }
+      can_read_workout: { Args: { p_workout_id: string }; Returns: boolean }
       create_client_invitation: { Args: { p_client_id: string; p_target_role: string }; Returns: string }
       claim_client_invitation: { Args: { p_code: string }; Returns: string }
       revoke_client_invitation: { Args: { p_invitation_id: string }; Returns: undefined }
       remove_client_trainer: { Args: { p_client_id: string; p_trainer_id: string }; Returns: undefined }
       leave_client_space: { Args: { p_client_id: string }; Returns: undefined }
+      list_client_trainers: { Args: { p_client_id: string }; Returns: TrainerMembershipRow[] }
       list_clients: { Args: { p_include_archived?: boolean }; Returns: ClientListRow[] }
       list_workouts: { Args: { p_from?: string | null; p_to?: string | null; p_client_id?: string | null; p_limit?: number; p_offset?: number }; Returns: WorkoutListRow[] }
       list_workout_summaries: { Args: { p_client_id: string }; Returns: WorkoutSummaryRow[] }
