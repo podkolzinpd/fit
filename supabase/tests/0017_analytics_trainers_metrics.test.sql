@@ -23,10 +23,13 @@ select public.initialize_trainer('Analytics', 'Test', 'Europe/Moscow');
 reset role;
 
 refresh materialized view analytics.trainers_metrics;
+-- Сравниваем с живым count(*), а не с захардкоженным числом — в CI/локали
+-- в public.trainers к этому моменту могут быть и другие тренеры из фикстур
+-- параллельных миграций/тестов, важно лишь что refresh подхватывает факт.
 select is(
-  (select trainers_total from analytics.trainers_metrics)::int,
-  1,
-  'trainers_total reflects the freshly initialized trainer'
+  (select trainers_total from analytics.trainers_metrics),
+  (select count(*)::bigint from public.trainers),
+  'trainers_total matches live count(*) from public.trainers after refresh'
 );
 
 select * from finish();
