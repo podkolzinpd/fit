@@ -148,8 +148,15 @@ async function summaryGenerationError(error: unknown): Promise<Error> {
   if (context && typeof context === 'object' && 'json' in context && typeof context.json === 'function') {
     try {
       const payload = await (context as { json: () => Promise<unknown> }).json()
-      if (payload && typeof payload === 'object' && 'error' in payload && typeof payload.error === 'string') {
-        return new Error(generationErrorMessage(payload.error))
+      if (payload && typeof payload === 'object') {
+        const body = payload as { error?: unknown; code?: unknown; message?: unknown }
+        const code = typeof body.code === 'string'
+          ? body.code
+          : typeof body.error === 'string'
+            ? body.error
+            : undefined
+        if (code) return new Error(generationErrorMessage(code))
+        if (typeof body.message === 'string') return new Error(body.message)
       }
     } catch {
       // Fall back to the standard Supabase error below.
