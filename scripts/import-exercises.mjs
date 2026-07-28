@@ -16,6 +16,16 @@ const SOURCE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/
 const RAW_IMAGES = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/'
 const TARGET_COUNT = 120
 
+// Обязательно включить в импорт (независимо от round-robin отбора). Например
+// ягодичные — новую группу «Ягодицы» наполняем целенаправленно. Ключи — id из
+// исходной Free Exercise DB; каждое должно иметь перевод в TRANSLATIONS.
+const FORCE_INCLUDE = new Set([
+  'Barbell_Glute_Bridge', 'Barbell_Hip_Thrust', 'Butt_Lift_Bridge',
+  'Single_Leg_Glute_Bridge', 'One-Legged_Cable_Kickback',
+  'Hip_Extension_with_Bands', 'Hip_Lift_with_Band', 'Kneeling_Squat',
+  'Step-up_with_Knee_Raise', 'Physioball_Hip_Bridge', 'Leg_Lift',
+])
+
 const projectRoot = new URL('..', import.meta.url)
 const imagesDir = new URL('public/exercises/', projectRoot)
 const generatedFile = new URL('src/shared/system-exercises.generated.ts', projectRoot)
@@ -87,7 +97,7 @@ const MUSCLE_GROUP = {
   shoulders: 'shoulders', traps: 'shoulders', neck: 'shoulders',
   biceps: 'arms', triceps: 'arms', forearms: 'arms',
   lats: 'back', 'middle back': 'back', 'lower back': 'back',
-  quadriceps: 'legs', hamstrings: 'legs', glutes: 'legs', calves: 'legs', adductors: 'legs', abductors: 'legs',
+  quadriceps: 'legs', hamstrings: 'legs', glutes: 'glutes', calves: 'legs', adductors: 'legs', abductors: 'legs',
   abdominals: 'core',
 }
 // Детальная мышца -> русский лейбл для карточки.
@@ -126,6 +136,18 @@ const EQUIPMENT_LABEL = {
 // Упражнения, отсутствующие здесь, в каталог не попадают — так набор
 // стабилен и полностью переведён.
 const TRANSLATIONS = {
+  // Ягодичные (группа «Ягодицы»).
+  'fedb-barbell-glute-bridge': 'Ягодичный мостик со штангой (Штанга)',
+  'fedb-barbell-hip-thrust': 'Ягодичный мост со штангой (Штанга)',
+  'fedb-butt-lift-bridge': 'Ягодичный мостик (Своё тело)',
+  'fedb-single-leg-glute-bridge': 'Ягодичный мостик на одной ноге (Своё тело)',
+  'fedb-one-legged-cable-kickback': 'Махи ногой назад в блоке (Блок)',
+  'fedb-hip-extension-with-bands': 'Разгибание бедра с резиной (Резина)',
+  'fedb-hip-lift-with-band': 'Подъём таза с резиной (Резина)',
+  'fedb-kneeling-squat': 'Присед с колен со штангой (Штанга)',
+  'fedb-step-up-with-knee-raise': 'Зашагивание с подъёмом колена (Своё тело)',
+  'fedb-physioball-hip-bridge': 'Ягодичный мостик на фитболе (Фитбол)',
+  'fedb-leg-lift': 'Подъём ноги назад (Своё тело)',
   'fedb-3-4-sit-up': 'Подъём корпуса на 3/4 (Своё тело)',
   'fedb-alternating-cable-shoulder-press': 'Попеременный жим над головой (Блок)',
   'fedb-alternating-floor-press': 'Попеременный жим с пола (Гиря)',
@@ -299,6 +321,10 @@ async function main() {
   const groups = [...byGroup.keys()]
   const picked = []
   const seen = new Set()
+  // Сначала — обязательные (FORCE_INCLUDE), затем добор round-robin до TARGET_COUNT.
+  for (const ex of usable) {
+    if (FORCE_INCLUDE.has(ex.id) && !seen.has(ex.id)) { seen.add(ex.id); picked.push(ex) }
+  }
   let round = 0
   while (picked.length < TARGET_COUNT) {
     let addedThisRound = false

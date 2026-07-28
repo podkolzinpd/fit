@@ -17,11 +17,12 @@ export interface ImportedExercise extends ExerciseSnapshot {
 }
 
 export const MUSCLE_GROUPS: readonly MuscleGroup[] = [
-  'legs', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio',
+  'legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio',
 ]
 
 export const MUSCLE_GROUP_LABELS: Record<MuscleGroup, string> = {
   legs: 'Ноги',
+  glutes: 'Ягодицы',
   chest: 'Грудь',
   back: 'Спина',
   shoulders: 'Плечи',
