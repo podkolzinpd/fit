@@ -510,18 +510,33 @@ export function LiveWorkoutPage() {
   return <Page title="Live-тренировка">
     <AsyncView loading={query.isLoading} error={query.error}>{query.data && <>
       <p>{query.data.clientName}</p>
-      {/* Закреплённый блок: таймер тренировки + отдых под ним (всегда на виду). */}
-      <div className="live-pinned">
-        <WorkoutTimer startedAt={query.data.startedAt ?? null} variant="big" />
-        {restRemaining !== null && <div className="rest-timer">
-          <strong>Отдых {formatRest(restRemaining)}</strong>
-          <div className="rest-controls">
-            <button type="button" className="rest-step" aria-label="Минус 15 секунд" onClick={() => adjustRest(-REST_STEP)}>−15с</button>
-            <button type="button" className="rest-step" aria-label="Плюс 15 секунд" onClick={() => adjustRest(REST_STEP)}>+15с</button>
-            <button type="button" className="link" onClick={stopRest}>Пропустить</button>
-          </div>
-        </div>}
-      </div>
+      {(() => {
+        // Активная круговая (многоэлементный блок с незавершёнными подходами) —
+        // её счётчик «Круг N из M» + точки закрепляем вместе с таймером, чтобы при
+        // скролле по кругам всегда было видно, на каком круге сейчас.
+        const liveBlocks = groupIntoBlocks(query.data.exercises)
+        const activeCircuit = liveBlocks.find((b) => b.exercises.length > 1 && b.exercises.some((ex) => ex.sets.some((s) => !s.confirmedAt)))
+        const circuitRounds = activeCircuit ? blockRoundsView(activeCircuit) : null
+        const circuitCurrent = circuitRounds ? currentRoundIndex(circuitRounds) : 0
+        return (
+        /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
+        <div className="live-pinned">
+          <WorkoutTimer startedAt={query.data.startedAt ?? null} variant="big" />
+          {restRemaining !== null && <div className="rest-timer">
+            <strong>Отдых {formatRest(restRemaining)}</strong>
+            <div className="rest-controls">
+              <button type="button" className="rest-step" aria-label="Минус 15 секунд" onClick={() => adjustRest(-REST_STEP)}>−15с</button>
+              <button type="button" className="rest-step" aria-label="Плюс 15 секунд" onClick={() => adjustRest(REST_STEP)}>+15с</button>
+              <button type="button" className="link" onClick={stopRest}>Пропустить</button>
+            </div>
+          </div>}
+          {activeCircuit && circuitRounds && <div className="circuit-head pinned">
+            <span className="block-badge">{blockLabel(activeCircuit.blockType, activeCircuit.blockPreset)}</span>
+            <span className="circuit-counter">Круг {circuitRounds[circuitCurrent]?.round ?? 1} из {circuitRounds.length}</span>
+            <span className="circuit-dots" aria-hidden="true">{circuitRounds.map((r, i) => <span key={r.round} className={`circuit-dot ${r.items.every(({ set }) => set.confirmedAt) ? 'done' : i === circuitCurrent ? 'current' : ''}`} />)}</span>
+          </div>}
+        </div>)
+      })()}
       {(() => { const liveBlocks = groupIntoBlocks(query.data.exercises); return liveBlocks.map((block, blockIndex) => {
         // ↑/↓ показываем только когда блоков больше одного; двигать можно любые
         // блоки (в т.ч. с завершёнными подходами), кроме упора в границу.
@@ -542,11 +557,14 @@ export function LiveWorkoutPage() {
         // Многоэлементный блок — по кругам, со счётчиком «Круг R из N».
         const rounds = blockRoundsView(block)
         const current = currentRoundIndex(rounds)
+        // Счётчик «Круг N из M» + точки закреплены сверху (.live-pinned) для
+        // активной круговой; здесь в шапке блока — бейдж, счётчик и стрелки.
+        // Точки не дублируем (они в закрепе), но счётчик оставляем как заголовок
+        // блока (актуален и для неактивных/завершённых круговых при скролле).
         return <div className="exercise-block live" key={block.blockId}>
           <div className="circuit-head">
             <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
             <span className="circuit-counter">Круг {rounds[current]?.round ?? 1} из {rounds.length}</span>
-            <span className="circuit-dots" aria-hidden="true">{rounds.map((r, i) => <span key={r.round} className={`circuit-dot ${r.items.every(({ set }) => set.confirmedAt) ? 'done' : i === current ? 'current' : ''}`} />)}</span>
             {reorder}
           </div>
           {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt); return <div className={`circuit-round ${roundDone ? 'done' : roundIndex === current ? 'current' : ''}`} key={round.round}>
