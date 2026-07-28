@@ -3,11 +3,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
+import { goalsRepository } from '../../data/repositories/goals.repository'
 import { invitationsRepository } from '../../data/repositories/invitations.repository'
 import { bmiLabel, computeClientStats, splitClientWorkouts, workoutsRepository } from '../../data/repositories/workouts.repository'
 import { WorkoutExercisesSummary } from '../workouts'
 import type { Client, Gender } from '../../shared/domain'
-import { formatLocalDate, todayLocalDate } from '../../shared/local-date'
+import { currentStage, daysToTarget, stageProgress } from '../../shared/goal-rules'
+import { formatLocalDate, formatLocalDateShort, localDate, todayLocalDate } from '../../shared/local-date'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { clientSchema } from '../../shared/validation'
 import { VoiceNoteField } from '../voice-input'
@@ -178,26 +180,53 @@ function useSaveClient(client: Client, onDone: () => void) {
   })
 }
 
+// «Осталось N дней» / «срок сегодня» / «просрочено N дней» по target_date.
+function targetHint(days: number): string {
+  if (days === 0) return 'срок сегодня'
+  if (days < 0) return `просрочено ${-days} дн.`
+  return `осталось ${days} дн.`
+}
+
 function ClientGoalBlock({ client }: { client: Client }) {
-  const [editing, setEditing] = useState(false)
+  const goalQuery = useQuery({ queryKey: ['client-goal', client.id], queryFn: () => goalsRepository.get(client.id) })
+  const [editingText, setEditingText] = useState(false)
   const form = useForm<{ goal: string }>({ defaultValues: { goal: client.goal ?? '' } })
-  const mutation = useSaveClient(client, () => setEditing(false))
-  const startEditing = () => { form.reset({ goal: client.goal ?? '' }); setEditing(true) }
-  if (editing) return <section className="goal-block">
+  const mutation = useSaveClient(client, () => setEditingText(false))
+  const startEditing = () => { form.reset({ goal: client.goal ?? '' }); setEditingText(true) }
+
+  // Цель как сущность (client_goals) — приоритетна: заголовок + дата + текущий этап.
+  const goal = goalQuery.data
+  if (goal) {
+    const today = todayLocalDate()
+    const days = daysToTarget(goal, today)
+    const stage = currentStage(goal, today)
+    const progress = stageProgress(goal, today)
+    return <section className="goal-block">
+      <div className="goal-head"><h2>Цель</h2><Link className="link" to={`/clients/${client.id}/goal`}>Открыть →</Link></div>
+      <p>{goal.title}</p>
+      {goal.targetDate && <p className="muted">До {formatLocalDateShort(localDate(goal.targetDate))}{days !== null ? ` · ${targetHint(days)}` : ''}</p>}
+      {progress && progress.total > 0 && <p className="goal-stage-line">
+        {stage ? `Этап ${progress.index} из ${progress.total} · «${stage.title}»` : `${progress.total} ${progress.total === 1 ? 'этап' : 'этапа'}, между периодами`}
+      </p>}
+    </section>
+  }
+
+  // Легаси-текст цели (clients.goal): показываем + inline-правку, предлагаем оформить.
+  if (editingText) return <section className="goal-block">
     <form className="stack" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate({ goal: values.goal }))(event)}>
       <Field label="Цель"><textarea rows={3} placeholder="Например: похудеть к отпуску, −8 кг" {...form.register('goal')} /></Field>
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions"><button type="button" className="secondary" onClick={() => setEditing(false)}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
+      <div className="actions"><button type="button" className="secondary" onClick={() => setEditingText(false)}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
     </form>
   </section>
   return <section className="goal-block">
     <div className="goal-head"><h2>Цель</h2><button type="button" className="link" onClick={startEditing}>{client.goal ? 'Изменить' : '＋ Добавить'}</button></div>
     {client.goal ? <p>{client.goal}</p> : <p className="muted">Цель пока не задана</p>}
-    {/* Discoverability периодизации (Заход 2): цель можно разбить на этапы с датами. */}
-    <div className="goal-stages-hint">
+    {/* Периодизация: оформить цель с датой и этапами (Заход 2). */}
+    <Link className="goal-stages-hint" to={`/clients/${client.id}/goal`}>
       <div><strong>Разбить путь на этапы</strong><p>Периоды с датами: набор, сушка, поддержка — со сроком к цели</p></div>
-      <button type="button" className="secondary" disabled title="Скоро">Скоро</button>
-    </div>
+      <span className="button secondary">Оформить</span>
+    </Link>
   </section>
 }
 

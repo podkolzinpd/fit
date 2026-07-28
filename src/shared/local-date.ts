@@ -52,6 +52,13 @@ export function addDays(value: LocalDate, days: number): LocalDate {
   return fromUtc(Date.UTC(year, month - 1, day + days))
 }
 
+// Календарных дней от from до to (to - from). Отрицательно, если to раньше from.
+export function daysBetween(from: LocalDate, to: LocalDate): number {
+  const [fy, fm, fd] = parts(from)
+  const [ty, tm, td] = parts(to)
+  return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86_400_000)
+}
+
 export function addMonths(value: LocalDate, months: number): LocalDate {
   const [year, month, day] = parts(value)
   // Clamp to the last day of the target month (e.g. 31 Jan + 1 month → 28/29 Feb).

@@ -1,4 +1,4 @@
-// schema-sha256: 0cd290b44c47731614dc07fda97f7bbe63942f00bdbb882468395ae3e8ba7384
+// schema-sha256: 9b43deafc14c397c50e37e6654f014af25e502dd80742d49a0ecbbd63911a453
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
@@ -119,6 +119,11 @@ export type Database = {
       update_client: { Args: { p_client: Json; p_expected_version: number }; Returns: number }
       update_own_client: { Args: { p_client: Json; p_expected_version: number }; Returns: number }
       update_client_trainer_preferences: { Args: { p_client_id: string; p_alias: string; p_note: string | null; p_expected_version: number }; Returns: number }
+      get_client_goal: { Args: { p_client_id: string }; Returns: Json }
+      save_client_goal: { Args: { p_goal: Json; p_expected_version?: number }; Returns: string }
+      archive_client_goal: { Args: { p_goal_id: string; p_expected_version: number }; Returns: undefined }
+      save_goal_stage: { Args: { p_stage: Json; p_expected_version?: number }; Returns: string }
+      delete_goal_stage: { Args: { p_stage_id: string }; Returns: undefined }
       save_workout: { Args: { p_workout: Json; p_expected_version?: number | null }; Returns: string }
       start_workout: { Args: { p_workout_id: string; p_expected_version: number }; Returns: number }
       save_live_set_draft: { Args: { p_set_id: string; p_draft: Json; p_expected_version: number }; Returns: number }
