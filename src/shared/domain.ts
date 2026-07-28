@@ -177,6 +177,7 @@ export interface WorkoutDraft {
   startTime?: string
   endTime?: string
   notes?: string
+  stageId?: UUID | null
   exercises: WorkoutExerciseDraft[]
   version?: number
 }
@@ -221,6 +222,8 @@ export interface Workout {
   completedAt: string | null
   status: WorkoutStatus
   notes: string | null
+  stageId: UUID | null
+  stageTitle: string | null
   version: number
   exercises: WorkoutExercise[]
 }
