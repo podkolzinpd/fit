@@ -6,6 +6,1101 @@ import type { ImportedExercise } from './system-exercises'
 export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   {
     "source": "system",
+    "ref": "fedb-smith-machine-bent-over-row",
+    "name": "Тяга в наклоне в Смите (Тренажёр)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Середина спины",
+    "secondaryMuscles": [
+      "Бицепс",
+      "Широчайшие",
+      "Плечи"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-smith-machine-bent-over-row.jpg",
+    "instructions": [
+      "Встаньте в наклоне, гриф Смита в опущенных руках хватом на ширине плеч.",
+      "Подтяните гриф к животу, сводя лопатки.",
+      "Медленно опустите, сохраняя нейтральную спину."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-step-up-with-knee-raise",
+    "name": "Зашагивание с подъёмом колена (Своё тело)",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Ягодицы",
+    "secondaryMuscles": [
+      "Бицепс бедра",
+      "Квадрицепс"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-step-up-with-knee-raise.jpg",
+    "instructions": [
+      "Встаньте перед тумбой, поставьте на неё одну стопу целиком.",
+      "Поднимитесь на тумбу силой опорной ноги, вынося колено второй ноги вверх.",
+      "Подконтрольно опуститесь, повторите, затем смените ногу."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-stiff-legged-dumbbell-deadlift",
+    "name": "Становая на прямых ногах с гантелями (Гантели)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Бицепс бедра",
+    "secondaryMuscles": [
+      "Ягодицы",
+      "Поясница"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-stiff-legged-dumbbell-deadlift.jpg",
+    "instructions": [
+      "Встаньте, гантели перед бёдрами, ноги почти прямые, спина нейтральна.",
+      "Наклонитесь вперёд в тазобедренном суставе, опуская гантели вдоль ног.",
+      "Почувствовав растяжение бицепса бедра, вернитесь вверх, сжимая ягодицы."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-straight-bar-bench-mid-rows",
+    "name": "Тяга к скамье прямым грифом (Штанга)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Середина спины",
+    "secondaryMuscles": [
+      "Бицепс",
+      "Широчайшие"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-straight-bar-bench-mid-rows.jpg",
+    "instructions": [
+      "Сядьте у скамьи, прямой гриф под ней, тяните к нижней части груди.",
+      "Подтяните гриф, сводя лопатки, локти вдоль корпуса.",
+      "Подконтрольно опустите под контролем."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-underhand-cable-pulldowns",
+    "name": "Тяга верхнего блока обратным хватом (Блок)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Широчайшие",
+    "secondaryMuscles": [
+      "Бицепс",
+      "Середина спины",
+      "Плечи"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-underhand-cable-pulldowns.jpg",
+    "instructions": [
+      "Сядьте у верхнего блока, рукоять обратным хватом на ширине плеч.",
+      "Подтяните рукоять к верху груди, сводя лопатки.",
+      "Медленно верните вверх до растяжения широчайших."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-barbell-glute-bridge",
+    "name": "Ягодичный мостик со штангой (Штанга)",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Ягодицы",
+    "secondaryMuscles": [
+      "Икры",
+      "Бицепс бедра"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-barbell-glute-bridge.jpg",
+    "instructions": [
+      "Лягте на спину, согните колени, стопы на полу. Штангу разместите на тазу (на валике/подушке).",
+      "На выдохе поднимите таз, полностью выпрямляя корпус и сжимая ягодицы вверху.",
+      "Задержитесь на секунду и подконтрольно опустите таз, не касаясь пола полностью."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-barbell-hip-thrust",
+    "name": "Ягодичный мост со штангой (Штанга)",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Ягодицы",
+    "secondaryMuscles": [
+      "Икры",
+      "Бицепс бедра"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-barbell-hip-thrust.jpg",
+    "instructions": [
+      "Обопритесь верхом спины (лопатками) о скамью, штанга на тазу, стопы на полу.",
+      "На выдохе поднимите таз до параллели корпуса полу, максимально сжимая ягодицы.",
+      "Подконтрольно опуститесь, сохраняя напряжение в ягодицах."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-dumbbell-clean",
+    "name": "Взятие гантелей на грудь (Гантели)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Бицепс бедра",
+    "secondaryMuscles": [
+      "Икры",
+      "Предплечья",
+      "Ягодицы",
+      "Поясница",
+      "Квадрицепс",
+      "Плечи",
+      "Трапеции"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-dumbbell-clean.jpg",
+    "instructions": [
+      "Гантели у пола между стоп, спина прямая, таз отведён.",
+      "Мощно разогнитесь, подрывая гантели вверх, и подсядьте под них к плечам.",
+      "Встаньте, зафиксировав гантели у плеч, затем опустите."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-kettlebell-dead-clean",
+    "name": "Взятие гири на грудь с пола (Гиря)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Бицепс бедра",
+    "secondaryMuscles": [
+      "Икры",
+      "Ягодицы",
+      "Поясница",
+      "Квадрицепс",
+      "Трапеции"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-kettlebell-dead-clean.jpg",
+    "instructions": [
+      "Гиря на полу между стоп, возьмите за дужку, спина прямая.",
+      "Взрывно разогните таз, забрасывая гирю к плечу, «прошивая» кистью.",
+      "Опустите гирю на пол под контролем, повторите."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-kettlebell-one-legged-deadlift",
+    "name": "Становая на одной ноге с гирей (Гиря)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Бицепс бедра",
+    "secondaryMuscles": [
+      "Ягодицы",
+      "Поясница"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-kettlebell-one-legged-deadlift.jpg",
+    "instructions": [
+      "Встаньте на одну ногу, гиря в руке, вторая нога уходит назад.",
+      "Наклонитесь вперёд, опуская гирю, свободная нога поднимается назад в линию.",
+      "Вернитесь вверх за счёт бицепса бедра и ягодицы опорной ноги."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-kneeling-squat",
+    "name": "Присед с колен со штангой (Штанга)",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Ягодицы",
+    "secondaryMuscles": [
+      "Пресс",
+      "Бицепс бедра",
+      "Поясница"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-kneeling-squat.jpg",
+    "instructions": [
+      "Встаньте на колени (на мягкую опору), штанга на трапециях, корпус прямой.",
+      "Отведите таз назад и опуститесь к пяткам, сохраняя нейтральную спину.",
+      "Вернитесь вверх за счёт ягодиц, полностью выпрямляя таз."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-alternate-hammer-curl",
+    "name": "Попеременный молоток (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [
+      "Предплечья"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-alternate-hammer-curl.jpg",
+    "instructions": [
+      "Встаньте, гантели в опущенных руках нейтральным хватом (ладони внутрь).",
+      "Поочерёдно сгибайте руки, поднимая гантель к плечу, локоть у корпуса.",
+      "Подконтрольно опускайте, чередуя стороны."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-alternate-incline-dumbbell-curl",
+    "name": "Попеременный подъём на бицепс на наклонной (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [
+      "Предплечья"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-alternate-incline-dumbbell-curl.jpg",
+    "instructions": [
+      "Сядьте на наклонную скамью, руки с гантелями свободно свисают.",
+      "Поочерёдно сгибайте руку, поднимая гантель, локоть неподвижен.",
+      "Медленно опускайте, растягивая бицепс, чередуйте руки."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-barbell-curls-lying-against-an-incline",
+    "name": "Подъём штанги на бицепс лёжа на наклонной (Штанга)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-barbell-curls-lying-against-an-incline.jpg",
+    "instructions": [
+      "Лягте грудью на наклонную скамью, руки со штангой свисают вниз.",
+      "Согните руки, поднимая штангу к плечам без раскачки.",
+      "Медленно опустите, сохраняя изоляцию бицепса."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-barbell-seated-calf-raise",
+    "name": "Подъём на носки сидя со штангой (Штанга)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Икры",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-barbell-seated-calf-raise.jpg",
+    "instructions": [
+      "Сядьте, штангу разместите на бёдрах у колен, носки на возвышении, пятки свободны.",
+      "Поднимитесь максимально высоко на носках, сжимая икры.",
+      "Медленно опустите пятки ниже уровня носков, чувствуя растяжение."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-barbell-shrug",
+    "name": "Шраги со штангой (Штанга)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Трапеции",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-barbell-shrug.jpg",
+    "instructions": [
+      "Встаньте, штанга в опущенных руках перед бёдрами, хват на ширине плеч.",
+      "Поднимите плечи к ушам, не сгибая руки.",
+      "Задержитесь вверху и подконтрольно опустите плечи."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-barbell-shrug-behind-the-back",
+    "name": "Шраги со штангой за спиной (Штанга)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Трапеции",
+    "secondaryMuscles": [
+      "Предплечья",
+      "Середина спины"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-barbell-shrug-behind-the-back.jpg",
+    "instructions": [
+      "Штанга за спиной в опущенных руках, хват на ширине плеч.",
+      "Поднимите плечи вверх, сжимая трапеции.",
+      "Медленно опустите, не раскачиваясь."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-butt-lift-bridge",
+    "name": "Ягодичный мостик (Своё тело)",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Ягодицы",
+    "secondaryMuscles": [
+      "Бицепс бедра"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-butt-lift-bridge.jpg",
+    "instructions": [
+      "Лягте на спину, колени согнуты, стопы на ширине таза, руки вдоль тела.",
+      "Поднимите таз вверх за счёт ягодиц, выпрямляя корпус в линию.",
+      "Задержитесь и плавно опуститесь, не роняя таз на пол."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-cable-hammer-curls-rope-attachment",
+    "name": "Молоток на блоке с канатом (Блок)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-cable-hammer-curls-rope-attachment.jpg",
+    "instructions": [
+      "Встаньте у нижнего блока с канатом, хват нейтральный.",
+      "Согните руки, подтягивая канат к плечам, локти у корпуса.",
+      "Подконтрольно верните, не разгибая локти в стороны."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-cable-incline-pushdown",
+    "name": "Пуловер прямыми руками в наклоне в блоке (Блок)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Широчайшие",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-cable-incline-pushdown.jpg",
+    "instructions": [
+      "Встаньте у верхнего блока, наклонитесь вперёд, руки почти прямые на рукояти.",
+      "Опустите рукоять к бёдрам прямыми руками за счёт широчайших.",
+      "Подконтрольно верните вверх, растягивая спину."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-cable-preacher-curl",
+    "name": "Подъём на бицепс на скамье Скотта в блоке (Блок)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [
+      "Предплечья"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-cable-preacher-curl.jpg",
+    "instructions": [
+      "Сядьте у скамьи Скотта, руки со штангой/рукоятью блока на подушке.",
+      "Согните руки, поднимая вес, не отрывая локти от подушки.",
+      "Медленно опустите до почти прямых рук."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-cable-shrugs",
+    "name": "Шраги в блоке (Блок)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Трапеции",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-cable-shrugs.jpg",
+    "instructions": [
+      "Встаньте у нижнего блока, рукоять в опущенных руках.",
+      "Поднимите плечи к ушам против веса блока.",
+      "Подконтрольно опустите плечи вниз."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-cable-wrist-curl",
+    "name": "Сгибание запястий в блоке (Блок)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Предплечья",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-cable-wrist-curl.jpg",
+    "instructions": [
+      "Сядьте, предплечья на бёдрах, кисти с рукоятью блока свисают ладонями вверх.",
+      "Согните кисти вверх, поднимая рукоять только запястьями.",
+      "Медленно опустите, растягивая сгибатели предплечья."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-calf-press",
+    "name": "Жим носками в тренажёре (Тренажёр)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Икры",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-calf-press.jpg",
+    "instructions": [
+      "Сядьте в тренажёр, упритесь носками в платформу, пятки свисают.",
+      "Выжмите платформу носками, полностью выпрямляя стопы.",
+      "Подконтрольно верните, опуская пятки для растяжения икр."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-calf-press-on-the-leg-press-machine",
+    "name": "Жим носками в жиме ногами (Тренажёр)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Икры",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-calf-press-on-the-leg-press-machine.jpg",
+    "instructions": [
+      "В жиме ногами поставьте носки на нижний край платформы, пятки свободны.",
+      "Выжмите платформу носками, разгибая стопы; колени держите слегка согнутыми.",
+      "Медленно опустите, растягивая икры внизу."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-calf-machine-shoulder-shrug",
+    "name": "Шраги в тренажёре для икр (Тренажёр)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Трапеции",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-calf-machine-shoulder-shrug.jpg",
+    "instructions": [
+      "Встаньте в тренажёр для икр, плечи под упорами.",
+      "Поднимите плечи вверх, сжимая трапеции.",
+      "Медленно опустите под контролем веса."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-close-grip-ez-bar-curl",
+    "name": "Подъём на бицепс узким хватом (EZ-гриф)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [
+      "Предплечья"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-close-grip-ez-bar-curl.jpg",
+    "instructions": [
+      "Встаньте, EZ-гриф узким хватом снизу, руки опущены.",
+      "Согните руки, поднимая гриф к плечам, локти неподвижны.",
+      "Подконтрольно опустите, растягивая бицепс."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-dumbbell-seated-one-leg-calf-raise",
+    "name": "Подъём на носок сидя на одной ноге с гантелью (Гантели)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Икры",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-dumbbell-seated-one-leg-calf-raise.jpg",
+    "instructions": [
+      "Сядьте, гантель на бедре у колена, носок рабочей ноги на возвышении.",
+      "Поднимите пятку максимально высоко, сжимая икру.",
+      "Опустите ниже уровня носка, смените ногу."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-dumbbell-shrug",
+    "name": "Шраги с гантелями (Гантели)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Трапеции",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-dumbbell-shrug.jpg",
+    "instructions": [
+      "Встаньте, гантели в опущенных руках вдоль тела.",
+      "Поднимите плечи к ушам, не сгибая руки.",
+      "Задержитесь и плавно опустите плечи."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-finger-curls",
+    "name": "Сгибание пальцами со штангой (Штанга)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Предплечья",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-finger-curls.jpg",
+    "instructions": [
+      "Сядьте, предплечья на бёдрах, штанга на раскрытых пальцах ладонями вверх.",
+      "Скрутите штангу пальцами и подсогните кисти вверх.",
+      "Медленно раскройте пальцы, опуская штангу."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-hip-extension-with-bands",
+    "name": "Разгибание бедра с резиной (Резина)",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "equipmentRef": "bands",
+    "primaryMuscleDetail": "Ягодицы",
+    "secondaryMuscles": [
+      "Бицепс бедра"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-hip-extension-with-bands.jpg",
+    "instructions": [
+      "Закрепите резину на лодыжке и неподвижной опоре впереди, встаньте, держась за поддержку.",
+      "Отведите прямую ногу назад, преодолевая сопротивление резины, сжимая ягодицу.",
+      "Медленно верните ногу, не заваливая корпус."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-hip-lift-with-band",
+    "name": "Подъём таза с резиной (Резина)",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "equipmentRef": "bands",
+    "primaryMuscleDetail": "Ягодицы",
+    "secondaryMuscles": [
+      "Икры",
+      "Бицепс бедра"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-hip-lift-with-band.jpg",
+    "instructions": [
+      "Лягте на спину, резину накиньте на бёдра, стопы на полу, колени согнуты.",
+      "Поднимите таз вверх против сопротивления резины, разводя колени наружу.",
+      "Сожмите ягодицы вверху и подконтрольно опуститесь."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-incline-bench-pull",
+    "name": "Тяга штанги лёжа на наклонной (Штанга)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Середина спины",
+    "secondaryMuscles": [
+      "Широчайшие",
+      "Плечи"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-incline-bench-pull.jpg",
+    "instructions": [
+      "Лягте грудью на наклонную скамью, штанга в свисающих руках.",
+      "Подтяните штангу к скамье, сводя лопатки, локти вдоль корпуса.",
+      "Подконтрольно опустите, растягивая спину."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-leg-lift",
+    "name": "Подъём ноги назад (Своё тело)",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Ягодицы",
+    "secondaryMuscles": [
+      "Бицепс бедра"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-leg-lift.jpg",
+    "instructions": [
+      "Встаньте на четвереньки (или обопритесь о опору), спина нейтральна.",
+      "Поднимите прямую ногу назад до линии корпуса за счёт ягодицы.",
+      "Подконтрольно опустите ногу, не прогибая поясницу, смените сторону."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-lying-cambered-barbell-row",
+    "name": "Тяга изогнутого грифа лёжа (Штанга)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Середина спины",
+    "secondaryMuscles": [
+      "Бицепс",
+      "Широчайшие",
+      "Трапеции"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-lying-cambered-barbell-row.jpg",
+    "instructions": [
+      "Лягте на скамью лицом вниз, изогнутый гриф под скамьёй в руках.",
+      "Подтяните гриф к скамье, сводя лопатки.",
+      "Медленно опустите под контролем."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-lying-leg-curls",
+    "name": "Сгибание ног лёжа в тренажёре (Тренажёр)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Бицепс бедра",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-lying-leg-curls.jpg",
+    "instructions": [
+      "Лягте на тренажёр лицом вниз, валик над пятками.",
+      "Согните ноги, подтягивая валик к ягодицам за счёт бицепса бедра.",
+      "Медленно верните, не бросая вес."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-palms-down-dumbbell-wrist-curl-over-a-bench",
+    "name": "Разгибание запястий с гантелями на скамье (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Предплечья",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-palms-down-dumbbell-wrist-curl-over-a-bench.jpg",
+    "instructions": [
+      "Предплечья на скамье, кисти с гантелями свисают ладонями вниз.",
+      "Разогните кисти вверх, поднимая гантели только запястьями.",
+      "Подконтрольно опустите кисти вниз."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-palms-down-wrist-curl-over-a-bench",
+    "name": "Разгибание запястий со штангой на скамье (Штанга)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Предплечья",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-palms-down-wrist-curl-over-a-bench.jpg",
+    "instructions": [
+      "Предплечья на скамье, штанга в кистях ладонями вниз, гриф свисает.",
+      "Разогните запястья вверх, поднимая штангу.",
+      "Медленно опустите кисти, растягивая разгибатели."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-palms-up-barbell-wrist-curl-over-a-bench",
+    "name": "Сгибание запястий со штангой на скамье (Штанга)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Предплечья",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-palms-up-barbell-wrist-curl-over-a-bench.jpg",
+    "instructions": [
+      "Предплечья на скамье, штанга в кистях ладонями вверх, гриф свисает.",
+      "Согните запястья вверх, поднимая штангу.",
+      "Подконтрольно опустите кисти, растягивая сгибатели."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-palms-up-dumbbell-wrist-curl-over-a-bench",
+    "name": "Сгибание запястий с гантелями на скамье (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Предплечья",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-palms-up-dumbbell-wrist-curl-over-a-bench.jpg",
+    "instructions": [
+      "Предплечья на скамье, гантели в кистях ладонями вверх, свисают.",
+      "Согните запястья вверх, поднимая гантели.",
+      "Медленно опустите кисти вниз."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-physioball-hip-bridge",
+    "name": "Ягодичный мостик на фитболе (Фитбол)",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Фитбол",
+    "equipmentRef": "exercise ball",
+    "primaryMuscleDetail": "Ягодицы",
+    "secondaryMuscles": [
+      "Бицепс бедра"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-physioball-hip-bridge.jpg",
+    "instructions": [
+      "Лягте на спину, пятки на фитболе, руки вдоль тела для устойчивости.",
+      "Поднимите таз, сжимая ягодицы, удерживая баланс на мяче.",
+      "Медленно опуститесь, не теряя контроль над мячом."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-rocking-standing-calf-raise",
+    "name": "Подъём на носки стоя со штангой (Штанга)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Икры",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-rocking-standing-calf-raise.jpg",
+    "instructions": [
+      "Штанга на трапециях, носки на возвышении, пятки свисают.",
+      "Поднимитесь на носки как можно выше, задержитесь.",
+      "Опустите пятки ниже носков, растягивая икры."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-rope-straight-arm-pulldown",
+    "name": "Пуловер прямыми руками с канатом в блоке (Блок)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Широчайшие",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-rope-straight-arm-pulldown.jpg",
+    "instructions": [
+      "Встаньте у верхнего блока с канатом, руки почти прямые перед собой.",
+      "Опустите канат к бёдрам прямыми руками, разводя концы внизу.",
+      "Медленно верните вверх, растягивая широчайшие."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-seated-calf-raise",
+    "name": "Подъём на носки сидя в тренажёре (Тренажёр)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Икры",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-seated-calf-raise.jpg",
+    "instructions": [
+      "Сядьте в тренажёр, валик на бёдрах у колен, носки на платформе.",
+      "Поднимитесь на носки, преодолевая вес, сжимая икры.",
+      "Медленно опустите пятки для полного растяжения."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-seated-leg-curl",
+    "name": "Сгибание ног сидя в тренажёре (Тренажёр)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Бицепс бедра",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-seated-leg-curl.jpg",
+    "instructions": [
+      "Сядьте в тренажёр, валик над щиколотками, бёдра зафиксированы.",
+      "Согните ноги под себя, преодолевая вес.",
+      "Подконтрольно разогните, растягивая бицепс бедра."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-single-leg-glute-bridge",
+    "name": "Ягодичный мостик на одной ноге (Своё тело)",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Ягодицы",
+    "secondaryMuscles": [
+      "Бицепс бедра"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-single-leg-glute-bridge.jpg",
+    "instructions": [
+      "Лягте на спину, одну ногу согните (стопа на полу), вторую выпрямите вверх.",
+      "Поднимите таз силой опорной ягодицы, удерживая вторую ногу на весу.",
+      "Опуститесь подконтрольно, повторите, затем смените ногу."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-smith-machine-calf-raise",
+    "name": "Подъём на носки в Смите (Тренажёр)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Икры",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-smith-machine-calf-raise.jpg",
+    "instructions": [
+      "Гриф Смита на трапециях, носки на возвышении, пятки свободны.",
+      "Поднимитесь на носки, разгибая стопы полностью.",
+      "Подконтрольно опустите пятки ниже уровня носков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-standing-leg-curl",
+    "name": "Сгибание ноги стоя в тренажёре (Тренажёр)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Бицепс бедра",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-standing-leg-curl.jpg",
+    "instructions": [
+      "Встаньте в тренажёр, валик над пяткой одной ноги.",
+      "Согните ногу, подтягивая пятку к ягодице.",
+      "Медленно опустите, повторите на другую ногу."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-straight-arm-pulldown",
+    "name": "Пуловер прямыми руками в блоке (Блок)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Широчайшие",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-straight-arm-pulldown.jpg",
+    "instructions": [
+      "Встаньте у верхнего блока, прямая рукоять в почти прямых руках.",
+      "Опустите рукоять к бёдрам прямыми руками за счёт широчайших.",
+      "Подконтрольно верните вверх."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-thigh-abductor",
+    "name": "Разведение ног в тренажёре (Тренажёр)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Отводящие",
+    "secondaryMuscles": [
+      "Ягодицы"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-thigh-abductor.jpg",
+    "instructions": [
+      "Сядьте в тренажёр, валики с внешней стороны бёдер, ноги вместе.",
+      "Разведите бёдра в стороны, преодолевая сопротивление.",
+      "Подконтрольно сведите ноги обратно."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-thigh-adductor",
+    "name": "Сведение ног в тренажёре (Тренажёр)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Приводящие",
+    "secondaryMuscles": [
+      "Ягодицы",
+      "Бицепс бедра"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-thigh-adductor.jpg",
+    "instructions": [
+      "Сядьте в тренажёр, валики с внутренней стороны бёдер, ноги разведены.",
+      "Сведите бёдра вместе, преодолевая сопротивление.",
+      "Медленно разведите ноги обратно под контролем."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-legged-cable-kickback",
+    "name": "Махи ногой назад в блоке (Блок)",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Ягодицы",
+    "secondaryMuscles": [
+      "Бицепс бедра"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-one-legged-cable-kickback.jpg",
+    "instructions": [
+      "Закрепите манжету на лодыжке, встаньте лицом к блоку, слегка наклонитесь, держась за опору.",
+      "Отведите прямую ногу назад за счёт ягодицы, не прогибаясь в пояснице.",
+      "Подконтрольно верните ногу, повторите, затем смените сторону."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-ball-leg-curl",
+    "name": "Сгибание ног на фитболе (Фитбол)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Фитбол",
+    "equipmentRef": "exercise ball",
+    "primaryMuscleDetail": "Бицепс бедра",
+    "secondaryMuscles": [
+      "Икры",
+      "Ягодицы"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-ball-leg-curl.jpg",
+    "instructions": [
+      "Лягте на спину, пятки на фитболе, таз поднят в линию с корпусом.",
+      "Согните ноги, подкатывая мяч пятками к себе, удерживая таз вверху.",
+      "Подконтрольно откатите мяч, разгибая ноги."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-band-hip-adductions",
+    "name": "Приведение бедра с резиной (Резина)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "equipmentRef": "bands",
+    "primaryMuscleDetail": "Приводящие",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-band-hip-adductions.jpg",
+    "instructions": [
+      "Закрепите резину сбоку на лодыжке, встаньте боком, держась за опору.",
+      "Приведите ногу к центру и за опорную, преодолевая резину.",
+      "Подконтрольно верните, смените сторону."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-calf-raises-with-bands",
+    "name": "Подъём на носки с резиной (Резина)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "equipmentRef": "bands",
+    "primaryMuscleDetail": "Икры",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-calf-raises-with-bands.jpg",
+    "instructions": [
+      "Встаньте на резину носками, концы держите в руках у плеч.",
+      "Поднимитесь на носки против сопротивления резины.",
+      "Плавно опуститесь, контролируя растяжение икр."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-close-grip-ez-bar-curl-with-band",
+    "name": "Подъём на бицепс узким хватом с резиной (EZ-гриф)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "EZ-гриф",
+    "equipmentRef": "e-z curl bar",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [
+      "Предплечья"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-close-grip-ez-bar-curl-with-band.jpg",
+    "instructions": [
+      "Встаньте на резину, EZ-гриф с резиной узким хватом снизу.",
+      "Согните руки, преодолевая вес и натяжение резины.",
+      "Плавно опустите, контролируя обратный ход."
+    ]
+  },
+  {
+    "source": "system",
     "ref": "fedb-3-4-sit-up",
     "name": "Подъём корпуса на 3/4 (Своё тело)",
     "muscleGroup": "core",
@@ -131,6 +1226,26 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
+    "ref": "fedb-flutter-kicks",
+    "name": "Ножницы (Своё тело)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [
+      "Бицепс бедра"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-flutter-kicks.jpg",
+    "instructions": [
+      "Лягте на спину, руки вдоль тела, ноги подняты и выпрямлены.",
+      "Попеременно опускайте и поднимайте прямые ноги короткими движениями.",
+      "Поясница прижата к полу, пресс напряжён на протяжении всего подхода."
+    ]
+  },
+  {
+    "source": "system",
     "ref": "fedb-air-bike",
     "name": "Велосипед лёжа (Своё тело)",
     "muscleGroup": "core",
@@ -232,6 +1347,26 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
       "Т-гриф между ног, наклон вперёд, одна рука на грифе, спина прямая.",
       "На выдохе подтяните гриф к поясу, отводя локоть назад.",
       "На вдохе плавно опустите. Повторите на другую сторону."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-glute-kickback",
+    "name": "Махи ногой назад (Своё тело)",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Ягодицы",
+    "secondaryMuscles": [
+      "Бицепс бедра"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-glute-kickback.jpg",
+    "instructions": [
+      "Встаньте на четвереньки, опора на предплечья и колени, спина прямая.",
+      "На выдохе отведите одну ногу назад-вверх, сжимая ягодицу, до прямой линии с корпусом.",
+      "На вдохе плавно верните колено вниз. Повторите на другую ногу."
     ]
   },
   {
@@ -356,6 +1491,27 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
       "Наклонитесь от таза, спина прямая, гантели в опущенных руках.",
       "На выдохе подтяните обе гантели к поясу, сводя лопатки.",
       "На вдохе плавно опустите гантели."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-pull-through",
+    "name": "Протяжка между ног в блоке (Блок)",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Ягодицы",
+    "secondaryMuscles": [
+      "Бицепс бедра",
+      "Поясница"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-pull-through.jpg",
+    "instructions": [
+      "Встаньте спиной к нижнему блоку, канат между ног, шаг вперёд. Наклонитесь, отводя таз назад.",
+      "Выпрямитесь, протягивая канат вперёд усилием ягодиц.",
+      "Плавно вернитесь в наклон, контролируя вес."
     ]
   },
   {
@@ -994,22 +2150,25 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
-    "ref": "fedb-flutter-kicks",
-    "name": "Ножницы (Своё тело)",
-    "muscleGroup": "core",
+    "ref": "fedb-goblet-squat",
+    "name": "Гоблет-присед (Гиря)",
+    "muscleGroup": "legs",
     "inputKind": "strength",
-    "equipment": "Своё тело",
-    "equipmentRef": "body only",
-    "primaryMuscleDetail": "Пресс",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Квадрицепс",
     "secondaryMuscles": [
-      "Бицепс бедра"
+      "Икры",
+      "Ягодицы",
+      "Бицепс бедра",
+      "Плечи"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-flutter-kicks.jpg",
+    "imageUrl": "/exercises/fedb-goblet-squat.jpg",
     "instructions": [
-      "Лягте на спину, руки вдоль тела, ноги подняты и выпрямлены.",
-      "Попеременно опускайте и поднимайте прямые ноги короткими движениями.",
-      "Поясница прижата к полу, пресс напряжён на протяжении всего подхода."
+      "Держите гирю у груди обеими руками, стопы чуть шире плеч.",
+      "На вдохе присядьте между бёдер, локти внутри коленей, спина прямая.",
+      "На выдохе выжмите себя вверх через пятки."
     ]
   },
   {
@@ -1117,22 +2276,24 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
-    "ref": "fedb-glute-kickback",
-    "name": "Махи ногой назад (Своё тело)",
+    "ref": "fedb-hack-squat",
+    "name": "Гакк-присед (Тренажёр)",
     "muscleGroup": "legs",
     "inputKind": "strength",
-    "equipment": "Своё тело",
-    "equipmentRef": "body only",
-    "primaryMuscleDetail": "Ягодицы",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Квадрицепс",
     "secondaryMuscles": [
+      "Икры",
+      "Ягодицы",
       "Бицепс бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-glute-kickback.jpg",
+    "imageUrl": "/exercises/fedb-hack-squat.jpg",
     "instructions": [
-      "Встаньте на четвереньки, опора на предплечья и колени, спина прямая.",
-      "На выдохе отведите одну ногу назад-вверх, сжимая ягодицу, до прямой линии с корпусом.",
-      "На вдохе плавно верните колено вниз. Повторите на другую ногу."
+      "Встаньте в гакк-тренажёр, спина к платформе, стопы на ширине плеч.",
+      "На вдохе присядьте, сгибая колени до ~90°.",
+      "На выдохе выжмите платформу через пятки, не разгибая колени до упора."
     ]
   },
   {
@@ -1234,29 +2395,6 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
       "Лягте на пол, гиря у груди одной рукой.",
       "На выдохе выжмите гирю вверх до прямой руки.",
       "На вдохе плавно опустите до касания локтем пола. Повторите на другую руку."
-    ]
-  },
-  {
-    "source": "system",
-    "ref": "fedb-goblet-squat",
-    "name": "Гоблет-присед (Гиря)",
-    "muscleGroup": "legs",
-    "inputKind": "strength",
-    "equipment": "Гири",
-    "equipmentRef": "kettlebells",
-    "primaryMuscleDetail": "Квадрицепс",
-    "secondaryMuscles": [
-      "Икры",
-      "Ягодицы",
-      "Бицепс бедра",
-      "Плечи"
-    ],
-    "level": "beginner",
-    "imageUrl": "/exercises/fedb-goblet-squat.jpg",
-    "instructions": [
-      "Держите гирю у груди обеими руками, стопы чуть шире плеч.",
-      "На вдохе присядьте между бёдер, локти внутри коленей, спина прямая.",
-      "На выдохе выжмите себя вверх через пятки."
     ]
   },
   {
@@ -1367,24 +2505,23 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
-    "ref": "fedb-hack-squat",
-    "name": "Гакк-присед (Тренажёр)",
+    "ref": "fedb-leverage-deadlift",
+    "name": "Становая тяга в рычажном тренажёре (Тренажёр)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Бицепс бедра",
     "secondaryMuscles": [
-      "Икры",
       "Ягодицы",
       "Бицепс бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-hack-squat.jpg",
+    "imageUrl": "/exercises/fedb-leverage-deadlift.jpg",
     "instructions": [
-      "Встаньте в гакк-тренажёр, спина к платформе, стопы на ширине плеч.",
-      "На вдохе присядьте, сгибая колени до ~90°.",
-      "На выдохе выжмите платформу через пятки, не разгибая колени до упора."
+      "Встаньте в рычажный тренажёр, возьмите рукояти, спина прямая, колени согнуты.",
+      "Выпрямитесь усилием ног и спины, выводя таз вперёд.",
+      "Плавно вернитесь в исходное, отводя таз назад."
     ]
   },
   {
@@ -1486,6 +2623,29 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
       "Скамья под наклоном, гантели у верха груди нейтральным хватом.",
       "На вдохе опустите гантели по бокам груди.",
       "На выдохе выжмите вверх, сохраняя нейтральный хват."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-plie-dumbbell-squat",
+    "name": "Присед плие с гантелью (Гантели)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Квадрицепс",
+    "secondaryMuscles": [
+      "Пресс",
+      "Икры",
+      "Ягодицы",
+      "Бицепс бедра"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-plie-dumbbell-squat.jpg",
+    "instructions": [
+      "Ноги шире плеч, носки развёрнуты наружу, гантель держите обеими руками перед собой.",
+      "На вдохе присядьте, колени в стороны по линии носков, спина прямая.",
+      "На выдохе выжмите себя вверх, сжимая ягодицы и внутреннюю поверхность бёдер."
     ]
   },
   {
@@ -1593,23 +2753,25 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
-    "ref": "fedb-leverage-deadlift",
-    "name": "Становая тяга в рычажном тренажёре (Тренажёр)",
+    "ref": "fedb-smith-machine-squat",
+    "name": "Приседания в Смите (Тренажёр)",
     "muscleGroup": "legs",
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Бицепс бедра",
+    "primaryMuscleDetail": "Квадрицепс",
     "secondaryMuscles": [
+      "Икры",
       "Ягодицы",
-      "Бицепс бедра"
+      "Бицепс бедра",
+      "Поясница"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-leverage-deadlift.jpg",
+    "imageUrl": "/exercises/fedb-smith-machine-squat.jpg",
     "instructions": [
-      "Встаньте в рычажный тренажёр, возьмите рукояти, спина прямая, колени согнуты.",
-      "Выпрямитесь усилием ног и спины, выводя таз вперёд.",
-      "Плавно вернитесь в исходное, отводя таз назад."
+      "Гриф Смита на трапециях, стопы чуть впереди проекции грифа.",
+      "На вдохе присядьте до параллели бёдер, спина прямая.",
+      "На выдохе выжмите себя вверх через пятки."
     ]
   },
   {
@@ -1695,25 +2857,23 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
-    "ref": "fedb-plie-dumbbell-squat",
-    "name": "Присед плие с гантелью (Гантели)",
+    "ref": "fedb-smith-machine-stiff-legged-deadlift",
+    "name": "Становая на прямых ногах в Смите (Тренажёр)",
     "muscleGroup": "legs",
     "inputKind": "strength",
-    "equipment": "Гантели",
-    "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Квадрицепс",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Бицепс бедра",
     "secondaryMuscles": [
-      "Пресс",
-      "Икры",
       "Ягодицы",
-      "Бицепс бедра"
+      "Поясница"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-plie-dumbbell-squat.jpg",
+    "imageUrl": "/exercises/fedb-smith-machine-stiff-legged-deadlift.jpg",
     "instructions": [
-      "Ноги шире плеч, носки развёрнуты наружу, гантель держите обеими руками перед собой.",
-      "На вдохе присядьте, колени в стороны по линии носков, спина прямая.",
-      "На выдохе выжмите себя вверх, сжимая ягодицы и внутреннюю поверхность бёдер."
+      "Гриф Смита в руках прямым хватом, ноги на ширине плеч, колени почти прямые.",
+      "Наклонитесь от таза, опуская гриф вдоль ног, до растяжения задней поверхности бедра.",
+      "Выпрямитесь усилием бицепса бедра и ягодиц."
     ]
   },
   {
@@ -1801,23 +2961,24 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
-    "ref": "fedb-pull-through",
-    "name": "Протяжка между ног в блоке (Блок)",
+    "ref": "fedb-smith-single-leg-split-squat",
+    "name": "Сплит-присед на одной ноге в Смите (Тренажёр)",
     "muscleGroup": "legs",
     "inputKind": "strength",
-    "equipment": "Блок",
-    "equipmentRef": "cable",
-    "primaryMuscleDetail": "Ягодицы",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Квадрицепс",
     "secondaryMuscles": [
-      "Бицепс бедра",
-      "Поясница"
+      "Икры",
+      "Ягодицы",
+      "Бицепс бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-pull-through.jpg",
+    "imageUrl": "/exercises/fedb-smith-single-leg-split-squat.jpg",
     "instructions": [
-      "Встаньте спиной к нижнему блоку, канат между ног, шаг вперёд. Наклонитесь, отводя таз назад.",
-      "Выпрямитесь, протягивая канат вперёд усилием ягодиц.",
-      "Плавно вернитесь в наклон, контролируя вес."
+      "Гриф Смита на трапециях, одна нога впереди, другая позади на носке.",
+      "Опуститесь на передней ноге, сгибая колено до ~90°.",
+      "Выжмите себя вверх через пятку передней ноги."
     ]
   },
   {
@@ -1901,25 +3062,23 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
-    "ref": "fedb-smith-machine-squat",
-    "name": "Приседания в Смите (Тренажёр)",
+    "ref": "fedb-split-squat-with-dumbbells",
+    "name": "Сплит-присед с гантелями (Гантели)",
     "muscleGroup": "legs",
     "inputKind": "strength",
-    "equipment": "Тренажёр",
-    "equipmentRef": "machine",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
     "primaryMuscleDetail": "Квадрицепс",
     "secondaryMuscles": [
-      "Икры",
       "Ягодицы",
-      "Бицепс бедра",
-      "Поясница"
+      "Бицепс бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-smith-machine-squat.jpg",
+    "imageUrl": "/exercises/fedb-split-squat-with-dumbbells.jpg",
     "instructions": [
-      "Гриф Смита на трапециях, стопы чуть впереди проекции грифа.",
-      "На вдохе присядьте до параллели бёдер, спина прямая.",
-      "На выдохе выжмите себя вверх через пятки."
+      "Гантели в руках, одна нога впереди, другая позади на носке.",
+      "Опуститесь, сгибая переднее колено до ~90°, корпус вертикально.",
+      "Выжмите себя вверх через пятку передней ноги. Повторите на другую ногу."
     ]
   },
   {
@@ -2031,27 +3190,6 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
-    "ref": "fedb-smith-machine-stiff-legged-deadlift",
-    "name": "Становая на прямых ногах в Смите (Тренажёр)",
-    "muscleGroup": "legs",
-    "inputKind": "strength",
-    "equipment": "Тренажёр",
-    "equipmentRef": "machine",
-    "primaryMuscleDetail": "Бицепс бедра",
-    "secondaryMuscles": [
-      "Ягодицы",
-      "Поясница"
-    ],
-    "level": "beginner",
-    "imageUrl": "/exercises/fedb-smith-machine-stiff-legged-deadlift.jpg",
-    "instructions": [
-      "Гриф Смита в руках прямым хватом, ноги на ширине плеч, колени почти прямые.",
-      "Наклонитесь от таза, опуская гриф вдоль ног, до растяжения задней поверхности бедра.",
-      "Выпрямитесь усилием бицепса бедра и ягодиц."
-    ]
-  },
-  {
-    "source": "system",
     "ref": "fedb-floor-press-with-chains",
     "name": "Жим с пола с цепями (Штанга)",
     "muscleGroup": "arms",
@@ -2069,28 +3207,6 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
       "Лягте на пол, на грифе цепи, хват чуть шире плеч.",
       "На вдохе опустите штангу до касания локтями пола.",
       "На выдохе выжмите вверх (цепи добавляют вес в верхней точке)."
-    ]
-  },
-  {
-    "source": "system",
-    "ref": "fedb-smith-machine-bent-over-row",
-    "name": "Тяга в наклоне в Смите (Тренажёр)",
-    "muscleGroup": "back",
-    "inputKind": "strength",
-    "equipment": "Тренажёр",
-    "equipmentRef": "machine",
-    "primaryMuscleDetail": "Середина спины",
-    "secondaryMuscles": [
-      "Бицепс",
-      "Широчайшие",
-      "Плечи"
-    ],
-    "level": "beginner",
-    "imageUrl": "/exercises/fedb-smith-machine-bent-over-row.jpg",
-    "instructions": [
-      "Наклонитесь от таза, спина прямая, гриф Смита в прямом хвате.",
-      "На выдохе подтяните гриф к низу живота, сводя лопатки.",
-      "На вдохе плавно опустите гриф."
     ]
   },
   {
@@ -2150,28 +3266,6 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
       "Ладони на возвышении (скамья), тело прямая линия, ноги на полу.",
       "На вдохе опуститесь, сгибая локти, до касания грудью опоры.",
       "На выдохе выжмите себя вверх."
-    ]
-  },
-  {
-    "source": "system",
-    "ref": "fedb-smith-single-leg-split-squat",
-    "name": "Сплит-присед на одной ноге в Смите (Тренажёр)",
-    "muscleGroup": "legs",
-    "inputKind": "strength",
-    "equipment": "Тренажёр",
-    "equipmentRef": "machine",
-    "primaryMuscleDetail": "Квадрицепс",
-    "secondaryMuscles": [
-      "Икры",
-      "Ягодицы",
-      "Бицепс бедра"
-    ],
-    "level": "beginner",
-    "imageUrl": "/exercises/fedb-smith-single-leg-split-squat.jpg",
-    "instructions": [
-      "Гриф Смита на трапециях, одна нога впереди, другая позади на носке.",
-      "Опуститесь на передней ноге, сгибая колено до ~90°.",
-      "Выжмите себя вверх через пятку передней ноги."
     ]
   },
   {
@@ -2275,27 +3369,6 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
   },
   {
     "source": "system",
-    "ref": "fedb-split-squat-with-dumbbells",
-    "name": "Сплит-присед с гантелями (Гантели)",
-    "muscleGroup": "legs",
-    "inputKind": "strength",
-    "equipment": "Гантели",
-    "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Квадрицепс",
-    "secondaryMuscles": [
-      "Ягодицы",
-      "Бицепс бедра"
-    ],
-    "level": "beginner",
-    "imageUrl": "/exercises/fedb-split-squat-with-dumbbells.jpg",
-    "instructions": [
-      "Гантели в руках, одна нога впереди, другая позади на носке.",
-      "Опуститесь, сгибая переднее колено до ~90°, корпус вертикально.",
-      "Выжмите себя вверх через пятку передней ноги. Повторите на другую ногу."
-    ]
-  },
-  {
-    "source": "system",
     "ref": "fedb-one-arm-floor-press",
     "name": "Жим с пола одной рукой (Штанга)",
     "muscleGroup": "arms",
@@ -2313,27 +3386,6 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
       "Лягте на пол, гантель у груди в одной руке.",
       "На выдохе выжмите гантель вверх до прямой руки.",
       "На вдохе опустите до касания локтем пола. Повторите на другую руку."
-    ]
-  },
-  {
-    "source": "system",
-    "ref": "fedb-straight-bar-bench-mid-rows",
-    "name": "Тяга к скамье прямым грифом (Штанга)",
-    "muscleGroup": "back",
-    "inputKind": "strength",
-    "equipment": "Штанга",
-    "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Середина спины",
-    "secondaryMuscles": [
-      "Бицепс",
-      "Широчайшие"
-    ],
-    "level": "beginner",
-    "imageUrl": "/exercises/fedb-straight-bar-bench-mid-rows.jpg",
-    "instructions": [
-      "Наклонитесь к скамье, прямой гриф в опущенных руках, спина прямая.",
-      "На выдохе подтяните гриф к скамье, сводя лопатки.",
-      "На вдохе плавно опустите гриф."
     ]
   }
 ]

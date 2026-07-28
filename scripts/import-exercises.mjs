@@ -14,7 +14,45 @@ import { INSTRUCTIONS_RU } from './instructions-ru.mjs'
 
 const SOURCE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json'
 const RAW_IMAGES = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/'
-const TARGET_COUNT = 120
+const TARGET_COUNT = 185
+
+// Обязательно включить в импорт (независимо от round-robin отбора). Например
+// ягодичные — новую группу «Ягодицы» наполняем целенаправленно. Ключи — id из
+// исходной Free Exercise DB; каждое должно иметь перевод в TRANSLATIONS.
+const FORCE_INCLUDE = new Set([
+  // Ягодицы.
+  'Barbell_Glute_Bridge', 'Barbell_Hip_Thrust', 'Butt_Lift_Bridge',
+  'Single_Leg_Glute_Bridge', 'One-Legged_Cable_Kickback',
+  'Hip_Extension_with_Bands', 'Hip_Lift_with_Band', 'Kneeling_Squat',
+  'Step-up_with_Knee_Raise', 'Physioball_Hip_Bridge', 'Leg_Lift',
+  // Икры.
+  'Barbell_Seated_Calf_Raise', 'Calf_Press', 'Calf_Press_On_The_Leg_Press_Machine',
+  'Calf_Raises_-_With_Bands', 'Dumbbell_Seated_One-Leg_Calf_Raise',
+  'Rocking_Standing_Calf_Raise', 'Seated_Calf_Raise', 'Smith_Machine_Calf_Raise',
+  // Бицепс.
+  'Alternate_Hammer_Curl', 'Alternate_Incline_Dumbbell_Curl',
+  'Barbell_Curls_Lying_Against_An_Incline', 'Cable_Hammer_Curls_-_Rope_Attachment',
+  'Cable_Preacher_Curl', 'Close-Grip_EZ_Bar_Curl', 'Close-Grip_EZ-Bar_Curl_with_Band',
+  // Предплечья.
+  'Cable_Wrist_Curl', 'Finger_Curls', 'Palms-Down_Dumbbell_Wrist_Curl_Over_A_Bench',
+  'Palms-Down_Wrist_Curl_Over_A_Bench', 'Palms-Up_Barbell_Wrist_Curl_Over_A_Bench',
+  'Palms-Up_Dumbbell_Wrist_Curl_Over_A_Bench',
+  // Бицепс бедра.
+  'Ball_Leg_Curl', 'Lying_Leg_Curls', 'Seated_Leg_Curl', 'Standing_Leg_Curl',
+  'Stiff-Legged_Dumbbell_Deadlift', 'Dumbbell_Clean', 'Kettlebell_Dead_Clean',
+  'Kettlebell_One-Legged_Deadlift',
+  // Трапеции.
+  'Barbell_Shrug', 'Barbell_Shrug_Behind_The_Back', 'Cable_Shrugs',
+  'Calf-Machine_Shoulder_Shrug', 'Dumbbell_Shrug',
+  // Широчайшие. (Chin-Up/Pullups — дубли нашего базового «Подтягивания», см. DEDUP_REFS.)
+  'Cable_Incline_Pushdown', 'Rope_Straight-Arm_Pulldown',
+  'Straight-Arm_Pulldown', 'Underhand_Cable_Pulldowns',
+  // Середина спины. (Seated_Cable_Rows — дубль базового «Тяга нижнего блока».)
+  'Incline_Bench_Pull', 'Lying_Cambered_Barbell_Row',
+  'Smith_Machine_Bent_Over_Row', 'Straight_Bar_Bench_Mid_Rows',
+  // Приводящие/отводящие.
+  'Band_Hip_Adductions', 'Thigh_Adductor', 'Thigh_Abductor',
+])
 
 const projectRoot = new URL('..', import.meta.url)
 const imagesDir = new URL('public/exercises/', projectRoot)
@@ -87,7 +125,7 @@ const MUSCLE_GROUP = {
   shoulders: 'shoulders', traps: 'shoulders', neck: 'shoulders',
   biceps: 'arms', triceps: 'arms', forearms: 'arms',
   lats: 'back', 'middle back': 'back', 'lower back': 'back',
-  quadriceps: 'legs', hamstrings: 'legs', glutes: 'legs', calves: 'legs', adductors: 'legs', abductors: 'legs',
+  quadriceps: 'legs', hamstrings: 'legs', glutes: 'glutes', calves: 'legs', adductors: 'legs', abductors: 'legs',
   abdominals: 'core',
 }
 // Детальная мышца -> русский лейбл для карточки.
@@ -126,6 +164,71 @@ const EQUIPMENT_LABEL = {
 // Упражнения, отсутствующие здесь, в каталог не попадают — так набор
 // стабилен и полностью переведён.
 const TRANSLATIONS = {
+  // Ягодичные (группа «Ягодицы»).
+  'fedb-barbell-glute-bridge': 'Ягодичный мостик со штангой (Штанга)',
+  'fedb-barbell-hip-thrust': 'Ягодичный мост со штангой (Штанга)',
+  'fedb-butt-lift-bridge': 'Ягодичный мостик (Своё тело)',
+  'fedb-single-leg-glute-bridge': 'Ягодичный мостик на одной ноге (Своё тело)',
+  'fedb-one-legged-cable-kickback': 'Махи ногой назад в блоке (Блок)',
+  'fedb-hip-extension-with-bands': 'Разгибание бедра с резиной (Резина)',
+  'fedb-hip-lift-with-band': 'Подъём таза с резиной (Резина)',
+  'fedb-kneeling-squat': 'Присед с колен со штангой (Штанга)',
+  'fedb-step-up-with-knee-raise': 'Зашагивание с подъёмом колена (Своё тело)',
+  'fedb-physioball-hip-bridge': 'Ягодичный мостик на фитболе (Фитбол)',
+  'fedb-leg-lift': 'Подъём ноги назад (Своё тело)',
+  // Икры.
+  'fedb-barbell-seated-calf-raise': 'Подъём на носки сидя со штангой (Штанга)',
+  'fedb-calf-press': 'Жим носками в тренажёре (Тренажёр)',
+  'fedb-calf-press-on-the-leg-press-machine': 'Жим носками в жиме ногами (Тренажёр)',
+  'fedb-calf-raises-with-bands': 'Подъём на носки с резиной (Резина)',
+  'fedb-dumbbell-seated-one-leg-calf-raise': 'Подъём на носок сидя на одной ноге с гантелью (Гантели)',
+  'fedb-rocking-standing-calf-raise': 'Подъём на носки стоя со штангой (Штанга)',
+  'fedb-seated-calf-raise': 'Подъём на носки сидя в тренажёре (Тренажёр)',
+  'fedb-smith-machine-calf-raise': 'Подъём на носки в Смите (Тренажёр)',
+  // Бицепс.
+  'fedb-alternate-hammer-curl': 'Попеременный молоток (Гантели)',
+  'fedb-alternate-incline-dumbbell-curl': 'Попеременный подъём на бицепс на наклонной (Гантели)',
+  'fedb-barbell-curls-lying-against-an-incline': 'Подъём штанги на бицепс лёжа на наклонной (Штанга)',
+  'fedb-cable-hammer-curls-rope-attachment': 'Молоток на блоке с канатом (Блок)',
+  'fedb-cable-preacher-curl': 'Подъём на бицепс на скамье Скотта в блоке (Блок)',
+  'fedb-close-grip-ez-bar-curl': 'Подъём на бицепс узким хватом (EZ-гриф)',
+  'fedb-close-grip-ez-bar-curl-with-band': 'Подъём на бицепс узким хватом с резиной (EZ-гриф)',
+  // Предплечья.
+  'fedb-cable-wrist-curl': 'Сгибание запястий в блоке (Блок)',
+  'fedb-finger-curls': 'Сгибание пальцами со штангой (Штанга)',
+  'fedb-palms-down-dumbbell-wrist-curl-over-a-bench': 'Разгибание запястий с гантелями на скамье (Гантели)',
+  'fedb-palms-down-wrist-curl-over-a-bench': 'Разгибание запястий со штангой на скамье (Штанга)',
+  'fedb-palms-up-barbell-wrist-curl-over-a-bench': 'Сгибание запястий со штангой на скамье (Штанга)',
+  'fedb-palms-up-dumbbell-wrist-curl-over-a-bench': 'Сгибание запястий с гантелями на скамье (Гантели)',
+  // Бицепс бедра.
+  'fedb-ball-leg-curl': 'Сгибание ног на фитболе (Фитбол)',
+  'fedb-lying-leg-curls': 'Сгибание ног лёжа в тренажёре (Тренажёр)',
+  'fedb-seated-leg-curl': 'Сгибание ног сидя в тренажёре (Тренажёр)',
+  'fedb-standing-leg-curl': 'Сгибание ноги стоя в тренажёре (Тренажёр)',
+  'fedb-stiff-legged-dumbbell-deadlift': 'Становая на прямых ногах с гантелями (Гантели)',
+  'fedb-dumbbell-clean': 'Взятие гантелей на грудь (Гантели)',
+  'fedb-kettlebell-dead-clean': 'Взятие гири на грудь с пола (Гиря)',
+  'fedb-kettlebell-one-legged-deadlift': 'Становая на одной ноге с гирей (Гиря)',
+  // Трапеции.
+  'fedb-barbell-shrug': 'Шраги со штангой (Штанга)',
+  'fedb-barbell-shrug-behind-the-back': 'Шраги со штангой за спиной (Штанга)',
+  'fedb-cable-shrugs': 'Шраги в блоке (Блок)',
+  'fedb-calf-machine-shoulder-shrug': 'Шраги в тренажёре для икр (Тренажёр)',
+  'fedb-dumbbell-shrug': 'Шраги с гантелями (Гантели)',
+  // Широчайшие.
+  'fedb-cable-incline-pushdown': 'Пуловер прямыми руками в наклоне в блоке (Блок)',
+  'fedb-rope-straight-arm-pulldown': 'Пуловер прямыми руками с канатом в блоке (Блок)',
+  'fedb-straight-arm-pulldown': 'Пуловер прямыми руками в блоке (Блок)',
+  'fedb-underhand-cable-pulldowns': 'Тяга верхнего блока обратным хватом (Блок)',
+  // Середина спины.
+  'fedb-incline-bench-pull': 'Тяга штанги лёжа на наклонной (Штанга)',
+  'fedb-lying-cambered-barbell-row': 'Тяга изогнутого грифа лёжа (Штанга)',
+  'fedb-smith-machine-bent-over-row': 'Тяга в наклоне в Смите (Тренажёр)',
+  'fedb-straight-bar-bench-mid-rows': 'Тяга к скамье прямым грифом сидя (Штанга)',
+  // Приводящие / отводящие.
+  'fedb-band-hip-adductions': 'Приведение бедра с резиной (Резина)',
+  'fedb-thigh-adductor': 'Сведение ног в тренажёре (Тренажёр)',
+  'fedb-thigh-abductor': 'Разведение ног в тренажёре (Тренажёр)',
   'fedb-3-4-sit-up': 'Подъём корпуса на 3/4 (Своё тело)',
   'fedb-alternating-cable-shoulder-press': 'Попеременный жим над головой (Блок)',
   'fedb-alternating-floor-press': 'Попеременный жим с пола (Гиря)',
@@ -250,6 +353,7 @@ const DEDUP_REFS = new Set([
   'fedb-seated-dumbbell-press',// = seated-dumbbell-press (Жим гантелей сидя)
   'fedb-chin-up',              // = pull-ups (Подтягивания)
   'fedb-pullups',              // = pull-ups (Подтягивания)
+  'fedb-barbell-curl',         // = barbell-curl (Подъём штанги на бицепс)
 ])
 
 // category Free Exercise DB -> наш inputKind.
@@ -299,6 +403,10 @@ async function main() {
   const groups = [...byGroup.keys()]
   const picked = []
   const seen = new Set()
+  // Сначала — обязательные (FORCE_INCLUDE), затем добор round-robin до TARGET_COUNT.
+  for (const ex of usable) {
+    if (FORCE_INCLUDE.has(ex.id) && !seen.has(ex.id)) { seen.add(ex.id); picked.push(ex) }
+  }
   let round = 0
   while (picked.length < TARGET_COUNT) {
     let addedThisRound = false
