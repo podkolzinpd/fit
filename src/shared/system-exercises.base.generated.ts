@@ -520,7 +520,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-good-morning.jpg",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Бицепс бедра",
+    "primaryMuscleDetail": "Поясница",
     "secondaryMuscles": [
       "Пресс",
       "Ягодицы",
@@ -950,7 +950,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-jump-rope.jpg",
     "equipment": "Другое",
     "equipmentRef": "other",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Кардио",
     "secondaryMuscles": [
       "Икры",
       "Бицепс бедра"
@@ -970,7 +970,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "inputKind": "reps",
     "equipment": "Своё тело",
     "equipmentRef": "other",
-    "primaryMuscleDetail": "Всё тело",
+    "primaryMuscleDetail": "Кардио",
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
