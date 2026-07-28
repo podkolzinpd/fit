@@ -158,28 +158,56 @@ function ClientForm({
   return embedded ? contents : <Page title={existing ? 'Редактировать клиента' : 'Новый клиент'}>{contents}</Page>
 }
 
-function ClientGoalBlock({ client }: { client: Client }) {
+// update_client пишет goal и note одной транзакцией с optimistic-lock (version).
+// Поэтому обе формы (цель / заметка) сохраняют через один хелпер и всегда
+// передают текущее значение соседнего поля — чтобы правка одного не затирала другое.
+function useSaveClient(client: Client, onDone: () => void) {
   const queryClient = useQueryClient()
-  const [editing, setEditing] = useState(false)
-  const form = useForm<{ goal: string; note: string }>({
-    defaultValues: { goal: client.goal ?? '', note: client.note ?? '' },
-  })
-  const mutation = useMutation({
-    mutationFn: (values: { goal: string; note: string }) => clientsRepository.update({
+  return useMutation({
+    mutationFn: (patch: { goal?: string; note?: string }) => clientsRepository.update({
       id: client.id, version: client.version, fullName: client.fullName, gender: client.gender,
       ageYears: client.ageYears, ageUpdatedAt: client.ageUpdatedAt, heightCm: client.heightCm,
-      goal: values.goal.trim() || undefined, note: values.note.trim() || undefined,
+      goal: (patch.goal ?? client.goal ?? '').trim() || undefined,
+      note: (patch.note ?? client.note ?? '').trim() || undefined,
     }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['clients'] })
       await queryClient.invalidateQueries({ queryKey: ['client', client.id] })
-      setEditing(false)
+      onDone()
     },
   })
-  const startEditing = () => { form.reset({ goal: client.goal ?? '', note: client.note ?? '' }); setEditing(true) }
+}
+
+function ClientGoalBlock({ client }: { client: Client }) {
+  const [editing, setEditing] = useState(false)
+  const form = useForm<{ goal: string }>({ defaultValues: { goal: client.goal ?? '' } })
+  const mutation = useSaveClient(client, () => setEditing(false))
+  const startEditing = () => { form.reset({ goal: client.goal ?? '' }); setEditing(true) }
   if (editing) return <section className="goal-block">
-    <form className="stack" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
+    <form className="stack" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate({ goal: values.goal }))(event)}>
       <Field label="Цель"><textarea rows={3} placeholder="Например: похудеть к отпуску, −8 кг" {...form.register('goal')} /></Field>
+      {mutation.error && <p className="error">{mutation.error.message}</p>}
+      <div className="actions"><button type="button" className="secondary" onClick={() => setEditing(false)}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
+    </form>
+  </section>
+  return <section className="goal-block">
+    <div className="goal-head"><h2>Цель</h2><button type="button" className="link" onClick={startEditing}>{client.goal ? 'Изменить' : '＋ Добавить'}</button></div>
+    {client.goal ? <p>{client.goal}</p> : <p className="muted">Цель пока не задана</p>}
+    {/* Discoverability периодизации (Заход 2): цель можно разбить на этапы с датами. */}
+    <div className="goal-stages-hint">
+      <div><strong>Разбить путь на этапы</strong><p>Периоды с датами: набор, сушка, поддержка — со сроком к цели</p></div>
+      <button type="button" className="secondary" disabled title="Скоро">Скоро</button>
+    </div>
+  </section>
+}
+
+function ClientNoteBlock({ client }: { client: Client }) {
+  const [editing, setEditing] = useState(false)
+  const form = useForm<{ note: string }>({ defaultValues: { note: client.note ?? '' } })
+  const mutation = useSaveClient(client, () => setEditing(false))
+  const startEditing = () => { form.reset({ note: client.note ?? '' }); setEditing(true) }
+  if (editing) return <section className="goal-block">
+    <form className="stack" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate({ note: values.note }))(event)}>
       <Controller control={form.control} name="note" render={({ field }) =>
         <VoiceNoteField name={field.name} source="client_form" label="Заметка" value={field.value} onValueChange={field.onChange} />
       } />
@@ -188,14 +216,8 @@ function ClientGoalBlock({ client }: { client: Client }) {
     </form>
   </section>
   return <section className="goal-block">
-    <div className="goal-head"><h2>Цель</h2><button type="button" className="link" onClick={startEditing}>{client.goal || client.note ? 'Изменить' : '＋ Добавить'}</button></div>
-    {client.goal ? <p>{client.goal}</p> : <p className="muted">Цель пока не задана</p>}
-    {client.note && <><h3>Заметка</h3><p>{client.note}</p></>}
-    {/* Discoverability периодизации (Заход 2): цель можно разбить на этапы с датами. */}
-    <div className="goal-stages-hint">
-      <div><strong>Разбить путь на этапы</strong><p>Периоды с датами: набор, сушка, поддержка — со сроком к цели</p></div>
-      <button type="button" className="secondary" disabled title="Скоро">Скоро</button>
-    </div>
+    <div className="goal-head"><h2>Заметка</h2><button type="button" className="link" onClick={startEditing}>{client.note ? 'Изменить' : '＋ Добавить'}</button></div>
+    {client.note ? <p>{client.note}</p> : <p className="muted">Заметок пока нет</p>}
   </section>
 }
 
@@ -261,6 +283,7 @@ export function ClientDetailPage() {
         <Link className="button secondary wide" to={`/progress/${clientId}`}>Замеры и аналитика</Link>
       </div>
       <ClientGoalBlock client={query.data} />
+      <ClientNoteBlock client={query.data} />
       {upcoming.length > 0 && <section><h2>Предстоит</h2><div className="cards">{upcoming.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}{workout.startTime ? ` · ${workout.startTime.slice(0, 5)}` : ''}</strong><WorkoutExercisesSummary workout={workout} /></div><span className={`badge ${workout.status}`}>{workout.status === 'in_progress' ? 'Идёт' : 'План'}</span></Link>)}</div></section>}
       <div className="page-actions">
         {query.data.hasAccount === false && <button className="secondary wide" disabled={invite.isPending} onClick={() => invite.mutate()}>Пригласить клиента</button>}
