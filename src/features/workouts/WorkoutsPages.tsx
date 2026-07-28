@@ -20,6 +20,7 @@ import { createLiveSetCoordinator } from './live-set-coordinator'
 import { LoadMoreButton } from './LoadMoreButton'
 import { workoutCountLabel } from './workout-count-label'
 import { useAuth } from '../../app/auth-context'
+import { useClientRealtime } from '../../app/use-client-realtime'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -144,6 +145,7 @@ export function WorkoutExercisesSummary({ workout }: { workout: Workout }) {
 
 export function ClientWorkoutsPage() {
   const { clientId = '' } = useParams()
+  useClientRealtime(clientId)
   const query = useInfiniteQuery({
     queryKey: ['workouts', clientId],
     initialPageParam: 0,
@@ -171,6 +173,7 @@ export function WorkoutFormPage() {
   const clientMode = actor?.role === 'client'
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false), enabled: !clientMode })
   const mine = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine(), enabled: clientMode })
+  useClientRealtime(source.data?.clientId ?? (clientMode ? mine.data?.id : params.get('client') ?? undefined))
   const catalog = useExerciseCatalog()
   const [draftExercises, setDraftExercises] = useState<WorkoutDraft['exercises'] | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -221,6 +224,7 @@ export function WorkoutDetailPage() {
   const { workoutId = '' } = useParams(); const navigate = useNavigate(); const queryClient = useQueryClient()
   const { actor } = useAuth()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
+  useClientRealtime(query.data?.clientId)
   const start = useMutation({ mutationFn: () => workoutsRepository.start(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }); navigate(`/workouts/${workoutId}/live`) } })
   const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workouts'] }); navigate(actor?.role === 'client' ? '/me/workouts' : '/schedule') } })
   const workout = query.data
@@ -335,6 +339,7 @@ export function LiveWorkoutPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
+  useClientRealtime(query.data?.clientId)
   const catalog = useExerciseCatalog()
   const [liveSets] = useState(() => createLiveSetCoordinator(
     (id, draft, version) => workoutsRepository.saveLiveSet(id, draft, version),
@@ -575,6 +580,7 @@ export function ExerciseHistoryPage() {
   const { workoutId = '', exerciseRef = '' } = useParams()
   const [tab, setTab] = useState<ExerciseCardTab>('stats')
   const current = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
+  useClientRealtime(current.data?.clientId)
   const history = useQuery({ queryKey: ['exercise-history', current.data?.clientId, exerciseRef], queryFn: async () => (await workoutsRepository.list(undefined, undefined, current.data!.clientId)).filter((workout) => workout.status === 'done' && workout.exercises.some((exercise) => exercise.ref === exerciseRef)), enabled: Boolean(current.data) })
   // Метаданные упражнения из каталога (картинка/оборудование/мышцы/инструкции).
   const meta = exercisesRepository.system.find((exercise) => exercise.ref === exerciseRef)
