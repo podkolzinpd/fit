@@ -50,6 +50,19 @@ export const clientsRepository = {
     return result.data.map(fromListRow)
   },
   async get(id: string): Promise<Client> {
+    const ownResult = await clientQueries.getMine()
+    if (ownResult.error) throw repositoryError(ownResult.error)
+    const ownRow: MyClientRow | undefined = ownResult.data[0]
+    if (ownRow?.id === id) {
+      return {
+        id: ownRow.id, hasAccount: true, fullName: ownRow.full_name, canonicalFullName: ownRow.full_name,
+        gender: ownRow.gender as Gender,
+        ageYears: ownRow.age_years, ageUpdatedAt: localDate(ownRow.age_updated_at), heightCm: Number(ownRow.height_cm),
+        goal: ownRow.goal, note: null,
+        currentWeightKg: ownRow.current_weight_kg === null ? null : Number(ownRow.current_weight_kg),
+        archivedAt: ownRow.archived_at, version: ownRow.version, membershipVersion: null,
+      }
+    }
     const result = await clientQueries.list(true)
     if (result.error) throw repositoryError(result.error)
     const client = result.data.map(fromListRow).find((item) => item.id === id)
