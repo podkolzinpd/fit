@@ -107,6 +107,14 @@ p { margin: 6px 0 }
 .client-actions-row .button { flex: 1; justify-content: center }
 .client-actions .button { text-align: center }
 .attention { margin: 12px 0 0; align-self: flex-start; font-size: 13px; font-weight: 600; color: var(--danger); background: #3a1f24; padding: 7px 11px; border-radius: 10px }
+.goal-block { display: flex; flex-direction: column; gap: 8px; margin-top: 4px }
+.goal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px }
+.goal-head h2 { margin: 0 }
+.goal-block h3 { margin: 8px 0 0; font-size: 14px }
+.goal-stages-hint { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; padding: 12px 14px; border: 1px dashed var(--border); border-radius: 14px; background: #221f2a }
+.goal-stages-hint strong { font-size: 14px }
+.goal-stages-hint p { margin: 3px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4 }
+.goal-stages-hint .secondary { flex-shrink: 0; padding: 8px 12px; font-size: 13px }
 .menu { display: flex; flex-direction: column; margin: 22px 0; border-block: 1px solid var(--border) }
 .menu a { padding: 15px 4px; text-decoration: none; border-bottom: 1px solid var(--border) }.menu a:last-child { border-bottom: 0 }
 .toggle { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; color: var(--muted) }
