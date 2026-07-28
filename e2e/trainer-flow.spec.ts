@@ -379,7 +379,9 @@ test('план: два упражнения объединяются в супе
   // текущий круг; отдых — после завершения круга (последнего упражнения круга).
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer-big')).toBeVisible()
-  await expect(page.locator('.circuit-counter')).toHaveText('Круг 1 из 2')
+  // Счётчик круга закреплён с таймером (.live-pinned) и продублирован в шапке
+  // блока — проверяем закреплённый (всегда виден при скролле по кругам).
+  await expect(page.locator('.live-pinned .circuit-counter')).toHaveText('Круг 1 из 2')
   // Первое упражнение круга 1 — отдых НЕ запускается (круг ещё не завершён).
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Подтверждено' })).toHaveCount(1)
@@ -388,7 +390,7 @@ test('план: два упражнения объединяются в супе
   // счётчик переключается на «Круг 2 из 2».
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByText(/Отдых/)).toBeVisible()
-  await expect(page.locator('.circuit-counter')).toHaveText('Круг 2 из 2')
+  await expect(page.locator('.live-pinned .circuit-counter')).toHaveText('Круг 2 из 2')
   // Подсветка: круг 1 закрыт (зелёный, done), круг 2 в работе (серый, current).
   await expect(page.locator('.circuit-round').nth(0)).toHaveClass(/done/)
   await expect(page.locator('.circuit-round').nth(1)).toHaveClass(/current/)
