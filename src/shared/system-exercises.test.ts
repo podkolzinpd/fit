@@ -46,8 +46,8 @@ describe('system exercise catalog', () => {
 
   it('импортированные названия переведены на русский в формате «Упражнение (Оборудование)»', () => {
     for (const exercise of IMPORTED_EXERCISES) {
-      // Нет латиницы (кроме допустимых аббревиатур в скобках нет) и есть «(…)».
-      expect(exercise.name).not.toMatch(/[A-Za-z]/)
+      // Нет латиницы, кроме принятого термина «EZ» (EZ-гриф); есть «(Оборудование)».
+      expect(exercise.name.replace(/EZ/g, '')).not.toMatch(/[A-Za-z]/)
       expect(exercise.name).toMatch(/\([^)]+\)$/)
     }
     // Названия уникальны.
