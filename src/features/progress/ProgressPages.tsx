@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
+import { useClientRealtime } from '../../app/use-client-realtime'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { findProgressDateConflict } from '../../data/repositories/progress-rules'
 import { progressRepository } from '../../data/repositories/progress.repository'
@@ -32,6 +33,7 @@ export function AnalyticsPage() {
 
 export function ProgressPage() {
   const { clientId = '' } = useParams(); const queryClient = useQueryClient(); const { actor } = useAuth(); const [editing, setEditing] = useState<ProgressEntry | null>(null)
+  useClientRealtime(clientId)
   const [selectedMetric, setSelectedMetric] = useState<string>('weightKg')
   const [windowEnd, setWindowEnd] = useState<LocalDate | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)

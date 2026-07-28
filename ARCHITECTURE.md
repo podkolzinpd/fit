@@ -42,6 +42,7 @@ route/page → feature UI/hooks → repository → query → Supabase Data API/R
 - System exercises — versioned application catalog; workout хранит snapshot.
 - Все существующие заметки считаются тренерскими.
 - Calendar dates обрабатываются без UTC-конверсии.
+- Realtime живёт одним каналом только для открытого пространства клиента. События aggregate-таблиц объединяются debounce и точечно инвалидируют соответствующие TanStack Query keys; скрытая вкладка закрывает канал, а при возвращении перечитывает активные данные пространства.
 
 ## Роли и клиентский контур
 

@@ -83,6 +83,7 @@ type ClientValues = z.input<typeof clientSchema>
 
 export function ClientFormPage() {
   const { clientId } = useParams(); const navigate = useNavigate(); const queryClient = useQueryClient()
+  useClientRealtime(clientId)
   const existing = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId ?? ''), enabled: Boolean(clientId) })
   if (clientId && (existing.isLoading || existing.error)) return <Page title="Карточка клиента"><AsyncView loading={existing.isLoading} error={existing.error} onRetry={() => void existing.refetch()} /></Page>
   if (clientId && existing.data) return <TrainerClientPreferencesForm client={existing.data} onSaved={async () => {
@@ -96,6 +97,7 @@ export function ClientFormPage() {
 export function MyClientEditPage() {
   const navigate = useNavigate(); const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
+  useClientRealtime(query.data?.id)
   return <AsyncView loading={query.isLoading} error={query.error} empty={!query.data} onRetry={() => void query.refetch()}>
     {query.data && <ClientForm existing={query.data} createMode="self" onSaved={async () => {
       await queryClient.invalidateQueries({ queryKey: ['my-client'] })
@@ -187,6 +189,7 @@ function TrainerClientPreferencesForm({ client, onSaved, onCancel }: {
 export function ClientDetailPage() {
   const { clientId = '' } = useParams(); const queryClient = useQueryClient()
   const { actor } = useAuth(); const navigate = useNavigate()
+  useClientRealtime(clientId)
   const query = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
   const stats = useQuery({ queryKey: ['client-stats', clientId], queryFn: async () => computeClientStats(await workoutsRepository.listSummaries(clientId), todayLocalDate()) })
   const workouts = useQuery({ queryKey: ['workouts', clientId, 'upcoming'], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
