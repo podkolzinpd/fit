@@ -13,11 +13,11 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-barbell-squat.jpg",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Ягодицы",
-      "Бицепс бедра",
+      "Задняя поверхность бедра",
       "Поясница"
     ],
     "level": "beginner",
@@ -37,11 +37,11 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-front-squat.jpg",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Ягодицы",
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "expert",
     "instructions": [
@@ -59,11 +59,11 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-leg-press.jpg",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Ягодицы",
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "instructions": [
@@ -81,9 +81,9 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-romanian-deadlift.jpg",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Бицепс бедра",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Ягодицы",
       "Поясница"
     ],
@@ -103,7 +103,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-stiff-leg-deadlift.jpg",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Бицепс бедра",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [
       "Ягодицы",
       "Поясница"
@@ -124,11 +124,11 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-lunges.jpg",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Ягодицы",
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "intermediate",
     "instructions": [
@@ -146,11 +146,11 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-bulgarian-split-squat.jpg",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Ягодицы",
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "expert",
     "instructions": [
@@ -168,7 +168,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-leg-curl.jpg",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Бицепс бедра",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
@@ -186,7 +186,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-leg-extension.jpg",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
@@ -204,7 +204,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-calf-raise.jpg",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Икры",
+    "primaryMuscleDetail": "Икроножные",
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
@@ -225,7 +225,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "primaryMuscleDetail": "Поясница",
     "secondaryMuscles": [
       "Ягодицы",
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "instructions": [
@@ -243,7 +243,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-bench-press.jpg",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (середина)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -264,7 +264,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-dumbbell-bench-press.jpg",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (середина)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -285,7 +285,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-incline-bench-press.jpg",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (верх)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -306,7 +306,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-dumbbell-fly.jpg",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (середина)",
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
@@ -324,7 +324,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-push-ups.jpg",
     "equipment": "Своё тело",
     "equipmentRef": "body only",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (середина)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -345,7 +345,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-dips.jpg",
     "equipment": "Другое",
     "equipmentRef": "other",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (низ)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -366,7 +366,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-pec-deck.jpg",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (середина)",
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
@@ -495,13 +495,13 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "equipmentRef": "barbell",
     "primaryMuscleDetail": "Поясница",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Предплечья",
       "Ягодицы",
-      "Бицепс бедра",
+      "Задняя поверхность бедра",
       "Широчайшие",
       "Середина спины",
-      "Квадрицепс",
+      "Передняя поверхность бедра",
       "Трапеции"
     ],
     "level": "intermediate",
@@ -542,7 +542,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-overhead-press.jpg",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [
       "Трицепс"
     ],
@@ -562,7 +562,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-seated-dumbbell-press.jpg",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [
       "Трицепс"
     ],
@@ -582,7 +582,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-lateral-raise.jpg",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Средняя дельта",
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
@@ -600,7 +600,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-rear-delt-fly.jpg",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Задняя дельта",
     "secondaryMuscles": [],
     "level": "beginner",
     "instructions": [
@@ -618,7 +618,7 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "imageUrl": "/exercises/base-upright-row.jpg",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Средняя дельта",
     "secondaryMuscles": [
       "Трапеции"
     ],
@@ -952,8 +952,8 @@ export const BASE_EXERCISES: readonly ExerciseSnapshot[] = [
     "equipmentRef": "other",
     "primaryMuscleDetail": "Кардио",
     "secondaryMuscles": [
-      "Икры",
-      "Бицепс бедра"
+      "Икроножные",
+      "Задняя поверхность бедра"
     ],
     "level": "intermediate",
     "instructions": [

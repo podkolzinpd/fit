@@ -36,8 +36,8 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "equipmentRef": "body only",
     "primaryMuscleDetail": "Ягодицы",
     "secondaryMuscles": [
-      "Бицепс бедра",
-      "Квадрицепс"
+      "Задняя поверхность бедра",
+      "Передняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-step-up-with-knee-raise.jpg",
@@ -55,7 +55,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Бицепс бедра",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [
       "Ягодицы",
       "Поясница"
@@ -121,8 +121,8 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "equipmentRef": "barbell",
     "primaryMuscleDetail": "Ягодицы",
     "secondaryMuscles": [
-      "Икры",
-      "Бицепс бедра"
+      "Икроножные",
+      "Задняя поверхность бедра"
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-barbell-glute-bridge.jpg",
@@ -142,8 +142,8 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "equipmentRef": "barbell",
     "primaryMuscleDetail": "Ягодицы",
     "secondaryMuscles": [
-      "Икры",
-      "Бицепс бедра"
+      "Икроножные",
+      "Задняя поверхность бедра"
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-barbell-hip-thrust.jpg",
@@ -161,13 +161,13 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Бицепс бедра",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Предплечья",
       "Ягодицы",
       "Поясница",
-      "Квадрицепс",
+      "Передняя поверхность бедра",
       "Плечи",
       "Трапеции"
     ],
@@ -187,12 +187,12 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гири",
     "equipmentRef": "kettlebells",
-    "primaryMuscleDetail": "Бицепс бедра",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Ягодицы",
       "Поясница",
-      "Квадрицепс",
+      "Передняя поверхность бедра",
       "Трапеции"
     ],
     "level": "intermediate",
@@ -211,7 +211,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гири",
     "equipmentRef": "kettlebells",
-    "primaryMuscleDetail": "Бицепс бедра",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [
       "Ягодицы",
       "Поясница"
@@ -235,7 +235,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Ягодицы",
     "secondaryMuscles": [
       "Пресс",
-      "Бицепс бедра",
+      "Задняя поверхность бедра",
       "Поясница"
     ],
     "level": "intermediate",
@@ -312,7 +312,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Икры",
+    "primaryMuscleDetail": "Икроножные",
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-seated-calf-raise.jpg",
@@ -371,7 +371,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "equipmentRef": "body only",
     "primaryMuscleDetail": "Ягодицы",
     "secondaryMuscles": [
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-butt-lift-bridge.jpg",
@@ -481,7 +481,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Икры",
+    "primaryMuscleDetail": "Икроножные",
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-calf-press.jpg",
@@ -499,7 +499,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Икры",
+    "primaryMuscleDetail": "Икроножные",
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-calf-press-on-the-leg-press-machine.jpg",
@@ -555,7 +555,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Икры",
+    "primaryMuscleDetail": "Икроножные",
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-seated-one-leg-calf-raise.jpg",
@@ -611,7 +611,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "equipmentRef": "bands",
     "primaryMuscleDetail": "Ягодицы",
     "secondaryMuscles": [
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-hip-extension-with-bands.jpg",
@@ -631,8 +631,8 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "equipmentRef": "bands",
     "primaryMuscleDetail": "Ягодицы",
     "secondaryMuscles": [
-      "Икры",
-      "Бицепс бедра"
+      "Икроножные",
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-hip-lift-with-band.jpg",
@@ -673,7 +673,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "equipmentRef": "body only",
     "primaryMuscleDetail": "Ягодицы",
     "secondaryMuscles": [
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-leg-lift.jpg",
@@ -713,7 +713,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Бицепс бедра",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-lying-leg-curls.jpg",
@@ -805,7 +805,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "equipmentRef": "exercise ball",
     "primaryMuscleDetail": "Ягодицы",
     "secondaryMuscles": [
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-physioball-hip-bridge.jpg",
@@ -823,7 +823,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Икры",
+    "primaryMuscleDetail": "Икроножные",
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-rocking-standing-calf-raise.jpg",
@@ -859,7 +859,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Икры",
+    "primaryMuscleDetail": "Икроножные",
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-seated-calf-raise.jpg",
@@ -877,7 +877,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Бицепс бедра",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-seated-leg-curl.jpg",
@@ -897,7 +897,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "equipmentRef": "body only",
     "primaryMuscleDetail": "Ягодицы",
     "secondaryMuscles": [
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-single-leg-glute-bridge.jpg",
@@ -915,7 +915,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Икры",
+    "primaryMuscleDetail": "Икроножные",
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-machine-calf-raise.jpg",
@@ -933,7 +933,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Бицепс бедра",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-standing-leg-curl.jpg",
@@ -969,7 +969,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Отводящие",
+    "primaryMuscleDetail": "Наружная поверхность бедра",
     "secondaryMuscles": [
       "Ягодицы"
     ],
@@ -989,10 +989,10 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Приводящие",
+    "primaryMuscleDetail": "Внутренняя поверхность бедра",
     "secondaryMuscles": [
       "Ягодицы",
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-thigh-adductor.jpg",
@@ -1012,7 +1012,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "equipmentRef": "cable",
     "primaryMuscleDetail": "Ягодицы",
     "secondaryMuscles": [
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-one-legged-cable-kickback.jpg",
@@ -1030,9 +1030,9 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Фитбол",
     "equipmentRef": "exercise ball",
-    "primaryMuscleDetail": "Бицепс бедра",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Ягодицы"
     ],
     "level": "beginner",
@@ -1051,7 +1051,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Резина",
     "equipmentRef": "bands",
-    "primaryMuscleDetail": "Приводящие",
+    "primaryMuscleDetail": "Внутренняя поверхность бедра",
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-band-hip-adductions.jpg",
@@ -1069,7 +1069,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Резина",
     "equipmentRef": "bands",
-    "primaryMuscleDetail": "Икры",
+    "primaryMuscleDetail": "Икроножные",
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-calf-raises-with-bands.jpg",
@@ -1125,7 +1125,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Блок",
     "equipmentRef": "cable",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [
       "Трицепс"
     ],
@@ -1145,7 +1145,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гири",
     "equipmentRef": "kettlebells",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (середина)",
     "secondaryMuscles": [
       "Пресс",
       "Плечи",
@@ -1167,10 +1167,10 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
-      "Бицепс бедра",
+      "Икроножные",
+      "Задняя поверхность бедра",
       "Поясница"
     ],
     "level": "beginner",
@@ -1234,7 +1234,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "equipmentRef": "body only",
     "primaryMuscleDetail": "Пресс",
     "secondaryMuscles": [
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-flutter-kicks.jpg",
@@ -1270,7 +1270,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [
       "Середина спины",
       "Трапеции",
@@ -1292,7 +1292,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (середина)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -1359,7 +1359,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "equipmentRef": "body only",
     "primaryMuscleDetail": "Ягодицы",
     "secondaryMuscles": [
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-glute-kickback.jpg",
@@ -1395,7 +1395,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [
       "Грудь"
     ],
@@ -1415,7 +1415,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (верх)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -1436,11 +1436,11 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Ягодицы",
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-walking-lunge.jpg",
@@ -1503,7 +1503,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "equipmentRef": "cable",
     "primaryMuscleDetail": "Ягодицы",
     "secondaryMuscles": [
-      "Бицепс бедра",
+      "Задняя поверхность бедра",
       "Поясница"
     ],
     "level": "beginner",
@@ -1540,7 +1540,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Задняя дельта",
     "secondaryMuscles": [
       "Бицепс",
       "Широчайшие",
@@ -1562,7 +1562,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Блок",
     "equipmentRef": "cable",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (середина)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -1583,10 +1583,10 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Своё тело",
     "equipmentRef": "body only",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
       "Ягодицы",
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bodyweight-squat.jpg",
@@ -1664,7 +1664,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [
       "Трицепс"
     ],
@@ -1684,7 +1684,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (низ)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -1705,11 +1705,11 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Блок",
     "equipmentRef": "cable",
-    "primaryMuscleDetail": "Бицепс бедра",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [
       "Предплечья",
       "Ягодицы",
-      "Бицепс бедра",
+      "Задняя поверхность бедра",
       "Поясница"
     ],
     "level": "beginner",
@@ -1785,7 +1785,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (низ)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -1806,11 +1806,11 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Ягодицы",
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-chair-squat.jpg",
@@ -1889,7 +1889,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Блок",
     "equipmentRef": "cable",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Задняя дельта",
     "secondaryMuscles": [
       "Бицепс",
       "Середина спины"
@@ -1910,7 +1910,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (низ)",
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-decline-dumbbell-flyes.jpg",
@@ -1928,11 +1928,11 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Ягодицы",
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-lunges.jpg",
@@ -2012,7 +2012,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Блок",
     "equipmentRef": "cable",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [
       "Трицепс"
     ],
@@ -2032,7 +2032,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (низ)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -2053,11 +2053,11 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Ягодицы",
-      "Бицепс бедра",
+      "Задняя поверхность бедра",
       "Поясница"
     ],
     "level": "beginner",
@@ -2136,7 +2136,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [
       "Бицепс"
     ],
@@ -2156,11 +2156,11 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гири",
     "equipmentRef": "kettlebells",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Ягодицы",
-      "Бицепс бедра",
+      "Задняя поверхность бедра",
       "Плечи"
     ],
     "level": "beginner",
@@ -2179,7 +2179,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (середина)",
     "secondaryMuscles": [
       "Грудь",
       "Предплечья",
@@ -2241,7 +2241,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гири",
     "equipmentRef": "kettlebells",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [
       "Пресс"
     ],
@@ -2261,7 +2261,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (середина)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -2282,11 +2282,11 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Ягодицы",
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-hack-squat.jpg",
@@ -2304,7 +2304,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (середина)",
     "secondaryMuscles": [
       "Грудь",
       "Широчайшие",
@@ -2364,7 +2364,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [
       "Трицепс"
     ],
@@ -2384,7 +2384,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гири",
     "equipmentRef": "kettlebells",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (середина)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -2467,7 +2467,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Блок",
     "equipmentRef": "cable",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Средняя дельта",
     "secondaryMuscles": [
       "Бицепс",
       "Середина спины",
@@ -2489,7 +2489,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (середина)",
     "secondaryMuscles": [
       "Широчайшие",
       "Плечи",
@@ -2511,10 +2511,10 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Бицепс бедра",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [
       "Ягодицы",
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-leverage-deadlift.jpg",
@@ -2592,7 +2592,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [
       "Трицепс"
     ],
@@ -2612,7 +2612,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (верх)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -2633,12 +2633,12 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
       "Пресс",
-      "Икры",
+      "Икроножные",
       "Ягодицы",
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-plie-dumbbell-squat.jpg",
@@ -2718,7 +2718,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Блок",
     "equipmentRef": "cable",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [
       "Трицепс"
     ],
@@ -2738,7 +2738,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Блок",
     "equipmentRef": "cable",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (верх)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -2759,11 +2759,11 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Ягодицы",
-      "Бицепс бедра",
+      "Задняя поверхность бедра",
       "Поясница"
     ],
     "level": "beginner",
@@ -2842,7 +2842,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (верх)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -2863,7 +2863,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Бицепс бедра",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [
       "Ягодицы",
       "Поясница"
@@ -2926,7 +2926,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Средняя дельта",
     "secondaryMuscles": [
       "Бицепс",
       "Трапеции"
@@ -2947,7 +2947,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (верх)",
     "secondaryMuscles": [
       "Плечи"
     ],
@@ -2967,11 +2967,11 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
-      "Икры",
+      "Икроножные",
       "Ягодицы",
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-single-leg-split-squat.jpg",
@@ -3028,7 +3028,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Тренажёр",
     "equipmentRef": "machine",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [
       "Трицепс"
     ],
@@ -3048,7 +3048,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (верх)",
     "secondaryMuscles": [
       "Плечи"
     ],
@@ -3068,10 +3068,10 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Квадрицепс",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [
       "Ягодицы",
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-split-squat-with-dumbbells.jpg",
@@ -3175,7 +3175,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (верх)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -3235,7 +3235,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Гантели",
     "equipmentRef": "dumbbell",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [
       "Трицепс"
     ],
@@ -3255,7 +3255,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Своё тело",
     "equipmentRef": "body only",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (верх)",
     "secondaryMuscles": [
       "Плечи",
       "Трицепс"
@@ -3297,7 +3297,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Поясница",
     "secondaryMuscles": [
       "Ягодицы",
-      "Бицепс бедра"
+      "Задняя поверхность бедра"
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-stiff-leg-barbell-good-morning.jpg",
@@ -3333,7 +3333,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Штанга",
     "equipmentRef": "barbell",
-    "primaryMuscleDetail": "Плечи",
+    "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [
       "Трицепс"
     ],
@@ -3353,7 +3353,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "inputKind": "strength",
     "equipment": "Своё тело",
     "equipmentRef": "body only",
-    "primaryMuscleDetail": "Грудь",
+    "primaryMuscleDetail": "Грудь (верх)",
     "secondaryMuscles": [
       "Пресс",
       "Плечи",

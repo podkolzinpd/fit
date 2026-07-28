@@ -129,12 +129,15 @@ const MUSCLE_GROUP = {
   abdominals: 'core',
 }
 // Детальная мышца -> русский лейбл для карточки.
+// Народные термины (как тренеры говорят клиентам): передняя/задняя поверхность
+// бедра вместо квадрицепс/бицепс бедра и т.п. Пучки дельт / верх-низ груди —
+// проставляются вручную через RECLASSIFY (источник их не различает).
 const MUSCLE_LABEL = {
   chest: 'Грудь', shoulders: 'Плечи', traps: 'Трапеции', neck: 'Шея',
   biceps: 'Бицепс', triceps: 'Трицепс', forearms: 'Предплечья',
   lats: 'Широчайшие', 'middle back': 'Середина спины', 'lower back': 'Поясница',
-  quadriceps: 'Квадрицепс', hamstrings: 'Бицепс бедра', glutes: 'Ягодицы',
-  calves: 'Икры', adductors: 'Приводящие', abductors: 'Отводящие', abdominals: 'Пресс',
+  quadriceps: 'Передняя поверхность бедра', hamstrings: 'Задняя поверхность бедра', glutes: 'Ягодицы',
+  calves: 'Икроножные', adductors: 'Внутренняя поверхность бедра', abductors: 'Наружная поверхность бедра', abdominals: 'Пресс',
 }
 // Ручные исправления классификации (ref -> переопределение группы/детали).
 // Free Exercise DB иногда тегирует упражнение по вторичной мышце. Здесь
@@ -145,17 +148,76 @@ const RECLASSIFY = {
   hyperextension: { muscleGroup: 'back', primaryMuscleDetail: 'Поясница' },
   // Динамика на прямую мышцу живота + hip flexors, не ягодицы.
   'fedb-flutter-kicks': { muscleGroup: 'core', primaryMuscleDetail: 'Пресс' },
-  // Пауэрлифтерский жим лёжа / жим с цепями — грудной жим, не изолированный трицепс.
-  'fedb-bench-press-powerlifting': { muscleGroup: 'chest', primaryMuscleDetail: 'Грудь' },
-  'fedb-bench-press-with-chains': { muscleGroup: 'chest', primaryMuscleDetail: 'Грудь' },
-  // Становая (hip hinge) — задняя цепь, прайм-мувер бицепс бедра, не квадрицепс.
-  'fedb-cable-deadlifts': { primaryMuscleDetail: 'Бицепс бедра' },
-  'fedb-leverage-deadlift': { primaryMuscleDetail: 'Бицепс бедра' },
+  // Пауэрлифт-жим / жим с цепями — грудной жим (не трицепс); деталь ниже в блоке груди.
+  // Становая (hip hinge) — задняя цепь, прайм-мувер задняя поверхность бедра, не квадрицепс.
+  'fedb-cable-deadlifts': { primaryMuscleDetail: 'Задняя поверхность бедра' },
+  'fedb-leverage-deadlift': { primaryMuscleDetail: 'Задняя поверхность бедра' },
   // Гудмонинг в группе «Спина»: деталь = Поясница (как у варианта на прямых
   // ногах), иначе «Бицепс бедра» ошибочно всплывает подкатегорией «Спины».
   'good-morning': { primaryMuscleDetail: 'Поясница' },
   // Скакалка — кардио, деталь не «Квадрицепс».
   'jump-rope': { primaryMuscleDetail: 'Кардио' },
+
+  // === Пучки дельт (плечи) — прайм-мувер, источник пучки не различает ===
+  // Передняя дельта: жимы над головой, подъёмы вперёд.
+  'overhead-press': { primaryMuscleDetail: 'Передняя дельта' },
+  'seated-dumbbell-press': { primaryMuscleDetail: 'Передняя дельта' },
+  'fedb-alternating-cable-shoulder-press': { primaryMuscleDetail: 'Передняя дельта' },
+  'fedb-anti-gravity-press': { primaryMuscleDetail: 'Передняя дельта' },
+  'fedb-bradford-rocky-presses': { primaryMuscleDetail: 'Передняя дельта' },
+  'fedb-cable-shoulder-press': { primaryMuscleDetail: 'Передняя дельта' },
+  'fedb-dumbbell-raise': { primaryMuscleDetail: 'Передняя дельта' },
+  'fedb-kettlebell-pirate-ships': { primaryMuscleDetail: 'Передняя дельта' },
+  'fedb-leverage-shoulder-press': { primaryMuscleDetail: 'Передняя дельта' },
+  'fedb-machine-shoulder-military-press': { primaryMuscleDetail: 'Передняя дельта' },
+  'fedb-seated-cable-shoulder-press': { primaryMuscleDetail: 'Передняя дельта' },
+  'fedb-smith-machine-overhead-shoulder-press': { primaryMuscleDetail: 'Передняя дельта' },
+  'fedb-standing-alternating-dumbbell-press': { primaryMuscleDetail: 'Передняя дельта' },
+  'fedb-standing-bradford-press': { primaryMuscleDetail: 'Передняя дельта' },
+  'fedb-barbell-incline-shoulder-raise': { primaryMuscleDetail: 'Передняя дельта' },
+  // Средняя дельта: разводки в стороны, тяга к подбородку/к шее.
+  'lateral-raise': { primaryMuscleDetail: 'Средняя дельта' },
+  'upright-row': { primaryMuscleDetail: 'Средняя дельта' },
+  'fedb-smith-machine-one-arm-upright-row': { primaryMuscleDetail: 'Средняя дельта' },
+  'fedb-low-pulley-row-to-neck': { primaryMuscleDetail: 'Средняя дельта' },
+  // Задняя дельта: разводки/тяги на заднюю дельту.
+  'rear-delt-fly': { primaryMuscleDetail: 'Задняя дельта' },
+  'fedb-barbell-rear-delt-row': { primaryMuscleDetail: 'Задняя дельта' },
+  'fedb-cable-rope-rear-delt-rows': { primaryMuscleDetail: 'Задняя дельта' },
+  // fedb-cable-internal-rotation — ротаторная манжета, не пучок дельты: оставляем «Плечи».
+
+  // === Грудь: верх (наклон вверх) / низ (отрицательный наклон) / середина ===
+  // Верх груди — положительный наклон (incline).
+  'incline-bench-press': { primaryMuscleDetail: 'Грудь (верх)' },
+  'fedb-barbell-incline-bench-press-medium-grip': { primaryMuscleDetail: 'Грудь (верх)' },
+  'fedb-hammer-grip-incline-db-bench-press': { primaryMuscleDetail: 'Грудь (верх)' },
+  'fedb-incline-cable-chest-press': { primaryMuscleDetail: 'Грудь (верх)' },
+  'fedb-incline-dumbbell-bench-with-palms-facing-in': { primaryMuscleDetail: 'Грудь (верх)' },
+  'fedb-incline-dumbbell-flyes': { primaryMuscleDetail: 'Грудь (верх)' },
+  'fedb-incline-dumbbell-flyes-with-a-twist': { primaryMuscleDetail: 'Грудь (верх)' },
+  'fedb-incline-dumbbell-press': { primaryMuscleDetail: 'Грудь (верх)' },
+  'fedb-incline-push-up': { primaryMuscleDetail: 'Грудь (верх)' },
+  'fedb-incline-push-up-medium': { primaryMuscleDetail: 'Грудь (верх)' },
+  // Низ груди — отрицательный наклон (decline).
+  'fedb-decline-barbell-bench-press': { primaryMuscleDetail: 'Грудь (низ)' },
+  'fedb-decline-dumbbell-bench-press': { primaryMuscleDetail: 'Грудь (низ)' },
+  'fedb-decline-dumbbell-flyes': { primaryMuscleDetail: 'Грудь (низ)' },
+  'fedb-decline-smith-press': { primaryMuscleDetail: 'Грудь (низ)' },
+  'dips': { primaryMuscleDetail: 'Грудь (низ)' },
+  // Середина груди — горизонтальные жимы/разводки/отжимания.
+  'bench-press': { primaryMuscleDetail: 'Грудь (середина)' },
+  'dumbbell-bench-press': { primaryMuscleDetail: 'Грудь (середина)' },
+  'dumbbell-fly': { primaryMuscleDetail: 'Грудь (середина)' },
+  'push-ups': { primaryMuscleDetail: 'Грудь (середина)' },
+  'pec-deck': { primaryMuscleDetail: 'Грудь (середина)' },
+  'fedb-alternating-floor-press': { primaryMuscleDetail: 'Грудь (середина)' },
+  'fedb-barbell-bench-press-medium-grip': { primaryMuscleDetail: 'Грудь (середина)' },
+  'fedb-cable-chest-press': { primaryMuscleDetail: 'Грудь (середина)' },
+  'fedb-bench-press-powerlifting': { muscleGroup: 'chest', primaryMuscleDetail: 'Грудь (середина)' },
+  'fedb-dumbbell-bench-press-with-neutral-grip': { primaryMuscleDetail: 'Грудь (середина)' },
+  'fedb-bench-press-with-chains': { muscleGroup: 'chest', primaryMuscleDetail: 'Грудь (середина)' },
+  'fedb-extended-range-one-arm-kettlebell-floor-press': { primaryMuscleDetail: 'Грудь (середина)' },
+  'fedb-front-raise-and-pullover': { primaryMuscleDetail: 'Грудь (середина)' },
 }
 // Оборудование -> русский лейбл.
 const EQUIPMENT_LABEL = {
