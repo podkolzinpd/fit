@@ -33,9 +33,10 @@ export function AuthPage() {
     <p className="muted">{mode === 'register' && role === 'client' ? 'Следите за своими тренировками и прогрессом.' : 'Планируйте тренировки и следите за прогрессом клиентов.'}</p>
     <form className="stack" onSubmit={(event) => void submit(event)}>
       {mode === 'register' && <>
-        <Field label="Тип аккаунта"><select value={role} onChange={(event) => setRole(event.target.value as AccountRole)}>
-          <option value="trainer">Я тренер</option><option value="client">Я клиент</option>
-        </select></Field>
+        <Field label="Тип аккаунта"><div className="segmented" role="radiogroup" aria-label="Тип аккаунта">
+          <button type="button" role="radio" aria-checked={role === 'trainer'} className={role === 'trainer' ? 'active' : ''} onClick={() => setRole('trainer')}>Я тренер</button>
+          <button type="button" role="radio" aria-checked={role === 'client'} className={role === 'client' ? 'active' : ''} onClick={() => setRole('client')}>Я клиент</button>
+        </div></Field>
         <Field label="Имя"><input name="firstName" autoComplete="given-name" required /></Field>
       </>}
       <Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>

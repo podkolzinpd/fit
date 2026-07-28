@@ -39,7 +39,7 @@ test('client registers, creates a standalone card and own workout without traine
   const email = `client-signup-${testInfo.workerIndex}-${Date.now()}@fit.local`
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
+  await page.getByRole('radio', { name: 'Я клиент' }).click()
   await page.getByLabel('Имя').fill('Клиент')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -108,7 +108,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.goto('/profile')
   await page.getByRole('button', { name: 'Выйти' }).click()
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
+  await page.getByRole('radio', { name: 'Я клиент' }).click()
   await page.getByLabel('Имя').fill('Клиент')
   await page.getByLabel('Email').fill(`invite-client-${suffix}@fit.local`)
   await page.getByLabel('Пароль').fill('FitLocal123!')
