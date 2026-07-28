@@ -3,7 +3,7 @@ import type { LocalDate } from './local-date'
 export type UUID = string
 export type WorkoutStatus = 'planned' | 'in_progress' | 'done'
 export type Gender = 'male' | 'female'
-export type MuscleGroup = 'legs' | 'chest' | 'back' | 'shoulders' | 'arms' | 'core' | 'cardio' | 'other'
+export type MuscleGroup = 'legs' | 'glutes' | 'chest' | 'back' | 'shoulders' | 'arms' | 'core' | 'cardio' | 'other'
 export type InputKind = 'strength' | 'distance' | 'reps'
 // Тип блока: одиночное упражнение или объединённая группа. Механика группы одна
 // (упражнения по кругу); «Сет» и «Круговая» — пресеты (блок различаются только
