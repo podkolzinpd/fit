@@ -54,6 +54,26 @@ describe('system exercise catalog', () => {
     expect(new Set(IMPORTED_EXERCISES.map((exercise) => exercise.name)).size).toBe(IMPORTED_EXERCISES.length)
   })
 
+  it('деталь мышцы соответствует своей группе (нет «Бицепс бедра» в «Спине» и т.п.)', () => {
+    // Какие детали допустимы в каждой укрупнённой группе. Ловит регресс, когда
+    // упражнение попадает в группу с чужой подкатегорией мышцы.
+    const allowed: Record<string, string[]> = {
+      legs: ['Квадрицепс', 'Бицепс бедра', 'Икры', 'Приводящие', 'Отводящие'],
+      glutes: ['Ягодицы'],
+      back: ['Середина спины', 'Широчайшие', 'Поясница'],
+      chest: ['Грудь'],
+      shoulders: ['Плечи', 'Трапеции'],
+      arms: ['Бицепс', 'Трицепс', 'Предплечья'],
+      core: ['Пресс'],
+      cardio: ['Кардио'],
+    }
+    for (const exercise of IMPORTED_EXERCISES) {
+      expect(allowed[exercise.muscleGroup], `группа ${exercise.muscleGroup} (${exercise.name})`).toBeDefined()
+      expect(allowed[exercise.muscleGroup], `${exercise.name}: деталь «${exercise.primaryMuscleDetail}» не из группы «${exercise.muscleGroup}»`)
+        .toContain(exercise.primaryMuscleDetail)
+    }
+  })
+
   it('базовые упражнения обогащены до идеального формата', () => {
     // Обогащённых базовых столько же, сколько рукописных, ref совпадают.
     expect(BASE_EXERCISES.length).toBe(SYSTEM_EXERCISES.length)
