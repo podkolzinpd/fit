@@ -39,7 +39,7 @@ test('client registers, creates a standalone card and own workout without traine
   const email = `client-signup-${testInfo.workerIndex}-${Date.now()}@fit.local`
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
+  await page.getByRole('radio', { name: 'Я клиент' }).click()
   await page.getByLabel('Имя').fill('Клиент')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -54,12 +54,13 @@ test('client registers, creates a standalone card and own workout without traine
 
   await expect(page.getByRole('heading', { name: 'Клиент' })).toBeVisible()
   await expect(page.getByText('72.5 кг')).toBeVisible()
+  await page.goto('/profile')
   await expect(page.getByText('Подключённых тренеров нет')).toBeVisible()
   await page.getByRole('link', { name: 'Изменить данные' }).click()
   await page.getByLabel('Имя').fill('Клиент Сам')
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Клиент Сам' })).toBeVisible()
-  await page.getByRole('main').getByRole('link', { name: 'Тренировки' }).click()
+  await page.getByRole('navigation').getByRole('link', { name: 'Тренировки' }).click()
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Бег')
@@ -108,7 +109,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.goto('/profile')
   await page.getByRole('button', { name: 'Выйти' }).click()
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
+  await page.getByRole('radio', { name: 'Я клиент' }).click()
   await page.getByLabel('Имя').fill('Клиент')
   await page.getByLabel('Email').fill(`invite-client-${suffix}@fit.local`)
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -166,14 +167,13 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('button', { name: 'Сохранить замер' }).click()
   await expect(page.getByText('59.5 кг')).toBeVisible()
 
-  await page.goto('/me')
+  await page.goto('/profile')
   await page.getByRole('button', { name: 'Пригласить тренера' }).click()
   const trainerCodeText = await page.getByText(/Код для тренера:/).textContent()
   const trainerCode = trainerCodeText?.match(/[A-F0-9]{12}/)?.[0]
   expect(trainerCode).toBeTruthy()
   await expect(page.getByRole('heading', { name: 'Активные приглашения' })).toBeVisible()
 
-  await page.goto('/profile')
   await page.getByRole('button', { name: 'Выйти' }).click()
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Имя').fill('Второй тренер')

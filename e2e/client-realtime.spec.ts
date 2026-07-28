@@ -5,7 +5,7 @@ const password = 'FitLocal123!'
 async function register(page: Page, values: { name: string; email: string; role?: 'client' }) {
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  if (values.role) await page.getByLabel('Тип аккаунта').selectOption(values.role)
+  if (values.role) await page.getByRole('radio', { name: 'Я клиент' }).click()
   await page.getByLabel('Имя').fill(values.name)
   await page.getByLabel('Email').fill(values.email)
   await page.getByLabel('Пароль').fill(password)
