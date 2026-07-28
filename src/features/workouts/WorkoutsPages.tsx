@@ -1,10 +1,10 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
-import { computeYDomain } from '../progress/ProgressChart'
+import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { blockLabel, chartUnitFor, copyWorkout, exerciseChartPoints, exerciseSummary, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
@@ -604,7 +604,8 @@ export function ExerciseHistoryPage() {
   const meta = exercisesRepository.system.find((exercise) => exercise.ref === exerciseRef)
   const inputKind = meta?.inputKind ?? history.data?.[0]?.exercises.find((item) => item.ref === exerciseRef)?.inputKind ?? 'strength'
   const name = meta?.name ?? history.data?.[0]?.exercises.find((item) => item.ref === exerciseRef)?.name ?? 'Упражнение'
-  const chart = useMemo(() => exerciseChartPoints(history.data ?? [], exerciseRef).map((point) => ({ date: point.date.slice(5), value: point.value })), [history.data, exerciseRef])
+  // Полная дата (YYYY-MM-DD) — нужна для AxisTick/тултипа как на вкладке замеров.
+  const chart = useMemo(() => exerciseChartPoints(history.data ?? [], exerciseRef), [history.data, exerciseRef])
   const unit = chartUnitFor(inputKind)
   const instructions = meta?.instructions ?? []
   return <Page title="Упражнение" back={`/workouts/${workoutId}`}>
@@ -626,7 +627,23 @@ export function ExerciseHistoryPage() {
       </div>
 
       {tab === 'stats' && (chart.length > 1
-        ? <section className="chart"><h2>Динамика ({unit})</h2><ResponsiveContainer width="100%" height={220}><LineChart data={chart}><XAxis dataKey="date" /><YAxis domain={computeYDomain(chart.map((point) => point.value))} allowDecimals /><Tooltip contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', borderRadius: 12 }} labelStyle={{ color: '#e9e4ed', fontWeight: 700 }} itemStyle={{ color: '#e9e4ed' }} /><Line type="monotone" dataKey="value" stroke="#735cff" strokeWidth={3} /></LineChart></ResponsiveContainer></section>
+        ? (() => {
+            // Оформление как на вкладке замеров: пунктирная сетка, подписи дат
+            // «01 / июль», подписи значений у мин/макс точек, форматированный тултип.
+            const values = chart.map((point) => point.value)
+            const minValue = Math.min(...values); const maxValue = Math.max(...values)
+            const minIndex = values.indexOf(minValue); const maxIndex = values.indexOf(maxValue)
+            return <section className="chart"><h2>Динамика ({unit})</h2><ResponsiveContainer width="100%" height={260}><LineChart data={chart} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="date" stroke="var(--muted)" height={40} tick={AxisTick} interval={Math.max(0, Math.ceil(chart.length / 5) - 1)} />
+              <YAxis stroke="var(--muted)" style={{ fontSize: '12px' }} domain={computeYDomain(values)} allowDecimals />
+              <Tooltip contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', borderRadius: 12 }} labelStyle={{ color: '#e9e4ed', fontWeight: 700 }} itemStyle={{ color: '#e9e4ed' }}
+                formatter={(value) => formatTooltipValue(Number(value), unit, name)} labelFormatter={(date) => formatTooltipLabel(String(date))} />
+              <Line type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={3}
+                dot={(dotProps: { cx?: number; cy?: number; index?: number }) => renderChartDot(dotProps, minIndex, maxIndex, chart.length)}
+                activeDot={{ r: 7 }} isAnimationActive={false} />
+            </LineChart></ResponsiveContainer></section>
+          })()
         : chart.length === 1
         ? <section className="stat-single card"><span className="muted">Текущий результат</span><strong>{chart[0]!.value} {unit}</strong><p className="muted">График динамики появится после второй проведённой тренировки.</p></section>
         : <p className="muted empty-hint">Пока нет данных. График появится после проведённых тренировок с фактом.</p>)}
