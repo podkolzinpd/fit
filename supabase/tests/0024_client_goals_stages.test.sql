@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(15);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('a1000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'g-trainer@example.test', ''),
@@ -80,6 +80,13 @@ select throws_ok(
     'goalId', %L, 'title', 'Кривой период', 'startsOn', %L, 'endsOn', %L))$$,
     :'goal_id', (current_date + 10)::text, current_date::text),
   'PT422', null, 'stage with ends_on < starts_on is rejected'
+);
+-- Этап не может заканчиваться позже даты цели (target_date = +90).
+select throws_ok(
+  format($$select public.save_goal_stage(jsonb_build_object(
+    'goalId', %L, 'title', 'За целью', 'startsOn', %L, 'endsOn', %L))$$,
+    :'goal_id', (current_date + 80)::text, (current_date + 91)::text),
+  'PT422', null, 'stage ending after target_date is rejected'
 );
 reset role;
 

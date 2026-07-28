@@ -127,6 +127,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .stage-actions { display: flex; gap: 6px; flex-shrink: 0 }
 .stage-actions .link { padding: 4px 6px; font-size: 13px }
 .stage-form { border: 1px dashed var(--border); border-radius: 14px; padding: 12px 14px }
+.stage-hint { font-size: 12px; margin: 0 }
 .menu { display: flex; flex-direction: column; margin: 22px 0; border-block: 1px solid var(--border) }
 .menu a { padding: 15px 4px; text-decoration: none; border-bottom: 1px solid var(--border) }.menu a:last-child { border-bottom: 0 }
 .toggle { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; color: var(--muted) }

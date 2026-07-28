@@ -77,9 +77,9 @@ function GoalDetail({ goal, today, onChanged, onArchived }: {
       <div className="goal-head"><h2>Этапы</h2>{!addingStage && <button type="button" className="link" onClick={() => setAddingStage(true)}>＋ Добавить</button>}</div>
       {stages.length === 0 && !addingStage && <p className="muted">Этапов пока нет</p>}
       <div className="stage-list">
-        {stages.map((stage) => <StageRow key={stage.id} stage={stage} today={today} onChanged={onChanged} />)}
+        {stages.map((stage) => <StageRow key={stage.id} stage={stage} today={today} targetDate={goal.targetDate} onChanged={onChanged} />)}
       </div>
-      {addingStage && <StageForm goalId={goal.id} position={stages.length}
+      {addingStage && <StageForm goalId={goal.id} position={stages.length} targetDate={goal.targetDate}
         defaultStart={stages.length ? localDate(stages[stages.length - 1]!.endsOn) : localDate(today)}
         onSaved={async () => { await onChanged(); setAddingStage(false) }} onCancel={() => setAddingStage(false)} />}
     </section>
@@ -113,10 +113,10 @@ function GoalEditForm({ goal, onSaved, onCancel }: { goal: ClientGoal; onSaved: 
   </form>
 }
 
-function StageRow({ stage, today, onChanged }: { stage: GoalStage; today: string; onChanged: () => Promise<void> }) {
+function StageRow({ stage, today, targetDate, onChanged }: { stage: GoalStage; today: string; targetDate: string | null; onChanged: () => Promise<void> }) {
   const [editing, setEditing] = useState(false)
   const remove = useMutation({ mutationFn: () => goalsRepository.deleteStage(stage.id), onSuccess: () => void onChanged() })
-  if (editing) return <StageForm goalId={stage.goalId} stage={stage} position={stage.position}
+  if (editing) return <StageForm goalId={stage.goalId} stage={stage} position={stage.position} targetDate={targetDate}
     defaultStart={localDate(stage.startsOn)} onSaved={async () => { await onChanged(); setEditing(false) }} onCancel={() => setEditing(false)} />
   const status = stageStatus(stage, localDate(today))
   return <article className={`stage-row ${status}`}>
@@ -133,8 +133,8 @@ function StageRow({ stage, today, onChanged }: { stage: GoalStage; today: string
   </article>
 }
 
-function StageForm({ goalId, stage, position, defaultStart, onSaved, onCancel }: {
-  goalId: string; stage?: GoalStage; position: number; defaultStart: string
+function StageForm({ goalId, stage, position, defaultStart, targetDate, onSaved, onCancel }: {
+  goalId: string; stage?: GoalStage; position: number; defaultStart: string; targetDate: string | null
   onSaved: () => Promise<void>; onCancel: () => void
 }) {
   const form = useForm<{ title: string; startsOn: string; endsOn: string }>({
@@ -155,8 +155,18 @@ function StageForm({ goalId, stage, position, defaultStart, onSaved, onCancel }:
     </Field>
     <div className="split">
       <Field label="Начало" error={form.formState.errors.startsOn?.message}><input type="date" {...form.register('startsOn', { required: 'Дата' })} /></Field>
-      <Field label="Конец" error={form.formState.errors.endsOn?.message}><input type="date" {...form.register('endsOn', { required: 'Дата' })} /></Field>
+      <Field label="Конец" error={form.formState.errors.endsOn?.message}>
+        <input type="date" max={targetDate ?? undefined} {...form.register('endsOn', {
+          required: 'Дата',
+          validate: (value, values) => {
+            if (values.startsOn && value < values.startsOn) return 'Конец раньше начала'
+            if (targetDate && value > targetDate) return 'Позже даты цели'
+            return true
+          },
+        })} />
+      </Field>
     </div>
+    {targetDate && <p className="muted stage-hint">Этап должен уложиться до даты цели ({formatLocalDateShort(localDate(targetDate))}).</p>}
     {mutation.error && <p className="error">{mutation.error.message}</p>}
     <div className="actions"><button type="button" className="secondary" onClick={onCancel}>Отмена</button><button disabled={mutation.isPending}>{stage ? 'Сохранить' : 'Добавить этап'}</button></div>
   </form>
