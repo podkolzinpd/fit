@@ -1,4 +1,4 @@
-import type { CreateClientInput, UpdateClientInput } from '../../shared/domain'
+import type { CreateClientInput, UpdateClientInput, UpdateClientTrainerPreferencesInput } from '../../shared/domain'
 import { supabase } from './client'
 import { toJson } from './json'
 
@@ -16,6 +16,13 @@ export const clientQueries = {
   createOwn: (input: CreateClientInput) => supabase.rpc('create_own_client', { p_client: toJson(input) }),
   update: (input: UpdateClientInput) => supabase.rpc('update_client', {
     p_client: toJson(input), p_expected_version: input.version,
+  }),
+  updateOwn: (input: UpdateClientInput) => supabase.rpc('update_own_client', {
+    p_client: toJson(input), p_expected_version: input.version,
+  }),
+  updatePreferences: (input: UpdateClientTrainerPreferencesInput) => supabase.rpc('update_client_trainer_preferences', {
+    p_client_id: input.clientId, p_alias: input.alias, p_note: input.note ?? null,
+    p_expected_version: input.version,
   }),
   setArchived: (id: string, version: number, archived: boolean) => supabase.from('clients')
     .update({ archived_at: archived ? new Date().toISOString() : null, version: version + 1 })

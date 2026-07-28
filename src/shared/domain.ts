@@ -55,6 +55,7 @@ export interface Client {
   id: UUID
   hasAccount: boolean | null
   fullName: string
+  canonicalFullName: string
   gender: Gender
   ageYears: number
   ageUpdatedAt: LocalDate
@@ -63,6 +64,14 @@ export interface Client {
   note: string | null
   currentWeightKg: number | null
   archivedAt: string | null
+  version: number
+  membershipVersion: number | null
+}
+
+export interface UpdateClientTrainerPreferencesInput {
+  clientId: UUID
+  alias: string
+  note?: string
   version: number
 }
 

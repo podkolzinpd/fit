@@ -32,10 +32,19 @@ describe('clientQueries.list', () => {
 
     expect(clientQueries.create(createInput)).toBe(response)
     expect(clientQueries.createOwn(createInput)).toBe(response)
+    expect(clientQueries.updateOwn({ ...createInput, id: 'client-id', version: 4 })).toBe(response)
+    expect(clientQueries.updatePreferences({ clientId: 'client-id', alias: 'Иван 1', note: 'Моя заметка', version: 2 })).toBe(response)
     expect(clientQueries.update({ ...createInput, id: 'client-id', version: 4 })).toBe(response)
     expect(rpc).toHaveBeenNthCalledWith(1, 'create_client', { p_client: createInput })
     expect(rpc).toHaveBeenNthCalledWith(2, 'create_own_client', { p_client: createInput })
-    expect(rpc).toHaveBeenNthCalledWith(3, 'update_client', {
+    expect(rpc).toHaveBeenNthCalledWith(3, 'update_own_client', {
+      p_client: { ...createInput, id: 'client-id', version: 4 },
+      p_expected_version: 4,
+    })
+    expect(rpc).toHaveBeenNthCalledWith(4, 'update_client_trainer_preferences', {
+      p_client_id: 'client-id', p_alias: 'Иван 1', p_note: 'Моя заметка', p_expected_version: 2,
+    })
+    expect(rpc).toHaveBeenNthCalledWith(5, 'update_client', {
       p_client: { ...createInput, id: 'client-id', version: 4 },
       p_expected_version: 4,
     })

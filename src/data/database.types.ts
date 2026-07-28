@@ -1,4 +1,4 @@
-// schema-sha256: 604738e0de1d53b2c864ba9120f99ed432421bfa607d01d3042e409015525894
+// schema-sha256: 0cd290b44c47731614dc07fda97f7bbe63942f00bdbb882468395ae3e8ba7384
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
@@ -19,10 +19,10 @@ type WorkoutSetRow = { id: string; workout_exercise_id: string; trainer_id: stri
 type ProgressRow = { id: string; trainer_id: string; client_id: string; created_by: string | null; recorded_on: string; weight_kg: number | null; chest_cm: number | null; waist_cm: number | null; hip_cm: number | null; notes: string | null; deleted_at: string | null; version: number; created_at: string; updated_at: string }
 type MetricRow = { id: string; trainer_id: string; client_id: string; name: string; unit: string | null; archived_at: string | null; version: number; created_at: string; updated_at: string }
 type ProgressCustomRow = { id: string; trainer_id: string; client_id: string; progress_id: string; metric_id: string; value: number; created_at: string; updated_at: string }
-type ClientTrainerRow = { client_id: string; trainer_id: string; joined_at: string }
+type ClientTrainerRow = { client_id: string; trainer_id: string; alias: string | null; note: string | null; version: number; joined_at: string }
 type ClientInvitationRow = { id: string; client_id: string; created_by: string; target_role: string; code_hash: string; expires_at: string; claimed_by: string | null; claimed_at: string | null; revoked_at: string | null; created_at: string }
-type ClientListRow = { id: string; full_name: string; gender: string; age_years: number; age_updated_at: string; height_cm: number; goal: string | null; note: string | null; current_weight_kg: number | null; archived_at: string | null; version: number }
-type MyClientRow = Omit<ClientListRow, 'note'>
+type ClientListRow = { id: string; has_account: boolean; full_name: string; canonical_full_name: string; gender: string; age_years: number; age_updated_at: string; height_cm: number; goal: string | null; note: string | null; current_weight_kg: number | null; archived_at: string | null; version: number; membership_version: number }
+type MyClientRow = Omit<ClientListRow, 'note' | 'canonical_full_name' | 'membership_version' | 'has_account'>
 type WorkoutListSetRow = Pick<WorkoutSetRow, 'id' | 'position' | 'plan_weight_kg' | 'plan_reps' | 'plan_duration_min' | 'plan_distance_km' | 'fact_weight_kg' | 'fact_reps' | 'fact_duration_min' | 'fact_distance_km' | 'confirmed_at' | 'version'>
 type WorkoutListExerciseRow = Pick<WorkoutExerciseRow, 'id' | 'position' | 'exercise_source' | 'exercise_ref' | 'custom_exercise_id' | 'exercise_name' | 'muscle_group' | 'input_kind' | 'block_id' | 'block_type' | 'block_preset' | 'block_rounds' | 'rest_between_exercises_sec' | 'rest_between_rounds_sec' | 'rest_between_sets_sec' | 'trainer_comment'> & { sets: WorkoutListSetRow[] }
 export type WorkoutListRow = Pick<WorkoutRow, 'id' | 'client_id' | 'workout_date' | 'start_time' | 'end_time' | 'started_at' | 'completed_at' | 'status' | 'notes' | 'version'> & { client_name: string; total_count: number; exercises: WorkoutListExerciseRow[] }
@@ -117,6 +117,8 @@ export type Database = {
       create_client: { Args: { p_client: Json }; Returns: string }
       create_own_client: { Args: { p_client: Json }; Returns: string }
       update_client: { Args: { p_client: Json; p_expected_version: number }; Returns: number }
+      update_own_client: { Args: { p_client: Json; p_expected_version: number }; Returns: number }
+      update_client_trainer_preferences: { Args: { p_client_id: string; p_alias: string; p_note: string | null; p_expected_version: number }; Returns: number }
       save_workout: { Args: { p_workout: Json; p_expected_version?: number | null }; Returns: string }
       start_workout: { Args: { p_workout_id: string; p_expected_version: number }; Returns: number }
       save_live_set_draft: { Args: { p_set_id: string; p_draft: Json; p_expected_version: number }; Returns: number }

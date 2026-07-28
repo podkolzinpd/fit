@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 
-test('trainer can create client, complete workout and save progress', async ({ page }) => {
+test('trainer can create client, complete workout and save progress', async ({ page }, testInfo) => {
+  const trainerAlias = `Анна ${testInfo.workerIndex}-${Date.now()}`
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -16,8 +17,17 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByRole('heading', { name: 'Анна Тестова' })).toBeVisible()
   const clientUrl = page.url()
 
+  await page.getByRole('link', { name: 'Мои настройки' }).click()
+  await page.getByLabel('Имя в моём списке').fill(trainerAlias)
+  await page.getByLabel('Личная заметка').fill('Моя приватная заметка')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
+  await page.goto('/clients')
+  await expect(page.getByText(trainerAlias)).toBeVisible()
+  await page.goto(clientUrl)
+
   await page.getByRole('link', { name: /Запланировать/ }).click()
-  await page.getByLabel('Клиент').selectOption({ label: 'Анна Тестова' })
+  await page.getByLabel('Клиент').selectOption({ label: trainerAlias })
   await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await expect(page.getByRole('button', { name: /Присед со штангой/ })).toBeVisible()
@@ -111,7 +121,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
 
   // Прогресс сохраняем из карточки клиента («Замеры и аналитика»).
   await page.goto(clientUrl)
-  await expect(page.getByRole('heading', { name: 'Анна Тестова' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
   await page.getByRole('link', { name: 'Замеры и аналитика' }).click()
   await page.getByLabel('Дата').fill('2026-07-20')
   await page.getByLabel('Вес, кг').fill('61')
