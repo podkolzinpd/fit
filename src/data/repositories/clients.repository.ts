@@ -1,4 +1,4 @@
-import type { Client, CreateClientInput, Gender, UpdateClientInput } from '../../shared/domain'
+import type { Client, CreateClientInput, Gender, UpdateClientInput, UpdateClientTrainerPreferencesInput } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { clientQueries } from '../queries/clients.queries'
 import { repositoryError } from './error'
@@ -9,10 +9,11 @@ type MyClientRow = NonNullable<Awaited<ReturnType<typeof clientQueries.getMine>>
 
 function fromListRow(row: ClientListRow): Client {
   return {
-    id: row.id, hasAccount: null, fullName: row.full_name, gender: row.gender as Gender,
+    id: row.id, hasAccount: row.has_account, fullName: row.full_name, canonicalFullName: row.canonical_full_name,
+    gender: row.gender as Gender,
     ageYears: row.age_years, ageUpdatedAt: localDate(row.age_updated_at), heightCm: Number(row.height_cm),
     goal: row.goal, note: row.note, currentWeightKg: row.current_weight_kg === null ? null : Number(row.current_weight_kg),
-    archivedAt: row.archived_at, version: row.version,
+    archivedAt: row.archived_at, version: row.version, membershipVersion: row.membership_version,
   }
 }
 
@@ -21,10 +22,11 @@ async function enrich(row: NonNullable<ClientRow>): Promise<Client> {
   if (note.error) throw repositoryError(note.error)
   if (weight.error) throw repositoryError(weight.error)
   return {
-    id: row.id, hasAccount: row.auth_user_id !== null, fullName: row.full_name, gender: row.gender as Gender,
+    id: row.id, hasAccount: row.auth_user_id !== null, fullName: row.full_name, canonicalFullName: row.full_name,
+    gender: row.gender as Gender,
     ageYears: row.age_years, ageUpdatedAt: localDate(row.age_updated_at), heightCm: Number(row.height_cm),
     goal: row.goal, note: note.data?.note ?? null, currentWeightKg: weight.data?.weight_kg === null || weight.data?.weight_kg === undefined ? null : Number(weight.data.weight_kg),
-    archivedAt: row.archived_at, version: row.version,
+    archivedAt: row.archived_at, version: row.version, membershipVersion: null,
   }
 }
 
@@ -35,10 +37,11 @@ export const clientsRepository = {
     const row: MyClientRow | undefined = result.data[0]
     if (!row) return null
     return {
-      id: row.id, hasAccount: true, fullName: row.full_name, gender: row.gender as Gender,
+      id: row.id, hasAccount: true, fullName: row.full_name, canonicalFullName: row.full_name,
+      gender: row.gender as Gender,
       ageYears: row.age_years, ageUpdatedAt: localDate(row.age_updated_at), heightCm: Number(row.height_cm),
       goal: row.goal, note: null, currentWeightKg: row.current_weight_kg === null ? null : Number(row.current_weight_kg),
-      archivedAt: row.archived_at, version: row.version,
+      archivedAt: row.archived_at, version: row.version, membershipVersion: null,
     }
   },
   async list(includeArchived = false): Promise<Client[]> {
@@ -47,9 +50,11 @@ export const clientsRepository = {
     return result.data.map(fromListRow)
   },
   async get(id: string): Promise<Client> {
-    const result = await clientQueries.get(id)
+    const result = await clientQueries.list(true)
     if (result.error) throw repositoryError(result.error)
-    return enrich(result.data)
+    const client = result.data.map(fromListRow).find((item) => item.id === id)
+    if (!client) throw new Error('Карточка клиента не найдена')
+    return client
   },
   async create(input: CreateClientInput): Promise<string> {
     const result = await clientQueries.create(input)
@@ -63,6 +68,14 @@ export const clientsRepository = {
   },
   async update(input: UpdateClientInput): Promise<void> {
     const result = await clientQueries.update(input)
+    if (result.error) throw repositoryError(result.error)
+  },
+  async updateOwn(input: UpdateClientInput): Promise<void> {
+    const result = await clientQueries.updateOwn(input)
+    if (result.error) throw repositoryError(result.error)
+  },
+  async updatePreferences(input: UpdateClientTrainerPreferencesInput): Promise<void> {
+    const result = await clientQueries.updatePreferences(input)
     if (result.error) throw repositoryError(result.error)
   },
   async setArchived(client: Client, archived: boolean): Promise<Client> {

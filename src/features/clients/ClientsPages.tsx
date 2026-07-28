@@ -36,7 +36,7 @@ export function MyClientPage() {
   const invite = useMutation({ mutationFn: (clientId: string) => invitationsRepository.create(clientId, 'trainer'), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', query.data?.id] }) })
   const revoke = useMutation({ mutationFn: (invitationId: string) => invitationsRepository.revoke(invitationId), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', query.data?.id] }) })
   const removeTrainer = useMutation({ mutationFn: (trainerId: string) => invitationsRepository.removeTrainer(query.data!.id, trainerId), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-trainers', query.data?.id] }) })
-  return <Page title="Мой кабинет">
+  return <Page title="Мой кабинет" action={query.data && <Link className="button secondary" to="/me/edit">Изменить данные</Link>}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {query.data ? <div className="stack">
         <section className="summary">
@@ -85,7 +85,23 @@ export function ClientFormPage() {
   const { clientId } = useParams(); const navigate = useNavigate(); const queryClient = useQueryClient()
   const existing = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId ?? ''), enabled: Boolean(clientId) })
   if (clientId && (existing.isLoading || existing.error)) return <Page title="Карточка клиента"><AsyncView loading={existing.isLoading} error={existing.error} onRetry={() => void existing.refetch()} /></Page>
-  return <ClientForm existing={existing.data} onSaved={async (id) => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); navigate(`/clients/${id}`) }} onCancel={() => navigate(-1)} />
+  if (clientId && existing.data) return <TrainerClientPreferencesForm client={existing.data} onSaved={async () => {
+    await queryClient.invalidateQueries({ queryKey: ['clients'] })
+    await queryClient.invalidateQueries({ queryKey: ['client', clientId] })
+    navigate(`/clients/${clientId}`)
+  }} onCancel={() => navigate(-1)} />
+  return <ClientForm onSaved={async (id) => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); navigate(`/clients/${id}`) }} onCancel={() => navigate(-1)} />
+}
+
+export function MyClientEditPage() {
+  const navigate = useNavigate(); const queryClient = useQueryClient()
+  const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
+  return <AsyncView loading={query.isLoading} error={query.error} empty={!query.data} onRetry={() => void query.refetch()}>
+    {query.data && <ClientForm existing={query.data} createMode="self" onSaved={async () => {
+      await queryClient.invalidateQueries({ queryKey: ['my-client'] })
+      navigate('/me')
+    }} onCancel={() => navigate(-1)} />}
+  </AsyncView>
 }
 
 function ClientForm({
@@ -110,9 +126,11 @@ function ClientForm({
   const mutation = useMutation({ mutationFn: async (values: ClientValues) => {
     const parsed = clientSchema.parse(values)
     if (existing) {
-      await clientsRepository.update({ id: existing.id, version: existing.version, fullName: parsed.fullName,
+      const input = { id: existing.id, version: existing.version, fullName: parsed.fullName,
         gender: parsed.gender as Gender, ageYears: parsed.ageYears, ageUpdatedAt: existing.ageUpdatedAt,
-        heightCm: parsed.heightCm, goal: parsed.goal, note: parsed.note })
+        heightCm: parsed.heightCm, goal: parsed.goal, note: parsed.note }
+      if (createMode === 'self') await clientsRepository.updateOwn(input)
+      else await clientsRepository.update(input)
       return existing.id
     }
     const input = { fullName: parsed.fullName, gender: parsed.gender as Gender,
@@ -127,15 +145,43 @@ function ClientForm({
       <div className="split"><Field label="Возраст"><input type="number" {...form.register('ageYears')} /></Field><Field label="Рост, см"><input type="number" step="0.1" {...form.register('heightCm')} /></Field></div>
       {!existing && <Field label="Начальный вес, кг"><input type="number" step="0.1" {...form.register('initialWeightKg')} /></Field>}
       <Field label="Цель"><textarea {...form.register('goal')} /></Field>
-      <Controller
+      {createMode === 'trainer' && <Controller
         control={form.control}
         name="note"
         render={({ field }) => <VoiceNoteField name={field.name} source="client_form" label="Общий комментарий" value={field.value ?? ''} onValueChange={field.onChange} />}
-      />
+      />}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions">{onCancel && <button type="button" className="secondary" onClick={onCancel}>Отмена</button>}<button disabled={mutation.isPending}>{createMode === 'self' ? 'Создать карточку' : 'Сохранить'}</button></div>
+      <div className="actions">{onCancel && <button type="button" className="secondary" onClick={onCancel}>Отмена</button>}<button disabled={mutation.isPending}>{createMode === 'self' && !existing ? 'Создать карточку' : 'Сохранить'}</button></div>
     </form>
   return embedded ? contents : <Page title={existing ? 'Редактировать клиента' : 'Новый клиент'}>{contents}</Page>
+}
+
+function TrainerClientPreferencesForm({ client, onSaved, onCancel }: {
+  client: Client
+  onSaved: () => Promise<void>
+  onCancel: () => void
+}) {
+  const form = useForm<{ alias: string; note: string }>({ defaultValues: { alias: client.fullName, note: client.note ?? '' } })
+  const mutation = useMutation({
+    mutationFn: (values: { alias: string; note: string }) => clientsRepository.updatePreferences({
+      clientId: client.id, alias: values.alias.trim(), note: values.note.trim() || undefined,
+      version: client.membershipVersion ?? 1,
+    }),
+    onSuccess: () => void onSaved(),
+  })
+  return <Page title="Моё отображение клиента">
+    <form className="stack" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
+      <p className="muted">Эти настройки видны только вам и не меняют данные клиента.</p>
+      <Field label="Имя в моём списке" error={form.formState.errors.alias?.message}>
+        <input {...form.register('alias', { required: 'Введите имя', maxLength: { value: 120, message: 'Не больше 120 символов' } })} />
+      </Field>
+      <Controller control={form.control} name="note" render={({ field }) =>
+        <VoiceNoteField name={field.name} source="client_form" label="Личная заметка" value={field.value} onValueChange={field.onChange} />
+      } />
+      {mutation.error && <p className="error">{mutation.error.message}</p>}
+      <div className="actions"><button type="button" className="secondary" onClick={onCancel}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
+    </form>
+  </Page>
 }
 
 export function ClientDetailPage() {
@@ -152,7 +198,7 @@ export function ClientDetailPage() {
   const trainers = useQuery({ queryKey: ['client-trainers', clientId], queryFn: () => invitationsRepository.listTrainers(clientId) })
   const currentMembership = trainers.data?.find((trainer) => trainer.trainerId === actor?.userId)
   const leave = useMutation({ mutationFn: () => invitationsRepository.leave(clientId), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); navigate('/clients') } })
-  return <Page title={query.data?.fullName ?? 'Клиент'} center back="/clients" action={query.data && <Link className="button secondary" to={`/clients/${clientId}/edit`}>Изменить</Link>}>
+  return <Page title={query.data?.fullName ?? 'Клиент'} center back="/clients" action={query.data && <Link className="button secondary" to={`/clients/${clientId}/edit`}>Мои настройки</Link>}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
       <section className="summary"><div><span>Возраст</span><strong>{query.data.ageYears}</strong></div><div><span>Рост</span><strong>{query.data.heightCm} см</strong></div><div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div></section>
       {stats.data && <>
@@ -180,7 +226,7 @@ export function ClientDetailPage() {
         {revoke.error && <p className="error">{revoke.error.message}</p>}
         {currentMembership && !currentMembership.isRoot && <button className="danger secondary wide" disabled={leave.isPending} onClick={() => { if (window.confirm('Покинуть пространство клиента? Доступ к тренировкам и прогрессу будет закрыт.')) leave.mutate() }}>Покинуть пространство клиента</button>}
         {leave.error && <p className="error">{leave.error.message}</p>}
-        <button className="danger secondary wide" disabled={archive.isPending} onClick={() => archive.mutate(query.data!)}>{query.data.archivedAt ? 'Вернуть из архива' : 'Архивировать клиента'}</button>
+        {currentMembership?.isRoot && <button className="danger secondary wide" disabled={archive.isPending} onClick={() => archive.mutate(query.data!)}>{query.data.archivedAt ? 'Вернуть из архива' : 'Архивировать клиента'}</button>}
       </div>
     </>}</AsyncView>
   </Page>
