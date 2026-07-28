@@ -116,6 +116,15 @@ describe('exerciseChartPoints', () => {
     ])
   })
 
+  it('несколько тренировок в один день → одна точка с лучшим результатом (без дублей дат)', () => {
+    const workouts = [
+      workoutWith('2026-07-27', 'squat', 'strength', [set({ weightKg: 100 })]),
+      workoutWith('2026-07-27', 'squat', 'strength', [set({ weightKg: 110 })]),
+      workoutWith('2026-07-27', 'squat', 'strength', [set({ weightKg: 95 })]),
+    ]
+    expect(exerciseChartPoints(workouts, 'squat')).toEqual([{ date: '2026-07-27', value: 110 }])
+  })
+
   it('использует дистанцию для distance-упражнений', () => {
     const workouts = [workoutWith('2026-07-10', 'run', 'distance', [set({ distanceKm: 5, durationMin: 30 })])]
     expect(exerciseChartPoints(workouts, 'run')).toEqual([{ date: '2026-07-10', value: 5 }])

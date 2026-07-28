@@ -462,21 +462,26 @@ function setMetric(inputKind: InputKind, set: WorkoutSet): number | undefined {
   return set.fact.weightKg
 }
 
-// Best result per completed workout for one exercise, oldest first, for the
-// progression chart. Only done workouts; workouts without any value skipped.
+// Best result per ДЕНЬ for one exercise, oldest first, for the progression
+// chart. Только done-тренировки; если в один день несколько тренировок с этим
+// упражнением — берём лучший результат дня (иначе на графике дублируются даты
+// и линия «скачет»). Точки без значений пропускаются.
 export function exerciseChartPoints(workouts: Workout[], exerciseRef: string): ExerciseChartPoint[] {
-  return workouts
-    .filter((workout) => workout.status === 'done')
-    .map((workout) => {
-      const exercise = workout.exercises.find((item) => item.ref === exerciseRef)
-      if (!exercise) return null
-      const values = exercise.sets
-        .map((set) => setMetric(exercise.inputKind, set))
-        .filter((value): value is number => value !== undefined)
-      if (values.length === 0) return null
-      return { date: workout.workoutDate, value: Math.max(...values) }
-    })
-    .filter((point): point is ExerciseChartPoint => point !== null)
+  const bestByDate = new Map<LocalDate, number>()
+  for (const workout of workouts) {
+    if (workout.status !== 'done') continue
+    const exercise = workout.exercises.find((item) => item.ref === exerciseRef)
+    if (!exercise) continue
+    const values = exercise.sets
+      .map((set) => setMetric(exercise.inputKind, set))
+      .filter((value): value is number => value !== undefined)
+    if (values.length === 0) continue
+    const best = Math.max(...values)
+    const current = bestByDate.get(workout.workoutDate)
+    if (current === undefined || best > current) bestByDate.set(workout.workoutDate, best)
+  }
+  return [...bestByDate.entries()]
+    .map(([date, value]) => ({ date, value }))
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
 }
 
