@@ -1,4 +1,4 @@
-// schema-sha256: f47d5525ebf7410ebe92cee839d2db9c3921e1cb20493f6d40f64574eeca5523
+// schema-sha256: d9026798a0b2f4c43f0e255159d6b76f6ae1fe6e84b7c649bc43e6a191633bc8
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
@@ -13,7 +13,7 @@ type TrainerRow = { profile_id: string; created_at: string; updated_at: string }
 type ClientRow = { id: string; trainer_id: string; auth_user_id: string | null; full_name: string; gender: string; age_years: number; age_updated_at: string; height_cm: number; goal: string | null; archived_at: string | null; version: number; created_at: string; updated_at: string }
 type PrivateRow = { client_id: string; trainer_id: string; note: string | null; created_at: string; updated_at: string }
 type CustomExerciseRow = { id: string; trainer_id: string; name: string; muscle_group: string; input_kind: string; archived_at: string | null; version: number; created_at: string; updated_at: string }
-type WorkoutRow = { id: string; trainer_id: string; client_id: string; created_by: string | null; workout_date: string; start_time: string | null; end_time: string | null; status: string; notes: string | null; started_at: string | null; completed_at: string | null; deleted_at: string | null; version: number; created_at: string; updated_at: string }
+type WorkoutRow = { id: string; trainer_id: string; client_id: string; created_by: string | null; workout_date: string; start_time: string | null; end_time: string | null; status: string; notes: string | null; stage_id: string | null; started_at: string | null; completed_at: string | null; deleted_at: string | null; version: number; created_at: string; updated_at: string }
 type WorkoutExerciseRow = { id: string; workout_id: string; trainer_id: string; client_id: string; position: number; exercise_source: string; exercise_ref: string; custom_exercise_id: string | null; exercise_name: string; muscle_group: string; input_kind: string; block_id: string; block_type: string; block_preset: string; block_rounds: number; rest_between_exercises_sec: number; rest_between_rounds_sec: number; rest_between_sets_sec: number; trainer_comment: string | null; created_at: string; updated_at: string }
 type WorkoutSetRow = { id: string; workout_exercise_id: string; trainer_id: string; client_id: string; position: number; plan_weight_kg: number | null; plan_reps: number | null; plan_duration_min: number | null; plan_distance_km: number | null; fact_weight_kg: number | null; fact_reps: number | null; fact_duration_min: number | null; fact_distance_km: number | null; confirmed_at: string | null; version: number; created_at: string; updated_at: string }
 type ProgressRow = { id: string; trainer_id: string; client_id: string; created_by: string | null; recorded_on: string; weight_kg: number | null; chest_cm: number | null; waist_cm: number | null; hip_cm: number | null; notes: string | null; deleted_at: string | null; version: number; created_at: string; updated_at: string }
@@ -25,7 +25,7 @@ type ClientListRow = { id: string; has_account: boolean; full_name: string; cano
 type MyClientRow = Omit<ClientListRow, 'note' | 'canonical_full_name' | 'membership_version' | 'has_account'>
 type WorkoutListSetRow = Pick<WorkoutSetRow, 'id' | 'position' | 'plan_weight_kg' | 'plan_reps' | 'plan_duration_min' | 'plan_distance_km' | 'fact_weight_kg' | 'fact_reps' | 'fact_duration_min' | 'fact_distance_km' | 'confirmed_at' | 'version'>
 type WorkoutListExerciseRow = Pick<WorkoutExerciseRow, 'id' | 'position' | 'exercise_source' | 'exercise_ref' | 'custom_exercise_id' | 'exercise_name' | 'muscle_group' | 'input_kind' | 'block_id' | 'block_type' | 'block_preset' | 'block_rounds' | 'rest_between_exercises_sec' | 'rest_between_rounds_sec' | 'rest_between_sets_sec' | 'trainer_comment'> & { sets: WorkoutListSetRow[] }
-export type WorkoutListRow = Pick<WorkoutRow, 'id' | 'client_id' | 'workout_date' | 'start_time' | 'end_time' | 'started_at' | 'completed_at' | 'status' | 'notes' | 'version'> & { client_name: string; total_count: number; exercises: WorkoutListExerciseRow[] }
+export type WorkoutListRow = Pick<WorkoutRow, 'id' | 'client_id' | 'workout_date' | 'start_time' | 'end_time' | 'started_at' | 'completed_at' | 'status' | 'notes' | 'version'> & { client_name: string; stage_id: string | null; stage_title: string | null; total_count: number; exercises: WorkoutListExerciseRow[] }
 type WorkoutSummaryRow = Pick<WorkoutRow, 'id' | 'workout_date' | 'status'>
 type TrainerMembershipRow = { trainer_id: string; first_name: string | null; last_name: string | null; joined_at: string; is_root: boolean }
 

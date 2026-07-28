@@ -10,7 +10,7 @@ function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary
 function bareWorkout(date: string, status: WorkoutStatus): Workout {
   return {
     id: date + status, clientId: 'c1', clientName: 'Клиент', workoutDate: localDate(date),
-    startTime: null, endTime: null, startedAt: null, completedAt: null, status, notes: null, version: 1, exercises: [],
+    startTime: null, endTime: null, startedAt: null, completedAt: null, status, notes: null, stageId: null, stageTitle: null, version: 1, exercises: [],
   }
 }
 
@@ -26,7 +26,7 @@ describe('workouts repository rules', () => {
   it('копирует план без факта и идентификаторов', () => {
     const source: Workout = {
       id: 'w1', clientId: 'c1', clientName: 'Анна', workoutDate: localDate('2026-07-21'),
-      startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'done', notes: null, version: 3,
+      startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'done', notes: null, stageId: null, stageTitle: null, version: 3,
       exercises: [{ id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: 'b1', blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90,
         sets: [{ id: 's1', position: 0, weightKg: 50, reps: 10, fact: { weightKg: 55, reps: 9 }, confirmedAt: 'now', version: 2 }] }],
     }
@@ -99,7 +99,7 @@ function planSet(weightKg: number, position = 0): WorkoutSet {
 function workoutWith(date: string, ref: string, inputKind: InputKind, sets: WorkoutSet[]): Workout {
   return {
     id: `w-${date}`, clientId: 'c1', clientName: 'Клиент', workoutDate: localDate(date),
-    startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'done', notes: null, version: 1,
+    startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'done', notes: null, stageId: null, stageTitle: null, version: 1,
     exercises: [{ id: `e-${date}`, source: 'system', ref, name: ref, muscleGroup: 'legs', inputKind, position: 0, blockId: `b-${date}`, blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90, sets }],
   }
 }
@@ -307,7 +307,7 @@ function exercise(id: string, position: number, blockId: string, blockType: 'sin
   return { id, source: 'system', ref: id, name: id, muscleGroup: 'legs', inputKind: 'strength', position, blockId, blockType, blockPreset: 'set', blockRounds: Math.max(1, sets.length), restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90, sets }
 }
 function workoutWithExercises(exercises: Workout['exercises']): Workout {
-  return { id: 'w', clientId: 'c1', clientName: 'К', workoutDate: localDate('2026-07-20'), startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'in_progress', notes: null, version: 1, exercises }
+  return { id: 'w', clientId: 'c1', clientName: 'К', workoutDate: localDate('2026-07-20'), startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'in_progress', notes: null, stageId: null, stageTitle: null, version: 1, exercises }
 }
 
 describe('groupIntoBlocks', () => {

@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { clientsRepository } from '../../data/repositories/clients.repository'
+import { goalsRepository } from '../../data/repositories/goals.repository'
+import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { blockLabel, chartUnitFor, copyWorkout, exerciseChartPoints, exerciseSummary, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
@@ -181,6 +183,14 @@ export function WorkoutFormPage() {
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const initial = source.data ? (workoutId ? { ...copyWorkout(source.data), id: source.data.id, version: source.data.version } : copyWorkout(source.data, todayLocalDate())) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
+  // Клиент, для которого выбираем этап (реактивно — при смене в селекте).
+  const defaultClientId = clientMode ? (mine.data?.id ?? '') : (initial?.clientId ?? params.get('client') ?? '')
+  const [selectedClientId, setSelectedClientId] = useState<string>('')
+  const clientId = selectedClientId || defaultClientId
+  const goal = useQuery({ queryKey: ['client-goal', clientId], queryFn: () => goalsRepository.get(clientId), enabled: Boolean(clientId) })
+  const stages = goal.data ? orderedStages(goal.data) : []
+  // Этап по умолчанию: сохранённый у тренировки, иначе текущий по дате.
+  const defaultStageId = source.data?.stageId ?? (goal.data ? currentStage(goal.data, todayLocalDate())?.id ?? '' : '')
   const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => workoutsRepository.save(draft), onSuccess: async (id) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['workout', id] }),
@@ -197,9 +207,10 @@ export function WorkoutFormPage() {
   function closePicker() { setPickerOpen(false); setReplaceIndex(null) }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget)
-    const clientId = String(form.get('clientId')); const date = localDate(String(form.get('date')))
-    mutation.mutate({ id: workoutId, clientId, workoutDate: date, startTime: String(form.get('startTime') || '') || undefined,
-      notes: String(form.get('notes') || '') || undefined, exercises, version: source.data?.version })
+    const submitClientId = String(form.get('clientId')); const date = localDate(String(form.get('date')))
+    const stageId = String(form.get('stageId') || '') || null
+    mutation.mutate({ id: workoutId, clientId: submitClientId, workoutDate: date, startTime: String(form.get('startTime') || '') || undefined,
+      notes: String(form.get('notes') || '') || undefined, stageId, exercises, version: source.data?.version })
   }
   const availableClients = clientMode ? (mine.data ? [mine.data] : []) : clients.data
   const editingDenied = Boolean(clientMode && workoutId && source.data && source.data.createdBy !== actor?.userId)
@@ -209,8 +220,15 @@ export function WorkoutFormPage() {
     <AsyncView loading={loading} error={error}>{editingDenied ? <div className="state"><h2>Редактирование недоступно</h2><p>Назначенную тренером тренировку может менять только тренер.</p></div> : clientMode && !mine.data ? <div className="state"><h2>Карточка ещё не подключена</h2><p>Создать тренировку можно после подключения клиентской карточки.</p></div> : <form className="stack" onSubmit={(event) => void submit(event)}>
       {clientMode
         ? <><input type="hidden" name="clientId" value={mine.data?.id ?? ''} /><Field label="Клиент"><input value={mine.data?.fullName ?? ''} disabled /></Field></>
-        : <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} required><option value="">Выберите</option>{availableClients?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>}
+        : <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} onChange={(event) => setSelectedClientId(event.target.value)} required><option value="">Выберите</option>{availableClients?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>}
       <div className="split"><Field label="Дата"><input name="date" type="date" defaultValue={initial?.workoutDate ?? params.get('date') ?? todayLocalDate()} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} /></Field></div>
+      {stages.length > 0 && <Field label="Этап цели">
+        {/* key — чтобы defaultValue пересчитался при смене клиента/загрузке цели */}
+        <select name="stageId" key={`${clientId}-${defaultStageId}`} defaultValue={defaultStageId}>
+          <option value="">Без этапа</option>
+          {stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.title}</option>)}
+        </select>
+      </Field>}
       <VoiceNoteField name="notes" source="workout_form" defaultValue={initial?.notes ?? ''} />
       <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} />
       {mutation.error && <p className="error">{mutation.error.message}</p>}
@@ -225,6 +243,9 @@ export function WorkoutDetailPage() {
   const { actor } = useAuth()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   useClientRealtime(query.data?.clientId)
+  // Этап тренировки: get() отдаёт stageId, название берём из цели клиента.
+  const goal = useQuery({ queryKey: ['client-goal', query.data?.clientId], queryFn: () => goalsRepository.get(query.data!.clientId), enabled: Boolean(query.data?.stageId && query.data?.clientId) })
+  const stageTitle = query.data?.stageId ? goal.data?.stages.find((stage) => stage.id === query.data!.stageId)?.title ?? null : null
   const start = useMutation({ mutationFn: () => workoutsRepository.start(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }); navigate(`/workouts/${workoutId}/live`) } })
   const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workouts'] }); navigate(actor?.role === 'client' ? '/me/workouts' : '/schedule') } })
   const workout = query.data
@@ -241,7 +262,7 @@ export function WorkoutDetailPage() {
   return <Page title="Тренировка" back={backTo}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       <section className="workout-title">
-        <div><h2>{workout.clientName}</h2><p>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</p></div>
+        <div><h2>{workout.clientName}</h2><p>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</p>{stageTitle && <p className="stage-tag">🎯 {stageTitle}</p>}</div>
         <span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span>
       </section>
       {workout.status === 'planned' && <button className="wide" onClick={() => start.mutate()}>Начать тренировку</button>}

@@ -43,6 +43,7 @@ async function get(id: string): Promise<Workout> {
     workoutDate: localDate(root.data.workout_date), startTime: root.data.start_time,
     endTime: root.data.end_time, startedAt: root.data.started_at ?? null, completedAt: root.data.completed_at ?? null,
     status: root.data.status as Workout['status'], notes: root.data.notes,
+    stageId: root.data.stage_id ?? null, stageTitle: null,
     version: root.data.version, exercises: mappedExercises,
   }
 }
@@ -60,6 +61,8 @@ function mapWorkout(row: WorkoutListRow): Workout {
     completedAt: row.completed_at ?? null,
     status: row.status as WorkoutStatus,
     notes: row.notes,
+    stageId: row.stage_id ?? null,
+    stageTitle: row.stage_title ?? null,
     version: row.version,
     exercises: row.exercises.map((exercise) => ({
       id: exercise.id,
