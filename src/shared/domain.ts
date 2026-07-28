@@ -92,6 +92,45 @@ export interface UpdateClientInput extends Omit<CreateClientInput, 'initialWeigh
   version: number
 }
 
+// Периодизация: цель клиента (одна активная) + этапы-подцели с датами.
+export interface GoalStage {
+  id: UUID
+  goalId: UUID
+  title: string
+  startsOn: LocalDate
+  endsOn: LocalDate
+  position: number
+  version: number
+}
+
+export interface ClientGoal {
+  id: UUID
+  clientId: UUID
+  title: string
+  targetDate: LocalDate | null
+  status: 'active' | 'archived'
+  version: number
+  stages: GoalStage[]
+}
+
+export interface SaveClientGoalInput {
+  clientId: UUID
+  id?: UUID
+  title: string
+  targetDate?: LocalDate | null
+  version?: number
+}
+
+export interface SaveGoalStageInput {
+  goalId: UUID
+  id?: UUID
+  title: string
+  startsOn: LocalDate
+  endsOn: LocalDate
+  position?: number
+  version?: number
+}
+
 export interface ExerciseSnapshot {
   source: 'system' | 'custom'
   ref: string

@@ -3,7 +3,7 @@ import { useAuth } from './auth-context'
 import { trackPageView } from '../shared/yandex-metrika'
 import { AppLayout } from './AppLayout'
 import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage } from '../features/auth'
-import { ClientDetailPage, ClientFormPage, ClientsPage, MyClientEditPage, MyClientPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
+import { ClientDetailPage, ClientFormPage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { AnalyticsPage, ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
@@ -47,6 +47,7 @@ const router = createBrowserRouter([
       { path: '/clients', element: <ClientsPage /> },
       { path: '/clients/new', element: <ClientFormPage /> },
       { path: '/clients/:clientId', element: <ClientDetailPage /> },
+      { path: '/clients/:clientId/goal', element: <GoalPage /> },
       { path: '/clients/:clientId/edit', element: <ClientFormPage /> },
       { path: '/clients/:clientId/workouts', element: <ClientWorkoutsPage /> },
       { path: '/schedule', element: <SchedulePage /> },

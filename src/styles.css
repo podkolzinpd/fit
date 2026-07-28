@@ -115,6 +115,18 @@ p { margin: 6px 0 }
 .goal-stages-hint strong { font-size: 14px }
 .goal-stages-hint p { margin: 3px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4 }
 .goal-stages-hint .secondary { flex-shrink: 0; padding: 8px 12px; font-size: 13px }
+a.goal-stages-hint { text-decoration: none; color: inherit }
+a.goal-stages-hint:hover { border-color: #4c465a }
+.goal-stage-line { font-size: 13px; font-weight: 600; color: #b9a9ff }
+.stage-list { display: flex; flex-direction: column; gap: 8px }
+.stage-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-raised) }
+.stage-row.current { border-color: #6c5ce0; background: #241f38 }
+.stage-row.done { opacity: .7 }
+.stage-row strong { font-size: 14px }
+.stage-row p { margin: 3px 0 0; font-size: 12px }
+.stage-actions { display: flex; gap: 6px; flex-shrink: 0 }
+.stage-actions .link { padding: 4px 6px; font-size: 13px }
+.stage-form { border: 1px dashed var(--border); border-radius: 14px; padding: 12px 14px }
 .menu { display: flex; flex-direction: column; margin: 22px 0; border-block: 1px solid var(--border) }
 .menu a { padding: 15px 4px; text-decoration: none; border-bottom: 1px solid var(--border) }.menu a:last-child { border-bottom: 0 }
 .toggle { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; color: var(--muted) }
