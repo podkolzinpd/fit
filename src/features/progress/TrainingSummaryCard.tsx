@@ -7,7 +7,7 @@ import type {
   TrainingSummary,
   TrainingSummaryMetrics,
 } from '../../shared/domain'
-import { addDays, addMonths, formatLocalDate, todayLocalDate, type LocalDate } from '../../shared/local-date'
+import { addDays, addMonths, daysBetween, formatLocalDate, todayLocalDate, type LocalDate } from '../../shared/local-date'
 import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 
@@ -27,12 +27,28 @@ function periodRange(key: SummaryPeriod, end = todayLocalDate()): {
   return { start: addDays(addMonths(end, -months), 1), end }
 }
 
+// Сводку сопоставляем с выбранным периодом по ДЛИНЕ окна (в днях), а не по
+// точному совпадению дат. Точное равенство было хрупким: сводка генерируется по
+// current_date БД, а окно считается по todayLocalDate() приложения — при сдвиге
+// на день (таймзона/смена суток/клэмп конца месяца) match терял запись и экран
+// показывал «сводка не запрошена». Берём запись, чья длина ближе всего к целевой
+// (с допуском), и среди подходящих — самую свежую по periodEnd.
 function periodMatch<T extends { periodStart: LocalDate; periodEnd: LocalDate }>(
   values: T[],
   key: SummaryPeriod,
 ): T | undefined {
-  const range = periodRange(key)
-  return values.find((item) => item.periodStart === range.start && item.periodEnd === range.end)
+  const months = PERIODS.find((period) => period.key === key)?.months ?? 6
+  const target = daysBetween(addMonths(todayLocalDate(), -months), todayLocalDate())
+  // Допуск: половина месяца — уверенно отделяет 1m от 3m от 6m, но переживает
+  // сдвиг границ на несколько дней.
+  const tolerance = 15
+  return values
+    .map((item) => ({ item, span: daysBetween(item.periodStart, item.periodEnd) }))
+    .filter(({ span }) => Math.abs(span - target) <= tolerance)
+    .sort((a, b) =>
+      Math.abs(a.span - target) - Math.abs(b.span - target)
+      || (a.item.periodEnd < b.item.periodEnd ? 1 : -1))
+    .at(0)?.item
 }
 
 function PeriodTabs({ value, onChange }: {
