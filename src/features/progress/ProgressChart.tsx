@@ -153,8 +153,8 @@ export function ProgressChart({ entries, metric, label, unit, windowEnd, onWindo
               <YAxis stroke="var(--muted)" style={{ fontSize: '12px' }} domain={yDomain} allowDecimals />
               {!isDragging && <Tooltip
                 contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', borderRadius: 12 }}
-                labelStyle={{ color: '#e9e4ed', fontWeight: 700 }}
-                itemStyle={{ color: '#e9e4ed' }}
+                labelStyle={{ color: 'var(--fg)', fontWeight: 700 }}
+                itemStyle={{ color: 'var(--fg)' }}
                 formatter={(value) => formatTooltipValue(Number(value), unit, label)} labelFormatter={(date) => formatTooltipLabel(String(date))} />}
               <Line type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={3}
                 dot={(dotProps: { cx?: number; cy?: number; index?: number }) => renderChartDot(dotProps, minIndex, maxIndex, visibleData.length)}
