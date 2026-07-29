@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { BlockPreset, WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
 import { groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
+import { OverflowMenu } from '../../shared/ui'
 
 // Числовое поле, которое МОЖНО очистить курсором. Контролируемый input с value
 // снаружи «возвращал» старое число при пустом вводе (стереть можно было только
@@ -121,7 +122,10 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   // Одиночное упражнение (вне блока): подходы + «＋ Подход» + «Объединить».
   function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode) {
     return <article className="exercise" key={`${exercise.ref}-${exerciseIndex}`}>
-      <header><strong>{exercise.name}</strong><span className="exercise-head-actions">{reorder}<button type="button" className="link" onClick={() => onReplaceExercise(exerciseIndex)}>Заменить</button><button type="button" className="link danger" onClick={() => removeExercise(exerciseIndex)}>Удалить</button></span></header>
+      <header><strong>{exercise.name}</strong><span className="exercise-head-actions">{reorder}<OverflowMenu items={[
+        { label: 'Заменить', onClick: () => onReplaceExercise(exerciseIndex) },
+        { label: 'Удалить', danger: true, onClick: () => removeExercise(exerciseIndex) },
+      ]} /></span></header>
       {exercise.sets.map((_set, setIndex) => <div className="planned-set" key={setIndex}>
         <div className="planned-set-heading"><span>Подход {setIndex + 1}</span>{exercise.sets.length > 1 && <button type="button" className="link danger" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}>×</button>}</div>
         {setFields(exercise, exerciseIndex, setIndex)}
@@ -166,7 +170,10 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
           <label className="block-rest-field">Отдых между кругами, с<ClampedNumberInput label="Отдых между кругами, с" value={block.restBetweenRoundsSec} min={0} max={600} onCommit={(next) => onChange(setBlockRest([...exercises], block.blockId, { betweenRounds: next }))} /></label>
         </div>
         {/* Список упражнений блока с удалением (значения — ниже по кругам). */}
-        <div className="block-exercises">{block.items.map(({ exercise, index }) => <div className="block-exercise-row" key={exercise.blockId ? `${exercise.ref}-${index}` : index}><div className="block-exercise-head"><strong>{exercise.name}</strong><span className="exercise-head-actions"><button type="button" className="link" onClick={() => onReplaceExercise(index)}>Заменить</button><button type="button" className="link danger" onClick={() => removeExercise(index)}>Удалить</button></span></div>{commentField(exercise, index)}</div>)}</div>
+        <div className="block-exercises">{block.items.map(({ exercise, index }) => <div className="block-exercise-row" key={exercise.blockId ? `${exercise.ref}-${index}` : index}><div className="block-exercise-head"><strong>{exercise.name}</strong><span className="exercise-head-actions"><OverflowMenu items={[
+          { label: 'Заменить', onClick: () => onReplaceExercise(index) },
+          { label: 'Удалить', danger: true, onClick: () => removeExercise(index) },
+        ]} /></span></div>{commentField(exercise, index)}</div>)}</div>
         {rounds.map((round) => <div className="planned-round" key={round.round}>
           <div className="planned-round-label">Круг {round.round}</div>
           {round.items.map(({ exercise, exerciseIndex, setIndex }) => <div className="planned-round-exercise" key={`${exercise.ref}-${exerciseIndex}`}>

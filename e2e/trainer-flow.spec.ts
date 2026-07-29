@@ -271,7 +271,9 @@ test('замена упражнения: в форме плана и в live', a
   await page.getByLabel('Повторы, подход 1').fill('10')
 
   // Заменяем на «Жим лёжа» (тот же тип) — значения подхода сохраняются.
-  await page.getByRole('button', { name: 'Заменить' }).click()
+  // «Заменить» теперь в меню «⋯» (редкое действие вне постоянной видимости).
+  await page.getByRole('button', { name: 'Ещё действия' }).first().click()
+  await page.getByRole('menuitem', { name: 'Заменить' }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
   await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
   await expect(page.locator('.exercise header strong').first()).toContainText('Жим лёжа')
@@ -284,13 +286,14 @@ test('замена упражнения: в форме плана и в live', a
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer-big')).toBeVisible()
   await expect(page.locator('.live-exercise-head h2').first()).toContainText('Жим лёжа')
-  await page.getByRole('button', { name: 'Заменить' }).click()
+  await page.getByRole('button', { name: 'Ещё действия' }).first().click()
+  await page.getByRole('menuitem', { name: 'Заменить' }).click()
   await page.getByLabel('Поиск упражнения').fill('Тяга верхнего блока')
   await page.getByRole('button', { name: /Тяга верхнего блока/ }).first().click()
   await expect(page.locator('.live-exercise-head h2').first()).toContainText('Тяга верхнего блока')
-  // После подтверждения подхода «Заменить» пропадает (начатое заменять нельзя).
+  // После подтверждения подхода «⋯»-меню упражнения пропадает (заменять начатое нельзя).
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
-  await expect(page.getByRole('button', { name: 'Заменить' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Ещё действия' })).toHaveCount(0)
 })
 
 test('карточка упражнения: шапка с оборудованием/мышцами и табы', async ({ page }) => {

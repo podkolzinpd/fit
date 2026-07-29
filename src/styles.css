@@ -193,8 +193,19 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .reorder-btn { width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-raised); color: var(--fg); font-size: 15px; line-height: 1; cursor: pointer }
 .reorder-btn:hover:not(:disabled) { border-color: #4b3f83 }
 .reorder-btn:disabled { opacity: .35; cursor: default }
+
+/* Меню «три точки»: редкие действия (заменить/удалить) вне постоянной видимости. */
+.overflow-menu { position: relative; display: inline-flex }
+.overflow-trigger { min-width: 44px; min-height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-raised); color: var(--fg); font-size: 20px; line-height: 1; cursor: pointer; box-shadow: none }
+.overflow-trigger:hover { border-color: #4b3f83 }
+.overflow-list { position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; min-width: 160px; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--border); border-radius: 12px; background: #221f2a; box-shadow: 0 14px 40px #00000066 }
+.overflow-item { min-height: 44px; padding: 10px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--fg); font-weight: 600; text-align: left; box-shadow: none; cursor: pointer }
+.overflow-item:hover { background: #2c2836 }
+.overflow-item.danger { color: var(--danger) }
+.overflow-item:disabled { opacity: .5; cursor: default }
 .live-exercise-head { display: flex; align-items: center; justify-content: space-between; gap: 10px }
-.live-exercise-head h2 { margin: 0 }
+.live-exercise-head h2, .live-exercise-head h3 { margin: 0; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere }
+.live-exercise-head .exercise-head-actions { flex: 0 0 auto }
 .block-badge { align-self: flex-start; padding: 3px 10px; border-radius: 99px; background: #2f2850; border: 1px solid #4b3f83; color: var(--purple); font-size: 12px; font-weight: 700 }
 .block-rounds { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 600 }
 /* Live «по кругам»: шапка со счётчиком и точками прогресса. */
@@ -253,8 +264,9 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .exercise-name-hint { font-size: 12px; color: var(--purple); font-weight: 600 }
 /* Приписка плана рядом с фактом (при расхождении) — тусклая. */
 .plan-note { color: var(--muted); font-size: 12px }
-.exercise header, .workout-title { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; flex-wrap: wrap }
-.exercise header > strong { flex: 1 1 auto; min-width: 0 }
+.exercise header, .workout-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 12px; flex-wrap: nowrap }
+.exercise header > strong { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere }
+.exercise header > .exercise-head-actions { flex: 0 0 auto }
 .workout-title { margin-bottom: 18px }
 .workout-title h2 { margin: 0 0 4px }
 .set-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 24px }
