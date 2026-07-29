@@ -528,7 +528,7 @@ export function LiveWorkoutPage() {
         ? <button type="button" className="secondary" disabled={save.isPending}
             onPointerDown={() => { skipBlurForSet.current = set.id }}
             onClick={(event) => { const form = event.currentTarget.form; if (form) save.mutate({ set, draft: draftFrom(form) }); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}>Сохранить</button>
-        : <button type="button" className="secondary" disabled={Boolean(set.confirmedAt) || confirm.isPending}
+        : <button type="button" className={set.confirmedAt ? 'secondary live-confirm' : 'live-confirm'} disabled={Boolean(set.confirmedAt) || confirm.isPending}
             onPointerDown={() => { skipBlurForSet.current = set.id }}
             onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>{set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'}</button>}
     </form>
@@ -605,7 +605,11 @@ export function LiveWorkoutPage() {
       }) })()}
       {!clientMode && <button type="button" className="secondary wide" onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
       {error && <p className="error">{error.message}</p>}
-      <button className="wide" disabled={finish.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => exercise.sets.some((set) => !set.confirmedAt)); if (!incomplete || window.confirm('Есть незавершённые подходы. Завершить тренировку частично?')) finish.mutate() }}>Завершить тренировку</button>
+      {/* Закреплённая нижняя панель: «Завершить» — вторичная, чтобы не
+          конкурировать с primary-подтверждением подхода в карточке. */}
+      <div className="live-bottom-bar">
+        <button type="button" className="secondary wide" disabled={finish.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => exercise.sets.some((set) => !set.confirmedAt)); if (!incomplete || window.confirm('Есть незавершённые подходы. Завершить тренировку частично?')) finish.mutate() }}>Завершить тренировку</button>
+      </div>
     </>}</AsyncView>
     {!clientMode && pickerOpen && <ExercisePicker catalog={catalog} onPick={pickLiveExercise} onClose={closePicker} />}
   </Page>

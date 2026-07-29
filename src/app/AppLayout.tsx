@@ -10,18 +10,24 @@ export function AppLayout() {
 
   useEffect(() => { contentRef.current?.scrollTo(0, 0) }, [pathname])
 
-  if (actor?.role === 'client') return <div className="phone-frame"><div className="content" ref={contentRef}><Outlet /></div><nav className="tab-bar" aria-label="Основная навигация">
+  // В live-режиме прячем нижнюю навигацию: во время тренировки приоритет —
+  // текущий подход, таймер и завершение; таб-бар не должен конкурировать с
+  // закреплённой панелью действий (BottomActionBar). Контент занимает всю высоту.
+  const immersive = /\/live$/.test(pathname)
+  const contentClass = immersive ? 'content content-immersive' : 'content'
+
+  if (actor?.role === 'client') return <div className="phone-frame"><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
     <NavLink to="/me"><ClientsIcon />Кабинет</NavLink>
     <NavLink to="/me/workouts"><ScheduleIcon />Тренировки</NavLink>
     <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
     <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>
-  </nav></div>
-  return <div className="phone-frame"><div className="content" ref={contentRef}><Outlet /></div><nav className="tab-bar" aria-label="Основная навигация">
+  </nav>}</div>
+  return <div className="phone-frame"><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
     <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>
     <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>
     <NavLink to="/analytics"><AnalyticsIcon />Аналитика</NavLink>
     <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>
-  </nav></div>
+  </nav>}</div>
 }
 
 export function ClientAppLayout() {
