@@ -1,4 +1,4 @@
-import type { PropsWithChildren, ReactNode } from 'react'
+import { useEffect, useRef, useState, type PropsWithChildren, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 export function Page({ title, action, back, center, hideTitle, className, children }: PropsWithChildren<{
@@ -36,4 +36,29 @@ export function Field({ label, error, children }: PropsWithChildren<{ label: str
 const STATUS_BADGE: Record<string, string> = { current: 'Сейчас', upcoming: 'Далее', done: 'Готово' }
 export function StatusBadge({ status }: { status: 'current' | 'upcoming' | 'done' }) {
   return <span className={`status-badge status-${status}`}>{STATUS_BADGE[status]}</span>
+}
+
+export interface OverflowMenuItem { label: string; onClick: () => void; danger?: boolean; disabled?: boolean }
+// Меню «три точки» для редких действий, чтобы они не конкурировали с основными.
+// Пункты сохраняют свои названия (доступны по имени после раскрытия меню).
+export function OverflowMenu({ items, label = 'Ещё действия' }: { items: OverflowMenuItem[]; label?: string }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const onDown = (event: PointerEvent) => { if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false) }
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false) }
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('pointerdown', onDown); document.removeEventListener('keydown', onKey) }
+  }, [open])
+  if (items.length === 0) return null
+  return <div className="overflow-menu" ref={ref}>
+    <button type="button" className="overflow-trigger" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}>⋯</button>
+    {open && <div className="overflow-list" role="menu">
+      {items.map((item) => <button key={item.label} type="button" role="menuitem" disabled={item.disabled}
+        className={item.danger ? 'overflow-item danger' : 'overflow-item'}
+        onClick={() => { setOpen(false); item.onClick() }}>{item.label}</button>)}
+    </div>}
+  </div>
 }

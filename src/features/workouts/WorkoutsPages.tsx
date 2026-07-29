@@ -14,7 +14,7 @@ import {
   addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayLocalDate, weekdayShort,
   type LocalDate,
 } from '../../shared/local-date'
-import { AsyncView, Field, Page, StatusBadge } from '../../shared/ui'
+import { AsyncView, Field, OverflowMenu, Page, StatusBadge } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { VoiceNoteField } from '../voice-input'
 import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
@@ -498,12 +498,15 @@ export function LiveWorkoutPage() {
     return <textarea className="exercise-comment" aria-label={`Комментарий: ${exercise.name}`} placeholder="Комментарий к упражнению…" rows={1} defaultValue={exercise.trainerComment ?? ''} disabled={commentLive.isPending}
       onBlur={(event) => { const next = event.target.value.trim(); if (next !== (exercise.trainerComment ?? '')) commentLive.mutate({ exerciseId: exercise.id, comment: next }) }} />
   }
-  // Кнопка «Заменить»: доступна, пока у упражнения нет подтверждённых подходов
-  // (начатое заменять нельзя — факт относился к старому упражнению).
-  function replaceButton(exercise: WorkoutExercise) {
+  // Меню упражнения в live (⋯): «Заменить» доступно, пока нет подтверждённых
+  // подходов (начатое заменять нельзя — факт относился к старому упражнению).
+  // В меню, чтобы редкое действие не конкурировало с подтверждением подхода.
+  function exerciseMenu(exercise: WorkoutExercise) {
     if (clientMode) return null
     if (exercise.sets.some((set) => set.confirmedAt)) return null
-    return <button type="button" className="link" disabled={replaceLive.isPending} onClick={() => { setReplaceExerciseId(exercise.id); setPickerOpen(true) }}>Заменить</button>
+    return <OverflowMenu items={[
+      { label: 'Заменить', disabled: replaceLive.isPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } },
+    ]} />
   }
   // Стрелки ↑/↓ для перестановки блока в live (задизейблены на границах).
   function liveReorder(blockId: string, isFirst: boolean, isLast: boolean) {
@@ -602,7 +605,7 @@ export function LiveWorkoutPage() {
               </button>
             }
             return <section key={exercise.id} className={`live-exercise ${blockStatus}`}>
-              <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{replaceButton(exercise)}{reorder}</span></div>
+              <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{exerciseMenu(exercise)}{reorder}</span></div>
               {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex, exercise.sets.length > 1))}
               {!clientMode && <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
               {liveCommentField(exercise)}
@@ -625,7 +628,7 @@ export function LiveWorkoutPage() {
           {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt); return <div className={`circuit-round ${roundDone ? 'done' : roundIndex === current ? 'current' : ''}`} key={round.round}>
             <div className="circuit-round-label">Круг {round.round}</div>
             {round.items.map(({ exercise, set }) => <section key={set.id}>
-              <div className="live-exercise-head"><h3>{exercise.name}</h3>{roundIndex === 0 && <span className="exercise-head-actions">{replaceButton(exercise)}</span>}</div>
+              <div className="live-exercise-head"><h3>{exercise.name}</h3>{roundIndex === 0 && <span className="exercise-head-actions">{exerciseMenu(exercise)}</span>}</div>
               {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
               {roundIndex === 0 && liveCommentField(exercise)}
             </section>)}

@@ -43,7 +43,9 @@ describe('workout exercise editor rules', () => {
     await user.click(screen.getByRole('button', { name: 'Удалить подход 2' }))
     expect(screen.queryByText('Подход 3')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Удалить' }))
+    // «Удалить» упражнение теперь в меню «⋯» (редкое действие вне видимости).
+    await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Удалить' }))
     expect(screen.queryByText('Присед')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '＋ Упражнение' }))
