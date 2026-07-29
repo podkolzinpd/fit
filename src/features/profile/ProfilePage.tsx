@@ -7,6 +7,7 @@ import { Field, Page } from '../../shared/ui'
 
 export function ProfilePage() {
   const { actor, refresh } = useAuth(); const navigate = useNavigate(); const [saved, setSaved] = useState(false)
+  const [showArchived, setShowArchived] = useState(() => localStorage.getItem('fit.showArchivedClients') === 'true')
   const formRef = useRef<HTMLFormElement>(null)
   const update = useMutation({ mutationFn: async (form: HTMLFormElement) => {
     if (!actor || actor.kind !== 'trainer') throw new Error('Профиль тренера недоступен')
@@ -17,5 +18,9 @@ export function ProfilePage() {
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); update.mutate(event.currentTarget) }
   // Отмена сбрасывает несохранённые правки к текущим значениям профиля.
   function cancel() { formRef.current?.reset(); setSaved(false) }
-  return <Page title="Профиль"><form ref={formRef} className="stack" onSubmit={(event) => void submit(event)}><Field label="Имя"><input name="firstName" defaultValue={actor?.firstName ?? ''} /></Field><Field label="Фамилия"><input name="lastName" defaultValue={actor?.lastName ?? ''} /></Field><Field label="Часовой пояс"><input name="timezone" defaultValue={actor?.timezone ?? 'Europe/Moscow'} /></Field>{update.error && <p className="error">{update.error.message}</p>}{saved && <p className="success">Сохранено</p>}<div className="actions"><button type="button" className="secondary" onClick={cancel}>Отмена</button><button disabled={update.isPending}>Сохранить</button></div></form><div className="menu"><Link to="/join">Ввести код приглашения</Link>{actor?.role === 'trainer' && <Link to="/exercises">Управление упражнениями</Link>}</div><button className="danger secondary wide" onClick={() => void logout()}>Выйти</button></Page>
+  function toggleShowArchived(checked: boolean) {
+    setShowArchived(checked)
+    localStorage.setItem('fit.showArchivedClients', String(checked))
+  }
+  return <Page title="Профиль"><form ref={formRef} className="stack" onSubmit={(event) => void submit(event)}><Field label="Имя"><input name="firstName" defaultValue={actor?.firstName ?? ''} /></Field><Field label="Фамилия"><input name="lastName" defaultValue={actor?.lastName ?? ''} /></Field><Field label="Часовой пояс"><input name="timezone" defaultValue={actor?.timezone ?? 'Europe/Moscow'} /></Field>{update.error && <p className="error">{update.error.message}</p>}{saved && <p className="success">Сохранено</p>}<div className="actions"><button type="button" className="secondary" onClick={cancel}>Отмена</button><button disabled={update.isPending}>Сохранить</button></div></form>{actor?.role === 'trainer' && <label className="toggle"><input type="checkbox" checked={showArchived} onChange={(event) => toggleShowArchived(event.target.checked)} /> Показывать архив клиентов</label>}<div className="menu"><Link to="/join">Ввести код приглашения</Link>{actor?.role === 'trainer' && <Link to="/exercises">Управление упражнениями</Link>}</div><button className="danger secondary wide" onClick={() => void logout()}>Выйти</button></Page>
 }
