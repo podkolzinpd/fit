@@ -530,7 +530,7 @@ export function LiveWorkoutPage() {
             onClick={(event) => { const form = event.currentTarget.form; if (form) save.mutate({ set, draft: draftFrom(form) }); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}>Сохранить</button>
         : <button type="button" className={set.confirmedAt ? 'secondary live-confirm' : 'live-confirm'} disabled={Boolean(set.confirmedAt) || confirm.isPending}
             onPointerDown={() => { skipBlurForSet.current = set.id }}
-            onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>{set.confirmedAt ? 'Подтверждено' : 'Готово · отдых'}</button>}
+            onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>{set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'}</button>}
     </form>
   }
   return <Page title="Live-тренировка">
