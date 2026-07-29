@@ -14,7 +14,7 @@ import {
   addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayLocalDate, weekdayShort,
   type LocalDate,
 } from '../../shared/local-date'
-import { AsyncView, Field, Page } from '../../shared/ui'
+import { AsyncView, Field, Page, StatusBadge } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { VoiceNoteField } from '../voice-input'
 import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
@@ -372,6 +372,9 @@ export function LiveWorkoutPage() {
   const [replaceExerciseId, setReplaceExerciseId] = useState<string | null>(null)
   // Подтверждённые подходы, временно разблокированные для правки (по карандашику).
   const [editingSets, setEditingSets] = useState<Set<string>>(() => new Set())
+  // Завершённые упражнения по умолчанию свёрнуты; id здесь — принудительно раскрытые
+  // тренером (тап по свёрнутой карточке), чтобы поправить факт.
+  const [expandedExercises, setExpandedExercises] = useState<Set<string>>(() => new Set())
   const [restRemaining, setRestRemaining] = useState<number | null>(null)
   const restEndsAt = useRef<number | null>(null)
   // При правке ПОДТВЕРЖДЁННОГО подхода (карандаш → «Сохранить») значение пишется
@@ -563,17 +566,39 @@ export function LiveWorkoutPage() {
           </div>}
         </div>)
       })()}
-      {(() => { const liveBlocks = groupIntoBlocks(query.data.exercises); return liveBlocks.map((block, blockIndex) => {
+      {(() => { const liveBlocks = groupIntoBlocks(query.data.exercises);
+        // Индекс первого блока с незавершёнными подходами = «текущий» блок.
+        // До него — завершённые, после — предстоящие. Даёт статус за секунду.
+        const currentBlockIndex = liveBlocks.findIndex((b) => b.exercises.some((ex) => ex.sets.some((s) => !s.confirmedAt)))
+        return liveBlocks.map((block, blockIndex) => {
         // ↑/↓ показываем только когда блоков больше одного; двигать можно любые
         // блоки (в т.ч. с завершёнными подходами), кроме упора в границу.
         const reorder = liveBlocks.length > 1 ? liveReorder(block.blockId, blockIndex === 0, blockIndex === liveBlocks.length - 1) : null
+        const blockStatus = currentBlockIndex === -1 ? 'done' : blockIndex < currentBlockIndex ? 'done' : blockIndex === currentBlockIndex ? 'current' : 'upcoming'
         // Одиночное упражнение (или блок из одного) — как раньше, по подходам.
         // Текущий подход (первый неподтверждённый) подсвечивается серым.
         if (block.blockType === 'single' || block.exercises.length === 1) {
           return block.exercises.map((exercise) => {
             const currentSetIndex = exercise.sets.findIndex((set) => !set.confirmedAt)
-            return <section key={exercise.id}>
-              <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions">{replaceButton(exercise)}{reorder}</span></div>
+            const allDone = exercise.sets.every((set) => set.confirmedAt)
+            // Завершённое упражнение сворачиваем в компактный итог, ТОЛЬКО пока
+            // впереди есть незавершённый блок (тренер перешёл дальше). Когда всё
+            // готово (currentBlockIndex === -1), последнее упражнение оставляем
+            // раскрытым — это последнее действие, «сворачивать за» нечего, и там
+            // же остаются подтверждение/правка факта. Тап по свёрнутой — раскрыть.
+            const collapsed = allDone && !clientMode && currentBlockIndex !== -1 && !expandedExercises.has(exercise.id)
+            if (collapsed) {
+              const doneCount = exercise.sets.length
+              const best = exercise.sets.map((set) => factLine(set)).filter(Boolean).slice(-1)[0] ?? null
+              return <button type="button" key={exercise.id} className="live-exercise-collapsed"
+                onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))}>
+                <span className="live-collapsed-check" aria-hidden="true">✓</span>
+                <span className="live-collapsed-body"><strong>{exercise.name}</strong><span className="muted">{doneCount} {doneCount === 1 ? 'подход' : doneCount < 5 ? 'подхода' : 'подходов'}{best ? ` · ${best}` : ''}</span></span>
+                <StatusBadge status="done" />
+              </button>
+            }
+            return <section key={exercise.id} className={`live-exercise ${blockStatus}`}>
+              <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{replaceButton(exercise)}{reorder}</span></div>
               {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex, exercise.sets.length > 1))}
               {!clientMode && <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
               {liveCommentField(exercise)}

@@ -293,9 +293,31 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 
 /* В live контент занимает всю высоту (таб-бар скрыт); снизу оставляем место
    под закреплённую панель «Завершить», чтобы она не перекрывала последнее упр. */
-.content-immersive { padding-bottom: calc(92px + env(safe-area-inset-bottom)) }
-.live-bottom-bar { position: sticky; bottom: 0; z-index: 4; margin: 18px -18px 0; padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); background: #15131aec; border-top: 1px solid var(--border); backdrop-filter: blur(16px) saturate(130%) }
+.content-immersive { padding-bottom: calc(96px + env(safe-area-inset-bottom)) }
+/* Панель прижата к низу вьюпорта (как таб-бар: fixed по ширине phone-frame),
+   а не sticky в коротком контейнере — иначе «плавала» поверх контента в
+   середине скролла. Контент скроллится под ней (зарезервирован padding-bottom). */
+.live-bottom-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 10; width: min(100%, 440px); padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); background: #15131af2; border-top: 1px solid var(--border); backdrop-filter: blur(18px) saturate(135%) }
 .live-bottom-bar .wide { margin: 0 }
+
+/* Статус-бейдж: за секунду понять положение в тренировке. */
+.status-badge { padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700; white-space: nowrap; letter-spacing: .02em }
+.status-current { color: #cdbcff; background: #2f2850; border: 1px solid #4b3f83 }
+.status-upcoming { color: var(--muted); background: #23202b; border: 1px solid var(--border) }
+.status-done { color: var(--success); background: #16301f; border: 1px solid #2f5c3d }
+
+/* Статусы упражнения в live: текущее — акцентная рамка, предстоящее — приглушено. */
+.live-exercise { border-radius: 16px; transition: opacity .2s ease }
+.live-exercise.current { }
+.live-exercise.upcoming { opacity: .62 }
+
+/* Свёрнутое завершённое упражнение: компактная строка с итогом. Тап — раскрыть. */
+.live-exercise-collapsed { width: 100%; display: flex; align-items: center; gap: 12px; margin: 10px 0; padding: 12px 14px; border: 1px solid #2f5c3d; border-radius: 14px; background: #14251a; color: var(--fg); text-align: left; box-shadow: none; cursor: pointer }
+.live-exercise-collapsed:hover { border-color: #3c7350 }
+.live-collapsed-check { flex: 0 0 auto; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: #1d3b28; color: var(--success); font-weight: 800; font-size: 15px }
+.live-collapsed-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px }
+.live-collapsed-body strong { font-size: 15px; overflow-wrap: anywhere }
+.live-collapsed-body .muted { font-size: 13px }
 .chips { display: flex; flex-wrap: wrap; gap: 7px }.chip { padding: 7px 10px; border: 1px solid var(--border); border-radius: 99px; background: #201e27; color: #d8d3e1; font-size: 13px }
 .row-actions { display: flex; flex-direction: column; align-items: flex-end }
 .chart { margin: 12px -8px; padding: 14px 0; border: 1px solid var(--border); border-radius: 16px }
