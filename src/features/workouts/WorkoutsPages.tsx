@@ -543,7 +543,9 @@ export function LiveWorkoutPage() {
             onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>{set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'}</button>}
     </form>
   }
-  return <Page title="Live-тренировка">
+  // «Назад» ведёт в карточку тренировки: таб-бар в live скрыт, поэтому нужен
+  // явный выход наружу без завершения тренировки (тренер может вернуться позже).
+  return <Page title="Live-тренировка" back={`/workouts/${workoutId}`}>
     <AsyncView loading={query.isLoading} error={query.error}>{query.data && <>
       <p>{query.data.clientName}</p>
       {(() => {
