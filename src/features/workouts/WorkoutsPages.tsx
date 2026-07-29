@@ -375,6 +375,10 @@ export function LiveWorkoutPage() {
   // Завершённые упражнения по умолчанию свёрнуты; id здесь — принудительно раскрытые
   // тренером (тап по свёрнутой карточке), чтобы поправить факт.
   const [expandedExercises, setExpandedExercises] = useState<Set<string>>(() => new Set())
+  // Inline-подтверждение частичного завершения. window.confirm в нативной обёртке
+  // (Capacitor/WKWebView) не показывается и блокировал выход из тренировки —
+  // используем встроенный диалог в панели вместо нативного confirm.
+  const [confirmFinish, setConfirmFinish] = useState(false)
   const [restRemaining, setRestRemaining] = useState<number | null>(null)
   const restEndsAt = useRef<number | null>(null)
   // При правке ПОДТВЕРЖДЁННОГО подхода (карандаш → «Сохранить») значение пишется
@@ -631,9 +635,19 @@ export function LiveWorkoutPage() {
       {!clientMode && <button type="button" className="secondary wide" onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
       {error && <p className="error">{error.message}</p>}
       {/* Закреплённая нижняя панель: «Завершить» — вторичная, чтобы не
-          конкурировать с primary-подтверждением подхода в карточке. */}
+          конкурировать с primary-подтверждением подхода в карточке.
+          Подтверждение частичного завершения — inline (не нативный confirm,
+          который не работает в WKWebView и блокировал выход). */}
       <div className="live-bottom-bar">
-        <button type="button" className="secondary wide" disabled={finish.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => exercise.sets.some((set) => !set.confirmedAt)); if (!incomplete || window.confirm('Есть незавершённые подходы. Завершить тренировку частично?')) finish.mutate() }}>Завершить тренировку</button>
+        {confirmFinish
+          ? <div className="finish-confirm">
+              <p>Есть незавершённые подходы. Завершить частично?</p>
+              <div className="actions">
+                <button type="button" className="secondary" onClick={() => setConfirmFinish(false)}>Отмена</button>
+                <button type="button" disabled={finish.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>Завершить</button>
+              </div>
+            </div>
+          : <button type="button" className="secondary wide" disabled={finish.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => exercise.sets.some((set) => !set.confirmedAt)); if (incomplete) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</button>}
       </div>
     </>}</AsyncView>
     {!clientMode && pickerOpen && <ExercisePicker catalog={catalog} onPick={pickLiveExercise} onClose={closePicker} />}

@@ -299,6 +299,10 @@ a.goal-stages-hint:hover { border-color: #4c465a }
    середине скролла. Контент скроллится под ней (зарезервирован padding-bottom). */
 .live-bottom-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 10; width: min(100%, 440px); padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); background: #15131af2; border-top: 1px solid var(--border); backdrop-filter: blur(18px) saturate(135%) }
 .live-bottom-bar .wide { margin: 0 }
+/* Inline-подтверждение частичного завершения (вместо нативного confirm). */
+.finish-confirm { display: flex; flex-direction: column; gap: 10px }
+.finish-confirm p { margin: 0; font-size: 14px; color: var(--fg); text-align: center }
+.finish-confirm .actions { margin: 0 }
 
 /* Статус-бейдж: за секунду понять положение в тренировке. */
 .status-badge { padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700; white-space: nowrap; letter-spacing: .02em }

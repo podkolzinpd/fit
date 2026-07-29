@@ -72,8 +72,9 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByLabel('Поиск упражнения').fill('Берпи')
   await page.getByRole('button', { name: /^Берпи/ }).click()
   await expect(page.getByRole('heading', { name: 'Берпи' })).toBeVisible()
-  page.once('dialog', (dialog) => dialog.accept())
+  // Есть незавершённые подходы → inline-подтверждение частичного завершения.
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
+  await page.getByRole('button', { name: 'Завершить', exact: true }).click()
   await expect(page.getByText('Готово', { exact: true })).toBeVisible()
   // Завершённая тренировка показывает фактический результат (вес × повторы)
   // только по подтверждённым подходам, а не только название упражнения.
