@@ -6,13 +6,16 @@
      (фиол→коралл) и будущая светлая тема были заменой значений, а не правкой
      каждого правила. Семантика важнее конкретного hex. */
   --bg: #15131a; --fg: #e9e4ed;
-  --accent: #7457ff; --purple: #8b74ff;
-  /* Акцентное семейство (сейчас — фиолетовое): заливка/градиент/бордер/рамка/фоны. */
-  --accent-strong: #6548e9; --accent-weak: #a18fff;
-  --accent-border: #8b76ff; --accent-ring: #765cff26; --accent-focus: #8067ff;
-  --accent-grad: linear-gradient(145deg, #8065ff, #6548e9);
-  --accent-surface: #2f2850; --accent-surface-border: #4b3f83;
-  --accent-shadow: #4f36c42b; --selection: #735cff99;
+  /* Акцент — коралловый (LIGHT PREMIUM PERFORMANCE). Раньше фиолетовый; вся
+     айдентика на этих переменных, поэтому смена сводится к правке значений.
+     Тема пока тёмная — оттенки подобраны под тёмный фон (белый текст на кнопке
+     читается, ссылки/бейджи достаточно светлые). */
+  --accent: #f26b4a; --purple: #ff9273;
+  --accent-strong: #e0542f; --accent-weak: #ff9273;
+  --accent-border: #f26b4a; --accent-ring: #f26b4a33; --accent-focus: #f26b4a;
+  --accent-grad: linear-gradient(145deg, #f47a56, #e0542f);
+  --accent-surface: #3a241d; --accent-surface-border: #7a4436;
+  --accent-shadow: #e0542f30; --selection: #f26b4a4d;
   --on-accent: #ffffff;
   --surface: #19171f; --surface-raised: #24212b; --muted: #a59ead;
   --border: #3a3643; --danger: #ff7380; --success: #62d786; --warning: #ffc06b; --input: #2a2732;
@@ -33,7 +36,7 @@ h1 { color: #e9e1ef; font-size: 30px; line-height: 1.08; letter-spacing: -.035em
 .page-header h1 { min-width: 0; overflow-wrap: break-word; font-size: clamp(20px, 7cqw, 30px) }
 h2 { font-size: 18px; letter-spacing: -.015em; margin: 24px 0 12px }
 p { margin: 6px 0 }
-.phone-frame { width: min(calc(100% - 32px), 440px); height: calc(100dvh - 32px); min-height: 0; margin: 16px auto; overflow: hidden; background: radial-gradient(circle at 86% -12%, #342957 0, transparent 36%), linear-gradient(180deg, #1d1a24, #17151c); display: flex; flex-direction: column; border: 1px solid #3a3544; border-radius: 26px; box-shadow: 0 18px 54px #17131f2b }
+.phone-frame { width: min(calc(100% - 32px), 440px); height: calc(100dvh - 32px); min-height: 0; margin: 16px auto; overflow: hidden; background: radial-gradient(circle at 86% -12%, #3a2418 0, transparent 36%), linear-gradient(180deg, #1d1a24, #17151c); display: flex; flex-direction: column; border: 1px solid #3a3544; border-radius: 26px; box-shadow: 0 18px 54px #17131f2b }
 .content { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-bottom: 94px; scrollbar-width: none }.content::-webkit-scrollbar { display: none }
 /* Верхний отступ учитывает вырез/Dynamic Island (safe-area). Без него в
    полноэкранном мобильном режиме шапка (в т.ч. кнопка ＋) уходит под статус-бар
@@ -48,8 +51,8 @@ p { margin: 6px 0 }
 .page-center .page-header h1 { grid-column: 2; text-align: center; margin: 0 }
 .page-center .page-header .page-back { grid-column: 1 }
 .page-center .page-header > :not(h1):not(.page-back) { grid-column: 3; justify-self: end }
-.auth-screen { width: min(calc(100% - 32px), 440px); min-height: calc(100dvh - 32px); margin: 16px auto; padding: 40px 24px; overflow: hidden auto; border: 1px solid #3a3544; border-radius: 26px; background: radial-gradient(circle at 86% -12%, #342957 0, transparent 36%), linear-gradient(180deg, #1d1a24, #17151c); display: flex; flex-direction: column; justify-content: flex-start; gap: 18px; box-shadow: 0 18px 54px #17131f2b }
-.brand { width: 64px; height: 64px; display: grid; place-items: center; background: linear-gradient(145deg, #8c73ff, #5133d5); border: 1px solid #9a86ff; border-radius: 22px; box-shadow: 0 16px 40px #5e43e84d; font-size: 22px; font-weight: 900 }
+.auth-screen { width: min(calc(100% - 32px), 440px); min-height: calc(100dvh - 32px); margin: 16px auto; padding: 40px 24px; overflow: hidden auto; border: 1px solid #3a3544; border-radius: 26px; background: radial-gradient(circle at 86% -12%, #3a2418 0, transparent 36%), linear-gradient(180deg, #1d1a24, #17151c); display: flex; flex-direction: column; justify-content: flex-start; gap: 18px; box-shadow: 0 18px 54px #17131f2b }
+.brand { width: 64px; height: 64px; display: grid; place-items: center; background: linear-gradient(145deg, #f47a56, #d84a26); border: 1px solid #f58a68; border-radius: 22px; box-shadow: 0 16px 40px #e0542f4d; font-size: 22px; font-weight: 900 }
 .stack { display: flex; flex-direction: column; gap: 16px }
 .compact { padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface-raised) }
 .field { display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 14px; min-width: 0 }
@@ -91,11 +94,11 @@ p { margin: 6px 0 }
 .card.editing:hover { transform: none }
 .card p { font-size: 14px; margin-top: 4px }
 .badge { font-size: 12px; padding: 5px 8px; border-radius: 99px; color: #c3bdcf; background: #2b2933; white-space: nowrap }
-.badge.in_progress { color: #ffc06b; background: #3a2b1d }.badge.done { color: #69dc8c; background: #1d3626 }.badge.planned { color: #aa99ff; background: #2b2549 }
+.badge.in_progress { color: #ffc06b; background: #3a2b1d }.badge.done { color: #69dc8c; background: #1d3626 }.badge.planned { color: #ff9273; background: #3a241d }
 .tab-bar { position: fixed; z-index: 10; bottom: 16px; width: min(calc(100% - 32px), 440px); display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 5px calc(8px + env(safe-area-inset-bottom)); border-radius: 0 0 25px 25px; background: #1a1820ed; border-top: 1px solid var(--border); backdrop-filter: blur(20px) saturate(135%) }
 .tab-bar a { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 3px; border-radius: 12px; text-align: center; text-decoration: none; color: #777180; font-size: 11px; transition: color .18s ease, background .18s ease }
 .tab-bar a svg { width: 21px; height: 21px; opacity: .82; transition: opacity .18s ease, transform .18s ease }
-.tab-bar a.active { color: #a793ff; background: #211d31; font-weight: 700 }.tab-bar a.active svg { opacity: 1; transform: translateY(-1px) }
+.tab-bar a.active { color: #ff9273; background: #2a1d18; font-weight: 700 }.tab-bar a.active svg { opacity: 1; transform: translateY(-1px) }
 .client-shell .tab-bar { grid-template-columns: repeat(2, 1fr) }
 .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px }
 .summary div { background: var(--surface-raised); border: 1px solid var(--border); padding: 13px 8px; border-radius: 14px; display: flex; flex-direction: column; gap: 3px; text-align: center }
@@ -136,10 +139,10 @@ p { margin: 6px 0 }
 .goal-stages-hint .secondary { flex-shrink: 0; padding: 8px 12px; font-size: 13px }
 a.goal-stages-hint { text-decoration: none; color: inherit }
 a.goal-stages-hint:hover { border-color: #4c465a }
-.goal-stage-line { font-size: 13px; font-weight: 600; color: #b9a9ff }
+.goal-stage-line { font-size: 13px; font-weight: 600; color: var(--accent-weak) }
 .stage-list { display: flex; flex-direction: column; gap: 8px }
 .stage-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-raised) }
-.stage-row.current { border-color: #6c5ce0; background: #241f38 }
+.stage-row.current { border-color: var(--accent-surface-border); background: var(--accent-surface) }
 .stage-row.done { opacity: .7 }
 .stage-row strong { font-size: 14px }
 .stage-row p { margin: 3px 0 0; font-size: 12px }
@@ -147,7 +150,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .stage-actions .link { padding: 4px 6px; font-size: 13px }
 .stage-form { border: 1px dashed var(--border); border-radius: 14px; padding: 12px 14px }
 .stage-hint { font-size: 12px; margin: 0 }
-.stage-tag { font-size: 12px; font-weight: 600; color: #b9a9ff; margin-top: 4px }
+.stage-tag { font-size: 12px; font-weight: 600; color: var(--accent-weak); margin-top: 4px }
 .menu { display: flex; flex-direction: column; margin: 22px 0; border-block: 1px solid var(--border) }
 .menu a { padding: 15px 4px; text-decoration: none; border-bottom: 1px solid var(--border) }.menu a:last-child { border-bottom: 0 }
 .toggle { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; color: var(--muted) }
@@ -188,7 +191,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .day-grid-hour { position: absolute; left: 0; right: 0; z-index: 2; display: flex; align-items: flex-start; gap: 8px; height: 0; pointer-events: none }
 .day-grid-hour-label { width: 44px; flex-shrink: 0; font-size: 11px; color: var(--muted); transform: translateY(-6px) }
 .day-grid-hour-line { flex: 1; height: 1px; background: #ffffff26; margin-top: 2px }
-.day-grid-event { position: absolute; left: 52px; right: 0; display: flex; flex-direction: column; align-items: stretch; gap: 1px; padding: 5px 10px; border-radius: 10px; background: #2b2549; border: 1px solid var(--accent); color: var(--fg); overflow: hidden; text-align: left; text-decoration: none; line-height: 1.15 }
+.day-grid-event { position: absolute; left: 52px; right: 0; display: flex; flex-direction: column; align-items: stretch; gap: 1px; padding: 5px 10px; border-radius: 10px; background: #3a241d; border: 1px solid var(--accent); color: var(--fg); overflow: hidden; text-align: left; text-decoration: none; line-height: 1.15 }
 /* Все строки плашки не должны вылезать за правый край карточки. */
 .day-grid-event > * { min-width: 0; max-width: 100% }
 .day-grid-event.done { border-color: var(--success); background: #1d3626 }
@@ -201,7 +204,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .exercise { border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin: 10px 0; background: var(--surface-raised) }
 .cards > .exercise { margin: 0 }
 /* Блок упражнений (суперсет/трисет/круговая): рамка с левой акцентной линией. */
-.exercise-block { border: 1px solid var(--accent-surface-border); border-left: 3px solid var(--purple); border-radius: 14px; padding: 10px; margin: 10px 0; background: #211d2e; display: flex; flex-direction: column; gap: 8px }
+.exercise-block { border: 1px solid var(--accent-surface-border); border-left: 3px solid var(--purple); border-radius: 14px; padding: 10px; margin: 10px 0; background: #241b16; display: flex; flex-direction: column; gap: 8px }
 .exercise-block .exercise { margin: 0 }
 .exercise-block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px }
 .exercise-block-head select { padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700 }
@@ -232,7 +235,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .circuit-dots { display: inline-flex; gap: 6px; margin-left: auto; flex-wrap: wrap; justify-content: flex-end }
 /* Закреплённая версия (в .live-pinned): плашка под таймером, чтобы «Круг N из M»
    и точки всегда были на виду при скролле по кругам. */
-.circuit-head.pinned { padding: 10px 14px; border: 1px solid var(--accent-surface-border); border-radius: 13px; background: #29223f }
+.circuit-head.pinned { padding: 10px 14px; border: 1px solid var(--accent-surface-border); border-radius: 13px; background: #2e211b }
 .circuit-dot { width: 10px; height: 10px; border-radius: 50%; background: #3a3352; border: 1px solid var(--accent-surface-border) }
 /* Точки прогресса: текущий круг (в работе) — серый, пройденный — зелёный. */
 .circuit-dot.current { background: #8a8399; border-color: #a29bb0 }
@@ -300,23 +303,23 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .exercise.current { border-color: #6f6a80; background: #24222c }
 .circuit-round.done .exercise, .circuit-round.done .exercise.confirmed { border-color: #367b4b; background: transparent }
 .live-dot { color: #d33030; font-weight: 800; font-size: 13px }
-.live-timer { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border: 1px solid var(--accent-surface-border); border-radius: 11px; background: #29223f; color: var(--fg); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14px }
+.live-timer { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border: 1px solid var(--accent-surface-border); border-radius: 11px; background: #2e211b; color: var(--fg); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14px }
 /* Крупный таймер по центру над подходами. */
 /* Закреплённый блок live: таймер + отдых под ним, оба прилипают вверху вместе. */
 .live-pinned { position: sticky; top: 0; z-index: 3; margin: 0 0 18px; display: flex; flex-direction: column; gap: 10px; background: var(--surface); }
-.live-timer-big { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0; padding: 16px; border: 1px solid var(--accent-surface-border); border-radius: 16px; background: #29223f; color: var(--fg); font-weight: 800; font-variant-numeric: tabular-nums; font-size: 40px; letter-spacing: 1px; box-shadow: 0 6px 20px #17131f66 }
+.live-timer-big { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0; padding: 16px; border: 1px solid var(--accent-surface-border); border-radius: 16px; background: #2e211b; color: var(--fg); font-weight: 800; font-variant-numeric: tabular-nums; font-size: 40px; letter-spacing: 1px; box-shadow: 0 6px 20px #17131f66 }
 .live-timer-big .live-dot-mark { width: 14px; height: 14px }
 .live-dot-mark { width: 8px; height: 8px; border-radius: 50%; background: #d33030; box-shadow: 0 0 0 0 #d3303066; animation: live-pulse 1.6s ease-out infinite }
 @keyframes live-pulse { 0% { box-shadow: 0 0 0 0 #d3303066 } 70% { box-shadow: 0 0 0 6px #d3303000 } 100% { box-shadow: 0 0 0 0 #d3303000 } }
 .rest-controls { display: flex; align-items: center; gap: 8px }
-.rest-step { min-height: 44px; padding: 8px 12px; border: 1px solid var(--accent-surface-border); border-radius: 10px; background: #201a33; color: var(--fg); font-weight: 700; font-size: 14px; cursor: pointer }
+.rest-step { min-height: 44px; padding: 8px 12px; border: 1px solid var(--accent-surface-border); border-radius: 10px; background: #281c16; color: var(--fg); font-weight: 700; font-size: 14px; cursor: pointer }
 .rest-step:hover { border-color: #6a58b8 }
 .rest-controls .link { min-height: 44px; padding: 4px 8px }
 
 /* P0 live: главное действие. Подтверждение текущего подхода — primary, во всю
    ширину карточки, крупная зона нажатия под большой палец (≥48px). */
 .live-confirm { width: 100%; min-height: 50px; margin-top: 4px; font-size: 16px }
-.exercise.current .live-confirm { box-shadow: 0 8px 22px #4f36c43d }
+.exercise.current .live-confirm { box-shadow: 0 8px 22px #e0542f3d }
 /* Крупные зоны для правки/удаления подхода и «＋ Подход» в live. */
 .set-edit, .set-remove { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center }
 .live-exercise-head ~ .secondary { min-height: 46px }
@@ -336,7 +339,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 
 /* Статус-бейдж: за секунду понять положение в тренировке. */
 .status-badge { padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700; white-space: nowrap; letter-spacing: .02em }
-.status-current { color: #cdbcff; background: var(--accent-surface); border: 1px solid var(--accent-surface-border) }
+.status-current { color: var(--accent-weak); background: var(--accent-surface); border: 1px solid var(--accent-surface-border) }
 .status-upcoming { color: var(--muted); background: #23202b; border: 1px solid var(--border) }
 .status-done { color: var(--success); background: #16301f; border: 1px solid #2f5c3d }
 
@@ -364,22 +367,22 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 @media (pointer: fine) { .metric-tabs { cursor: grab } .metric-tabs:active { cursor: grabbing } }
 .metric-tab { padding: 7px 14px; border: 1px solid var(--border); border-radius: 99px; background: var(--surface-raised); color: var(--muted); font-size: 13px; white-space: nowrap }
 .metric-tab.active { border-color: var(--accent); color: #fff; background: var(--accent) }
-.ai-progress-card { margin: 0 -2px 24px; overflow: hidden; border: 1px solid #51468a; border-radius: 20px; background: radial-gradient(circle at 90% -10%, #765cff30, transparent 38%), linear-gradient(155deg, #262139, #1d1a25 62%); box-shadow: 0 16px 40px #08060d45 }
+.ai-progress-card { margin: 0 -2px 24px; overflow: hidden; border: 1px solid #6b4436; border-radius: 20px; background: radial-gradient(circle at 90% -10%, #f26b4a26, transparent 38%), linear-gradient(155deg, #2a201b, #1d1a25 62%); box-shadow: 0 16px 40px #08060d45 }
 .ai-progress-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 17px 17px 12px }
 .ai-progress-title { display: flex; align-items: center; gap: 11px }
 .ai-progress-title h2 { margin: 0; font-size: 18px }
 .ai-progress-title p { margin: 2px 0 0; color: var(--muted); font-size: 12px }
-.ai-progress-mark { width: 36px; height: 36px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid #9b88ff80; border-radius: 12px; background: linear-gradient(145deg, #8a72ff, #583bd5); color: white; box-shadow: 0 8px 24px #5236d34d; font-size: 18px }
-.ai-progress-demo { padding: 4px 8px; border: 1px solid #5d5480; border-radius: 99px; color: #bcb1eb; background: #2c2740; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase }
+.ai-progress-mark { width: 36px; height: 36px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid #f58a6880; border-radius: 12px; background: linear-gradient(145deg, #f47a56, #d84a26); color: white; box-shadow: 0 8px 24px #e0542f4d; font-size: 18px }
+.ai-progress-demo { padding: 4px 8px; border: 1px solid #7a5544; border-radius: 99px; color: #ecc4b6; background: #3a281f; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase }
 .ai-progress-demo.published { border-color: #367b4b; color: #8ce7a6; background: #193122 }
-.ai-progress-periods { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 0 17px 15px; padding: 4px; border: 1px solid #3f394d; border-radius: 12px; background: #17151d99 }
+.ai-progress-periods { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 0 17px 15px; padding: 4px; border: 1px solid #3a352f; border-radius: 12px; background: #17151d99 }
 .ai-progress-periods button { padding: 7px 4px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); box-shadow: none; font-size: 12px }
-.ai-progress-periods button.active { background: #694fe3; color: white; box-shadow: 0 6px 18px #3f2ca45c }
-.ai-progress-hero { display: flex; flex-direction: column; gap: 5px; padding: 15px 17px; border-block: 1px solid #3d374b; background: #18151f7d }
-.ai-progress-hero span, .ai-progress-regularity span { color: #a997ff; font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase }
+.ai-progress-periods button.active { background: var(--accent); color: white; box-shadow: 0 6px 18px #e0542f5c }
+.ai-progress-hero { display: flex; flex-direction: column; gap: 5px; padding: 15px 17px; border-block: 1px solid #3a352f; background: #18151f7d }
+.ai-progress-hero span, .ai-progress-regularity span { color: var(--accent-weak); font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase }
 .ai-progress-hero strong { font-size: 15px; line-height: 1.4 }
-.ai-progress-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; border-bottom: 1px solid #3d374b; background: #3d374b }
-.ai-progress-stats div { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 12px 7px; background: #211d2b; text-align: center }
+.ai-progress-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; border-bottom: 1px solid #3a352f; background: #3a352f }
+.ai-progress-stats div { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 12px 7px; background: #211e1a; text-align: center }
 .ai-progress-stats strong { font-size: 16px; font-variant-numeric: tabular-nums }
 .ai-progress-stats strong.positive { color: var(--success) }
 .ai-progress-stats span { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap }
@@ -396,14 +399,14 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .ai-progress-attention > span { width: 20px; height: 20px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; color: #1b140b; background: #eab65d; font-size: 12px; font-weight: 900 }
 .ai-progress-attention p { margin: 1px 0 0; color: #e8d6b6; font-size: 11px; line-height: 1.4 }
 .ai-progress-attention > div { display: flex; flex-direction: column; gap: 5px }
-.ai-progress-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 15px; padding: 12px 17px; border-top: 1px solid #3d374b; background: #17151db3 }
+.ai-progress-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 15px; padding: 12px 17px; border-top: 1px solid #3a352f; background: #17151db3 }
 .ai-progress-footer > span { color: var(--muted); font-size: 10px }
 .ai-progress-footer button { flex: 0 0 auto; padding: 7px 10px; border-radius: 9px; font-size: 11px }
-.ai-progress-empty { display: flex; min-height: 150px; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 24px 22px; border-block: 1px solid #3d374b; color: #ded7e7; text-align: center; background: #18151f7d }
+.ai-progress-empty { display: flex; min-height: 150px; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 24px 22px; border-block: 1px solid #3a352f; color: #ded7e7; text-align: center; background: #18151f7d }
 .ai-progress-empty p { color: var(--muted); font-size: 12px }
 .ai-progress-error { margin: 0; padding: 0 17px 14px; font-size: 12px }
 .client-copy-toggle { display: flex; justify-content: center; padding: 12px 17px 0 }
-.client-copy-editor { display: flex; flex-direction: column; gap: 12px; margin: 12px 12px 0; padding: 14px; border: 1px solid #51468a; border-radius: 15px; background: #17151ee6 }
+.client-copy-editor { display: flex; flex-direction: column; gap: 12px; margin: 12px 12px 0; padding: 14px; border: 1px solid #4a4238; border-radius: 15px; background: #17151ee6 }
 .client-copy-editor .field { font-size: 12px }
 .client-copy-editor textarea { min-height: 68px; font-size: 12px; line-height: 1.4 }
 .client-copy-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px }
@@ -421,7 +424,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .client-profile-card { display: flex; align-items: center; gap: 13px; margin-bottom: 18px; padding: 17px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface-raised) }
 .client-profile-avatar { width: 50px; height: 50px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 16px; color: white; background: linear-gradient(145deg, #59ce80, #258f4a); font-weight: 900 }
 .client-profile-card p { color: var(--muted); font-size: 13px }
-.client-access-card { display: flex; flex-direction: column; gap: 13px; margin: 16px 0; padding: 15px; border: 1px solid var(--accent-surface-border); border-radius: 16px; background: #211d2e }
+.client-access-card { display: flex; flex-direction: column; gap: 13px; margin: 16px 0; padding: 15px; border: 1px solid var(--accent-surface-border); border-radius: 16px; background: #211e1a }
 .client-access-card > div { display: flex; align-items: flex-start; gap: 10px }
 .client-access-card > div > span { width: 28px; height: 28px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 9px; color: #c7bcff; background: #342b5b; font-weight: 900 }
 .client-access-card p { color: var(--muted); font-size: 12px }
@@ -443,10 +446,10 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .picker-close svg { width: 22px; height: 22px; display: block; stroke-width: 2.2 }
 .picker-search { flex: 0 0 auto; width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: 13px; color: #ece7f0; background: var(--input); font-size: 18px; outline: none }
 .picker-categories { flex: 0 0 auto; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none }.picker-categories::-webkit-scrollbar { display: none }
-.picker-category { flex: 0 0 auto; padding: 9px 14px; border: 1px solid var(--border); border-radius: 99px; background: #1b1921; color: #d9d5df; font-weight: 500; box-shadow: none }.picker-category.active { border-color: #8a72ff; background: #6f54ef; color: white }
+.picker-category { flex: 0 0 auto; padding: 9px 14px; border: 1px solid var(--border); border-radius: 99px; background: #1b1921; color: #d9d5df; font-weight: 500; box-shadow: none }.picker-category.active { border-color: var(--accent); background: var(--accent); color: white }
 /* Второй уровень: детальные мышцы выбранной группы (компактнее и приглушённее). */
 .picker-muscles { flex: 0 0 auto; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none }.picker-muscles::-webkit-scrollbar { display: none }
-.picker-muscle { flex: 0 0 auto; padding: 6px 12px; border: 1px solid var(--border); border-radius: 99px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 500; box-shadow: none }.picker-muscle.active { border-color: #8a72ff; color: #cbbcff }
+.picker-muscle { flex: 0 0 auto; padding: 6px 12px; border: 1px solid var(--border); border-radius: 99px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 500; box-shadow: none }.picker-muscle.active { border-color: var(--accent); color: #ffc7b3 }
 .picker-create { flex: 0 0 auto; border: 1px dashed #4c4758; background: #19171e; color: #b2acba; box-shadow: none }
 .picker-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px }
 .picker-section-label { margin: 4px 2px 0; color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em }
@@ -478,6 +481,6 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .voice-input-button svg { width: 19px; height: 19px }
 .voice-input-button.recording { border-color: #9d4651; background: #3a2026; color: #ff9aa3 }
 .voice-input small { line-height: 1.35 }
-.client-card { justify-content: flex-start }.client-card > .badge { margin-left: auto }.client-avatar { flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid #ffffff24; border-radius: 14px; color: white; background: linear-gradient(145deg, #8b75ff, #4e32d2); font-weight: 800; box-shadow: inset 0 1px #ffffff26 }.client-avatar.tone-1 { background: linear-gradient(145deg, #f16a7a, #b82f57) }.client-avatar.tone-2 { background: linear-gradient(145deg, #efb34d, #b96e25) }.client-avatar.tone-3 { background: linear-gradient(145deg, #59ce80, #258f4a) }
+.client-card { justify-content: flex-start }.client-card > .badge { margin-left: auto }.client-avatar { flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid #ffffff24; border-radius: 14px; color: white; background: linear-gradient(145deg, #f47a56, #d84a26); font-weight: 800; box-shadow: inset 0 1px #ffffff26 }.client-avatar.tone-1 { background: linear-gradient(145deg, #f16a7a, #b82f57) }.client-avatar.tone-2 { background: linear-gradient(145deg, #efb34d, #b96e25) }.client-avatar.tone-3 { background: linear-gradient(145deg, #59ce80, #258f4a) }
 @media (max-width: 480px) { .phone-frame { width: 100%; height: 100dvh; margin: 0; border: 0; border-radius: 0 }.auth-screen { width: 100%; min-height: 100dvh; margin: 0; border: 0; border-radius: 0 }.tab-bar { bottom: 0; width: 100%; border-radius: 0 } }
 @media (max-width: 360px) { .measure-grid { grid-template-columns: 1fr }.inline-form { grid-template-columns: 1fr }.inline-form button { grid-column: 1 }.tab-bar a { font-size: 11px } }
