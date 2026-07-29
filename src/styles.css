@@ -279,8 +279,23 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .live-dot-mark { width: 8px; height: 8px; border-radius: 50%; background: #d33030; box-shadow: 0 0 0 0 #d3303066; animation: live-pulse 1.6s ease-out infinite }
 @keyframes live-pulse { 0% { box-shadow: 0 0 0 0 #d3303066 } 70% { box-shadow: 0 0 0 6px #d3303000 } 100% { box-shadow: 0 0 0 0 #d3303000 } }
 .rest-controls { display: flex; align-items: center; gap: 8px }
-.rest-step { padding: 6px 10px; border: 1px solid #4b3f83; border-radius: 9px; background: #201a33; color: var(--fg); font-weight: 700; font-size: 13px; cursor: pointer }
+.rest-step { min-height: 44px; padding: 8px 12px; border: 1px solid #4b3f83; border-radius: 10px; background: #201a33; color: var(--fg); font-weight: 700; font-size: 14px; cursor: pointer }
 .rest-step:hover { border-color: #6a58b8 }
+.rest-controls .link { min-height: 44px; padding: 4px 8px }
+
+/* P0 live: главное действие. Подтверждение текущего подхода — primary, во всю
+   ширину карточки, крупная зона нажатия под большой палец (≥48px). */
+.live-confirm { width: 100%; min-height: 50px; margin-top: 4px; font-size: 16px }
+.exercise.current .live-confirm { box-shadow: 0 8px 22px #4f36c43d }
+/* Крупные зоны для правки/удаления подхода и «＋ Подход» в live. */
+.set-edit, .set-remove { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center }
+.live-exercise-head ~ .secondary { min-height: 46px }
+
+/* В live контент занимает всю высоту (таб-бар скрыт); снизу оставляем место
+   под закреплённую панель «Завершить», чтобы она не перекрывала последнее упр. */
+.content-immersive { padding-bottom: calc(92px + env(safe-area-inset-bottom)) }
+.live-bottom-bar { position: sticky; bottom: 0; z-index: 4; margin: 18px -18px 0; padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); background: #15131aec; border-top: 1px solid var(--border); backdrop-filter: blur(16px) saturate(130%) }
+.live-bottom-bar .wide { margin: 0 }
 .chips { display: flex; flex-wrap: wrap; gap: 7px }.chip { padding: 7px 10px; border: 1px solid var(--border); border-radius: 99px; background: #201e27; color: #d8d3e1; font-size: 13px }
 .row-actions { display: flex; flex-direction: column; align-items: flex-end }
 .chart { margin: 12px -8px; padding: 14px 0; border: 1px solid var(--border); border-radius: 16px }
