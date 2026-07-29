@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(17);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('e1000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'matrix-root@example.test', ''),
@@ -41,6 +41,11 @@ select is(
   1::bigint,
   'root trainer lists only own workout'
 );
+select is(
+  (select total_count from public.list_workouts(null, null, 'e4000000-0000-4000-8000-000000000004', 1, 0)),
+  1::bigint,
+  'root total count excludes workouts by other authors'
+);
 select is((select count(*) from public.workouts where id = 'e5000000-0000-4000-8000-000000000005'), 1::bigint, 'root reads own workout by UUID');
 select is((select count(*) from public.workouts where id = 'e6000000-0000-4000-8000-000000000006'), 0::bigint, 'root cannot read member workout by UUID');
 select is((select count(*) from public.workouts where id = 'e7000000-0000-4000-8000-000000000007'), 0::bigint, 'root cannot read client workout by UUID');
@@ -62,6 +67,11 @@ select is(
   1::bigint,
   'member trainer lists only own workout'
 );
+select is(
+  (select total_count from public.list_workouts(null, null, 'e4000000-0000-4000-8000-000000000004', 1, 0)),
+  1::bigint,
+  'member total count excludes workouts by other authors'
+);
 select is((select count(*) from public.workouts where id = 'e5000000-0000-4000-8000-000000000005'), 0::bigint, 'member cannot read root workout by UUID');
 select is((select count(*) from public.workouts where id = 'e6000000-0000-4000-8000-000000000006'), 1::bigint, 'member reads own workout by UUID');
 select is((select count(*) from public.workouts where id = 'e7000000-0000-4000-8000-000000000007'), 0::bigint, 'member cannot read client workout by UUID');
@@ -74,6 +84,11 @@ select is(
   (select count(*) from public.list_workouts(null, null, 'e4000000-0000-4000-8000-000000000004', 50, 0)),
   3::bigint,
   'client lists workouts from both trainers and self'
+);
+select is(
+  (select total_count from public.list_workouts(null, null, 'e4000000-0000-4000-8000-000000000004', 1, 1)),
+  3::bigint,
+  'client total count is preserved after root pagination'
 );
 select lives_ok(
   $$select public.save_progress('{"id":"e9000000-0000-4000-8000-000000000009","clientId":"e4000000-0000-4000-8000-000000000004","recordedOn":"2030-01-02","weightKg":69.5,"customMetrics":[]}', 1)$$,
