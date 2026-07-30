@@ -65,6 +65,17 @@ export function Field({ label, error, children }: PropsWithChildren<{ label: str
   return <label className="field"><span>{label}</span>{children}{error && <small className="error">{error}</small>}</label>
 }
 
+export function Switch({ label, checked, onChange }: {
+  label: string; checked: boolean; onChange: (checked: boolean) => void
+}) {
+  return <label className="switch-row">
+    <span className="switch-label">{label}</span>
+    <input className="switch-input" role="switch" type="checkbox" checked={checked}
+      onChange={(event) => onChange(event.target.checked)} />
+    <span className="switch-control" aria-hidden="true" />
+  </label>
+}
+
 // Единый статус-бейдж (текущий/предстоит/выполнено) для быстрого понимания
 // положения в тренировке. Цвет и подпись — по семантике статуса.
 const STATUS_BADGE: Record<string, string> = { current: 'Сейчас', upcoming: 'Далее', done: 'Готово' }

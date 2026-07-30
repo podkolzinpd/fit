@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { AsyncView, Field, SaveStatus, useConfirm } from './ui'
+import { AsyncView, Field, SaveStatus, Switch, useConfirm } from './ui'
 
 describe('AsyncView', () => {
   it('показывает loading, empty и content состояния', () => {
@@ -38,6 +38,17 @@ describe('Field', () => {
     render(<Field label="Имя" error="Обязательное поле"><input /></Field>)
     expect(screen.getByRole('textbox', { name: /Имя/ })).toBeVisible()
     expect(screen.getByText('Обязательное поле')).toBeVisible()
+  })
+})
+
+describe('Switch', () => {
+  it('сохраняет доступное имя и передаёт новое состояние', () => {
+    const onChange = vi.fn()
+    render(<Switch label="Тёмная тема" checked={false} onChange={onChange} />)
+    const control = screen.getByRole('switch', { name: 'Тёмная тема' })
+    expect(control).not.toBeChecked()
+    fireEvent.click(control)
+    expect(onChange).toHaveBeenCalledWith(true)
   })
 })
 
