@@ -40,9 +40,10 @@ insert into auth.identities (
   'email', now(), now(), now(), '93000000-0000-4000-8000-000000000039'
 ) on conflict (provider_id, provider) do nothing;
 
-insert into public.profiles (id, first_name, last_name)
+insert into public.profiles (id, account_role, first_name, last_name)
 values (
   '90000000-0000-4000-8000-000000000009',
+  'trainer',
   'Тест',
   'Тренер'
 ) on conflict (id) do nothing;
@@ -50,6 +51,18 @@ values (
 insert into public.trainers (profile_id)
 values ('90000000-0000-4000-8000-000000000009')
 on conflict (profile_id) do nothing;
+
+-- Профиль демо-клиента (client@fit.local). Без него account_role падает в дефолт
+-- 'trainer', и authorize_client_mutation не пускает клиента-владельца к своим
+-- замерам/тренировкам (PT403 client_access_denied). На проде профиль клиента
+-- создаётся при онбординге с account_role='client'; в seed задаём явно.
+insert into public.profiles (id, account_role, first_name, last_name)
+values (
+  '92000000-0000-4000-8000-000000000029',
+  'client',
+  'Анна',
+  'Смирнова'
+) on conflict (id) do nothing;
 
 insert into public.clients (
   id,
