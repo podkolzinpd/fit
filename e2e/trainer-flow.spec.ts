@@ -548,6 +548,7 @@ test('комментарий тренера к упражнению: план �
   await page.getByLabel('Вес, подход 1').fill('90')
   await page.getByLabel('Повторы, подход 1').fill('8')
   // Комментарий тренера к упражнению в форме плана.
+  await page.getByText('Дополнительно', { exact: true }).click()
   await page.getByLabel('Комментарий к упражнению').fill('Держи спину прямо')
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
