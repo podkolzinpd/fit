@@ -336,6 +336,57 @@ function deviationNote(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet
   return `${diff > 0 ? '+' : ''}${diff} ${pick.unit} к плану`
 }
 
+// Поле факта с крупными кнопками −/+ (быстрое изменение между подходами одной
+// рукой). Внутри — тот же <input> (aria-label/name/placeholder/defaultValue
+// сохранены, e2e и автосейв по blur работают как раньше). Кнопки не забирают
+// фокус (preventDefault на pointerdown) и меняют value через нативное событие
+// input, чтобы неконтролируемое поле и последующее сохранение увидели новое
+// значение. В locked-режиме кнопки скрыты (поле disabled).
+function LiveStepperInput({ name, label, shortLabel, placeholder, defaultValue, step, disabled, inputKey }: {
+  name: string; label: string; shortLabel: string; placeholder: string; defaultValue: number | undefined
+  step: number; disabled: boolean; inputKey: string
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+  function nudge(delta: number) {
+    const el = ref.current
+    if (!el) return
+    const current = el.value === '' ? 0 : Number(el.value)
+    const next = Math.max(0, Math.round((current + delta) / step) * step)
+    // toFixed убирает флоат-шум (0.1+0.2); затем в число обратно строкой.
+    setNativeInputValue(el, String(Number(next.toFixed(3))))
+  }
+  if (disabled) return <input ref={ref} key={inputKey} aria-label={label} name={name} type="number" min="0" step={step} disabled defaultValue={defaultValue} placeholder={placeholder} />
+  // Метки кнопок НЕ содержат точную подпись поля («Фактический вес»), иначе
+  // getByLabel в e2e/тестах ловил бы и кнопку, и инпут (substring-match).
+  return <div className="stepper">
+    <button type="button" className="stepper-btn" aria-label={`Убавить ${shortLabel}`} onPointerDown={(e) => e.preventDefault()} onClick={() => nudge(-step)}>−</button>
+    <input ref={ref} key={inputKey} aria-label={label} name={name} type="number" min="0" step={step} defaultValue={defaultValue} placeholder={placeholder} />
+    <button type="button" className="stepper-btn" aria-label={`Добавить ${shortLabel}`} onPointerDown={(e) => e.preventDefault()} onClick={() => nudge(step)}>＋</button>
+  </div>
+}
+
+// Проставляет значение неконтролируемому input (defaultValue) и шлёт событие
+// input, чтобы автосейв по blur/подтверждение прочитали новое значение из
+// FormData. Поля неконтролируемые, поэтому обычного el.value достаточно.
+function setNativeInputValue(el: HTMLInputElement, value: string) {
+  el.value = value
+  el.dispatchEvent(new Event('input', { bubbles: true }))
+}
+
+// Перенос плана в факт: заполняет поля формы плановыми значениями подхода по типу
+// упражнения через нативное событие input (неконтролируемые поля + автосейв).
+function fillFactFromPlan(form: HTMLFormElement | null, inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet) {
+  if (!form) return
+  const put = (name: string, plan: number | undefined) => {
+    if (plan === undefined) return
+    const el = form.elements.namedItem(name)
+    if (el instanceof HTMLInputElement) setNativeInputValue(el, String(plan))
+  }
+  if (inputKind === 'strength') { put('weightKg', set.weightKg); put('reps', set.reps) }
+  else if (inputKind === 'reps') { put('durationMin', set.durationMin); put('reps', set.reps) }
+  else { put('durationMin', set.durationMin); put('distanceKm', set.distanceKm) }
+}
+
 function LiveSetFields({ inputKind, set, editing = false }: { inputKind: ExerciseSnapshot['inputKind']; set: WorkoutSet; editing?: boolean }) {
   // После подтверждения показываем зафиксированный результат (факт, иначе план)
   // как обычное яркое значение в заблокированном поле, а не тусклый placeholder.
@@ -351,9 +402,18 @@ function LiveSetFields({ inputKind, set, editing = false }: { inputKind: Exercis
   // Для подтверждённого подхода (в т.ч. при правке) показываем факт, иначе план.
   const confirmed = Boolean(set.confirmedAt)
   const value = (fact: number | undefined, plan: number | undefined) => (confirmed ? (fact ?? plan) : fact)
-  if (inputKind === 'strength') return <div className={rowClass}><input key={`w-${k}`} aria-label="Фактический вес" name="weightKg" type="number" min="0" step="0.5" disabled={locked} defaultValue={value(set.fact.weightKg, set.weightKg)} placeholder={set.weightKg === undefined ? 'кг' : `${set.weightKg} кг`} /><input key={`r-${k}`} aria-label="Фактические повторы" name="reps" type="number" min="0" disabled={locked} defaultValue={value(set.fact.reps, set.reps)} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
-  if (inputKind === 'reps') return <div className={rowClass}><input key={`d-${k}`} aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" disabled={locked} defaultValue={value(set.fact.durationMin, set.durationMin)} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input key={`r-${k}`} aria-label="Фактические повторы" name="reps" type="number" min="0" disabled={locked} defaultValue={value(set.fact.reps, set.reps)} placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} /></div>
-  return <div className={rowClass}><input key={`d-${k}`} aria-label="Фактическое время" name="durationMin" type="number" min="0" step="0.5" disabled={locked} defaultValue={value(set.fact.durationMin, set.durationMin)} placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} /><input key={`dist-${k}`} aria-label="Фактическая дистанция" name="distanceKm" type="number" min="0" step="0.1" disabled={locked} defaultValue={value(set.fact.distanceKm, set.distanceKm)} placeholder={set.distanceKm === undefined ? 'км' : `${set.distanceKm} км`} /></div>
+  if (inputKind === 'strength') return <div className={rowClass}>
+    <LiveStepperInput name="weightKg" label="Фактический вес" shortLabel="вес" placeholder={set.weightKg === undefined ? 'кг' : `${set.weightKg} кг`} defaultValue={value(set.fact.weightKg, set.weightKg)} step={2.5} disabled={locked} inputKey={`w-${k}`} />
+    <LiveStepperInput name="reps" label="Фактические повторы" shortLabel="повторы" placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} defaultValue={value(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} />
+  </div>
+  if (inputKind === 'reps') return <div className={rowClass}>
+    <LiveStepperInput name="durationMin" label="Фактическое время" shortLabel="время" placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} defaultValue={value(set.fact.durationMin, set.durationMin)} step={0.5} disabled={locked} inputKey={`d-${k}`} />
+    <LiveStepperInput name="reps" label="Фактические повторы" shortLabel="повторы" placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} defaultValue={value(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} />
+  </div>
+  return <div className={rowClass}>
+    <LiveStepperInput name="durationMin" label="Фактическое время" shortLabel="время" placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} defaultValue={value(set.fact.durationMin, set.durationMin)} step={0.5} disabled={locked} inputKey={`d-${k}`} />
+    <LiveStepperInput name="distanceKm" label="Фактическая дистанция" shortLabel="дистанция" placeholder={set.distanceKm === undefined ? 'км' : `${set.distanceKm} км`} defaultValue={value(set.fact.distanceKm, set.distanceKm)} step={0.1} disabled={locked} inputKey={`dist-${k}`} />
+  </div>
 }
 
 const REST_STEP = 15
@@ -565,6 +625,11 @@ export function LiveWorkoutPage() {
     }}>
       <div className="set-head"><span className="muted">{label}{planLine(exercise.inputKind, set) ? <span className="set-plan"> · план {planLine(exercise.inputKind, set)}</span> : null}</span>{headActions}</div>
       <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} />
+      {/* «= план»: перенести плановые значения в поля факта одним тапом (когда
+          подход ещё не подтверждён и план задан). Не забирает фокус. */}
+      {!set.confirmedAt && planLine(exercise.inputKind, set) && <button type="button" className="link set-fill-plan"
+        onPointerDown={(e) => e.preventDefault()}
+        onClick={(event) => fillFactFromPlan(event.currentTarget.form, exercise.inputKind, set)}>= план</button>}
       {deviationNote(exercise.inputKind, set) && <p className="set-deviation">{deviationNote(exercise.inputKind, set)}</p>}
       {set.confirmedAt && isEditing
         ? <button type="button" className="secondary" disabled={save.isPending}

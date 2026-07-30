@@ -300,6 +300,13 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .set-remove { padding: 2px 8px; font-size: 16px; line-height: 1; color: var(--danger, #ff6b6b) }
 .set-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0 }
 .set-row input { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 9px; color: #ece7f0; background: var(--input) }
+/* Степпер: крупные −/+ вокруг поля факта (быстрый ввод одной рукой, P5). */
+.stepper { display: flex; align-items: stretch; gap: 6px; min-width: 0 }
+.stepper input { text-align: center; font-weight: 700; -moz-appearance: textfield }
+.stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0 }
+.stepper-btn { flex: 0 0 auto; width: 44px; min-height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-raised); color: var(--fg); font-size: 20px; font-weight: 700; line-height: 1; cursor: pointer; box-shadow: none }
+.stepper-btn:hover { border-color: var(--accent-surface-border) }
+.set-fill-plan { align-self: flex-start; margin: 6px 0 0; font-size: 13px }
 /* Зафиксированный подход: значения горят ярко, не тускнеют как disabled. */
 .set-row.locked input { color: #ece7f0; -webkit-text-fill-color: #ece7f0; opacity: 1; font-weight: 700; border-color: #367b4b; background: #15271a }
 .confirmed { border-color: #367b4b; background: #15271a }
