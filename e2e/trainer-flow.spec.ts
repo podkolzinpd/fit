@@ -576,8 +576,11 @@ test('комментарий тренера к упражнению: план �
   await page.getByText('Коммент Клиент', { exact: true }).first().click()
   await expect(page.getByRole('heading', { name: 'Коммент Клиент' })).toBeVisible()
   await page.getByRole('link', { name: 'История', exact: true }).click()
-  // Дожидаемся, что история подгрузилась (не пустой экран), потом ищем коммент.
-  await expect(page.locator('.card').first()).toBeVisible()
+  // Дожидаемся, что история клиента открылась и список подгрузился (не «Загрузка…»),
+  // потом ищем карточку/коммент. Явный timeout переживает холодный кэш запроса
+  // list_workouts под нагрузкой (иначе .card ловил таймаут до ответа RPC).
+  await expect(page).toHaveURL(/\/clients\/[0-9a-f-]+\/workouts$/)
+  await expect(page.locator('.card').first()).toBeVisible({ timeout: 15000 })
   await expect(page.locator('.workout-exercise-comment').first()).toContainText('Держи спину прямо')
 })
 
