@@ -2,10 +2,11 @@ import { useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnalyticsIcon, ClientsIcon, ProfileIcon, ScheduleIcon } from '../shared/icons'
 import { useAuth } from './auth-context'
-import { APP_THEME } from './theme'
+import { useAppTheme } from './theme'
 
 export function AppLayout() {
   const { actor } = useAuth()
+  const theme = useAppTheme()
   const contentRef = useRef<HTMLDivElement>(null)
   const { pathname } = useLocation()
 
@@ -17,7 +18,7 @@ export function AppLayout() {
   const immersive = /\/live$/.test(pathname)
   const contentClass = immersive ? 'content content-immersive' : 'content'
 
-  const frameClass = APP_THEME === 'light' ? 'phone-frame theme-light' : 'phone-frame'
+  const frameClass = theme === 'light' ? 'phone-frame theme-light' : 'phone-frame'
 
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
     <NavLink to="/me"><ClientsIcon />Кабинет</NavLink>
