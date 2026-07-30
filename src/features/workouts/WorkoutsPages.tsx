@@ -14,7 +14,7 @@ import {
   addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayLocalDate, weekdayShort,
   type LocalDate,
 } from '../../shared/local-date'
-import { AsyncView, Field, OverflowMenu, Page, StatusBadge } from '../../shared/ui'
+import { AsyncView, Field, OverflowMenu, Page, StatusBadge, useConfirm } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { VoiceNoteField } from '../voice-input'
 import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
@@ -241,6 +241,7 @@ export function WorkoutFormPage() {
 export function WorkoutDetailPage() {
   const { workoutId = '' } = useParams(); const navigate = useNavigate(); const queryClient = useQueryClient()
   const { actor } = useAuth()
+  const [confirm, confirmDialog] = useConfirm()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   useClientRealtime(query.data?.clientId)
   // Этап тренировки: get() отдаёт stageId, название берём из цели клиента.
@@ -287,9 +288,10 @@ export function WorkoutDetailPage() {
         {workout.status === 'planned' && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>Изменить</Link>}
         <Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link>
       </div>
-      <button className="danger secondary wide" disabled={remove.isPending} onClick={() => { if (window.confirm('Удалить тренировку?')) remove.mutate() }}>Удалить тренировку</button></>}
+      <button className="danger secondary wide" disabled={remove.isPending} onClick={async () => { if (await confirm({ message: 'Удалить тренировку?', confirmLabel: 'Удалить', danger: true })) remove.mutate() }}>Удалить тренировку</button></>}
       {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Создать свою копию</Link></div>}
       {remove.error && <p className="error">{remove.error.message}</p>}
+      {confirmDialog}
     </>}</AsyncView>
   </Page>
 }
@@ -449,6 +451,7 @@ export function LiveWorkoutPage() {
   const { actor } = useAuth()
   const clientMode = actor?.role === 'client'
   const navigate = useNavigate()
+  const [askConfirm, confirmDialog] = useConfirm()
   const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   useClientRealtime(query.data?.clientId)
@@ -616,7 +619,7 @@ export function LiveWorkoutPage() {
     // Действия в шапке подхода: карандаш (правка подтверждённого) + крестик (удалить).
     const headActions = <span className="set-head-actions">
       {set.confirmedAt && !isEditing && <button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}
-      {!clientMode && canRemove && !isEditing && <button type="button" className="link set-remove" aria-label="Удалить подход" disabled={removeSet.isPending} onClick={() => { if (window.confirm('Удалить этот подход?')) removeSet.mutate(set.id) }}>✕</button>}
+      {!clientMode && canRemove && !isEditing && <button type="button" className="link set-remove" aria-label="Удалить подход" disabled={removeSet.isPending} onClick={async () => { if (await askConfirm({ message: 'Удалить этот подход?', confirmLabel: 'Удалить', danger: true })) removeSet.mutate(set.id) }}>✕</button>}
     </span>
     return <form className={`exercise ${stateClass}`} key={set.id} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
@@ -753,6 +756,7 @@ export function LiveWorkoutPage() {
       </div>
     </>}</AsyncView>
     {!clientMode && pickerOpen && <ExercisePicker catalog={catalog} onPick={pickLiveExercise} onClose={closePicker} />}
+    {confirmDialog}
   </Page>
 }
 

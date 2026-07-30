@@ -7,7 +7,7 @@ import { goalsRepository } from '../../data/repositories/goals.repository'
 import type { ClientGoal, GoalStage } from '../../shared/domain'
 import { orderedStages, stageStatus } from '../../shared/goal-rules'
 import { formatLocalDateShort, localDate, todayLocalDate } from '../../shared/local-date'
-import { AsyncView, Field, Page } from '../../shared/ui'
+import { AsyncView, Field, Page, useConfirm } from '../../shared/ui'
 
 const STATUS_LABEL: Record<string, string> = { done: 'завершён', current: 'идёт', upcoming: 'впереди' }
 
@@ -60,6 +60,7 @@ function GoalDetail({ goal, today, onChanged, onArchived }: {
 }) {
   const [editingGoal, setEditingGoal] = useState(false)
   const [addingStage, setAddingStage] = useState(false)
+  const [confirm, confirmDialog] = useConfirm()
   const archive = useMutation({
     mutationFn: () => goalsRepository.archive(goal.id, goal.version),
     onSuccess: () => void onArchived(),
@@ -85,10 +86,11 @@ function GoalDetail({ goal, today, onChanged, onArchived }: {
     </section>
 
     <button className="danger secondary wide" disabled={archive.isPending}
-      onClick={() => { if (window.confirm('Архивировать цель? Её можно будет поставить заново.')) archive.mutate() }}>
+      onClick={async () => { if (await confirm({ message: 'Архивировать цель? Её можно будет поставить заново.', confirmLabel: 'Архивировать', danger: true })) archive.mutate() }}>
       Архивировать цель
     </button>
     {archive.error && <p className="error">{archive.error.message}</p>}
+    {confirmDialog}
   </div>
 }
 
@@ -115,6 +117,7 @@ function GoalEditForm({ goal, onSaved, onCancel }: { goal: ClientGoal; onSaved: 
 
 function StageRow({ stage, today, targetDate, onChanged }: { stage: GoalStage; today: string; targetDate: string | null; onChanged: () => Promise<void> }) {
   const [editing, setEditing] = useState(false)
+  const [confirm, confirmDialog] = useConfirm()
   const remove = useMutation({ mutationFn: () => goalsRepository.deleteStage(stage.id), onSuccess: () => void onChanged() })
   if (editing) return <StageForm goalId={stage.goalId} stage={stage} position={stage.position} targetDate={targetDate}
     defaultStart={localDate(stage.startsOn)} onSaved={async () => { await onChanged(); setEditing(false) }} onCancel={() => setEditing(false)} />
@@ -127,9 +130,10 @@ function StageRow({ stage, today, targetDate, onChanged }: { stage: GoalStage; t
     <div className="stage-actions">
       <button type="button" className="link" onClick={() => setEditing(true)}>Изменить</button>
       <button type="button" className="link danger" disabled={remove.isPending}
-        onClick={() => { if (window.confirm('Удалить этап?')) remove.mutate() }}>Удалить</button>
+        onClick={async () => { if (await confirm({ message: 'Удалить этап?', confirmLabel: 'Удалить', danger: true })) remove.mutate() }}>Удалить</button>
     </div>
     {remove.error && <p className="error">{remove.error.message}</p>}
+    {confirmDialog}
   </article>
 }
 

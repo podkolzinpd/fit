@@ -198,7 +198,9 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page).toHaveURL(/\/clients\/[0-9a-f-]+$/)
   const leaveButton = page.getByRole('button', { name: 'Покинуть пространство клиента' })
   await expect(leaveButton).toBeVisible()
-  page.once('dialog', (dialog) => dialog.accept())
   await leaveButton.click()
+  // In-app confirm (useConfirm) вместо нативного window.confirm — подтверждаем
+  // кнопкой в диалоге.
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Покинуть' }).click()
   await expect(page).toHaveURL(/\/clients$/)
 })
