@@ -22,6 +22,12 @@
   --accent-surface: #3a241d; --accent-surface-border: #7a4436;
   --accent-shadow: #e0542f30; --selection: #f26b4a4d;
   --on-accent: #ffffff;
+  /* Декоративные аватары остаются различимыми, но живут внутри одной тёплой
+     бренд-гаммы. Зелёный зарезервирован для успеха/положительной динамики. */
+  --avatar-grad-0: linear-gradient(145deg, #e85c3a, #b83d22);
+  --avatar-grad-1: linear-gradient(145deg, #d95c54, #a33232);
+  --avatar-grad-2: linear-gradient(145deg, #d8872d, #965018);
+  --avatar-grad-3: linear-gradient(145deg, #c96f4a, #8e3f28);
   --surface: #19171f; --surface-raised: #24212b; --muted: #a59ead;
   --border: #3a3643; --danger: #ff7380; --success: #62d786; --warning: #ffc06b; --input: #2a2732;
   /* ── Семантические токены тем (заложены в YAFIT-77). В базовой тёмной теме =
@@ -583,7 +589,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .client-welcome h2 { margin: 6px 0; font-size: var(--text-title); line-height: 1.2 }
 .client-welcome p { color: var(--muted); font-size: 12px }
 .client-profile-card { display: flex; align-items: center; gap: 13px; margin-bottom: 18px; padding: 17px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface-raised) }
-.client-profile-avatar { width: 50px; height: 50px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 16px; color: white; background: linear-gradient(145deg, #59ce80, #258f4a); font-weight: 900 }
+.client-profile-avatar { width: 50px; height: 50px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 16px; color: white; background: var(--avatar-grad-0); font-weight: 900 }
 .client-profile-card p { color: var(--muted); font-size: 13px }
 .client-access-card { display: flex; flex-direction: column; gap: 13px; margin: 16px 0; padding: 15px; border: 1px solid var(--accent-surface-border); border-radius: 16px; background: #211e1a }
 .client-access-card > div { display: flex; align-items: flex-start; gap: 10px }
@@ -642,7 +648,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .voice-input-button svg { width: 19px; height: 19px }
 .voice-input-button.recording { border-color: #9d4651; background: #3a2026; color: #ff9aa3 }
 .voice-input small { line-height: 1.35 }
-.client-card { justify-content: flex-start }.client-card > .badge { margin-left: auto }.client-avatar { flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid #ffffff24; border-radius: 14px; color: white; background: linear-gradient(145deg, #f47a56, #d84a26); font-weight: 800; box-shadow: inset 0 1px #ffffff26 }.client-avatar.tone-1 { background: linear-gradient(145deg, #f16a7a, #b82f57) }.client-avatar.tone-2 { background: linear-gradient(145deg, #efb34d, #b96e25) }.client-avatar.tone-3 { background: linear-gradient(145deg, #59ce80, #258f4a) }
+.client-card { justify-content: flex-start }.client-card > .badge { margin-left: auto }.client-avatar { flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid #ffffff24; border-radius: 14px; color: white; background: var(--avatar-grad-0); font-weight: 800; box-shadow: inset 0 1px #ffffff26 }.client-avatar.tone-1 { background: var(--avatar-grad-1) }.client-avatar.tone-2 { background: var(--avatar-grad-2) }.client-avatar.tone-3 { background: var(--avatar-grad-3) }
 /* ── Светлые переопределения плотных «тёплых» кластеров 3 экранов (YAFIT-77).
    Карточка AI-прогресса и карточка клиента набраны множеством одноразовых hex
    (внутренние hairline #3a352f, ячейки #211e1a, warm-градиенты) — токенизировать
