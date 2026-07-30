@@ -25,9 +25,9 @@ export function AppLayout() {
   const immersive = /\/live$/.test(pathname)
   const contentClass = immersive ? 'content content-immersive' : 'content'
 
-  // YAFIT-77: светлый пилот. За флагом VITE_LIGHT_PILOT включаем светлую тему
-  // (класс theme-light на .phone-frame) только на 3 экранах — карточка клиента,
-  // live-тренировка, прогресс. Пилот точечный: остальные экраны остаются тёмными.
+  // YAFIT-77: после трёх групп раскатки флаг покрывает все известные маршруты.
+  // Проверку маршрута сохраняем как предохранитель для новых экранов: они не
+  // должны случайно считаться визуально проверенными.
   const frameClass = isLightPilotRoute(pathname) ? 'phone-frame theme-light' : 'phone-frame'
 
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">

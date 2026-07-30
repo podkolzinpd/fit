@@ -46,9 +46,9 @@
   --motion-fast: .18s; --motion-med: .22s; --ease: ease;
 }
 /* ── Светлый пилот (YAFIT-77, LIGHT PREMIUM PERFORMANCE). Включается флагом
-   VITE_LIGHT_PILOT и вешается классом .theme-light на .phone-frame только на 3
-   экранах (карточка клиента / live / прогресс). Меняем ТОЛЬКО значения токенов —
-   разметка и правила общие. Коралл для текста/ссылок затемнён до #b83d1c
+   VITE_LIGHT_PILOT. После этапа 3 класс .theme-light ставится на корень
+   приложения и покрывает все экраны. Меняем прежде всего значения токенов —
+   разметка и правила общие. Коралл для текста/ссылок затемнён
    (контраст ≥5:1 на светлом), яркий коралл остаётся для кнопок/заливок. */
 .phone-frame.theme-light, .theme-light {
   /* Согласованная палитра LIGHT PREMIUM (project_fit_light_premium_identity):
@@ -113,6 +113,7 @@ p { margin: 6px 0 }
 .page-center .page-header .page-back { grid-column: 1 }
 .page-center .page-header > :not(h1):not(.page-back) { grid-column: 3; justify-self: end }
 .auth-screen { width: min(calc(100% - 32px), 440px); min-height: calc(100dvh - 32px); margin: 16px auto; padding: 40px 24px; overflow: hidden auto; border: 1px solid #3a3544; border-radius: 26px; background: radial-gradient(circle at 86% -12%, #3a2418 0, transparent 36%), linear-gradient(180deg, #1d1a24, #17151c); display: flex; flex-direction: column; justify-content: flex-start; gap: 18px; box-shadow: 0 18px 54px #17131f2b }
+.theme-light .auth-screen { border-color: var(--frame-border); background: var(--frame-bg); color: var(--fg) }
 .brand { width: 64px; height: 64px; display: grid; place-items: center; background: linear-gradient(145deg, #f47a56, #d84a26); border: 1px solid #f58a68; border-radius: 22px; box-shadow: 0 16px 40px #e0542f4d; font-size: 22px; font-weight: 900 }
 .stack { display: flex; flex-direction: column; gap: 16px }
 .compact { padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface-raised) }
@@ -160,6 +161,9 @@ p { margin: 6px 0 }
 .tab-bar a { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 3px; border-radius: 12px; text-align: center; text-decoration: none; color: #777180; font-size: 11px; transition: color .18s ease, background .18s ease }
 .tab-bar a svg { width: 21px; height: 21px; opacity: .82; transition: opacity .18s ease, transform .18s ease }
 .tab-bar a.active { color: #ff9273; background: #2a1d18; font-weight: 700 }.tab-bar a.active svg { opacity: 1; transform: translateY(-1px) }
+.theme-light .tab-bar { background: #fffefced }
+.theme-light .tab-bar a { color: #77717b }
+.theme-light .tab-bar a.active { color: var(--accent-strong); background: var(--accent-surface) }
 .client-shell .tab-bar { grid-template-columns: repeat(2, 1fr) }
 .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px }
 .summary div { background: var(--surface-raised); border: 1px solid var(--border); padding: 13px 8px; border-radius: 14px; display: flex; flex-direction: column; gap: 3px; text-align: center }
