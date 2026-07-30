@@ -51,33 +51,39 @@
    разметка и правила общие. Коралл для текста/ссылок затемнён до #b83d1c
    (контраст ≥5:1 на светлом), яркий коралл остаётся для кнопок/заливок. */
 .phone-frame.theme-light, .theme-light {
+  /* Согласованная палитра LIGHT PREMIUM (project_fit_light_premium_identity):
+     bg #F7F4EF / surface #FFFEFC / surface-2 #F2EEE8 / border #E5DED3 /
+     text #17191D / text-2 #6C717A. Заливка кнопок глубокая #E85C3A (pressed
+     #C9481F), destructive #DC4C4C держим ОТДЕЛЬНО от акцента. Для акцент-ТЕКСТА
+     (ссылки/мелкие лейблы) #E85C3A даёт 3.2:1 — мало, поэтому текстовый коралл
+     затемнён до #A83714 (≥5:1); яркий #F26B4A остаётся light-accent в заливках. */
   color-scheme: light;
-  --bg: #faf7f5; --fg: #1c1a22;
-  --accent: #e0542f; --purple: #c74a26;
-  --accent-strong: #b83d1c; --accent-weak: #b83d1c;
-  --accent-border: #f0a58f; --accent-ring: #e0542f33; --accent-focus: #e0542f;
-  --accent-grad: linear-gradient(145deg, #f26b4a, #e0542f);
+  --bg: #f7f4ef; --fg: #17191d;
+  --accent: #e85c3a; --purple: #a83714;
+  --accent-strong: #a83714; --accent-weak: #a83714;
+  --accent-border: #f0a58f; --accent-ring: #e85c3a33; --accent-focus: #e85c3a;
+  --accent-grad: linear-gradient(145deg, #f26b4a, #e85c3a);
   --accent-surface: #fdeee8; --accent-surface-border: #f3c4b3;
-  --accent-shadow: #e0542f30; --selection: #f26b4a3d;
+  --accent-shadow: #c9481f30; --selection: #f26b4a3d;
   --on-accent: #ffffff;
-  --surface: #ffffff; --surface-raised: #ffffff; --muted: #6d6673;
-  --border: #e7e0da; --danger: #d33a48; --success: #2f9e5a; --warning: #b57a12; --input: #f6f1ee;
-  --fg-strong: #171520; --fg-on-surface: #1c1a22;
-  --surface-sunken: #f6f1ee; --surface-elevated: #ffffff;
+  --surface: #fffefc; --surface-raised: #fffefc; --muted: #6c717a;
+  --border: #e5ded3; --danger: #dc4c4c; --success: #22c55e; --warning: #f59e0b; --input: #f2eee8;
+  --fg-strong: #17191d; --fg-on-surface: #17191d;
+  --surface-sunken: #f2eee8; --surface-elevated: #fffefc;
   --hairline: #00000012; --overlay: #2a201b73;
-  --card-grad: linear-gradient(145deg, #ffffff, #fbf8f6);
+  --card-grad: linear-gradient(145deg, #fffefc, #f9f6f1);
   --live-warm: #fdeee8; --live-warm-border: #f3c4b3;
-  --progress-grad: radial-gradient(circle at 90% -10%, #e0542f14, transparent 40%), linear-gradient(155deg, #fff6f2, #ffffff 60%);
+  --progress-grad: radial-gradient(circle at 90% -10%, #e85c3a14, transparent 40%), linear-gradient(155deg, #fdf3ee, #fffefc 60%);
   --progress-border: #f3c4b3;
-  --shadow-card: 0 6px 18px #b8481c14;
-  --frame-bg: radial-gradient(circle at 86% -12%, #fff1eb 0, transparent 42%), linear-gradient(180deg, #fbf8f6, #f4efeb);
-  --frame-border: #ece5df;
-  --success-surface: #eaf6ee; --success-border: #a6d9ba;
+  --shadow-card: 0 6px 18px #c9481f14;
+  --frame-bg: radial-gradient(circle at 86% -12%, #fdeee5 0, transparent 42%), linear-gradient(180deg, #faf7f2, #f2eee8);
+  --frame-border: #e5ded3;
+  --success-surface: #eafaf0; --success-border: #a6e2bd;
   --neutral-current: #f1eef4; --neutral-current-border: #cfc9d6;
-  --warning-surface: #fdf2dc; --warning-border: #ecc98b; --warning-fg: #8a5e12;
-  --bar-bg: #fffdfcf2;
-  --secondary-bg: #f2ede9; --secondary-fg: #2b2733;
-  --page-back-bg: #ffffff;
+  --warning-surface: #fdf3dc; --warning-border: #f5cf8b; --warning-fg: #8a5e12;
+  --bar-bg: #fffefcf2;
+  --secondary-bg: #f2eee8; --secondary-fg: #2b2733;
+  --page-back-bg: #fffefc;
   background: var(--bg); color: var(--fg);
 }
 * { box-sizing: border-box }
