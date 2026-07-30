@@ -112,8 +112,8 @@ function ConfirmDialog({ message, confirmLabel = 'Подтвердить', cance
   }, [onCancel])
   // Портал в .phone-frame (а не в body): overlay всё равно fixed/во весь экран,
   // но так диалог наследует активную тему (класс .theme-light вешается на
-  // .phone-frame в светлом пилоте). Портал в body отрисовал бы диалог с
-  // токенами :root (тёмными) поверх светлого экрана. Fallback — body.
+  // .phone-frame в основной светлой теме). Портал в body при аварийном
+  // переключении темы мог бы получить другой набор токенов. Fallback — body.
   const host = document.querySelector('.phone-frame') ?? document.body
   return createPortal(
     <div className="modal-overlay" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) onCancel() }}>
