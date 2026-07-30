@@ -316,6 +316,15 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .block-rest { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 2px }
 .block-rest-field { display: inline-flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 12px; font-weight: 600 }
 .block-rest-field input { width: 72px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700; text-align: center }
+.exercise-options { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px }
+.exercise-options summary { width: fit-content; color: var(--accent-weak); cursor: pointer; font-size: 13px; font-weight: 700; list-style-position: inside }
+.exercise-options[open] summary { margin-bottom: 10px }
+.exercise-options-fields { display: flex; flex-direction: column; align-items: flex-start; gap: 10px }
+.exercise-options-fields .block-rest-field { flex-direction: row; align-items: center; gap: 8px }
+.exercise-options-fields .block-rest-field input { min-height: 40px }
+.exercise-options-fields .exercise-comment { margin-top: 0 }
+.block-options { margin-top: 0; border-top: 0; padding-top: 0 }
+.block-options .block-rest { margin-top: 0 }
 /* «＋ Подход» и короткое поле «Отдых, с [90]» в один ряд (подпись и поле —
    горизонтально). Короткая подпись помещается рядом с кнопкой без налезания. */
 /* Строка добавления подхода = сетка как у .set-row (две колонки 1fr, gap 8px):
