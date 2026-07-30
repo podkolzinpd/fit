@@ -409,6 +409,17 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .finish-confirm p { margin: 0; font-size: 14px; color: var(--fg); text-align: center }
 .finish-confirm .actions { margin: 0 }
 
+/* In-app confirm-диалог (useConfirm) — замена window.confirm. По центру, на
+   дизайн-токенах (работает и в светлой теме). destructive-действие — .danger. */
+.modal-overlay { position: fixed; z-index: 40; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--overlay); backdrop-filter: blur(5px) }
+.modal-dialog { width: min(100%, 360px); display: flex; flex-direction: column; gap: 18px; padding: 22px 20px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-elevated); box-shadow: 0 24px 70px #00000047 }
+.modal-message { margin: 0; font-size: 15px; line-height: 1.4; color: var(--fg); text-align: center }
+.modal-dialog .actions { margin: 0 }
+.modal-dialog .actions > * { flex: 1 }
+/* destructive-кнопка в диалоге: красная заливка (не только текст), чтобы
+   опасное действие читалось как основное-опасное. */
+.modal-dialog .actions .danger { border-color: var(--danger); background: var(--danger); color: #fff; box-shadow: none }
+
 /* Статус-бейдж: за секунду понять положение в тренировке. */
 .status-badge { padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700; white-space: nowrap; letter-spacing: .02em }
 .status-current { color: var(--accent-weak); background: var(--accent-surface); border: 1px solid var(--accent-surface-border) }
@@ -511,7 +522,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 /* Парный замер: два поля Л/П в одну строку. */
 .measure-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
 .metric { display: flex; justify-content: space-between; padding: 10px 2px; border-bottom: 1px solid var(--border) }
-.sheet-overlay { position: fixed; z-index: 30; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-top: 32px; background: #000000b8; backdrop-filter: blur(5px) }
+.sheet-overlay { position: fixed; z-index: 30; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-top: 32px; background: var(--overlay); backdrop-filter: blur(5px) }
 .exercise-picker { width: min(100%, 440px); max-height: calc(100dvh - 32px); overflow: hidden; display: flex; flex-direction: column; gap: 16px; padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); border: 1px solid #464150; border-bottom: 0; border-radius: 28px 28px 0 0; background: #201d26; box-shadow: 0 -24px 70px #00000080 }
 .picker-header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px }.picker-header h1 { font-size: 24px }
 .picker-close { flex: 0 0 auto; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: transparent; color: var(--muted); box-shadow: none }

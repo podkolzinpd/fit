@@ -627,9 +627,10 @@ test('live: удаление подхода и наследование факт
   await page.getByRole('button', { name: '＋ Подход' }).first().click()
   await expect(page.getByLabel('Фактический вес').nth(1)).toHaveAttribute('placeholder', '100 кг')
 
-  // Удаляем добавленный подход — остаётся один.
-  page.once('dialog', (d) => d.accept())
+  // Удаляем добавленный подход — остаётся один. Подтверждаем через in-app
+  // confirm (useConfirm), а не нативный window.confirm.
   await page.getByRole('button', { name: 'Удалить подход' }).nth(1).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click()
   await expect(page.locator('.exercise')).toHaveCount(1)
 })
 

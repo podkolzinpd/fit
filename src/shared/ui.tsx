@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type PropsWithChildren, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type PropsWithChildren, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 
 export function Page({ title, action, back, center, hideTitle, className, children }: PropsWithChildren<{
@@ -36,6 +37,63 @@ export function Field({ label, error, children }: PropsWithChildren<{ label: str
 const STATUS_BADGE: Record<string, string> = { current: 'Сейчас', upcoming: 'Далее', done: 'Готово' }
 export function StatusBadge({ status }: { status: 'current' | 'upcoming' | 'done' }) {
   return <span className={`status-badge status-${status}`}>{STATUS_BADGE[status]}</span>
+}
+
+export interface ConfirmOptions {
+  message: string
+  confirmLabel?: string
+  cancelLabel?: string
+  danger?: boolean
+}
+
+interface ConfirmState extends ConfirmOptions { resolve: (ok: boolean) => void }
+
+// In-app подтверждение вместо window.confirm. Нативный confirm в WKWebView
+// (Capacitor) не показывается и блокировал действия (урок #127), а также
+// выпадает из премиального light-облика — свой диалог на дизайн-токенах.
+// Использование:
+//   const [confirm, confirmDialog] = useConfirm()
+//   onClick={async () => { if (await confirm({ message: '…', danger: true })) mutate() }}
+//   ...и один раз отрисовать {confirmDialog} в разметке.
+export function useConfirm(): [(options: ConfirmOptions) => Promise<boolean>, ReactNode] {
+  const [state, setState] = useState<ConfirmState | null>(null)
+  const confirm = useCallback((options: ConfirmOptions) =>
+    new Promise<boolean>((resolve) => setState({ ...options, resolve })), [])
+  const close = useCallback((ok: boolean) => {
+    setState((current) => { current?.resolve(ok); return null })
+  }, [])
+  const dialog = state
+    ? <ConfirmDialog {...state} onCancel={() => close(false)} onConfirm={() => close(true)} />
+    : null
+  return [confirm, dialog]
+}
+
+function ConfirmDialog({ message, confirmLabel = 'Подтвердить', cancelLabel = 'Отмена', danger, onCancel, onConfirm }:
+  ConfirmOptions & { onCancel: () => void; onConfirm: () => void }) {
+  const confirmRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    confirmRef.current?.focus()
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onCancel() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onCancel])
+  // Портал в .phone-frame (а не в body): overlay всё равно fixed/во весь экран,
+  // но так диалог наследует активную тему (класс .theme-light вешается на
+  // .phone-frame в светлом пилоте). Портал в body отрисовал бы диалог с
+  // токенами :root (тёмными) поверх светлого экрана. Fallback — body.
+  const host = document.querySelector('.phone-frame') ?? document.body
+  return createPortal(
+    <div className="modal-overlay" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) onCancel() }}>
+      <div className="modal-dialog" role="alertdialog" aria-modal="true" aria-label={message}>
+        <p className="modal-message">{message}</p>
+        <div className="actions">
+          <button type="button" className="secondary" onClick={onCancel}>{cancelLabel}</button>
+          <button type="button" ref={confirmRef} className={danger ? 'danger' : undefined} onClick={onConfirm}>{confirmLabel}</button>
+        </div>
+      </div>
+    </div>,
+    host,
+  )
 }
 
 export interface OverflowMenuItem { label: string; onClick: () => void; danger?: boolean; disabled?: boolean }
