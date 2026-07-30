@@ -570,7 +570,7 @@ test('комментарий тренера к упражнению: план �
   await page.locator('.exercise-name-link').first().click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   await page.getByRole('tab', { name: 'История' }).click()
-  await expect(page.locator('.exercise-comment-note')).toContainText('Держи спину прямо')
+  await expect(page.getByText('💬 Держи спину прямо', { exact: true }).first()).toBeVisible()
 
   // Комментарий виден и в карточке истории тренировок клиента (список упр.).
   await page.getByRole('link', { name: 'Клиенты', exact: true }).click()

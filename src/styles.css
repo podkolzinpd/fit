@@ -38,6 +38,8 @@
   --success-surface: #15271a; --success-border: #367b4b; /* зафиксированный подход */
   --neutral-current: #24222c; --neutral-current-border: #6f6a80; /* текущий подход */
   --warning-surface: #3a2f1d; --warning-border: #ffc06b66; --warning-fg: #ffd9a0; /* отдых/таймер */
+  --danger-surface: #27171b; --danger-border: #5b2d35; --danger-hover: #321c21;
+  --secondary-hover: #35313e; --tertiary-fg: #a59ead;
   --bar-bg: #15131af2; /* фон закреплённой нижней панели live */
   /* Геометрия / эффекты. */
   --radius-sm: 9px; --radius-md: 12px; --radius-lg: 16px; --radius-pill: 99px;
@@ -81,6 +83,8 @@
   --success-surface: #eafaf0; --success-border: #a6e2bd;
   --neutral-current: #f1eef4; --neutral-current-border: #cfc9d6;
   --warning-surface: #fdf3dc; --warning-border: #f5cf8b; --warning-fg: #8a5e12;
+  --danger-surface: #fff1f1; --danger-border: #efb3b3; --danger-hover: #ffe5e5;
+  --secondary-hover: #ebe5dd; --tertiary-fg: #6c717a;
   --bar-bg: #fffefcf2;
   --secondary-bg: #f2eee8; --secondary-fg: #2b2733;
   --page-back-bg: #fffefc;
@@ -137,10 +141,15 @@ p { margin: 6px 0 }
 .actions { display: flex; gap: 10px; flex-wrap: wrap }
 .actions > * { flex: 1 }
 .secondary { border-color: var(--border); background: var(--secondary-bg, #2d2a35); color: var(--secondary-fg, #e3dee8); box-shadow: none }
-.link { border: 0; background: transparent; color: var(--accent-weak); padding: 4px; font-weight: 600; box-shadow: none }
+.secondary:hover { background: var(--secondary-hover) }
+/* Tertiary-действия не конкурируют с единственной primary-кнопкой экрана.
+   Коралл появляется при наведении/фокусе; destructive всегда остаётся красным. */
+.link { border: 0; background: transparent; color: var(--tertiary-fg); padding: 4px; font-weight: 600; box-shadow: none }
+.link:hover, .link:focus-visible { color: var(--accent-weak) }
 .danger { color: var(--danger) }
-.danger.secondary { border-color: #5b2d35; background: #27171b; color: #ff7a84 }
-.danger.secondary:hover { border-color: #84404a; background: #321c21 }
+.link.danger, .link.danger:hover, .link.danger:focus-visible { color: var(--danger) }
+.danger.secondary { border-color: var(--danger-border); background: var(--danger-surface); color: var(--danger) }
+.danger.secondary:hover { border-color: var(--danger); background: var(--danger-hover) }
 .wide { width: 100%; margin-top: 18px }
 .page-actions { display: flex; flex-direction: column; align-items: stretch; gap: 12px; margin-top: 22px }
 .page-actions .wide { margin-top: 0 }
