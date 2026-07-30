@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } from 'react-router-dom'
 import { useAuth } from './auth-context'
 import { trackPageView } from '../shared/yandex-metrika'
@@ -8,6 +9,8 @@ import { ExercisesPage } from '../features/exercises'
 import { AnalyticsPage, ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
+
+const LIGHT_PILOT_ENABLED = import.meta.env.VITE_LIGHT_PILOT === '1'
 
 function Protected() {
   const { actor, loading, error } = useAuth(); const location = useLocation()
@@ -69,4 +72,14 @@ router.subscribe((state) => {
   trackPageView(state.location.pathname + state.location.search)
 })
 
-export function App() { return <RouterProvider router={router} /> }
+export function App() {
+  // Группа 3 завершает маршрутную раскатку: тема нужна на корне, чтобы её
+  // наследовали auth-экраны, body и порталы, находящиеся вне .phone-frame.
+  // При выключенном флаге класс снимается и текущая тёмная тема не меняется.
+  useEffect(() => {
+    document.documentElement.classList.toggle('theme-light', LIGHT_PILOT_ENABLED)
+    return () => document.documentElement.classList.remove('theme-light')
+  }, [])
+
+  return <RouterProvider router={router} />
+}

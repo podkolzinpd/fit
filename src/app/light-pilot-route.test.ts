@@ -2,9 +2,21 @@ import { describe, expect, it } from 'vitest'
 import { isLightPilotPath } from './light-pilot-route'
 
 describe('isLightPilotPath (светлый пилот, YAFIT-77)', () => {
-  it('покрывает пилотные экраны (карточка/live/прогресс + группы 1–2)', () => {
+  it('покрывает всё приложение после группы 3', () => {
     const covered = [
+      '/',
+      '/auth',
+      '/auth/forgot',
+      '/auth/reset',
+      '/auth/callback',
+      '/join',
+      '/clients',
+      '/clients/new',
+      '/clients/abc/edit',
+      '/analytics',
+      '/profile',
       '/me',
+      '/me/edit',
       '/me/progress',
       '/me/workouts',
       '/schedule',
@@ -22,14 +34,9 @@ describe('isLightPilotPath (светлый пилот, YAFIT-77)', () => {
     for (const path of covered) expect(isLightPilotPath(path), path).toBe(true)
   })
 
-  it('не трогает непокрытые экраны', () => {
-    const uncovered = [
-      '/clients',            // список — не карточка
-      '/analytics',
-      '/profile',
-      '/auth',
-      '/clients/abc/edit',   // форма настроек клиента — не в пилоте
-    ]
-    for (const path of uncovered) expect(isLightPilotPath(path), path).toBe(false)
+  it('не принимает неизвестные маршруты и похожие префиксы', () => {
+    for (const path of ['/unknown', '/profiles', '/auth/other', '/clients/abc/other']) {
+      expect(isLightPilotPath(path), path).toBe(false)
+    }
   })
 })
