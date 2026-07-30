@@ -29,7 +29,7 @@
   --avatar-grad-2: linear-gradient(145deg, #d8872d, #965018);
   --avatar-grad-3: linear-gradient(145deg, #c96f4a, #8e3f28);
   --surface: #19171f; --surface-raised: #24212b; --muted: #a59ead;
-  --border: #3a3643; --danger: #ff7380; --success: #62d786; --warning: #ffc06b; --input: #2a2732;
+  --border: #3a3643; --danger: #ff7380; --success: #62d786; --success-fg: #62d786; --warning: #ffc06b; --input: #2a2732;
   /* ── Семантические токены тем (заложены в YAFIT-77). В базовой тёмной теме =
      исходные значения 1:1, в основной .theme-light переопределяются.
      Введены для мест, где раньше был хардкод на 3 целевых экранах (карточка
@@ -47,6 +47,7 @@
   --progress-border: #6b4436;
   --shadow-card: 0 10px 24px #00000024;
   --success-surface: #15271a; --success-border: #367b4b; /* зафиксированный подход */
+  --success-mark-surface: #1d3b28;
   --neutral-current: #24222c; --neutral-current-border: #6f6a80; /* текущий подход */
   --warning-surface: #3a2f1d; --warning-border: #ffc06b66; --warning-fg: #ffd9a0; /* отдых/таймер */
   --danger-surface: #27171b; --danger-border: #5b2d35; --danger-hover: #321c21;
@@ -99,7 +100,7 @@
   --accent-shadow: #c9481f30; --selection: #f26b4a3d;
   --on-accent: #ffffff;
   --surface: #fffefc; --surface-raised: #fffefc; --muted: #6c717a;
-  --border: #e5ded3; --danger: #dc4c4c; --success: #22c55e; --warning: #f59e0b; --input: #f2eee8;
+  --border: #e5ded3; --danger: #dc4c4c; --success: #22c55e; --success-fg: #1f7a44; --warning: #f59e0b; --input: #f2eee8;
   --fg-strong: #17191d; --fg-on-surface: #17191d;
   --surface-sunken: #f2eee8; --surface-elevated: #fffefc;
   --hairline: #00000012; --overlay: #2a201b73;
@@ -111,6 +112,7 @@
   --frame-bg: radial-gradient(circle at 86% -12%, #fdeee5 0, transparent 42%), linear-gradient(180deg, #faf7f2, #f2eee8);
   --frame-border: #e5ded3;
   --success-surface: #eafaf0; --success-border: #a6e2bd;
+  --success-mark-surface: #d7efdf;
   --neutral-current: #f1eef4; --neutral-current-border: #cfc9d6;
   --warning-surface: #fdf3dc; --warning-border: #f5cf8b; --warning-fg: #8a5e12;
   --danger-surface: #fff1f1; --danger-border: #efb3b3; --danger-hover: #ffe5e5;
@@ -188,7 +190,7 @@ p { margin: 6px 0 }
 .page-actions .wide { margin-top: 0 }
 .muted, .card p { color: var(--muted) }
 .error { color: var(--danger) }
-.success { color: var(--success) }
+.success { color: var(--success-fg) }
 .auth-links { display: flex; justify-content: space-between; align-items: center }
 .state { min-height: 180px; display: grid; place-content: center; text-align: center; color: var(--muted); gap: 10px }
 .skeleton-stack { display: flex; flex-direction: column; gap: 14px }
@@ -203,7 +205,7 @@ p { margin: 6px 0 }
 .empty-state .button, .empty-state button { margin-top: 8px }
 .save-status { display: flex; align-items: center; gap: 7px; min-height: 24px; margin: 0; color: var(--muted); font-size: 13px; font-weight: 700 }
 .save-status-saving span { color: var(--warning); animation: save-pulse 1s ease-in-out infinite }
-.save-status-saved { color: var(--success) }
+.save-status-saved { color: var(--success-fg) }
 .save-status-error { color: var(--danger) }
 @keyframes skeleton-wave { from { background-position: 100% 0 } to { background-position: -100% 0 } }
 @keyframes save-pulse { 50% { opacity: .35 } }
@@ -333,7 +335,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .day-grid-event.done { border-color: var(--success-border); background: var(--success-surface) }
 .day-grid-event.in_progress { border-color: var(--warning-border); background: var(--warning-surface) }
 .day-grid-event-time { font-size: 11px; font-weight: 700; color: var(--accent-weak) }
-.day-grid-event.done .day-grid-event-time { color: var(--success) }
+.day-grid-event.done .day-grid-event-time { color: var(--success-fg) }
  .day-grid-event.in_progress .day-grid-event-time { color: var(--warning-fg) }
  .day-grid-event-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
  .schedule-count { padding: 7px 13px; border: 1px solid var(--border); border-radius: 99px; color: var(--fg); background: var(--surface-raised); font-size: 14px; font-weight: 600; white-space: nowrap }
@@ -469,7 +471,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 @keyframes live-pulse { 0% { box-shadow: 0 0 0 0 #d3303066 } 70% { box-shadow: 0 0 0 6px #d3303000 } 100% { box-shadow: 0 0 0 0 #d3303000 } }
 .rest-controls { display: flex; align-items: center; gap: 8px }
 .rest-step { min-height: 44px; padding: 8px 12px; border: 1px solid var(--accent-surface-border); border-radius: 10px; background: var(--accent-surface); color: var(--fg); font-weight: 700; font-size: 14px; cursor: pointer }
-.rest-step:hover { border-color: #6a58b8 }
+.rest-step:hover { border-color: var(--accent-border) }
 .rest-controls .link { min-height: 44px; padding: 4px 8px }
 
 /* P0 live: главное действие. Подтверждение текущего подхода — primary, во всю
@@ -507,8 +509,8 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 /* Статус-бейдж: за секунду понять положение в тренировке. */
 .status-badge { padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700; white-space: nowrap; letter-spacing: .02em }
 .status-current { color: var(--accent-weak); background: var(--accent-surface); border: 1px solid var(--accent-surface-border) }
-.status-upcoming { color: var(--muted); background: #23202b; border: 1px solid var(--border) }
-.status-done { color: var(--success); background: #16301f; border: 1px solid #2f5c3d }
+.status-upcoming { color: var(--muted); background: var(--surface-sunken); border: 1px solid var(--border) }
+.status-done { color: var(--success-fg); background: var(--success-surface); border: 1px solid var(--success-border) }
 
 /* Статусы упражнения в live: текущее — акцентная рамка, предстоящее — приглушено. */
 .live-exercise { border-radius: 16px; transition: opacity .2s ease }
@@ -516,9 +518,9 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .live-exercise.upcoming { opacity: .62 }
 
 /* Свёрнутое завершённое упражнение: компактная строка с итогом. Тап — раскрыть. */
-.live-exercise-collapsed { width: 100%; display: flex; align-items: center; gap: 12px; margin: 10px 0; padding: 12px 14px; border: 1px solid #2f5c3d; border-radius: 14px; background: #14251a; color: var(--fg); text-align: left; box-shadow: none; cursor: pointer }
-.live-exercise-collapsed:hover { border-color: #3c7350 }
-.live-collapsed-check { flex: 0 0 auto; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: #1d3b28; color: var(--success); font-weight: 800; font-size: 15px }
+.live-exercise-collapsed { width: 100%; display: flex; align-items: center; gap: 12px; margin: 10px 0; padding: 12px 14px; border: 1px solid var(--success-border); border-radius: 14px; background: var(--success-surface); color: var(--fg); text-align: left; box-shadow: none; cursor: pointer }
+.live-exercise-collapsed:hover { border-color: var(--success) }
+.live-collapsed-check { flex: 0 0 auto; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: var(--success-mark-surface); color: var(--success-fg); font-weight: 800; font-size: 15px }
 .live-collapsed-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px }
 .live-collapsed-body strong { font-size: 15px; overflow-wrap: anywhere }
 .live-collapsed-body .muted { font-size: 13px }
@@ -551,7 +553,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .ai-progress-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; border-bottom: 1px solid #3a352f; background: #3a352f }
 .ai-progress-stats div { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 12px 7px; background: #211e1a; text-align: center }
 .ai-progress-stats strong { font-size: 16px; font-variant-numeric: tabular-nums }
-.ai-progress-stats strong.positive { color: var(--success) }
+.ai-progress-stats strong.positive { color: var(--success-fg) }
 .ai-progress-stats span { overflow: hidden; color: var(--muted); font-size: var(--text-xs); line-height: 1.2; text-overflow: ellipsis; white-space: nowrap }
 .ai-progress-section { padding: 14px 17px 0 }
 .ai-progress-section h3 { margin: 0 0 8px; font-size: var(--text-sm) }
