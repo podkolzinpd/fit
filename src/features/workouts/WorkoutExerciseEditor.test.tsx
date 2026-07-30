@@ -71,4 +71,18 @@ describe('workout exercise editor rules', () => {
     await user.click(screen.getByRole('button', { name: '−5%' }))
     expect(onChange).toHaveBeenCalledTimes(3)
   })
+
+  it('hides optional rest and comment fields until requested', async () => {
+    const user = userEvent.setup()
+    render(<EditorHarness onOpenPicker={vi.fn()} />)
+
+    const summary = screen.getByText('Дополнительно')
+    const details = summary.closest('details')
+    expect(details).not.toHaveAttribute('open')
+
+    await user.click(summary)
+    expect(details).toHaveAttribute('open')
+    expect(screen.getByLabelText('Отдых между подходами, с')).toBeInTheDocument()
+    expect(screen.getByLabelText('Комментарий к упражнению')).toBeInTheDocument()
+  })
 })

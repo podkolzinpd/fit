@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import type { BlockPreset, WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
-import { groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
+import { groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, PRESET_REST_DEFAULTS, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
 import { OverflowMenu } from '../../shared/ui'
 
 // Числовое поле, которое МОЖНО очистить курсором. Контролируемый input с value
@@ -30,6 +30,19 @@ function ClampedNumberInput({ value, min, max, label, onCommit }: {
       if (next !== value) onCommit(next)
     }}
     onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }} />
+}
+
+function OptionalDetails({ summary, initialOpen = false, className = '', children }: {
+  summary: string
+  initialOpen?: boolean
+  className?: string
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(initialOpen)
+  return <details className={`exercise-options ${className}`.trim()} open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+    <summary>{summary}</summary>
+    {children}
+  </details>
 }
 
 export function roundToStep(value: number, step: number): number {
@@ -132,9 +145,13 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       </div>)}
       <div className="set-add-row">
         <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
-        <label className="block-rest-field"><ClampedNumberInput label="Отдых между подходами, с" value={exercise.restBetweenSetsSec ?? 90} min={0} max={600} onCommit={(next) => { if (exercise.blockId) onChange(setBlockRest([...exercises], exercise.blockId, { betweenSets: next })) }} /><span>Отдых, с</span></label>
       </div>
-      {commentField(exercise, exerciseIndex)}
+      <OptionalDetails summary="Дополнительно" initialOpen={Boolean(exercise.trainerComment || (exercise.restBetweenSetsSec !== undefined && exercise.restBetweenSetsSec !== 90))}>
+        <div className="exercise-options-fields">
+          <label className="block-rest-field"><ClampedNumberInput label="Отдых между подходами, с" value={exercise.restBetweenSetsSec ?? 90} min={0} max={600} onCommit={(next) => { if (exercise.blockId) onChange(setBlockRest([...exercises], exercise.blockId, { betweenSets: next })) }} /><span>Отдых, с</span></label>
+          {commentField(exercise, exerciseIndex)}
+        </div>
+      </OptionalDetails>
       {canMergeNext && <button type="button" className="link block-merge" onClick={() => onChange(mergeBlockWithNext([...exercises], exerciseIndex))}>⛓ Объединить со следующим в блок</button>}
     </article>
   }
@@ -165,15 +182,22 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
           {blocks.length > 1 && reorderButtons(block.blockId, isFirst, isLast)}
           <button type="button" className="link" onClick={() => onChange(splitBlock([...exercises], block.blockId))}>Разбить</button>
         </div>
-        <div className="block-rest">
-          <label className="block-rest-field">Отдых между упр., с<ClampedNumberInput label="Отдых между упражнениями, с" value={block.restBetweenExercisesSec} min={0} max={600} onCommit={(next) => onChange(setBlockRest([...exercises], block.blockId, { betweenExercises: next }))} /></label>
-          <label className="block-rest-field">Отдых между кругами, с<ClampedNumberInput label="Отдых между кругами, с" value={block.restBetweenRoundsSec} min={0} max={600} onCommit={(next) => onChange(setBlockRest([...exercises], block.blockId, { betweenRounds: next }))} /></label>
-        </div>
+        <OptionalDetails className="block-options" summary="Настройки блока" initialOpen={(() => {
+          const defaults = PRESET_REST_DEFAULTS[block.blockPreset]
+          return block.restBetweenExercisesSec !== defaults.betweenExercises || block.restBetweenRoundsSec !== defaults.betweenRounds
+        })()}>
+          <div className="block-rest">
+            <label className="block-rest-field">Отдых между упр., с<ClampedNumberInput label="Отдых между упражнениями, с" value={block.restBetweenExercisesSec} min={0} max={600} onCommit={(next) => onChange(setBlockRest([...exercises], block.blockId, { betweenExercises: next }))} /></label>
+            <label className="block-rest-field">Отдых между кругами, с<ClampedNumberInput label="Отдых между кругами, с" value={block.restBetweenRoundsSec} min={0} max={600} onCommit={(next) => onChange(setBlockRest([...exercises], block.blockId, { betweenRounds: next }))} /></label>
+          </div>
+        </OptionalDetails>
         {/* Список упражнений блока с удалением (значения — ниже по кругам). */}
         <div className="block-exercises">{block.items.map(({ exercise, index }) => <div className="block-exercise-row" key={exercise.blockId ? `${exercise.ref}-${index}` : index}><div className="block-exercise-head"><strong>{exercise.name}</strong><span className="exercise-head-actions"><OverflowMenu items={[
           { label: 'Заменить', onClick: () => onReplaceExercise(index) },
           { label: 'Удалить', danger: true, onClick: () => removeExercise(index) },
-        ]} /></span></div>{commentField(exercise, index)}</div>)}</div>
+        ]} /></span></div>{showTrainerComments && <OptionalDetails className="exercise-comment-options" summary="Комментарий" initialOpen={Boolean(exercise.trainerComment)}>
+          {commentField(exercise, index)}
+        </OptionalDetails>}</div>)}</div>
         {rounds.map((round) => <div className="planned-round" key={round.round}>
           <div className="planned-round-label">Круг {round.round}</div>
           {round.items.map(({ exercise, exerciseIndex, setIndex }) => <div className="planned-round-exercise" key={`${exercise.ref}-${exerciseIndex}`}>
