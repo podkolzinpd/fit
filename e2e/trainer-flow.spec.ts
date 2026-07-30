@@ -422,14 +422,14 @@ test('profile Cancel resets unsaved edits', async ({ page }) => {
   await page.getByRole('button', { name: 'Отмена' }).click()
   await expect(firstName).toHaveValue(original)
 
-  const darkTheme = page.getByRole('checkbox', { name: 'Тёмная тема' })
+  const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
   await expect(darkTheme).not.toBeChecked()
   await darkTheme.check()
   await expect(page.locator('.phone-frame')).not.toHaveClass(/theme-light/)
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#15131a')
 
   await page.reload()
-  await expect(page.getByRole('checkbox', { name: 'Тёмная тема' })).toBeChecked()
+  await expect(page.getByRole('switch', { name: 'Тёмная тема' })).toBeChecked()
   await expect(page.locator('.phone-frame')).not.toHaveClass(/theme-light/)
 })
 

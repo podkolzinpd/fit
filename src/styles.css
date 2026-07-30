@@ -273,7 +273,17 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .stage-tag { font-size: 12px; font-weight: 600; color: var(--accent-weak); margin-top: 4px }
 .menu { display: flex; flex-direction: column; margin: 22px 0; border-block: 1px solid var(--border) }
 .menu a { padding: 15px 4px; text-decoration: none; border-bottom: 1px solid var(--border) }.menu a:last-child { border-bottom: 0 }
-.toggle { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; color: var(--muted) }
+.profile-settings { margin: 20px 0 22px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-card) }
+.switch-row { position: relative; min-height: 58px; display: flex; align-items: center; gap: 14px; padding: 13px 14px; cursor: pointer; -webkit-tap-highlight-color: transparent }
+.switch-row + .switch-row { border-top: 1px solid var(--border) }
+.switch-label { min-width: 0; flex: 1; color: var(--fg); font-size: var(--text-ui); font-weight: var(--weight-medium); line-height: var(--leading-snug) }
+.switch-input { position: absolute; z-index: 1; top: 50%; right: 14px; width: 48px; height: 28px; margin: 0; transform: translateY(-50%); opacity: 0; cursor: pointer }
+.switch-control { position: relative; width: 48px; height: 28px; flex: 0 0 auto; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--surface-sunken); box-shadow: inset 0 1px 2px #00000014; transition: border-color var(--motion-fast) var(--ease), background var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease) }
+.switch-control::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--surface-elevated); box-shadow: 0 2px 5px #00000038; transition: transform var(--motion-med) var(--ease), background var(--motion-fast) var(--ease) }
+.switch-input:checked + .switch-control { border-color: var(--accent); background: var(--accent-grad); box-shadow: 0 4px 12px var(--accent-shadow) }
+.switch-input:checked + .switch-control::after { transform: translateX(20px); background: var(--on-accent) }
+.switch-input:focus-visible + .switch-control { outline: 3px solid var(--accent-ring); outline-offset: 2px }
+.switch-row:active .switch-control::after { width: 22px }
  .content:has(.schedule-page) { overflow: hidden; padding-bottom: 0 }
 .schedule-page { height: 100%; display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0 }
 .schedule-page > .page-header, .schedule-page > .week-nav { flex: 0 0 auto }
