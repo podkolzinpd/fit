@@ -159,9 +159,19 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
     page.getByRole('button', { name: 'Завершить тренировку' }).click(),
   ])
 
+  // Замер записываем на СЕГОДНЯ: будущая дата — нереальный сценарий (замер
+  // делают в прошлом/сегодня), а окно графика заканчивается сегодняшним днём,
+  // из-за чего запись «на завтра» была не видна в отдельные календарные дни
+  // (дата-зависимый флейк, YAFIT-80). По умолчанию форма и так подставляет
+  // сегодня — просто не перебиваем дату.
+  // Замер добавляем на ПРОШЛУЮ дату (неделю назад): аккаунт клиента уже завёл
+  // замер на сегодня (начальный вес 60 кг при онбординге), поэтому «сегодня»
+  // упирается в защиту от дубля даты, а «завтра» — нереальная будущая дата,
+  // которую окно графика прячет в отдельные календарные дни (дата-зависимый
+  // флейк YAFIT-80). Прошлая дата и реалистична, и уникальна.
   await page.goto('/me/progress')
-  const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
-  await page.getByLabel('Дата').fill(tomorrow)
+  const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10)
+  await page.getByLabel('Дата').fill(weekAgo)
   await page.getByLabel('Вес, кг').fill('59.5')
   await page.getByRole('button', { name: 'Сохранить замер' }).click()
   await expect(page.getByText('59.5 кг')).toBeVisible()

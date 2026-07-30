@@ -19,11 +19,72 @@
   --on-accent: #ffffff;
   --surface: #19171f; --surface-raised: #24212b; --muted: #a59ead;
   --border: #3a3643; --danger: #ff7380; --success: #62d786; --warning: #ffc06b; --input: #2a2732;
+  /* ── Семантические токены светлого пилота (YAFIT-77). На тёмной теме = текущие
+     значения 1:1 (0 визуальных изменений), в .theme-light переопределяются.
+     Введены для мест, где раньше был хардкод на 3 целевых экранах (карточка
+     клиента / live / прогресс): их и переводим на эти переменные. */
+  --fg-strong: #e9e1ef;          /* заголовки/яркий текст (был #e9e1ef/#ece7f0) */
+  --fg-on-surface: #ece7f0;      /* текст в полях/карточках */
+  --surface-sunken: #1b1826;     /* утопленный фон (круги/планы) */
+  --surface-elevated: #221f2a;   /* всплывашки/меню/оверлей-панели */
+  --hairline: #ffffff26;         /* тонкая разделительная линия на тёмном */
+  --overlay: #000000b8;          /* затемнение под шитами */
+  --card-grad: linear-gradient(145deg, #292631, #211f28);  /* карточки списка */
+  --live-warm: #2e211b;          /* тёплая заливка таймера/панелей live */
+  --live-warm-border: var(--accent-surface-border);
+  --progress-grad: radial-gradient(circle at 90% -10%, #f26b4a26, transparent 38%), linear-gradient(155deg, #2a201b, #1d1a25 62%);
+  --progress-border: #6b4436;
+  --shadow-card: 0 10px 24px #00000024;
+  --success-surface: #15271a; --success-border: #367b4b; /* зафиксированный подход */
+  --neutral-current: #24222c; --neutral-current-border: #6f6a80; /* текущий подход */
+  --warning-surface: #3a2f1d; --warning-border: #ffc06b66; --warning-fg: #ffd9a0; /* отдых/таймер */
+  --bar-bg: #15131af2; /* фон закреплённой нижней панели live */
   /* Геометрия / эффекты. */
   --radius-sm: 9px; --radius-md: 12px; --radius-lg: 16px; --radius-pill: 99px;
   --tap: 44px;
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px;
   --motion-fast: .18s; --motion-med: .22s; --ease: ease;
+}
+/* ── Светлый пилот (YAFIT-77, LIGHT PREMIUM PERFORMANCE). Включается флагом
+   VITE_LIGHT_PILOT и вешается классом .theme-light на .phone-frame только на 3
+   экранах (карточка клиента / live / прогресс). Меняем ТОЛЬКО значения токенов —
+   разметка и правила общие. Коралл для текста/ссылок затемнён до #b83d1c
+   (контраст ≥5:1 на светлом), яркий коралл остаётся для кнопок/заливок. */
+.phone-frame.theme-light, .theme-light {
+  /* Согласованная палитра LIGHT PREMIUM (project_fit_light_premium_identity):
+     bg #F7F4EF / surface #FFFEFC / surface-2 #F2EEE8 / border #E5DED3 /
+     text #17191D / text-2 #6C717A. Заливка кнопок глубокая #E85C3A (pressed
+     #C9481F), destructive #DC4C4C держим ОТДЕЛЬНО от акцента. Для акцент-ТЕКСТА
+     (ссылки/мелкие лейблы) #E85C3A даёт 3.2:1 — мало, поэтому текстовый коралл
+     затемнён до #A83714 (≥5:1); яркий #F26B4A остаётся light-accent в заливках. */
+  color-scheme: light;
+  --bg: #f7f4ef; --fg: #17191d;
+  --accent: #e85c3a; --purple: #a83714;
+  --accent-strong: #a83714; --accent-weak: #a83714;
+  --accent-border: #f0a58f; --accent-ring: #e85c3a33; --accent-focus: #e85c3a;
+  --accent-grad: linear-gradient(145deg, #f26b4a, #e85c3a);
+  --accent-surface: #fdeee8; --accent-surface-border: #f3c4b3;
+  --accent-shadow: #c9481f30; --selection: #f26b4a3d;
+  --on-accent: #ffffff;
+  --surface: #fffefc; --surface-raised: #fffefc; --muted: #6c717a;
+  --border: #e5ded3; --danger: #dc4c4c; --success: #22c55e; --warning: #f59e0b; --input: #f2eee8;
+  --fg-strong: #17191d; --fg-on-surface: #17191d;
+  --surface-sunken: #f2eee8; --surface-elevated: #fffefc;
+  --hairline: #00000012; --overlay: #2a201b73;
+  --card-grad: linear-gradient(145deg, #fffefc, #f9f6f1);
+  --live-warm: #fdeee8; --live-warm-border: #f3c4b3;
+  --progress-grad: radial-gradient(circle at 90% -10%, #e85c3a14, transparent 40%), linear-gradient(155deg, #fdf3ee, #fffefc 60%);
+  --progress-border: #f3c4b3;
+  --shadow-card: 0 6px 18px #c9481f14;
+  --frame-bg: radial-gradient(circle at 86% -12%, #fdeee5 0, transparent 42%), linear-gradient(180deg, #faf7f2, #f2eee8);
+  --frame-border: #e5ded3;
+  --success-surface: #eafaf0; --success-border: #a6e2bd;
+  --neutral-current: #f1eef4; --neutral-current-border: #cfc9d6;
+  --warning-surface: #fdf3dc; --warning-border: #f5cf8b; --warning-fg: #8a5e12;
+  --bar-bg: #fffefcf2;
+  --secondary-bg: #f2eee8; --secondary-fg: #2b2733;
+  --page-back-bg: #fffefc;
+  background: var(--bg); color: var(--fg);
 }
 * { box-sizing: border-box }
 body { margin: 0; min-height: 100dvh; background: var(--bg); }
@@ -32,11 +93,11 @@ button, input, textarea, select { font: inherit }
 button, .button { border: 1px solid var(--accent-border); border-radius: var(--radius-md); background: var(--accent-grad); color: var(--on-accent); padding: 11px 16px; cursor: pointer; text-decoration: none; font-weight: 700; text-align: center; box-shadow: 0 8px 22px var(--accent-shadow) }
 button:disabled { opacity: .55; cursor: default }
 a { color: var(--accent-weak) }
-h1 { color: #e9e1ef; font-size: 30px; line-height: 1.08; letter-spacing: -.035em; margin: 0 }
+h1 { color: var(--fg-strong); font-size: 30px; line-height: 1.08; letter-spacing: -.035em; margin: 0 }
 .page-header h1 { min-width: 0; overflow-wrap: break-word; font-size: clamp(20px, 7cqw, 30px) }
 h2 { font-size: 18px; letter-spacing: -.015em; margin: 24px 0 12px }
 p { margin: 6px 0 }
-.phone-frame { width: min(calc(100% - 32px), 440px); height: calc(100dvh - 32px); min-height: 0; margin: 16px auto; overflow: hidden; background: radial-gradient(circle at 86% -12%, #3a2418 0, transparent 36%), linear-gradient(180deg, #1d1a24, #17151c); display: flex; flex-direction: column; border: 1px solid #3a3544; border-radius: 26px; box-shadow: 0 18px 54px #17131f2b }
+.phone-frame { width: min(calc(100% - 32px), 440px); height: calc(100dvh - 32px); min-height: 0; margin: 16px auto; overflow: hidden; background: var(--frame-bg, radial-gradient(circle at 86% -12%, #3a2418 0, transparent 36%), linear-gradient(180deg, #1d1a24, #17151c)); display: flex; flex-direction: column; border: 1px solid var(--frame-border, #3a3544); border-radius: 26px; box-shadow: 0 18px 54px #17131f2b }
 .content { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-bottom: 94px; scrollbar-width: none }.content::-webkit-scrollbar { display: none }
 /* Верхний отступ учитывает вырез/Dynamic Island (safe-area). Без него в
    полноэкранном мобильном режиме шапка (в т.ч. кнопка ＋) уходит под статус-бар
@@ -56,7 +117,7 @@ p { margin: 6px 0 }
 .stack { display: flex; flex-direction: column; gap: 16px }
 .compact { padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface-raised) }
 .field { display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 14px; min-width: 0 }
-.field input, .field textarea, .field select, select[aria-label], .inline-form input { width: 100%; min-width: 0; padding: 12px 13px; border: 1px solid var(--border); border-radius: 11px; color: #ece7f0; background: var(--input); outline: none }
+.field input, .field textarea, .field select, select[aria-label], .inline-form input { width: 100%; min-width: 0; padding: 12px 13px; border: 1px solid var(--border); border-radius: 11px; color: var(--fg-on-surface); background: var(--input); outline: none }
 .field input:focus, .field textarea:focus, .field select:focus, .inline-form input:focus, .picker-search:focus { border-color: var(--accent-focus); box-shadow: 0 0 0 3px var(--accent-ring) }
 .field textarea { min-height: 82px; resize: vertical }
 /* Нативные date/time на iOS Safari по умолчанию центрируют текст, имеют своё
@@ -74,7 +135,7 @@ p { margin: 6px 0 }
 .split input { min-width: 0; width: 100% }
 .actions { display: flex; gap: 10px; flex-wrap: wrap }
 .actions > * { flex: 1 }
-.secondary { border-color: var(--border); background: #2d2a35; color: #e3dee8; box-shadow: none }
+.secondary { border-color: var(--border); background: var(--secondary-bg, #2d2a35); color: var(--secondary-fg, #e3dee8); box-shadow: none }
 .link { border: 0; background: transparent; color: var(--accent-weak); padding: 4px; font-weight: 600; box-shadow: none }
 .danger { color: var(--danger) }
 .danger.secondary { border-color: #5b2d35; background: #27171b; color: #ff7a84 }
@@ -235,15 +296,15 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .circuit-dots { display: inline-flex; gap: 6px; margin-left: auto; flex-wrap: wrap; justify-content: flex-end }
 /* Закреплённая версия (в .live-pinned): плашка под таймером, чтобы «Круг N из M»
    и точки всегда были на виду при скролле по кругам. */
-.circuit-head.pinned { padding: 10px 14px; border: 1px solid var(--accent-surface-border); border-radius: 13px; background: #2e211b }
+.circuit-head.pinned { padding: 10px 14px; border: 1px solid var(--accent-surface-border); border-radius: 13px; background: var(--live-warm) }
 .circuit-dot { width: 10px; height: 10px; border-radius: 50%; background: #3a3352; border: 1px solid var(--accent-surface-border) }
 /* Точки прогресса: текущий круг (в работе) — серый, пройденный — зелёный. */
 .circuit-dot.current { background: #8a8399; border-color: #a29bb0 }
 .circuit-dot.done { background: var(--success); border-color: var(--success) }
-.circuit-round { border: 1px solid var(--border); border-radius: 12px; padding: 8px; background: #1b1826; opacity: .5 }
+.circuit-round { border: 1px solid var(--border); border-radius: 12px; padding: 8px; background: var(--surface-sunken); opacity: .5 }
 /* Текущий круг (в работе) — серая подсветка; пройденный — зелёная. */
-.circuit-round.current { opacity: 1; border-color: #6f6a80; background: #24222c }
-.circuit-round.done { opacity: 1; border-color: #367b4b; background: #15271a }
+.circuit-round.current { opacity: 1; border-color: var(--neutral-current-border); background: var(--neutral-current) }
+.circuit-round.done { opacity: 1; border-color: var(--success-border); background: var(--success-surface) }
 .circuit-round-label { font-size: 12px; font-weight: 700; color: var(--purple); margin-bottom: 4px }
 .circuit-round h3 { margin: 8px 0 4px; font-size: 15px }
 .circuit-round .exercise { margin: 0 }
@@ -276,7 +337,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .exercise-comment { width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--fg); font: inherit; font-size: 13px; resize: vertical; box-sizing: border-box }
 .exercise-comment::placeholder { color: var(--muted) }
 .exercise-comment-note { color: var(--muted); font-size: 13px; margin-top: 4px }
-.planned-round { border: 1px solid var(--border); border-radius: 12px; padding: 10px; background: #1b1826 }
+.planned-round { border: 1px solid var(--border); border-radius: 12px; padding: 10px; background: var(--surface-sunken) }
 .planned-round-label { font-size: 12px; font-weight: 700; color: var(--purple); margin-bottom: 6px }
 .planned-round-exercise { margin-bottom: 8px }
 .planned-round-exercise:last-child { margin-bottom: 0 }
@@ -299,7 +360,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .set-edit { padding: 2px 8px; font-size: 16px; line-height: 1; color: var(--purple) }
 .set-remove { padding: 2px 8px; font-size: 16px; line-height: 1; color: var(--danger, #ff6b6b) }
 .set-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0 }
-.set-row input { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 9px; color: #ece7f0; background: var(--input) }
+.set-row input { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 9px; color: var(--fg-on-surface); background: var(--input) }
 /* Степпер: крупные −/+ вокруг поля факта (быстрый ввод одной рукой, P5). */
 .stepper { display: flex; align-items: stretch; gap: 6px; min-width: 0 }
 .stepper input { text-align: center; font-weight: 700; -moz-appearance: textfield }
@@ -308,22 +369,22 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .stepper-btn:hover { border-color: var(--accent-surface-border) }
 .set-fill-plan { align-self: flex-start; margin: 6px 0 0; font-size: 13px }
 /* Зафиксированный подход: значения горят ярко, не тускнеют как disabled. */
-.set-row.locked input { color: #ece7f0; -webkit-text-fill-color: #ece7f0; opacity: 1; font-weight: 700; border-color: #367b4b; background: #15271a }
-.confirmed { border-color: #367b4b; background: #15271a }
+.set-row.locked input { color: var(--fg-on-surface); -webkit-text-fill-color: var(--fg-on-surface); opacity: 1; font-weight: 700; border-color: var(--success-border); background: var(--success-surface) }
+.confirmed { border-color: var(--success-border); background: var(--success-surface) }
 /* Текущий подход (в работе) — серая подсветка. */
-.exercise.current { border-color: #6f6a80; background: #24222c }
-.circuit-round.done .exercise, .circuit-round.done .exercise.confirmed { border-color: #367b4b; background: transparent }
+.exercise.current { border-color: var(--neutral-current-border); background: var(--neutral-current) }
+.circuit-round.done .exercise, .circuit-round.done .exercise.confirmed { border-color: var(--success-border); background: transparent }
 .live-dot { color: #d33030; font-weight: 800; font-size: 13px }
-.live-timer { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border: 1px solid var(--accent-surface-border); border-radius: 11px; background: #2e211b; color: var(--fg); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14px }
+.live-timer { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border: 1px solid var(--accent-surface-border); border-radius: 11px; background: var(--live-warm); color: var(--fg); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14px }
 /* Крупный таймер по центру над подходами. */
 /* Закреплённый блок live: таймер + отдых под ним, оба прилипают вверху вместе. */
 .live-pinned { position: sticky; top: 0; z-index: 3; margin: 0 0 18px; display: flex; flex-direction: column; gap: 10px; background: var(--surface); }
-.live-timer-big { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0; padding: 16px; border: 1px solid var(--accent-surface-border); border-radius: 16px; background: #2e211b; color: var(--fg); font-weight: 800; font-variant-numeric: tabular-nums; font-size: 40px; letter-spacing: 1px; box-shadow: 0 6px 20px #17131f66 }
+.live-timer-big { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0; padding: 16px; border: 1px solid var(--accent-surface-border); border-radius: 16px; background: var(--live-warm); color: var(--fg); font-weight: 800; font-variant-numeric: tabular-nums; font-size: 40px; letter-spacing: 1px; box-shadow: 0 6px 20px #17131f66 }
 .live-timer-big .live-dot-mark { width: 14px; height: 14px }
 .live-dot-mark { width: 8px; height: 8px; border-radius: 50%; background: #d33030; box-shadow: 0 0 0 0 #d3303066; animation: live-pulse 1.6s ease-out infinite }
 @keyframes live-pulse { 0% { box-shadow: 0 0 0 0 #d3303066 } 70% { box-shadow: 0 0 0 6px #d3303000 } 100% { box-shadow: 0 0 0 0 #d3303000 } }
 .rest-controls { display: flex; align-items: center; gap: 8px }
-.rest-step { min-height: 44px; padding: 8px 12px; border: 1px solid var(--accent-surface-border); border-radius: 10px; background: #281c16; color: var(--fg); font-weight: 700; font-size: 14px; cursor: pointer }
+.rest-step { min-height: 44px; padding: 8px 12px; border: 1px solid var(--accent-surface-border); border-radius: 10px; background: var(--accent-surface); color: var(--fg); font-weight: 700; font-size: 14px; cursor: pointer }
 .rest-step:hover { border-color: #6a58b8 }
 .rest-controls .link { min-height: 44px; padding: 4px 8px }
 
@@ -341,7 +402,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 /* Панель прижата к низу вьюпорта (как таб-бар: fixed по ширине phone-frame),
    а не sticky в коротком контейнере — иначе «плавала» поверх контента в
    середине скролла. Контент скроллится под ней (зарезервирован padding-bottom). */
-.live-bottom-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 10; width: min(100%, 440px); padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); background: #15131af2; border-top: 1px solid var(--border); backdrop-filter: blur(18px) saturate(135%) }
+.live-bottom-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 10; width: min(100%, 440px); padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); background: var(--bar-bg); border-top: 1px solid var(--border); backdrop-filter: blur(18px) saturate(135%) }
 .live-bottom-bar .wide { margin: 0 }
 /* Inline-подтверждение частичного завершения (вместо нативного confirm). */
 .finish-confirm { display: flex; flex-direction: column; gap: 10px }
@@ -455,7 +516,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .picker-header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px }.picker-header h1 { font-size: 24px }
 .picker-close { flex: 0 0 auto; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: transparent; color: var(--muted); box-shadow: none }
 .picker-close svg { width: 22px; height: 22px; display: block; stroke-width: 2.2 }
-.picker-search { flex: 0 0 auto; width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: 13px; color: #ece7f0; background: var(--input); font-size: 18px; outline: none }
+.picker-search { flex: 0 0 auto; width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: 13px; color: var(--fg-on-surface); background: var(--input); font-size: 18px; outline: none }
 .picker-categories { flex: 0 0 auto; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none }.picker-categories::-webkit-scrollbar { display: none }
 .picker-category { flex: 0 0 auto; padding: 9px 14px; border: 1px solid var(--border); border-radius: 99px; background: #1b1921; color: #d9d5df; font-weight: 500; box-shadow: none }.picker-category.active { border-color: var(--accent); background: var(--accent); color: white }
 /* Второй уровень: детальные мышцы выбранной группы (компактнее и приглушённее). */
@@ -464,7 +525,7 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .picker-create { flex: 0 0 auto; border: 1px dashed #4c4758; background: #19171e; color: #b2acba; box-shadow: none }
 .picker-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px }
 .picker-section-label { margin: 4px 2px 0; color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em }
-.picker-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 12px 15px; border: 1px solid var(--border); background: var(--surface-raised); color: #ece7f0; text-align: left; font-weight: 500; box-shadow: none }.picker-item small { color: var(--muted); font-weight: 400 }
+.picker-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 12px 15px; border: 1px solid var(--border); background: var(--surface-raised); color: var(--fg-on-surface); text-align: left; font-weight: 500; box-shadow: none }.picker-item small { color: var(--muted); font-weight: 400 }
 .picker-item-name { flex: 1 1 auto; min-width: 0 }
 .picker-thumb { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 8px; object-fit: cover; background: #fff }
 .picker-thumb-empty { background: var(--surface); border: 1px solid var(--border) }
@@ -486,12 +547,49 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .workout-tools { display: flex; gap: 6px }.workout-tools .link { font-size: 13px }
 .planned-set { padding-top: 10px; border-top: 1px solid var(--border) }.planned-set:first-of-type { border-top: 0 }.planned-set-heading { color: var(--muted); font-size: 13px }
 /* Отдых внутри закреплённого блока (.live-pinned) — свой sticky не нужен. */
-.rest-timer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 12px 14px; border: 1px solid #ffc06b66; border-radius: 13px; background: #3a2f1d; color: #ffd9a0 }
+.rest-timer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 12px 14px; border: 1px solid var(--warning-border); border-radius: 13px; background: var(--warning-surface); color: var(--warning-fg) }
 .voice-input { display: flex; flex-direction: column; align-items: flex-start; gap: 7px }
 .voice-input-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 9px 13px; font-size: 14px }
 .voice-input-button svg { width: 19px; height: 19px }
 .voice-input-button.recording { border-color: #9d4651; background: #3a2026; color: #ff9aa3 }
 .voice-input small { line-height: 1.35 }
 .client-card { justify-content: flex-start }.client-card > .badge { margin-left: auto }.client-avatar { flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid #ffffff24; border-radius: 14px; color: white; background: linear-gradient(145deg, #f47a56, #d84a26); font-weight: 800; box-shadow: inset 0 1px #ffffff26 }.client-avatar.tone-1 { background: linear-gradient(145deg, #f16a7a, #b82f57) }.client-avatar.tone-2 { background: linear-gradient(145deg, #efb34d, #b96e25) }.client-avatar.tone-3 { background: linear-gradient(145deg, #59ce80, #258f4a) }
+/* ── Светлые переопределения плотных «тёплых» кластеров 3 экранов (YAFIT-77).
+   Карточка AI-прогресса и карточка клиента набраны множеством одноразовых hex
+   (внутренние hairline #3a352f, ячейки #211e1a, warm-градиенты) — токенизировать
+   каждый раздул бы палитру. Поэтому на светлой теме переопределяем их точечно;
+   на тёмной теме этот блок не действует (селектор .theme-light отсутствует). */
+.theme-light .ai-progress-card { border-color: var(--progress-border); background: var(--progress-grad); box-shadow: 0 12px 32px #b8481c14 }
+.theme-light .ai-progress-hero { border-block-color: var(--border); background: #fff8f4 }
+.theme-light .ai-progress-periods { border-color: var(--border); background: #fbf4f0 }
+.theme-light .ai-progress-stats { border-bottom-color: var(--border); background: var(--border) }
+.theme-light .ai-progress-stats div { background: #ffffff }
+.theme-light .ai-progress-section li { color: #4a4550 }
+.theme-light .ai-progress-regularity { border-color: var(--border); background: #fbf4f0 }
+.theme-light .ai-progress-footer { border-top-color: var(--border); background: #fff8f4 }
+.theme-light .ai-progress-empty { border-block-color: var(--border); color: #4a4550; background: #fff8f4 }
+.theme-light .ai-progress-demo { border-color: #e6b7a5; color: #a4441f; background: #fdeee8 }
+.theme-light .ai-progress-demo.published { border-color: var(--success-border); color: #1f7a44; background: #eaf6ee }
+.theme-light .ai-progress-attention { border-color: #ecc98b; background: #fdf6e6 }
+.theme-light .ai-progress-attention p { color: #7a5a1e }
+.theme-light .client-copy-editor { border-color: var(--border); background: #ffffff }
+.theme-light .client-copy-heading > span { color: #6b4436; background: #fdeee8 }
+.theme-light .client-progress-card { border-color: #a6d9ba; background: radial-gradient(circle at 90% -10%, #55d68a1a, transparent 40%), linear-gradient(155deg, #f2fbf5, #ffffff 60%) }
+.theme-light .client-encouragement { border-color: #a6d9ba; background: #eef8f1 }
+.theme-light .client-encouragement p { color: #2c6a44 }
+.theme-light .client-welcome { border-color: var(--border); background: var(--card-grad) }
+.theme-light .client-welcome > span { color: var(--accent-strong) }
+.theme-light .client-access-card { border-color: var(--accent-surface-border); background: #fdf6f2 }
+.theme-light .client-access-card > div > span { color: #6b4436; background: #fdeee8 }
+.theme-light .client-access-card.connected { border-color: #a6d9ba; background: #eef8f1 }
+.theme-light .client-access-card.connected > div > span { color: #1f7a44; background: #d7efdf }
+.theme-light .card { box-shadow: var(--shadow-card) }
+.theme-light .page-back { background: var(--surface-raised) }
+.theme-light .badge { color: #6d6673; background: #efeae6 }
+.theme-light .exercise-block { background: #fdf6f2 }
+.theme-light .goal-stages-hint { background: #fbf4f0 }
+.theme-light .overflow-list { background: var(--surface-elevated) }
+.theme-light .overflow-item:hover { background: #f2ede9 }
+.theme-light .day-grid-hour-line { background: var(--hairline) }
 @media (max-width: 480px) { .phone-frame { width: 100%; height: 100dvh; margin: 0; border: 0; border-radius: 0 }.auth-screen { width: 100%; min-height: 100dvh; margin: 0; border: 0; border-radius: 0 }.tab-bar { bottom: 0; width: 100%; border-radius: 0 } }
 @media (max-width: 360px) { .measure-grid { grid-template-columns: 1fr }.inline-form { grid-template-columns: 1fr }.inline-form button { grid-column: 1 }.tab-bar a { font-size: 11px } }

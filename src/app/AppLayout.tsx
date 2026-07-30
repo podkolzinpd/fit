@@ -3,6 +3,23 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnalyticsIcon, ClientsIcon, ProfileIcon, ScheduleIcon } from '../shared/icons'
 import { useAuth } from './auth-context'
 
+// YAFIT-77: флаг светлого пилота. Выключен по умолчанию (в т.ч. в проде/iOS);
+// включается заданием VITE_LIGHT_PILOT=1 в окружении сборки.
+const LIGHT_PILOT_ENABLED = import.meta.env.VITE_LIGHT_PILOT === '1'
+
+// Маршруты 3 пилотных экранов: карточка клиента (тренер /clients/:id и клиент
+// /me), live-тренировка (…/live), прогресс (/progress/:id и /me/progress).
+function isLightPilotRoute(pathname: string): boolean {
+  if (!LIGHT_PILOT_ENABLED) return false
+  return (
+    pathname === '/me' ||
+    pathname === '/me/progress' ||
+    /^\/clients\/[^/]+$/.test(pathname) ||
+    /^\/progress\/[^/]+$/.test(pathname) ||
+    /\/live$/.test(pathname)
+  )
+}
+
 export function AppLayout() {
   const { actor } = useAuth()
   const contentRef = useRef<HTMLDivElement>(null)
@@ -16,13 +33,18 @@ export function AppLayout() {
   const immersive = /\/live$/.test(pathname)
   const contentClass = immersive ? 'content content-immersive' : 'content'
 
-  if (actor?.role === 'client') return <div className="phone-frame"><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
+  // YAFIT-77: светлый пилот. За флагом VITE_LIGHT_PILOT включаем светлую тему
+  // (класс theme-light на .phone-frame) только на 3 экранах — карточка клиента,
+  // live-тренировка, прогресс. Пилот точечный: остальные экраны остаются тёмными.
+  const frameClass = isLightPilotRoute(pathname) ? 'phone-frame theme-light' : 'phone-frame'
+
+  if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
     <NavLink to="/me"><ClientsIcon />Кабинет</NavLink>
     <NavLink to="/me/workouts"><ScheduleIcon />Тренировки</NavLink>
     <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
     <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>
   </nav>}</div>
-  return <div className="phone-frame"><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
+  return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
     <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>
     <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>
     <NavLink to="/analytics"><AnalyticsIcon />Аналитика</NavLink>
