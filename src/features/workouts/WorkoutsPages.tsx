@@ -305,6 +305,37 @@ function FactVsPlan({ set }: { set: WorkoutSet }) {
 }
 
 
+// Плановое значение подхода вторичной строкой («План: 100 кг × 10») по типу
+// упражнения. Факт остаётся основным редактируемым полем, план — явно виден
+// (раньше был только тусклым placeholder). null — если план не задан.
+function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet): string | null {
+  const parts: string[] = []
+  if (inputKind === 'strength') {
+    if (set.weightKg !== undefined) parts.push(`${set.weightKg} кг`)
+    if (set.reps !== undefined) parts.push(`${set.reps} повт.`)
+  } else if (inputKind === 'reps') {
+    if (set.durationMin !== undefined) parts.push(`${set.durationMin} мин`)
+    if (set.reps !== undefined) parts.push(`${set.reps} повт.`)
+  } else {
+    if (set.durationMin !== undefined) parts.push(`${set.durationMin} мин`)
+    if (set.distanceKm !== undefined) parts.push(`${set.distanceKm} км`)
+  }
+  return parts.length ? parts.join(' × ') : null
+}
+
+// Отклонение факта от плана — показываем ТОЛЬКО при разнице (по ключевой метрике:
+// вес для силовых, иначе время). Знак и величина, тёплым (warning) цветом.
+function deviationNote(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet): string | null {
+  if (!set.confirmedAt) return null
+  const pick = inputKind === 'strength'
+    ? { fact: set.fact.weightKg, plan: set.weightKg, unit: 'кг' }
+    : { fact: set.fact.durationMin, plan: set.durationMin, unit: 'мин' }
+  if (pick.fact === undefined || pick.plan === undefined) return null
+  const diff = Math.round((pick.fact - pick.plan) * 10) / 10
+  if (diff === 0) return null
+  return `${diff > 0 ? '+' : ''}${diff} ${pick.unit} к плану`
+}
+
 function LiveSetFields({ inputKind, set, editing = false }: { inputKind: ExerciseSnapshot['inputKind']; set: WorkoutSet; editing?: boolean }) {
   // После подтверждения показываем зафиксированный результат (факт, иначе план)
   // как обычное яркое значение в заблокированном поле, а не тусклый placeholder.
@@ -532,8 +563,9 @@ export function LiveWorkoutPage() {
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
       save.mutate({ set, draft: draftFrom(event.currentTarget) })
     }}>
-      <div className="set-head"><span className="muted">{label}</span>{headActions}</div>
+      <div className="set-head"><span className="muted">{label}{planLine(exercise.inputKind, set) ? <span className="set-plan"> · план {planLine(exercise.inputKind, set)}</span> : null}</span>{headActions}</div>
       <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} />
+      {deviationNote(exercise.inputKind, set) && <p className="set-deviation">{deviationNote(exercise.inputKind, set)}</p>}
       {set.confirmedAt && isEditing
         ? <button type="button" className="secondary" disabled={save.isPending}
             onPointerDown={() => { skipBlurForSet.current = set.id }}

@@ -292,6 +292,10 @@ a.goal-stages-hint:hover { border-color: #4c465a }
 .workout-title h2 { margin: 0 0 4px }
 .set-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 24px }
 .set-head-actions { display: inline-flex; align-items: center; gap: 4px; margin-left: auto }
+/* План — вторичной строкой в шапке подхода; отклонение факта — тёплым цветом,
+   только при разнице (P4: план vs факт визуально). */
+.set-plan { color: var(--muted); font-weight: 500 }
+.set-deviation { margin: 4px 0 0; font-size: 12px; font-weight: 700; color: var(--warning) }
 .set-edit { padding: 2px 8px; font-size: 16px; line-height: 1; color: var(--purple) }
 .set-remove { padding: 2px 8px; font-size: 16px; line-height: 1; color: var(--danger, #ff6b6b) }
 .set-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0 }
