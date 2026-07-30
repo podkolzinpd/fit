@@ -2,22 +2,14 @@ import { useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnalyticsIcon, ClientsIcon, ProfileIcon, ScheduleIcon } from '../shared/icons'
 import { useAuth } from './auth-context'
+import { isLightPilotPath } from './light-pilot-route'
 
 // YAFIT-77: флаг светлого пилота. Выключен по умолчанию (в т.ч. в проде/iOS);
 // включается заданием VITE_LIGHT_PILOT=1 в окружении сборки.
 const LIGHT_PILOT_ENABLED = import.meta.env.VITE_LIGHT_PILOT === '1'
 
-// Маршруты 3 пилотных экранов: карточка клиента (тренер /clients/:id и клиент
-// /me), live-тренировка (…/live), прогресс (/progress/:id и /me/progress).
 function isLightPilotRoute(pathname: string): boolean {
-  if (!LIGHT_PILOT_ENABLED) return false
-  return (
-    pathname === '/me' ||
-    pathname === '/me/progress' ||
-    /^\/clients\/[^/]+$/.test(pathname) ||
-    /^\/progress\/[^/]+$/.test(pathname) ||
-    /\/live$/.test(pathname)
-  )
+  return LIGHT_PILOT_ENABLED && isLightPilotPath(pathname)
 }
 
 export function AppLayout() {
