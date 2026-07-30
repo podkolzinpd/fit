@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { AsyncView, Field, useConfirm } from './ui'
+import { AsyncView, Field, SaveStatus, useConfirm } from './ui'
 
 describe('AsyncView', () => {
   it('показывает loading, empty и content состояния', () => {
@@ -19,6 +19,17 @@ describe('AsyncView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
     expect(screen.getByRole('alert').closest('.error')).toHaveTextContent('Сеть недоступна')
     expect(retry).toHaveBeenCalledOnce()
+  })
+})
+
+describe('SaveStatus', () => {
+  it('показывает saving, saved и error состояния', () => {
+    const { rerender } = render(<SaveStatus status="saving" />)
+    expect(screen.getByRole('status')).toHaveTextContent('Сохраняем')
+    rerender(<SaveStatus status="saved" />)
+    expect(screen.getByRole('status')).toHaveTextContent('Сохранено')
+    rerender(<SaveStatus status="error" error="Сеть недоступна" />)
+    expect(screen.getByRole('alert')).toHaveTextContent('Сеть недоступна')
   })
 })
 
