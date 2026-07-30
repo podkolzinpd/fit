@@ -421,6 +421,16 @@ test('profile Cancel resets unsaved edits', async ({ page }) => {
   await firstName.fill('Черновик Который Отменим')
   await page.getByRole('button', { name: 'Отмена' }).click()
   await expect(firstName).toHaveValue(original)
+
+  const darkTheme = page.getByRole('checkbox', { name: 'Тёмная тема' })
+  await expect(darkTheme).not.toBeChecked()
+  await darkTheme.check()
+  await expect(page.locator('.phone-frame')).not.toHaveClass(/theme-light/)
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#15131a')
+
+  await page.reload()
+  await expect(page.getByRole('checkbox', { name: 'Тёмная тема' })).toBeChecked()
+  await expect(page.locator('.phone-frame')).not.toHaveClass(/theme-light/)
 })
 
 test('schedule shows week strip and hour grid with day/week navigation', async ({ page }) => {

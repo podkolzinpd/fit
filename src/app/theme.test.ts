@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveAppTheme } from './theme'
+import { resolveAppTheme, resolveThemePreference } from './theme'
 
 describe('resolveAppTheme', () => {
   it('использует светлую тему по умолчанию', () => {
@@ -10,5 +10,11 @@ describe('resolveAppTheme', () => {
 
   it('оставляет явный откат на тёмную тему', () => {
     expect(resolveAppTheme('dark')).toBe('dark')
+  })
+
+  it('ставит сохранённый выбор выше темы сборки', () => {
+    expect(resolveThemePreference('dark', 'light')).toBe('dark')
+    expect(resolveThemePreference('light', 'dark')).toBe('light')
+    expect(resolveThemePreference(null, 'dark')).toBe('dark')
   })
 })
