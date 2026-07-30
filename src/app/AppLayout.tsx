@@ -2,15 +2,7 @@ import { useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnalyticsIcon, ClientsIcon, ProfileIcon, ScheduleIcon } from '../shared/icons'
 import { useAuth } from './auth-context'
-import { isLightPilotPath } from './light-pilot-route'
-
-// YAFIT-77: флаг светлого пилота. Выключен по умолчанию (в т.ч. в проде/iOS);
-// включается заданием VITE_LIGHT_PILOT=1 в окружении сборки.
-const LIGHT_PILOT_ENABLED = import.meta.env.VITE_LIGHT_PILOT === '1'
-
-function isLightPilotRoute(pathname: string): boolean {
-  return LIGHT_PILOT_ENABLED && isLightPilotPath(pathname)
-}
+import { APP_THEME } from './theme'
 
 export function AppLayout() {
   const { actor } = useAuth()
@@ -25,10 +17,7 @@ export function AppLayout() {
   const immersive = /\/live$/.test(pathname)
   const contentClass = immersive ? 'content content-immersive' : 'content'
 
-  // YAFIT-77: после трёх групп раскатки флаг покрывает все известные маршруты.
-  // Проверку маршрута сохраняем как предохранитель для новых экранов: они не
-  // должны случайно считаться визуально проверенными.
-  const frameClass = isLightPilotRoute(pathname) ? 'phone-frame theme-light' : 'phone-frame'
+  const frameClass = APP_THEME === 'light' ? 'phone-frame theme-light' : 'phone-frame'
 
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
     <NavLink to="/me"><ClientsIcon />Кабинет</NavLink>
