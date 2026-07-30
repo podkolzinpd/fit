@@ -19,12 +19,45 @@ export function Page({ title, action, back, center, hideTitle, className, childr
   </main>
 }
 
-export function AsyncView({ loading, error, empty, onRetry, children }: PropsWithChildren<{
+export function Skeleton({ rows = 3 }: { rows?: number }) {
+  return <div className="skeleton-stack" role="status" aria-label="Загрузка">
+    <span className="sr-only">Загрузка…</span>
+    {Array.from({ length: rows }, (_, index) => <div className="skeleton-card" aria-hidden="true" key={index}>
+      <span className="skeleton-block skeleton-title" />
+      <span className="skeleton-block skeleton-line" />
+    </div>)}
+  </div>
+}
+
+export function EmptyState({ title = 'Пока ничего нет', description = 'Здесь появятся новые данные.', action }: {
+  title?: string; description?: string; action?: ReactNode
+}) {
+  return <div className="empty-state">
+    <span className="empty-state-mark" aria-hidden="true">＋</span>
+    <h2>{title}</h2>
+    <p>{description}</p>
+    {action}
+  </div>
+}
+
+export function SaveStatus({ status, error }: {
+  status: 'idle' | 'saving' | 'saved' | 'error'; error?: string
+}) {
+  if (status === 'idle') return null
+  const text = status === 'saving' ? 'Сохраняем…' : status === 'saved' ? 'Сохранено' : error ?? 'Не удалось сохранить'
+  return <p className={`save-status save-status-${status}`} role={status === 'error' ? 'alert' : 'status'}>
+    <span aria-hidden="true">{status === 'saving' ? '●' : status === 'saved' ? '✓' : '!'}</span>
+    {text}
+  </p>
+}
+
+export function AsyncView({ loading, error, empty, onRetry, emptyTitle, emptyDescription, emptyAction, children }: PropsWithChildren<{
   loading: boolean; error?: Error | null; empty?: boolean; onRetry?: () => void
+  emptyTitle?: string; emptyDescription?: string; emptyAction?: ReactNode
 }>) {
-  if (loading) return <div className="state" role="status">Загрузка…</div>
+  if (loading) return <Skeleton />
   if (error) return <div className="state error" role="alert"><p>{error.message}</p>{onRetry && <button onClick={onRetry}>Повторить</button>}</div>
-  if (empty) return <div className="state">Пока ничего нет</div>
+  if (empty) return <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
   return children
 }
 

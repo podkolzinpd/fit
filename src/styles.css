@@ -158,6 +158,23 @@ p { margin: 6px 0 }
 .success { color: var(--success) }
 .auth-links { display: flex; justify-content: space-between; align-items: center }
 .state { min-height: 180px; display: grid; place-content: center; text-align: center; color: var(--muted); gap: 10px }
+.skeleton-stack { display: flex; flex-direction: column; gap: 14px }
+.skeleton-card { min-height: 92px; padding: 18px; border: 1px solid var(--border); border-radius: 17px; background: var(--surface-raised); overflow: hidden }
+.skeleton-block { display: block; border-radius: 8px; background: linear-gradient(90deg, var(--surface-sunken) 20%, var(--surface-raised) 48%, var(--surface-sunken) 76%); background-size: 220% 100%; animation: skeleton-wave 1.35s ease-in-out infinite }
+.skeleton-title { width: 48%; height: 18px; margin-bottom: 13px }
+.skeleton-line { width: 76%; height: 13px }
+.empty-state { min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 26px; border: 1px dashed var(--border); border-radius: 18px; text-align: center; background: var(--surface-raised) }
+.empty-state-mark { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 16px; color: var(--accent-strong); background: var(--accent-surface); font-size: 25px; font-weight: 700 }
+.empty-state h2 { margin: 6px 0 0 }
+.empty-state p { max-width: 280px; color: var(--muted) }
+.empty-state .button, .empty-state button { margin-top: 8px }
+.save-status { display: flex; align-items: center; gap: 7px; min-height: 24px; margin: 0; color: var(--muted); font-size: 13px; font-weight: 700 }
+.save-status-saving span { color: var(--warning); animation: save-pulse 1s ease-in-out infinite }
+.save-status-saved { color: var(--success) }
+.save-status-error { color: var(--danger) }
+@keyframes skeleton-wave { from { background-position: 100% 0 } to { background-position: -100% 0 } }
+@keyframes save-pulse { 50% { opacity: .35 } }
+@media (prefers-reduced-motion: reduce) { .skeleton-block, .save-status-saving span { animation: none } }
 .cards, .timeline { display: flex; flex-direction: column; gap: 16px }
 .card { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 15px; border: 1px solid var(--border); border-radius: 17px; text-decoration: none; color: inherit; background: var(--card-grad); box-shadow: var(--shadow-card); transition: border-color .18s ease, transform .18s ease }
 .card:hover { border-color: #4c465a; transform: translateY(-1px) }

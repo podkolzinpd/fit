@@ -28,7 +28,10 @@ function metricField(metric: CustomMetric, entry: ProgressEntry | null, placehol
 
 export function AnalyticsPage() {
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
-  return <Page title="Аналитика"><AsyncView loading={clients.isLoading} error={clients.error} empty={!clients.data?.length}><div className="cards">{clients.data?.map((client) => <Link className="card" key={client.id} to={`/progress/${client.id}`}><div><strong>{client.fullName}</strong><p>{client.currentWeightKg ? `Текущий вес: ${client.currentWeightKg} кг` : 'Нет замеров веса'}</p></div><span>→</span></Link>)}</div></AsyncView></Page>
+  return <Page title="Аналитика"><AsyncView loading={clients.isLoading} error={clients.error} empty={!clients.data?.length}
+    emptyTitle="Аналитики пока нет"
+    emptyDescription="Добавьте клиента и первый замер — здесь появится динамика прогресса."
+    emptyAction={<Link className="button" to="/clients/new">Добавить клиента</Link>}><div className="cards">{clients.data?.map((client) => <Link className="card" key={client.id} to={`/progress/${client.id}`}><div><strong>{client.fullName}</strong><p>{client.currentWeightKg ? `Текущий вес: ${client.currentWeightKg} кг` : 'Нет замеров веса'}</p></div><span>→</span></Link>)}</div></AsyncView></Page>
 }
 
 export function ProgressPage() {
