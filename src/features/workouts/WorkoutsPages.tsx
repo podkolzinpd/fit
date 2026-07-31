@@ -372,15 +372,17 @@ function deviationNote(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet
 // фокус (preventDefault на pointerdown) и меняют value через нативное событие
 // input, чтобы неконтролируемое поле и последующее сохранение увидели новое
 // значение. В locked-режиме кнопки скрыты (поле disabled).
-function LiveStepperInput({ name, label, shortLabel, placeholder, defaultValue, step, disabled, inputKey }: {
+function LiveStepperInput({ name, label, shortLabel, placeholder, defaultValue, baselineValue, step, disabled, inputKey }: {
   name: string; label: string; shortLabel: string; placeholder: string; defaultValue: number | undefined
-  step: number; disabled: boolean; inputKey: string
+  // Когда факт ещё пуст, степпер начинает от плана, а не от нуля. Это особенно
+  // важно для быстрого ввода в зале: «план 70» + «+» должно стать 72,5.
+  baselineValue: number | undefined; step: number; disabled: boolean; inputKey: string
 }) {
   const ref = useRef<HTMLInputElement>(null)
   function nudge(delta: number) {
     const el = ref.current
     if (!el) return
-    const current = el.value === '' ? 0 : Number(el.value)
+    const current = el.value === '' ? (baselineValue ?? 0) : Number(el.value)
     const next = Math.max(0, Math.round((current + delta) / step) * step)
     // toFixed убирает флоат-шум (0.1+0.2); затем в число обратно строкой.
     setNativeInputValue(el, String(Number(next.toFixed(3))))
@@ -433,16 +435,16 @@ function LiveSetFields({ inputKind, set, editing = false }: { inputKind: Exercis
   const confirmed = Boolean(set.confirmedAt)
   const value = (fact: number | undefined, plan: number | undefined) => (confirmed ? (fact ?? plan) : fact)
   if (inputKind === 'strength') return <div className={rowClass}>
-    <LiveStepperInput name="weightKg" label="Фактический вес" shortLabel="вес" placeholder={set.weightKg === undefined ? 'кг' : `${set.weightKg} кг`} defaultValue={value(set.fact.weightKg, set.weightKg)} step={2.5} disabled={locked} inputKey={`w-${k}`} />
-    <LiveStepperInput name="reps" label="Фактические повторы" shortLabel="повторы" placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} defaultValue={value(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} />
+    <LiveStepperInput name="weightKg" label="Фактический вес" shortLabel="вес" placeholder={set.weightKg === undefined ? 'кг' : `${set.weightKg} кг`} defaultValue={value(set.fact.weightKg, set.weightKg)} baselineValue={set.weightKg} step={2.5} disabled={locked} inputKey={`w-${k}`} />
+    <LiveStepperInput name="reps" label="Фактические повторы" shortLabel="повторы" placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} defaultValue={value(set.fact.reps, set.reps)} baselineValue={set.reps} step={1} disabled={locked} inputKey={`r-${k}`} />
   </div>
   if (inputKind === 'reps') return <div className={rowClass}>
-    <LiveStepperInput name="durationMin" label="Фактическое время" shortLabel="время" placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} defaultValue={value(set.fact.durationMin, set.durationMin)} step={0.5} disabled={locked} inputKey={`d-${k}`} />
-    <LiveStepperInput name="reps" label="Фактические повторы" shortLabel="повторы" placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} defaultValue={value(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} />
+    <LiveStepperInput name="durationMin" label="Фактическое время" shortLabel="время" placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} defaultValue={value(set.fact.durationMin, set.durationMin)} baselineValue={set.durationMin} step={0.5} disabled={locked} inputKey={`d-${k}`} />
+    <LiveStepperInput name="reps" label="Фактические повторы" shortLabel="повторы" placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} defaultValue={value(set.fact.reps, set.reps)} baselineValue={set.reps} step={1} disabled={locked} inputKey={`r-${k}`} />
   </div>
   return <div className={rowClass}>
-    <LiveStepperInput name="durationMin" label="Фактическое время" shortLabel="время" placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} defaultValue={value(set.fact.durationMin, set.durationMin)} step={0.5} disabled={locked} inputKey={`d-${k}`} />
-    <LiveStepperInput name="distanceKm" label="Фактическая дистанция" shortLabel="дистанция" placeholder={set.distanceKm === undefined ? 'км' : `${set.distanceKm} км`} defaultValue={value(set.fact.distanceKm, set.distanceKm)} step={0.1} disabled={locked} inputKey={`dist-${k}`} />
+    <LiveStepperInput name="durationMin" label="Фактическое время" shortLabel="время" placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} defaultValue={value(set.fact.durationMin, set.durationMin)} baselineValue={set.durationMin} step={0.5} disabled={locked} inputKey={`d-${k}`} />
+    <LiveStepperInput name="distanceKm" label="Фактическая дистанция" shortLabel="дистанция" placeholder={set.distanceKm === undefined ? 'км' : `${set.distanceKm} км`} defaultValue={value(set.fact.distanceKm, set.distanceKm)} baselineValue={set.distanceKm} step={0.1} disabled={locked} inputKey={`dist-${k}`} />
   </div>
 }
 

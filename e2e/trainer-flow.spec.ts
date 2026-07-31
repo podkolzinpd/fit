@@ -64,6 +64,11 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('button', { name: 'Начать' }).click()
   // Крупный таймер тренировки по центру над подходами, идущий от старта (мм:сс).
   await expect(page.locator('.live-timer-big')).toContainText(/\d\d:\d\d/)
+  // Пока факт пуст, ± начинает от плана, а не от нуля.
+  await page.getByRole('button', { name: 'Добавить вес' }).first().click()
+  await expect(page.getByLabel('Фактический вес').first()).toHaveValue('42.5')
+  await page.getByRole('button', { name: 'Убавить повторы' }).first().click()
+  await expect(page.getByLabel('Фактические повторы').first()).toHaveValue('9')
   await page.getByLabel('Фактический вес').first().fill('42.5')
   await page.getByLabel('Фактические повторы').first().fill('9')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
