@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, replaceExercise, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, completedWorkoutDraft, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, replaceExercise, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -33,6 +33,16 @@ describe('workouts repository rules', () => {
     const copy = copyWorkout(source, localDate('2026-07-22'))
     expect(copy.id).toBeUndefined()
     expect(copy.exercises[0]?.sets[0]).toEqual({ position: 0, weightKg: 50, reps: 10, durationMin: undefined, distanceKm: undefined })
+  })
+
+  it('открывает завершённую тренировку для правки по фактическим значениям', () => {
+    const source: Workout = {
+      id: 'w1', clientId: 'c1', clientName: 'Анна', workoutDate: localDate('2026-07-21'),
+      startTime: null, endTime: null, startedAt: null, completedAt: 'now', status: 'done', notes: null, stageId: null, stageTitle: null, version: 3,
+      exercises: [{ id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: 'b1', blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90,
+        sets: [{ id: 's1', position: 0, weightKg: 50, reps: 10, fact: { weightKg: 55, reps: 9, rpe: 8 }, confirmedAt: 'now', version: 2 }] }],
+    }
+    expect(completedWorkoutDraft(source).exercises[0]?.sets[0]).toMatchObject({ weightKg: 55, reps: 9, rpe: 8 })
   })
 })
 

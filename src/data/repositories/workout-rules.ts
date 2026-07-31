@@ -538,6 +538,30 @@ export function copyWorkout(source: Workout, workoutDate = source.workoutDate): 
   }
 }
 
+// Завершённую тренировку редактируем по факту, а не по исходному плану.
+// Если факт у конкретного поля не записан, оставляем план как ориентир.
+export function completedWorkoutDraft(source: Workout): WorkoutDraft {
+  const draft = copyWorkout(source)
+  return {
+    ...draft,
+    exercises: draft.exercises.map((exercise, exerciseIndex) => ({
+      ...exercise,
+      sets: exercise.sets.map((set, setIndex) => {
+        const fact = source.exercises[exerciseIndex]?.sets[setIndex]?.fact
+        return {
+          ...set,
+          weightKg: fact?.weightKg ?? set.weightKg,
+          reps: fact?.reps ?? set.reps,
+          durationSec: fact?.durationSec ?? set.durationSec,
+          durationMin: fact?.durationMin ?? set.durationMin,
+          distanceKm: fact?.distanceKm ?? set.distanceKm,
+          rpe: fact?.rpe ?? set.rpe,
+        }
+      }),
+    })),
+  }
+}
+
 export function canTransition(from: Workout['status'], to: Workout['status']): boolean {
   return (from === 'planned' && to === 'in_progress') || (from === 'in_progress' && to === 'done')
 }

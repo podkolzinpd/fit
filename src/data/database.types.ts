@@ -1,58 +1,29 @@
-// schema-sha256: f8bb83fbcb344761c3a3a21bdea3c29a3d6828d3b20f179ccd5c5eee3670146a
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+// schema-sha256: 7b965fa79ca8541941e290c931c869fdd9f5a30e45472fd480f547d869d64f8e
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
-type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
-  Row: Row
-  Insert: Insert
-  Update: Update
-  Relationships: []
+type WorkoutListSetRow = {
+  id: string; position: number; plan_weight_kg: number | null; plan_reps: number | null
+  plan_duration_min: number | null; plan_duration_sec: number | null; plan_distance_km: number | null; plan_rpe: number | null
+  fact_weight_kg: number | null; fact_reps: number | null; fact_duration_min: number | null; fact_duration_sec: number | null; fact_distance_km: number | null; fact_rpe: number | null
+  confirmed_at: string | null; version: number
 }
-
-type ProfileRow = { id: string; account_role: 'trainer' | 'client'; first_name: string | null; last_name: string | null; timezone: string; created_at: string; updated_at: string }
-type TrainerRow = { profile_id: string; created_at: string; updated_at: string }
-type ClientRow = { id: string; trainer_id: string; auth_user_id: string | null; full_name: string; gender: string; age_years: number; age_updated_at: string; height_cm: number; goal: string | null; archived_at: string | null; version: number; created_at: string; updated_at: string }
-type PrivateRow = { client_id: string; trainer_id: string; note: string | null; created_at: string; updated_at: string }
-type CustomExerciseRow = { id: string; trainer_id: string; name: string; muscle_group: string; input_kind: string; archived_at: string | null; version: number; created_at: string; updated_at: string }
-type WorkoutRow = { id: string; trainer_id: string; client_id: string; created_by: string | null; workout_date: string; start_time: string | null; end_time: string | null; status: string; notes: string | null; stage_id: string | null; started_at: string | null; completed_at: string | null; deleted_at: string | null; version: number; created_at: string; updated_at: string }
-type WorkoutExerciseRow = { id: string; workout_id: string; trainer_id: string; client_id: string; position: number; exercise_source: string; exercise_ref: string; custom_exercise_id: string | null; exercise_name: string; muscle_group: string; input_kind: string; block_id: string; block_type: string; block_preset: string; block_rounds: number; rest_between_exercises_sec: number; rest_between_rounds_sec: number; rest_between_sets_sec: number; trainer_comment: string | null; created_at: string; updated_at: string }
-type WorkoutSetRow = { id: string; workout_exercise_id: string; trainer_id: string; client_id: string; position: number; plan_weight_kg: number | null; plan_reps: number | null; plan_duration_min: number | null; plan_duration_sec: number | null; plan_distance_km: number | null; plan_rpe: number | null; fact_weight_kg: number | null; fact_reps: number | null; fact_duration_min: number | null; fact_duration_sec: number | null; fact_distance_km: number | null; fact_rpe: number | null; confirmed_at: string | null; version: number; created_at: string; updated_at: string }
-type ProgressRow = { id: string; trainer_id: string; client_id: string; created_by: string | null; recorded_on: string; weight_kg: number | null; chest_cm: number | null; waist_cm: number | null; hip_cm: number | null; notes: string | null; deleted_at: string | null; version: number; created_at: string; updated_at: string }
-type MetricRow = { id: string; trainer_id: string; client_id: string; name: string; unit: string | null; archived_at: string | null; version: number; created_at: string; updated_at: string }
-type ProgressCustomRow = { id: string; trainer_id: string; client_id: string; progress_id: string; metric_id: string; value: number; created_at: string; updated_at: string }
-type ClientTrainerRow = { client_id: string; trainer_id: string; alias: string | null; note: string | null; version: number; joined_at: string }
-type ClientInvitationRow = { id: string; client_id: string; created_by: string; target_role: string; code_hash: string; expires_at: string; claimed_by: string | null; claimed_at: string | null; revoked_at: string | null; created_at: string }
-type ClientListRow = { id: string; has_account: boolean; full_name: string; canonical_full_name: string; gender: string; age_years: number; age_updated_at: string; height_cm: number; goal: string | null; note: string | null; current_weight_kg: number | null; archived_at: string | null; version: number; membership_version: number }
-type MyClientRow = Omit<ClientListRow, 'note' | 'canonical_full_name' | 'membership_version' | 'has_account'>
-type WorkoutListSetRow = Pick<WorkoutSetRow, 'id' | 'position' | 'plan_weight_kg' | 'plan_reps' | 'plan_duration_min' | 'plan_duration_sec' | 'plan_distance_km' | 'plan_rpe' | 'fact_weight_kg' | 'fact_reps' | 'fact_duration_min' | 'fact_duration_sec' | 'fact_distance_km' | 'fact_rpe' | 'confirmed_at' | 'version'>
-type WorkoutListExerciseRow = Pick<WorkoutExerciseRow, 'id' | 'position' | 'exercise_source' | 'exercise_ref' | 'custom_exercise_id' | 'exercise_name' | 'muscle_group' | 'input_kind' | 'block_id' | 'block_type' | 'block_preset' | 'block_rounds' | 'rest_between_exercises_sec' | 'rest_between_rounds_sec' | 'rest_between_sets_sec' | 'trainer_comment'> & { sets: WorkoutListSetRow[] }
-export type WorkoutListRow = Pick<WorkoutRow, 'id' | 'client_id' | 'workout_date' | 'start_time' | 'end_time' | 'started_at' | 'completed_at' | 'status' | 'notes' | 'version'> & { client_name: string; stage_id: string | null; stage_title: string | null; total_count: number; exercises: WorkoutListExerciseRow[] }
-type WorkoutSummaryRow = Pick<WorkoutRow, 'id' | 'workout_date' | 'status'>
-type PreviousExerciseResultRow = { exercise_ref: string; workout_date: string; sets: Json }
-type TrainerMembershipRow = { trainer_id: string; first_name: string | null; last_name: string | null; joined_at: string; is_root: boolean }
-
-type TrainingSummaryRow = {
-  id: string
-  client_id: string
-  trainer_id: string
-  period_start: string
-  period_end: string
-  trainer_summary: Json
-  client_summary: Json
-  display_metrics: Json
-  generated_at: string
-  version: number
+type WorkoutListExerciseRow = {
+  id: string; position: number; exercise_source: string; exercise_ref: string; custom_exercise_id: string | null; exercise_name: string
+  muscle_group: string; input_kind: string; block_id: string; block_type: string; block_preset: string; block_rounds: number
+  rest_between_exercises_sec: number; rest_between_rounds_sec: number; rest_between_sets_sec: number; trainer_comment: string | null
+  sets: WorkoutListSetRow[]
 }
-type PublishedTrainingSummaryRow = {
-  id: string
-  source_summary_id: string
-  client_id: string
-  trainer_id: string
-  period_start: string
-  period_end: string
-  summary: Json
-  display_metrics: Json
-  generated_at: string
-  published_at: string
+export type WorkoutListRow = {
+  id: string; client_id: string; client_name: string; workout_date: string; start_time: string | null; end_time: string | null
+  started_at: string | null; completed_at: string | null; status: string; notes: string | null; stage_id: string | null; stage_title: string | null
+  version: number; total_count: number; exercises: WorkoutListExerciseRow[]
 }
 
 export type Database = {
@@ -83,69 +54,1215 @@ export type Database = {
   }
   public: {
     Tables: {
-      profiles: Table<ProfileRow, Pick<ProfileRow, 'id'> & Partial<ProfileRow>>
-      trainers: Table<TrainerRow, Pick<TrainerRow, 'profile_id'> & Partial<TrainerRow>>
-      clients: Table<ClientRow, Pick<ClientRow, 'trainer_id' | 'full_name' | 'gender' | 'age_years' | 'height_cm'> & Partial<ClientRow>>
-      client_private_details: Table<PrivateRow, Pick<PrivateRow, 'client_id' | 'trainer_id'> & Partial<PrivateRow>>
-      custom_exercises: Table<CustomExerciseRow, Pick<CustomExerciseRow, 'trainer_id' | 'name' | 'muscle_group' | 'input_kind'> & Partial<CustomExerciseRow>>
-      workouts: Table<WorkoutRow, Pick<WorkoutRow, 'trainer_id' | 'client_id' | 'workout_date'> & Partial<WorkoutRow>>
-      workout_exercises: Table<WorkoutExerciseRow, Pick<WorkoutExerciseRow, 'workout_id' | 'trainer_id' | 'client_id' | 'position' | 'exercise_source' | 'exercise_ref' | 'exercise_name' | 'muscle_group' | 'input_kind'> & Partial<WorkoutExerciseRow>>
-      workout_sets: Table<WorkoutSetRow, Pick<WorkoutSetRow, 'workout_exercise_id' | 'trainer_id' | 'client_id' | 'position'> & Partial<WorkoutSetRow>>
-      client_progress: Table<ProgressRow, Pick<ProgressRow, 'trainer_id' | 'client_id' | 'recorded_on'> & Partial<ProgressRow>>
-      client_custom_metrics: Table<MetricRow, Pick<MetricRow, 'trainer_id' | 'client_id' | 'name'> & Partial<MetricRow>>
-      client_progress_custom: Table<ProgressCustomRow, Pick<ProgressCustomRow, 'trainer_id' | 'client_id' | 'progress_id' | 'metric_id' | 'value'> & Partial<ProgressCustomRow>>
-      client_trainers: Table<ClientTrainerRow, Pick<ClientTrainerRow, 'client_id' | 'trainer_id'> & Partial<ClientTrainerRow>>
-      client_invitations: Table<ClientInvitationRow, Pick<ClientInvitationRow, 'client_id' | 'created_by' | 'target_role' | 'code_hash' | 'expires_at'> & Partial<ClientInvitationRow>>
-      client_training_summaries: Table<TrainingSummaryRow>
-      client_published_training_summaries: Table<PublishedTrainingSummaryRow>
+      client_custom_metrics: {
+        Row: {
+          archived_at: string | null
+          client_id: string
+          created_at: string
+          id: string
+          name: string
+          trainer_id: string
+          unit: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          name: string
+          trainer_id: string
+          unit?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          trainer_id?: string
+          unit?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_metrics_client_fk"
+            columns: ["client_id", "trainer_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id", "trainer_id"]
+          },
+        ]
+      }
+      client_goals: {
+        Row: {
+          archived_at: string | null
+          client_id: string
+          created_at: string
+          created_by: string
+          id: string
+          status: string
+          target_date: string | null
+          title: string
+          trainer_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          client_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          status?: string
+          target_date?: string | null
+          title: string
+          trainer_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          status?: string
+          target_date?: string | null
+          title?: string
+          trainer_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_goals_client_fk"
+            columns: ["client_id", "trainer_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id", "trainer_id"]
+          },
+        ]
+      }
+      client_invitations: {
+        Row: {
+          claimed_at: string | null
+          claimed_by: string | null
+          client_id: string
+          code_hash: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          revoked_at: string | null
+          target_role: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          client_id: string
+          code_hash: string
+          created_at?: string
+          created_by: string
+          expires_at: string
+          id?: string
+          revoked_at?: string | null
+          target_role: string
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          client_id?: string
+          code_hash?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          revoked_at?: string | null
+          target_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_invitations_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_invitations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_invitations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_private_details: {
+        Row: {
+          client_id: string
+          created_at: string
+          note: string | null
+          trainer_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          note?: string | null
+          trainer_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          note?: string | null
+          trainer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_private_client_fk"
+            columns: ["client_id", "trainer_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id", "trainer_id"]
+          },
+        ]
+      }
+      client_progress: {
+        Row: {
+          chest_cm: number | null
+          client_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          hip_cm: number | null
+          id: string
+          notes: string | null
+          recorded_on: string
+          trainer_id: string
+          updated_at: string
+          version: number
+          waist_cm: number | null
+          weight_kg: number | null
+        }
+        Insert: {
+          chest_cm?: number | null
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          hip_cm?: number | null
+          id?: string
+          notes?: string | null
+          recorded_on: string
+          trainer_id: string
+          updated_at?: string
+          version?: number
+          waist_cm?: number | null
+          weight_kg?: number | null
+        }
+        Update: {
+          chest_cm?: number | null
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          hip_cm?: number | null
+          id?: string
+          notes?: string | null
+          recorded_on?: string
+          trainer_id?: string
+          updated_at?: string
+          version?: number
+          waist_cm?: number | null
+          weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_progress_client_fk"
+            columns: ["client_id", "trainer_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id", "trainer_id"]
+          },
+          {
+            foreignKeyName: "client_progress_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_progress_custom: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          metric_id: string
+          progress_id: string
+          trainer_id: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          metric_id: string
+          progress_id: string
+          trainer_id: string
+          updated_at?: string
+          value: number
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          metric_id?: string
+          progress_id?: string
+          trainer_id?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progress_custom_metric_fk"
+            columns: ["metric_id", "trainer_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "client_custom_metrics"
+            referencedColumns: ["id", "trainer_id", "client_id"]
+          },
+          {
+            foreignKeyName: "progress_custom_progress_fk"
+            columns: ["progress_id", "trainer_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "client_progress"
+            referencedColumns: ["id", "trainer_id", "client_id"]
+          },
+        ]
+      }
+      client_published_training_summaries: {
+        Row: {
+          client_id: string
+          created_at: string
+          display_metrics: Json
+          generated_at: string
+          id: string
+          period_end: string
+          period_start: string
+          published_at: string
+          published_by: string | null
+          source_summary_id: string
+          summary: Json
+          trainer_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          display_metrics?: Json
+          generated_at: string
+          id?: string
+          period_end: string
+          period_start: string
+          published_at?: string
+          published_by?: string | null
+          source_summary_id: string
+          summary: Json
+          trainer_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          display_metrics?: Json
+          generated_at?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          published_at?: string
+          published_by?: string | null
+          source_summary_id?: string
+          summary?: Json
+          trainer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_published_training_summaries_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "client_published_training_summaries_source_summary_id_fkey"
+            columns: ["source_summary_id"]
+            isOneToOne: true
+            referencedRelation: "client_training_summaries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "published_training_summaries_client_fk"
+            columns: ["client_id", "trainer_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id", "trainer_id"]
+          },
+        ]
+      }
+      client_trainers: {
+        Row: {
+          alias: string | null
+          client_id: string
+          joined_at: string
+          note: string | null
+          trainer_id: string
+          version: number
+        }
+        Insert: {
+          alias?: string | null
+          client_id: string
+          joined_at?: string
+          note?: string | null
+          trainer_id: string
+          version?: number
+        }
+        Update: {
+          alias?: string | null
+          client_id?: string
+          joined_at?: string
+          note?: string | null
+          trainer_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_trainers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_trainers_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      client_training_summaries: {
+        Row: {
+          client_id: string
+          client_summary: Json
+          created_at: string
+          display_metrics: Json
+          generated_at: string
+          id: string
+          input_fingerprint: string
+          input_stats: Json
+          model_uri: string
+          period_end: string
+          period_start: string
+          prompt_version: string
+          summary: string
+          token_usage: Json | null
+          trainer_id: string
+          trainer_summary: Json
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          client_id: string
+          client_summary: Json
+          created_at?: string
+          display_metrics?: Json
+          generated_at?: string
+          id?: string
+          input_fingerprint: string
+          input_stats?: Json
+          model_uri: string
+          period_end: string
+          period_start: string
+          prompt_version: string
+          summary: string
+          token_usage?: Json | null
+          trainer_id: string
+          trainer_summary: Json
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          client_id?: string
+          client_summary?: Json
+          created_at?: string
+          display_metrics?: Json
+          generated_at?: string
+          id?: string
+          input_fingerprint?: string
+          input_stats?: Json
+          model_uri?: string
+          period_end?: string
+          period_start?: string
+          prompt_version?: string
+          summary?: string
+          token_usage?: Json | null
+          trainer_id?: string
+          trainer_summary?: Json
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_training_summaries_client_fk"
+            columns: ["client_id", "trainer_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id", "trainer_id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          age_updated_at: string
+          age_years: number
+          archived_at: string | null
+          auth_user_id: string | null
+          created_at: string
+          full_name: string
+          gender: string
+          goal: string | null
+          height_cm: number
+          id: string
+          trainer_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          age_updated_at?: string
+          age_years: number
+          archived_at?: string | null
+          auth_user_id?: string | null
+          created_at?: string
+          full_name: string
+          gender: string
+          goal?: string | null
+          height_cm: number
+          id?: string
+          trainer_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          age_updated_at?: string
+          age_years?: number
+          archived_at?: string | null
+          auth_user_id?: string | null
+          created_at?: string
+          full_name?: string
+          gender?: string
+          goal?: string | null
+          height_cm?: number
+          id?: string
+          trainer_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_partition_owner_fk"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_exercises: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          input_kind: string
+          muscle_group: string
+          name: string
+          trainer_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          input_kind: string
+          muscle_group: string
+          name: string
+          trainer_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          input_kind?: string
+          muscle_group?: string
+          name?: string
+          trainer_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_exercises_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      goal_stages: {
+        Row: {
+          client_id: string
+          created_at: string
+          ends_on: string
+          goal_id: string
+          id: string
+          position: number
+          starts_on: string
+          title: string
+          trainer_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          ends_on: string
+          goal_id: string
+          id?: string
+          position?: number
+          starts_on: string
+          title: string
+          trainer_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          ends_on?: string
+          goal_id?: string
+          id?: string
+          position?: number
+          starts_on?: string
+          title?: string
+          trainer_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_stages_goal_fk"
+            columns: ["goal_id", "trainer_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "client_goals"
+            referencedColumns: ["id", "trainer_id", "client_id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          account_role: string
+          created_at: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          account_role?: string
+          created_at?: string
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          account_role?: string
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      trainers: {
+        Row: {
+          created_at: string
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workout_exercises: {
+        Row: {
+          block_id: string
+          block_preset: string
+          block_rounds: number
+          block_type: string
+          client_id: string
+          created_at: string
+          custom_exercise_id: string | null
+          exercise_name: string
+          exercise_ref: string
+          exercise_source: string
+          id: string
+          input_kind: string
+          muscle_group: string
+          position: number
+          rest_between_exercises_sec: number
+          rest_between_rounds_sec: number
+          rest_between_sets_sec: number
+          trainer_comment: string | null
+          trainer_id: string
+          updated_at: string
+          workout_id: string
+        }
+        Insert: {
+          block_id?: string
+          block_preset?: string
+          block_rounds?: number
+          block_type?: string
+          client_id: string
+          created_at?: string
+          custom_exercise_id?: string | null
+          exercise_name: string
+          exercise_ref: string
+          exercise_source: string
+          id?: string
+          input_kind: string
+          muscle_group: string
+          position: number
+          rest_between_exercises_sec?: number
+          rest_between_rounds_sec?: number
+          rest_between_sets_sec?: number
+          trainer_comment?: string | null
+          trainer_id: string
+          updated_at?: string
+          workout_id: string
+        }
+        Update: {
+          block_id?: string
+          block_preset?: string
+          block_rounds?: number
+          block_type?: string
+          client_id?: string
+          created_at?: string
+          custom_exercise_id?: string | null
+          exercise_name?: string
+          exercise_ref?: string
+          exercise_source?: string
+          id?: string
+          input_kind?: string
+          muscle_group?: string
+          position?: number
+          rest_between_exercises_sec?: number
+          rest_between_rounds_sec?: number
+          rest_between_sets_sec?: number
+          trainer_comment?: string | null
+          trainer_id?: string
+          updated_at?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_exercises_custom_fk"
+            columns: ["custom_exercise_id", "trainer_id"]
+            isOneToOne: false
+            referencedRelation: "custom_exercises"
+            referencedColumns: ["id", "trainer_id"]
+          },
+          {
+            foreignKeyName: "workout_exercises_workout_fk"
+            columns: ["workout_id", "trainer_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id", "trainer_id", "client_id"]
+          },
+        ]
+      }
+      workout_sets: {
+        Row: {
+          client_id: string
+          confirmed_at: string | null
+          created_at: string
+          fact_distance_km: number | null
+          fact_duration_min: number | null
+          fact_duration_sec: number | null
+          fact_reps: number | null
+          fact_rpe: number | null
+          fact_weight_kg: number | null
+          id: string
+          plan_distance_km: number | null
+          plan_duration_min: number | null
+          plan_duration_sec: number | null
+          plan_reps: number | null
+          plan_rpe: number | null
+          plan_weight_kg: number | null
+          position: number
+          trainer_id: string
+          updated_at: string
+          version: number
+          workout_exercise_id: string
+        }
+        Insert: {
+          client_id: string
+          confirmed_at?: string | null
+          created_at?: string
+          fact_distance_km?: number | null
+          fact_duration_min?: number | null
+          fact_duration_sec?: number | null
+          fact_reps?: number | null
+          fact_rpe?: number | null
+          fact_weight_kg?: number | null
+          id?: string
+          plan_distance_km?: number | null
+          plan_duration_min?: number | null
+          plan_duration_sec?: number | null
+          plan_reps?: number | null
+          plan_rpe?: number | null
+          plan_weight_kg?: number | null
+          position: number
+          trainer_id: string
+          updated_at?: string
+          version?: number
+          workout_exercise_id: string
+        }
+        Update: {
+          client_id?: string
+          confirmed_at?: string | null
+          created_at?: string
+          fact_distance_km?: number | null
+          fact_duration_min?: number | null
+          fact_duration_sec?: number | null
+          fact_reps?: number | null
+          fact_rpe?: number | null
+          fact_weight_kg?: number | null
+          id?: string
+          plan_distance_km?: number | null
+          plan_duration_min?: number | null
+          plan_duration_sec?: number | null
+          plan_reps?: number | null
+          plan_rpe?: number | null
+          plan_weight_kg?: number | null
+          position?: number
+          trainer_id?: string
+          updated_at?: string
+          version?: number
+          workout_exercise_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_sets_exercise_fk"
+            columns: ["workout_exercise_id", "trainer_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "workout_exercises"
+            referencedColumns: ["id", "trainer_id", "client_id"]
+          },
+        ]
+      }
+      workouts: {
+        Row: {
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          end_time: string | null
+          id: string
+          notes: string | null
+          stage_id: string | null
+          start_time: string | null
+          started_at: string | null
+          status: string
+          trainer_id: string
+          updated_at: string
+          version: number
+          workout_date: string
+        }
+        Insert: {
+          client_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          stage_id?: string | null
+          start_time?: string | null
+          started_at?: string | null
+          status?: string
+          trainer_id: string
+          updated_at?: string
+          version?: number
+          workout_date: string
+        }
+        Update: {
+          client_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          stage_id?: string | null
+          start_time?: string | null
+          started_at?: string | null
+          status?: string
+          trainer_id?: string
+          updated_at?: string
+          version?: number
+          workout_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workouts_client_fk"
+            columns: ["client_id", "trainer_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id", "trainer_id"]
+          },
+          {
+            foreignKeyName: "workouts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workouts_stage_fk"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "goal_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
-    Views: Record<string, never>
+    Views: {
+      [_ in never]: never
+    }
     Functions: {
-      initialize_account: { Args: { p_role: string; p_first_name?: string | null; p_last_name?: string | null; p_timezone?: string }; Returns: ProfileRow }
-      initialize_trainer: { Args: { p_first_name?: string | null; p_last_name?: string | null; p_timezone?: string }; Returns: TrainerRow }
-      get_my_client: { Args: Record<string, never>; Returns: MyClientRow[] }
+      append_live_exercise: {
+        Args: {
+          p_exercise: Json
+          p_expected_version: number
+          p_workout_id: string
+        }
+        Returns: number
+      }
+      append_live_set: {
+        Args: { p_expected_version: number; p_workout_exercise_id: string }
+        Returns: number
+      }
+      archive_client_goal: {
+        Args: { p_expected_version: number; p_goal_id: string }
+        Returns: undefined
+      }
+      authorize_client_mutation: {
+        Args: { p_allow_owner: boolean; p_client_id: string }
+        Returns: string
+      }
+      authorize_workout_mutation: {
+        Args: { p_client_can_execute: boolean; p_workout_id: string }
+        Returns: string
+      }
       can_access_client: { Args: { p_client_id: string }; Returns: boolean }
       can_read_workout: { Args: { p_workout_id: string }; Returns: boolean }
-      create_client_invitation: { Args: { p_client_id: string; p_target_role: string }; Returns: string }
       claim_client_invitation: { Args: { p_code: string }; Returns: string }
-      revoke_client_invitation: { Args: { p_invitation_id: string }; Returns: undefined }
-      remove_client_trainer: { Args: { p_client_id: string; p_trainer_id: string }; Returns: undefined }
-      leave_client_space: { Args: { p_client_id: string }; Returns: undefined }
-      list_client_trainers: { Args: { p_client_id: string }; Returns: TrainerMembershipRow[] }
-      list_clients: { Args: { p_include_archived?: boolean }; Returns: ClientListRow[] }
-      list_workouts: { Args: { p_from?: string | null; p_to?: string | null; p_client_id?: string | null; p_limit?: number; p_offset?: number }; Returns: WorkoutListRow[] }
-      list_workout_summaries: { Args: { p_client_id: string }; Returns: WorkoutSummaryRow[] }
-      list_latest_exercise_results: { Args: { p_client_id: string; p_exercise_refs: string[] }; Returns: PreviousExerciseResultRow[] }
+      confirm_live_set: {
+        Args: { p_expected_version: number; p_set_id: string }
+        Returns: number
+      }
       create_client: { Args: { p_client: Json }; Returns: string }
+      create_client_invitation: {
+        Args: { p_client_id: string; p_target_role: string }
+        Returns: string
+      }
       create_own_client: { Args: { p_client: Json }; Returns: string }
-      update_client: { Args: { p_client: Json; p_expected_version: number }; Returns: number }
-      update_own_client: { Args: { p_client: Json; p_expected_version: number }; Returns: number }
-      update_client_trainer_preferences: { Args: { p_client_id: string; p_alias: string; p_note: string | null; p_expected_version: number }; Returns: number }
-      get_client_goal: { Args: { p_client_id: string }; Returns: Json }
-      save_client_goal: { Args: { p_goal: Json; p_expected_version?: number }; Returns: string }
-      archive_client_goal: { Args: { p_goal_id: string; p_expected_version: number }; Returns: undefined }
-      save_goal_stage: { Args: { p_stage: Json; p_expected_version?: number }; Returns: string }
       delete_goal_stage: { Args: { p_stage_id: string }; Returns: undefined }
-      save_workout: { Args: { p_workout: Json; p_expected_version?: number | null }; Returns: string }
-      save_completed_workout: { Args: { p_workout: Json; p_expected_version?: number | null }; Returns: string }
-      start_workout: { Args: { p_workout_id: string; p_expected_version: number }; Returns: number }
-      save_live_set_draft: { Args: { p_set_id: string; p_draft: Json; p_expected_version: number }; Returns: number }
-      confirm_live_set: { Args: { p_set_id: string; p_expected_version: number }; Returns: number }
-      append_live_exercise: { Args: { p_workout_id: string; p_exercise: Json; p_expected_version: number }; Returns: number }
-      append_live_set: { Args: { p_workout_exercise_id: string; p_expected_version: number }; Returns: number }
-      remove_live_set: { Args: { p_set_id: string; p_expected_version: number }; Returns: number }
-      set_exercise_comment: { Args: { p_exercise_id: string; p_comment: string; p_expected_version: number }; Returns: number }
-      reorder_live_block: { Args: { p_workout_id: string; p_block_id: string; p_direction: number; p_expected_version: number }; Returns: number }
-      replace_live_exercise: { Args: { p_workout_id: string; p_exercise_id: string; p_exercise: Json; p_expected_version: number }; Returns: number }
-      finish_workout: { Args: { p_workout_id: string; p_expected_version: number }; Returns: number }
-      save_progress: { Args: { p_progress: Json; p_expected_version?: number | null }; Returns: string }
-      soft_delete_workout: { Args: { p_workout_id: string; p_expected_version: number }; Returns: undefined }
-      soft_delete_progress: { Args: { p_progress_id: string; p_expected_version: number }; Returns: undefined }
-      publish_training_summary: { Args: { p_summary_id: string; p_client_summary: Json; p_expected_version: number }; Returns: number[] }
-      unpublish_training_summary: { Args: { p_summary_id: string; p_expected_version: number }; Returns: number }
+      finish_workout: {
+        Args: { p_expected_version: number; p_workout_id: string }
+        Returns: number
+      }
+      get_client_goal: { Args: { p_client_id: string }; Returns: Json }
+      get_my_client: {
+        Args: never
+        Returns: {
+          age_updated_at: string
+          age_years: number
+          archived_at: string
+          current_weight_kg: number
+          full_name: string
+          gender: string
+          goal: string
+          height_cm: number
+          id: string
+          version: number
+        }[]
+      }
+      initialize_account: {
+        Args: {
+          p_first_name?: string | null
+          p_last_name?: string | null
+          p_role: string
+          p_timezone?: string
+        }
+        Returns: {
+          account_role: string
+          created_at: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          timezone: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      initialize_trainer: {
+        Args: {
+          p_first_name?: string
+          p_last_name?: string
+          p_timezone?: string
+        }
+        Returns: {
+          created_at: string
+          profile_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trainers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      leave_client_space: { Args: { p_client_id: string }; Returns: undefined }
+      list_client_trainers: {
+        Args: { p_client_id: string }
+        Returns: {
+          first_name: string
+          is_root: boolean
+          joined_at: string
+          last_name: string
+          trainer_id: string
+        }[]
+      }
+      list_clients: {
+        Args: { p_include_archived?: boolean }
+        Returns: {
+          age_updated_at: string
+          age_years: number
+          archived_at: string
+          canonical_full_name: string
+          current_weight_kg: number
+          full_name: string
+          gender: string
+          goal: string
+          has_account: boolean
+          height_cm: number
+          id: string
+          membership_version: number
+          note: string
+          version: number
+        }[]
+      }
+      list_latest_exercise_results: {
+        Args: { p_client_id: string; p_exercise_refs: string[] }
+        Returns: {
+          exercise_ref: string
+          sets: Json
+          workout_date: string
+        }[]
+      }
+      list_workout_summaries: {
+        Args: { p_client_id: string }
+        Returns: {
+          id: string
+          status: string
+          workout_date: string
+        }[]
+      }
+      list_workouts: {
+        Args: {
+          p_client_id?: string | null
+          p_from?: string | null
+          p_limit?: number
+          p_offset?: number
+          p_to?: string | null
+        }
+        Returns: WorkoutListRow[]
+      }
+      publish_training_summary: {
+        Args: {
+          p_client_summary: Json
+          p_expected_version: number
+          p_summary_id: string
+        }
+        Returns: {
+          next_version: number
+          published_id: string
+        }[]
+      }
+      remove_client_trainer: {
+        Args: { p_client_id: string; p_trainer_id: string }
+        Returns: undefined
+      }
+      remove_live_set: {
+        Args: { p_expected_version: number; p_set_id: string }
+        Returns: number
+      }
+      reorder_live_block: {
+        Args: {
+          p_block_id: string
+          p_direction: number
+          p_expected_version: number
+          p_workout_id: string
+        }
+        Returns: number
+      }
+      replace_live_exercise: {
+        Args: {
+          p_exercise: Json
+          p_exercise_id: string
+          p_expected_version: number
+          p_workout_id: string
+        }
+        Returns: number
+      }
+      revoke_client_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: undefined
+      }
+      save_client_goal: {
+        Args: { p_expected_version?: number; p_goal: Json }
+        Returns: string
+      }
+      save_completed_workout: {
+        Args: { p_expected_version?: number | null; p_workout: Json }
+        Returns: string
+      }
+      save_goal_stage: {
+        Args: { p_expected_version?: number; p_stage: Json }
+        Returns: string
+      }
+      save_live_set_draft: {
+        Args: { p_draft: Json; p_expected_version: number; p_set_id: string }
+        Returns: number
+      }
+      save_progress: {
+        Args: { p_expected_version?: number | null; p_progress: Json }
+        Returns: string
+      }
+      save_workout: {
+        Args: { p_expected_version?: number | null; p_workout: Json }
+        Returns: string
+      }
+      set_exercise_comment: {
+        Args: {
+          p_comment: string
+          p_exercise_id: string
+          p_expected_version: number
+        }
+        Returns: number
+      }
+      soft_delete_progress: {
+        Args: { p_expected_version: number; p_progress_id: string }
+        Returns: undefined
+      }
+      soft_delete_workout: {
+        Args: { p_expected_version: number; p_workout_id: string }
+        Returns: undefined
+      }
+      start_workout: {
+        Args: { p_expected_version: number; p_workout_id: string }
+        Returns: number
+      }
+      unpublish_training_summary: {
+        Args: { p_expected_version: number; p_summary_id: string }
+        Returns: number
+      }
+      update_client: {
+        Args: { p_client: Json; p_expected_version: number }
+        Returns: number
+      }
+      update_client_trainer_preferences: {
+        Args: {
+          p_alias: string
+          p_client_id: string
+          p_expected_version: number
+          p_note: string | null
+        }
+        Returns: number
+      }
+      update_own_client: {
+        Args: { p_client: Json; p_expected_version: number }
+        Returns: number
+      }
     }
-    Enums: Record<string, never>
-    CompositeTypes: Record<string, never>
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }
 
