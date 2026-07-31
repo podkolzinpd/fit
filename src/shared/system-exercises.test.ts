@@ -22,9 +22,11 @@ describe('system exercise catalog', () => {
 
   it('keeps the cardio input semantics', () => {
     expect(SYSTEM_EXERCISES.filter((exercise) => exercise.inputKind === 'distance')).toHaveLength(5)
-    // reps = ввод по времени (мин + повторы): изометрия на время (планки) + кардио.
+    // reps = ввод по времени и повторам: кардио-интервалы.
     expect(SYSTEM_EXERCISES.filter((exercise) => exercise.inputKind === 'reps').map((exercise) => exercise.name))
-      .toEqual(['Планка', 'Боковая планка', 'Прыжки со скакалкой', 'Берпи'])
+      .toEqual(['Прыжки со скакалкой', 'Берпи'])
+    expect(SYSTEM_EXERCISES.filter((exercise) => exercise.inputKind === 'duration').map((exercise) => exercise.name))
+      .toEqual(['Планка', 'Боковая планка'])
   })
 
   it('добавляет импортированный каталог поверх базового без дублей', () => {

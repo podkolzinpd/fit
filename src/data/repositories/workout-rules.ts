@@ -279,9 +279,15 @@ export function nextSetDraft(sets: WorkoutSetDraft[], inputKind: InputKind): Wor
   const position = sets.length
   const last = sets[sets.length - 1]
   if (!last) return { position }
-  if (inputKind === 'distance') return { position, durationMin: last.durationMin, distanceKm: last.distanceKm }
-  if (inputKind === 'reps') return { position, durationMin: last.durationMin, reps: last.reps }
-  return { position, weightKg: last.weightKg, reps: last.reps }
+  // Не добавляем undefined-поля: это сохраняет компактный payload и совместимость
+  // старых черновиков с durationMin.
+  const inherit = <T extends object>(values: T) => Object.fromEntries(
+    Object.entries(values).filter(([, value]) => value !== undefined),
+  ) as WorkoutSetDraft
+  if (inputKind === 'distance') return inherit({ position, durationSec: last.durationSec, durationMin: last.durationMin, distanceKm: last.distanceKm, rpe: last.rpe })
+  if (inputKind === 'reps') return inherit({ position, durationSec: last.durationSec, durationMin: last.durationMin, reps: last.reps, rpe: last.rpe })
+  if (inputKind === 'duration') return inherit({ position, durationSec: last.durationSec, durationMin: last.durationMin, rpe: last.rpe })
+  return inherit({ position, weightKg: last.weightKg, reps: last.reps, rpe: last.rpe })
 }
 
 export interface ExerciseChartPoint {
@@ -350,11 +356,23 @@ export function workoutDurationLabel(startedAt: string | null, completedAt: stri
 export function chartUnitFor(inputKind: InputKind): string {
   if (inputKind === 'distance') return 'км'
   if (inputKind === 'reps') return 'повт.'
+  if (inputKind === 'duration') return 'сек'
   return 'кг'
 }
 
-function setLine(weightKg?: number, reps?: number, distanceKm?: number, durationMin?: number): string {
-  return [weightKg && `${weightKg} кг`, reps && `${reps} повт.`, distanceKm && `${distanceKm} км`, durationMin && `${durationMin} мин`].filter(Boolean).join(' × ')
+export function durationSeconds(durationSec?: number, durationMin?: number): number | undefined {
+  return durationSec ?? (durationMin === undefined ? undefined : Math.round(durationMin * 60))
+}
+
+export function durationLabel(durationSec?: number, durationMin?: number): string | null {
+  const seconds = durationSeconds(durationSec, durationMin)
+  if (seconds === undefined) return null
+  if (seconds < 60) return `${seconds} сек`
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+}
+
+function setLine(weightKg?: number, reps?: number, distanceKm?: number, durationSec?: number, durationMin?: number, rpe?: number): string {
+  return [weightKg && `${weightKg} кг`, reps && `${reps} повт.`, distanceKm && `${distanceKm} км`, durationLabel(durationSec, durationMin), rpe !== undefined && `RPE ${rpe}`].filter(Boolean).join(' × ')
 }
 
 // Результат подхода: строка факта (факт, иначе план) и приписка плана — только
@@ -364,14 +382,18 @@ export function formatFactVsPlan(set: WorkoutSet): { fact: string; planNote: str
   const weight = set.fact.weightKg ?? set.weightKg
   const reps = set.fact.reps ?? set.reps
   const distance = set.fact.distanceKm ?? set.distanceKm
-  const duration = set.fact.durationMin ?? set.durationMin
-  const fact = setLine(weight, reps, distance, duration) || 'Без результата'
+  const durationSec = set.fact.durationSec ?? set.durationSec
+  const durationMin = durationSec === undefined ? (set.fact.durationMin ?? set.durationMin) : undefined
+  const rpe = set.fact.rpe ?? set.rpe
+  const fact = setLine(weight, reps, distance, durationSec, durationMin, rpe) || 'Без результата'
   const differs =
     (set.fact.weightKg !== undefined && set.fact.weightKg !== set.weightKg) ||
     (set.fact.reps !== undefined && set.fact.reps !== set.reps) ||
     (set.fact.distanceKm !== undefined && set.fact.distanceKm !== set.distanceKm) ||
-    (set.fact.durationMin !== undefined && set.fact.durationMin !== set.durationMin)
-  const planNote = differs ? `план ${setLine(set.weightKg, set.reps, set.distanceKm, set.durationMin)}` : null
+    (set.fact.durationSec !== undefined && set.fact.durationSec !== set.durationSec) ||
+    (set.fact.durationMin !== undefined && set.fact.durationMin !== set.durationMin) ||
+    (set.fact.rpe !== undefined && set.fact.rpe !== set.rpe)
+  const planNote = differs ? `план ${setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin, set.rpe)}` : null
   return { fact, planNote }
 }
 
@@ -381,7 +403,7 @@ export function formatFactVsPlan(set: WorkoutSet): { fact: string; planNote: str
 // выдаём (иначе история расходится с графиком «строго по факту»).
 export function factLine(set: WorkoutSet): string | null {
   if (!set.confirmedAt) return null
-  const line = setLine(set.fact.weightKg, set.fact.reps, set.fact.distanceKm, set.fact.durationMin)
+  const line = setLine(set.fact.weightKg, set.fact.reps, set.fact.distanceKm, set.fact.durationSec, set.fact.durationMin, set.fact.rpe)
   return line || null
 }
 
@@ -459,6 +481,7 @@ export function tonnageLabel(kg: number): string {
 function setMetric(inputKind: InputKind, set: WorkoutSet): number | undefined {
   if (inputKind === 'distance') return set.fact.distanceKm
   if (inputKind === 'reps') return set.fact.reps
+  if (inputKind === 'duration') return durationSeconds(set.fact.durationSec, set.fact.durationMin)
   return set.fact.weightKg
 }
 
@@ -507,7 +530,8 @@ export function copyWorkout(source: Workout, workoutDate = source.workoutDate): 
       restBetweenExercisesSec: exercise.restBetweenExercisesSec, restBetweenRoundsSec: exercise.restBetweenRoundsSec, restBetweenSetsSec: exercise.restBetweenSetsSec,
       trainerComment: exercise.trainerComment,
       sets: exercise.sets.map((set) => ({ position: set.position, weightKg: set.weightKg,
-        reps: set.reps, durationMin: set.durationMin, distanceKm: set.distanceKm })),
+        reps: set.reps, durationSec: set.durationSec, durationMin: set.durationMin,
+        distanceKm: set.distanceKm, rpe: set.rpe })),
     })),
   }
 }

@@ -154,7 +154,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByText('61 кг')).toBeVisible()
 })
 
-test('live: планка вводится в минутах, таймер закреплён, подтверждённый подход правится карандашом', async ({ page }) => {
+test('live: планка вводится в секундах, таймер закреплён, подтверждённый подход правится карандашом', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -175,10 +175,10 @@ test('live: планка вводится в минутах, таймер зак
   await page.getByLabel('Поиск упражнения').fill('Планка')
   await page.getByRole('button', { name: /^Планка/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
-  // #4: планка — время (мин), а не вес (кг).
-  await expect(page.getByLabel('Время, подход 1')).toBeVisible()
-  await expect(page.getByLabel('Время, подход 1')).toHaveAttribute('placeholder', 'мин')
-  await page.getByLabel('Время, подход 1').fill('1')
+  // Планка — точное время в секундах, а не вес или минуты.
+  await expect(page.getByLabel('Время, сек, подход 1')).toBeVisible()
+  await expect(page.getByLabel('Время, сек, подход 1')).toHaveAttribute('placeholder', 'сек')
+  await page.getByLabel('Время, сек, подход 1').fill('60')
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
@@ -187,13 +187,13 @@ test('live: планка вводится в минутах, таймер зак
   // #3: закреплённый блок с таймером (и отдыхом) sticky — не уезжает при скролле.
   await expect(page.locator('.live-pinned')).toHaveCSS('position', 'sticky')
   // #6: подтверждаем подход, затем правим карандашом.
-  await page.getByLabel('Фактическое время').first().fill('2')
+  await page.getByLabel('Фактическое время, сек').first().fill('75')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
-  await expect(page.getByLabel('Фактическое время').first()).toBeDisabled()
+  await expect(page.getByLabel('Фактическое время, сек').first()).toBeDisabled()
   await page.getByRole('button', { name: 'Редактировать подход' }).first().click()
-  await expect(page.getByLabel('Фактическое время').first()).toBeEnabled()
-  await page.getByLabel('Фактическое время').first().fill('3')
+  await expect(page.getByLabel('Фактическое время, сек').first()).toBeEnabled()
+  await page.getByLabel('Фактическое время, сек').first().fill('90')
   await page.getByRole('button', { name: 'Сохранить' }).first().click()
   await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
 })

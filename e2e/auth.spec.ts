@@ -141,7 +141,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
     page.getByRole('button', { name: 'Сохранить' }).click(),
   ])
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
-  await page.getByLabel('Фактическое время').fill('25')
+  await page.getByLabel('Фактическое время, сек').fill('25')
   await page.getByLabel('Фактическая дистанция').fill('4')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
   await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
@@ -153,7 +153,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.goto(workoutUrl)
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
   await expect(page).toHaveURL(/\/live$/)
-  await page.getByLabel('Фактическое время').fill('30')
+  await page.getByLabel('Фактическое время, сек').fill('30')
   await page.getByLabel('Фактическая дистанция').fill('5')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
   await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()

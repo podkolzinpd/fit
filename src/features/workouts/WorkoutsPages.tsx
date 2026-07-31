@@ -7,7 +7,7 @@ import { goalsRepository } from '../../data/repositories/goals.repository'
 import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
-import { blockLabel, chartUnitFor, copyWorkout, exerciseChartPoints, exerciseSummary, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, copyWorkout, durationLabel, durationSeconds, exerciseChartPoints, exerciseSummary, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -324,7 +324,7 @@ export function WorkoutDetailPage() {
   </Page>
 }
 
-function formatSet(set: WorkoutSet) { const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, set.distanceKm && `${set.distanceKm} км`, set.durationMin && `${set.durationMin} мин`].filter(Boolean).join(' × '); return plan || 'Подход без плана' }
+function formatSet(set: WorkoutSet) { const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, set.distanceKm && `${set.distanceKm} км`, durationLabel(set.durationSec, set.durationMin), set.rpe !== undefined && `RPE ${set.rpe}`].filter(Boolean).join(' × '); return plan || 'Подход без плана' }
 
 // Результат подхода в завершённой тренировке: подтверждённый — только факт;
 // неподтверждённый — план с пометкой «не выполнено» (план за факт не выдаём).
@@ -344,12 +344,18 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet): st
     if (set.weightKg !== undefined) parts.push(`${set.weightKg} кг`)
     if (set.reps !== undefined) parts.push(`${set.reps} повт.`)
   } else if (inputKind === 'reps') {
-    if (set.durationMin !== undefined) parts.push(`${set.durationMin} мин`)
+    const duration = durationLabel(set.durationSec, set.durationMin)
+    if (duration) parts.push(duration)
     if (set.reps !== undefined) parts.push(`${set.reps} повт.`)
+  } else if (inputKind === 'duration') {
+    const duration = durationLabel(set.durationSec, set.durationMin)
+    if (duration) parts.push(duration)
   } else {
-    if (set.durationMin !== undefined) parts.push(`${set.durationMin} мин`)
+    const duration = durationLabel(set.durationSec, set.durationMin)
+    if (duration) parts.push(duration)
     if (set.distanceKm !== undefined) parts.push(`${set.distanceKm} км`)
   }
+  if (set.rpe !== undefined) parts.push(`RPE ${set.rpe}`)
   return parts.length ? parts.join(' × ') : null
 }
 
@@ -359,7 +365,7 @@ function deviationNote(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet
   if (!set.confirmedAt) return null
   const pick = inputKind === 'strength'
     ? { fact: set.fact.weightKg, plan: set.weightKg, unit: 'кг' }
-    : { fact: set.fact.durationMin, plan: set.durationMin, unit: 'мин' }
+    : { fact: durationSeconds(set.fact.durationSec, set.fact.durationMin), plan: durationSeconds(set.durationSec, set.durationMin), unit: 'сек' }
   if (pick.fact === undefined || pick.plan === undefined) return null
   const diff = Math.round((pick.fact - pick.plan) * 10) / 10
   if (diff === 0) return null
@@ -415,8 +421,20 @@ function fillFactFromPlan(form: HTMLFormElement | null, inputKind: ExerciseSnaps
     if (el instanceof HTMLInputElement) setNativeInputValue(el, String(plan))
   }
   if (inputKind === 'strength') { put('weightKg', set.weightKg); put('reps', set.reps) }
-  else if (inputKind === 'reps') { put('durationMin', set.durationMin); put('reps', set.reps) }
-  else { put('durationMin', set.durationMin); put('distanceKm', set.distanceKm) }
+  else if (inputKind === 'reps') { put('durationSec', durationSeconds(set.durationSec, set.durationMin)); put('reps', set.reps) }
+  else if (inputKind === 'duration') put('durationSec', durationSeconds(set.durationSec, set.durationMin))
+  else { put('durationSec', durationSeconds(set.durationSec, set.durationMin)); put('distanceKm', set.distanceKm) }
+}
+
+const RPE_OPTIONS = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10] as const
+
+function LiveRpeField({ defaultValue, disabled, inputKey }: { defaultValue: number | undefined; disabled: boolean; inputKey: string }) {
+  return <label className="set-rpe-field">RPE
+    <select key={inputKey} name="rpe" aria-label="Фактический RPE" defaultValue={defaultValue ?? ''} disabled={disabled}>
+      <option value="">Не указывать</option>
+      {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
+    </select>
+  </label>
 }
 
 function LiveSetFields({ inputKind, set, editing = false }: { inputKind: ExerciseSnapshot['inputKind']; set: WorkoutSet; editing?: boolean }) {
@@ -434,18 +452,25 @@ function LiveSetFields({ inputKind, set, editing = false }: { inputKind: Exercis
   // Для подтверждённого подхода (в т.ч. при правке) показываем факт, иначе план.
   const confirmed = Boolean(set.confirmedAt)
   const value = (fact: number | undefined, plan: number | undefined) => (confirmed ? (fact ?? plan) : fact)
-  if (inputKind === 'strength') return <div className={rowClass}>
+  const factDuration = durationSeconds(set.fact.durationSec, set.fact.durationMin)
+  const planDuration = durationSeconds(set.durationSec, set.durationMin)
+  // Целевой RPE — ориентир из плана, а не автоматически внесённый факт.
+  const rpe = <LiveRpeField defaultValue={set.fact.rpe} disabled={locked} inputKey={`rpe-${k}`} />
+  if (inputKind === 'strength') return <><div className={rowClass}>
     <LiveStepperInput name="weightKg" label="Фактический вес" shortLabel="вес" placeholder={set.weightKg === undefined ? 'кг' : `${set.weightKg} кг`} defaultValue={value(set.fact.weightKg, set.weightKg)} baselineValue={set.weightKg} step={2.5} disabled={locked} inputKey={`w-${k}`} />
     <LiveStepperInput name="reps" label="Фактические повторы" shortLabel="повторы" placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} defaultValue={value(set.fact.reps, set.reps)} baselineValue={set.reps} step={1} disabled={locked} inputKey={`r-${k}`} />
-  </div>
-  if (inputKind === 'reps') return <div className={rowClass}>
-    <LiveStepperInput name="durationMin" label="Фактическое время" shortLabel="время" placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} defaultValue={value(set.fact.durationMin, set.durationMin)} baselineValue={set.durationMin} step={0.5} disabled={locked} inputKey={`d-${k}`} />
+  </div>{rpe}</>
+  if (inputKind === 'reps') return <><div className={rowClass}>
+    <LiveStepperInput name="durationSec" label="Фактическое время, сек" shortLabel="секунды" placeholder={durationLabel(set.durationSec, set.durationMin) ?? 'сек'} defaultValue={value(factDuration, planDuration)} baselineValue={planDuration} step={15} disabled={locked} inputKey={`d-${k}`} />
     <LiveStepperInput name="reps" label="Фактические повторы" shortLabel="повторы" placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} defaultValue={value(set.fact.reps, set.reps)} baselineValue={set.reps} step={1} disabled={locked} inputKey={`r-${k}`} />
-  </div>
-  return <div className={rowClass}>
-    <LiveStepperInput name="durationMin" label="Фактическое время" shortLabel="время" placeholder={set.durationMin === undefined ? 'мин' : `${set.durationMin} мин`} defaultValue={value(set.fact.durationMin, set.durationMin)} baselineValue={set.durationMin} step={0.5} disabled={locked} inputKey={`d-${k}`} />
+  </div>{rpe}</>
+  if (inputKind === 'duration') return <><div className={rowClass}>
+    <LiveStepperInput name="durationSec" label="Фактическое время, сек" shortLabel="секунды" placeholder={durationLabel(set.durationSec, set.durationMin) ?? 'сек'} defaultValue={value(factDuration, planDuration)} baselineValue={planDuration} step={15} disabled={locked} inputKey={`d-${k}`} />
+  </div>{rpe}</>
+  return <><div className={rowClass}>
+    <LiveStepperInput name="durationSec" label="Фактическое время, сек" shortLabel="секунды" placeholder={durationLabel(set.durationSec, set.durationMin) ?? 'сек'} defaultValue={value(factDuration, planDuration)} baselineValue={planDuration} step={15} disabled={locked} inputKey={`d-${k}`} />
     <LiveStepperInput name="distanceKm" label="Фактическая дистанция" shortLabel="дистанция" placeholder={set.distanceKm === undefined ? 'км' : `${set.distanceKm} км`} defaultValue={value(set.fact.distanceKm, set.distanceKm)} baselineValue={set.distanceKm} step={0.1} disabled={locked} inputKey={`dist-${k}`} />
-  </div>
+  </div>{rpe}</>
 }
 
 const REST_STEP = 15
@@ -584,7 +609,7 @@ export function LiveWorkoutPage() {
     ])
     navigate(`/workouts/${workoutId}`, { state: { justCompleted: true } })
   } })
-  function draftFrom(form: HTMLFormElement): LiveSetDraft { const values = new FormData(form); return { weightKg: numberValue(values.get('weightKg')), reps: numberValue(values.get('reps')), distanceKm: numberValue(values.get('distanceKm')), durationMin: numberValue(values.get('durationMin')) } }
+  function draftFrom(form: HTMLFormElement): LiveSetDraft { const values = new FormData(form); return { weightKg: numberValue(values.get('weightKg')), reps: numberValue(values.get('reps')), distanceKm: numberValue(values.get('distanceKm')), durationSec: numberValue(values.get('durationSec')), rpe: numberValue(values.get('rpe')) } }
   // Derive the countdown from a wall-clock deadline so it stays correct even
   // when the tab is backgrounded and timers are throttled by the browser.
   const restActive = restRemaining !== null

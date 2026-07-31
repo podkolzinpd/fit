@@ -46,6 +46,7 @@ type SetRow = {
   fact_weight_kg: number | null
   fact_reps: number | null
   fact_duration_min: number | null
+  fact_duration_sec: number | null
   fact_distance_km: number | null
 }
 
@@ -301,9 +302,10 @@ function buildProgressData(
     const reps = exerciseSets.flatMap((set) =>
       set.fact_reps === null ? [] : [Number(set.fact_reps)]
     )
-    const durations = exerciseSets.flatMap((set) =>
-      set.fact_duration_min === null ? [] : [Number(set.fact_duration_min)]
-    )
+    const durations = exerciseSets.flatMap((set) => {
+      if (set.fact_duration_sec !== null) return [Number(set.fact_duration_sec) / 60]
+      return set.fact_duration_min === null ? [] : [Number(set.fact_duration_min)]
+    })
     const distances = exerciseSets.flatMap((set) =>
       set.fact_distance_km === null ? [] : [Number(set.fact_distance_km)]
     )
@@ -671,7 +673,7 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
         const { data, error } = await userClient
           .from("workout_sets")
           .select(
-            "workout_exercise_id,position,fact_weight_kg,fact_reps,fact_duration_min,fact_distance_km",
+            "workout_exercise_id,position,fact_weight_kg,fact_reps,fact_duration_min,fact_duration_sec,fact_distance_km",
           )
           .in("workout_exercise_id", exerciseIds)
           .not("confirmed_at", "is", null)
