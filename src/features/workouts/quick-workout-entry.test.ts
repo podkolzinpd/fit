@@ -35,10 +35,8 @@ describe('parseQuickWorkoutEntry', () => {
   it('не выбирает упражнение молча, если название неоднозначно или не найдено', () => {
     const result = parseQuickWorkoutEntry('Присед 3×8 80 кг\nНесуществующее 3×10', catalog)
     expect(result.parsed).toEqual([])
-    expect(result.unparsed).toEqual([
-      { line: 'Присед 3×8 80 кг', reason: 'ambiguous' },
-      { line: 'Несуществующее 3×10', reason: 'not-found' },
-    ])
+    expect(result.unparsed[0]).toMatchObject({ line: 'Присед 3×8 80 кг', reason: 'ambiguous', candidates: [{ ref: 'squat' }] })
+    expect(result.unparsed[1]).toEqual({ line: 'Несуществующее 3×10', reason: 'not-found', candidates: [] })
   })
 
   it('предпочитает системное упражнение одноимённому пользовательскому', () => {
