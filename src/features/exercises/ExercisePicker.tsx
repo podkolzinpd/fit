@@ -12,14 +12,25 @@ export function filterExercises(
   muscle: string | null = null,
   equipment: string | null = null,
 ): readonly ExerciseSnapshot[] {
-  const query = search.trim().toLocaleLowerCase('ru')
+  const normalize = (value: string) => value
+    .toLocaleLowerCase('ru')
+    .replaceAll('ё', 'е')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+  const queryTokens = normalize(search).split(/\s+/).filter(Boolean)
   return exercises
-    .filter((exercise) =>
-      (category === 'all' || exercise.muscleGroup === category)
-      && (!muscle || exercise.primaryMuscleDetail === muscle)
-      && (!equipment || exercise.equipment === equipment)
-      && (!query || exercise.name.toLocaleLowerCase('ru').includes(query)),
-    )
+    .filter((exercise) => {
+      const haystack = normalize([
+        exercise.name,
+        exercise.equipment,
+        exercise.primaryMuscleDetail,
+        MUSCLE_GROUP_LABELS[exercise.muscleGroup],
+      ].filter(Boolean).join(' '))
+      return (category === 'all' || exercise.muscleGroup === category)
+        && (!muscle || exercise.primaryMuscleDetail === muscle)
+        && (!equipment || exercise.equipment === equipment)
+        && queryTokens.every((token) => haystack.includes(token))
+    })
     .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
 }
 

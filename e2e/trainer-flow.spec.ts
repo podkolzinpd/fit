@@ -30,7 +30,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByLabel('Клиент').selectOption({ label: trainerAlias })
   await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
-  await expect(page.getByRole('button', { name: /Присед со штангой/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Присед со штангой/ }).first()).toBeVisible()
   // Список упражнений маскируем: миниатюры-фото волатильны и различаются по ОС.
   // Под визуальным контролем — search-first хром пикера.
   await expect(page).toHaveScreenshot('exercise-picker-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03, mask: [page.locator('.picker-list')] })
