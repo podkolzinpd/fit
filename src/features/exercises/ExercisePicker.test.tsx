@@ -1,17 +1,18 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { ExercisePicker, filterExercises, musclesForGroup } from './ExercisePicker'
+import { ExercisePicker, equipmentForSelection, filterExercises, musclesForGroup } from './ExercisePicker'
 import type { ExerciseCatalogState } from './exercise-catalog'
 import { SYSTEM_EXERCISES } from '../../shared/system-exercises'
 import type { ExerciseSnapshot } from '../../shared/domain'
 
-// Обогащённая выборка для проверки иерархии группа→мышца→упражнение.
+// Обогащённая выборка для проверки иерархии
+// группа→мышца→оборудование→упражнение.
 const ENRICHED: ExerciseSnapshot[] = [
-  { source: 'system', ref: 'a', name: 'Присед (Штанга)', muscleGroup: 'legs', inputKind: 'strength', primaryMuscleDetail: 'Квадрицепс' },
-  { source: 'system', ref: 'b', name: 'Разгибание ног (Тренажёр)', muscleGroup: 'legs', inputKind: 'strength', primaryMuscleDetail: 'Квадрицепс' },
-  { source: 'system', ref: 'c', name: 'Сгибание ног (Тренажёр)', muscleGroup: 'legs', inputKind: 'strength', primaryMuscleDetail: 'Бицепс бедра' },
-  { source: 'system', ref: 'd', name: 'Жим лёжа (Штанга)', muscleGroup: 'chest', inputKind: 'strength', primaryMuscleDetail: 'Грудь' },
+  { source: 'system', ref: 'a', name: 'Присед (Штанга)', muscleGroup: 'legs', inputKind: 'strength', primaryMuscleDetail: 'Квадрицепс', equipment: 'Штанга' },
+  { source: 'system', ref: 'b', name: 'Разгибание ног (Тренажёр)', muscleGroup: 'legs', inputKind: 'strength', primaryMuscleDetail: 'Квадрицепс', equipment: 'Тренажёр' },
+  { source: 'system', ref: 'c', name: 'Сгибание ног (Тренажёр)', muscleGroup: 'legs', inputKind: 'strength', primaryMuscleDetail: 'Бицепс бедра', equipment: 'Тренажёр' },
+  { source: 'system', ref: 'd', name: 'Жим лёжа (Штанга)', muscleGroup: 'chest', inputKind: 'strength', primaryMuscleDetail: 'Грудь', equipment: 'Штанга' },
 ]
 
 function catalog(overrides: Partial<ExerciseCatalogState> = {}): ExerciseCatalogState {
@@ -40,7 +41,14 @@ describe('ExercisePicker', () => {
     expect(filterExercises(ENRICHED, 'legs', '', 'Бицепс бедра').map((exercise) => exercise.ref)).toEqual(['c'])
   })
 
-  it('иерархия в пикере: группа → мышца → упражнения', async () => {
+  it('строит список оборудования и фильтрует выбранную мышцу по оборудованию', () => {
+    expect(equipmentForSelection(ENRICHED, 'legs', null)).toEqual(['Тренажёр', 'Штанга'])
+    expect(equipmentForSelection(ENRICHED, 'legs', 'Квадрицепс')).toEqual(['Тренажёр', 'Штанга'])
+    expect(equipmentForSelection(ENRICHED, 'legs', 'Бицепс бедра')).toEqual(['Тренажёр'])
+    expect(filterExercises(ENRICHED, 'legs', '', 'Квадрицепс', 'Штанга').map((exercise) => exercise.ref)).toEqual(['a'])
+  })
+
+  it('иерархия в пикере: группа → мышца → оборудование → упражнения', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
     // Пока группа не выбрана — второго уровня нет.
@@ -49,7 +57,15 @@ describe('ExercisePicker', () => {
     // Появились чипы мышц группы «Ноги».
     expect(screen.getByRole('button', { name: 'Квадрицепс' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Бицепс бедра' })).toBeInTheDocument()
-    // Выбор мышцы сужает список.
+    // Выбор мышцы открывает оборудование и сужает список.
+    await user.click(screen.getByRole('button', { name: 'Квадрицепс' }))
+    expect(screen.getByRole('button', { name: 'Всё оборудование' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Штанга' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Тренажёр' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Штанга' }))
+    expect(screen.getByRole('button', { name: /Присед/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Разгибание ног/ })).not.toBeInTheDocument()
+    // Смена мышцы сбрасывает старое оборудование.
     await user.click(screen.getByRole('button', { name: 'Бицепс бедра' }))
     expect(screen.getByRole('button', { name: /Сгибание ног/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Разгибание ног/ })).not.toBeInTheDocument()

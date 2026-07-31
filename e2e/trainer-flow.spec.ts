@@ -34,6 +34,13 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // Список упражнений маскируем: миниатюры-фото волатильны и различаются по ОС.
   // Под визуальным контролем — «хром» пикера (шапка, поиск, категории).
   await expect(page).toHaveScreenshot('exercise-picker-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03, mask: [page.locator('.picker-list')] })
+  // Иерархия каталога: группа → мышца → оборудование → упражнение.
+  await page.getByRole('button', { name: 'Ноги', exact: true }).click()
+  await page.getByRole('button', { name: 'Передняя поверхность бедра' }).click()
+  await expect(page.getByRole('button', { name: 'Всё оборудование' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Штанга', exact: true })).toBeVisible()
+  await expect(page).toHaveScreenshot('exercise-picker-equipment-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03, mask: [page.locator('.picker-list')] })
+  await page.getByRole('button', { name: 'Все', exact: true }).click()
   await page.getByLabel('Поиск упражнения').fill('Болгарский')
   await page.getByRole('button', { name: /Болгарский присед/ }).click()
   await page.getByLabel('Вес, подход 1').fill('40')
