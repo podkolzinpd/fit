@@ -615,13 +615,24 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Парный замер: два поля Л/П в одну строку. */
 .measure-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
 .metric { display: flex; justify-content: space-between; padding: 10px 2px; border-bottom: 1px solid var(--border) }
-.sheet-overlay { position: fixed; z-index: 30; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-top: 32px; background: var(--overlay); backdrop-filter: blur(5px) }
-.exercise-picker { width: min(100%, 440px); max-height: calc(100dvh - 32px); overflow: hidden; display: flex; flex-direction: column; gap: 16px; padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); border: 1px solid #464150; border-bottom: 0; border-radius: 28px 28px 0 0; background: #201d26; box-shadow: 0 -24px 70px #00000080 }
+.sheet-overlay { position: fixed; z-index: 30; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-top: max(12px, env(safe-area-inset-top)); background: var(--overlay); backdrop-filter: blur(5px) }
+.sheet-overlay.keyboard-open { padding-top: max(8px, env(safe-area-inset-top)) }
+.exercise-picker { width: min(100%, 440px); max-height: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 12px; padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); border: 1px solid #464150; border-bottom: 0; border-radius: 28px 28px 0 0; background: #201d26; box-shadow: 0 -24px 70px #00000080 }
+.keyboard-open .exercise-picker { height: 100%; border-radius: 24px 24px 0 0; padding-top: 14px; padding-bottom: 10px }
 .picker-header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px }.picker-header h1 { font-size: var(--text-title) }
 .picker-close { flex: 0 0 auto; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: transparent; color: var(--muted); box-shadow: none }
 .picker-close svg { width: 22px; height: 22px; display: block; stroke-width: 2.2 }
 .picker-search { flex: 0 0 auto; width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: 13px; color: var(--fg-on-surface); background: var(--input); font-size: 18px; outline: none }
-.picker-search-summary { flex: 0 0 auto; margin: -5px 2px 0; color: var(--muted); font-size: var(--text-caption); font-weight: var(--weight-medium) }
+.picker-search-row { flex: 0 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px }
+.picker-filter-toggle { padding: 0 13px; border: 1px solid var(--border); background: var(--surface-sunken); color: var(--muted); box-shadow: none }.picker-filter-toggle.active { border-color: var(--accent-surface-border); color: var(--accent-strong); background: var(--accent-surface) }
+.picker-filter-panel { flex: 0 0 auto; display: grid; grid-template-columns: 1fr; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-sunken) }
+.picker-filter-panel label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: var(--text-xs); font-weight: var(--weight-medium) }
+.picker-filter-panel select { min-width: 0; padding: 9px 10px; font-size: 14px }
+.picker-filter-panel .picker-custom-filter { flex-direction: row; align-items: center; gap: 8px; min-height: 36px; color: var(--fg) }
+.picker-filter-panel .picker-custom-filter input { width: 20px; height: 20px; margin: 0 }
+.picker-filter-panel > .link { justify-self: start }
+.picker-list-meta { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -2px 2px 0; color: var(--muted); font-size: var(--text-caption); font-weight: var(--weight-medium) }
+.picker-list-meta .link { font-size: var(--text-caption); white-space: nowrap }
 .picker-categories { flex: 0 0 auto; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none }.picker-categories::-webkit-scrollbar { display: none }
 .picker-category { flex: 0 0 auto; padding: 9px 14px; border: 1px solid var(--border); border-radius: 99px; background: #1b1921; color: #d9d5df; font-weight: 500; box-shadow: none }.picker-category.active { border-color: var(--accent); background: var(--accent); color: var(--on-accent) }
 /* Второй уровень: детальные мышцы выбранной группы (компактнее и приглушённее). */
@@ -631,12 +642,17 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .picker-equipment { flex: 0 0 auto; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none }.picker-equipment::-webkit-scrollbar { display: none }
 .picker-equipment-option { flex: 0 0 auto; padding: 6px 12px; border: 1px solid var(--border); border-radius: 99px; background: var(--surface-sunken); color: var(--muted); font-size: 13px; font-weight: 500; box-shadow: none }.picker-equipment-option.active { border-color: var(--accent-surface-border); color: var(--accent-label); background: var(--accent-surface) }
 .picker-create { flex: 0 0 auto; border: 1px dashed #4c4758; background: #19171e; color: #b2acba; box-shadow: none }
-.picker-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px }
+.picker-list { flex: 1 1 auto; min-height: 76px; overflow-y: auto; overscroll-behavior: contain; scroll-padding-bottom: 76px; display: flex; flex-direction: column; gap: 8px; padding-bottom: 2px }
 .picker-section-label { margin: 4px 2px 0; color: var(--muted); font-size: var(--text-caption); font-weight: var(--weight-medium); text-transform: uppercase; letter-spacing: var(--tracking-label) }
-.picker-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 12px 15px; border: 1px solid var(--border); background: var(--surface-raised); color: var(--fg-on-surface); text-align: left; font-weight: var(--weight-medium); line-height: var(--leading-snug); box-shadow: none }.picker-item small { color: var(--muted); font-weight: 400 }
-.picker-item-name { flex: 1 1 auto; min-width: 0 }
+.picker-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 1px solid var(--border); background: var(--surface-raised); color: var(--fg-on-surface); text-align: left; font-weight: var(--weight-medium); line-height: var(--leading-snug); box-shadow: none }.picker-item small { color: var(--muted); font-weight: 400 }
+.picker-item.selected { border-color: var(--accent-surface-border); background: var(--accent-surface) }
+.picker-item-copy { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px }
+.picker-item-name { min-width: 0 }
+.picker-select-mark { flex: 0 0 auto; width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 10px; color: var(--muted); font-size: 18px }.picker-item.selected .picker-select-mark { border-color: var(--accent); color: var(--on-accent); background: var(--accent) }
 .picker-thumb { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 8px; object-fit: cover; background: #fff }
 .picker-thumb-empty { background: var(--surface); border: 1px solid var(--border) }
+.picker-selection-bar { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 10px; border-top: 1px solid var(--border); font-size: var(--text-caption); font-weight: var(--weight-bold) }
+.picker-selection-bar button { min-height: 44px; padding: 10px 18px }
 /* Карточка упражнения: шапка (картинка + метаданные) + табы. */
 .exercise-card-head { display: flex; gap: 14px; align-items: flex-start }
 .exercise-card-image { flex: 0 0 auto; width: 96px; height: 96px; border-radius: 12px; object-fit: cover; background: #fff }

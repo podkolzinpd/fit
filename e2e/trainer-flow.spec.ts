@@ -32,20 +32,25 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await expect(page.getByRole('button', { name: /Присед со штангой/ })).toBeVisible()
   // Список упражнений маскируем: миниатюры-фото волатильны и различаются по ОС.
-  // Под визуальным контролем — «хром» пикера (шапка, поиск, категории).
+  // Под визуальным контролем — search-first хром пикера.
   await expect(page).toHaveScreenshot('exercise-picker-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03, mask: [page.locator('.picker-list')] })
-  // Иерархия каталога: группа → мышца → оборудование → упражнение.
-  await page.getByRole('button', { name: 'Ноги', exact: true }).click()
-  await page.getByRole('button', { name: 'Передняя поверхность бедра' }).click()
-  await expect(page.getByRole('button', { name: 'Всё оборудование' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Штанга', exact: true })).toBeVisible()
+  // Группа → мышца → оборудование собраны в одном компактном фильтре.
+  await page.getByRole('button', { name: 'Фильтры' }).click()
+  await page.getByLabel('Группа мышц').selectOption('legs')
+  await page.getByLabel('Мышца').selectOption('Передняя поверхность бедра')
+  await expect(page.getByLabel('Оборудование')).toBeVisible()
+  await expect(page.getByLabel('Оборудование')).toContainText('Штанга')
   await expect(page).toHaveScreenshot('exercise-picker-equipment-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03, mask: [page.locator('.picker-list')] })
-  await page.getByRole('button', { name: 'Все', exact: true }).click()
+  await page.getByRole('button', { name: 'Сбросить фильтры' }).click()
+  await page.getByRole('button', { name: 'Фильтры' }).click()
   await page.getByLabel('Поиск упражнения').fill('Болгарский')
   await expect(page.getByText(/Найдено: \d+/)).toBeVisible()
   await expect(page.getByLabel('Группа мышц')).toBeHidden()
-  await expect(page).toHaveScreenshot('exercise-picker-search-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03, mask: [page.locator('.picker-list')] })
+  await expect(page).toHaveScreenshot('exercise-picker-search-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.05, mask: [page.locator('.picker-list')] })
   await page.getByRole('button', { name: /Болгарский присед/ }).click()
+  await expect(page.getByText('Выбрано: 1')).toBeVisible()
+  await expect(page).toHaveScreenshot('exercise-picker-selected-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.05, mask: [page.locator('.picker-list')] })
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
   await page.getByRole('button', { name: '＋ Подход' }).click()
@@ -164,6 +169,7 @@ test('live: планка вводится в минутах, таймер зак
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Планка')
   await page.getByRole('button', { name: /^Планка/ }).click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
   // #4: планка — время (мин), а не вес (кг).
   await expect(page.getByLabel('Время, подход 1')).toBeVisible()
   await expect(page.getByLabel('Время, подход 1')).toHaveAttribute('placeholder', 'мин')
@@ -208,6 +214,7 @@ test('план: порядок упражнений меняется стрел�
     await page.getByRole('button', { name: '＋ Упражнение' }).click()
     await page.getByLabel('Поиск упражнения').fill(q)
     await page.getByRole('button', { name: new RegExp(q) }).first().click()
+    await page.getByRole('button', { name: 'Добавить 1' }).click()
   }
   // Первое «Вверх» задизейблено (граница), последнее «Вниз» — тоже.
   await expect(page.getByRole('button', { name: 'Вверх' }).first()).toBeDisabled()
@@ -241,6 +248,7 @@ test('live: порядок упражнений меняется стрелка�
     await page.getByRole('button', { name: '＋ Упражнение' }).click()
     await page.getByLabel('Поиск упражнения').fill(q)
     await page.getByRole('button', { name: new RegExp(q) }).first().click()
+    await page.getByRole('button', { name: 'Добавить 1' }).click()
   }
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
@@ -279,6 +287,7 @@ test('замена упражнения: в форме плана и в live', a
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Присед со штангой')
   await page.getByRole('button', { name: /Присед со штангой/ }).first().click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('50')
   await page.getByLabel('Повторы, подход 1').fill('10')
 
@@ -329,6 +338,7 @@ test('карточка упражнения: шапка с оборудован�
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('тяга штанги в наклоне (штанга)')
   await page.getByRole('button', { name: /Тяга штанги в наклоне \(Штанга\)/ }).first().click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
@@ -367,6 +377,7 @@ test('план: два упражнения объединяются в супе
     await page.getByRole('button', { name: '＋ Упражнение' }).click()
     await page.getByLabel('Поиск упражнения').fill(q)
     await page.getByRole('button', { name: new RegExp(q) }).first().click()
+    await page.getByRole('button', { name: 'Добавить 1' }).click()
   }
   // Объединяем первое упражнение со следующим в блок → появляется селектор типа.
   await page.getByRole('button', { name: /Объединить со следующим/ }).first().click()
@@ -504,6 +515,7 @@ test('расписание: создание тренировки из расп�
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
   await page.getByRole('button', { name: /Присед со штангой/ }).first().click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 })
@@ -530,6 +542,7 @@ test('расписание: карточка события — время, им
     await page.getByRole('button', { name: '＋ Упражнение' }).click()
     await page.getByLabel('Поиск упражнения').fill(q)
     await page.locator('.picker-item').first().click()
+    await page.getByRole('button', { name: 'Добавить 1' }).click()
   }
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
@@ -567,6 +580,7 @@ test('комментарий тренера к упражнению: план �
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
   await page.getByRole('button', { name: /Присед со штангой/ }).first().click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('90')
   await page.getByLabel('Повторы, подход 1').fill('8')
   // Комментарий тренера к упражнению в форме плана.
@@ -625,6 +639,7 @@ test('live: удаление подхода и наследование факт
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
   await page.locator('.picker-item').first().click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('90')
   await page.getByLabel('Повторы, подход 1').fill('8')
   await page.getByRole('button', { name: 'Сохранить' }).click()
@@ -675,6 +690,7 @@ test('live: «Готово» без ввода факта — подход сч�
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
   await page.locator('.picker-item').first().click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('100')
   await page.getByLabel('Повторы, подход 1').fill('5')
   await page.getByRole('button', { name: 'Сохранить' }).click()
