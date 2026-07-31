@@ -14,7 +14,7 @@ import {
   addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayLocalDate, weekdayShort,
   type LocalDate,
 } from '../../shared/local-date'
-import { AsyncView, Field, OverflowMenu, Page, StatusBadge, useConfirm } from '../../shared/ui'
+import { AsyncView, Field, OverflowMenu, Page, SaveStatus, StatusBadge, useConfirm } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { VoiceNoteField } from '../voice-input'
 import { QuickWorkoutEntry } from './QuickWorkoutEntry'
@@ -557,6 +557,9 @@ export function LiveWorkoutPage() {
   const [replaceExerciseId, setReplaceExerciseId] = useState<string | null>(null)
   // Подтверждённые подходы, временно разблокированные для правки (по карандашику).
   const [editingSets, setEditingSets] = useState<Set<string>>(() => new Set())
+  const [savingSetId, setSavingSetId] = useState<string | null>(null)
+  const [savedSetId, setSavedSetId] = useState<string | null>(null)
+  const [saveErrorSetId, setSaveErrorSetId] = useState<string | null>(null)
   // Завершённые упражнения по умолчанию свёрнуты; id здесь — принудительно раскрытые
   // тренером (тап по свёрнутой карточке), чтобы поправить факт.
   const [expandedExercises, setExpandedExercises] = useState<Set<string>>(() => new Set())
@@ -570,7 +573,17 @@ export function LiveWorkoutPage() {
   // в БД, но без refetch локальный set остаётся старым и поле возвращает прежнее
   // число. Освежаем только для подтверждённых (в обычном вводе по blur refetch не
   // нужен и мешал бы: ремоунт полей по key сбросил бы текущий ввод).
-  const save = useMutation({ mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.save(set, draft), onSuccess: async (_v, { set }) => { if (set.confirmedAt) await query.refetch() } })
+  const save = useMutation({
+    mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.save(set, draft),
+    onMutate: ({ set }) => { setSavingSetId(set.id); setSavedSetId(null); setSaveErrorSetId(null) },
+    onSuccess: async (_v, { set }) => { setSavingSetId(null); setSavedSetId(set.id); if (set.confirmedAt) await query.refetch() },
+    onError: (_error, { set }) => { setSavingSetId(null); setSaveErrorSetId(set.id) },
+  })
+  useEffect(() => {
+    if (!savedSetId) return
+    const timer = window.setTimeout(() => setSavedSetId(null), 2_500)
+    return () => window.clearTimeout(timer)
+  }, [savedSetId])
   const confirm = useMutation({
     mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.confirm(set, draft),
     onSuccess: (_data, { set }) => {
@@ -707,6 +720,7 @@ export function LiveWorkoutPage() {
     const isEditing = editingSets.has(set.id)
     // «Закрыто» (подтверждён) — зелёный; «в работе» (текущий) — серый.
     const stateClass = set.confirmedAt && !isEditing ? 'confirmed' : current && !isEditing ? 'current' : ''
+    const saveStatus = savingSetId === set.id ? 'saving' : saveErrorSetId === set.id ? 'error' : savedSetId === set.id ? 'saved' : 'idle'
     // Действия в шапке подхода: карандаш (правка подтверждённого) + крестик (удалить).
     const headActions = <span className="set-head-actions">
       {set.confirmedAt && !isEditing && <button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}
@@ -719,6 +733,7 @@ export function LiveWorkoutPage() {
     }}>
       <div className="set-head"><span className="muted">{label}{planLine(exercise.inputKind, set) ? <span className="set-plan"> · план {planLine(exercise.inputKind, set)}</span> : null}</span>{headActions}</div>
       <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} />
+      <SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} />
       {/* «= план»: перенести плановые значения в поля факта одним тапом (когда
           подход ещё не подтверждён и план задан). Не забирает фокус. */}
       {!set.confirmedAt && planLine(exercise.inputKind, set) && <button type="button" className="link set-fill-plan"

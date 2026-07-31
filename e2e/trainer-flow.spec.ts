@@ -98,6 +98,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByLabel('Фактические повторы').first()).toHaveValue('9')
   await page.getByLabel('Фактический вес').first().fill('42.5')
   await page.getByLabel('Фактические повторы').first().fill('9')
+  await page.locator('.live-timer-big').click()
+  await expect(page.getByRole('status').filter({ hasText: 'Сохранено' })).toBeVisible()
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
   // Подтверждённый подход показывает зафиксированные значения ярко (не placeholder):
