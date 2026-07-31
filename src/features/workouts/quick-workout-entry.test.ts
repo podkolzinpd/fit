@@ -32,6 +32,30 @@ describe('parseQuickWorkoutEntry', () => {
     expect(result.parsed[1]?.sets).toEqual([{ position: 0, durationSec: 1800, distanceKm: 5 }])
   })
 
+  it('понимает привычные форматы веса, подходов и RPE', () => {
+    const result = parseQuickWorkoutEntry('Присед со штангой 80×8×3 RPE 8\nЖим лёжа 3 подхода по 10 60 кг RPE 7.5', catalog)
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed[0]?.sets).toEqual([
+      { position: 0, weightKg: 80, reps: 8, rpe: 8 },
+      { position: 1, weightKg: 80, reps: 8, rpe: 8 },
+      { position: 2, weightKg: 80, reps: 8, rpe: 8 },
+    ])
+    expect(result.parsed[1]?.sets).toEqual([
+      { position: 0, weightKg: 60, reps: 10, rpe: 7.5 },
+      { position: 1, weightKg: 60, reps: 10, rpe: 7.5 },
+      { position: 2, weightKg: 60, reps: 10, rpe: 7.5 },
+    ])
+  })
+
+  it('применяет запись «по» к упражнению на время', () => {
+    const result = parseQuickWorkoutEntry('Планка 3 по 45 сек RPE 8', catalog)
+    expect(result.parsed[0]?.sets).toEqual([
+      { position: 0, durationSec: 45, rpe: 8 },
+      { position: 1, durationSec: 45, rpe: 8 },
+      { position: 2, durationSec: 45, rpe: 8 },
+    ])
+  })
+
   it('не выбирает упражнение молча, если название неоднозначно или не найдено', () => {
     const result = parseQuickWorkoutEntry('Присед 3×8 80 кг\nНесуществующее 3×10', catalog)
     expect(result.parsed).toEqual([])

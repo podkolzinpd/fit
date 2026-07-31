@@ -40,7 +40,7 @@ function number(value: string | undefined): number | undefined {
 }
 
 function exerciseNamePart(line: string): string {
-  const metric = /\d+\s*(?:[xх×]|кг|kg|сек|мин|км|km|повт)/iu.exec(line)
+  const metric = /\d+\s*(?:[xх×]|кг|kg|сек|мин|км|km|повт|(?:подход(?:а|ов)?|сет(?:а|ов)?)?\s*по\s*\d)/iu.exec(line)
   return (metric ? line.slice(0, metric.index) : line).trim()
 }
 
@@ -73,11 +73,16 @@ function needsTrainerChoice(name: string, catalog: readonly ExerciseSnapshot[]):
 }
 
 function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { sets: WorkoutSetDraft[]; hasValues: boolean } {
+  // Тренеры записывают и «3×8», и «3 подхода по 8». В тройной записи
+  // «80×8×3» порядок привычный для зала: вес × повторы × подходы.
+  const weightRepsSetsMatch = /(\d+(?:[.,]\d+)?)\s*[xх×]\s*(\d+(?:[.,]\d+)?)\s*[xх×]\s*(\d+)/iu.exec(line)
+  const setsByWordsMatch = /(\d+)\s*(?:подход(?:а|ов)?|сет(?:а|ов)?)?\s*по\s*(\d+(?:[.,]\d+)?)\s*(сек|с|мин|м)?\b/iu.exec(line)
   const setMatch = /(\d+)\s*[xх×]\s*(\d+(?:[.,]\d+)?)\s*(сек|с|мин|м)?\b/iu.exec(line)
-  const count = setMatch ? Number(setMatch[1]) : 1
-  const repeatedValue = number(setMatch?.[2])
-  const repeatedUnit = setMatch?.[3]?.toLocaleLowerCase('ru')
+  const count = weightRepsSetsMatch ? Number(weightRepsSetsMatch[3]) : setsByWordsMatch ? Number(setsByWordsMatch[1]) : setMatch ? Number(setMatch[1]) : 1
+  const repeatedValue = number(weightRepsSetsMatch?.[2] ?? setsByWordsMatch?.[2] ?? setMatch?.[2])
+  const repeatedUnit = (setsByWordsMatch?.[3] ?? setMatch?.[3])?.toLocaleLowerCase('ru')
   const weight = number(/(\d+(?:[.,]\d+)?)\s*(?:кг|kg)/iu.exec(line)?.[1])
+    ?? number(weightRepsSetsMatch?.[1])
   const durationMatch = /(\d+(?:[.,]\d+)?)\s*(сек|с|мин|м)/iu.exec(line)
   const durationValue = number(durationMatch?.[1])
   const durationUnit = durationMatch?.[2]?.toLocaleLowerCase('ru')
@@ -87,7 +92,9 @@ function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { se
   const distanceKm = number(/(\d+(?:[.,]\d+)?)\s*(?:км|km)/iu.exec(line)?.[1])
   const explicitReps = number(/(\d+)\s*(?:повт|повтор)/iu.exec(line)?.[1])
   const reps = repeatedUnit ? explicitReps : repeatedValue
-  const hasValues = weight !== undefined || reps !== undefined || durationSec !== undefined || distanceKm !== undefined
+  const rpe = number(/\brpe\s*(\d+(?:[.,]\d+)?)/iu.exec(line)?.[1])
+  const validRpe = rpe !== undefined && rpe >= 1 && rpe <= 10 ? rpe : undefined
+  const hasValues = weight !== undefined || reps !== undefined || durationSec !== undefined || distanceKm !== undefined || validRpe !== undefined
   return {
     hasValues,
     sets: Array.from({ length: Math.min(Math.max(count, 1), 20) }, (_, position) => ({
@@ -99,6 +106,7 @@ function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { se
       ...(inputKind === 'duration' && durationSec !== undefined ? { durationSec } : {}),
       ...(inputKind === 'distance' && durationSec !== undefined ? { durationSec } : {}),
       ...(inputKind === 'distance' && distanceKm !== undefined ? { distanceKm } : {}),
+      ...(validRpe !== undefined ? { rpe: validRpe } : {}),
     })),
   }
 }

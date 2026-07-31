@@ -10,8 +10,8 @@ test('форма: быстрый ввод разбирает текст в уп�
   await page.goto('/workouts/new')
   await page.getByLabel('Клиент').selectOption({ label: 'Анна Смирнова' })
   await page.getByRole('button', { name: '⌁ Добавить из текста или голоса' }).click()
-  await page.getByLabel('Запись тренировки').fill('Присед 3×8 80 кг\nПланка 3×45 сек')
-  await expect(page.getByText(/«Присед 3×8 80 кг» — выберите вариант/)).toBeVisible()
+  await page.getByLabel('Запись тренировки').fill('Присед 80×8×3 RPE 8\nПланка 3 по 45 сек')
+  await expect(page.getByText(/«Присед 80×8×3 RPE 8» — выберите вариант/)).toBeVisible()
   // Короткое название не угадывается: тренер выбирает подходящий присед одним тапом.
   const squatCandidates = page.locator('.quick-workout-candidates button')
   await expect(squatCandidates).toHaveCount(4)
@@ -20,6 +20,7 @@ test('форма: быстрый ввод разбирает текст в уп�
   await page.getByRole('button', { name: 'Добавить распознанные (2)' }).click()
   await expect(page.getByLabel('Вес, подход 1')).toHaveValue('80')
   await expect(page.getByLabel('Повторы, подход 3')).toHaveValue('8')
+  await expect(page.getByRole('article').filter({ hasText: 'Присед со штангой' }).getByLabel('Целевой RPE, подход 1')).toHaveValue('8')
   await expect(page.getByLabel('Время, сек, подход 3')).toHaveValue('45')
   await page.getByRole('button', { name: 'Отмена' }).click()
 })
