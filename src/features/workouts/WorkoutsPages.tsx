@@ -181,6 +181,7 @@ export function WorkoutFormPage() {
   useClientRealtime(source.data?.clientId ?? (clientMode ? mine.data?.id : params.get('client') ?? undefined))
   const catalog = useExerciseCatalog()
   const [draftExercises, setDraftExercises] = useState<WorkoutDraft['exercises'] | null>(null)
+  const [recordCompleted, setRecordCompleted] = useState(false)
   const [prefillError, setPrefillError] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
@@ -195,7 +196,7 @@ export function WorkoutFormPage() {
   const stages = goal.data ? orderedStages(goal.data) : []
   // Этап по умолчанию: сохранённый у тренировки, иначе текущий по дате.
   const defaultStageId = source.data?.stageId ?? (goal.data ? currentStage(goal.data, todayLocalDate())?.id ?? '' : '')
-  const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => workoutsRepository.save(draft), onSuccess: async (id) => {
+  const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => recordCompleted ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: async (id) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['workout', id] }),
       queryClient.invalidateQueries({ queryKey: ['workouts'] }),
@@ -258,7 +259,8 @@ export function WorkoutFormPage() {
       {clientMode
         ? <><input type="hidden" name="clientId" value={mine.data?.id ?? ''} /><Field label="Клиент"><input value={mine.data?.fullName ?? ''} disabled /></Field></>
         : <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} onChange={(event) => setSelectedClientId(event.target.value)} required><option value="">Выберите</option>{availableClients?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>}
-      <div className="split"><Field label="Дата"><input name="date" type="date" defaultValue={initial?.workoutDate ?? params.get('date') ?? todayLocalDate()} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} /></Field></div>
+      <div className="split"><Field label="Дата"><input name="date" type="date" max={recordCompleted ? todayLocalDate() : undefined} defaultValue={initial?.workoutDate ?? params.get('date') ?? todayLocalDate()} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} /></Field></div>
+      {!workoutId && <label className="manual-workout-toggle"><input type="checkbox" checked={recordCompleted} onChange={(event) => setRecordCompleted(event.target.checked)} /> <span><strong>Записать завершённую тренировку</strong><small>Введённые значения сохранятся как факт, без live-режима.</small></span></label>}
       {stages.length > 0 && <Field label="Этап цели">
         {/* key — чтобы defaultValue пересчитался при смене клиента/загрузке цели */}
         <select name="stageId" key={`${clientId}-${defaultStageId}`} defaultValue={defaultStageId}>
@@ -267,10 +269,10 @@ export function WorkoutFormPage() {
         </select>
       </Field>}
       <VoiceNoteField name="notes" source="workout_form" defaultValue={initial?.notes ?? ''} />
-      <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} />
+      <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={recordCompleted ? 'fact' : 'plan'} />
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
+      <div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>{recordCompleted ? 'Записать тренировку' : 'Сохранить'}</button></div>
     </form>}</AsyncView>
     {pickerOpen && <ExercisePicker catalog={catalog} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
   </Page>

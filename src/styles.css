@@ -457,6 +457,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .set-rpe-field { display: inline-flex; align-items: center; gap: 8px; margin: -2px 0 10px; color: var(--muted); font-size: 12px; font-weight: 700 }
 .set-rpe-field select { min-height: 34px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 8px; color: var(--fg-on-surface); background: var(--input); font: inherit }
 .exercise-prefill-note { margin: -4px 0 8px; color: var(--muted); font-size: 13px; }
+.manual-workout-toggle { display:flex; gap:10px; align-items:flex-start; padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--surface-raised); }
+.manual-workout-toggle input { margin-top:4px; }.manual-workout-toggle small { display:block; margin-top:3px; color:var(--muted); }
 /* Степпер: крупные −/+ вокруг поля факта (быстрый ввод одной рукой, P5). */
 .stepper { display: flex; align-items: stretch; gap: 6px; min-width: 0 }
 .stepper input { text-align: center; font-weight: 700; -moz-appearance: textfield }

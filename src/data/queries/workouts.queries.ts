@@ -29,6 +29,9 @@ export const workoutQueries = {
   save: (draft: WorkoutDraft) => supabase.rpc('save_workout', {
     p_workout: toJson(draft), p_expected_version: draft.version ?? null,
   }),
+  saveCompleted: (draft: WorkoutDraft) => supabase.rpc('save_completed_workout', {
+    p_workout: toJson(draft), p_expected_version: draft.version ?? null,
+  }),
   start: (id: string, version: number) => supabase.rpc('start_workout', { p_workout_id: id, p_expected_version: version }),
   saveLiveSet: (id: string, draft: LiveSetDraft, version: number) => supabase.rpc('save_live_set_draft', {
     p_set_id: id, p_draft: toJson(draft), p_expected_version: version,
