@@ -56,6 +56,16 @@ describe('parseQuickWorkoutEntry', () => {
     ])
   })
 
+  it('сохраняет разные веса и повторы из списка подходов', () => {
+    const result = parseQuickWorkoutEntry('Присед со штангой 80×8, 85 кг × 6, 90 на 5 RPE 8.5', catalog)
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed[0]?.sets).toEqual([
+      { position: 0, weightKg: 80, reps: 8, rpe: 8.5 },
+      { position: 1, weightKg: 85, reps: 6, rpe: 8.5 },
+      { position: 2, weightKg: 90, reps: 5, rpe: 8.5 },
+    ])
+  })
+
   it('не выбирает упражнение молча, если название неоднозначно или не найдено', () => {
     const result = parseQuickWorkoutEntry('Присед 3×8 80 кг\nНесуществующее 3×10', catalog)
     expect(result.parsed).toEqual([])
