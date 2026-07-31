@@ -17,7 +17,9 @@ import {
 import { AsyncView, Field, OverflowMenu, Page, StatusBadge, useConfirm } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { VoiceNoteField } from '../voice-input'
+import { QuickWorkoutEntry } from './QuickWorkoutEntry'
 import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
+import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
 import { LoadMoreButton } from './LoadMoreButton'
 import { workoutCountLabel } from './workout-count-label'
@@ -242,6 +244,16 @@ export function WorkoutFormPage() {
     ])
     closePicker()
   }
+  async function addQuickEntry(parsed: ParsedWorkoutExercise[]) {
+    const results = await previousResults(parsed.map((item) => item.exercise))
+    setDraftExercises([
+      ...exercises,
+      ...parsed.map((item, index) => {
+        const fallback = exerciseDraft(item.exercise, exercises.length + index, results.get(item.exercise.ref))
+        return { ...fallback, sets: item.hasValues ? item.sets : fallback.sets }
+      }),
+    ])
+  }
   function closePicker() { setPickerOpen(false); setReplaceIndex(null) }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget)
@@ -269,6 +281,7 @@ export function WorkoutFormPage() {
         </select>
       </Field>}
       <VoiceNoteField name="notes" source="workout_form" defaultValue={initial?.notes ?? ''} />
+      <QuickWorkoutEntry catalog={catalog.exercises} onAdd={(parsed) => void addQuickEntry(parsed)} />
       <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={recordCompleted ? 'fact' : 'plan'} />
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
