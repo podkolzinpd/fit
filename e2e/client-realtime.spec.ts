@@ -12,7 +12,7 @@ async function register(page: Page, values: { name: string; email: string; role?
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
 }
 
-function futureDate(days: number) {
+function dateOffset(days: number) {
   const value = new Date()
   value.setDate(value.getDate() + days)
   return [
@@ -63,12 +63,12 @@ test('client and trainer receive progress and workout changes without reload', a
     await expect(client.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
     await trainer.waitForTimeout(500)
 
-    await client.getByLabel('Дата').fill(futureDate(1))
+    await client.getByLabel('Дата').fill(dateOffset(-1))
     await client.getByLabel('Вес, кг').fill('61.1')
     await client.getByRole('button', { name: 'Сохранить замер' }).click()
     await expect(trainer.getByText('61.1 кг')).toBeVisible({ timeout: 10_000 })
 
-    await trainer.getByLabel('Дата').fill(futureDate(2))
+    await trainer.getByLabel('Дата').fill(dateOffset(-2))
     await trainer.getByLabel('Вес, кг').fill('62.2')
     await trainer.getByRole('button', { name: 'Сохранить замер' }).click()
     await expect(client.getByText('62.2 кг')).toBeVisible({ timeout: 10_000 })

@@ -37,9 +37,11 @@ export function MyProgressPage() {
   const entries = useQuery({ queryKey: ['progress', mine.data?.id], queryFn: () => progressRepository.list(mine.data!.id), enabled: Boolean(mine.data) })
   const save = useMutation({ mutationFn: (form: HTMLFormElement) => {
     const data = new FormData(form)
+    const recordedOn = localDate(String(data.get('recordedOn')))
+    if (recordedOn > todayLocalDate()) throw new Error('Нельзя добавить замер с будущей датой')
     return progressRepository.save({
       clientId: mine.data!.id,
-      recordedOn: localDate(String(data.get('recordedOn'))),
+      recordedOn,
       weightKg: numberValue(data.get('weightKg')),
       chestCm: numberValue(data.get('chestCm')),
       waistCm: numberValue(data.get('waistCm')),
@@ -51,7 +53,7 @@ export function MyProgressPage() {
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); save.mutate(event.currentTarget) }
   return <Page title="Мой прогресс" back="/me"><AsyncView loading={mine.isLoading || entries.isLoading} error={mine.error ?? entries.error} onRetry={() => { void mine.refetch(); void entries.refetch() }}>
     {entries.data && mine.data && <><ClientTrainingSummaryCard clientId={mine.data.id} /><section><h2>Новый замер</h2><form className="stack compact" onSubmit={(event) => void submit(event)}>
-      <Field label="Дата"><input name="recordedOn" type="date" defaultValue={todayLocalDate()} required /></Field>
+      <Field label="Дата"><input name="recordedOn" type="date" max={todayLocalDate()} defaultValue={todayLocalDate()} required /></Field>
       <div className="measure-grid"><Field label="Вес, кг"><input name="weightKg" type="number" step="0.1" /></Field><Field label="Грудь, см"><input name="chestCm" type="number" step="0.1" /></Field><Field label="Талия, см"><input name="waistCm" type="number" step="0.1" /></Field><Field label="Бёдра, см"><input name="hipCm" type="number" step="0.1" /></Field></div>
       {save.error && <p className="error">{save.error.message}</p>}<button disabled={save.isPending}>Сохранить замер</button>
     </form></section>
