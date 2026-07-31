@@ -73,6 +73,20 @@ function needsTrainerChoice(name: string, catalog: readonly ExerciseSnapshot[]):
 }
 
 function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { sets: WorkoutSetDraft[]; hasValues: boolean } {
+  const rpe = number(/\brpe\s*(\d+(?:[.,]\d+)?)/iu.exec(line)?.[1])
+  const validRpe = rpe !== undefined && rpe >= 1 && rpe <= 10 ? rpe : undefined
+  // Отдельные пары веса и повторов — естественная запись факта после зала:
+  // «80×8, 85×6, 90×5». Берём её только при двух и более парах, чтобы
+  // обычное «3×8 80 кг» по-прежнему означало три одинаковых подхода.
+  const variableStrengthSets = [...line.matchAll(/(\d+(?:[.,]\d+)?)\s*(?:кг|kg)?\s*(?:[xх×]|на)\s*(\d+)/giu)]
+    .map((match) => ({ weightKg: number(match[1]), reps: number(match[2]) }))
+    .filter((set): set is { weightKg: number; reps: number } => set.weightKg !== undefined && set.reps !== undefined)
+  if (inputKind === 'strength' && variableStrengthSets.length >= 2) {
+    return {
+      hasValues: true,
+      sets: variableStrengthSets.slice(0, 20).map((set, position) => ({ position, ...set, ...(validRpe !== undefined ? { rpe: validRpe } : {}) })),
+    }
+  }
   // Тренеры записывают и «3×8», и «3 подхода по 8». В тройной записи
   // «80×8×3» порядок привычный для зала: вес × повторы × подходы.
   const weightRepsSetsMatch = /(\d+(?:[.,]\d+)?)\s*[xх×]\s*(\d+(?:[.,]\d+)?)\s*[xх×]\s*(\d+)/iu.exec(line)
@@ -92,8 +106,6 @@ function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { se
   const distanceKm = number(/(\d+(?:[.,]\d+)?)\s*(?:км|km)/iu.exec(line)?.[1])
   const explicitReps = number(/(\d+)\s*(?:повт|повтор)/iu.exec(line)?.[1])
   const reps = repeatedUnit ? explicitReps : repeatedValue
-  const rpe = number(/\brpe\s*(\d+(?:[.,]\d+)?)/iu.exec(line)?.[1])
-  const validRpe = rpe !== undefined && rpe >= 1 && rpe <= 10 ? rpe : undefined
   const hasValues = weight !== undefined || reps !== undefined || durationSec !== undefined || distanceKm !== undefined || validRpe !== undefined
   return {
     hasValues,

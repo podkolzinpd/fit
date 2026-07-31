@@ -31,7 +31,7 @@ export function QuickWorkoutEntry({ catalog, onAdd }: QuickWorkoutEntryProps) {
       {open ? 'Скрыть быстрый ввод' : '⌁ Добавить из текста или голоса'}
     </button>
     {open && <div className="quick-workout-entry-panel">
-      <p className="muted">По одной строке: <strong>Присед со штангой 3×8 80 кг</strong>, <strong>80×8×3 RPE 8</strong> или <strong>Планка 3 по 45 сек</strong>. Сначала проверим разбор, затем добавим упражнения в форму.</p>
+      <p className="muted">По одной строке: <strong>Присед со штангой 3×8 80 кг</strong>, <strong>80×8×3 RPE 8</strong>, <strong>80×8, 85×6, 90×5</strong> или <strong>Планка 3 по 45 сек</strong>. Сначала проверим разбор, затем добавим упражнения в форму.</p>
       <VoiceNoteField name="quick-workout-entry" source="workout_quick_entry" label="Запись тренировки" value={text} onValueChange={setText} />
       {text.trim() && <div className="quick-workout-preview" aria-live="polite">
         {resolved.length > 0 && <><p><strong>Распознано: {resolved.length}</strong></p><ul>{resolved.map((item, index) => <li key={`${item.exercise.ref}-${index}`}>{item.exercise.name} · {item.sets.length} {item.sets.length === 1 ? 'подход' : item.sets.length < 5 ? 'подхода' : 'подходов'}</li>)}</ul></>}
