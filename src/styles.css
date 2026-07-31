@@ -459,6 +459,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-prefill-note { margin: -4px 0 8px; color: var(--muted); font-size: 13px; }
 .manual-workout-toggle { display:flex; gap:10px; align-items:flex-start; padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--surface-raised); }
 .manual-workout-toggle input { margin-top:4px; }.manual-workout-toggle small { display:block; margin-top:3px; color:var(--muted); }
+.quick-workout-entry { display:grid; gap:8px; }
+.quick-workout-entry-panel { display:grid; gap:10px; padding:12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); }
+.quick-workout-entry-panel .voice-note-field { margin:0; }
+.quick-workout-entry-panel .voice-note-field textarea { min-height:88px; }
+.quick-workout-preview { padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--surface); }
+.quick-workout-preview p { margin:0 0 6px; }.quick-workout-preview ul { margin:0; padding-left:20px; }
+.quick-workout-unparsed { margin-top:10px; color:var(--warning-fg); }
 /* Степпер: крупные −/+ вокруг поля факта (быстрый ввод одной рукой, P5). */
 .stepper { display: flex; align-items: stretch; gap: 6px; min-width: 0 }
 .stepper input { text-align: center; font-weight: 700; -moz-appearance: textfield }

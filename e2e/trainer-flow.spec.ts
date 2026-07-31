@@ -1,5 +1,24 @@
 import { expect, test } from '@playwright/test'
 
+test('форма: быстрый ввод разбирает текст в упражнения и подходы', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.goto('/workouts/new')
+  await page.getByLabel('Клиент').selectOption({ label: 'Анна Смирнова' })
+  await page.getByRole('button', { name: '⌁ Добавить из текста или голоса' }).click()
+  await page.getByLabel('Запись тренировки').fill('Присед со штангой 3×8 80 кг\nПланка 3×45 сек')
+  await expect(page.getByText('Распознано: 2')).toBeVisible()
+  await page.getByRole('button', { name: 'Добавить распознанные (2)' }).click()
+  await expect(page.getByLabel('Вес, подход 1')).toHaveValue('80')
+  await expect(page.getByLabel('Повторы, подход 3')).toHaveValue('8')
+  await expect(page.getByLabel('Время, сек, подход 3')).toHaveValue('45')
+  await page.getByRole('button', { name: 'Отмена' }).click()
+})
+
 test('trainer can create client, complete workout and save progress', async ({ page }, testInfo) => {
   const trainerAlias = `Анна ${testInfo.workerIndex}-${Date.now()}`
   await page.goto('/auth')
