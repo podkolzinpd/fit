@@ -40,7 +40,7 @@ function number(value: string | undefined): number | undefined {
 }
 
 function exerciseNamePart(line: string): string {
-  const metric = /\d+\s*(?:[xх×]|кг|kg|сек|мин|км|km|повт|(?:подход(?:а|ов)?|сет(?:а|ов)?)?\s*по\s*\d)/iu.exec(line)
+  const metric = /\d+\s*(?:[xх×]|кг|kg|сек|мин|км|km|повт|на\s*\d|(?:подход(?:а|ов)?|сет(?:а|ов)?)?\s*по\s*\d)/iu.exec(line)
   return (metric ? line.slice(0, metric.index) : line).trim()
 }
 
@@ -72,6 +72,12 @@ function needsTrainerChoice(name: string, catalog: readonly ExerciseSnapshot[]):
   return !catalog.some((exercise) => normalizedExerciseName(exercise.name) === query)
 }
 
+function quickWorkoutLines(text: string): string[] {
+  // Whisper обычно сохраняет слова-связки, а не переносы. Разделяем только
+  // явные «затем/потом», чтобы не разрезать список подходов через запятую.
+  return text.split(/[\n;]+/).flatMap((line) => line.split(/\s+(?:затем|потом|далее|после\s+этого)\s+/iu)).map((line) => line.trim()).filter(Boolean)
+}
+
 function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { sets: WorkoutSetDraft[]; hasValues: boolean } {
   const rpe = number(/\brpe\s*(\d+(?:[.,]\d+)?)/iu.exec(line)?.[1])
   const validRpe = rpe !== undefined && rpe >= 1 && rpe <= 10 ? rpe : undefined
@@ -81,7 +87,8 @@ function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { se
   const variableStrengthSets = [...line.matchAll(/(\d+(?:[.,]\d+)?)\s*(?:кг|kg)?\s*(?:[xх×]|на)\s*(\d+)/giu)]
     .map((match) => ({ weightKg: number(match[1]), reps: number(match[2]) }))
     .filter((set): set is { weightKg: number; reps: number } => set.weightKg !== undefined && set.reps !== undefined)
-  if (inputKind === 'strength' && variableStrengthSets.length >= 2) {
+  const spokenWeightReps = /\d+(?:[.,]\d+)?\s*на\s*\d+/iu.test(line)
+  if (inputKind === 'strength' && (variableStrengthSets.length >= 2 || spokenWeightReps)) {
     return {
       hasValues: true,
       sets: variableStrengthSets.slice(0, 20).map((set, position) => ({ position, ...set, ...(validRpe !== undefined ? { rpe: validRpe } : {}) })),
@@ -135,7 +142,7 @@ export function resolveQuickWorkoutLine(line: string, exercise: ExerciseSnapshot
 export function parseQuickWorkoutEntry(text: string, catalog: readonly ExerciseSnapshot[]): QuickWorkoutParseResult {
   const parsed: ParsedWorkoutExercise[] = []
   const unparsed: UnparsedWorkoutLine[] = []
-  for (const rawLine of text.split(/[\n;]/)) {
+  for (const rawLine of quickWorkoutLines(text)) {
     const line = rawLine.trim()
     if (!line) continue
     const name = exerciseNamePart(line)

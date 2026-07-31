@@ -66,6 +66,21 @@ describe('parseQuickWorkoutEntry', () => {
     ])
   })
 
+  it('разделяет упражнения из голосовой фразы и понимает «вес на повторы»', () => {
+    const result = parseQuickWorkoutEntry('Присед со штангой 80 на 8, 85 на 6 затем Планка 3 по 45 сек', catalog)
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed.map((item) => item.exercise.ref)).toEqual(['squat', 'plank'])
+    expect(result.parsed[0]?.sets).toEqual([
+      { position: 0, weightKg: 80, reps: 8 },
+      { position: 1, weightKg: 85, reps: 6 },
+    ])
+    expect(result.parsed[1]?.sets).toEqual([
+      { position: 0, durationSec: 45 },
+      { position: 1, durationSec: 45 },
+      { position: 2, durationSec: 45 },
+    ])
+  })
+
   it('не выбирает упражнение молча, если название неоднозначно или не найдено', () => {
     const result = parseQuickWorkoutEntry('Присед 3×8 80 кг\nНесуществующее 3×10', catalog)
     expect(result.parsed).toEqual([])
