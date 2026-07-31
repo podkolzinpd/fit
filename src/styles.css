@@ -626,6 +626,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Второй уровень: детальные мышцы выбранной группы (компактнее и приглушённее). */
 .picker-muscles { flex: 0 0 auto; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none }.picker-muscles::-webkit-scrollbar { display: none }
 .picker-muscle { flex: 0 0 auto; padding: 6px 12px; border: 1px solid var(--border); border-radius: 99px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 500; box-shadow: none }.picker-muscle.active { border-color: var(--accent); color: #ffc7b3 }
+/* Третий уровень: оборудование выбранной группы/мышцы. */
+.picker-equipment { flex: 0 0 auto; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none }.picker-equipment::-webkit-scrollbar { display: none }
+.picker-equipment-option { flex: 0 0 auto; padding: 6px 12px; border: 1px solid var(--border); border-radius: 99px; background: var(--surface-sunken); color: var(--muted); font-size: 13px; font-weight: 500; box-shadow: none }.picker-equipment-option.active { border-color: var(--accent-surface-border); color: var(--accent-label); background: var(--accent-surface) }
 .picker-create { flex: 0 0 auto; border: 1px dashed #4c4758; background: #19171e; color: #b2acba; box-shadow: none }
 .picker-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px }
 .picker-section-label { margin: 4px 2px 0; color: var(--muted); font-size: var(--text-caption); font-weight: var(--weight-medium); text-transform: uppercase; letter-spacing: var(--tracking-label) }
