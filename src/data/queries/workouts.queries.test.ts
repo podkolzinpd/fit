@@ -57,6 +57,14 @@ describe('workoutQueries lists', () => {
     expect(rpc).toHaveBeenCalledWith('list_workout_summaries', { p_client_id: 'client-id' })
   })
 
+  it('loads only the latest completed values for selected exercises', () => {
+    workoutQueries.latestExerciseResults('client-id', ['squat', 'plank'])
+
+    expect(rpc).toHaveBeenCalledWith('list_latest_exercise_results', {
+      p_client_id: 'client-id', p_exercise_refs: ['squat', 'plank'],
+    })
+  })
+
   it('builds detail reads through the explicit table contracts', () => {
     workoutQueries.getRoot('workout-id')
     workoutQueries.getExercises('workout-id')

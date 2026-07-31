@@ -568,6 +568,16 @@ describe('replaceExercise', () => {
     expect(out[0]!.sets).toEqual([{ position: 0 }, { position: 1 }])
   })
 
+  it('при замене может подставить все подходы из последнего выполнения', () => {
+    const start: WorkoutExerciseDraft[] = [{ source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, sets: [{ position: 0 }] }]
+    const out = replaceExercise(start, 0, bench, {
+      prefilledFromDate: localDate('2026-07-28'),
+      sets: [{ position: 0, weightKg: 70, reps: 7, rpe: 8 }, { position: 1, weightKg: 65, reps: 8 }],
+    })
+    expect(out[0]!.prefilledFromDate).toBe('2026-07-28')
+    expect(out[0]!.sets).toEqual([{ position: 0, weightKg: 70, reps: 7, rpe: 8 }, { position: 1, weightKg: 65, reps: 8 }])
+  })
+
   it('сохраняет customExerciseId при замене на кастомное и убирает при системном', () => {
     const custom: ExerciseSnapshot = { source: 'custom', ref: 'x', customExerciseId: 'cust-1', name: 'Своё', muscleGroup: 'legs', inputKind: 'strength' }
     const start: WorkoutExerciseDraft[] = [{ source: 'custom', ref: 'y', customExerciseId: 'cust-0', name: 'Старое', muscleGroup: 'legs', inputKind: 'strength', position: 0, sets: [{ position: 0 }] }]

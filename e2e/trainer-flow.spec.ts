@@ -121,6 +121,20 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // Вместо «Последней» на карточке показываем ИМТ.
   await expect(page.locator('.summary.stats')).toContainText('ИМТ')
 
+  // Новая тренировка подхватывает фактические значения всех подходов из
+  // последнего завершённого выполнения этого упражнения.
+  await page.getByRole('link', { name: /Запланировать/ }).click()
+  await page.getByLabel('Клиент').selectOption({ label: trainerAlias })
+  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Болгарский')
+  await page.getByRole('button', { name: /Болгарский присед/ }).click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await expect(page.getByLabel('Вес, подход 1')).toHaveValue('42.5')
+  await expect(page.getByLabel('Повторы, подход 1')).toHaveValue('9')
+  await expect(page.getByText(/Значения с тренировки/)).toBeVisible()
+  await page.getByRole('button', { name: 'Отмена' }).click()
+  await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
+
   // История и карточка используют один префикс ключа кэша, но разной формы —
   // переход туда-обратно не должен ронять приложение (регресс e.filter).
   await page.getByRole('link', { name: 'История', exact: true }).click()

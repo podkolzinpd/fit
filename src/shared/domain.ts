@@ -172,6 +172,8 @@ export interface WorkoutExerciseDraft extends ExerciseSnapshot {
   restBetweenRoundsSec?: number
   restBetweenSetsSec?: number
   trainerComment?: string
+  /** Дата последнего завершённого выполнения, из которого подставлены значения. */
+  prefilledFromDate?: LocalDate
   sets: WorkoutSetDraft[]
 }
 
