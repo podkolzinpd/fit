@@ -1,4 +1,4 @@
-// schema-sha256: b1f8a29942c2e78ed266f9abfd7b5332f47e10d78869fad08a532b5cce71b525
+// schema-sha256: 10b191bce06a69ba6b44cb625cf57c518c6c2a2f416200a05da58dc98b54a3ef
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
@@ -27,6 +27,7 @@ type WorkoutListSetRow = Pick<WorkoutSetRow, 'id' | 'position' | 'plan_weight_kg
 type WorkoutListExerciseRow = Pick<WorkoutExerciseRow, 'id' | 'position' | 'exercise_source' | 'exercise_ref' | 'custom_exercise_id' | 'exercise_name' | 'muscle_group' | 'input_kind' | 'block_id' | 'block_type' | 'block_preset' | 'block_rounds' | 'rest_between_exercises_sec' | 'rest_between_rounds_sec' | 'rest_between_sets_sec' | 'trainer_comment'> & { sets: WorkoutListSetRow[] }
 export type WorkoutListRow = Pick<WorkoutRow, 'id' | 'client_id' | 'workout_date' | 'start_time' | 'end_time' | 'started_at' | 'completed_at' | 'status' | 'notes' | 'version'> & { client_name: string; stage_id: string | null; stage_title: string | null; total_count: number; exercises: WorkoutListExerciseRow[] }
 type WorkoutSummaryRow = Pick<WorkoutRow, 'id' | 'workout_date' | 'status'>
+type PreviousExerciseResultRow = { exercise_ref: string; workout_date: string; sets: Json }
 type TrainerMembershipRow = { trainer_id: string; first_name: string | null; last_name: string | null; joined_at: string; is_root: boolean }
 
 type TrainingSummaryRow = {
@@ -114,6 +115,7 @@ export type Database = {
       list_clients: { Args: { p_include_archived?: boolean }; Returns: ClientListRow[] }
       list_workouts: { Args: { p_from?: string | null; p_to?: string | null; p_client_id?: string | null; p_limit?: number; p_offset?: number }; Returns: WorkoutListRow[] }
       list_workout_summaries: { Args: { p_client_id: string }; Returns: WorkoutSummaryRow[] }
+      list_latest_exercise_results: { Args: { p_client_id: string; p_exercise_refs: string[] }; Returns: PreviousExerciseResultRow[] }
       create_client: { Args: { p_client: Json }; Returns: string }
       create_own_client: { Args: { p_client: Json }; Returns: string }
       update_client: { Args: { p_client: Json; p_expected_version: number }; Returns: number }

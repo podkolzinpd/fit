@@ -7,7 +7,7 @@ import { goalsRepository } from '../../data/repositories/goals.repository'
 import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
-import { blockLabel, chartUnitFor, copyWorkout, durationLabel, durationSeconds, exerciseChartPoints, exerciseSummary, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, copyWorkout, durationLabel, durationSeconds, exerciseChartPoints, exerciseSummary, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -181,6 +181,7 @@ export function WorkoutFormPage() {
   useClientRealtime(source.data?.clientId ?? (clientMode ? mine.data?.id : params.get('client') ?? undefined))
   const catalog = useExerciseCatalog()
   const [draftExercises, setDraftExercises] = useState<WorkoutDraft['exercises'] | null>(null)
+  const [prefillError, setPrefillError] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
@@ -202,22 +203,41 @@ export function WorkoutFormPage() {
     navigate(`/workouts/${id}`)
   } })
 
-  function pickExercise(selected: ExerciseSnapshot) {
-    if (replaceIndex !== null) setDraftExercises(replaceExercise(exercises, replaceIndex, selected))
-    else setDraftExercises([...exercises, { ...selected, position: exercises.length, blockId: crypto.randomUUID(), blockType: 'single', blockRounds: 1, sets: [{ position: 0 }] }])
+  async function previousResults(selected: ExerciseSnapshot[]): Promise<Map<string, PreviousExerciseResult>> {
+    if (!clientId) return new Map<string, PreviousExerciseResult>()
+    try {
+      setPrefillError(null)
+      return await workoutsRepository.latestExerciseResults(clientId, selected.map((exercise) => exercise.ref))
+    } catch {
+      // Добавление тренировки не должно блокироваться, если история временно недоступна.
+      setPrefillError('Не удалось подставить значения с прошлой тренировки')
+      return new Map<string, PreviousExerciseResult>()
+    }
+  }
+  function exerciseDraft(selected: ExerciseSnapshot, position: number, result: PreviousExerciseResult | undefined) {
+    return {
+      ...selected, position, blockId: crypto.randomUUID(), blockType: 'single' as const, blockRounds: 1,
+      prefilledFromDate: result?.workoutDate,
+      sets: result?.sets.length ? result.sets : [{ position: 0 }],
+    }
+  }
+  async function pickExercise(selected: ExerciseSnapshot) {
+    const results = await previousResults([selected])
+    const previous = results.get(selected.ref)
+    if (replaceIndex !== null) {
+      // Если в истории этого упражнения ещё нет, сохраняем привычное поведение
+      // замены: при одинаковом типе остаются уже набранные значения формы.
+      const draft = previous ? exerciseDraft(selected, replaceIndex, previous) : undefined
+      setDraftExercises(replaceExercise(exercises, replaceIndex, selected, draft))
+    }
+    else setDraftExercises([...exercises, exerciseDraft(selected, exercises.length, previous)])
     closePicker()
   }
-  function pickExercises(selected: ExerciseSnapshot[]) {
+  async function pickExercises(selected: ExerciseSnapshot[]) {
+    const results = await previousResults(selected)
     setDraftExercises([
       ...exercises,
-      ...selected.map((exercise, index) => ({
-        ...exercise,
-        position: exercises.length + index,
-        blockId: crypto.randomUUID(),
-        blockType: 'single' as const,
-        blockRounds: 1,
-        sets: [{ position: 0 }],
-      })),
+      ...selected.map((exercise, index) => exerciseDraft(exercise, exercises.length + index, results.get(exercise.ref))),
     ])
     closePicker()
   }
@@ -248,6 +268,7 @@ export function WorkoutFormPage() {
       </Field>}
       <VoiceNoteField name="notes" source="workout_form" defaultValue={initial?.notes ?? ''} />
       <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} />
+      {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
     </form>}</AsyncView>

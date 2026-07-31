@@ -253,12 +253,13 @@ export function replaceExercise(
   exercises: WorkoutExerciseDraft[],
   index: number,
   snapshot: ExerciseSnapshot,
+  previous?: Pick<WorkoutExerciseDraft, 'sets' | 'prefilledFromDate'>,
 ): WorkoutExerciseDraft[] {
   return exercises.map((exercise, current) => {
     if (current !== index) return exercise
-    const sets = exercise.inputKind === snapshot.inputKind
+    const sets = previous?.sets ?? (exercise.inputKind === snapshot.inputKind
       ? exercise.sets
-      : exercise.sets.map((set) => ({ position: set.position }))
+      : exercise.sets.map((set) => ({ position: set.position })))
     return {
       ...exercise,
       source: snapshot.source,
@@ -267,6 +268,7 @@ export function replaceExercise(
       name: snapshot.name,
       muscleGroup: snapshot.muscleGroup,
       inputKind: snapshot.inputKind,
+      prefilledFromDate: previous?.prefilledFromDate,
       sets,
     }
   })

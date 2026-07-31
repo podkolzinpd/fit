@@ -1,4 +1,4 @@
-import type { BlockPreset, BlockType, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
+import type { BlockPreset, BlockType, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet, WorkoutSetDraft, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import type { WorkoutListRow } from '../database.types'
 import { clientsRepository } from './clients.repository'
@@ -8,6 +8,29 @@ import { workoutQueries } from '../queries/workouts.queries'
 export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, durationLabel, durationSeconds, formatFactVsPlan, factLine, splitClientWorkouts, workoutDurationLabel, muscleGroupLabels, exerciseSummary, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, BLOCK_PRESET_LABELS, PRESET_REST_DEFAULTS, DEFAULT_REST_BETWEEN_SETS, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockPreset, setBlockRest, syncBlockRounds, draftBlockRoundsView, moveBlock, replaceExercise } from './workout-rules'
 export type { ExerciseBlock, DraftBlock, DraftBlockRound, BlockRound } from './workout-rules'
 export type { ExerciseChartPoint } from './workout-rules'
+
+export interface PreviousExerciseResult {
+  workoutDate: ReturnType<typeof localDate>
+  sets: WorkoutSetDraft[]
+}
+
+function numberOrUndefined(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+function previousSets(value: unknown): WorkoutSetDraft[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item, position) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return []
+    const row = item as Record<string, unknown>
+    return [{
+      position,
+      weightKg: numberOrUndefined(row.weightKg), reps: numberOrUndefined(row.reps),
+      durationSec: numberOrUndefined(row.durationSec), distanceKm: numberOrUndefined(row.distanceKm),
+      rpe: numberOrUndefined(row.rpe),
+    }]
+  })
+}
 
 async function get(id: string): Promise<Workout> {
   const [root, exercises] = await Promise.all([workoutQueries.getRoot(id), workoutQueries.getExercises(id)])
@@ -128,6 +151,15 @@ export const workoutsRepository = {
     return result.data.map((row) => ({
       id: row.id, workoutDate: localDate(row.workout_date), status: row.status as WorkoutStatus,
     }))
+  },
+  async latestExerciseResults(clientId: string, exerciseRefs: string[]): Promise<Map<string, PreviousExerciseResult>> {
+    if (!exerciseRefs.length) return new Map()
+    const result = await workoutQueries.latestExerciseResults(clientId, exerciseRefs)
+    if (result.error) throw repositoryError(result.error)
+    return new Map(result.data.map((row) => [row.exercise_ref, {
+      workoutDate: localDate(row.workout_date),
+      sets: previousSets(row.sets),
+    }]))
   },
   async save(draft: WorkoutDraft): Promise<string> {
     const result = await workoutQueries.save(draft)
