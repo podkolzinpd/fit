@@ -454,6 +454,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .set-remove { padding: 2px 8px; font-size: 16px; line-height: 1; color: var(--danger, #ff6b6b) }
 .set-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0 }
 .set-row input { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 9px; color: var(--fg-on-surface); background: var(--input) }
+.set-rpe-field { display: inline-flex; align-items: center; gap: 8px; margin: -2px 0 10px; color: var(--muted); font-size: 12px; font-weight: 700 }
+.set-rpe-field select { min-height: 34px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 8px; color: var(--fg-on-surface); background: var(--input); font: inherit }
 /* Степпер: крупные −/+ вокруг поля факта (быстрый ввод одной рукой, P5). */
 .stepper { display: flex; align-items: stretch; gap: 6px; min-width: 0 }
 .stepper input { text-align: center; font-weight: 700; -moz-appearance: textfield }

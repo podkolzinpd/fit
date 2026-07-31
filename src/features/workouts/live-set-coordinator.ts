@@ -7,8 +7,10 @@ function draftKey(draft: LiveSetDraft): string {
   return JSON.stringify([
     draft.weightKg ?? null,
     draft.reps ?? null,
+    draft.durationSec ?? null,
     draft.durationMin ?? null,
     draft.distanceKm ?? null,
+    draft.rpe ?? null,
   ])
 }
 

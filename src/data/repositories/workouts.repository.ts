@@ -5,7 +5,7 @@ import { clientsRepository } from './clients.repository'
 import { collectPages, pageFromLookahead } from './collect-pages'
 import { repositoryError } from './error'
 import { workoutQueries } from '../queries/workouts.queries'
-export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, formatFactVsPlan, factLine, splitClientWorkouts, workoutDurationLabel, muscleGroupLabels, exerciseSummary, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, BLOCK_PRESET_LABELS, PRESET_REST_DEFAULTS, DEFAULT_REST_BETWEEN_SETS, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockPreset, setBlockRest, syncBlockRounds, draftBlockRoundsView, moveBlock, replaceExercise } from './workout-rules'
+export { canTransition, copyWorkout, computeClientStats, exerciseChartPoints, chartUnitFor, durationLabel, durationSeconds, formatFactVsPlan, factLine, splitClientWorkouts, workoutDurationLabel, muscleGroupLabels, exerciseSummary, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, BLOCK_PRESET_LABELS, PRESET_REST_DEFAULTS, DEFAULT_REST_BETWEEN_SETS, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockPreset, setBlockRest, syncBlockRounds, draftBlockRoundsView, moveBlock, replaceExercise } from './workout-rules'
 export type { ExerciseBlock, DraftBlock, DraftBlockRound, BlockRound } from './workout-rules'
 export type { ExerciseChartPoint } from './workout-rules'
 
@@ -21,9 +21,11 @@ async function get(id: string): Promise<Workout> {
     current.push({
       id: row.id, position: row.position,
       weightKg: row.plan_weight_kg ?? undefined, reps: row.plan_reps ?? undefined,
-      durationMin: row.plan_duration_min ?? undefined, distanceKm: row.plan_distance_km ?? undefined,
+      durationMin: row.plan_duration_min ?? undefined, durationSec: row.plan_duration_sec ?? undefined,
+      distanceKm: row.plan_distance_km ?? undefined, rpe: row.plan_rpe ?? undefined,
       fact: { weightKg: row.fact_weight_kg ?? undefined, reps: row.fact_reps ?? undefined,
-        durationMin: row.fact_duration_min ?? undefined, distanceKm: row.fact_distance_km ?? undefined },
+        durationMin: row.fact_duration_min ?? undefined, durationSec: row.fact_duration_sec ?? undefined,
+        distanceKm: row.fact_distance_km ?? undefined, rpe: row.fact_rpe ?? undefined },
       confirmedAt: row.confirmed_at, version: row.version,
     })
     grouped.set(row.workout_exercise_id, current)
@@ -87,12 +89,16 @@ function mapWorkout(row: WorkoutListRow): Workout {
         weightKg: set.plan_weight_kg ?? undefined,
         reps: set.plan_reps ?? undefined,
         durationMin: set.plan_duration_min ?? undefined,
+        durationSec: set.plan_duration_sec ?? undefined,
         distanceKm: set.plan_distance_km ?? undefined,
+        rpe: set.plan_rpe ?? undefined,
         fact: {
           weightKg: set.fact_weight_kg ?? undefined,
           reps: set.fact_reps ?? undefined,
           durationMin: set.fact_duration_min ?? undefined,
+          durationSec: set.fact_duration_sec ?? undefined,
           distanceKm: set.fact_distance_km ?? undefined,
+          rpe: set.fact_rpe ?? undefined,
         },
         confirmedAt: set.confirmed_at,
         version: set.version,

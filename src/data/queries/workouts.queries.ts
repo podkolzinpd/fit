@@ -21,7 +21,7 @@ export const workoutQueries = {
     .select('id,position,exercise_source,exercise_ref,custom_exercise_id,exercise_name,muscle_group,input_kind,block_id,block_type,block_preset,block_rounds,rest_between_exercises_sec,rest_between_rounds_sec,rest_between_sets_sec,trainer_comment')
     .eq('workout_id', id).order('position'),
   getSets: (exerciseIds: string[]) => supabase.from('workout_sets')
-    .select('id,workout_exercise_id,position,plan_weight_kg,plan_reps,plan_duration_min,plan_distance_km,fact_weight_kg,fact_reps,fact_duration_min,fact_distance_km,confirmed_at,version')
+    .select('id,workout_exercise_id,position,plan_weight_kg,plan_reps,plan_duration_min,plan_duration_sec,plan_distance_km,plan_rpe,fact_weight_kg,fact_reps,fact_duration_min,fact_duration_sec,fact_distance_km,fact_rpe,confirmed_at,version')
     .in('workout_exercise_id', exerciseIds).order('position'),
   save: (draft: WorkoutDraft) => supabase.rpc('save_workout', {
     p_workout: toJson(draft), p_expected_version: draft.version ?? null,

@@ -4,7 +4,7 @@ export type UUID = string
 export type WorkoutStatus = 'planned' | 'in_progress' | 'done'
 export type Gender = 'male' | 'female'
 export type MuscleGroup = 'legs' | 'glutes' | 'chest' | 'back' | 'shoulders' | 'arms' | 'core' | 'cardio' | 'other'
-export type InputKind = 'strength' | 'distance' | 'reps'
+export type InputKind = 'strength' | 'distance' | 'reps' | 'duration'
 // Тип блока: одиночное упражнение или объединённая группа. Механика группы одна
 // (упражнения по кругу); «Сет» и «Круговая» — пресеты (блок различаются только
 // названием и дефолтами отдыха).
@@ -153,8 +153,13 @@ export interface WorkoutSetDraft {
   position: number
   weightKg?: number
   reps?: number
+  /** Новые тренировки хранят длительность точно, в целых секундах. */
+  durationSec?: number
+  /** Совместимость с историческими тренировками, записанными до секунд. */
   durationMin?: number
   distanceKm?: number
+  /** Целевая субъективная нагрузка в плане: 6–10, шаг 0,5. */
+  rpe?: number
 }
 
 export interface WorkoutExerciseDraft extends ExerciseSnapshot {
@@ -185,8 +190,11 @@ export interface WorkoutDraft {
 export interface LiveSetDraft {
   weightKg?: number
   reps?: number
+  durationSec?: number
   durationMin?: number
   distanceKm?: number
+  /** Фактическая субъективная нагрузка: 6–10, шаг 0,5. */
+  rpe?: number
 }
 
 export interface WorkoutSet extends WorkoutSetDraft {

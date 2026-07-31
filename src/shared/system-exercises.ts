@@ -75,11 +75,11 @@ export const SYSTEM_EXERCISES = [
   { source: 'system', ref: 'triceps-pushdown', name: 'Разгибание на трицепс', muscleGroup: 'arms', inputKind: 'strength' },
   { source: 'system', ref: 'close-grip-push-up', name: 'Отжимания узким хватом', muscleGroup: 'arms', inputKind: 'strength' },
 
-  { source: 'system', ref: 'plank', name: 'Планка', muscleGroup: 'core', inputKind: 'reps' },
+  { source: 'system', ref: 'plank', name: 'Планка', muscleGroup: 'core', inputKind: 'duration' },
   { source: 'system', ref: 'crunches', name: 'Скручивания', muscleGroup: 'core', inputKind: 'strength' },
   { source: 'system', ref: 'leg-raise', name: 'Подъём ног', muscleGroup: 'core', inputKind: 'strength' },
   { source: 'system', ref: 'russian-twist', name: 'Русский твист', muscleGroup: 'core', inputKind: 'strength' },
-  { source: 'system', ref: 'side-plank', name: 'Боковая планка', muscleGroup: 'core', inputKind: 'reps' },
+  { source: 'system', ref: 'side-plank', name: 'Боковая планка', muscleGroup: 'core', inputKind: 'duration' },
 
   { source: 'system', ref: 'running', name: 'Бег', muscleGroup: 'cardio', inputKind: 'distance' },
   { source: 'system', ref: 'stationary-bike', name: 'Велотренажёр', muscleGroup: 'cardio', inputKind: 'distance' },
