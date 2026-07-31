@@ -281,7 +281,7 @@ export function WorkoutFormPage() {
           {stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.title}</option>)}
         </select>
       </Field>}
-      <VoiceNoteField name="notes" source="workout_form" defaultValue={initial?.notes ?? ''} />
+      <VoiceNoteField name="notes" source="workout_form" defaultValue={initial?.notes ?? ''} collapsible />
       <QuickWorkoutEntry catalog={catalog.exercises} onAdd={(parsed) => void addQuickEntry(parsed)} />
       <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} />
       {prefillError && <p className="error">{prefillError}</p>}

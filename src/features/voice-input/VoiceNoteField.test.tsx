@@ -35,4 +35,25 @@ describe('appendTranscript', () => {
 
     expect(onValueChange).toHaveBeenCalledWith('Жим лёжа 40 кг')
   })
+
+  it('keeps an empty optional note compact until the trainer needs it', async () => {
+    const user = userEvent.setup()
+    render(<VoiceNoteField name="notes" source="test" collapsible />)
+
+    expect(screen.queryByLabelText('Заметка')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Добавить заметку' }))
+    expect(screen.getByLabelText('Заметка')).toBeVisible()
+  })
+
+  it('keeps a draft when an optional note is hidden and opened again', async () => {
+    const user = userEvent.setup()
+    render(<VoiceNoteField name="notes" source="test" collapsible />)
+
+    await user.click(screen.getByRole('button', { name: 'Добавить заметку' }))
+    await user.type(screen.getByLabelText('Заметка'), 'Техника хорошая')
+    await user.click(screen.getByRole('button', { name: 'Скрыть заметку' }))
+    await user.click(screen.getByRole('button', { name: 'Добавить заметку' }))
+
+    expect(screen.getByLabelText('Заметка')).toHaveValue('Техника хорошая')
+  })
 })

@@ -162,6 +162,9 @@ p { margin: 6px 0 }
 .field input, .field textarea, .field select, select[aria-label], .inline-form input { width: 100%; min-width: 0; padding: 12px 13px; border: 1px solid var(--border); border-radius: 11px; color: var(--fg-on-surface); background: var(--input); outline: none }
 .field input:focus, .field textarea:focus, .field select:focus, .inline-form input:focus, .picker-search:focus { border-color: var(--accent-focus); box-shadow: 0 0 0 3px var(--accent-ring) }
 .field textarea { min-height: 82px; resize: vertical }
+.voice-note-disclosure { display: flex; align-items: center; min-height: 44px }
+.voice-note-disclosure .secondary { margin: 0; }
+.voice-note-hide { align-self: flex-start; min-height: 32px; padding: 2px 0; font-size: 13px; }
 /* Нативные date/time на iOS Safari по умолчанию центрируют текст, имеют своё
    оформление и разную высоту (пустое «Время» выше «Даты»). Нормализуем: снимаем
    нативный вид, выравниваем влево, фиксируем высоту как у обычных полей.
