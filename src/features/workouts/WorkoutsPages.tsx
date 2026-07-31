@@ -207,6 +207,20 @@ export function WorkoutFormPage() {
     else setDraftExercises([...exercises, { ...selected, position: exercises.length, blockId: crypto.randomUUID(), blockType: 'single', blockRounds: 1, sets: [{ position: 0 }] }])
     closePicker()
   }
+  function pickExercises(selected: ExerciseSnapshot[]) {
+    setDraftExercises([
+      ...exercises,
+      ...selected.map((exercise, index) => ({
+        ...exercise,
+        position: exercises.length + index,
+        blockId: crypto.randomUUID(),
+        blockType: 'single' as const,
+        blockRounds: 1,
+        sets: [{ position: 0 }],
+      })),
+    ])
+    closePicker()
+  }
   function closePicker() { setPickerOpen(false); setReplaceIndex(null) }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget)
@@ -237,7 +251,7 @@ export function WorkoutFormPage() {
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
     </form>}</AsyncView>
-    {pickerOpen && <ExercisePicker catalog={catalog} onPick={pickExercise} onClose={closePicker} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
   </Page>
 }
 
