@@ -16,6 +16,7 @@ interface VoiceInputButtonProps {
   recognizerFactory?: () => SpeechRecognizer
   decodeAudio?: (blob: Blob) => Promise<ArrayBuffer>
   maxDurationMs?: number
+  idleLabel?: string
 }
 
 export function VoiceInputButton({
@@ -25,6 +26,7 @@ export function VoiceInputButton({
   recognizerFactory = () => new WhisperCppRecognizer(),
   decodeAudio = decodeAudioToPcm16,
   maxDurationMs = 60_000,
+  idleLabel = 'Надиктовать заметку',
 }: VoiceInputButtonProps) {
   const [phase, setPhase] = useState<Phase>('idle')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -114,19 +116,19 @@ export function VoiceInputButton({
       }}
     >
       {recording ? <StopIcon /> : <MicIcon />}
-      {voiceButtonLabel(phase, elapsedSeconds, progress)}
+      {voiceButtonLabel(phase, elapsedSeconds, progress, idleLabel)}
     </button>
     {phase === 'loading' && <small className="muted">При первом запуске загружается локальная модель (~31 МБ).</small>}
     {message && <small className={message.startsWith('Текст добавлен') ? 'success' : 'error'} role="status">{message}</small>}
   </div>
 }
 
-function voiceButtonLabel(phase: Phase, elapsedSeconds: number, progress: number) {
+function voiceButtonLabel(phase: Phase, elapsedSeconds: number, progress: number, idleLabel: string) {
   if (phase === 'recording') return `Остановить · ${formatDuration(elapsedSeconds)}`
   if (phase === 'preparing') return 'Подготавливаю запись…'
   if (phase === 'loading') return 'Загружаю модель…'
   if (phase === 'transcribing') return `Распознаю… ${progress}%`
-  return 'Надиктовать заметку'
+  return idleLabel
 }
 
 function formatDuration(seconds: number) {
