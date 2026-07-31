@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { goalsRepository } from '../../data/repositories/goals.repository'
@@ -242,7 +242,7 @@ export function WorkoutFormPage() {
 }
 
 export function WorkoutDetailPage() {
-  const { workoutId = '' } = useParams(); const navigate = useNavigate(); const queryClient = useQueryClient()
+  const { workoutId = '' } = useParams(); const navigate = useNavigate(); const location = useLocation(); const queryClient = useQueryClient()
   const { actor } = useAuth()
   const [confirm, confirmDialog] = useConfirm()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
@@ -257,6 +257,9 @@ export function WorkoutDetailPage() {
   const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt) : null
   const groups = workout ? muscleGroupLabels(workout) : []
   const tonnage = workout ? workoutTonnage(workout) : 0
+  const sets = workout?.exercises.flatMap((exercise) => exercise.sets) ?? []
+  const completedSets = sets.filter((set) => set.confirmedAt).length
+  const justCompleted = done && (location.state as { justCompleted?: boolean } | null)?.justCompleted === true
   // «Назад» ведёт в расписание (все запланированные), а не -1 по истории
   // браузера: -1 создавал петлю тренировка ↔ история упражнения после захода
   // в аналитику.
@@ -265,6 +268,14 @@ export function WorkoutDetailPage() {
   const backTo = clientMode ? '/me/workouts' : '/schedule'
   return <Page title="Тренировка" back={backTo}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
+      {justCompleted && <section className="workout-completion" aria-labelledby="workout-completion-title">
+        <span className="workout-completion-mark" aria-hidden="true">✓</span>
+        <div>
+          <span className="workout-completion-kicker">Результат сохранён</span>
+          <h2 id="workout-completion-title">Тренировка завершена</h2>
+          <p>{sets.length > 0 ? `Выполнено ${completedSets} из ${sets.length} подходов` : 'Результаты сохранены'}</p>
+        </div>
+      </section>}
       <section className="workout-title">
         <div><h2>{workout.clientName}</h2><p>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</p>{stageTitle && <p className="stage-tag">🎯 {stageTitle}</p>}</div>
         <span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span>
@@ -555,7 +566,7 @@ export function LiveWorkoutPage() {
       queryClient.invalidateQueries({ queryKey: ['workouts'] }),
       clientId ? queryClient.invalidateQueries({ queryKey: ['client-stats', clientId] }) : Promise.resolve(),
     ])
-    navigate(`/workouts/${workoutId}`)
+    navigate(`/workouts/${workoutId}`, { state: { justCompleted: true } })
   } })
   function draftFrom(form: HTMLFormElement): LiveSetDraft { const values = new FormData(form); return { weightKg: numberValue(values.get('weightKg')), reps: numberValue(values.get('reps')), distanceKm: numberValue(values.get('distanceKm')), durationMin: numberValue(values.get('durationMin')) } }
   // Derive the countdown from a wall-clock deadline so it stays correct even

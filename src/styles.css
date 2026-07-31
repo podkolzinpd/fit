@@ -239,6 +239,11 @@ p { margin: 6px 0 }
 .summary.done-summary strong { font-size: 15px }
 .summary.done-summary-3 { grid-template-columns: repeat(3, 1fr) }
 .summary.done-summary-3 strong { font-size: 14px }
+.workout-completion { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; padding: 17px; border: 1px solid var(--success-border); border-radius: 18px; background: var(--success-surface); box-shadow: var(--shadow-card) }
+.workout-completion-mark { flex: 0 0 auto; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 16px; color: var(--success-fg); background: var(--success-mark-surface); font-size: 27px; font-weight: var(--weight-bold) }
+.workout-completion-kicker { color: var(--success-fg); font-size: var(--text-caption); font-weight: var(--weight-bold); letter-spacing: var(--tracking-label); text-transform: uppercase }
+.workout-completion h2 { margin: 2px 0 3px; font-size: var(--text-section) }
+.workout-completion p { margin: 0; color: var(--muted); font-size: var(--text-ui) }
 .card-meta { color: var(--muted); font-size: var(--text-caption); margin-top: 2px }
 /* Список упражнений в карточке тренировки: каждое на строке, комментарий ниже. */
 .workout-exercise-list { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px }
