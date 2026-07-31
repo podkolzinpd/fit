@@ -621,6 +621,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .picker-close { flex: 0 0 auto; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: transparent; color: var(--muted); box-shadow: none }
 .picker-close svg { width: 22px; height: 22px; display: block; stroke-width: 2.2 }
 .picker-search { flex: 0 0 auto; width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: 13px; color: var(--fg-on-surface); background: var(--input); font-size: 18px; outline: none }
+.picker-search-summary { flex: 0 0 auto; margin: -5px 2px 0; color: var(--muted); font-size: var(--text-caption); font-weight: var(--weight-medium) }
 .picker-categories { flex: 0 0 auto; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none }.picker-categories::-webkit-scrollbar { display: none }
 .picker-category { flex: 0 0 auto; padding: 9px 14px; border: 1px solid var(--border); border-radius: 99px; background: #1b1921; color: #d9d5df; font-weight: 500; box-shadow: none }.picker-category.active { border-color: var(--accent); background: var(--accent); color: var(--on-accent) }
 /* Второй уровень: детальные мышцы выбранной группы (компактнее и приглушённее). */

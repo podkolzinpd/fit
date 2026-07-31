@@ -73,10 +73,20 @@ describe('ExercisePicker', () => {
 
   it('searches exercises in the picker', async () => {
     const user = userEvent.setup()
-    render(<ExercisePicker catalog={catalog()} onPick={vi.fn()} onClose={vi.fn()} />)
-    await user.type(screen.getByLabelText('Поиск упражнения'), 'болгар')
-    expect(screen.getByRole('button', { name: /Болгарский присед/ })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Жим лёжа/ })).not.toBeInTheDocument()
+    render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+    await user.click(screen.getByRole('button', { name: 'Квадрицепс' }))
+    await user.click(screen.getByRole('button', { name: 'Тренажёр' }))
+    await user.type(screen.getByLabelText('Поиск упражнения'), 'жим')
+    // Поиск сворачивает навигацию и ищет глобально, а не внутри скрытых
+    // фильтров «Ноги / Квадрицепс / Тренажёр».
+    expect(screen.queryByLabelText('Группа мышц')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Создать своё упражнение/ })).not.toBeInTheDocument()
+    expect(screen.getByText('Найдено: 1')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Жим лёжа/ })).toBeInTheDocument()
+    await user.clear(screen.getByLabelText('Поиск упражнения'))
+    expect(screen.getByLabelText('Группа мышц')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Разгибание ног/ })).toBeInTheDocument()
   })
 
   it('filters by category and returns the selected exercise', async () => {
