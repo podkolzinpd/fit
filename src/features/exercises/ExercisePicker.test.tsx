@@ -34,6 +34,11 @@ describe('ExercisePicker', () => {
     expect(filterExercises(SYSTEM_EXERCISES, 'cardio', '')).toHaveLength(7)
   })
 
+  it('ищет по словам в любом порядке, оборудованию и без различия е/ё', () => {
+    expect(filterExercises(ENRICHED, 'all', 'штанга жим').map((exercise) => exercise.ref)).toEqual(['d'])
+    expect(filterExercises(ENRICHED, 'all', 'тренажер ноги').map((exercise) => exercise.ref)).toEqual(['b', 'c'])
+  })
+
   it('строит список мышц группы по частоте и фильтрует по мышце', () => {
     expect(musclesForGroup(ENRICHED, 'legs')).toEqual(['Квадрицепс', 'Бицепс бедра'])
     expect(musclesForGroup(ENRICHED, 'chest')).toEqual(['Грудь'])

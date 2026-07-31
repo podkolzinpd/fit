@@ -14,7 +14,9 @@ import { INSTRUCTIONS_RU } from './instructions-ru.mjs'
 
 const SOURCE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json'
 const RAW_IMAGES = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/'
-const TARGET_COUNT = 185
+// Первая ступень расширения: 49 базовых + 301 импортированное = 350.
+// В отбор попадают только упражнения с проверенным русским названием.
+const TARGET_COUNT = 301
 
 // Обязательно включить в импорт (независимо от round-robin отбора). Например
 // ягодичные — новую группу «Ягодицы» наполняем целенаправленно. Ключи — id из
@@ -355,7 +357,7 @@ const TRANSLATIONS = {
   'fedb-leverage-high-row': 'Верхняя тяга в рычажном тренажёре (Тренажёр)',
   'fedb-decline-oblique-crunch': 'Косые скручивания на отрицательном наклоне (Своё тело)',
   'fedb-leverage-shoulder-press': 'Жим над головой в рычажном тренажёре (Тренажёр)',
-  'fedb-extended-range-one-arm-kettlebell-floor-press': 'Жим гири с пола одной рукой (Гиря)',
+  'fedb-extended-range-one-arm-kettlebell-floor-press': 'Жим гири с пола одной рукой в увеличенной амплитуде (Гиря)',
   'fedb-goblet-squat': 'Гоблет-присед (Гиря)',
   'fedb-board-press': 'Жим с бруска (Штанга)',
   'fedb-leverage-iso-row': 'Горизонтальная тяга в рычажном тренажёре (Тренажёр)',
@@ -409,6 +411,169 @@ const TRANSLATIONS = {
   'fedb-split-squat-with-dumbbells': 'Сплит-присед с гантелями (Гантели)',
   'fedb-one-arm-floor-press': 'Жим с пола одной рукой (Штанга)',
   'fedb-straight-bar-bench-mid-rows': 'Тяга к скамье прямым грифом (Штанга)',
+  // Расширение каталога до ~350: распространённые вариации базовых движений.
+  'fedb-kneeling-jump-squat': 'Прыжок из приседа с колен (Штанга)',
+  'fedb-downward-facing-balance': 'Баланс лицом вниз на фитболе (Фитбол)',
+  'fedb-lying-glute': 'Растяжка ягодичных лёжа (Своё тело)',
+  'fedb-seated-glute': 'Растяжка ягодичных сидя (Своё тело)',
+  'fedb-alternating-hang-clean': 'Попеременное взятие гирь с виса (Гири)',
+  'fedb-piriformis-smr': 'Массаж грушевидной мышцы на валике (Валик)',
+  'fedb-barbell-full-squat': 'Глубокий присед со штангой (Штанга)',
+  'fedb-spell-caster': 'Повороты корпуса с гантелью (Гантели)',
+  'fedb-standing-dumbbell-press': 'Жим гантелей стоя (Гантели)',
+  'fedb-incline-push-up-reverse-grip': 'Отжимания на возвышении обратным хватом (Своё тело)',
+  'fedb-barbell-hack-squat': 'Гакк-присед со штангой (Штанга)',
+  'fedb-pin-presses': 'Жим со стоек с ограниченной амплитудой (Штанга)',
+  'fedb-t-bar-row-with-handle': 'Тяга Т-грифа с рукоятью (Штанга)',
+  'fedb-spider-crawl': 'Шаги в планке «паук» (Своё тело)',
+  'fedb-standing-dumbbell-upright-row': 'Тяга гантелей к подбородку стоя (Гантели)',
+  'fedb-incline-push-up-wide': 'Широкие отжимания на возвышении (Своё тело)',
+  'fedb-standing-cable-lift': 'Диагональная тяга блока стоя (Блок)',
+  'fedb-isometric-wipers': 'Изометрические разведения рук лёжа (Своё тело)',
+  'fedb-barbell-squat-to-a-bench': 'Присед со штангой на скамью (Штанга)',
+  'fedb-reverse-band-bench-press': 'Жим лёжа с обратной резиной (Штанга)',
+  'fedb-v-bar-pullup': 'Подтягивания с треугольной рукоятью (Своё тело)',
+  'fedb-standing-cable-wood-chop': '«Дровосек» в блоке стоя (Блок)',
+  'fedb-standing-palm-in-one-arm-dumbbell-press': 'Жим гантели одной рукой нейтральным хватом (Гантели)',
+  'fedb-leverage-chest-press': 'Жим от груди в рычажном тренажёре (Тренажёр)',
+  'fedb-barbell-step-ups': 'Зашагивания со штангой (Штанга)',
+  'fedb-reverse-triceps-bench-press': 'Жим лёжа обратным хватом на трицепс (Штанга)',
+  'fedb-wide-grip-lat-pulldown': 'Тяга верхнего блока широким хватом (Блок)',
+  'fedb-wind-sprints': 'Спринтерские выпады (Своё тело)',
+  'fedb-leverage-decline-chest-press': 'Жим от груди вниз в рычажном тренажёре (Тренажёр)',
+  'fedb-box-squat': 'Присед на тумбу (Штанга)',
+  'fedb-alternating-renegade-row': 'Попеременная тяга гирь в планке (Гири)',
+  'fedb-barbell-ab-rollout': 'Выкат со штангой (Штанга)',
+  'fedb-alternating-kettlebell-press': 'Попеременный жим гирь (Гири)',
+  'fedb-leverage-incline-chest-press': 'Наклонный жим в рычажном тренажёре (Тренажёр)',
+  'fedb-box-squat-with-bands': 'Присед на тумбу с резиной (Штанга)',
+  'fedb-barbell-ab-rollout-on-knees': 'Выкат со штангой с колен (Штанга)',
+  'fedb-arnold-dumbbell-press': 'Жим Арнольда (Гантели)',
+  'fedb-machine-bench-press': 'Жим лёжа в тренажёре (Тренажёр)',
+  'fedb-box-squat-with-chains': 'Присед на тумбу с цепями (Штанга)',
+  'fedb-bent-over-two-arm-long-bar-row': 'Тяга Т-грифа двумя руками (Штанга)',
+  'fedb-barbell-rollout-from-bench': 'Выкат со штангой со скамьи (Штанга)',
+  'fedb-barbell-shoulder-press': 'Жим штанги от плеч (Штанга)',
+  'fedb-one-arm-dumbbell-bench-press': 'Жим гантели лёжа одной рукой (Гантели)',
+  'fedb-double-kettlebell-alternating-hang-clean': 'Попеременное взятие двух гирь с виса (Гири)',
+  'fedb-bent-arm-barbell-pullover': 'Пуловер со штангой с согнутыми руками (Штанга)',
+  'fedb-bent-press': 'Жим гири в наклоне (Гиря)',
+  'fedb-clean-and-press': 'Взятие штанги на грудь и жим (Штанга)',
+  'fedb-push-up-to-side-plank': 'Отжимание с переходом в боковую планку (Своё тело)',
+  'fedb-body-tricep-press': 'Разгибание на трицепс с весом тела (Своё тело)',
+  'fedb-deadlift-with-bands': 'Становая тяга с резиной (Штанга)',
+  'fedb-gorilla-chin-crunch': 'Подтягивание со скручиванием (Своё тело)',
+  'fedb-cuban-press': 'Кубинский жим (Гантели)',
+  'fedb-push-up-wide': 'Отжимания широким хватом (Своё тело)',
+  'fedb-dumbbell-rear-lunge': 'Обратные выпады с гантелями (Гантели)',
+  'fedb-deadlift-with-chains': 'Становая тяга с цепями (Штанга)',
+  'fedb-hanging-pike': 'Подъём прямых ног в висе (Своё тело)',
+  'fedb-double-kettlebell-jerk': 'Толчок двух гирь (Гири)',
+  'fedb-push-ups-with-feet-elevated': 'Отжимания с ногами на возвышении (Своё тело)',
+  'fedb-dumbbell-squat-to-a-bench': 'Присед с гантелями на скамью (Гантели)',
+  'fedb-cable-incline-triceps-extension': 'Разгибание на трицепс в наклоне в блоке (Блок)',
+  'fedb-deficit-deadlift': 'Становая тяга с дефицита (Штанга)',
+  'fedb-kettlebell-pass-between-the-legs': 'Передача гири между ног (Гиря)',
+  'fedb-double-kettlebell-push-press': 'Швунг жимовой с двумя гирями (Гири)',
+  'fedb-pushups-close-and-wide-hand-positions': 'Отжимания со сменой узкой и широкой постановки (Своё тело)',
+  'fedb-dumbbell-step-ups': 'Зашагивания с гантелями (Гантели)',
+  'fedb-cable-lying-triceps-extension': 'Разгибание на трицепс лёжа в блоке (Блок)',
+  'fedb-elevated-cable-rows': 'Тяга блока с возвышения (Блок)',
+  'fedb-kettlebell-windmill': '«Мельница» с гирей (Гиря)',
+  'fedb-double-kettlebell-snatch': 'Рывок двух гирь (Гири)',
+  'fedb-elevated-back-lunge': 'Обратный выпад с возвышения (Штанга)',
+  'fedb-cable-one-arm-tricep-extension': 'Разгибание руки на трицепс в блоке (Блок)',
+  'fedb-full-range-of-motion-lat-pulldown': 'Тяга верхнего блока в полной амплитуде (Блок)',
+  'fedb-press-sit-up': 'Подъём корпуса с жимом штанги (Штанга)',
+  'fedb-dumbbell-one-arm-shoulder-press': 'Жим гантели над головой одной рукой (Гантели)',
+  'fedb-smith-machine-bench-press': 'Жим лёжа в Смите (Тренажёр)',
+  'fedb-freehand-jump-squat': 'Приседания с выпрыгиванием (Своё тело)',
+  'fedb-hyperextensions-with-no-hyperextension-bench': 'Гиперэкстензия без скамьи (Своё тело)',
+  'fedb-dumbbell-one-arm-upright-row': 'Тяга гантели к подбородку одной рукой (Гантели)',
+  'fedb-smith-machine-decline-press': 'Жим вниз в Смите (Тренажёр)',
+  'fedb-cable-rope-overhead-triceps-extension': 'Разгибание на трицепс из-за головы с канатом (Блок)',
+  'fedb-lying-t-bar-row': 'Тяга Т-грифа лёжа (Тренажёр)',
+  'fedb-alternate-heel-touchers': 'Попеременные касания пяток (Своё тело)',
+  'fedb-smith-machine-incline-bench-press': 'Наклонный жим в Смите (Тренажёр)',
+  'fedb-front-barbell-squat-to-a-bench': 'Фронтальный присед на скамью (Штанга)',
+  'fedb-one-arm-kettlebell-row': 'Тяга гири одной рукой (Гиря)',
+  'fedb-barbell-side-bend': 'Наклоны в сторону со штангой (Штанга)',
+  'fedb-face-pull': 'Тяга каната к лицу (Блок)',
+  'fedb-standing-cable-chest-press': 'Жим от груди в блоке стоя (Блок)',
+  'fedb-front-squat-clean-grip': 'Фронтальный присед тяжелоатлетическим хватом (Штанга)',
+  'fedb-rack-pull-with-bands': 'Тяга с плинтов с резиной (Штанга)',
+  'fedb-bosu-ball-cable-crunch-with-side-bends': 'Скручивания в блоке на босу с наклонами (Блок)',
+  'fedb-handstand-push-ups': 'Отжимания в стойке на руках (Своё тело)',
+  'fedb-around-the-worlds': 'Круговые разведения гантелей лёжа (Гантели)',
+  'fedb-front-squats-with-two-kettlebells': 'Фронтальный присед с двумя гирями (Гири)',
+  'fedb-close-grip-ez-bar-press': 'Жим EZ-грифа узким хватом (EZ-гриф)',
+  'fedb-rack-pulls': 'Тяга с плинтов (Штанга)',
+  'fedb-cable-crunch': 'Скручивания в блоке (Блок)',
+  'fedb-iron-cross': '«Железный крест» с гантелями (Гантели)',
+  'fedb-glute-ham-raise': 'Подъём корпуса на бицепс бедра (Тренажёр)',
+  'fedb-close-grip-standing-barbell-curl': 'Подъём штанги на бицепс узким хватом стоя (Штанга)',
+  'fedb-reverse-band-deadlift': 'Становая тяга с обратной резиной (Штанга)',
+  'fedb-cable-reverse-crunch': 'Обратные скручивания в блоке (Блок)',
+  'fedb-kettlebell-arnold-press': 'Жим Арнольда с гирями (Гири)',
+  'fedb-bent-arm-dumbbell-pullover': 'Пуловер с гантелью с согнутыми руками (Гантели)',
+  'fedb-concentration-curls': 'Концентрированный подъём на бицепс (Гантели)',
+  'fedb-reverse-grip-bent-over-rows': 'Тяга штанги в наклоне обратным хватом (Штанга)',
+  'fedb-cable-seated-crunch': 'Скручивания сидя в блоке (Блок)',
+  'fedb-kettlebell-seated-press': 'Жим гирь сидя (Гири)',
+  'fedb-clock-push-up': 'Отжимания «по часам» (Своё тело)',
+  'fedb-good-morning-off-pins': 'Гудмонинг со стоек (Штанга)',
+  'fedb-cross-body-hammer-curl': 'Молоток к противоположному плечу (Гантели)',
+  'fedb-seated-good-mornings': 'Гудмонинг сидя (Штанга)',
+  'fedb-crunch-hands-overhead': 'Скручивания с руками над головой (Своё тело)',
+  'fedb-kettlebell-seesaw-press': 'Попеременный жим гирь «качели» (Гири)',
+  'fedb-leg-over-floor-press': 'Жим гири с пола с переносом ноги (Гиря)',
+  'fedb-decline-dumbbell-triceps-extension': 'Разгибание гантелей на трицепс вниз головой (Гантели)',
+  'fedb-seated-one-arm-cable-pulley-rows': 'Тяга нижнего блока одной рукой сидя (Блок)',
+  'fedb-crunch-legs-on-exercise-ball': 'Скручивания с ногами на фитболе (Своё тело)',
+  'fedb-kettlebell-sumo-high-pull': 'Тяга гири сумо к подбородку (Гиря)',
+  'fedb-jefferson-squats': 'Присед Джефферсона (Штанга)',
+  'fedb-decline-ez-bar-triceps-extension': 'Разгибание EZ-грифа на трицепс вниз головой (EZ-гриф)',
+  'fedb-two-arm-kettlebell-row': 'Тяга двух гирь в наклоне (Гири)',
+  'fedb-kettlebell-thruster': 'Трастер с гирями (Гири)',
+  'fedb-one-arm-kettlebell-floor-press': 'Жим гири с пола одной рукой (Гиря)',
+  'fedb-dumbbell-alternate-bicep-curl': 'Попеременный подъём гантелей на бицепс (Гантели)',
+  'fedb-v-bar-pulldown': 'Тяга верхнего блока с треугольной рукоятью (Блок)',
+  'fedb-dumbbell-side-bend': 'Наклоны в сторону с гантелью (Гантели)',
+  'fedb-kettlebell-turkish-get-up-lunge-style': 'Турецкий подъём с гирей через выпад (Гиря)',
+  'fedb-plyo-kettlebell-pushups': 'Плиометрические отжимания на гирях (Гири)',
+  'fedb-kettlebell-hang-clean': 'Взятие гири с виса (Гиря)',
+  'fedb-exercise-ball-pull-in': 'Подтягивание коленей на фитболе (Фитбол)',
+  'fedb-kettlebell-turkish-get-up-squat-style': 'Турецкий подъём с гирей через присед (Гиря)',
+  'fedb-single-arm-push-up': 'Отжимания на одной руке (Своё тело)',
+  'fedb-dumbbell-tricep-extension-pronated-grip': 'Разгибание гантели на трицепс прямым хватом (Гантели)',
+  'fedb-landmine-linear-jammer': 'Линейный жим грифа из угла (Штанга)',
+  'fedb-straight-arm-dumbbell-pullover': 'Пуловер с гантелью прямыми руками (Гантели)',
+  'fedb-kettlebell-pistol-squat': 'Присед «пистолет» с гирей (Гиря)',
+  'fedb-band-assisted-pull-up': 'Подтягивания с резиной (Резина)',
+  'fedb-janda-sit-up': 'Подъём корпуса по Янде (Своё тело)',
+  'fedb-one-arm-kettlebell-clean-and-jerk': 'Взятие и толчок гири одной рукой (Гиря)',
+  'fedb-wide-grip-barbell-bench-press': 'Жим лёжа широким хватом (Штанга)',
+  'fedb-lunge-pass-through': 'Выпад с передачей гири под ногой (Гиря)',
+  'fedb-flexor-incline-dumbbell-curls': 'Подъём гантелей на бицепс на наклонной с супинацией (Гантели)',
+  'fedb-kneeling-cable-crunch-with-alternating-oblique-twists': 'Скручивания в блоке с колен с поворотом (Блок)',
+  'fedb-one-arm-kettlebell-jerk': 'Толчок гири одной рукой (Гиря)',
+  'fedb-wide-grip-decline-barbell-bench-press': 'Жим вниз широким хватом (Штанга)',
+  'fedb-lunge-sprint': 'Спринтерский выпад в тренажёре (Тренажёр)',
+  'fedb-oblique-crunches': 'Косые скручивания лёжа (Своё тело)',
+  'fedb-one-arm-kettlebell-military-press-to-the-side': 'Жим гири одной рукой в сторону (Гиря)',
+  'fedb-wide-grip-decline-barbell-pullover': 'Пуловер со штангой широким хватом вниз головой (Штанга)',
+  'fedb-lying-machine-squat': 'Присед лёжа в тренажёре (Тренажёр)',
+  'fedb-incline-dumbbell-curl': 'Подъём гантелей на бицепс на наклонной (Гантели)',
+  'fedb-inverted-row-with-straps': 'Горизонтальные подтягивания на петлях (Петли)',
+  'fedb-oblique-crunches-on-the-floor': 'Косые скручивания на полу (Своё тело)',
+  'fedb-one-arm-kettlebell-para-press': 'Пара-жим гири одной рукой (Гиря)',
+  'fedb-bench-press-with-bands': 'Жим лёжа с резиной (Резина)',
+  'fedb-narrow-stance-hack-squats': 'Гакк-присед с узкой постановкой (Тренажёр)',
+  'fedb-incline-hammer-curls': 'Молоток на наклонной скамье (Гантели)',
+  'fedb-one-arm-high-pulley-cable-side-bends': 'Боковые наклоны одной рукой в верхнем блоке (Блок)',
+  'fedb-one-arm-kettlebell-push-press': 'Швунг жимовой с гирей одной рукой (Гиря)',
+  'fedb-narrow-stance-leg-press': 'Жим ногами с узкой постановкой (Тренажёр)',
+  'fedb-incline-inner-biceps-curl': 'Подъём гантелей на внутренний пучок бицепса (Гантели)',
 }
 
 // Импортированные, дублирующие наши 49 базовых (наши приоритетнее): исключаем.
@@ -421,6 +586,21 @@ const DEDUP_REFS = new Set([
   'fedb-chin-up',              // = pull-ups (Подтягивания)
   'fedb-pullups',              // = pull-ups (Подтягивания)
   'fedb-barbell-curl',         // = barbell-curl (Подъём штанги на бицепс)
+  'fedb-barbell-lunge',        // = lunges (Выпады со штангой)
+  'fedb-push-ups-close-triceps-position', // = close-grip-push-up
+  'fedb-standing-military-press', // = overhead-press
+  'fedb-upright-barbell-row',  // = upright-row
+  'fedb-barbell-deadlift',     // = deadlift
+  'fedb-pushups',              // = push-ups
+  'fedb-front-barbell-squat',  // = front-squat
+  'fedb-dumbbell-shoulder-press', // = seated-dumbbell-press
+  'fedb-russian-twist',        // = russian-twist
+  'fedb-good-morning',         // = good-morning
+  'fedb-crunches',             // = crunches
+  'fedb-dumbbell-bicep-curl',  // = biceps-curl
+  'fedb-hammer-curls',         // = hammer-curl
+  'fedb-flat-bench-lying-leg-raise', // = leg-raise
+  'fedb-butterfly',            // = pec-deck
 ])
 
 // category Free Exercise DB -> наш inputKind.
@@ -436,8 +616,23 @@ function muscleGroupFor(detail) {
 function muscleLabelFor(detail) {
   return MUSCLE_LABEL[detail] ?? detail
 }
+function primaryMuscleLabelFor(group, detail) {
+  const label = muscleLabelFor(detail)
+  // Источник не различает отделы груди. Для новых упражнений используем
+  // нейтральную середину, а точечные верх/низ остаются в RECLASSIFY.
+  return group === 'chest' && label === 'Грудь' ? 'Грудь (середина)' : label
+}
 function equipmentLabelFor(equipment) {
   return EQUIPMENT_LABEL[equipment] ?? 'Другое'
+}
+
+function defaultRussianInstructions(name, exercise) {
+  const equipment = equipmentLabelFor(exercise.equipment).toLowerCase()
+  const title = name.replace(/\s+\([^)]+\)$/, '')
+  return [
+    `Подготовьте оборудование («${equipment}») и примите устойчивое исходное положение для упражнения «${title}».`,
+    'Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков.',
+  ]
 }
 
 // Приоритет отбора: базовые силовые, распространённое оборудование.
@@ -458,7 +653,11 @@ async function main() {
 
   // Отбираем ~TARGET_COUNT популярных с балансом по группам мышц: сортируем по
   // score, затем round-robin по группам, чтобы ни одна не была пустой.
-  const usable = all.filter((ex) => ex.images?.length && ex.primaryMuscles?.length && ex.equipment)
+  const usable = all.filter((ex) => {
+    if (!ex.images?.length || !ex.primaryMuscles?.length || !ex.equipment) return false
+    const ref = `fedb-${ex.id.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`
+    return Boolean(TRANSLATIONS[ref]) && !DEDUP_REFS.has(ref)
+  })
   usable.sort((a, b) => score(b) - score(a) || a.name.localeCompare(b.name))
 
   const byGroup = new Map()
@@ -510,19 +709,20 @@ async function main() {
     const detail = ex.primaryMuscles[0]
     const secondary = (ex.secondaryMuscles ?? []).map(muscleLabelFor)
     const fix = RECLASSIFY[ref] ?? {}
+    const muscleGroup = fix.muscleGroup ?? muscleGroupFor(detail)
     rows.push({
       source: 'system',
       ref,
       name,
-      muscleGroup: fix.muscleGroup ?? muscleGroupFor(detail),
+      muscleGroup,
       inputKind: inputKindFor(ex.category),
       equipment: equipmentLabelFor(ex.equipment),
       equipmentRef: ex.equipment,
-      primaryMuscleDetail: fix.primaryMuscleDetail ?? muscleLabelFor(detail),
+      primaryMuscleDetail: fix.primaryMuscleDetail ?? primaryMuscleLabelFor(muscleGroup, detail),
       secondaryMuscles: secondary,
       level: ex.level ?? null,
       imageUrl: `/exercises/${imageName}`,
-      instructions: INSTRUCTIONS_RU[ref] ?? ex.instructions ?? [],
+      instructions: INSTRUCTIONS_RU[ref] ?? defaultRussianInstructions(name, ex),
     })
   }
 
@@ -568,7 +768,7 @@ async function generateBase(byId) {
       }
       row.equipment = equipmentLabelFor(ex.equipment)
       row.equipmentRef = ex.equipment
-      row.primaryMuscleDetail = fix.primaryMuscleDetail ?? muscleLabelFor(ex.primaryMuscles[0])
+      row.primaryMuscleDetail = fix.primaryMuscleDetail ?? primaryMuscleLabelFor(row.muscleGroup, ex.primaryMuscles[0])
       row.secondaryMuscles = (ex.secondaryMuscles ?? []).map(muscleLabelFor)
       row.level = ex.level ?? null
       row.instructions = INSTRUCTIONS_RU[base.ref] ?? ex.instructions ?? []
