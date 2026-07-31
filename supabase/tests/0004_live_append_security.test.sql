@@ -44,8 +44,16 @@ select throws_ok(
 );
 reset role;
 
-select is((select count(*) from public.workout_exercises), 1::bigint, 'cross-tenant append leaves exercises unchanged');
-select is((select count(*) from public.workout_sets), 1::bigint, 'cross-tenant append leaves sets unchanged');
+select is(
+  (select count(*) from public.workout_exercises where workout_id = 'd0000000-0000-4000-8000-000000000005'),
+  1::bigint,
+  'cross-tenant append leaves exercises unchanged'
+);
+select is(
+  (select count(*) from public.workout_sets where workout_exercise_id = 'e0000000-0000-4000-8000-000000000005'),
+  1::bigint,
+  'cross-tenant append leaves sets unchanged'
+);
 
 select * from finish();
 rollback;
