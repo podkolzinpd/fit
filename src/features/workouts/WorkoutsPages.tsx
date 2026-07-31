@@ -7,7 +7,7 @@ import { goalsRepository } from '../../data/repositories/goals.repository'
 import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
-import { blockLabel, chartUnitFor, copyWorkout, durationLabel, durationSeconds, exerciseChartPoints, exerciseSummary, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, completedWorkoutDraft, copyWorkout, durationLabel, durationSeconds, exerciseChartPoints, exerciseSummary, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -188,7 +188,7 @@ export function WorkoutFormPage() {
   const [pickerOpen, setPickerOpen] = useState(false)
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
-  const initial = source.data ? (workoutId ? { ...copyWorkout(source.data), id: source.data.id, version: source.data.version } : copyWorkout(source.data, todayLocalDate())) : undefined
+  const initial = source.data ? (workoutId ? { ...(source.data.status === 'done' ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, todayLocalDate())) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
   // Клиент, для которого выбираем этап (реактивно — при смене в селекте).
   const defaultClientId = clientMode ? (mine.data?.id ?? '') : (initial?.clientId ?? params.get('client') ?? '')
@@ -198,7 +198,8 @@ export function WorkoutFormPage() {
   const stages = goal.data ? orderedStages(goal.data) : []
   // Этап по умолчанию: сохранённый у тренировки, иначе текущий по дате.
   const defaultStageId = source.data?.stageId ?? (goal.data ? currentStage(goal.data, todayLocalDate())?.id ?? '' : '')
-  const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => recordCompleted ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: async (id) => {
+  const completedMode = recordCompleted || source.data?.status === 'done'
+  const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => completedMode ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: async (id) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['workout', id] }),
       queryClient.invalidateQueries({ queryKey: ['workouts'] }),
@@ -271,7 +272,7 @@ export function WorkoutFormPage() {
       {clientMode
         ? <><input type="hidden" name="clientId" value={mine.data?.id ?? ''} /><Field label="Клиент"><input value={mine.data?.fullName ?? ''} disabled /></Field></>
         : <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} onChange={(event) => setSelectedClientId(event.target.value)} required><option value="">Выберите</option>{availableClients?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>}
-      <div className="split"><Field label="Дата"><input name="date" type="date" max={recordCompleted ? todayLocalDate() : undefined} defaultValue={initial?.workoutDate ?? params.get('date') ?? todayLocalDate()} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} /></Field></div>
+      <div className="split"><Field label="Дата"><input name="date" type="date" max={completedMode ? todayLocalDate() : undefined} defaultValue={initial?.workoutDate ?? params.get('date') ?? todayLocalDate()} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} /></Field></div>
       {!workoutId && <label className="manual-workout-toggle"><input type="checkbox" checked={recordCompleted} onChange={(event) => setRecordCompleted(event.target.checked)} /> <span><strong>Записать завершённую тренировку</strong><small>Введённые значения сохранятся как факт, без live-режима.</small></span></label>}
       {stages.length > 0 && <Field label="Этап цели">
         {/* key — чтобы defaultValue пересчитался при смене клиента/загрузке цели */}
@@ -282,10 +283,10 @@ export function WorkoutFormPage() {
       </Field>}
       <VoiceNoteField name="notes" source="workout_form" defaultValue={initial?.notes ?? ''} />
       <QuickWorkoutEntry catalog={catalog.exercises} onAdd={(parsed) => void addQuickEntry(parsed)} />
-      <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={recordCompleted ? 'fact' : 'plan'} />
+      <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} />
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>{recordCompleted ? 'Записать тренировку' : 'Сохранить'}</button></div>
+      <div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>{recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить'}</button></div>
     </form>}</AsyncView>
     {pickerOpen && <ExercisePicker catalog={catalog} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
   </Page>
@@ -349,7 +350,7 @@ export function WorkoutDetailPage() {
       })}</div>
       {workout.notes && <p>{workout.notes}</p>}
       {(!clientMode || clientOwned) && <><div className="actions">
-        {workout.status === 'planned' && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>Изменить</Link>}
+        {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
         <Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link>
       </div>
       <button className="danger secondary wide" disabled={remove.isPending} onClick={async () => { if (await confirm({ message: 'Удалить тренировку?', confirmLabel: 'Удалить', danger: true })) remove.mutate() }}>Удалить тренировку</button></>}

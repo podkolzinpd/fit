@@ -138,6 +138,15 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.done-summary-3')).toContainText('Тоннаж')
   await expect(page.locator('.done-summary-3')).toContainText('1.2 т')
 
+  // Завершённую тренировку можно исправить без возврата в live: редактор
+  // открывает сохранённый факт, а после сохранения статус остаётся «Готово».
+  await page.getByRole('link', { name: 'Изменить результат' }).click()
+  await expect(page.getByLabel('Фактический вес, подход 1')).toHaveValue('42.5')
+  await page.getByLabel('Фактический вес, подход 1').fill('45')
+  await page.getByRole('button', { name: 'Сохранить изменения' }).click()
+  await expect(page.getByText('Готово', { exact: true })).toBeVisible()
+  await expect(page.getByText(/45 кг × 9 повт\./)).toBeVisible()
+
   // «Назад» с завершённой тренировки ведёт в расписание (все запланированные).
   await page.locator('.page-back').click()
   await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
@@ -158,7 +167,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByLabel('Поиск упражнения').fill('Болгарский')
   await page.getByRole('button', { name: /Болгарский присед/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
-  await expect(page.getByLabel('Вес, подход 1')).toHaveValue('42.5')
+  await expect(page.getByLabel('Вес, подход 1')).toHaveValue('45')
   await expect(page.getByLabel('Повторы, подход 1')).toHaveValue('9')
   await expect(page.getByText(/Значения с тренировки/)).toBeVisible()
   await page.getByRole('button', { name: 'Отмена' }).click()
