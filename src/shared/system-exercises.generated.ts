@@ -6117,5 +6117,2891 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Попеременный подъём гантелей на бицепс».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
     ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-dumbbell-side-bend",
+    "name": "Наклоны в сторону с гантелью (Гантели)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-dumbbell-side-bend.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Наклоны в сторону с гантелью».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-landmine-linear-jammer",
+    "name": "Линейный жим грифа из угла (Штанга)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Пресс",
+      "Икроножные",
+      "Грудь",
+      "Задняя поверхность бедра",
+      "Передняя поверхность бедра",
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-landmine-linear-jammer.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Линейный жим грифа из угла».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-straight-arm-dumbbell-pullover",
+    "name": "Пуловер с гантелью прямыми руками (Гантели)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [
+      "Широчайшие",
+      "Плечи",
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-straight-arm-dumbbell-pullover.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Пуловер с гантелью прямыми руками».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-lunge-sprint",
+    "name": "Спринтерский выпад в тренажёре (Тренажёр)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Ягодицы",
+      "Задняя поверхность бедра"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-lunge-sprint.jpg",
+    "instructions": [
+      "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Спринтерский выпад в тренажёре».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-dumbbell-tricep-extension-pronated-grip",
+    "name": "Разгибание гантели на трицепс прямым хватом (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Трицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-dumbbell-tricep-extension-pronated-grip.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разгибание гантели на трицепс прямым хватом».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-exercise-ball-pull-in",
+    "name": "Подтягивание коленей на фитболе (Фитбол)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Фитбол",
+    "equipmentRef": "exercise ball",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-exercise-ball-pull-in.jpg",
+    "instructions": [
+      "Подготовьте оборудование («фитбол») и примите устойчивое исходное положение для упражнения «Подтягивание коленей на фитболе».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-kettlebell-clean-and-jerk",
+    "name": "Взятие и толчок гири одной рукой (Гиря)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-one-arm-kettlebell-clean-and-jerk.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Взятие и толчок гири одной рукой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-wide-grip-barbell-bench-press",
+    "name": "Жим лёжа широким хватом (Штанга)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [
+      "Плечи",
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-wide-grip-barbell-bench-press.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Жим лёжа широким хватом».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-lying-machine-squat",
+    "name": "Присед лёжа в тренажёре (Тренажёр)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Ягодицы",
+      "Задняя поверхность бедра"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-lying-machine-squat.jpg",
+    "instructions": [
+      "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Присед лёжа в тренажёре».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-inverted-row-with-straps",
+    "name": "Горизонтальные подтягивания на петлях (Петли)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Середина спины",
+    "secondaryMuscles": [
+      "Бицепс",
+      "Широчайшие"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-inverted-row-with-straps.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Горизонтальные подтягивания на петлях».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-janda-sit-up",
+    "name": "Подъём корпуса по Янде (Своё тело)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-janda-sit-up.jpg",
+    "instructions": [
+      "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Подъём корпуса по Янде».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-kettlebell-jerk",
+    "name": "Толчок гири одной рукой (Гиря)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Передняя поверхность бедра",
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-one-arm-kettlebell-jerk.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Толчок гири одной рукой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-wide-grip-decline-barbell-bench-press",
+    "name": "Жим вниз широким хватом (Штанга)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [
+      "Плечи",
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-wide-grip-decline-barbell-bench-press.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Жим вниз широким хватом».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-narrow-stance-hack-squats",
+    "name": "Гакк-присед с узкой постановкой (Тренажёр)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Ягодицы",
+      "Задняя поверхность бедра"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-narrow-stance-hack-squats.jpg",
+    "instructions": [
+      "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Гакк-присед с узкой постановкой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-flexor-incline-dumbbell-curls",
+    "name": "Подъём гантелей на бицепс на наклонной с супинацией (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-flexor-incline-dumbbell-curls.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Подъём гантелей на бицепс на наклонной с супинацией».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-kneeling-cable-crunch-with-alternating-oblique-twists",
+    "name": "Скручивания в блоке с колен с поворотом (Блок)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-kneeling-cable-crunch-with-alternating-oblique-twists.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Скручивания в блоке с колен с поворотом».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-kettlebell-military-press-to-the-side",
+    "name": "Жим гири одной рукой в сторону (Гиря)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-one-arm-kettlebell-military-press-to-the-side.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Жим гири одной рукой в сторону».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-wide-grip-decline-barbell-pullover",
+    "name": "Пуловер со штангой широким хватом вниз головой (Штанга)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [
+      "Плечи",
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-wide-grip-decline-barbell-pullover.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Пуловер со штангой широким хватом вниз головой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-narrow-stance-leg-press",
+    "name": "Жим ногами с узкой постановкой (Тренажёр)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Ягодицы",
+      "Задняя поверхность бедра"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-narrow-stance-leg-press.jpg",
+    "instructions": [
+      "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Жим ногами с узкой постановкой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-incline-dumbbell-curl",
+    "name": "Подъём гантелей на бицепс на наклонной (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-incline-dumbbell-curl.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Подъём гантелей на бицепс на наклонной».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-oblique-crunches",
+    "name": "Косые скручивания лёжа (Своё тело)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-oblique-crunches.jpg",
+    "instructions": [
+      "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Косые скручивания лёжа».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-kettlebell-para-press",
+    "name": "Пара-жим гири одной рукой (Гиря)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-one-arm-kettlebell-para-press.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Пара-жим гири одной рукой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-bench-press-with-bands",
+    "name": "Жим лёжа с резиной (Резина)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "equipmentRef": "bands",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [
+      "Плечи",
+      "Трицепс"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-bench-press-with-bands.jpg",
+    "instructions": [
+      "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Жим лёжа с резиной».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-narrow-stance-squats",
+    "name": "Присед со штангой с узкой постановкой (Штанга)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Ягодицы",
+      "Задняя поверхность бедра",
+      "Поясница"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-narrow-stance-squats.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Присед со штангой с узкой постановкой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-incline-hammer-curls",
+    "name": "Молоток на наклонной скамье (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-incline-hammer-curls.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Молоток на наклонной скамье».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-sled-row",
+    "name": "Тяга саней к корпусу (Другое)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Середина спины",
+    "secondaryMuscles": [
+      "Бицепс",
+      "Широчайшие"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-sled-row.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Тяга саней к корпусу».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-oblique-crunches-on-the-floor",
+    "name": "Косые скручивания на полу (Своё тело)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-oblique-crunches-on-the-floor.jpg",
+    "instructions": [
+      "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Косые скручивания на полу».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-kettlebell-push-press",
+    "name": "Швунг жимовой с гирей одной рукой (Гиря)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Передняя поверхность бедра",
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-one-arm-kettlebell-push-press.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Швунг жимовой с гирей одной рукой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-cable-crossover",
+    "name": "Сведение рук в кроссовере (Блок)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [
+      "Плечи"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-cable-crossover.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Сведение рук в кроссовере».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-natural-glute-ham-raise",
+    "name": "Сгибание корпуса на бицепс бедра с колен (Своё тело)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Ягодицы",
+      "Поясница"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-natural-glute-ham-raise.jpg",
+    "instructions": [
+      "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Сгибание корпуса на бицепс бедра с колен».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-incline-inner-biceps-curl",
+    "name": "Подъём гантелей на внутренний пучок бицепса (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-incline-inner-biceps-curl.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Подъём гантелей на внутренний пучок бицепса».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-high-pulley-cable-side-bends",
+    "name": "Боковые наклоны одной рукой в верхнем блоке (Блок)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-one-arm-high-pulley-cable-side-bends.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Боковые наклоны одной рукой в верхнем блоке».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-kettlebell-snatch",
+    "name": "Рывок гири одной рукой (Гиря)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Ягодицы",
+      "Задняя поверхность бедра",
+      "Поясница",
+      "Трапеции",
+      "Трицепс"
+    ],
+    "level": "expert",
+    "imageUrl": "/exercises/fedb-one-arm-kettlebell-snatch.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Рывок гири одной рукой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-cross-over-with-bands",
+    "name": "Сведение рук с резиной (Резина)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "equipmentRef": "bands",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [
+      "Бицепс",
+      "Плечи"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-cross-over-with-bands.jpg",
+    "instructions": [
+      "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Сведение рук с резиной».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-leg-barbell-squat",
+    "name": "Присед на одной ноге со штангой (Штанга)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Ягодицы",
+      "Задняя поверхность бедра"
+    ],
+    "level": "expert",
+    "imageUrl": "/exercises/fedb-one-leg-barbell-squat.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Присед на одной ноге со штангой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-low-cable-triceps-extension",
+    "name": "Разгибание на трицепс в нижнем блоке (Блок)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Трицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-low-cable-triceps-extension.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разгибание на трицепс в нижнем блоке».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-suspended-row",
+    "name": "Горизонтальная тяга на петлях (Петли)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Середина спины",
+    "secondaryMuscles": [
+      "Бицепс",
+      "Широчайшие"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-suspended-row.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Горизонтальная тяга на петлях».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-medicine-ball-slam",
+    "name": "Бросок медбола в пол одной рукой (Медбол)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "equipmentRef": "medicine ball",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [
+      "Широчайшие",
+      "Плечи"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-one-arm-medicine-ball-slam.jpg",
+    "instructions": [
+      "Подготовьте оборудование («медбол») и примите устойчивое исходное положение для упражнения «Бросок медбола в пол одной рукой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-kettlebell-split-jerk",
+    "name": "Толчок гири в разножку (Гиря)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Ягодицы",
+      "Задняя поверхность бедра",
+      "Передняя поверхность бедра",
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-one-arm-kettlebell-split-jerk.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Толчок гири в разножку».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-dumbbell-flyes",
+    "name": "Разводка гантелей лёжа (Гантели)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-dumbbell-flyes.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разводка гантелей лёжа».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-kettlebell-clean",
+    "name": "Взятие гири на грудь одной рукой (Гиря)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "secondaryMuscles": [
+      "Ягодицы",
+      "Поясница",
+      "Плечи",
+      "Трапеции"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-one-arm-kettlebell-clean.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Взятие гири на грудь одной рукой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-lying-close-grip-bar-curl-on-high-pulley",
+    "name": "Подъём на бицепс лёжа в верхнем блоке (Блок)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-lying-close-grip-bar-curl-on-high-pulley.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Подъём на бицепс лёжа в верхнем блоке».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-alternating-kettlebell-row",
+    "name": "Попеременная тяга гирь в наклоне (Гири)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Середина спины",
+    "secondaryMuscles": [
+      "Бицепс",
+      "Широчайшие"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-alternating-kettlebell-row.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Попеременная тяга гирь в наклоне».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-pallof-press",
+    "name": "Жим Паллоффа (Блок)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [
+      "Грудь",
+      "Плечи",
+      "Трицепс"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-pallof-press.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Жим Паллоффа».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-kettlebell-split-snatch",
+    "name": "Рывок гири в разножку (Гиря)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Задняя поверхность бедра",
+      "Передняя поверхность бедра"
+    ],
+    "level": "expert",
+    "imageUrl": "/exercises/fedb-one-arm-kettlebell-split-snatch.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Рывок гири в разножку».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-low-cable-crossover",
+    "name": "Сведение рук снизу в кроссовере (Блок)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [
+      "Плечи"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-low-cable-crossover.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Сведение рук снизу в кроссовере».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-kettlebell-swings",
+    "name": "Мах гири одной рукой (Гиря)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Ягодицы",
+      "Поясница",
+      "Плечи"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-one-arm-kettlebell-swings.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Мах гири одной рукой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-lying-supine-dumbbell-curl",
+    "name": "Подъём гантелей на бицепс лёжа (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-lying-supine-dumbbell-curl.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Подъём гантелей на бицепс лёжа».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-bodyweight-mid-row",
+    "name": "Горизонтальная тяга с весом тела (Петли)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Середина спины",
+    "secondaryMuscles": [
+      "Бицепс",
+      "Широчайшие"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-bodyweight-mid-row.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Горизонтальная тяга с весом тела».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-reverse-crunch",
+    "name": "Обратные скручивания (Своё тело)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-reverse-crunch.jpg",
+    "instructions": [
+      "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Обратные скручивания».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-seated-barbell-military-press",
+    "name": "Армейский жим сидя (Штанга)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-seated-barbell-military-press.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Армейский жим сидя».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-flat-bench-dumbbell-flye",
+    "name": "Разводка гантели лёжа одной рукой (Гантели)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-one-arm-flat-bench-dumbbell-flye.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разводка гантели лёжа одной рукой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-open-palm-kettlebell-clean",
+    "name": "Взятие гири открытой ладонью одной рукой (Гиря)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "secondaryMuscles": [
+      "Предплечья",
+      "Ягодицы",
+      "Поясница",
+      "Передняя поверхность бедра",
+      "Плечи"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-one-arm-open-palm-kettlebell-clean.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Взятие гири открытой ладонью одной рукой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-machine-bicep-curl",
+    "name": "Подъём на бицепс в тренажёре (Тренажёр)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-machine-bicep-curl.jpg",
+    "instructions": [
+      "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Подъём на бицепс в тренажёре».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-gironda-sternum-chins",
+    "name": "Подтягивания Жиронды к груди (Своё тело)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Широчайшие",
+    "secondaryMuscles": [
+      "Бицепс",
+      "Середина спины"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-gironda-sternum-chins.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Подтягивания Жиронды к груди».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-rope-crunch",
+    "name": "Скручивания с канатом в блоке (Блок)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-rope-crunch.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Скручивания с канатом в блоке».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-see-saw-press-alternating-side-press",
+    "name": "Попеременный жим гантелей «качели» (Гантели)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Пресс",
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-see-saw-press-alternating-side-press.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Попеременный жим гантелей «качели»».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-single-arm-cable-crossover",
+    "name": "Сведение одной рукой в кроссовере (Блок)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-single-arm-cable-crossover.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Сведение одной рукой в кроссовере».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-overhead-kettlebell-squats",
+    "name": "Присед с гирей над головой одной рукой (Гиря)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Ягодицы",
+      "Задняя поверхность бедра",
+      "Плечи"
+    ],
+    "level": "expert",
+    "imageUrl": "/exercises/fedb-one-arm-overhead-kettlebell-squats.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Присед с гирей над головой одной рукой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-machine-preacher-curls",
+    "name": "Подъём на бицепс на скамье Скотта в тренажёре (Тренажёр)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-machine-preacher-curls.jpg",
+    "instructions": [
+      "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Подъём на бицепс на скамье Скотта в тренажёре».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-middle-back-shrug",
+    "name": "Шраги лёжа на середину спины (Гантели)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Середина спины",
+    "secondaryMuscles": [],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-middle-back-shrug.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Шраги лёжа на середину спины».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-seated-barbell-twist",
+    "name": "Повороты корпуса сидя со штангой (Штанга)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-seated-barbell-twist.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Повороты корпуса сидя со штангой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-single-arm-linear-jammer",
+    "name": "Линейный жим грифа одной рукой (Штанга)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Грудь",
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-single-arm-linear-jammer.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Линейный жим грифа одной рукой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-suspended-push-up",
+    "name": "Отжимания на петлях (Петли)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [
+      "Плечи",
+      "Трицепс"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-suspended-push-up.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Отжимания на петлях».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-side-deadlift",
+    "name": "Боковая становая тяга одной рукой (Штанга)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
+    "secondaryMuscles": [
+      "Пресс",
+      "Икроножные",
+      "Ягодицы",
+      "Задняя поверхность бедра",
+      "Поясница",
+      "Трапеции"
+    ],
+    "level": "expert",
+    "imageUrl": "/exercises/fedb-one-arm-side-deadlift.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Боковая становая тяга одной рукой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-machine-triceps-extension",
+    "name": "Разгибание на трицепс в тренажёре (Тренажёр)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Трицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-machine-triceps-extension.jpg",
+    "instructions": [
+      "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Разгибание на трицепс в тренажёре».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-mixed-grip-chin",
+    "name": "Подтягивания смешанным хватом (Своё тело)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Середина спины",
+    "secondaryMuscles": [
+      "Бицепс",
+      "Широчайшие"
+    ],
+    "level": "expert",
+    "imageUrl": "/exercises/fedb-mixed-grip-chin.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Подтягивания смешанным хватом».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-seated-leg-tucks",
+    "name": "Подтягивание коленей сидя (Своё тело)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-seated-leg-tucks.jpg",
+    "instructions": [
+      "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Подтягивание коленей сидя».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-standing-palms-in-dumbbell-press",
+    "name": "Жим гантелей стоя нейтральным хватом (Гантели)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-standing-palms-in-dumbbell-press.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Жим гантелей стоя нейтральным хватом».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-svend-press",
+    "name": "Жим Свенда (Другое)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [
+      "Предплечья",
+      "Плечи",
+      "Трицепс"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-svend-press.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Жим Свенда».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-open-palm-kettlebell-clean",
+    "name": "Взятие гири открытой ладонью (Гиря)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "secondaryMuscles": [
+      "Ягодицы",
+      "Поясница",
+      "Передняя поверхность бедра",
+      "Плечи"
+    ],
+    "level": "expert",
+    "imageUrl": "/exercises/fedb-open-palm-kettlebell-clean.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Взятие гири открытой ладонью».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-dumbbell-preacher-curl",
+    "name": "Подъём гантели на скамье Скотта одной рукой (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-one-arm-dumbbell-preacher-curl.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Подъём гантели на скамье Скотта одной рукой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-chin-up",
+    "name": "Подтягивания на одной руке (Своё тело)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Середина спины",
+    "secondaryMuscles": [
+      "Бицепс",
+      "Предплечья",
+      "Широчайшие"
+    ],
+    "level": "expert",
+    "imageUrl": "/exercises/fedb-one-arm-chin-up.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Подтягивания на одной руке».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-side-bridge",
+    "name": "Боковой мост (Своё тело)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [
+      "Плечи"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-side-bridge.jpg",
+    "instructions": [
+      "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Боковой мост».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-two-arm-kettlebell-clean",
+    "name": "Взятие двух гирь на грудь (Гири)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Ягодицы",
+      "Задняя поверхность бедра",
+      "Поясница",
+      "Трапеции"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-two-arm-kettlebell-clean.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Взятие двух гирь на грудь».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-dips-chest-version",
+    "name": "Отжимания на брусьях с акцентом на грудь (Своё тело)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [
+      "Плечи",
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-dips-chest-version.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Отжимания на брусьях с акцентом на грудь».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-power-clean",
+    "name": "Силовое взятие штанги на грудь (Штанга)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Предплечья",
+      "Ягодицы",
+      "Поясница",
+      "Середина спины",
+      "Передняя поверхность бедра",
+      "Плечи",
+      "Трапеции",
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-power-clean.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Силовое взятие штанги на грудь».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-pronated-dumbbell-triceps-extension",
+    "name": "Разгибание гантели на трицепс прямым хватом одной рукой (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Трицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-one-arm-pronated-dumbbell-triceps-extension.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разгибание гантели на трицепс прямым хватом одной рукой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-rope-climb",
+    "name": "Лазание по канату (Другое)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Широчайшие",
+    "secondaryMuscles": [
+      "Бицепс",
+      "Предплечья",
+      "Середина спины",
+      "Плечи"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-rope-climb.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Лазание по канату».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-sit-up",
+    "name": "Подъём корпуса лёжа (Своё тело)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-sit-up.jpg",
+    "instructions": [
+      "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Подъём корпуса лёжа».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-two-arm-kettlebell-jerk",
+    "name": "Толчок гири двумя руками (Гиря)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Передняя поверхность бедра",
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-two-arm-kettlebell-jerk.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Толчок гири двумя руками».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-flat-bench-cable-flyes",
+    "name": "Разводка рук в блоке лёжа (Блок)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-flat-bench-cable-flyes.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разводка рук в блоке лёжа».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-reverse-band-box-squat",
+    "name": "Присед на тумбу с обратной резиной (Штанга)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
+    "secondaryMuscles": [
+      "Наружная поверхность бедра",
+      "Внутренняя поверхность бедра",
+      "Икроножные",
+      "Предплечья",
+      "Ягодицы",
+      "Задняя поверхность бедра",
+      "Поясница"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-reverse-band-box-squat.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Присед на тумбу с обратной резиной».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-one-arm-supinated-dumbbell-triceps-extension",
+    "name": "Разгибание гантели на трицепс обратным хватом одной рукой (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Трицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-one-arm-supinated-dumbbell-triceps-extension.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разгибание гантели на трицепс обратным хватом одной рукой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-superman",
+    "name": "«Супермен» лёжа (Своё тело)",
+    "muscleGroup": "back",
+    "inputKind": "reps",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Поясница",
+    "secondaryMuscles": [
+      "Ягодицы",
+      "Задняя поверхность бедра"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-superman.jpg",
+    "instructions": [
+      "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения ««Супермен» лёжа».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-smith-machine-hip-raise",
+    "name": "Подъём таза в Смите (Тренажёр)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-smith-machine-hip-raise.jpg",
+    "instructions": [
+      "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Подъём таза в Смите».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-two-arm-kettlebell-military-press",
+    "name": "Армейский жим двух гирь (Гири)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-two-arm-kettlebell-military-press.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Армейский жим двух гирь».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-incline-cable-flye",
+    "name": "Разводка рук в блоке на наклонной (Блок)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [
+      "Плечи"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-incline-cable-flye.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разводка рук в блоке на наклонной».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-reverse-band-power-squat",
+    "name": "Силовой присед с обратной резиной (Штанга)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
+    "secondaryMuscles": [
+      "Внутренняя поверхность бедра",
+      "Икроножные",
+      "Ягодицы",
+      "Задняя поверхность бедра",
+      "Поясница"
+    ],
+    "level": "expert",
+    "imageUrl": "/exercises/fedb-reverse-band-power-squat.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Силовой присед с обратной резиной».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-weighted-ball-hyperextension",
+    "name": "Гиперэкстензия на фитболе с весом (Фитбол)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Фитбол",
+    "equipmentRef": "exercise ball",
+    "primaryMuscleDetail": "Поясница",
+    "secondaryMuscles": [
+      "Ягодицы",
+      "Задняя поверхность бедра",
+      "Середина спины"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-weighted-ball-hyperextension.jpg",
+    "instructions": [
+      "Подготовьте оборудование («фитбол») и примите устойчивое исходное положение для упражнения «Гиперэкстензия на фитболе с весом».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-standing-rope-crunch",
+    "name": "Скручивания стоя с канатом (Блок)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-standing-rope-crunch.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Скручивания стоя с канатом».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-upright-cable-row",
+    "name": "Тяга нижнего блока к подбородку (Блок)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Трапеции",
+    "secondaryMuscles": [
+      "Плечи"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-upright-cable-row.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Тяга нижнего блока к подбородку».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-isometric-chest-squeezes",
+    "name": "Изометрическое сжатие ладоней перед грудью (Своё тело)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [
+      "Плечи",
+      "Трицепс"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-isometric-chest-squeezes.jpg",
+    "instructions": [
+      "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Изометрическое сжатие ладоней перед грудью».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-reverse-band-sumo-deadlift",
+    "name": "Становая тяга сумо с обратной резиной (Штанга)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "secondaryMuscles": [
+      "Наружная поверхность бедра",
+      "Внутренняя поверхность бедра",
+      "Икроножные",
+      "Предплечья",
+      "Ягодицы",
+      "Поясница",
+      "Передняя поверхность бедра",
+      "Трапеции"
+    ],
+    "level": "expert",
+    "imageUrl": "/exercises/fedb-reverse-band-sumo-deadlift.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Становая тяга сумо с обратной резиной».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-weighted-pull-ups",
+    "name": "Подтягивания с дополнительным весом (Своё тело)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Широчайшие",
+    "secondaryMuscles": [
+      "Бицепс",
+      "Середина спины"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-weighted-pull-ups.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Подтягивания с дополнительным весом».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-tuck-crunch",
+    "name": "Скручивания с подтягиванием коленей (Своё тело)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-tuck-crunch.jpg",
+    "instructions": [
+      "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Скручивания с подтягиванием коленей».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-alternating-deltoid-raise",
+    "name": "Попеременный подъём гантелей на дельты (Гантели)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-alternating-deltoid-raise.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Попеременный подъём гантелей на дельты».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-plyo-push-up",
+    "name": "Плиометрические отжимания (Своё тело)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [
+      "Плечи",
+      "Трицепс"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-plyo-push-up.jpg",
+    "instructions": [
+      "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Плиометрические отжимания».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-romanian-deadlift",
+    "name": "Румынская тяга со штангой (Штанга)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Ягодицы",
+      "Поясница"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-romanian-deadlift.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Румынская тяга со штангой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-hyperextensions-back-extensions",
+    "name": "Гиперэкстензия для спины (Своё тело)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Поясница",
+    "secondaryMuscles": [
+      "Ягодицы",
+      "Задняя поверхность бедра"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-hyperextensions-back-extensions.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Гиперэкстензия для спины».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-ab-crunch-machine",
+    "name": "Скручивания в тренажёре (Тренажёр)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-ab-crunch-machine.jpg",
+    "instructions": [
+      "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Скручивания в тренажёре».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-back-flyes-with-bands",
+    "name": "Разведения на заднюю дельту с резиной (Резина)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "equipmentRef": "bands",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Середина спины",
+      "Трицепс"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-back-flyes-with-bands.jpg",
+    "instructions": [
+      "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Разведения на заднюю дельту с резиной».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-push-ups-with-feet-on-an-exercise-ball",
+    "name": "Отжимания с ногами на фитболе (Фитбол)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Фитбол",
+    "equipmentRef": "exercise ball",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [
+      "Плечи",
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-push-ups-with-feet-on-an-exercise-ball.jpg",
+    "instructions": [
+      "Подготовьте оборудование («фитбол») и примите устойчивое исходное положение для упражнения «Отжимания с ногами на фитболе».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-smith-machine-hang-power-clean",
+    "name": "Силовое взятие с виса в Смите (Тренажёр)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "secondaryMuscles": [
+      "Ягодицы",
+      "Поясница",
+      "Передняя поверхность бедра",
+      "Плечи",
+      "Трапеции"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-smith-machine-hang-power-clean.jpg",
+    "instructions": [
+      "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Силовое взятие с виса в Смите».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-catch-and-overhead-throw",
+    "name": "Ловля и бросок медбола над головой (Медбол)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "equipmentRef": "medicine ball",
+    "primaryMuscleDetail": "Широчайшие",
+    "secondaryMuscles": [
+      "Пресс",
+      "Грудь",
+      "Плечи"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-catch-and-overhead-throw.jpg",
+    "instructions": [
+      "Подготовьте оборудование («медбол») и примите устойчивое исходное положение для упражнения «Ловля и бросок медбола над головой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-ab-roller",
+    "name": "Выкат с роликом (Ролик)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [
+      "Плечи"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-ab-roller.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Выкат с роликом».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-medicine-ball-chest-pass",
+    "name": "Передача медбола от груди (Медбол)",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "equipmentRef": "medicine ball",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [
+      "Плечи",
+      "Трицепс"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-medicine-ball-chest-pass.jpg",
+    "instructions": [
+      "Подготовьте оборудование («медбол») и примите устойчивое исходное положение для упражнения «Передача медбола от груди».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-smith-machine-leg-press",
+    "name": "Жим ногами в Смите (Тренажёр)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Ягодицы",
+      "Задняя поверхность бедра"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-smith-machine-leg-press.jpg",
+    "instructions": [
+      "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Жим ногами в Смите».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-parallel-bar-dip",
+    "name": "Отжимания на параллельных брусьях (Своё тело)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Трицепс",
+    "secondaryMuscles": [
+      "Грудь",
+      "Плечи"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-parallel-bar-dip.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Отжимания на параллельных брусьях».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-overhead-slam",
+    "name": "Бросок медбола в пол над головой (Медбол)",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "equipmentRef": "medicine ball",
+    "primaryMuscleDetail": "Широчайшие",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-overhead-slam.jpg",
+    "instructions": [
+      "Подготовьте оборудование («медбол») и примите устойчивое исходное положение для упражнения «Бросок медбола в пол над головой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-advanced-kettlebell-windmill",
+    "name": "Продвинутая «мельница» с гирей (Гиря)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [
+      "Ягодицы",
+      "Задняя поверхность бедра",
+      "Плечи"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-advanced-kettlebell-windmill.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Продвинутая «мельница» с гирей».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-chest-stretch-on-stability-ball",
+    "name": "Растяжка груди на фитболе (Фитбол)",
+    "muscleGroup": "chest",
+    "inputKind": "reps",
+    "equipment": "Фитбол",
+    "equipmentRef": "exercise ball",
+    "primaryMuscleDetail": "Грудь (середина)",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-chest-stretch-on-stability-ball.jpg",
+    "instructions": [
+      "Подготовьте оборудование («фитбол») и примите устойчивое исходное положение для упражнения «Растяжка груди на фитболе».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-smith-machine-pistol-squat",
+    "name": "Присед «пистолет» в Смите (Тренажёр)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "equipmentRef": "machine",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Ягодицы",
+      "Задняя поверхность бедра"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-smith-machine-pistol-squat.jpg",
+    "instructions": [
+      "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Присед «пистолет» в Смите».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-preacher-curl",
+    "name": "Подъём штанги на скамье Скотта (Штанга)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-preacher-curl.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Подъём штанги на скамье Скотта».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-decline-crunch",
+    "name": "Скручивания на скамье с отрицательным наклоном (Своё тело)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-decline-crunch.jpg",
+    "instructions": [
+      "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Скручивания на скамье с отрицательным наклоном».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-battling-ropes",
+    "name": "Волны с канатами (Канаты)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Грудь",
+      "Предплечья"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-battling-ropes.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Волны с канатами».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-snatch-pull",
+    "name": "Рывковая тяга (Штанга)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "secondaryMuscles": [
+      "Икроножные",
+      "Ягодицы",
+      "Поясница",
+      "Передняя поверхность бедра",
+      "Трапеции"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-snatch-pull.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Рывковая тяга».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-preacher-hammer-dumbbell-curl",
+    "name": "Молоток на скамье Скотта (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [
+      "Предплечья"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-preacher-hammer-dumbbell-curl.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Молоток на скамье Скотта».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-double-kettlebell-windmill",
+    "name": "«Мельница» с двумя гирями (Гири)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Гири",
+    "equipmentRef": "kettlebells",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [
+      "Ягодицы",
+      "Задняя поверхность бедра",
+      "Плечи",
+      "Трицепс"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-double-kettlebell-windmill.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения ««Мельница» с двумя гирями».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-bent-over-dumbbell-rear-delt-raise-with-head-on-bench",
+    "name": "Разводка гантелей на заднюю дельту с опорой головой (Гантели)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-bent-over-dumbbell-rear-delt-raise-with-head-on-bench.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разводка гантелей на заднюю дельту с опорой головой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-balance-board",
+    "name": "Баланс на балансировочной доске (Другое)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Другое",
+    "equipmentRef": "other",
+    "primaryMuscleDetail": "Икроножные",
+    "secondaryMuscles": [
+      "Задняя поверхность бедра",
+      "Передняя поверхность бедра"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-balance-board.jpg",
+    "instructions": [
+      "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Баланс на балансировочной доске».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-reverse-barbell-curl",
+    "name": "Подъём штанги на бицепс обратным хватом (Штанга)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [
+      "Предплечья"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-reverse-barbell-curl.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Подъём штанги на бицепс обратным хватом».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-frog-sit-ups",
+    "name": "Подъём корпуса «лягушка» (Своё тело)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-frog-sit-ups.jpg",
+    "instructions": [
+      "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Подъём корпуса «лягушка»».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-bent-over-low-pulley-side-lateral",
+    "name": "Разведение руки в наклоне в нижнем блоке (Блок)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Поясница",
+      "Середина спины",
+      "Трапеции"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-bent-over-low-pulley-side-lateral.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разведение руки в наклоне в нижнем блоке».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-band-good-morning",
+    "name": "Гудмонинг с резиной (Резина)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "equipmentRef": "bands",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "secondaryMuscles": [
+      "Ягодицы",
+      "Поясница"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-band-good-morning.jpg",
+    "instructions": [
+      "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Гудмонинг с резиной».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-reverse-cable-curl",
+    "name": "Подъём на бицепс обратным хватом в блоке (Блок)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [
+      "Предплечья"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-reverse-cable-curl.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Подъём на бицепс обратным хватом в блоке».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-hanging-leg-raise",
+    "name": "Подъём ног в висе (Своё тело)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "expert",
+    "imageUrl": "/exercises/fedb-hanging-leg-raise.jpg",
+    "instructions": [
+      "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Подъём ног в висе».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-cable-rear-delt-fly",
+    "name": "Разводка на заднюю дельту в блоке (Блок)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-cable-rear-delt-fly.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разводка на заднюю дельту в блоке».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-band-good-morning-pull-through",
+    "name": "Гудмонинг с протяжкой резины (Резина)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "equipmentRef": "bands",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "secondaryMuscles": [
+      "Ягодицы",
+      "Поясница"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-band-good-morning-pull-through.jpg",
+    "instructions": [
+      "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Гудмонинг с протяжкой резины».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-reverse-grip-triceps-pushdown",
+    "name": "Разгибание на трицепс обратным хватом (Блок)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Трицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-reverse-grip-triceps-pushdown.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разгибание на трицепс обратным хватом».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-exercise-ball-crunch",
+    "name": "Скручивания на фитболе (Фитбол)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Фитбол",
+    "equipmentRef": "exercise ball",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-exercise-ball-crunch.jpg",
+    "instructions": [
+      "Подготовьте оборудование («фитбол») и примите устойчивое исходное положение для упражнения «Скручивания на фитболе».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-cable-seated-lateral-raise",
+    "name": "Разведение рук сидя в блоке (Блок)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Середина спины",
+      "Трапеции"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-cable-seated-lateral-raise.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разведение рук сидя в блоке».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-seated-bent-over-one-arm-dumbbell-triceps-extension",
+    "name": "Разгибание гантели на трицепс сидя в наклоне (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Трицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-seated-bent-over-one-arm-dumbbell-triceps-extension.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разгибание гантели на трицепс сидя в наклоне».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-weighted-crunches",
+    "name": "Скручивания с медболом (Медбол)",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "equipmentRef": "medicine ball",
+    "primaryMuscleDetail": "Пресс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-weighted-crunches.jpg",
+    "instructions": [
+      "Подготовьте оборудование («медбол») и примите устойчивое исходное положение для упражнения «Скручивания с медболом».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-cable-hip-adduction",
+    "name": "Приведение бедра в блоке (Блок)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "equipmentRef": "cable",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-cable-hip-adduction.jpg",
+    "instructions": [
+      "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Приведение бедра в блоке».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-seated-dumbbell-curl",
+    "name": "Подъём гантелей на бицепс сидя (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-seated-dumbbell-curl.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Подъём гантелей на бицепс сидя».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-seated-dumbbell-inner-biceps-curl",
+    "name": "Подъём гантелей на внутренний пучок бицепса сидя (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-seated-dumbbell-inner-biceps-curl.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Подъём гантелей на внутренний пучок бицепса сидя».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-car-drivers",
+    "name": "Вращение блина перед собой (Штанга)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "equipmentRef": "barbell",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Предплечья"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-car-drivers.jpg",
+    "instructions": [
+      "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Вращение блина перед собой».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-seated-dumbbell-palms-down-wrist-curl",
+    "name": "Разгибание запястий с гантелями сидя (Гантели)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "equipmentRef": "dumbbell",
+    "primaryMuscleDetail": "Предплечья",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-seated-dumbbell-palms-down-wrist-curl.jpg",
+    "instructions": [
+      "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разгибание запястий с гантелями сидя».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-body-up",
+    "name": "Разгибание рук с весом тела (Своё тело)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Своё тело",
+    "equipmentRef": "body only",
+    "primaryMuscleDetail": "Трицепс",
+    "secondaryMuscles": [
+      "Пресс",
+      "Предплечья"
+    ],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-body-up.jpg",
+    "instructions": [
+      "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Разгибание рук с весом тела».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-external-rotation-with-band",
+    "name": "Наружная ротация плеча с резиной (Резина)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "equipmentRef": "bands",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-external-rotation-with-band.jpg",
+    "instructions": [
+      "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Наружная ротация плеча с резиной».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-hip-flexion-with-band",
+    "name": "Сгибание бедра с резиной (Резина)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "equipmentRef": "bands",
+    "primaryMuscleDetail": "Передняя поверхность бедра",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-hip-flexion-with-band.jpg",
+    "instructions": [
+      "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Сгибание бедра с резиной».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-band-skull-crusher",
+    "name": "Разгибание на трицепс с резиной лёжа (Резина)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "equipmentRef": "bands",
+    "primaryMuscleDetail": "Трицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-band-skull-crusher.jpg",
+    "instructions": [
+      "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Разгибание на трицепс с резиной лёжа».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-shoulder-press-with-bands",
+    "name": "Жим над головой с резиной (Резина)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "equipmentRef": "bands",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Трицепс"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-shoulder-press-with-bands.jpg",
+    "instructions": [
+      "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Жим над головой с резиной».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-upright-row-with-bands",
+    "name": "Тяга к подбородку с резиной (Резина)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "equipmentRef": "bands",
+    "primaryMuscleDetail": "Трапеции",
+    "secondaryMuscles": [
+      "Плечи"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-upright-row-with-bands.jpg",
+    "instructions": [
+      "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Тяга к подбородку с резиной».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-monster-walk",
+    "name": "Боковая ходьба с резиной (Резина)",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "equipmentRef": "bands",
+    "primaryMuscleDetail": "Наружная поверхность бедра",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-monster-walk.jpg",
+    "instructions": [
+      "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Боковая ходьба с резиной».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-ez-bar-curl",
+    "name": "Подъём EZ-грифа на бицепс (EZ-гриф)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "EZ-гриф",
+    "equipmentRef": "e-z curl bar",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-ez-bar-curl.jpg",
+    "instructions": [
+      "Подготовьте оборудование («ez-гриф») и примите устойчивое исходное положение для упражнения «Подъём EZ-грифа на бицепс».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-band-pull-apart",
+    "name": "Разведение рук с резиной (Резина)",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "equipmentRef": "bands",
+    "primaryMuscleDetail": "Плечи",
+    "secondaryMuscles": [
+      "Середина спины",
+      "Трапеции"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-band-pull-apart.jpg",
+    "instructions": [
+      "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Разведение рук с резиной».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-ez-bar-skullcrusher",
+    "name": "Французский жим с EZ-грифом (EZ-гриф)",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "EZ-гриф",
+    "equipmentRef": "e-z curl bar",
+    "primaryMuscleDetail": "Трицепс",
+    "secondaryMuscles": [
+      "Предплечья"
+    ],
+    "level": "beginner",
+    "imageUrl": "/exercises/fedb-ez-bar-skullcrusher.jpg",
+    "instructions": [
+      "Подготовьте оборудование («ez-гриф») и примите устойчивое исходное положение для упражнения «Французский жим с EZ-грифом».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "fedb-brachialis-smr",
+    "name": "Массаж плечевой мышцы на валике (Валик)",
+    "muscleGroup": "arms",
+    "inputKind": "reps",
+    "equipment": "Валик",
+    "equipmentRef": "foam roll",
+    "primaryMuscleDetail": "Бицепс",
+    "secondaryMuscles": [],
+    "level": "intermediate",
+    "imageUrl": "/exercises/fedb-brachialis-smr.jpg",
+    "instructions": [
+      "Подготовьте оборудование («валик») и примите устойчивое исходное положение для упражнения «Массаж плечевой мышцы на валике».",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
+    ]
   }
 ]
