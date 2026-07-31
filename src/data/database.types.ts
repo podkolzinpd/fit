@@ -1,4 +1,4 @@
-// schema-sha256: 10b191bce06a69ba6b44cb625cf57c518c6c2a2f416200a05da58dc98b54a3ef
+// schema-sha256: f8bb83fbcb344761c3a3a21bdea3c29a3d6828d3b20f179ccd5c5eee3670146a
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
@@ -127,6 +127,7 @@ export type Database = {
       save_goal_stage: { Args: { p_stage: Json; p_expected_version?: number }; Returns: string }
       delete_goal_stage: { Args: { p_stage_id: string }; Returns: undefined }
       save_workout: { Args: { p_workout: Json; p_expected_version?: number | null }; Returns: string }
+      save_completed_workout: { Args: { p_workout: Json; p_expected_version?: number | null }; Returns: string }
       start_workout: { Args: { p_workout_id: string; p_expected_version: number }; Returns: number }
       save_live_set_draft: { Args: { p_set_id: string; p_draft: Json; p_expected_version: number }; Returns: number }
       confirm_live_set: { Args: { p_set_id: string; p_expected_version: number }; Returns: number }

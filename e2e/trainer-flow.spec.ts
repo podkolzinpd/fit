@@ -444,8 +444,16 @@ test('план: два упражнения объединяются в супе
   // Круг 2: упр.A → отдыха нет; упр.B — последнее упражнение последнего круга,
   // блок завершён → отдых НЕ запускается (регресс: раньше запускался лишний).
   await page.getByRole('button', { name: 'Пропустить' }).click()
-  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
-  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  // Берём кнопки именно из текущего круга. На странице остаются disabled-кнопки
+  // уже завершённого круга, поэтому глобальный `.first()` иногда выбирал их,
+  // а клик уходил в закреплённую нижнюю панель.
+  const currentRound = page.locator('.circuit-round.current')
+  const currentRoundConfirm = currentRound.getByRole('button', { name: 'Готово, отдых' })
+  await expect(currentRoundConfirm).toHaveCount(2)
+  await expect(currentRoundConfirm.first()).toBeEnabled()
+  await currentRoundConfirm.first().click()
+  await expect(currentRoundConfirm.last()).toBeEnabled()
+  await currentRoundConfirm.last().click()
   await expect(page.getByText(/Отдых/)).toHaveCount(0)
 })
 

@@ -166,6 +166,11 @@ export const workoutsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
+  async saveCompleted(draft: WorkoutDraft): Promise<string> {
+    const result = await workoutQueries.saveCompleted(draft)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
   async start(workout: Workout): Promise<number> {
     const result = await workoutQueries.start(workout.id, workout.version)
     if (result.error) throw repositoryError(result.error)
