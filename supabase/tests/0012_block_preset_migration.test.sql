@@ -17,9 +17,12 @@ insert into public.workouts (id, trainer_id, client_id, workout_date, status) va
   ('dd000000-0000-4000-8000-0000000000f2', 'aa000000-0000-4000-8000-0000000000f2', 'cc000000-0000-4000-8000-0000000000f2', '2026-07-24', 'planned');
 
 -- Возвращаем «старый» constraint, допускающий circuit, и вставляем такую строку.
+-- Тест запускается поверх уже мигрированной seed-базы, где есть block_type=group.
+-- NOT VALID не перепроверяет эти постмиграционные строки, но продолжает
+-- проверять новую «дореформенную» строку и позволяет воспроизвести миграцию.
 alter table public.workout_exercises drop constraint workout_exercises_block_type_allowed;
 alter table public.workout_exercises add constraint workout_exercises_block_type_allowed
-  check (block_type in ('single', 'superset', 'triset', 'circuit'));
+  check (block_type in ('single', 'superset', 'triset', 'circuit')) not valid;
 insert into public.workout_exercises (
   id, workout_id, trainer_id, client_id, position, exercise_source, exercise_ref,
   exercise_name, muscle_group, input_kind, block_id, block_type, block_preset, block_rounds
