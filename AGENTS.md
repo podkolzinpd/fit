@@ -1,6 +1,6 @@
 # Fit V2 — обязательные правила разработки
 
-Этот файл обязателен для людей и ИИ-агентов. Перед изменением кода прочитайте `ARCHITECTURE.md` и соответствующий пункт `FEATURE_PARITY.md`.
+Этот файл обязателен для людей и ИИ-агентов. Перед изменением кода прочитайте `ARCHITECTURE.md`, соответствующий пункт `FEATURE_PARITY.md` и актуальное описание продукта в `docs/PRODUCT_WIKI.md`.
 
 ## Порядок работы
 
@@ -8,7 +8,8 @@
 2. Найдите существующий публичный контракт feature. Для parity-задачи сравните его с точным V1 baseline из `FEATURE_PARITY.md`: данные, состояния, действия и mobile visual. Не создавайте параллельный путь к тем же данным.
 3. Если меняется БД: migration → SQL/RLS tests → generated types → query → repository → UI.
 4. Добавьте happy path, validation, loading, empty, error и retry states.
-5. Запустите `npm run check`; для DB-изменений также `npm run db:reset && npm run db:test`.
+5. Если изменилось пользовательское поведение, роли, доступы, навигация или известные ограничения, обновите `docs/PRODUCT_WIKI.md`. Описывайте только уже реализованный функционал; планы и идеи оставляйте в `docs/design` и `FEATURE_PARITY.md`.
+6. Запустите `npm run check`; для DB-изменений также `npm run db:reset && npm run db:test`.
 
 ## Границы архитектуры
 
@@ -48,6 +49,7 @@
 ## Definition of Done
 
 - Пользовательский сценарий отражён в `FEATURE_PARITY.md`.
+- `docs/PRODUCT_WIKI.md` отражает актуальный пользовательский функционал и ограничения после изменения.
 - Migration воспроизводится чистым `db reset`.
 - Generated DB types актуальны.
 - Unit/component/integration/E2E покрытие соответствует риску.
