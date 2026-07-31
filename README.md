@@ -54,6 +54,7 @@ npm run check
 
 ## Обязательные документы
 
+- [docs/PRODUCT_WIKI.md](./docs/PRODUCT_WIKI.md) — актуальная продуктовая wiki с описанием реализованного функционала.
 - [AGENTS.md](./AGENTS.md) — правила для людей и ИИ-агентов.
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — границы слоёв и работа с БД.
 - [FEATURE_PARITY.md](./FEATURE_PARITY.md) — контракт переноса V1.
