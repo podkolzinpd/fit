@@ -10,7 +10,12 @@ test('форма: быстрый ввод разбирает текст в уп�
   await page.goto('/workouts/new')
   await page.getByLabel('Клиент').selectOption({ label: 'Анна Смирнова' })
   await page.getByRole('button', { name: '⌁ Добавить из текста или голоса' }).click()
-  await page.getByLabel('Запись тренировки').fill('Присед со штангой 3×8 80 кг\nПланка 3×45 сек')
+  await page.getByLabel('Запись тренировки').fill('Присед 3×8 80 кг\nПланка 3×45 сек')
+  await expect(page.getByText(/«Присед 3×8 80 кг» — выберите вариант/)).toBeVisible()
+  // Короткое название не угадывается: тренер выбирает подходящий присед одним тапом.
+  const squatCandidates = page.locator('.quick-workout-candidates button')
+  await expect(squatCandidates).toHaveCount(4)
+  await squatCandidates.first().click()
   await expect(page.getByText('Распознано: 2')).toBeVisible()
   await page.getByRole('button', { name: 'Добавить распознанные (2)' }).click()
   await expect(page.getByLabel('Вес, подход 1')).toHaveValue('80')

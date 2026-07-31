@@ -466,6 +466,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .quick-workout-preview { padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--surface); }
 .quick-workout-preview p { margin:0 0 6px; }.quick-workout-preview ul { margin:0; padding-left:20px; }
 .quick-workout-unparsed { margin-top:10px; color:var(--warning-fg); }
+.quick-workout-unparsed-line + .quick-workout-unparsed-line { margin-top:10px; }
+.quick-workout-candidates { display:flex; flex-wrap:wrap; gap:6px; }
+.quick-workout-candidates .secondary { min-height:36px; padding:6px 10px; font-size:14px; }
+.quick-workout-candidates .secondary.selected { border-color:var(--accent); color:var(--accent-strong); background:var(--accent-soft); }
 /* Степпер: крупные −/+ вокруг поля факта (быстрый ввод одной рукой, P5). */
 .stepper { display: flex; align-items: stretch; gap: 6px; min-width: 0 }
 .stepper input { text-align: center; font-weight: 700; -moz-appearance: textfield }

@@ -10,6 +10,8 @@ export interface ParsedWorkoutExercise {
 export interface UnparsedWorkoutLine {
   line: string
   reason: 'not-found' | 'ambiguous'
+  /** До четырёх наиболее близких вариантов для выбора тренером одним тапом. */
+  candidates: ExerciseSnapshot[]
 }
 
 export interface QuickWorkoutParseResult {
@@ -42,27 +44,32 @@ function exerciseNamePart(line: string): string {
   return (metric ? line.slice(0, metric.index) : line).trim()
 }
 
-function matchExercise(name: string, catalog: readonly ExerciseSnapshot[]): ExerciseSnapshot | null | 'ambiguous' {
+function matchingExercises(name: string, catalog: readonly ExerciseSnapshot[]): ExerciseSnapshot[] {
   const query = normalize(name)
-  if (!query) return null
+  if (!query) return []
   const tokens = query.split(' ')
   const exact = catalog.filter((exercise) => normalizedExerciseName(exercise.name) === query)
-  if (exact.length === 1) return exact[0]!
+  if (exact.length === 1) return exact
   // Своё упражнение иногда повторяет системное по имени. Для записи без явного
   // уточнения берём единственный встроенный вариант: его тип ввода стабилен.
   // Несколько системных совпадений по-прежнему считаем неоднозначностью.
   const exactSystem = exact.filter((exercise) => exercise.source === 'system')
-  if (exactSystem.length === 1) return exactSystem[0]!
+  if (exactSystem.length === 1) return exactSystem
   // Одно короткое слово («присед») почти всегда скрывает вариацию. Не делаем
   // вид, что знаем намерение тренера: точные «Планка»/«Бег» уже прошли exact.
   if (query.split(' ').length < 2) {
-    return catalog.some((exercise) => normalize(exercise.name).includes(query)) ? 'ambiguous' : null
+    return catalog.filter((exercise) => normalizedExerciseName(exercise.name).includes(query))
   }
-  const matches = catalog.filter((exercise) => {
+  return catalog.filter((exercise) => {
     const candidate = normalizedExerciseName(exercise.name)
     return tokens.every((token) => candidate.includes(token))
   })
-  return matches.length === 1 ? matches[0]! : matches.length > 1 ? 'ambiguous' : null
+}
+
+function needsTrainerChoice(name: string, catalog: readonly ExerciseSnapshot[]): boolean {
+  const query = normalize(name)
+  if (query.split(' ').length >= 2) return false
+  return !catalog.some((exercise) => normalizedExerciseName(exercise.name) === query)
 }
 
 function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { sets: WorkoutSetDraft[]; hasValues: boolean } {
@@ -96,6 +103,11 @@ function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { se
   }
 }
 
+export function resolveQuickWorkoutLine(line: string, exercise: ExerciseSnapshot): ParsedWorkoutExercise {
+  const values = setDrafts(line, exercise.inputKind)
+  return { line, exercise, ...values }
+}
+
 /**
  * Строгий локальный разбор записи тренера. Он не угадывает похожие упражнения:
  * неуверенную строку возвращаем в unparsed, чтобы не записать факт не тому движению.
@@ -106,13 +118,13 @@ export function parseQuickWorkoutEntry(text: string, catalog: readonly ExerciseS
   for (const rawLine of text.split(/[\n;]/)) {
     const line = rawLine.trim()
     if (!line) continue
-    const matched = matchExercise(exerciseNamePart(line), catalog)
-    if (!matched || matched === 'ambiguous') {
-      unparsed.push({ line, reason: matched === 'ambiguous' ? 'ambiguous' : 'not-found' })
+    const name = exerciseNamePart(line)
+    const matches = matchingExercises(name, catalog)
+    if (needsTrainerChoice(name, catalog) || matches.length !== 1) {
+      unparsed.push({ line, reason: matches.length ? 'ambiguous' : 'not-found', candidates: matches.slice(0, 4) })
       continue
     }
-    const values = setDrafts(line, matched.inputKind)
-    parsed.push({ line, exercise: matched, ...values })
+    parsed.push(resolveQuickWorkoutLine(line, matches[0]!))
   }
   return { parsed, unparsed }
 }
