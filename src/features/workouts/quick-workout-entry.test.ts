@@ -47,6 +47,20 @@ describe('parseQuickWorkoutEntry', () => {
     ])
   })
 
+  it('не передаёт RPE, который не примет ограничение базы', () => {
+    const result = parseQuickWorkoutEntry('Присед со штангой 3×8 80 кг RPE 5\nЖим лёжа 3×8 60 кг RPE 6.2', catalog)
+    expect(result.parsed[0]?.sets).toEqual([
+      { position: 0, weightKg: 80, reps: 8 },
+      { position: 1, weightKg: 80, reps: 8 },
+      { position: 2, weightKg: 80, reps: 8 },
+    ])
+    expect(result.parsed[1]?.sets).toEqual([
+      { position: 0, weightKg: 60, reps: 8 },
+      { position: 1, weightKg: 60, reps: 8 },
+      { position: 2, weightKg: 60, reps: 8 },
+    ])
+  })
+
   it('применяет запись «по» к упражнению на время', () => {
     const result = parseQuickWorkoutEntry('Планка 3 по 45 сек RPE 8', catalog)
     expect(result.parsed[0]?.sets).toEqual([

@@ -1,4 +1,5 @@
 import type { ExerciseSnapshot, WorkoutSetDraft } from '../../shared/domain'
+import { isValidRpe } from '../../shared/rpe'
 
 export interface ParsedWorkoutExercise {
   line: string
@@ -80,7 +81,7 @@ function quickWorkoutLines(text: string): string[] {
 
 function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { sets: WorkoutSetDraft[]; hasValues: boolean } {
   const rpe = number(/\brpe\s*(\d+(?:[.,]\d+)?)/iu.exec(line)?.[1])
-  const validRpe = rpe !== undefined && rpe >= 1 && rpe <= 10 ? rpe : undefined
+  const validRpe = isValidRpe(rpe) ? rpe : undefined
   // Отдельные пары веса и повторов — естественная запись факта после зала:
   // «80×8, 85×6, 90×5». Берём её только при двух и более парах, чтобы
   // обычное «3×8 80 кг» по-прежнему означало три одинаковых подхода.

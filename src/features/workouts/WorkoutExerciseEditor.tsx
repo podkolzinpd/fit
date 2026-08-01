@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { BlockPreset, WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
 import { formatLocalDate } from '../../shared/local-date'
+import { RPE_OPTIONS } from '../../shared/rpe'
 import { groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, PRESET_REST_DEFAULTS, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
 import { OverflowMenu } from '../../shared/ui'
 
@@ -82,8 +83,6 @@ interface WorkoutExerciseEditorProps {
 function inputNumber(value: string): number | undefined {
   return value === '' ? undefined : Number(value)
 }
-
-const RPE_OPTIONS = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10] as const
 
 export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, showTrainerComments = true, entryMode = 'plan' }: WorkoutExerciseEditorProps) {
   function updateComment(exerciseIndex: number, comment: string) {

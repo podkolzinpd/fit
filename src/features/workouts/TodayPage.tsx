@@ -5,6 +5,7 @@ import { clientsRepository } from '../../data/repositories/clients.repository'
 import { workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, Workout, WorkoutDraft, WorkoutSetDraft } from '../../shared/domain'
 import { formatLocalDateShort, localDate, todayLocalDate } from '../../shared/local-date'
+import { isValidRpe } from '../../shared/rpe'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { Page } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
@@ -32,7 +33,12 @@ function draftExercise(item: ParsedWorkoutExercise, position: number): WorkoutDr
     blockId: crypto.randomUUID(),
     blockType: 'single',
     blockRounds: 1,
-    sets: item.sets.length ? item.sets : [{ position: 0 }],
+    // Черновик мог быть создан до появления строгого ограничения RPE в БД.
+    // Не даём старому значению сорвать сохранение всей тренировки.
+    sets: (item.sets.length ? item.sets : [{ position: 0 }]).map((set) => ({
+      ...set,
+      ...(isValidRpe(set.rpe) ? {} : { rpe: undefined }),
+    })),
   }
 }
 
@@ -193,10 +199,11 @@ export function TodayPage() {
     trackGoal('today_review_edited')
     const ref = items[itemIndex]?.exercise.ref
     if (ref) setManualRefs((current) => current.includes(ref) ? current : [...current, ref])
+    const safePatch = patch.rpe === undefined || isValidRpe(patch.rpe) ? patch : { ...patch, rpe: undefined }
     setItems((current) => current.map((item, index) => index !== itemIndex ? item : {
       ...item,
       hasValues: true,
-      sets: item.sets.map((set, currentSetIndex) => currentSetIndex === setIndex ? { ...set, ...patch } : set),
+      sets: item.sets.map((set, currentSetIndex) => currentSetIndex === setIndex ? { ...set, ...safePatch } : set),
     }))
   }
 
