@@ -445,13 +445,13 @@ export function exerciseSummary(workout: Workout): SummaryExercise[] {
 }
 
 // Body Mass Index = weight(kg) / height(m)². Null when data is missing/invalid.
-export function bmiValue(heightCm: number, weightKg: number | null): number | null {
+export function bmiValue(heightCm: number | null, weightKg: number | null): number | null {
   if (!weightKg || weightKg <= 0 || !heightCm || heightCm <= 0) return null
   const meters = heightCm / 100
   return weightKg / (meters * meters)
 }
 
-export function bmiLabel(heightCm: number, weightKg: number | null): string {
+export function bmiLabel(heightCm: number | null, weightKg: number | null): string {
   const value = bmiValue(heightCm, weightKg)
   return value === null ? '—' : value.toFixed(1)
 }
