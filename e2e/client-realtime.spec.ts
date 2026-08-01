@@ -2,6 +2,12 @@ import { expect, test, type Page } from '@playwright/test'
 
 const password = 'FitLocal123!'
 
+async function fillClientProfileDetails(page: Page) {
+  await page.getByLabel('Пол').selectOption('female')
+  await page.getByLabel('Возраст').fill('30')
+  await page.getByLabel('Рост, см').fill('170')
+}
+
 async function register(page: Page, values: { name: string; email: string; role?: 'client' }) {
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
@@ -34,6 +40,7 @@ test('client and trainer receive progress and workout changes without reload', a
     await register(trainer, { name: 'Realtime тренер', email: `realtime-trainer-${suffix}@fit.local` })
     await trainer.getByRole('link', { name: 'Добавить' }).click()
     await trainer.getByLabel('Имя').fill('Realtime клиент')
+    await fillClientProfileDetails(trainer)
     await trainer.getByLabel('Начальный вес, кг').fill('60')
     await Promise.all([
       trainer.waitForURL(/\/clients\/[0-9a-f-]+$/),

@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test'
 
+async function fillClientProfileDetails(page: import('@playwright/test').Page) {
+  await page.getByLabel('Пол').selectOption('female')
+  await page.getByLabel('Возраст').fill('30')
+  await page.getByLabel('Рост, см').fill('170')
+}
+
 test('auth shell matches mobile baseline', async ({ page }) => {
   await page.goto('/auth')
   await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
@@ -48,6 +54,7 @@ test('client registers, creates a standalone card and own workout without traine
   await expect(page).toHaveURL(/\/me$/)
   await expect(page.getByRole('heading', { name: 'Создайте личную карточку' })).toBeVisible()
   await expect(page.getByLabel('Имя')).toHaveValue('Клиент')
+  await fillClientProfileDetails(page)
   await page.getByLabel('Начальный вес, кг').fill('72.5')
   await page.getByLabel('Цель').fill('Тренироваться самостоятельно')
   await page.getByRole('button', { name: 'Создать карточку' }).click()
@@ -84,6 +91,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByLabel('Имя').fill('Связанный клиент')
+  await fillClientProfileDetails(page)
   await page.getByLabel('Начальный вес, кг').fill('60')
   await Promise.all([
     page.waitForURL(/\/clients\/[0-9a-f-]+$/),
