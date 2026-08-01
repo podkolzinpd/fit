@@ -13,7 +13,7 @@ import { formatLocalDate, formatLocalDateShort, localDate, todayLocalDate } from
 import { AsyncView, Field, Page, useConfirm } from '../../shared/ui'
 import { clientSchema } from '../../shared/validation'
 import { VoiceNoteField } from '../voice-input'
-import type { z } from 'zod'
+import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
 import { ProfileIcon } from '../../shared/icons'
@@ -86,6 +86,11 @@ export function MyClientPage() {
 import { useState } from 'react'
 
 type ClientValues = z.input<typeof clientSchema>
+type ClientProfileValues = ClientValues & { alias: string; privateNote: string }
+const clientProfileSchema = clientSchema.extend({
+  alias: z.string().max(120, 'Не больше 120 символов'),
+  privateNote: z.string(),
+})
 
 export function ClientFormPage() {
   const { clientId } = useParams(); const navigate = useNavigate(); const queryClient = useQueryClient()
@@ -127,18 +132,23 @@ function ClientForm({
   onSaved: (id: string) => Promise<void>
   onCancel?: () => void
 }) {
-  const form = useForm<ClientValues>({ resolver: zodResolver(clientSchema), defaultValues: existing ? {
+  const form = useForm<ClientProfileValues>({ resolver: zodResolver(clientProfileSchema), defaultValues: existing ? {
     fullName: existing.fullName, gender: existing.gender ?? undefined, ageYears: existing.ageYears ?? undefined, heightCm: existing.heightCm ?? undefined,
-    goal: existing.goal ?? '', note: existing.note ?? '',
-  } : { fullName: initialFullName, gender: 'female', ageYears: 30, heightCm: 170 } })
-  const mutation = useMutation({ mutationFn: async (values: ClientValues) => {
+    goal: existing.goal ?? '', note: existing.note ?? '', alias: existing.fullName, privateNote: existing.note ?? '',
+  } : { fullName: initialFullName, gender: 'female', ageYears: 30, heightCm: 170, alias: '', privateNote: '' } })
+  const mutation = useMutation({ mutationFn: async (values: ClientProfileValues) => {
     const parsed = clientSchema.parse(values)
     if (existing) {
       const input = { id: existing.id, version: existing.version, fullName: parsed.fullName,
         gender: parsed.gender as Gender, ageYears: parsed.ageYears, ageUpdatedAt: existing.ageUpdatedAt ?? todayLocalDate(),
         heightCm: parsed.heightCm, goal: parsed.goal, note: parsed.note }
       if (createMode === 'self') await clientsRepository.updateOwn(input)
-      else await clientsRepository.update(input)
+      else {
+        await clientsRepository.update(input)
+        const alias = values.alias.trim() === existing.fullName && existing.fullName === existing.canonicalFullName
+          ? parsed.fullName : values.alias.trim()
+        await clientsRepository.updatePreferences({ clientId: existing.id, alias, note: values.privateNote.trim() || undefined, version: existing.membershipVersion ?? 1 })
+      }
       return existing.id
     }
     const input = { fullName: parsed.fullName, gender: parsed.gender as Gender,
@@ -147,17 +157,33 @@ function ClientForm({
       initialWeightRecordedOn: todayLocalDate() }
     return createMode === 'self' ? clientsRepository.createOwn(input) : clientsRepository.create(input)
   }, onSuccess: (id) => void onSaved(id) })
-  const contents = <form className="stack" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
-      <Field label="Имя" error={form.formState.errors.fullName?.message}><input {...form.register('fullName')} /></Field>
-      <Field label="Пол"><select {...form.register('gender')}><option value="">Выберите</option><option value="female">Женский</option><option value="male">Мужской</option></select></Field>
-      <div className="split"><Field label="Возраст"><input type="number" {...form.register('ageYears')} /></Field><Field label="Рост, см"><input type="number" step="0.1" {...form.register('heightCm')} /></Field></div>
-      {!existing && <Field label="Начальный вес, кг"><input type="number" step="0.1" {...form.register('initialWeightKg')} /></Field>}
-      <Field label="Цель"><textarea {...form.register('goal')} /></Field>
-      {createMode === 'trainer' && <Controller
-        control={form.control}
-        name="note"
-        render={({ field }) => <VoiceNoteField name={field.name} source="client_form" label="Общий комментарий" value={field.value ?? ''} onValueChange={field.onChange} />}
-      />}
+  const contents = <form className="stack client-profile-form" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
+      <section className="client-form-section">
+        <div className="client-form-section-head">
+          <p className="eyebrow">ПРОФИЛЬ СПОРТСМЕНА</p>
+          <h2>Основные данные</h2>
+          <p>Эти данные помогают вести тренировки и отслеживать прогресс.</p>
+        </div>
+        <Field label="Имя" error={form.formState.errors.fullName?.message}><input {...form.register('fullName')} /></Field>
+        <Field label="Пол"><select {...form.register('gender')}><option value="">Выберите</option><option value="female">Женский</option><option value="male">Мужской</option></select></Field>
+        <div className="split"><Field label="Возраст"><input type="number" {...form.register('ageYears')} /></Field><Field label="Рост, см"><input type="number" step="0.1" {...form.register('heightCm')} /></Field></div>
+        {!existing && <Field label="Начальный вес, кг"><input type="number" step="0.1" {...form.register('initialWeightKg')} /></Field>}
+        <Field label="Цель"><textarea {...form.register('goal')} /></Field>
+        {createMode === 'trainer' && <Controller
+          control={form.control}
+          name="note"
+          render={({ field }) => <VoiceNoteField name={field.name} source="client_form" label="Общий комментарий" value={field.value ?? ''} onValueChange={field.onChange} />}
+        />}
+      </section>
+      {existing && createMode === 'trainer' && <section className="client-form-section client-display-settings">
+        <div className="client-form-section-head">
+          <p className="eyebrow">ТОЛЬКО ДЛЯ ТРЕНЕРА</p>
+          <h2>Мои настройки отображения</h2>
+          <p>Они видны только вам и не меняют профиль спортсмена.</p>
+        </div>
+        <Field label="Имя в моём списке" error={form.formState.errors.alias?.message}><input {...form.register('alias', { required: 'Введите имя', maxLength: { value: 120, message: 'Не больше 120 символов' } })} /></Field>
+        <Controller control={form.control} name="privateNote" render={({ field }) => <VoiceNoteField name={field.name} source="client_form" label="Личная заметка" value={field.value ?? ''} onValueChange={field.onChange} />} />
+      </section>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions">{onCancel && <button type="button" className="secondary" onClick={onCancel}>Отмена</button>}<button disabled={mutation.isPending}>{createMode === 'self' && !existing ? 'Создать карточку' : 'Сохранить'}</button></div>
     </form>
