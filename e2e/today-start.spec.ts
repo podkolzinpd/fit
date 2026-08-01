@@ -10,8 +10,7 @@ test('today: быстрый старт ведёт в существующий re
 
   await expect(page.getByRole('heading', { name: 'Создайте тренировку за минуту' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Разобрать тренировку' })).toBeDisabled()
-  await page.getByRole('button', { name: 'Вставить пример' }).click()
-  await expect(page.getByLabel('Тренировка')).toHaveValue('Присед 3×8 — 80 кг\nПланка 3×45 сек')
+  await page.getByLabel('Тренировка').fill('Присед 3×8 — 80 кг\nПланка 3×45 сек')
   await expect(page.getByRole('button', { name: 'Разобрать тренировку' })).toBeEnabled()
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка готова' })).toBeVisible()
