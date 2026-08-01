@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnalyticsIcon, ClientsIcon, ProfileIcon, ScheduleIcon } from '../shared/icons'
 import { useAuth } from './auth-context'
@@ -11,8 +11,24 @@ export function AppLayout() {
   const contentRef = useRef<HTMLDivElement>(null)
   const { pathname } = useLocation()
   const redesignedStart = isTodayStartRedesignEnabled()
+  const [keyboardOpen, setKeyboardOpen] = useState(false)
 
   useEffect(() => { contentRef.current?.scrollTo(0, 0) }, [pathname])
+
+  // На iOS окно не всегда меняет высоту при открытии клавиатуры. Visual
+  // Viewport даёт её фактическую высоту: таб-бар не мешает вводу и CTA.
+  useEffect(() => {
+    const viewport = window.visualViewport
+    if (!viewport) return
+    const update = () => setKeyboardOpen(window.innerHeight - viewport.height > 160)
+    update()
+    viewport.addEventListener('resize', update)
+    viewport.addEventListener('scroll', update)
+    return () => {
+      viewport.removeEventListener('resize', update)
+      viewport.removeEventListener('scroll', update)
+    }
+  }, [])
 
   // В live-режиме прячем нижнюю навигацию: во время тренировки приоритет —
   // текущий подход, таймер и завершение; таб-бар не должен конкурировать с
@@ -20,7 +36,7 @@ export function AppLayout() {
   const immersive = /\/live$/.test(pathname)
   const contentClass = immersive ? 'content content-immersive' : 'content'
 
-  const frameClass = `${theme === 'light' ? 'phone-frame theme-light' : 'phone-frame'}${redesignedStart && pathname === '/today' ? ' today-start-shell' : ''}`
+  const frameClass = `${theme === 'light' ? 'phone-frame theme-light' : 'phone-frame'}${redesignedStart && pathname === '/today' ? ' today-start-shell' : ''}${keyboardOpen ? ' keyboard-open' : ''}`
 
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
     <NavLink to="/me"><ClientsIcon />Кабинет</NavLink>
