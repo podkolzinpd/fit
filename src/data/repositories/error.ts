@@ -7,11 +7,15 @@ export class RepositoryError extends Error {
 
 export function repositoryError(error: unknown): RepositoryError {
   if (!error || typeof error !== 'object') {
-    return new RepositoryError('unknown', 'Неизвестная ошибка')
+    return new RepositoryError('unknown', 'Не удалось выполнить действие. Попробуйте ещё раз.')
   }
   const candidate = error as { code?: unknown; message?: unknown }
   const code = typeof candidate.code === 'string' ? candidate.code : 'database_error'
-  const message = typeof candidate.message === 'string' ? candidate.message : 'Неизвестная ошибка'
+  const message = typeof candidate.message === 'string' ? candidate.message : ''
+  const normalizedMessage = message.toLocaleLowerCase('en')
+  if (normalizedMessage.includes('workout_sets_rpe_valid')) {
+    return new RepositoryError(code, 'В одном из подходов указано некорректное RPE. Выберите значение от 6 до 10 с шагом 0,5.')
+  }
   if (code === 'PT409' || code === '40001') {
     return new RepositoryError(code, 'Данные уже изменились. Обновите страницу и повторите.')
   }
@@ -21,5 +25,20 @@ export function repositoryError(error: unknown): RepositoryError {
   if (code === 'PT422') {
     return new RepositoryError(code, 'Операцию нельзя выполнить с текущими данными.')
   }
-  return new RepositoryError(code, message)
+  if (code === '23505') {
+    return new RepositoryError(code, 'Такая запись уже существует. Проверьте введённые данные.')
+  }
+  if (code === '23503') {
+    return new RepositoryError(code, 'Связанная запись больше недоступна. Обновите страницу и повторите.')
+  }
+  if (code === '23514') {
+    return new RepositoryError(code, 'Проверьте заполненные значения и повторите сохранение.')
+  }
+  if (code === '42501') {
+    return new RepositoryError(code, 'Недостаточно прав для этого действия.')
+  }
+  if (normalizedMessage.includes('failed to fetch') || normalizedMessage.includes('network')) {
+    return new RepositoryError(code, 'Не удалось подключиться к серверу. Проверьте интернет и повторите попытку.')
+  }
+  return new RepositoryError(code, 'Не удалось выполнить действие. Попробуйте ещё раз.')
 }
