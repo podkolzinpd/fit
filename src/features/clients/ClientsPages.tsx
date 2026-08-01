@@ -141,7 +141,7 @@ function ClientForm({
   const form = useForm<ClientProfileValues>({ resolver: zodResolver(clientProfileSchema), defaultValues: existing ? {
     fullName: existing.fullName, gender: existing.gender ?? undefined, ageYears: existing.ageYears ?? undefined, heightCm: existing.heightCm ?? undefined,
     goal: existing.goal ?? '', note: existing.note ?? '', alias: existing.fullName, privateNote: existing.note ?? '',
-  } : { fullName: initialFullName, gender: 'female', ageYears: 30, heightCm: 170, alias: '', privateNote: '' } })
+  } : { fullName: initialFullName, gender: undefined, ageYears: undefined, heightCm: undefined, alias: '', privateNote: '' } })
   const mutation = useMutation({ mutationFn: async (values: ClientProfileValues) => {
     const parsed = clientSchema.parse(values)
     if (existing) {
