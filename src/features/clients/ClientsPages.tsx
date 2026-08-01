@@ -13,18 +13,19 @@ import { formatLocalDate, formatLocalDateShort, localDate, todayLocalDate } from
 import { AsyncView, Field, Page, useConfirm } from '../../shared/ui'
 import { clientSchema } from '../../shared/validation'
 import { VoiceNoteField } from '../voice-input'
-import type { z } from 'zod'
+import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
+import { ProfileIcon } from '../../shared/icons'
 
 export function ClientsPage() {
   const showArchived = localStorage.getItem('fit.showArchivedClients') === 'true'
   const query = useQuery({ queryKey: ['clients', showArchived], queryFn: () => clientsRepository.list(showArchived) })
-  return <Page title="Мои клиенты" action={<Link className="button" to="/clients/new">Добавить</Link>}>
+  return <Page title="Клиенты" className="clients-page" action={<Link className="button" to="/clients/new">Добавить</Link>}>
     <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}
       emptyTitle="Клиентов пока нет"
       emptyDescription="Нажмите «Добавить» сверху, чтобы создать первого клиента, планировать тренировки и отслеживать прогресс.">
-      <div className="cards">{query.data?.map((client) => <Link className="card client-card" key={client.id} to={`/clients/${client.id}`}><span className={`client-avatar tone-${client.fullName.length % 4}`}>{client.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span><div><strong>{client.fullName}</strong><p>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</p></div>{client.archivedAt && <span className="badge">Архив</span>}</Link>)}</div>
+      <div className="cards clients-list">{query.data?.map((client) => <Link className="card client-card" key={client.id} to={`/clients/${client.id}`}><span className="client-avatar" aria-hidden="true"><ProfileIcon /></span><div><strong>{client.fullName}</strong><p>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</p></div>{client.archivedAt && <span className="badge">Архив</span>}<span className="client-card-arrow" aria-hidden="true">›</span></Link>)}</div>
     </AsyncView>
   </Page>
 }
@@ -85,13 +86,18 @@ export function MyClientPage() {
 import { useState } from 'react'
 
 type ClientValues = z.input<typeof clientSchema>
+type ClientProfileValues = ClientValues & { alias: string; privateNote: string }
+const clientProfileSchema = clientSchema.extend({
+  alias: z.string().max(120, 'Не больше 120 символов'),
+  privateNote: z.string(),
+})
 
 export function ClientFormPage() {
   const { clientId } = useParams(); const navigate = useNavigate(); const queryClient = useQueryClient()
   useClientRealtime(clientId)
   const existing = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId ?? ''), enabled: Boolean(clientId) })
   if (clientId && (existing.isLoading || existing.error)) return <Page title="Карточка клиента"><AsyncView loading={existing.isLoading} error={existing.error} onRetry={() => void existing.refetch()} /></Page>
-  if (clientId && existing.data) return <TrainerClientPreferencesForm client={existing.data} onSaved={async () => {
+  if (clientId && existing.data) return <ClientForm existing={existing.data} onSaved={async () => {
     await queryClient.invalidateQueries({ queryKey: ['clients'] })
     await queryClient.invalidateQueries({ queryKey: ['client', clientId] })
     navigate(`/clients/${clientId}`)
@@ -126,18 +132,23 @@ function ClientForm({
   onSaved: (id: string) => Promise<void>
   onCancel?: () => void
 }) {
-  const form = useForm<ClientValues>({ resolver: zodResolver(clientSchema), defaultValues: existing ? {
+  const form = useForm<ClientProfileValues>({ resolver: zodResolver(clientProfileSchema), defaultValues: existing ? {
     fullName: existing.fullName, gender: existing.gender ?? undefined, ageYears: existing.ageYears ?? undefined, heightCm: existing.heightCm ?? undefined,
-    goal: existing.goal ?? '', note: existing.note ?? '',
-  } : { fullName: initialFullName, gender: 'female', ageYears: 30, heightCm: 170 } })
-  const mutation = useMutation({ mutationFn: async (values: ClientValues) => {
+    goal: existing.goal ?? '', note: existing.note ?? '', alias: existing.fullName, privateNote: existing.note ?? '',
+  } : { fullName: initialFullName, gender: 'female', ageYears: 30, heightCm: 170, alias: '', privateNote: '' } })
+  const mutation = useMutation({ mutationFn: async (values: ClientProfileValues) => {
     const parsed = clientSchema.parse(values)
     if (existing) {
       const input = { id: existing.id, version: existing.version, fullName: parsed.fullName,
         gender: parsed.gender as Gender, ageYears: parsed.ageYears, ageUpdatedAt: existing.ageUpdatedAt ?? todayLocalDate(),
         heightCm: parsed.heightCm, goal: parsed.goal, note: parsed.note }
       if (createMode === 'self') await clientsRepository.updateOwn(input)
-      else await clientsRepository.update(input)
+      else {
+        await clientsRepository.update(input)
+        const alias = values.alias.trim() === existing.fullName && existing.fullName === existing.canonicalFullName
+          ? parsed.fullName : values.alias.trim()
+        await clientsRepository.updatePreferences({ clientId: existing.id, alias, note: values.privateNote.trim() || undefined, version: existing.membershipVersion ?? 1 })
+      }
       return existing.id
     }
     const input = { fullName: parsed.fullName, gender: parsed.gender as Gender,
@@ -146,17 +157,33 @@ function ClientForm({
       initialWeightRecordedOn: todayLocalDate() }
     return createMode === 'self' ? clientsRepository.createOwn(input) : clientsRepository.create(input)
   }, onSuccess: (id) => void onSaved(id) })
-  const contents = <form className="stack" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
-      <Field label="Имя" error={form.formState.errors.fullName?.message}><input {...form.register('fullName')} /></Field>
-      <Field label="Пол"><select {...form.register('gender')}><option value="">Выберите</option><option value="female">Женский</option><option value="male">Мужской</option></select></Field>
-      <div className="split"><Field label="Возраст"><input type="number" {...form.register('ageYears')} /></Field><Field label="Рост, см"><input type="number" step="0.1" {...form.register('heightCm')} /></Field></div>
-      {!existing && <Field label="Начальный вес, кг"><input type="number" step="0.1" {...form.register('initialWeightKg')} /></Field>}
-      <Field label="Цель"><textarea {...form.register('goal')} /></Field>
-      {createMode === 'trainer' && <Controller
-        control={form.control}
-        name="note"
-        render={({ field }) => <VoiceNoteField name={field.name} source="client_form" label="Общий комментарий" value={field.value ?? ''} onValueChange={field.onChange} />}
-      />}
+  const contents = <form className="stack client-profile-form" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
+      <section className="client-form-section">
+        <div className="client-form-section-head">
+          <p className="eyebrow">ПРОФИЛЬ СПОРТСМЕНА</p>
+          <h2>Основные данные</h2>
+          <p>Эти данные помогают вести тренировки и отслеживать прогресс.</p>
+        </div>
+        <Field label="Имя" error={form.formState.errors.fullName?.message}><input {...form.register('fullName')} /></Field>
+        <Field label="Пол"><select {...form.register('gender')}><option value="">Выберите</option><option value="female">Женский</option><option value="male">Мужской</option></select></Field>
+        <div className="split"><Field label="Возраст"><input type="number" {...form.register('ageYears')} /></Field><Field label="Рост, см"><input type="number" step="0.1" {...form.register('heightCm')} /></Field></div>
+        {!existing && <Field label="Начальный вес, кг"><input type="number" step="0.1" {...form.register('initialWeightKg')} /></Field>}
+        <Field label="Цель"><textarea {...form.register('goal')} /></Field>
+        {createMode === 'trainer' && <Controller
+          control={form.control}
+          name="note"
+          render={({ field }) => <VoiceNoteField name={field.name} source="client_form" label="Общий комментарий" value={field.value ?? ''} onValueChange={field.onChange} />}
+        />}
+      </section>
+      {existing && createMode === 'trainer' && <section className="client-form-section client-display-settings">
+        <div className="client-form-section-head">
+          <p className="eyebrow">ТОЛЬКО ДЛЯ ТРЕНЕРА</p>
+          <h2>Мои настройки отображения</h2>
+          <p>Они видны только вам и не меняют профиль спортсмена.</p>
+        </div>
+        <Field label="Имя в моём списке" error={form.formState.errors.alias?.message}><input {...form.register('alias', { required: 'Введите имя', maxLength: { value: 120, message: 'Не больше 120 символов' } })} /></Field>
+        <Controller control={form.control} name="privateNote" render={({ field }) => <VoiceNoteField name={field.name} source="client_form" label="Личная заметка" value={field.value ?? ''} onValueChange={field.onChange} />} />
+      </section>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions">{onCancel && <button type="button" className="secondary" onClick={onCancel}>Отмена</button>}<button disabled={mutation.isPending}>{createMode === 'self' && !existing ? 'Создать карточку' : 'Сохранить'}</button></div>
     </form>
@@ -256,34 +283,6 @@ function ClientNoteBlock({ client }: { client: Client }) {
   </section>
 }
 
-function TrainerClientPreferencesForm({ client, onSaved, onCancel }: {
-  client: Client
-  onSaved: () => Promise<void>
-  onCancel: () => void
-}) {
-  const form = useForm<{ alias: string; note: string }>({ defaultValues: { alias: client.fullName, note: client.note ?? '' } })
-  const mutation = useMutation({
-    mutationFn: (values: { alias: string; note: string }) => clientsRepository.updatePreferences({
-      clientId: client.id, alias: values.alias.trim(), note: values.note.trim() || undefined,
-      version: client.membershipVersion ?? 1,
-    }),
-    onSuccess: () => void onSaved(),
-  })
-  return <Page title="Моё отображение клиента">
-    <form className="stack" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
-      <p className="muted">Эти настройки видны только вам и не меняют данные клиента.</p>
-      <Field label="Имя в моём списке" error={form.formState.errors.alias?.message}>
-        <input {...form.register('alias', { required: 'Введите имя', maxLength: { value: 120, message: 'Не больше 120 символов' } })} />
-      </Field>
-      <Controller control={form.control} name="note" render={({ field }) =>
-        <VoiceNoteField name={field.name} source="client_form" label="Личная заметка" value={field.value} onValueChange={field.onChange} />
-      } />
-      {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions"><button type="button" className="secondary" onClick={onCancel}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
-    </form>
-  </Page>
-}
-
 export function ClientDetailPage() {
   const { clientId = '' } = useParams(); const queryClient = useQueryClient()
   const { actor } = useAuth(); const navigate = useNavigate()
@@ -300,7 +299,7 @@ export function ClientDetailPage() {
   const currentMembership = trainers.data?.find((trainer) => trainer.trainerId === actor?.userId)
   const leave = useMutation({ mutationFn: () => invitationsRepository.leave(clientId), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); navigate('/clients') } })
   const [confirm, confirmDialog] = useConfirm()
-  return <Page title={query.data?.fullName ?? 'Клиент'} center back="/clients" action={query.data && <Link className="button secondary" to={`/clients/${clientId}/edit`}>Мои настройки</Link>}>
+  return <Page title={query.data?.fullName ?? 'Клиент'} center back="/clients" action={query.data && <Link className="button secondary" to={`/clients/${clientId}/edit`}>Редактировать профиль</Link>}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
       <section className="summary"><div><span>Возраст</span><strong>{query.data.ageYears ?? '—'}</strong></div><div><span>Рост</span><strong>{query.data.heightCm ? `${query.data.heightCm} см` : '—'}</strong></div><div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div></section>
       {stats.data && <>

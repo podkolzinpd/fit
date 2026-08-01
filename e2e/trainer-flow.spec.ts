@@ -44,7 +44,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByRole('heading', { name: 'Анна Тестова' })).toBeVisible()
   const clientUrl = page.url()
 
-  await page.getByRole('link', { name: 'Мои настройки' }).click()
+  await page.getByRole('link', { name: 'Редактировать профиль' }).click()
+  await page.getByLabel('Имя', { exact: true }).fill(trainerAlias)
   await page.getByLabel('Имя в моём списке').fill(trainerAlias)
   await page.getByLabel('Личная заметка').fill('Моя приватная заметка')
   await page.getByRole('button', { name: 'Сохранить' }).click()
