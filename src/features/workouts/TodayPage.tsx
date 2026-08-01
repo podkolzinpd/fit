@@ -57,6 +57,7 @@ export function TodayPage() {
   const [draftReady, setDraftReady] = useState(false)
   const [draftRestored, setDraftRestored] = useState(false)
   const inputStarted = useRef(false)
+  const openedTracked = useRef(false)
   const lastEmptyText = useRef('')
   const draftKey = todayDraftKey(actor!.userId)
 
@@ -92,9 +93,17 @@ export function TodayPage() {
   const noMatches = Boolean(text.trim() && !resolved.length && parsed.unparsed.length)
 
   useEffect(() => {
+    if (!openedTracked.current) {
+      openedTracked.current = true
+      trackGoal('today_opened')
+    }
+  }, [])
+
+  useEffect(() => {
     if (text.trim() && !inputStarted.current) {
       inputStarted.current = true
       trackGoal('today_input_started')
+      trackGoal('workout_input_started')
     }
     if (noMatches && lastEmptyText.current !== text) {
       lastEmptyText.current = text
@@ -102,14 +111,14 @@ export function TodayPage() {
     }
   }, [noMatches, text])
   const save = useMutation({
-    mutationFn: async () => workoutsRepository.saveCompleted({
-      clientId,
-      workoutDate: todayLocalDate(),
-      exercises: items.map(draftExercise),
-    }),
-    onMutate: () => trackGoal('today_workout_save_started'),
-    onSuccess: async (id) => {
-      trackGoal('today_workout_saved')
+    mutationFn: async (mode: 'planned' | 'completed') => {
+      const draft = { clientId, workoutDate: todayLocalDate(), exercises: items.map(draftExercise) }
+      return mode === 'planned' ? workoutsRepository.save(draft) : workoutsRepository.saveCompleted(draft)
+    },
+    onMutate: (mode) => trackGoal(mode === 'planned' ? 'today_plan_save_started' : 'today_workout_save_started'),
+    onSuccess: async (id, mode) => {
+      trackGoal(mode === 'planned' ? 'today_plan_saved' : 'today_workout_saved')
+      trackGoal('today_review_confirmed')
       setDraftReady(false)
       removeTodayDraft(draftKey)
       await queryClient.invalidateQueries({ queryKey: ['workouts'] })
@@ -127,8 +136,13 @@ export function TodayPage() {
   })
 
   function review() {
-    if (!resolved.length) return
+    trackGoal('workout_parse_submitted')
+    if (!resolved.length) {
+      trackGoal('workout_parse_failed')
+      return
+    }
     trackGoal(items.length ? 'today_reparse_success' : 'today_parse_success')
+    trackGoal('workout_parse_completed')
     const currentByRef = new Map(items.map((item) => [item.exercise.ref, item]))
     const rebuilt = resolved
       .filter((item) => !removedRefs.includes(item.exercise.ref))
@@ -136,6 +150,7 @@ export function TodayPage() {
     const manualOnly = items.filter((item) => manualRefs.includes(item.exercise.ref) && !rebuilt.some((rebuiltItem) => rebuiltItem.exercise.ref === item.exercise.ref))
     setItems([...rebuilt, ...manualOnly])
     setScreen('review')
+    trackGoal('workout_review_opened')
   }
 
   function addExercises(exercises: ExerciseSnapshot[]) {
@@ -215,17 +230,22 @@ export function TodayPage() {
   const completedWorkouts = recentWorkouts.data?.items.filter((workout) => workout.status === 'done').slice(0, 3) ?? []
   function workoutTime(workout: Workout) { return workout.startTime?.slice(0, 5) ?? 'Без времени' }
 
-  return <Page title="Сегодня" className="today-page" hideTitle action={<Link className="button secondary today-clients" to="/clients">Клиенты</Link>}>
+  const trainerInitial = actor?.firstName?.trim().slice(0, 1).toUpperCase() || 'П'
+
+  return <Page title="Сегодня" className="today-page today-start-page" hideTitle action={<Link className="today-profile-avatar" to="/profile" aria-label="Открыть профиль">{trainerInitial}</Link>}>
     {(currentWorkout || plannedWorkouts.length > 0 || completedWorkouts.length > 0) && <section className="today-agenda"><div className="today-agenda-head"><div><p className="eyebrow">Рабочий день</p><h2>Сегодня</h2></div><Link className="link" to="/schedule">Расписание</Link></div>{currentWorkout && <Link className="today-current-workout" to={`/workouts/${currentWorkout.id}/live`}><span><strong>Продолжить тренировку</strong><small>{currentWorkout.clientName} · {workoutTime(currentWorkout)}</small></span><b>→</b></Link>}{plannedWorkouts.slice(0, 3).map((workout) => <Link className="today-planned-workout" key={workout.id} to={`/workouts/${workout.id}`}><span>{workoutTime(workout)}</span><strong>{workout.clientName}</strong><small>{workout.exercises.length ? workout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Без упражнений'}</small></Link>)}{completedWorkouts.length > 0 && <div className="today-recent-workouts"><p>Последние записи</p>{completedWorkouts.map((workout) => <Link className="today-recent-workout" key={workout.id} to={`/workouts/${workout.id}`}><span>{formatLocalDateShort(workout.workoutDate)}</span><strong>{workout.clientName}</strong><small>{workout.exercises.length} упр.</small></Link>)}</div>}</section>}
     {draftRestored && <div className="today-draft-notice" role="status"><span><strong>Черновик восстановлен</strong><small>Можно продолжить с того же места.</small></span><button type="button" className="link" onClick={discardDraft}>Удалить</button></div>}
     {screen === 'compose' ? <section className="today-composer">
       <div className="today-hero">
         <p className="eyebrow">Быстрый старт</p>
-        <h1>Запишите тренировку<br />в одном сообщении</h1>
-        <p>Например: «Присед 3×8 80 кг, затем планка 3 по 45 сек».</p>
+        <h1>Создайте тренировку<br />за минуту</h1>
+        <p>Напишите или вставьте тренировку —<br />мы разберём её по упражнениям.</p>
       </div>
-      <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать · beta" value={text} onValueChange={setText} />
-      <p className="today-hint">Голосовой ввод пока в beta: перед сохранением проверьте результат.</p>
+      <div className="today-input-card">
+        <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Голос · beta" placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} onValueChange={setText} />
+        <div className="today-input-actions"><button type="button" className="link" onClick={() => { setText('Присед 3×8 — 80 кг\nПланка 3×45 сек'); trackGoal('today_example_inserted') }}>Вставить пример</button>{text && <button type="button" className="link" onClick={() => setText('')}>Очистить</button>}</div>
+      </div>
+      <p className="today-hint">Голосовой ввод пока тестируется. Для более точного результата используйте текст.</p>
       {items.length > 0 && <p className="today-hint">Ручные правки подходов и добавленные упражнения сохранятся при повторном разборе.</p>}
       {text.trim() && <div className="today-parse-preview" aria-live="polite">
         {resolved.length > 0 && <p><strong>Найдены упражнения: {resolved.length}</strong></p>}
@@ -235,8 +255,8 @@ export function TodayPage() {
         </div>)}
       </div>}
       {noMatches && <div className="today-empty-parse" role="status"><strong>Не нашли упражнение</strong><span>Проверьте название или добавьте его из каталога ниже.</span></div>}
-      <button type="button" className="wide" disabled={!resolved.length} onClick={review}>Разобрать тренировку{resolved.length ? ` (${resolved.length})` : ''}</button>
-      <button type="button" className="secondary wide" onClick={() => { setItems([]); setScreen('review') }}>Выбрать упражнения из библиотеки</button>
+      <button type="button" className="wide today-primary-cta" disabled={!text.trim()} onClick={review}>Разобрать тренировку</button>
+      <button type="button" className="secondary wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}><span>Выбрать упражнения</span><small>Поиск и массовый выбор</small></button>
     </section> : <section className="today-review">
       <div className="today-review-head"><div><p className="eyebrow">Проверьте результат</p><h1>Тренировка готова</h1></div><button type="button" className="link" onClick={() => setScreen('compose')}>Изменить текст</button></div>
       {items.length > 0 ? <div className="today-exercise-list">{items.map((item, index) => <article className="today-exercise" key={`${item.exercise.ref}-${index}`}>
@@ -247,9 +267,9 @@ export function TodayPage() {
       <label className="today-client"><span>Кому записать тренировку</span><select value={clientId} onChange={(event) => setClientId(event.target.value)}><option value="">Выберите клиента</option>{clients.data?.map((client) => <option value={client.id} key={client.id}>{client.fullName}</option>)}</select></label>
       <section className="today-quick-client"><div><strong>Нет клиента в списке?</strong><p>Создайте короткую карточку только по имени — остальное добавите позже.</p></div><div className="today-quick-client-form"><input aria-label="Имя нового клиента" value={quickClientName} onChange={(event) => setQuickClientName(event.target.value)} placeholder="Имя клиента" /><button type="button" className="secondary" disabled={quickClientName.trim().length < 2 || createQuickClient.isPending} onClick={() => createQuickClient.mutate()}>Создать</button></div>{createQuickClient.error && <p className="error">{createQuickClient.error.message}</p>}</section>
       {save.error && <p className="error">{save.error.message}</p>}
-      <button type="button" className="wide" disabled={!items.length || !clientId || save.isPending} onClick={() => save.mutate()}>Записать завершённую тренировку</button>
+      <div className="today-save-actions"><button type="button" className="wide" disabled={!items.length || !clientId || save.isPending} onClick={() => save.mutate('planned')}>Создать план тренировки</button><button type="button" className="secondary wide" disabled={!items.length || !clientId || save.isPending} onClick={() => save.mutate('completed')}>Записать завершённую тренировку</button></div>
     </section>}
-    {(clients.error ?? catalog.error) && <p className="error">{(clients.error ?? catalog.error)?.message}</p>}
+    {(clients.error ?? catalog.error ?? todayWorkouts.error ?? recentWorkouts.error) && <p className="error">{(clients.error ?? catalog.error ?? todayWorkouts.error ?? recentWorkouts.error)?.message}</p>}
     {pickerOpen && <ExercisePicker catalog={catalog} onPick={(exercise) => pickExercises([exercise])} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
   </Page>
 }

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { authRepository } from '../../data/repositories/auth.repository'
 import { useAuth } from '../../app/auth-context'
+import { trainerHomePath } from '../../app/feature-flags'
 import { Field } from '../../shared/ui'
 import type { AccountRole } from '../../shared/domain'
 
@@ -14,7 +15,7 @@ export function AuthPage() {
   const [role, setRole] = useState<AccountRole>('trainer')
   const { actor } = useAuth()
   const location = useLocation()
-  if (actor) return <Navigate to={(location.state as { from?: string } | null)?.from ?? (actor.role === 'client' ? '/me' : '/clients')} replace />
+  if (actor) return <Navigate to={(location.state as { from?: string } | null)?.from ?? (actor.role === 'client' ? '/me' : trainerHomePath())} replace />
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError(null)
@@ -71,6 +72,6 @@ export function ResetPasswordPage() {
 
 export function AuthCallbackPage() {
   const { loading, error, actor } = useAuth()
-  if (actor) return <Navigate to={actor.role === 'client' ? '/me' : '/clients'} replace />
+  if (actor) return <Navigate to={actor.role === 'client' ? '/me' : trainerHomePath()} replace />
   return <main className="auth-screen"><h1>Завершаем вход</h1><p>{loading ? 'Проверяем сессию…' : error ?? 'Не удалось получить сессию.'}</p><Link to="/auth">Вернуться</Link></main>
 }
