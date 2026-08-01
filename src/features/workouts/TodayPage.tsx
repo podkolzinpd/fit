@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { workoutsRepository } from '../../data/repositories/workouts.repository'
-import type { ExerciseSnapshot, WorkoutDraft } from '../../shared/domain'
+import type { ExerciseSnapshot, WorkoutDraft, WorkoutSetDraft } from '../../shared/domain'
 import { todayLocalDate } from '../../shared/local-date'
 import { Page } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
@@ -45,6 +45,7 @@ export function TodayPage() {
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
   const [items, setItems] = useState<ParsedWorkoutExercise[]>([])
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const [clientId, setClientId] = useState('')
   const [quickClientName, setQuickClientName] = useState('')
   const [draftReady, setDraftReady] = useState(false)
@@ -116,6 +117,45 @@ export function TodayPage() {
     setPickerOpen(false)
   }
 
+  function pickExercises(exercises: ExerciseSnapshot[]) {
+    if (replaceIndex === null) { addExercises(exercises); return }
+    const exercise = exercises[0]
+    if (!exercise) return
+    setItems((current) => current.map((item, index) => index === replaceIndex ? {
+      ...item,
+      line: exercise.name,
+      exercise,
+      sets: item.exercise.inputKind === exercise.inputKind ? item.sets : [{ position: 0 }],
+      hasValues: item.exercise.inputKind === exercise.inputKind && item.hasValues,
+    } : item))
+    setReplaceIndex(null)
+    setPickerOpen(false)
+  }
+
+  function updateSet(itemIndex: number, setIndex: number, patch: Partial<WorkoutSetDraft>) {
+    setItems((current) => current.map((item, index) => index !== itemIndex ? item : {
+      ...item,
+      hasValues: true,
+      sets: item.sets.map((set, currentSetIndex) => currentSetIndex === setIndex ? { ...set, ...patch } : set),
+    }))
+  }
+
+  function addSet(itemIndex: number) {
+    setItems((current) => current.map((item, index) => {
+      if (index !== itemIndex) return item
+      const previous = item.sets.at(-1)
+      const nextSet = previous ? { ...previous, position: item.sets.length } : { position: item.sets.length }
+      return { ...item, sets: [...item.sets, nextSet], hasValues: item.hasValues }
+    }))
+  }
+
+  function removeSet(itemIndex: number, setIndex: number) {
+    setItems((current) => current.map((item, index) => index !== itemIndex ? item : {
+      ...item,
+      sets: item.sets.filter((_, currentSetIndex) => currentSetIndex !== setIndex).map((set, position) => ({ ...set, position })),
+    }))
+  }
+
   function discardDraft() {
     removeTodayDraft(draftKey)
     setScreen('compose')
@@ -148,16 +188,16 @@ export function TodayPage() {
     </section> : <section className="today-review">
       <div className="today-review-head"><div><p className="eyebrow">Проверьте результат</p><h1>Тренировка готова</h1></div><button type="button" className="link" onClick={() => setScreen('compose')}>Изменить текст</button></div>
       {items.length > 0 ? <div className="today-exercise-list">{items.map((item, index) => <article className="today-exercise" key={`${item.exercise.ref}-${index}`}>
-        <div><strong>{item.exercise.name}</strong><p>{setSummary(item)}</p></div>
-        <button type="button" className="icon-button" aria-label={`Удалить ${item.exercise.name}`} onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}>×</button>
+        <div className="today-exercise-title"><div><strong>{item.exercise.name}</strong><p>{setSummary(item)}</p></div><button type="button" className="icon-button" aria-label={`Удалить ${item.exercise.name}`} onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}>×</button></div>
+        <details className="today-exercise-editor"><summary>Править</summary><button type="button" className="link" onClick={() => { setReplaceIndex(index); setPickerOpen(true) }}>Заменить упражнение</button><div className="today-set-list">{item.sets.map((set, setIndex) => <div className="today-set-editor" key={set.position}><strong>{setIndex + 1}</strong>{item.exercise.inputKind === 'strength' && <><label>Кг<input aria-label={`${item.exercise.name}: вес, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.weightKg ?? ''} onChange={(event) => updateSet(index, setIndex, { weightKg: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><label>Повт.<input aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label></>}{item.exercise.inputKind === 'duration' && <label>Сек.<input aria-label={`${item.exercise.name}: секунды, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.durationSec ?? ''} onChange={(event) => updateSet(index, setIndex, { durationSec: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.exercise.inputKind === 'reps' && <label>Повт.<input aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.exercise.inputKind === 'distance' && <label>Км<input aria-label={`${item.exercise.name}: километры, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.distanceKm ?? ''} onChange={(event) => updateSet(index, setIndex, { distanceKm: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}<label>RPE<input aria-label={`${item.exercise.name}: RPE, подход ${setIndex + 1}`} type="number" min="1" max="10" step="0.5" inputMode="decimal" value={set.rpe ?? ''} onChange={(event) => updateSet(index, setIndex, { rpe: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>{item.sets.length > 1 && <button type="button" className="link danger" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(index, setIndex)}>×</button>}</div>)}</div><button type="button" className="secondary today-add-set" onClick={() => addSet(index)}>＋ Подход</button></details>
       </article>)}</div> : <div className="today-empty"><p>Добавьте упражнения из каталога — можно выбрать несколько сразу.</p></div>}
-      <button type="button" className="secondary wide" onClick={() => setPickerOpen(true)}>Добавить упражнение</button>
+      <button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button>
       <label className="today-client"><span>Кому записать тренировку</span><select value={clientId} onChange={(event) => setClientId(event.target.value)}><option value="">Выберите клиента</option>{clients.data?.map((client) => <option value={client.id} key={client.id}>{client.fullName}</option>)}</select></label>
       <section className="today-quick-client"><div><strong>Нет клиента в списке?</strong><p>Создайте короткую карточку только по имени — остальное добавите позже.</p></div><div className="today-quick-client-form"><input aria-label="Имя нового клиента" value={quickClientName} onChange={(event) => setQuickClientName(event.target.value)} placeholder="Имя клиента" /><button type="button" className="secondary" disabled={quickClientName.trim().length < 2 || createQuickClient.isPending} onClick={() => createQuickClient.mutate()}>Создать</button></div>{createQuickClient.error && <p className="error">{createQuickClient.error.message}</p>}</section>
       {save.error && <p className="error">{save.error.message}</p>}
       <button type="button" className="wide" disabled={!items.length || !clientId || save.isPending} onClick={() => save.mutate()}>Записать завершённую тренировку</button>
     </section>}
     {(clients.error ?? catalog.error) && <p className="error">{(clients.error ?? catalog.error)?.message}</p>}
-    {pickerOpen && <ExercisePicker catalog={catalog} onPick={(exercise) => addExercises([exercise])} onPickMany={addExercises} multiple onClose={() => setPickerOpen(false)} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} onPick={(exercise) => pickExercises([exercise])} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
   </Page>
 }
