@@ -71,11 +71,12 @@ export function MyClientPage() {
         {(removeTrainer.error || revoke.error) && <p className="error">{(removeTrainer.error ?? revoke.error)?.message}</p>}
         </section>
         {confirmDialog}
-      </div> : <div className="stack">
-        <div className="state">
+      </div> : <div className="client-onboarding">
+        <section className="client-onboarding-hero">
+          <p className="eyebrow">ЛИЧНЫЙ ПРОФИЛЬ</p>
           <h2>Создайте личную карточку</h2>
           <p>Она нужна для самостоятельных тренировок и замеров. Тренера можно пригласить позже.</p>
-        </div>
+        </section>
         <ClientForm
           createMode="self"
           initialFullName={[actor?.firstName, actor?.lastName].filter(Boolean).join(' ')}
