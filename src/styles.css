@@ -470,6 +470,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .quick-workout-candidates { display:flex; flex-wrap:wrap; gap:6px; }
 .quick-workout-candidates .secondary { min-height:36px; padding:6px 10px; font-size:14px; }
 .quick-workout-candidates .secondary.selected { border-color:var(--accent); color:var(--accent-strong); background:var(--accent-soft); }
+.today-page { display:grid; gap:18px; }
+.today-clients { min-height:36px; padding:7px 10px; font-size:14px; }
+.today-composer, .today-review { display:grid; gap:14px; }
+.today-hero { padding:10px 0 2px; }.today-hero h1, .today-review h1 { margin:2px 0 8px; font-size:clamp(28px, 8vw, 38px); line-height:1.06; letter-spacing:-.04em; }.today-hero p:not(.eyebrow) { margin:0; color:var(--text-muted); }
+.eyebrow { margin:0; color:var(--accent-strong); font-size:13px; font-weight:750; letter-spacing:.06em; text-transform:uppercase; }
+.today-composer .voice-note-field textarea { min-height:128px; }.today-hint { margin:-7px 0 0; color:var(--text-muted); font-size:13px; }.today-parse-preview, .today-empty { display:grid; gap:8px; padding:12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); }.today-parse-preview p, .today-unparsed p, .today-empty p { margin:0; }.today-unparsed { display:grid; gap:7px; color:var(--warning-fg); }
+.today-review-head { display:flex; align-items:start; justify-content:space-between; gap:12px; }.today-review-head .link { margin-top:5px; white-space:nowrap; }.today-exercise-list { display:grid; gap:8px; }.today-exercise { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); }.today-exercise strong { display:block; }.today-exercise p { margin:4px 0 0; color:var(--text-muted); font-size:14px; }.today-exercise .icon-button { flex:0 0 auto; width:36px; height:36px; padding:0; border-radius:50%; font-size:25px; line-height:1; }.today-client { display:grid; gap:7px; font-weight:700; }.today-client select { width:100%; }.today-no-client { margin:0; color:var(--warning-fg); font-size:14px; }
 /* Степпер: крупные −/+ вокруг поля факта (быстрый ввод одной рукой, P5). */
 .stepper { display: flex; align-items: stretch; gap: 6px; min-width: 0 }
 .stepper input { text-align: center; font-weight: 700; -moz-appearance: textfield }

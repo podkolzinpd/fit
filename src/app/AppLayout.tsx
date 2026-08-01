@@ -27,7 +27,7 @@ export function AppLayout() {
     <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>
   </nav>}</div>
   return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
-    <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>
+    <NavLink to="/today"><ScheduleIcon />Сегодня</NavLink>
     <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>
     <NavLink to="/analytics"><AnalyticsIcon />Аналитика</NavLink>
     <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>

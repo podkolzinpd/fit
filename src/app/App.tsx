@@ -7,7 +7,7 @@ import { ClientDetailPage, ClientFormPage, ClientsPage, GoalPage, MyClientEditPa
 import { ExercisesPage } from '../features/exercises'
 import { AnalyticsPage, ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
-import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
+import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
 
 function Protected() {
   const { actor, loading, error } = useAuth(); const location = useLocation()
@@ -24,7 +24,7 @@ function TrainerOnly() {
 
 function Home() {
   const { actor } = useAuth()
-  return <Navigate to={actor?.role === 'client' ? '/me' : '/clients'} replace />
+  return <Navigate to={actor?.role === 'client' ? '/me' : '/today'} replace />
 }
 
 const router = createBrowserRouter([
@@ -44,6 +44,7 @@ const router = createBrowserRouter([
     { path: '/workouts/:workoutId', element: <WorkoutDetailPage /> },
     { path: '/workouts/:workoutId/live', element: <LiveWorkoutPage /> },
     { element: <TrainerOnly />, children: [
+      { path: '/today', element: <TodayPage /> },
       { path: '/clients', element: <ClientsPage /> },
       { path: '/clients/new', element: <ClientFormPage /> },
       { path: '/clients/:clientId', element: <ClientDetailPage /> },
