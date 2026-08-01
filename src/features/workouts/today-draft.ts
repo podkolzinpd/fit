@@ -7,6 +7,8 @@ export interface TodayDraft {
   choices: Record<string, ExerciseSnapshot>
   items: ParsedWorkoutExercise[]
   clientId: string
+  manualRefs?: string[]
+  removedRefs?: string[]
 }
 
 function isDraft(value: unknown): value is TodayDraft {

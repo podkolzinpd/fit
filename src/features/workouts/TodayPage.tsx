@@ -48,6 +48,8 @@ export function TodayPage() {
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const [clientId, setClientId] = useState('')
   const [quickClientName, setQuickClientName] = useState('')
+  const [manualRefs, setManualRefs] = useState<string[]>([])
+  const [removedRefs, setRemovedRefs] = useState<string[]>([])
   const [draftReady, setDraftReady] = useState(false)
   const [draftRestored, setDraftRestored] = useState(false)
   const draftKey = todayDraftKey(actor!.userId)
@@ -60,6 +62,8 @@ export function TodayPage() {
       setChoices(draft.choices)
       setItems(draft.items)
       setClientId(draft.clientId)
+      setManualRefs(draft.manualRefs ?? [])
+      setRemovedRefs(draft.removedRefs ?? [])
       setDraftRestored(true)
     }
     setDraftReady(true)
@@ -71,8 +75,8 @@ export function TodayPage() {
       removeTodayDraft(draftKey)
       return
     }
-    writeTodayDraft(draftKey, { screen, text, choices, items, clientId })
-  }, [choices, clientId, draftKey, draftReady, items, screen, text])
+    writeTodayDraft(draftKey, { screen, text, choices, items, clientId, manualRefs, removedRefs })
+  }, [choices, clientId, draftKey, draftReady, items, manualRefs, removedRefs, screen, text])
 
   const parsed = useMemo(() => parseQuickWorkoutEntry(text, catalog.exercises), [catalog.exercises, text])
   const resolved = useMemo(() => [
@@ -103,11 +107,17 @@ export function TodayPage() {
 
   function review() {
     if (!resolved.length) return
-    setItems(resolved)
+    const currentByRef = new Map(items.map((item) => [item.exercise.ref, item]))
+    const rebuilt = resolved
+      .filter((item) => !removedRefs.includes(item.exercise.ref))
+      .map((item) => manualRefs.includes(item.exercise.ref) ? currentByRef.get(item.exercise.ref) ?? item : item)
+    const manualOnly = items.filter((item) => manualRefs.includes(item.exercise.ref) && !rebuilt.some((rebuiltItem) => rebuiltItem.exercise.ref === item.exercise.ref))
+    setItems([...rebuilt, ...manualOnly])
     setScreen('review')
   }
 
   function addExercises(exercises: ExerciseSnapshot[]) {
+    setManualRefs((current) => [...new Set([...current, ...exercises.map((exercise) => exercise.ref)])])
     setItems((current) => [...current, ...exercises.map((exercise) => ({
       line: exercise.name,
       exercise,
@@ -121,6 +131,7 @@ export function TodayPage() {
     if (replaceIndex === null) { addExercises(exercises); return }
     const exercise = exercises[0]
     if (!exercise) return
+    const replacedRef = items[replaceIndex]?.exercise.ref
     setItems((current) => current.map((item, index) => index === replaceIndex ? {
       ...item,
       line: exercise.name,
@@ -128,11 +139,15 @@ export function TodayPage() {
       sets: item.exercise.inputKind === exercise.inputKind ? item.sets : [{ position: 0 }],
       hasValues: item.exercise.inputKind === exercise.inputKind && item.hasValues,
     } : item))
+    setManualRefs((current) => [...new Set([...current, exercise.ref])])
+    if (replacedRef) setRemovedRefs((current) => current.includes(replacedRef) ? current : [...current, replacedRef])
     setReplaceIndex(null)
     setPickerOpen(false)
   }
 
   function updateSet(itemIndex: number, setIndex: number, patch: Partial<WorkoutSetDraft>) {
+    const ref = items[itemIndex]?.exercise.ref
+    if (ref) setManualRefs((current) => current.includes(ref) ? current : [...current, ref])
     setItems((current) => current.map((item, index) => index !== itemIndex ? item : {
       ...item,
       hasValues: true,
@@ -141,6 +156,8 @@ export function TodayPage() {
   }
 
   function addSet(itemIndex: number) {
+    const ref = items[itemIndex]?.exercise.ref
+    if (ref) setManualRefs((current) => current.includes(ref) ? current : [...current, ref])
     setItems((current) => current.map((item, index) => {
       if (index !== itemIndex) return item
       const previous = item.sets.at(-1)
@@ -150,6 +167,8 @@ export function TodayPage() {
   }
 
   function removeSet(itemIndex: number, setIndex: number) {
+    const ref = items[itemIndex]?.exercise.ref
+    if (ref) setManualRefs((current) => current.includes(ref) ? current : [...current, ref])
     setItems((current) => current.map((item, index) => index !== itemIndex ? item : {
       ...item,
       sets: item.sets.filter((_, currentSetIndex) => currentSetIndex !== setIndex).map((set, position) => ({ ...set, position })),
@@ -163,6 +182,8 @@ export function TodayPage() {
     setChoices({})
     setItems([])
     setClientId('')
+    setManualRefs([])
+    setRemovedRefs([])
     setDraftRestored(false)
   }
 
@@ -176,6 +197,7 @@ export function TodayPage() {
       </div>
       <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать · beta" value={text} onValueChange={setText} />
       <p className="today-hint">Голосовой ввод пока в beta: перед сохранением проверьте результат.</p>
+      {items.length > 0 && <p className="today-hint">Ручные правки подходов и добавленные упражнения сохранятся при повторном разборе.</p>}
       {text.trim() && <div className="today-parse-preview" aria-live="polite">
         {resolved.length > 0 && <p><strong>Найдены упражнения: {resolved.length}</strong></p>}
         {parsed.unparsed.map((item) => <div className="today-unparsed" key={item.line}>
@@ -188,7 +210,7 @@ export function TodayPage() {
     </section> : <section className="today-review">
       <div className="today-review-head"><div><p className="eyebrow">Проверьте результат</p><h1>Тренировка готова</h1></div><button type="button" className="link" onClick={() => setScreen('compose')}>Изменить текст</button></div>
       {items.length > 0 ? <div className="today-exercise-list">{items.map((item, index) => <article className="today-exercise" key={`${item.exercise.ref}-${index}`}>
-        <div className="today-exercise-title"><div><strong>{item.exercise.name}</strong><p>{setSummary(item)}</p></div><button type="button" className="icon-button" aria-label={`Удалить ${item.exercise.name}`} onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}>×</button></div>
+        <div className="today-exercise-title"><div><strong>{item.exercise.name}</strong><p>{setSummary(item)}</p></div><button type="button" className="icon-button" aria-label={`Удалить ${item.exercise.name}`} onClick={() => { setRemovedRefs((current) => current.includes(item.exercise.ref) ? current : [...current, item.exercise.ref]); setItems((current) => current.filter((_, itemIndex) => itemIndex !== index)) }}>×</button></div>
         <details className="today-exercise-editor"><summary>Править</summary><button type="button" className="link" onClick={() => { setReplaceIndex(index); setPickerOpen(true) }}>Заменить упражнение</button><div className="today-set-list">{item.sets.map((set, setIndex) => <div className="today-set-editor" key={set.position}><strong>{setIndex + 1}</strong>{item.exercise.inputKind === 'strength' && <><label>Кг<input aria-label={`${item.exercise.name}: вес, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.weightKg ?? ''} onChange={(event) => updateSet(index, setIndex, { weightKg: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><label>Повт.<input aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label></>}{item.exercise.inputKind === 'duration' && <label>Сек.<input aria-label={`${item.exercise.name}: секунды, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.durationSec ?? ''} onChange={(event) => updateSet(index, setIndex, { durationSec: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.exercise.inputKind === 'reps' && <label>Повт.<input aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.exercise.inputKind === 'distance' && <label>Км<input aria-label={`${item.exercise.name}: километры, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.distanceKm ?? ''} onChange={(event) => updateSet(index, setIndex, { distanceKm: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}<label>RPE<input aria-label={`${item.exercise.name}: RPE, подход ${setIndex + 1}`} type="number" min="1" max="10" step="0.5" inputMode="decimal" value={set.rpe ?? ''} onChange={(event) => updateSet(index, setIndex, { rpe: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>{item.sets.length > 1 && <button type="button" className="link danger" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(index, setIndex)}>×</button>}</div>)}</div><button type="button" className="secondary today-add-set" onClick={() => addSet(index)}>＋ Подход</button></details>
       </article>)}</div> : <div className="today-empty"><p>Добавьте упражнения из каталога — можно выбрать несколько сразу.</p></div>}
       <button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button>
