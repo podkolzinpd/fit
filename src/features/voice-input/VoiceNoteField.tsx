@@ -12,17 +12,19 @@ interface VoiceNoteFieldProps {
   voiceLabel?: string
   voiceBeta?: boolean
   placeholder?: string
+  hideLabel?: boolean
 }
 
-export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, label = 'Заметка', voiceLabel, voiceBeta, placeholder }: VoiceNoteFieldProps) {
+export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false }: VoiceNoteFieldProps) {
   const id = useId()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   return <div className="field voice-note-field">
-    <label htmlFor={id}>{label}</label>
+    {!hideLabel && <label htmlFor={id}>{label}</label>}
     <textarea
       ref={textareaRef}
       id={id}
       name={name}
+      aria-label={hideLabel ? label : undefined}
       placeholder={placeholder}
       defaultValue={onValueChange ? undefined : defaultValue}
       value={onValueChange ? value ?? '' : undefined}

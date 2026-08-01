@@ -283,7 +283,10 @@ export function WorkoutFormPage() {
             {stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.title}</option>)}
           </select>
         </Field>}
-        <VoiceNoteField name="notes" source="workout_form" defaultValue={initial?.notes ?? ''} />
+        <details className="workout-notes" open={Boolean(initial?.notes)}>
+          <summary>Заметка <span>Необязательно</span></summary>
+          <VoiceNoteField name="notes" source="workout_form" defaultValue={initial?.notes ?? ''} hideLabel />
+        </details>
       </section>
       <section className="workout-form-section workout-form-exercises">
         <div className="workout-form-section-head"><p className="eyebrow">УПРАЖНЕНИЯ</p><h2>План и факт</h2></div>
