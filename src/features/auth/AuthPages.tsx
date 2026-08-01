@@ -29,10 +29,14 @@ export function AuthPage() {
     finally { setBusy(false) }
   }
 
-  return <main className="auth-screen">
-    <div className="brand">FIT</div><h1>{mode === 'login' ? 'Вход' : 'Регистрация'}</h1>
-    <p className="muted">{mode === 'register' && role === 'client' ? 'Следите за своими тренировками и прогрессом.' : 'Планируйте тренировки и следите за прогрессом клиентов.'}</p>
-    <form className="stack" onSubmit={(event) => void submit(event)}>
+  return <main className="auth-screen auth-entry">
+    <header className="auth-entry-head">
+      <div className="brand" aria-hidden="true">FIT</div>
+      <p className="eyebrow">ВАШ РАБОЧИЙ ПРОЦЕСС</p>
+      <h1>{mode === 'login' ? 'Вход' : 'Регистрация'}</h1>
+      <p className="muted">{mode === 'register' && role === 'client' ? 'Следите за своими тренировками и прогрессом.' : 'Планируйте тренировки и следите за прогрессом клиентов.'}</p>
+    </header>
+    <form className="stack auth-form" onSubmit={(event) => void submit(event)}>
       {mode === 'register' && <>
         <Field label="Тип аккаунта"><select value={role} onChange={(event) => setRole(event.target.value as AccountRole)}>
           <option value="trainer">Я тренер</option><option value="client">Я клиент</option>
@@ -44,7 +48,7 @@ export function AuthPage() {
       {error && <p className="error" role="alert">{error}</p>}
       <button disabled={busy}>{busy ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}</button>
     </form>
-    <button className="secondary" onClick={() => void authRepository.signInWithGoogle(mode === 'register' ? role : 'trainer')}>Продолжить с Google</button>
+    <button className="secondary auth-google" onClick={() => void authRepository.signInWithGoogle(mode === 'register' ? role : 'trainer')}>Продолжить с Google</button>
     <div className="auth-links"><button className="link" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>{mode === 'login' ? 'Создать аккаунт' : 'У меня есть аккаунт'}</button>{mode === 'login' && <Link to="/auth/forgot">Забыли пароль?</Link>}</div>
   </main>
 }
@@ -57,7 +61,7 @@ export function ForgotPasswordPage() {
     try { await authRepository.resetPassword(String(new FormData(event.currentTarget).get('email'))); setMessage('Ссылка отправлена, если такой аккаунт существует.') }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Ошибка') }
   }
-  return <main className="auth-screen"><h1>Восстановление пароля</h1><form className="stack" onSubmit={(e) => void submit(e)}><Field label="Email"><input name="email" type="email" required /></Field>{error && <p className="error">{error}</p>}{message && <p className="success">{message}</p>}<button>Отправить ссылку</button></form><Link to="/auth">Вернуться ко входу</Link></main>
+  return <main className="auth-screen auth-entry"><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">ДОСТУП К АККАУНТУ</p><h1>Восстановление пароля</h1><p className="muted">Отправим ссылку на ваш email.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>{error && <p className="error">{error}</p>}{message && <p className="success">{message}</p>}<button>Отправить ссылку</button></form><Link className="auth-back-link" to="/auth">Вернуться ко входу</Link></main>
 }
 
 export function ResetPasswordPage() {
@@ -67,11 +71,11 @@ export function ResetPasswordPage() {
     try { await authRepository.updatePassword(String(new FormData(event.currentTarget).get('password'))); navigate('/') }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Ошибка') }
   }
-  return <main className="auth-screen"><h1>Новый пароль</h1><form className="stack" onSubmit={(e) => void submit(e)}><Field label="Пароль"><input name="password" type="password" minLength={8} required /></Field>{error && <p className="error">{error}</p>}<button>Сохранить</button></form></main>
+  return <main className="auth-screen auth-entry"><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">БЕЗОПАСНОСТЬ</p><h1>Новый пароль</h1><p className="muted">Выберите новый пароль для входа в FIT.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete="new-password" required /></Field>{error && <p className="error">{error}</p>}<button>Сохранить</button></form></main>
 }
 
 export function AuthCallbackPage() {
   const { loading, error, actor } = useAuth()
   if (actor) return <Navigate to={actor.role === 'client' ? '/me' : trainerHomePath()} replace />
-  return <main className="auth-screen"><h1>Завершаем вход</h1><p>{loading ? 'Проверяем сессию…' : error ?? 'Не удалось получить сессию.'}</p><Link to="/auth">Вернуться</Link></main>
+  return <main className="auth-screen auth-entry"><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">ВХОД В АККАУНТ</p><h1>Завершаем вход</h1><p className="muted">{loading ? 'Проверяем сессию…' : error ?? 'Не удалось получить сессию.'}</p></header><Link className="auth-back-link" to="/auth">Вернуться</Link></main>
 }

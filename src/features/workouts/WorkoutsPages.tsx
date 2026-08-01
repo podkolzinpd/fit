@@ -268,22 +268,28 @@ export function WorkoutFormPage() {
   const loading = source.isLoading || clients.isLoading || mine.isLoading
   const error = source.error ?? clients.error ?? mine.error
   return <Page title={workoutId ? 'Редактировать тренировку' : params.has('copy') ? 'Копия тренировки' : 'Новая тренировка'} back={-1}>
-    <AsyncView loading={loading} error={error}>{editingDenied ? <div className="state"><h2>Редактирование недоступно</h2><p>Назначенную тренером тренировку может менять только тренер.</p></div> : clientMode && !mine.data ? <div className="state"><h2>Карточка ещё не подключена</h2><p>Создать тренировку можно после подключения клиентской карточки.</p></div> : <form className="stack" onSubmit={(event) => void submit(event)}>
-      {clientMode
-        ? <><input type="hidden" name="clientId" value={mine.data?.id ?? ''} /><Field label="Клиент"><input value={mine.data?.fullName ?? ''} disabled /></Field></>
-        : <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} onChange={(event) => setSelectedClientId(event.target.value)} required><option value="">Выберите</option>{availableClients?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>}
-      <div className="split"><Field label="Дата"><input name="date" type="date" max={completedMode ? todayLocalDate() : undefined} defaultValue={initial?.workoutDate ?? params.get('date') ?? todayLocalDate()} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} /></Field></div>
-      {!workoutId && <label className="manual-workout-toggle"><input type="checkbox" checked={recordCompleted} onChange={(event) => setRecordCompleted(event.target.checked)} /> <span><strong>Записать завершённую тренировку</strong><small>Введённые значения сохранятся как факт, без live-режима.</small></span></label>}
-      {stages.length > 0 && <Field label="Этап цели">
-        {/* key — чтобы defaultValue пересчитался при смене клиента/загрузке цели */}
-        <select name="stageId" key={`${clientId}-${defaultStageId}`} defaultValue={defaultStageId}>
-          <option value="">Без этапа</option>
-          {stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.title}</option>)}
-        </select>
-      </Field>}
-      <VoiceNoteField name="notes" source="workout_form" defaultValue={initial?.notes ?? ''} />
-      <QuickWorkoutEntry catalog={catalog.exercises} onAdd={(parsed) => void addQuickEntry(parsed)} />
-      <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} />
+    <AsyncView loading={loading} error={error}>{editingDenied ? <div className="state"><h2>Редактирование недоступно</h2><p>Назначенную тренером тренировку может менять только тренер.</p></div> : clientMode && !mine.data ? <div className="state"><h2>Карточка ещё не подключена</h2><p>Создать тренировку можно после подключения клиентской карточки.</p></div> : <form className="stack workout-form" onSubmit={(event) => void submit(event)}>
+      <section className="workout-form-section">
+        <div className="workout-form-section-head"><p className="eyebrow">ОСНОВНЫЕ ДАННЫЕ</p><h2>Тренировка</h2></div>
+        {clientMode
+          ? <><input type="hidden" name="clientId" value={mine.data?.id ?? ''} /><Field label="Клиент"><input value={mine.data?.fullName ?? ''} disabled /></Field></>
+          : <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} onChange={(event) => setSelectedClientId(event.target.value)} required><option value="">Выберите</option>{availableClients?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>}
+        <div className="split"><Field label="Дата"><input name="date" type="date" max={completedMode ? todayLocalDate() : undefined} defaultValue={initial?.workoutDate ?? params.get('date') ?? todayLocalDate()} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} /></Field></div>
+        {!workoutId && <label className="manual-workout-toggle"><input type="checkbox" checked={recordCompleted} onChange={(event) => setRecordCompleted(event.target.checked)} /> <span><strong>Записать завершённую тренировку</strong><small>Введённые значения сохранятся как факт, без live-режима.</small></span></label>}
+        {stages.length > 0 && <Field label="Этап цели">
+          {/* key — чтобы defaultValue пересчитался при смене клиента/загрузке цели */}
+          <select name="stageId" key={`${clientId}-${defaultStageId}`} defaultValue={defaultStageId}>
+            <option value="">Без этапа</option>
+            {stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.title}</option>)}
+          </select>
+        </Field>}
+        <VoiceNoteField name="notes" source="workout_form" defaultValue={initial?.notes ?? ''} />
+      </section>
+      <section className="workout-form-section workout-form-exercises">
+        <div className="workout-form-section-head"><p className="eyebrow">УПРАЖНЕНИЯ</p><h2>План и факт</h2></div>
+        <QuickWorkoutEntry catalog={catalog.exercises} onAdd={(parsed) => void addQuickEntry(parsed)} />
+        <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} />
+      </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>{recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить'}</button></div>
