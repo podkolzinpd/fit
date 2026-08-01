@@ -8,14 +8,13 @@ test('форма: быстрый ввод разбирает текст в уп�
   await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
 
   await page.goto('/workouts/new')
-  // Форма — сфокусированный поток: нижняя навигация не конкурирует с
-  // закреплённым сохранением, заметка не занимает экран до явного раскрытия.
-  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeHidden()
+  // Таббар остаётся доступен, заметка не занимает экран до явного раскрытия,
+  // а быстрый ввод упражнений открыт сразу.
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible()
   await expect(page.getByRole('textbox', { name: 'Заметка' })).toBeHidden()
   await page.locator('.workout-notes summary').click()
   await expect(page.getByRole('textbox', { name: 'Заметка' })).toBeVisible()
   await page.getByLabel('Клиент').selectOption({ label: 'Анна Смирнова' })
-  await page.getByRole('button', { name: '⌁ Добавить из текста или голоса' }).click()
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
   await page.getByLabel('Запись тренировки').fill('Присед 80 на 8, 85 на 6, 90 на 5 RPE 8 затем Планка 3 по 45 сек')
   await expect(page.getByText(/«Присед 80 на 8, 85 на 6, 90 на 5 RPE 8» — выберите вариант/)).toBeVisible()

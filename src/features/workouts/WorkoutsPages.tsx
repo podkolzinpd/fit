@@ -275,7 +275,7 @@ export function WorkoutFormPage() {
           ? <><input type="hidden" name="clientId" value={mine.data?.id ?? ''} /><Field label="Клиент"><input value={mine.data?.fullName ?? ''} disabled /></Field></>
           : <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} onChange={(event) => setSelectedClientId(event.target.value)} required><option value="">Выберите</option>{availableClients?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>}
         <div className="split"><Field label="Дата"><input name="date" type="date" max={completedMode ? todayLocalDate() : undefined} defaultValue={initial?.workoutDate ?? params.get('date') ?? todayLocalDate()} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} /></Field></div>
-        {!workoutId && <label className="manual-workout-toggle"><input type="checkbox" checked={recordCompleted} onChange={(event) => setRecordCompleted(event.target.checked)} /> <span><strong>Записать завершённую тренировку</strong><small>Введённые значения сохранятся как факт, без live-режима.</small></span></label>}
+        {!workoutId && <div className="workout-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={!recordCompleted ? 'active' : ''} aria-pressed={!recordCompleted} onClick={() => setRecordCompleted(false)}>План</button><button type="button" className={recordCompleted ? 'active' : ''} aria-pressed={recordCompleted} onClick={() => setRecordCompleted(true)}>Завершённая</button></div>}
         {stages.length > 0 && <Field label="Этап цели">
           {/* key — чтобы defaultValue пересчитался при смене клиента/загрузке цели */}
           <select name="stageId" key={`${clientId}-${defaultStageId}`} defaultValue={defaultStageId}>
@@ -290,7 +290,7 @@ export function WorkoutFormPage() {
       </section>
       <section className="workout-form-section workout-form-exercises">
         <div className="workout-form-section-head"><p className="eyebrow">УПРАЖНЕНИЯ</p><h2>План и факт</h2></div>
-        <QuickWorkoutEntry catalog={catalog.exercises} onAdd={(parsed) => void addQuickEntry(parsed)} />
+        <QuickWorkoutEntry catalog={catalog.exercises} onAdd={(parsed) => void addQuickEntry(parsed)} defaultOpen />
         <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}

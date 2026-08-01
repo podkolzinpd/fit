@@ -6,10 +6,11 @@ import { parseQuickWorkoutEntry, resolveQuickWorkoutLine, type ParsedWorkoutExer
 interface QuickWorkoutEntryProps {
   catalog: readonly ExerciseSnapshot[]
   onAdd: (exercises: ParsedWorkoutExercise[]) => void
+  defaultOpen?: boolean
 }
 
-export function QuickWorkoutEntry({ catalog, onAdd }: QuickWorkoutEntryProps) {
-  const [open, setOpen] = useState(false)
+export function QuickWorkoutEntry({ catalog, onAdd, defaultOpen = false }: QuickWorkoutEntryProps) {
+  const [open, setOpen] = useState(defaultOpen)
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
   const parsed = useMemo(() => parseQuickWorkoutEntry(text, catalog), [text, catalog])
