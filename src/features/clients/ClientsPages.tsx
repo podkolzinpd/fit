@@ -305,12 +305,13 @@ export function ClientDetailPage() {
   const currentMembership = trainers.data?.find((trainer) => trainer.trainerId === actor?.userId)
   const leave = useMutation({ mutationFn: () => invitationsRepository.leave(clientId), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); navigate('/clients') } })
   const [confirm, confirmDialog] = useConfirm()
-  return <Page title={query.data?.fullName ?? 'Клиент'} center back="/clients" action={query.data && <Link className="button secondary" to={`/clients/${clientId}/edit`}>Редактировать профиль</Link>}>
+  return <Page title={query.data?.fullName ?? 'Клиент'} className="client-detail-page" back="/clients" action={query.data && <Link className="button secondary" to={`/clients/${clientId}/edit`}>Редактировать профиль</Link>}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
-      <section className="summary"><div><span>Возраст</span><strong>{query.data.ageYears ?? '—'}</strong></div><div><span>Рост</span><strong>{query.data.heightCm ? `${query.data.heightCm} см` : '—'}</strong></div><div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div></section>
+      <section className="client-detail-overview"><p className="eyebrow">ПРОФИЛЬ СПОРТСМЕНА</p><p>{query.data.goal || 'Цель ещё не задана — добавьте её, чтобы держать фокус тренировок.'}</p></section>
+      <section className="summary client-detail-summary"><div><span>Возраст</span><strong>{query.data.ageYears ?? '—'}</strong></div><div><span>Рост</span><strong>{query.data.heightCm ? `${query.data.heightCm} см` : '—'}</strong></div><div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div></section>
       {stats.data && <>
         {stats.data.needsAttention && <p className="attention">⚠ Давно не тренировался</p>}
-        <section className="summary stats stats-3">
+        <section className="summary stats stats-3 client-detail-stats">
           <div><span>Тренировок</span><strong>{stats.data.doneCount}</strong></div>
           <div><span>Выполнено</span><strong>{stats.data.completionPercent === null ? '—' : `${stats.data.completionPercent}%`}</strong></div>
           <div><span>ИМТ</span><strong>{bmiLabel(query.data.heightCm, query.data.currentWeightKg)}</strong></div>
