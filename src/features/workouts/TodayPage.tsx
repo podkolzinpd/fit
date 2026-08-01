@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { workoutsRepository } from '../../data/repositories/workouts.repository'
@@ -8,7 +8,9 @@ import { todayLocalDate } from '../../shared/local-date'
 import { Page } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { VoiceNoteField } from '../voice-input'
+import { useAuth } from '../../app/auth-context'
 import { parseQuickWorkoutEntry, resolveQuickWorkoutLine, type ParsedWorkoutExercise } from './quick-workout-entry'
+import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
 
 type Screen = 'compose' | 'review'
 
@@ -35,6 +37,7 @@ function draftExercise(item: ParsedWorkoutExercise, position: number): WorkoutDr
 export function TodayPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { actor } = useAuth()
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
   const catalog = useExerciseCatalog()
   const [screen, setScreen] = useState<Screen>('compose')
@@ -44,6 +47,31 @@ export function TodayPage() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [clientId, setClientId] = useState('')
   const [quickClientName, setQuickClientName] = useState('')
+  const [draftReady, setDraftReady] = useState(false)
+  const [draftRestored, setDraftRestored] = useState(false)
+  const draftKey = todayDraftKey(actor!.userId)
+
+  useEffect(() => {
+    const draft = readTodayDraft(draftKey)
+    if (draft) {
+      setScreen(draft.screen)
+      setText(draft.text)
+      setChoices(draft.choices)
+      setItems(draft.items)
+      setClientId(draft.clientId)
+      setDraftRestored(true)
+    }
+    setDraftReady(true)
+  }, [draftKey])
+
+  useEffect(() => {
+    if (!draftReady) return
+    if (!text.trim() && !items.length) {
+      removeTodayDraft(draftKey)
+      return
+    }
+    writeTodayDraft(draftKey, { screen, text, choices, items, clientId })
+  }, [choices, clientId, draftKey, draftReady, items, screen, text])
 
   const parsed = useMemo(() => parseQuickWorkoutEntry(text, catalog.exercises), [catalog.exercises, text])
   const resolved = useMemo(() => [
@@ -57,6 +85,8 @@ export function TodayPage() {
       exercises: items.map(draftExercise),
     }),
     onSuccess: async (id) => {
+      setDraftReady(false)
+      removeTodayDraft(draftKey)
       await queryClient.invalidateQueries({ queryKey: ['workouts'] })
       navigate(`/workouts/${id}`)
     },
@@ -86,7 +116,18 @@ export function TodayPage() {
     setPickerOpen(false)
   }
 
+  function discardDraft() {
+    removeTodayDraft(draftKey)
+    setScreen('compose')
+    setText('')
+    setChoices({})
+    setItems([])
+    setClientId('')
+    setDraftRestored(false)
+  }
+
   return <Page title="Сегодня" className="today-page" hideTitle action={<Link className="button secondary today-clients" to="/clients">Клиенты</Link>}>
+    {draftRestored && <div className="today-draft-notice" role="status"><span><strong>Черновик восстановлен</strong><small>Можно продолжить с того же места.</small></span><button type="button" className="link" onClick={discardDraft}>Удалить</button></div>}
     {screen === 'compose' ? <section className="today-composer">
       <div className="today-hero">
         <p className="eyebrow">Быстрый старт</p>
@@ -115,7 +156,6 @@ export function TodayPage() {
       <section className="today-quick-client"><div><strong>Нет клиента в списке?</strong><p>Создайте короткую карточку только по имени — остальное добавите позже.</p></div><div className="today-quick-client-form"><input aria-label="Имя нового клиента" value={quickClientName} onChange={(event) => setQuickClientName(event.target.value)} placeholder="Имя клиента" /><button type="button" className="secondary" disabled={quickClientName.trim().length < 2 || createQuickClient.isPending} onClick={() => createQuickClient.mutate()}>Создать</button></div>{createQuickClient.error && <p className="error">{createQuickClient.error.message}</p>}</section>
       {save.error && <p className="error">{save.error.message}</p>}
       <button type="button" className="wide" disabled={!items.length || !clientId || save.isPending} onClick={() => save.mutate()}>Записать завершённую тренировку</button>
-      {!clients.data?.length && <Link className="button wide" to="/clients/new">Создать клиента</Link>}
     </section>}
     {(clients.error ?? catalog.error) && <p className="error">{(clients.error ?? catalog.error)?.message}</p>}
     {pickerOpen && <ExercisePicker catalog={catalog} onPick={(exercise) => addExercises([exercise])} onPickMany={addExercises} multiple onClose={() => setPickerOpen(false)} />}
