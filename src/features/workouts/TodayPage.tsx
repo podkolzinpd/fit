@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, WorkoutDraft, WorkoutSetDraft } from '../../shared/domain'
 import { todayLocalDate } from '../../shared/local-date'
+import { trackGoal } from '../../shared/yandex-metrika'
 import { Page } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { VoiceNoteField } from '../voice-input'
@@ -52,6 +53,8 @@ export function TodayPage() {
   const [removedRefs, setRemovedRefs] = useState<string[]>([])
   const [draftReady, setDraftReady] = useState(false)
   const [draftRestored, setDraftRestored] = useState(false)
+  const inputStarted = useRef(false)
+  const lastEmptyText = useRef('')
   const draftKey = todayDraftKey(actor!.userId)
 
   useEffect(() => {
@@ -83,22 +86,37 @@ export function TodayPage() {
     ...parsed.parsed,
     ...parsed.unparsed.flatMap((item) => choices[item.line] ? [resolveQuickWorkoutLine(item.line, choices[item.line]!)] : []),
   ], [choices, parsed])
+  const noMatches = Boolean(text.trim() && !resolved.length && parsed.unparsed.length)
+
+  useEffect(() => {
+    if (text.trim() && !inputStarted.current) {
+      inputStarted.current = true
+      trackGoal('today_input_started')
+    }
+    if (noMatches && lastEmptyText.current !== text) {
+      lastEmptyText.current = text
+      trackGoal('today_parse_empty')
+    }
+  }, [noMatches, text])
   const save = useMutation({
     mutationFn: async () => workoutsRepository.saveCompleted({
       clientId,
       workoutDate: todayLocalDate(),
       exercises: items.map(draftExercise),
     }),
+    onMutate: () => trackGoal('today_workout_save_started'),
     onSuccess: async (id) => {
+      trackGoal('today_workout_saved')
       setDraftReady(false)
       removeTodayDraft(draftKey)
       await queryClient.invalidateQueries({ queryKey: ['workouts'] })
       navigate(`/workouts/${id}`)
-    },
+    }, onError: () => trackGoal('today_workout_save_error'),
   })
   const createQuickClient = useMutation({
     mutationFn: () => clientsRepository.createQuick(quickClientName.trim()),
     onSuccess: async (id) => {
+      trackGoal('today_quick_client_created')
       setClientId(id)
       setQuickClientName('')
       await queryClient.invalidateQueries({ queryKey: ['clients'] })
@@ -107,6 +125,7 @@ export function TodayPage() {
 
   function review() {
     if (!resolved.length) return
+    trackGoal(items.length ? 'today_reparse_success' : 'today_parse_success')
     const currentByRef = new Map(items.map((item) => [item.exercise.ref, item]))
     const rebuilt = resolved
       .filter((item) => !removedRefs.includes(item.exercise.ref))
@@ -146,6 +165,7 @@ export function TodayPage() {
   }
 
   function updateSet(itemIndex: number, setIndex: number, patch: Partial<WorkoutSetDraft>) {
+    trackGoal('today_review_edited')
     const ref = items[itemIndex]?.exercise.ref
     if (ref) setManualRefs((current) => current.includes(ref) ? current : [...current, ref])
     setItems((current) => current.map((item, index) => index !== itemIndex ? item : {
@@ -205,6 +225,7 @@ export function TodayPage() {
           {item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => setChoices((current) => ({ ...current, [item.line]: exercise }))}>{exercise.name}</button>)}</div>}
         </div>)}
       </div>}
+      {noMatches && <div className="today-empty-parse" role="status"><strong>Не нашли упражнение</strong><span>Проверьте название или добавьте его из каталога ниже.</span></div>}
       <button type="button" className="wide" disabled={!resolved.length} onClick={review}>Разобрать тренировку{resolved.length ? ` (${resolved.length})` : ''}</button>
       <button type="button" className="secondary wide" onClick={() => { setItems([]); setScreen('review') }}>Выбрать упражнения из библиотеки</button>
     </section> : <section className="today-review">
