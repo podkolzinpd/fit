@@ -3,8 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { workoutsRepository } from '../../data/repositories/workouts.repository'
-import type { ExerciseSnapshot, WorkoutDraft, WorkoutSetDraft } from '../../shared/domain'
-import { todayLocalDate } from '../../shared/local-date'
+import type { ExerciseSnapshot, Workout, WorkoutDraft, WorkoutSetDraft } from '../../shared/domain'
+import { formatLocalDateShort, todayLocalDate } from '../../shared/local-date'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { Page } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
@@ -40,6 +40,9 @@ export function TodayPage() {
   const queryClient = useQueryClient()
   const { actor } = useAuth()
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
+  const today = todayLocalDate()
+  const todayWorkouts = useQuery({ queryKey: ['today-workouts', today], queryFn: () => workoutsRepository.list(today, today) })
+  const recentWorkouts = useQuery({ queryKey: ['today-recent-workouts', today], queryFn: () => workoutsRepository.listPage(undefined, today) })
   const catalog = useExerciseCatalog()
   const [screen, setScreen] = useState<Screen>('compose')
   const [text, setText] = useState('')
@@ -207,7 +210,13 @@ export function TodayPage() {
     setDraftRestored(false)
   }
 
+  const currentWorkout = todayWorkouts.data?.find((workout) => workout.status === 'in_progress')
+  const plannedWorkouts = todayWorkouts.data?.filter((workout) => workout.status === 'planned').sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')) ?? []
+  const completedWorkouts = recentWorkouts.data?.items.filter((workout) => workout.status === 'done').slice(0, 3) ?? []
+  function workoutTime(workout: Workout) { return workout.startTime?.slice(0, 5) ?? 'Без времени' }
+
   return <Page title="Сегодня" className="today-page" hideTitle action={<Link className="button secondary today-clients" to="/clients">Клиенты</Link>}>
+    {(currentWorkout || plannedWorkouts.length > 0 || completedWorkouts.length > 0) && <section className="today-agenda"><div className="today-agenda-head"><div><p className="eyebrow">Рабочий день</p><h2>Сегодня</h2></div><Link className="link" to="/schedule">Расписание</Link></div>{currentWorkout && <Link className="today-current-workout" to={`/workouts/${currentWorkout.id}/live`}><span><strong>Продолжить тренировку</strong><small>{currentWorkout.clientName} · {workoutTime(currentWorkout)}</small></span><b>→</b></Link>}{plannedWorkouts.slice(0, 3).map((workout) => <Link className="today-planned-workout" key={workout.id} to={`/workouts/${workout.id}`}><span>{workoutTime(workout)}</span><strong>{workout.clientName}</strong><small>{workout.exercises.length ? workout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Без упражнений'}</small></Link>)}{completedWorkouts.length > 0 && <div className="today-recent-workouts"><p>Последние записи</p>{completedWorkouts.map((workout) => <Link className="today-recent-workout" key={workout.id} to={`/workouts/${workout.id}`}><span>{formatLocalDateShort(workout.workoutDate)}</span><strong>{workout.clientName}</strong><small>{workout.exercises.length} упр.</small></Link>)}</div>}</section>}
     {draftRestored && <div className="today-draft-notice" role="status"><span><strong>Черновик восстановлен</strong><small>Можно продолжить с того же места.</small></span><button type="button" className="link" onClick={discardDraft}>Удалить</button></div>}
     {screen === 'compose' ? <section className="today-composer">
       <div className="today-hero">
