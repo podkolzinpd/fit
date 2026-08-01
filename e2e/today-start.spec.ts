@@ -15,6 +15,7 @@ test('today: быстрый старт ведёт к единому выбору
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
   await page.getByLabel('Для кого тренировка').selectOption({ label: 'Анна Смирнова' })
+  await expect(page.getByText('Нет клиента?', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Запланировать' })).toBeEnabled()
   await expect(page.getByLabel('Дата тренировки')).toBeVisible()
   await expect(page.getByLabel('Время тренировки')).toBeVisible()
