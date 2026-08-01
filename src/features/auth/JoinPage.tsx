@@ -28,11 +28,11 @@ export function JoinPage() {
     claim.mutate(String(new FormData(event.currentTarget).get('code')))
   }
 
-  return <Page title="Присоединиться">
-    {codeFromLink && claim.isPending ? <p className="state">Проверяем приглашение…</p> : <form className="stack" onSubmit={submit}>
+  return <Page title="Присоединиться" className="join-page">
+    {codeFromLink && claim.isPending ? <p className="state join-state">Проверяем приглашение…</p> : <section className="join-card"><div className="join-card-head"><p className="eyebrow">СВЯЗЬ С ТРЕНЕРОМ</p><h2>Введите код приглашения</h2><p>Код из 12 символов свяжет ваш профиль с тренером.</p></div><form className="stack compact join-form" onSubmit={submit}>
       <Field label="Код приглашения"><input name="code" minLength={12} maxLength={12} autoCapitalize="characters" required /></Field>
       {claim.error && <p className="error" role="alert">{claim.error.message}</p>}
       <button disabled={claim.isPending}>{claim.isPending ? 'Подключаем…' : 'Присоединиться'}</button>
-    </form>}
+    </form></section>}
   </Page>
 }
