@@ -298,6 +298,27 @@ p { margin: 6px 0 }
 .client-home-connections > .card, .client-home-invitations .card { border-radius: 14px; background: var(--surface-sunken) }
 .client-home-invitations { display: grid; gap: 8px }
 .client-home-invitations h3 { margin: 5px 0 0; font-size: 14px; color: var(--muted) }
+/* Карточка спортсмена: те же спокойные карточки и иерархия, что на старте.
+   Шапка намеренно не центрируется: длинная CTA «Редактировать профиль» на 390 px
+   не должна забирать место у имени и кнопки назад. */
+.client-detail-page .page-header { align-items: flex-start; margin-bottom: 18px }
+.client-detail-page .page-header h1 { padding-top: 5px; font-size: clamp(28px, 7.5vw, 34px) }
+.client-detail-page .page-header .button { max-width: 148px; padding: 9px 11px; line-height: 1.15 }
+.client-detail-overview { display: grid; gap: 5px; margin: 0 0 14px; padding: 4px 0 0 }
+.client-detail-overview .eyebrow { margin: 0; color: var(--accent-strong) }
+.client-detail-overview > p:last-child { max-width: 345px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.42 }
+.client-detail-summary { gap: 9px; margin-bottom: 12px }
+.client-detail-summary div, .client-detail-stats div { min-height: 76px; justify-content: center; border-radius: 18px; box-shadow: var(--shadow-card) }
+.client-detail-summary strong { font-size: 18px }
+.client-detail-stats { gap: 9px; margin-top: 10px }
+.client-detail-page .client-actions { gap: 10px; margin: 18px 0 }
+.client-detail-page .client-actions .button { min-height: 50px; border-radius: 16px }
+.client-detail-page .goal-block { margin-top: 14px; padding: 18px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
+.client-detail-page .goal-block + .goal-block { margin-top: 12px }
+.client-detail-page .goal-head h2 { margin: 0; font-size: 22px }
+.client-detail-page .goal-block > p { line-height: 1.42 }
+.client-detail-page .page-actions { display: grid; gap: 10px; margin-top: 18px }
+.client-detail-page .page-actions .card { border-radius: 16px; background: var(--surface-raised) }
 .attention { margin: 12px 0 0; align-self: flex-start; font-size: 13px; font-weight: 600; color: var(--danger); background: #3a1f24; padding: 7px 11px; border-radius: 10px }
 .goal-block { display: flex; flex-direction: column; gap: 8px; margin-top: 18px }
 .goal-block + .goal-block { margin-top: 22px }
