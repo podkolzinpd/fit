@@ -8,6 +8,12 @@ test('форма: быстрый ввод разбирает текст в уп�
   await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
 
   await page.goto('/workouts/new')
+  // Форма — сфокусированный поток: нижняя навигация не конкурирует с
+  // закреплённым сохранением, заметка не занимает экран до явного раскрытия.
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeHidden()
+  await expect(page.getByRole('textbox', { name: 'Заметка' })).toBeHidden()
+  await page.locator('.workout-notes summary').click()
+  await expect(page.getByRole('textbox', { name: 'Заметка' })).toBeVisible()
   await page.getByLabel('Клиент').selectOption({ label: 'Анна Смирнова' })
   await page.getByRole('button', { name: '⌁ Добавить из текста или голоса' }).click()
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
@@ -56,7 +62,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
   await page.getByLabel('Клиент').selectOption({ label: trainerAlias })
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await expect(page.locator('.workout-notes summary')).toBeVisible()
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await expect(page.getByRole('button', { name: /Присед со штангой/ }).first()).toBeVisible()
   // Список упражнений маскируем: миниатюры-фото волатильны и различаются по ОС.
@@ -223,7 +229,7 @@ test('live: планка вводится в секундах, таймер за
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
   await page.getByLabel('Клиент').selectOption({ label: 'Планка Клиент' })
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await expect(page.locator('.workout-notes summary')).toBeVisible()
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Планка')
   await page.getByRole('button', { name: /^Планка/ }).click()
@@ -267,7 +273,7 @@ test('план: порядок упражнений меняется стрел�
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
   await page.getByLabel('Клиент').selectOption({ label: 'Порядок Клиент' })
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await expect(page.locator('.workout-notes summary')).toBeVisible()
   for (const q of ['Присед со штангой', 'Жим лёжа']) {
     await page.getByRole('button', { name: '＋ Упражнение' }).click()
     await page.getByLabel('Поиск упражнения').fill(q)
@@ -301,7 +307,7 @@ test('live: порядок упражнений меняется стрелка�
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
   await page.getByLabel('Клиент').selectOption({ label: 'Live Порядок' })
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await expect(page.locator('.workout-notes summary')).toBeVisible()
   for (const q of ['Присед со штангой', 'Жим лёжа']) {
     await page.getByRole('button', { name: '＋ Упражнение' }).click()
     await page.getByLabel('Поиск упражнения').fill(q)
@@ -340,7 +346,7 @@ test('замена упражнения: в форме плана и в live', a
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
   await page.getByLabel('Клиент').selectOption({ label: 'Замена Клиент' })
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await expect(page.locator('.workout-notes summary')).toBeVisible()
   // Добавляем «Присед», задаём подход.
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Присед со штангой')
@@ -391,7 +397,7 @@ test('карточка упражнения: шапка с оборудован�
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
   await page.getByLabel('Клиент').selectOption({ label: 'Карточка Клиент' })
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await expect(page.locator('.workout-notes summary')).toBeVisible()
   // Импортированное упражнение с картинкой/оборудованием/мышцами.
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('тяга штанги в наклоне (штанга)')
@@ -430,7 +436,7 @@ test('план: два упражнения объединяются в супе
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
   await page.getByLabel('Клиент').selectOption({ label: 'Суперсет Клиент' })
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await expect(page.locator('.workout-notes summary')).toBeVisible()
   for (const q of ['Присед со штангой', 'Жим лёжа']) {
     await page.getByRole('button', { name: '＋ Упражнение' }).click()
     await page.getByLabel('Поиск упражнения').fill(q)
@@ -575,7 +581,7 @@ test('расписание: создание тренировки из расп�
   await expect(page.locator('.schedule-count')).toBeVisible()
   await page.getByRole('link', { name: 'Новая тренировка' }).click()
   // Форма открылась; дата предзаполнена (не пустая), клиента выбираем.
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await expect(page.locator('.workout-notes summary')).toBeVisible()
   await expect(page.getByLabel('Дата')).not.toHaveValue('')
   await page.getByLabel('Клиент').selectOption({ label: 'Расписание Клиент' })
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
@@ -646,7 +652,7 @@ test('комментарий тренера к упражнению: план �
   // Имя может повторяться между параллельными/прошлыми прогонами; выбираем
   // ровно созданного клиента по value, а не по видимой подписи.
   await page.getByLabel('Клиент').selectOption(commentClientId)
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await expect(page.locator('.workout-notes summary')).toBeVisible()
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
   await page.getByRole('button', { name: /Присед со штангой/ }).first().click()
