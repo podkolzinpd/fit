@@ -761,9 +761,9 @@ export function LiveWorkoutPage() {
   }
   // «Назад» ведёт в карточку тренировки: таб-бар в live скрыт, поэтому нужен
   // явный выход наружу без завершения тренировки (тренер может вернуться позже).
-  return <Page title="Live-тренировка" back={`/workouts/${workoutId}`}>
+  return <Page title="Live-тренировка" className="live-workout-page" back={`/workouts/${workoutId}`}>
     <AsyncView loading={query.isLoading} error={query.error}>{query.data && <>
-      <p>{query.data.clientName}</p>
+      <p className="live-client-name"><span>Тренируется</span>{query.data.clientName}</p>
       {(() => {
         // Активная круговая (многоэлементный блок с незавершёнными подходами) —
         // её счётчик «Круг N из M» + точки закрепляем вместе с таймером, чтобы при

@@ -407,7 +407,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
    компактный переключатель недели и чистое рабочее поле. */
 .theme-light .schedule-page .page-header h1 { letter-spacing: var(--tracking-tight) }
 .theme-light .week-day { background: #fffefc; box-shadow: 0 3px 10px #b8481c0d }
-.theme-light .week-day.active { box-shadow: 0 8px 18px var(--accent-shadow) }
+.theme-light .week-day.active { border-color: var(--accent); background: var(--accent); color: var(--on-accent); box-shadow: 0 8px 18px var(--accent-shadow) }
+.theme-light .week-day.active .day-label, .theme-light .week-day.active .day-num, .theme-light .week-day.active .day-num.today { color: var(--on-accent) }
 .theme-light .schedule-jump { box-shadow: var(--shadow-card) }
 .theme-light .day-grid-event { box-shadow: 0 4px 12px #b8481c12 }
 .exercise { border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin: 10px 0; background: var(--surface-raised) }
@@ -628,6 +629,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-exercise { border-radius: 16px; transition: opacity .2s ease }
 .live-exercise.current { }
 .live-exercise.upcoming { opacity: .62 }
+/* Верх live-экрана остаётся вторичным: главные фокусы — таймер и текущий
+   подход. Имя спортсмена даёт контекст, но не конкурирует с ними. */
+.live-workout-page .page-header { margin-bottom: 8px }
+.live-workout-page .page-header h1 { font-size: clamp(26px, 7vw, 31px) }
+.live-client-name { display: grid; gap: 1px; margin: 0 0 14px; color: var(--fg-strong); font-size: 17px; font-weight: 750 }
+.live-client-name span { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: var(--tracking-label); text-transform: uppercase }
+.live-workout-page > .wide.secondary { min-height: 48px; border-radius: 15px }
 
 /* Свёрнутое завершённое упражнение: компактная строка с итогом. Тап — раскрыть. */
 .live-exercise-collapsed { width: 100%; display: flex; align-items: center; gap: 12px; margin: 10px 0; padding: 12px 14px; border: 1px solid var(--success-border); border-radius: 14px; background: var(--success-surface); color: var(--fg); text-align: left; box-shadow: none; cursor: pointer }
@@ -850,7 +858,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-profile-form textarea { min-height: 92px }
 .client-profile-form .voice-input-button { border-radius: 14px; background: var(--surface-sunken) }
 .client-display-settings { border-color: var(--accent-surface-border); background: linear-gradient(145deg, var(--surface-raised), var(--accent-surface)) }
-.client-profile-form .actions { position: sticky; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 2; margin: 0 -2px; padding: 10px 2px calc(2px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, transparent, var(--bg) 32%) }
+.client-profile-form .actions { position: static; margin: 0; padding: 2px 0 calc(12px + env(safe-area-inset-bottom)); background: transparent }
 .client-profile-form .actions button:last-child { min-height: 52px; border-radius: 16px; font-size: 17px; font-weight: 800 }
 /* ── Светлые переопределения плотных «тёплых» кластеров 3 экранов (YAFIT-77).
    Карточка AI-прогресса и карточка клиента набраны множеством одноразовых hex
