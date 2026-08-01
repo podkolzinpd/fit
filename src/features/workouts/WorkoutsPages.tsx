@@ -326,7 +326,7 @@ export function WorkoutDetailPage() {
   const clientMode = actor?.role === 'client'
   const clientOwned = clientMode && workout?.createdBy === actor.userId
   const backTo = clientMode ? '/me/workouts' : '/schedule'
-  return <Page title="Тренировка" back={backTo}>
+  return <Page title="Тренировка" className="workout-detail-page" back={backTo}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       {justCompleted && <section className="workout-completion" aria-labelledby="workout-completion-title">
         <span className="workout-completion-mark" aria-hidden="true">✓</span>

@@ -508,6 +508,24 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise header > .exercise-head-actions { flex: 0 0 auto }
 .workout-title { margin-bottom: 18px }
 .workout-title h2 { margin: 0 0 4px }
+/* Просмотр тренировки — маршрут «статус → действие → факт», а не набор
+   одинаковых блоков. Стили не меняют логику или подписи, только расставляют
+   визуальные приоритеты для рабочего экрана на 390 px. */
+.workout-detail-page .page-header { margin-bottom: 18px }
+.workout-detail-page .workout-title { padding: 18px; border: 1px solid var(--border); border-radius: 21px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
+.workout-detail-page .workout-title h2 { font-size: 25px; line-height: 1.12; letter-spacing: var(--tracking-tight) }
+.workout-detail-page .workout-title p { color: var(--muted); font-size: 14px }
+.workout-detail-page > .wide { min-height: 54px; margin-top: -7px; border-radius: 17px; font-size: 17px; font-weight: 800 }
+.workout-detail-page .summary.done-summary { gap: 8px; margin: 14px 0 18px }
+.workout-detail-page .summary.done-summary div { min-height: 78px; justify-content: center; border-radius: 17px; box-shadow: var(--shadow-card) }
+.workout-detail-page .summary.done-summary strong { font-size: 14px; line-height: 1.25 }
+.workout-detail-page > .cards { gap: 10px }
+.workout-detail-page > .cards > .exercise { margin: 0; padding: 16px; border-radius: 18px; box-shadow: var(--shadow-card) }
+.workout-detail-page .exercise-name-link { max-width: 100%; overflow-wrap: anywhere }
+.workout-detail-page .exercise-name-hint { flex: 0 0 auto }
+.workout-detail-page > .actions { margin-top: 18px }
+.workout-detail-page > .actions .button { min-height: 48px; border-radius: 15px }
+.workout-detail-page > .danger.wide { margin-top: 10px; min-height: 46px; border-radius: 15px }
 .set-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 24px }
 .set-head-actions { display: inline-flex; align-items: center; gap: 4px; margin-left: auto }
 /* План — вторичной строкой в шапке подхода; отклонение факта — тёплым цветом,
