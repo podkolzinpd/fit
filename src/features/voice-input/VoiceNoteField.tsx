@@ -10,9 +10,10 @@ interface VoiceNoteFieldProps {
   onValueChange?: (value: string) => void
   label?: string
   voiceLabel?: string
+  placeholder?: string
 }
 
-export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, label = 'Заметка', voiceLabel }: VoiceNoteFieldProps) {
+export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, label = 'Заметка', voiceLabel, placeholder }: VoiceNoteFieldProps) {
   const id = useId()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   return <div className="field voice-note-field">
@@ -21,6 +22,7 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
       ref={textareaRef}
       id={id}
       name={name}
+      placeholder={placeholder}
       defaultValue={onValueChange ? undefined : defaultValue}
       value={onValueChange ? value ?? '' : undefined}
       onChange={onValueChange ? (event) => onValueChange(event.target.value) : undefined}

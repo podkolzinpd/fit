@@ -2,6 +2,7 @@ import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } fr
 import { useAuth } from './auth-context'
 import { trackPageView } from '../shared/yandex-metrika'
 import { AppLayout } from './AppLayout'
+import { trainerHomePath } from './feature-flags'
 import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage } from '../features/auth'
 import { ClientDetailPage, ClientFormPage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
@@ -24,7 +25,7 @@ function TrainerOnly() {
 
 function Home() {
   const { actor } = useAuth()
-  return <Navigate to={actor?.role === 'client' ? '/me' : '/today'} replace />
+  return <Navigate to={actor?.role === 'client' ? '/me' : trainerHomePath()} replace />
 }
 
 const router = createBrowserRouter([
