@@ -17,6 +17,7 @@ interface VoiceInputButtonProps {
   decodeAudio?: (blob: Blob) => Promise<ArrayBuffer>
   maxDurationMs?: number
   idleLabel?: string
+  beta?: boolean
 }
 
 export function VoiceInputButton({
@@ -27,6 +28,7 @@ export function VoiceInputButton({
   decodeAudio = decodeAudioToPcm16,
   maxDurationMs = 60_000,
   idleLabel = 'Надиктовать заметку',
+  beta = false,
 }: VoiceInputButtonProps) {
   const [phase, setPhase] = useState<Phase>('idle')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -92,7 +94,7 @@ export function VoiceInputButton({
       if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.')
       if (!mountedRef.current) return
       onTranscript(text)
-      setMessage('Текст добавлен в заметку. Проверьте его перед сохранением.')
+      setMessage('Текст добавлен. Проверьте его перед разбором.')
     } catch (error) {
       if (!mountedRef.current) return
       setMessage(error instanceof Error ? error.message : 'Не удалось распознать запись.')
@@ -117,6 +119,7 @@ export function VoiceInputButton({
     >
       {recording ? <StopIcon /> : <MicIcon />}
       {voiceButtonLabel(phase, elapsedSeconds, progress, idleLabel)}
+      {beta && phase === 'idle' && <span className="voice-beta">beta</span>}
     </button>
     {phase === 'loading' && <small className="muted">При первом запуске загружается локальная модель (~31 МБ).</small>}
     {message && <small className={message.startsWith('Текст добавлен') ? 'success' : 'error'} role="status">{message}</small>}

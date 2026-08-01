@@ -9,6 +9,9 @@ export interface TodayDraft {
   clientId: string
   manualRefs?: string[]
   removedRefs?: string[]
+  recordMode?: 'planned' | 'completed'
+  workoutDate?: string
+  startTime?: string
 }
 
 function isDraft(value: unknown): value is TodayDraft {
@@ -19,6 +22,9 @@ function isDraft(value: unknown): value is TodayDraft {
     && typeof draft.clientId === 'string'
     && Array.isArray(draft.items)
     && Boolean(draft.choices && typeof draft.choices === 'object')
+    && (draft.recordMode === undefined || draft.recordMode === 'planned' || draft.recordMode === 'completed')
+    && (draft.workoutDate === undefined || typeof draft.workoutDate === 'string')
+    && (draft.startTime === undefined || typeof draft.startTime === 'string')
 }
 
 export function todayDraftKey(userId: string): string {

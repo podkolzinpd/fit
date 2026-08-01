@@ -48,7 +48,7 @@ describe('VoiceInputButton', () => {
     await user.click(screen.getByRole('button', { name: /Остановить/ }))
 
     await waitFor(() => expect(onTranscript).toHaveBeenCalledWith('Жим лёжа 40 килограмм'))
-    expect(screen.getByText(/Текст добавлен в заметку/)).toBeVisible()
+    expect(screen.getByText(/Текст добавлен\. Проверьте его перед разбором/)).toBeVisible()
     expect(stop).toHaveBeenCalledOnce()
     expect(prepare).toHaveBeenCalledOnce()
     expect(transcribe).toHaveBeenCalledOnce()
