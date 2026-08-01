@@ -906,7 +906,7 @@ export function ExerciseHistoryPage() {
         </div>
       </section>
 
-      <div className="tabs" role="tablist">
+      <div className="tabs exercise-card-tabs" role="tablist">
         <button type="button" role="tab" aria-selected={tab === 'stats'} className={tab === 'stats' ? 'tab active' : 'tab'} onClick={() => setTab('stats')}>Статистика</button>
         <button type="button" role="tab" aria-selected={tab === 'history'} className={tab === 'history' ? 'tab active' : 'tab'} onClick={() => setTab('history')}>История</button>
         <button type="button" role="tab" aria-selected={tab === 'how'} className={tab === 'how' ? 'tab active' : 'tab'} onClick={() => setTab('how')}>Техника</button>
