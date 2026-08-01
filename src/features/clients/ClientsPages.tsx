@@ -24,7 +24,7 @@ export function ClientsPage() {
     <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}
       emptyTitle="Клиентов пока нет"
       emptyDescription="Нажмите «Добавить» сверху, чтобы создать первого клиента, планировать тренировки и отслеживать прогресс.">
-      <div className="cards">{query.data?.map((client) => <Link className="card client-card" key={client.id} to={`/clients/${client.id}`}><span className={`client-avatar tone-${client.fullName.length % 4}`}>{client.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span><div><strong>{client.fullName}</strong><p>{client.ageYears} лет · {client.heightCm} см{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''} · ИМТ {bmiLabel(client.heightCm, client.currentWeightKg)}</p></div>{client.archivedAt && <span className="badge">Архив</span>}</Link>)}</div>
+      <div className="cards">{query.data?.map((client) => <Link className="card client-card" key={client.id} to={`/clients/${client.id}`}><span className={`client-avatar tone-${client.fullName.length % 4}`}>{client.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span><div><strong>{client.fullName}</strong><p>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</p></div>{client.archivedAt && <span className="badge">Архив</span>}</Link>)}</div>
     </AsyncView>
   </Page>
 }
@@ -44,8 +44,8 @@ export function MyClientPage() {
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {query.data ? <div className="stack">
         <section className="summary">
-          <div><span>Возраст</span><strong>{query.data.ageYears}</strong></div>
-          <div><span>Рост</span><strong>{query.data.heightCm} см</strong></div>
+          <div><span>Возраст</span><strong>{query.data.ageYears ?? '—'}</strong></div>
+          <div><span>Рост</span><strong>{query.data.heightCm ? `${query.data.heightCm} см` : '—'}</strong></div>
           <div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div>
         </section>
         <section><h2>{query.data.fullName}</h2>{query.data.goal && <><h3>Цель</h3><p>{query.data.goal}</p></>}</section>
@@ -127,14 +127,14 @@ function ClientForm({
   onCancel?: () => void
 }) {
   const form = useForm<ClientValues>({ resolver: zodResolver(clientSchema), defaultValues: existing ? {
-    fullName: existing.fullName, gender: existing.gender, ageYears: existing.ageYears, heightCm: existing.heightCm,
+    fullName: existing.fullName, gender: existing.gender ?? undefined, ageYears: existing.ageYears ?? undefined, heightCm: existing.heightCm ?? undefined,
     goal: existing.goal ?? '', note: existing.note ?? '',
   } : { fullName: initialFullName, gender: 'female', ageYears: 30, heightCm: 170 } })
   const mutation = useMutation({ mutationFn: async (values: ClientValues) => {
     const parsed = clientSchema.parse(values)
     if (existing) {
       const input = { id: existing.id, version: existing.version, fullName: parsed.fullName,
-        gender: parsed.gender as Gender, ageYears: parsed.ageYears, ageUpdatedAt: existing.ageUpdatedAt,
+        gender: parsed.gender as Gender, ageYears: parsed.ageYears, ageUpdatedAt: existing.ageUpdatedAt ?? todayLocalDate(),
         heightCm: parsed.heightCm, goal: parsed.goal, note: parsed.note }
       if (createMode === 'self') await clientsRepository.updateOwn(input)
       else await clientsRepository.update(input)
@@ -148,7 +148,7 @@ function ClientForm({
   }, onSuccess: (id) => void onSaved(id) })
   const contents = <form className="stack" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
       <Field label="Имя" error={form.formState.errors.fullName?.message}><input {...form.register('fullName')} /></Field>
-      <Field label="Пол"><select {...form.register('gender')}><option value="female">Женский</option><option value="male">Мужской</option></select></Field>
+      <Field label="Пол"><select {...form.register('gender')}><option value="">Выберите</option><option value="female">Женский</option><option value="male">Мужской</option></select></Field>
       <div className="split"><Field label="Возраст"><input type="number" {...form.register('ageYears')} /></Field><Field label="Рост, см"><input type="number" step="0.1" {...form.register('heightCm')} /></Field></div>
       {!existing && <Field label="Начальный вес, кг"><input type="number" step="0.1" {...form.register('initialWeightKg')} /></Field>}
       <Field label="Цель"><textarea {...form.register('goal')} /></Field>
@@ -169,12 +169,15 @@ function ClientForm({
 function useSaveClient(client: Client, onDone: () => void) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (patch: { goal?: string; note?: string }) => clientsRepository.update({
-      id: client.id, version: client.version, fullName: client.fullName, gender: client.gender,
-      ageYears: client.ageYears, ageUpdatedAt: client.ageUpdatedAt, heightCm: client.heightCm,
-      goal: (patch.goal ?? client.goal ?? '').trim() || undefined,
-      note: (patch.note ?? client.note ?? '').trim() || undefined,
-    }),
+    mutationFn: (patch: { goal?: string; note?: string }) => {
+      if (!client.gender || !client.ageYears || !client.heightCm || !client.ageUpdatedAt) throw new Error('Сначала дополните профиль клиента')
+      return clientsRepository.update({
+        id: client.id, version: client.version, fullName: client.fullName, gender: client.gender,
+        ageYears: client.ageYears, ageUpdatedAt: client.ageUpdatedAt, heightCm: client.heightCm,
+        goal: (patch.goal ?? client.goal ?? '').trim() || undefined,
+        note: (patch.note ?? client.note ?? '').trim() || undefined,
+      })
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['clients'] })
       await queryClient.invalidateQueries({ queryKey: ['client', client.id] })
@@ -299,7 +302,7 @@ export function ClientDetailPage() {
   const [confirm, confirmDialog] = useConfirm()
   return <Page title={query.data?.fullName ?? 'Клиент'} center back="/clients" action={query.data && <Link className="button secondary" to={`/clients/${clientId}/edit`}>Мои настройки</Link>}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
-      <section className="summary"><div><span>Возраст</span><strong>{query.data.ageYears}</strong></div><div><span>Рост</span><strong>{query.data.heightCm} см</strong></div><div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div></section>
+      <section className="summary"><div><span>Возраст</span><strong>{query.data.ageYears ?? '—'}</strong></div><div><span>Рост</span><strong>{query.data.heightCm ? `${query.data.heightCm} см` : '—'}</strong></div><div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div></section>
       {stats.data && <>
         {stats.data.needsAttention && <p className="attention">⚠ Давно не тренировался</p>}
         <section className="summary stats stats-3">

@@ -56,10 +56,10 @@ export interface Client {
   hasAccount: boolean | null
   fullName: string
   canonicalFullName: string
-  gender: Gender
-  ageYears: number
-  ageUpdatedAt: LocalDate
-  heightCm: number
+  gender: Gender | null
+  ageYears: number | null
+  ageUpdatedAt: LocalDate | null
+  heightCm: number | null
   goal: string | null
   note: string | null
   currentWeightKg: number | null

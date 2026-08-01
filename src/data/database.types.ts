@@ -1,4 +1,4 @@
-// schema-sha256: 7b965fa79ca8541941e290c931c869fdd9f5a30e45472fd480f547d869d64f8e
+// schema-sha256: 115743515f20289145994433fcb552ab4c880dc331a4798f3b97b36080659d56
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
   | string
@@ -540,45 +540,45 @@ export type Database = {
       }
       clients: {
         Row: {
-          age_updated_at: string
-          age_years: number
+          age_updated_at: string | null
+          age_years: number | null
           archived_at: string | null
           auth_user_id: string | null
           created_at: string
           full_name: string
-          gender: string
+          gender: string | null
           goal: string | null
-          height_cm: number
+          height_cm: number | null
           id: string
           trainer_id: string
           updated_at: string
           version: number
         }
         Insert: {
-          age_updated_at?: string
-          age_years: number
+          age_updated_at?: string | null
+          age_years?: number | null
           archived_at?: string | null
           auth_user_id?: string | null
           created_at?: string
           full_name: string
-          gender: string
+          gender?: string | null
           goal?: string | null
-          height_cm: number
+          height_cm?: number | null
           id?: string
           trainer_id: string
           updated_at?: string
           version?: number
         }
         Update: {
-          age_updated_at?: string
-          age_years?: number
+          age_updated_at?: string | null
+          age_years?: number | null
           archived_at?: string | null
           auth_user_id?: string | null
           created_at?: string
           full_name?: string
-          gender?: string
+          gender?: string | null
           goal?: string | null
-          height_cm?: number
+          height_cm?: number | null
           id?: string
           trainer_id?: string
           updated_at?: string
@@ -1032,6 +1032,7 @@ export type Database = {
         Returns: string
       }
       create_own_client: { Args: { p_client: Json }; Returns: string }
+      create_quick_client: { Args: { p_full_name: string }; Returns: string }
       delete_goal_stage: { Args: { p_stage_id: string }; Returns: undefined }
       finish_workout: {
         Args: { p_expected_version: number; p_workout_id: string }

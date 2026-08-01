@@ -43,6 +43,7 @@ export function TodayPage() {
   const [items, setItems] = useState<ParsedWorkoutExercise[]>([])
   const [pickerOpen, setPickerOpen] = useState(false)
   const [clientId, setClientId] = useState('')
+  const [quickClientName, setQuickClientName] = useState('')
 
   const parsed = useMemo(() => parseQuickWorkoutEntry(text, catalog.exercises), [catalog.exercises, text])
   const resolved = useMemo(() => [
@@ -58,6 +59,14 @@ export function TodayPage() {
     onSuccess: async (id) => {
       await queryClient.invalidateQueries({ queryKey: ['workouts'] })
       navigate(`/workouts/${id}`)
+    },
+  })
+  const createQuickClient = useMutation({
+    mutationFn: () => clientsRepository.createQuick(quickClientName.trim()),
+    onSuccess: async (id) => {
+      setClientId(id)
+      setQuickClientName('')
+      await queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
   })
 
@@ -103,7 +112,7 @@ export function TodayPage() {
       </article>)}</div> : <div className="today-empty"><p>Добавьте упражнения из каталога — можно выбрать несколько сразу.</p></div>}
       <button type="button" className="secondary wide" onClick={() => setPickerOpen(true)}>Добавить упражнение</button>
       <label className="today-client"><span>Кому записать тренировку</span><select value={clientId} onChange={(event) => setClientId(event.target.value)}><option value="">Выберите клиента</option>{clients.data?.map((client) => <option value={client.id} key={client.id}>{client.fullName}</option>)}</select></label>
-      {!clients.data?.length && !clients.isLoading && <p className="today-no-client">Сначала создайте карточку клиента — результат останется на этом экране, пока вы не уйдёте.</p>}
+      <section className="today-quick-client"><div><strong>Нет клиента в списке?</strong><p>Создайте короткую карточку только по имени — остальное добавите позже.</p></div><div className="today-quick-client-form"><input aria-label="Имя нового клиента" value={quickClientName} onChange={(event) => setQuickClientName(event.target.value)} placeholder="Имя клиента" /><button type="button" className="secondary" disabled={quickClientName.trim().length < 2 || createQuickClient.isPending} onClick={() => createQuickClient.mutate()}>Создать</button></div>{createQuickClient.error && <p className="error">{createQuickClient.error.message}</p>}</section>
       {save.error && <p className="error">{save.error.message}</p>}
       <button type="button" className="wide" disabled={!items.length || !clientId || save.isPending} onClick={() => save.mutate()}>Записать завершённую тренировку</button>
       {!clients.data?.length && <Link className="button wide" to="/clients/new">Создать клиента</Link>}
