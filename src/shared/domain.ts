@@ -63,6 +63,7 @@ export interface Client {
   goal: string | null
   note: string | null
   currentWeightKg: number | null
+  lastActivityAt?: string
   archivedAt: string | null
   version: number
   membershipVersion: number | null

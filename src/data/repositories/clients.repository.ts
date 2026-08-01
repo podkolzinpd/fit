@@ -13,6 +13,7 @@ function fromListRow(row: ClientListRow): Client {
     gender: row.gender as Gender | null,
     ageYears: row.age_years, ageUpdatedAt: row.age_updated_at ? localDate(row.age_updated_at) : null, heightCm: row.height_cm === null ? null : Number(row.height_cm),
     goal: row.goal, note: row.note, currentWeightKg: row.current_weight_kg === null ? null : Number(row.current_weight_kg),
+    lastActivityAt: row.last_activity_at,
     archivedAt: row.archived_at, version: row.version, membershipVersion: row.membership_version,
   }
 }

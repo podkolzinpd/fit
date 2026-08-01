@@ -1,5 +1,7 @@
-// schema-sha256: 57ed3c8c715c3ce5556847950feb4961889838244b1c100493d3d60c89eafde7
+// schema-sha256: d789671b141bdbb3260178a98cc269fc2f8286b18d14ec309b2f29d566a0cbf5
+
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
+
 export type Json =
   | string
   | number
@@ -1120,6 +1122,7 @@ export type Database = {
           has_account: boolean
           height_cm: number
           id: string
+          last_activity_at: string
           membership_version: number
           note: string
           version: number

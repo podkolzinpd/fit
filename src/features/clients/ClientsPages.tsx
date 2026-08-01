@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm } from 'react-hook-form'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { goalsRepository } from '../../data/repositories/goals.repository'
@@ -21,11 +22,17 @@ import { ProfileIcon } from '../../shared/icons'
 export function ClientsPage() {
   const showArchived = localStorage.getItem('fit.showArchivedClients') === 'true'
   const query = useQuery({ queryKey: ['clients', showArchived], queryFn: () => clientsRepository.list(showArchived) })
+  const [search, setSearch] = useState('')
+  const clients = useMemo(() => {
+    const normalizedSearch = search.trim().toLocaleLowerCase('ru')
+    return query.data?.filter((client) => !normalizedSearch || client.fullName.toLocaleLowerCase('ru').includes(normalizedSearch)) ?? []
+  }, [query.data, search])
   return <Page title="Клиенты" className="clients-page" action={<Link className="button" to="/clients/new">Добавить</Link>}>
     <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}
       emptyTitle="Клиентов пока нет"
       emptyDescription="Нажмите «Добавить» сверху, чтобы создать первого клиента, планировать тренировки и отслеживать прогресс.">
-      <div className="cards clients-list">{query.data?.map((client) => <Link className="card client-card" key={client.id} to={`/clients/${client.id}`}><span className="client-avatar" aria-hidden="true"><ProfileIcon /></span><div><strong>{client.fullName}</strong><p>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</p></div>{client.archivedAt && <span className="badge">Архив</span>}<span className="client-card-arrow" aria-hidden="true">›</span></Link>)}</div>
+      <label className="clients-search"><span className="sr-only">Поиск клиента</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Поиск по имени" autoComplete="off" /></label>
+      {clients.length > 0 ? <div className="cards clients-list">{clients.map((client) => <Link className="card client-card" key={client.id} to={`/clients/${client.id}`}><span className="client-avatar" aria-hidden="true"><ProfileIcon /></span><div><strong>{client.fullName}</strong><p>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</p></div>{client.archivedAt && <span className="badge">Архив</span>}<span className="client-card-arrow" aria-hidden="true">›</span></Link>)}</div> : <p className="clients-search-empty">По этому имени клиентов не найдено.</p>}
     </AsyncView>
   </Page>
 }
@@ -89,8 +96,6 @@ export function MyClientPage() {
     </AsyncView>
   </Page>
 }
-
-import { useState } from 'react'
 
 type ClientValues = z.input<typeof clientSchema>
 type ClientProfileValues = ClientValues & { alias: string; privateNote: string }
