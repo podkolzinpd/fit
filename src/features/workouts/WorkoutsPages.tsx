@@ -9,6 +9,7 @@ import { exercisesRepository } from '../../data/repositories/exercises.repositor
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { blockLabel, chartUnitFor, completedWorkoutDraft, copyWorkout, durationLabel, durationSeconds, exerciseChartPoints, exerciseSummary, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
+import { RPE_OPTIONS } from '../../shared/rpe'
 import { playGong } from '../../shared/gong'
 import {
   addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayLocalDate, weekdayShort,
@@ -471,8 +472,6 @@ function fillFactFromPlan(form: HTMLFormElement | null, inputKind: ExerciseSnaps
   else if (inputKind === 'duration') put('durationSec', durationSeconds(set.durationSec, set.durationMin))
   else { put('durationSec', durationSeconds(set.durationSec, set.durationMin)); put('distanceKm', set.distanceKm) }
 }
-
-const RPE_OPTIONS = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10] as const
 
 function LiveRpeField({ defaultValue, disabled, inputKey }: { defaultValue: number | undefined; disabled: boolean; inputKey: string }) {
   return <label className="set-rpe-field">RPE
