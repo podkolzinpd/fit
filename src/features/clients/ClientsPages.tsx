@@ -41,29 +41,35 @@ export function MyClientPage() {
   const revoke = useMutation({ mutationFn: (invitationId: string) => invitationsRepository.revoke(invitationId), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', query.data?.id] }) })
   const removeTrainer = useMutation({ mutationFn: (trainerId: string) => invitationsRepository.removeTrainer(query.data!.id, trainerId), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-trainers', query.data?.id] }) })
   const [confirm, confirmDialog] = useConfirm()
-  return <Page title="Мой кабинет" action={query.data && <Link className="button secondary" to="/me/edit">Изменить данные</Link>}>
+  return <Page title="Кабинет" className="client-home-page" action={query.data && <Link className="button secondary" to="/me/edit">Изменить данные</Link>}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
-      {query.data ? <div className="stack">
-        <section className="summary">
+      {query.data ? <div className="stack client-home-stack">
+        <section className="client-home-hero">
+          <p className="eyebrow">МОЙ ПРОФИЛЬ</p>
+          <h2>{query.data.fullName}</h2>
+          <p>{query.data.goal || 'Добавьте цель — тренировки и прогресс будут понятнее.'}</p>
+        </section>
+        <section className="summary client-home-summary" aria-label="Параметры профиля">
           <div><span>Возраст</span><strong>{query.data.ageYears ?? '—'}</strong></div>
           <div><span>Рост</span><strong>{query.data.heightCm ? `${query.data.heightCm} см` : '—'}</strong></div>
           <div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div>
         </section>
-        <section><h2>{query.data.fullName}</h2>{query.data.goal && <><h3>Цель</h3><p>{query.data.goal}</p></>}</section>
-        <div className="client-actions-row"><Link className="button" to="/me/workouts">Тренировки</Link><Link className="button secondary" to="/me/progress">Прогресс</Link></div>
-        <button className="secondary" disabled={invite.isPending} onClick={() => invite.mutate(query.data!.id)}>Пригласить тренера</button>
-        {invite.data && <div className="card"><strong>Код для тренера: {invite.data}</strong><p>Код действует 7 дней и используется один раз.</p></div>}
+        <section className="client-home-routes" aria-label="Разделы кабинета">
+          <Link className="client-home-route primary" to="/me/workouts"><span>Тренировки</span><small>Планы и история занятий</small><b aria-hidden="true">›</b></Link>
+          <Link className="client-home-route" to="/me/progress"><span>Прогресс</span><small>Замеры и динамика</small><b aria-hidden="true">›</b></Link>
+        </section>
+        <section className="client-home-connections"><div className="client-home-section-head"><div><p className="eyebrow">СВЯЗЬ С ТРЕНЕРОМ</p><h2>Тренеры</h2></div><button className="secondary" disabled={invite.isPending} onClick={() => invite.mutate(query.data!.id)}>Пригласить тренера</button></div>
+        {invite.data && <div className="card"><div><strong>Код для тренера: {invite.data}</strong><p>Действует 7 дней и используется один раз.</p></div></div>}
         {invite.error && <p className="error">{invite.error.message}</p>}
-        <section><h2>Мои тренеры</h2>
           {trainers.isLoading && <p className="muted">Загрузка тренеров…</p>}
           {trainers.error && <div><p className="error">{trainers.error.message}</p><button className="secondary" onClick={() => void trainers.refetch()}>Повторить</button></div>}
           {trainers.data?.length === 0 && <p className="muted">Подключённых тренеров нет</p>}
           {trainers.data?.map((trainer) => <article className="card" key={trainer.trainerId}><div><strong>{[trainer.firstName, trainer.lastName].filter(Boolean).join(' ') || 'Тренер'}</strong><p>{trainer.isRoot ? 'Основной тренер' : 'Подключённый тренер'}</p></div>{!trainer.isRoot && <button className="link danger" disabled={removeTrainer.isPending} onClick={async () => { if (await confirm({ message: 'Отключить этого тренера? Он потеряет доступ к вашим тренировкам и прогрессу.', confirmLabel: 'Отключить', danger: true })) removeTrainer.mutate(trainer.trainerId) }}>Отключить</button>}</article>)}
-        </section>
         {invitations.isLoading && <p className="muted">Загрузка приглашений…</p>}
-        {invitations.data && invitations.data.length > 0 && <section><h2>Активные приглашения</h2>{invitations.data.map((item) => <article className="card" key={item.id}><div><strong>Для тренера</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU')}</p></div><button className="link danger" disabled={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Код больше нельзя будет использовать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>Отозвать</button></article>)}</section>}
+        {invitations.data && invitations.data.length > 0 && <div className="client-home-invitations"><h3>Активные приглашения</h3>{invitations.data.map((item) => <article className="card" key={item.id}><div><strong>Приглашение для тренера</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU')}</p></div><button className="link danger" disabled={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Код больше нельзя будет использовать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>Отозвать</button></article>)}</div>}
         {invitations.error && <div><p className="error">{invitations.error.message}</p><button className="secondary" onClick={() => void invitations.refetch()}>Повторить</button></div>}
         {(removeTrainer.error || revoke.error) && <p className="error">{(removeTrainer.error ?? revoke.error)?.message}</p>}
+        </section>
         {confirmDialog}
       </div> : <div className="stack">
         <div className="state">
