@@ -56,7 +56,11 @@ export function AsyncView({ loading, error, empty, onRetry, emptyTitle, emptyDes
   emptyTitle?: string; emptyDescription?: string; emptyAction?: ReactNode
 }>) {
   if (loading) return <Skeleton />
-  if (error) return <div className="state error" role="alert"><p>{error.message}</p>{onRetry && <button onClick={onRetry}>Повторить</button>}</div>
+  if (error) return <div className="state async-error error" role="alert">
+    <span className="async-state-mark" aria-hidden="true">!</span>
+    <div><h2>Не удалось загрузить</h2><p>{error.message}</p></div>
+    {onRetry && <button onClick={onRetry}>Повторить</button>}
+  </div>
   if (empty) return <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
   return children
 }
