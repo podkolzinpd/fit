@@ -68,7 +68,7 @@ export function SchedulePage() {
     scrollRef.current.scrollTop = (Math.min(firstStart, 7 * 60) / 60) * HOUR_HEIGHT
   }, [query.isLoading, selected])
 
-  return <Page className="schedule-page" title="Расписание" hideTitle action={
+  return <Page className="schedule-page" title="Расписание" action={
      <div className="schedule-actions">
        <span className="schedule-count">{query.isLoading ? 'Загружаем…' : workoutCountLabel(totalCount)}</span>
        <button type="button" className="secondary schedule-today" disabled={selected === today} onClick={() => selectDate(today)}>Сегодня</button>

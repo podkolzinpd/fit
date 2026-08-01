@@ -28,10 +28,10 @@ function metricField(metric: CustomMetric, entry: ProgressEntry | null, placehol
 
 export function AnalyticsPage() {
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
-  return <Page title="Аналитика"><AsyncView loading={clients.isLoading} error={clients.error} empty={!clients.data?.length}
+  return <Page className="analytics-page" title="Аналитика"><AsyncView loading={clients.isLoading} error={clients.error} empty={!clients.data?.length}
     emptyTitle="Аналитики пока нет"
     emptyDescription="Добавьте клиента и первый замер — здесь появится динамика прогресса."
-    emptyAction={<Link className="button" to="/clients/new">Добавить клиента</Link>}><div className="cards">{clients.data?.map((client) => <Link className="card" key={client.id} to={`/progress/${client.id}`}><div><strong>{client.fullName}</strong><p>{client.currentWeightKg ? `Текущий вес: ${client.currentWeightKg} кг` : 'Нет замеров веса'}</p></div><span>→</span></Link>)}</div></AsyncView></Page>
+    emptyAction={<Link className="button" to="/clients/new">Добавить клиента</Link>}><div className="analytics-list">{clients.data?.map((client) => <Link className="analytics-client-card" key={client.id} to={`/progress/${client.id}`}><span className="analytics-client-avatar" aria-hidden="true">◌</span><div><strong>{client.fullName}</strong><p>{client.currentWeightKg ? `Текущий вес: ${client.currentWeightKg} кг` : 'Нет замеров веса'}</p></div><span className="analytics-client-arrow" aria-hidden="true">→</span></Link>)}</div></AsyncView></Page>
 }
 
 export function ProgressPage() {
@@ -92,7 +92,7 @@ export function ProgressPage() {
     if (tabsDraggedRef.current) { tabsDraggedRef.current = false; return }
     action()
   }
-  return <Page title={client.data ? `Прогресс · ${client.data.fullName}` : 'Прогресс'} back="/analytics"><AsyncView loading={loading} error={error}>{client.data && <>
+  return <Page className="progress-page" title={client.data ? `Прогресс · ${client.data.fullName}` : 'Прогресс'} back="/analytics"><AsyncView loading={loading} error={error}>{client.data && <>
     <TrainerTrainingSummaryCard clientId={clientId} />
     {entries.data && entries.data.length > 0 && <>
       <div className="metric-tabs" ref={tabsRef}
@@ -103,7 +103,7 @@ export function ProgressPage() {
       <ProgressChart entries={entries.data} metric={chartMetric} label={chartLabel} unit={chartUnit} windowEnd={windowEnd} onWindowChange={setWindowEnd} />
     </>}
     <ProgressForm entry={null} metrics={metrics.data ?? []} busy={save.isPending} errorMessage={createError ?? save.error?.message ?? null} onDateChange={() => { setCreateError(null); save.reset() }} onSubmit={saveNewProgress} />
-    <section>
+    <section className="progress-history">
       <div className="workout-editor-heading">
         <h2>История замеров ({entries.data?.length ?? 0})</h2>
         {entries.data && entries.data.length > 0 && <button type="button" className="link" onClick={() => setHistoryOpen((value) => !value)}>{historyOpen ? 'Скрыть' : 'Показать'}</button>}
@@ -127,7 +127,7 @@ function MetricOverflowSheet({ metrics, onPick, onClose }: { metrics: CustomMetr
 }
 
 function ProgressForm({ entry, metrics, busy, errorMessage, onSubmit, onCancel, onDateChange }: { entry: ProgressEntry | null; metrics: CustomMetric[]; busy: boolean; errorMessage: string | null; onSubmit: (form: HTMLFormElement) => void; onCancel?: () => void; onDateChange?: () => void }) {
-  return <section><h2>{entry ? 'Изменить замер' : 'Новый замер'}</h2><form className="stack compact" onSubmit={(event) => { event.preventDefault(); onSubmit(event.currentTarget) }}><Field label="Дата"><input name="recordedOn" type="date" max={todayLocalDate()} defaultValue={entry?.recordedOn ?? todayLocalDate()} onChange={onDateChange} required /></Field><div className="measure-grid"><Field label="Вес, кг"><input name="weightKg" type="number" step="0.1" defaultValue={entry?.weightKg} /></Field><Field label="Грудь, см"><input name="chestCm" type="number" step="0.1" defaultValue={entry?.chestCm} /></Field><Field label="Талия, см"><input name="waistCm" type="number" step="0.1" defaultValue={entry?.waistCm} /></Field><Field label="Бёдра, см"><input name="hipCm" type="number" step="0.1" defaultValue={entry?.hipCm} /></Field></div>{groupMetricRows(metrics.filter((metric) => !metric.archivedAt)).map((row) => row.kind === 'single'
+  return <section className="progress-form-card"><h2>{entry ? 'Изменить замер' : 'Новый замер'}</h2><form className="stack compact" onSubmit={(event) => { event.preventDefault(); onSubmit(event.currentTarget) }}><Field label="Дата"><input name="recordedOn" type="date" max={todayLocalDate()} defaultValue={entry?.recordedOn ?? todayLocalDate()} onChange={onDateChange} required /></Field><div className="measure-grid"><Field label="Вес, кг"><input name="weightKg" type="number" step="0.1" defaultValue={entry?.weightKg} /></Field><Field label="Грудь, см"><input name="chestCm" type="number" step="0.1" defaultValue={entry?.chestCm} /></Field><Field label="Талия, см"><input name="waistCm" type="number" step="0.1" defaultValue={entry?.waistCm} /></Field><Field label="Бёдра, см"><input name="hipCm" type="number" step="0.1" defaultValue={entry?.hipCm} /></Field></div>{groupMetricRows(metrics.filter((metric) => !metric.archivedAt)).map((row) => row.kind === 'single'
       ? <Field key={row.metric.id} label={`${row.metric.name}${row.metric.unit ? `, ${row.metric.unit}` : ''}`}>{metricField(row.metric, entry)}</Field>
       : <Field key={row.base} label={`${row.base}${row.unit ? `, ${row.unit}` : ''}`}><div className="measure-pair">{row.left && metricField(row.left, entry, 'Л')}{row.right && metricField(row.right, entry, 'П')}</div></Field>
     )}<Field label="Заметка"><textarea name="notes" defaultValue={entry?.notes} /></Field>{errorMessage && <p className="error">{errorMessage}</p>}<div className="actions">{onCancel && <button type="button" className="secondary" onClick={onCancel}>Отмена</button>}<button disabled={busy}>Сохранить замер</button></div></form></section>
@@ -146,7 +146,7 @@ function MetricsManager({ metrics, onCreate, onArchive }: { metrics: CustomMetri
     presetMetricNames(option).forEach((name) => { if (!existing.has(name)) onCreate(name, option.unit) })
     setPreset('')
   }
-  return <section><h2>Свои метрики</h2>
+  return <section className="metrics-manager"><h2>Свои метрики</h2>
     {available.length > 0 && <div className="metric-preset-row">
       <select aria-label="Готовый замер" value={preset} onChange={(event) => setPreset(event.target.value)}>
         <option value="">Выберите замер…</option>
