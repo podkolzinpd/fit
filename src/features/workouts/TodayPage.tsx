@@ -231,10 +231,10 @@ export function TodayPage() {
   function workoutTime(workout: Workout) { return workout.startTime?.slice(0, 5) ?? 'Без времени' }
 
   const trainerInitial = actor?.firstName?.trim().slice(0, 1).toUpperCase() || 'П'
+  const agenda = (currentWorkout || plannedWorkouts.length > 0 || completedWorkouts.length > 0) && <section className="today-agenda"><div className="today-agenda-head"><div><p className="eyebrow">Рабочий день</p><h2>На сегодня</h2></div><Link className="link" to="/schedule">Расписание</Link></div>{currentWorkout && <Link className="today-current-workout" to={`/workouts/${currentWorkout.id}/live`}><span><strong>Продолжить тренировку</strong><small>{currentWorkout.clientName} · {workoutTime(currentWorkout)}</small></span><b>→</b></Link>}{plannedWorkouts.slice(0, 3).map((workout) => <Link className="today-planned-workout" key={workout.id} to={`/workouts/${workout.id}`}><span>{workoutTime(workout)}</span><strong>{workout.clientName}</strong><small>{workout.exercises.length ? workout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Без упражнений'}</small></Link>)}{completedWorkouts.length > 0 && <div className="today-recent-workouts"><p>Последние записи</p>{completedWorkouts.map((workout) => <Link className="today-recent-workout" key={workout.id} to={`/workouts/${workout.id}`}><span>{formatLocalDateShort(workout.workoutDate)}</span><strong>{workout.clientName}</strong><small>{workout.exercises.length} упр.</small></Link>)}</div>}</section>
+  const draftNotice = draftRestored && <div className="today-draft-notice" role="status"><span><strong>Черновик восстановлен</strong><small>Можно продолжить с того же места.</small></span><button type="button" className="link" onClick={discardDraft}>Удалить</button></div>
 
-  return <Page title="Сегодня" className="today-page today-start-page" hideTitle action={<Link className="today-profile-avatar" to="/profile" aria-label="Открыть профиль">{trainerInitial}</Link>}>
-    {(currentWorkout || plannedWorkouts.length > 0 || completedWorkouts.length > 0) && <section className="today-agenda"><div className="today-agenda-head"><div><p className="eyebrow">Рабочий день</p><h2>Сегодня</h2></div><Link className="link" to="/schedule">Расписание</Link></div>{currentWorkout && <Link className="today-current-workout" to={`/workouts/${currentWorkout.id}/live`}><span><strong>Продолжить тренировку</strong><small>{currentWorkout.clientName} · {workoutTime(currentWorkout)}</small></span><b>→</b></Link>}{plannedWorkouts.slice(0, 3).map((workout) => <Link className="today-planned-workout" key={workout.id} to={`/workouts/${workout.id}`}><span>{workoutTime(workout)}</span><strong>{workout.clientName}</strong><small>{workout.exercises.length ? workout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Без упражнений'}</small></Link>)}{completedWorkouts.length > 0 && <div className="today-recent-workouts"><p>Последние записи</p>{completedWorkouts.map((workout) => <Link className="today-recent-workout" key={workout.id} to={`/workouts/${workout.id}`}><span>{formatLocalDateShort(workout.workoutDate)}</span><strong>{workout.clientName}</strong><small>{workout.exercises.length} упр.</small></Link>)}</div>}</section>}
-    {draftRestored && <div className="today-draft-notice" role="status"><span><strong>Черновик восстановлен</strong><small>Можно продолжить с того же места.</small></span><button type="button" className="link" onClick={discardDraft}>Удалить</button></div>}
+  return <Page title="Сегодня" className="today-page today-start-page" action={<Link className="today-profile-avatar" to="/profile" aria-label="Открыть профиль">{trainerInitial}</Link>}>
     {screen === 'compose' ? <section className="today-composer">
       <div className="today-hero">
         <p className="eyebrow">Быстрый старт</p>
@@ -243,7 +243,7 @@ export function TodayPage() {
       </div>
       <div className="today-input-card">
         <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Голос · beta" placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} onValueChange={setText} />
-        <div className="today-input-actions"><button type="button" className="link" onClick={() => { setText('Присед 3×8 — 80 кг\nПланка 3×45 сек'); trackGoal('today_example_inserted') }}>Вставить пример</button>{text && <button type="button" className="link" onClick={() => setText('')}>Очистить</button>}</div>
+        {text && <div className="today-input-actions"><button type="button" className="link" onClick={() => setText('')}>Очистить</button></div>}
       </div>
       <p className="today-hint">Голосовой ввод пока тестируется. Для более точного результата используйте текст.</p>
       {items.length > 0 && <p className="today-hint">Ручные правки подходов и добавленные упражнения сохранятся при повторном разборе.</p>}
@@ -269,6 +269,8 @@ export function TodayPage() {
       {save.error && <p className="error">{save.error.message}</p>}
       <div className="today-save-actions"><button type="button" className="wide" disabled={!items.length || !clientId || save.isPending} onClick={() => save.mutate('planned')}>Создать план тренировки</button><button type="button" className="secondary wide" disabled={!items.length || !clientId || save.isPending} onClick={() => save.mutate('completed')}>Записать завершённую тренировку</button></div>
     </section>}
+    {screen === 'compose' && agenda}
+    {draftNotice}
     {(clients.error ?? catalog.error ?? todayWorkouts.error ?? recentWorkouts.error) && <p className="error">{(clients.error ?? catalog.error ?? todayWorkouts.error ?? recentWorkouts.error)?.message}</p>}
     {pickerOpen && <ExercisePicker catalog={catalog} onPick={(exercise) => pickExercises([exercise])} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
   </Page>
