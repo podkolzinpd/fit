@@ -34,20 +34,17 @@ export function AppLayout() {
   // текущий подход, таймер и завершение; таб-бар не должен конкурировать с
   // закреплённой панелью действий (BottomActionBar). Контент занимает всю высоту.
   const immersive = /\/live$/.test(pathname)
-  // Создание и редактирование — сфокусированный сценарий: закреплённое
-  // «Сохранить» заменяет таб-бар, поэтому две нижние панели не накладываются.
-  const formFlow = /^\/workouts\/(new|[^/]+\/edit)$/.test(pathname)
-  const contentClass = immersive ? 'content content-immersive' : formFlow ? 'content content-form-flow' : 'content'
+  const contentClass = immersive ? 'content content-immersive' : 'content'
 
   const frameClass = `${theme === 'light' ? 'phone-frame theme-light' : 'phone-frame'}${redesignedStart && pathname === '/today' ? ' today-start-shell' : ''}${keyboardOpen ? ' keyboard-open' : ''}`
 
-  if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && !formFlow && <nav className="tab-bar" aria-label="Основная навигация">
+  if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
     <NavLink to="/me"><ClientsIcon />Кабинет</NavLink>
     <NavLink to="/me/workouts"><ScheduleIcon />Тренировки</NavLink>
     <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
     <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>
   </nav>}</div>
-  return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && !formFlow && <nav className="tab-bar" aria-label="Основная навигация">
+  return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
     <NavLink to="/today"><ScheduleIcon />Сегодня</NavLink>
     {redesignedStart && <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>}
     <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>
