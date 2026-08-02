@@ -63,6 +63,7 @@ export function equipmentForSelection(
 
 interface ExercisePickerProps {
   catalog: ExerciseCatalogState
+  frequent?: readonly ExerciseSnapshot[]
   onPick: (exercise: ExerciseSnapshot) => void
   onPickMany?: (exercises: ExerciseSnapshot[]) => void
   multiple?: boolean
@@ -94,7 +95,7 @@ function useVisualViewportStyle() {
   return { style, keyboardOpen }
 }
 
-export function ExercisePicker({ catalog, onPick, onPickMany, multiple = false, onClose }: ExercisePickerProps) {
+export function ExercisePicker({ catalog, frequent = [], onPick, onPickMany, multiple = false, onClose }: ExercisePickerProps) {
   const [category, setCategory] = useState<'all' | MuscleGroup>('all')
   const [muscle, setMuscle] = useState<string | null>(null)
   const [equipment, setEquipment] = useState<string | null>(null)
@@ -199,7 +200,9 @@ export function ExercisePicker({ catalog, onPick, onPickMany, multiple = false, 
         {catalog.loading && <p className="state">Загрузка…</p>}
         {catalog.error && <div className="state"><p className="error">{catalog.error.message}</p><button type="button" className="secondary" onClick={catalog.retry}>Повторить</button></div>}
         {!catalog.loading && <div className="picker-list">
-          {recent.length > 0 && <><p className="picker-section-label">Недавние</p>{recent.map((exercise) => item(exercise, 'recent'))}<p className="picker-section-label">Все упражнения</p></>}
+          {frequent.length > 0 && !hasFilters && !search.trim() && <><p className="picker-section-label">Часто у клиента</p>{frequent.map((exercise) => item(exercise, 'frequent'))}</>}
+          {recent.length > 0 && <><p className="picker-section-label">Недавние</p>{recent.map((exercise) => item(exercise, 'recent'))}</>}
+          {(frequent.length > 0 || recent.length > 0) && !hasFilters && !search.trim() && <p className="picker-section-label">Все упражнения</p>}
           {filtered.length ? filtered.map((exercise) => item(exercise, 'all')) : <p className="state">Ничего не найдено</p>}
         </div>}
         {multiple && selected.size > 0 && <div className="picker-selection-bar"><span>Выбрано: {selected.size}</span><button type="button" onClick={addSelected}>Добавить {selected.size}</button></div>}
