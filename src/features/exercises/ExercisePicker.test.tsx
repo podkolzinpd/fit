@@ -48,6 +48,13 @@ describe('ExercisePicker', () => {
     expect(filterExercises(ENRICHED, 'all', 'тренажер ноги').map((exercise) => exercise.ref)).toEqual(['b', 'c'])
   })
 
+  it('понимает тренерские синонимы и одну опечатку в длинном слове', () => {
+    expect(filterExercises(ENRICHED, 'all', 'брусья').map((exercise) => exercise.ref)).toEqual([])
+    expect(filterExercises(SYSTEM_EXERCISES, 'all', 'брусья').map((exercise) => exercise.ref)).toContain('dips')
+    expect(filterExercises(SYSTEM_EXERCISES, 'all', 'гиперы').map((exercise) => exercise.ref)).toContain('hyperextension')
+    expect(filterExercises(SYSTEM_EXERCISES, 'all', 'присд штангой').map((exercise) => exercise.ref)).toContain('barbell-squat')
+  })
+
   it('строит список мышц группы по частоте и фильтрует по мышце', () => {
     expect(musclesForGroup(ENRICHED, 'legs')).toEqual(['Квадрицепс', 'Бицепс бедра'])
     expect(musclesForGroup(ENRICHED, 'chest')).toEqual(['Грудь'])
