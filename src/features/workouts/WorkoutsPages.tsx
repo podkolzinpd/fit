@@ -16,7 +16,7 @@ import {
   type LocalDate,
 } from '../../shared/local-date'
 import { AsyncView, Field, OverflowMenu, Page, SaveStatus, StatusBadge, useConfirm } from '../../shared/ui'
-import { ExercisePicker, useExerciseCatalog } from '../exercises'
+import { ExercisePicker, frequentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { VoiceNoteField } from '../voice-input'
 import { QuickWorkoutEntry } from './QuickWorkoutEntry'
 import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
@@ -195,6 +195,8 @@ export function WorkoutFormPage() {
   const defaultClientId = clientMode ? (mine.data?.id ?? '') : (initial?.clientId ?? params.get('client') ?? '')
   const [selectedClientId, setSelectedClientId] = useState<string>('')
   const clientId = selectedClientId || defaultClientId
+  const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId), enabled: Boolean(clientId) })
+  const frequentExercises = useMemo(() => frequentExercisesForClient(catalog.exercises, clientWorkouts.data ?? []), [catalog.exercises, clientWorkouts.data])
   const goal = useQuery({ queryKey: ['client-goal', clientId], queryFn: () => goalsRepository.get(clientId), enabled: Boolean(clientId) })
   const stages = goal.data ? orderedStages(goal.data) : []
   // Этап по умолчанию: сохранённый у тренировки, иначе текущий по дате.
@@ -298,7 +300,7 @@ export function WorkoutFormPage() {
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>{recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить'}</button></div>
     </form>}</AsyncView>
-    {pickerOpen && <ExercisePicker catalog={catalog} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} frequent={frequentExercises} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
   </Page>
 }
 
@@ -556,6 +558,8 @@ export function LiveWorkoutPage() {
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   useClientRealtime(query.data?.clientId)
   const catalog = useExerciseCatalog()
+  const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', query.data?.clientId], queryFn: () => workoutsRepository.list(undefined, undefined, query.data!.clientId), enabled: Boolean(query.data?.clientId) })
+  const frequentExercises = useMemo(() => frequentExercisesForClient(catalog.exercises, clientWorkouts.data ?? []), [catalog.exercises, clientWorkouts.data])
   const [liveSets] = useState(() => createLiveSetCoordinator(
     (id, draft, version) => workoutsRepository.saveLiveSet(id, draft, version),
     (id, version) => workoutsRepository.confirmLiveSet(id, version),
@@ -870,7 +874,7 @@ export function LiveWorkoutPage() {
           : <button type="button" className="secondary wide" disabled={finish.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => exercise.sets.some((set) => !set.confirmedAt)); if (incomplete) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</button>}
       </div>
     </>}</AsyncView>
-    {!clientMode && pickerOpen && <ExercisePicker catalog={catalog} onPick={pickLiveExercise} onClose={closePicker} />}
+    {!clientMode && pickerOpen && <ExercisePicker catalog={catalog} frequent={frequentExercises} onPick={pickLiveExercise} onClose={closePicker} />}
     {confirmDialog}
   </Page>
 }

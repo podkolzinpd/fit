@@ -2,9 +2,10 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ExercisePicker, equipmentForSelection, filterExercises, musclesForGroup } from './ExercisePicker'
+import { frequentExercisesForClient } from './frequent-exercises'
 import type { ExerciseCatalogState } from './exercise-catalog'
 import { SYSTEM_EXERCISES } from '../../shared/system-exercises'
-import type { ExerciseSnapshot } from '../../shared/domain'
+import type { ExerciseSnapshot, Workout } from '../../shared/domain'
 
 // Обогащённая выборка для проверки иерархии
 // группа→мышца→оборудование→упражнение.
@@ -32,6 +33,14 @@ describe('ExercisePicker', () => {
     expect(filterExercises(SYSTEM_EXERCISES, 'legs', 'присед').map((exercise) => exercise.name))
       .toEqual(['Болгарский присед', 'Присед со штангой', 'Фронтальный присед'])
     expect(filterExercises(SYSTEM_EXERCISES, 'cardio', '')).toHaveLength(7)
+  })
+
+  it('ставит частые упражнения клиента выше остальных по числу использований', () => {
+    const workouts = [
+      { workoutDate: '2026-08-01', exercises: [{ source: 'system', ref: 'd' }, { source: 'system', ref: 'a' }] },
+      { workoutDate: '2026-07-30', exercises: [{ source: 'system', ref: 'a' }] },
+    ] as unknown as Workout[]
+    expect(frequentExercisesForClient(ENRICHED, workouts).map((exercise) => exercise.ref)).toEqual(['a', 'd'])
   })
 
   it('ищет по словам в любом порядке, оборудованию и без различия е/ё', () => {

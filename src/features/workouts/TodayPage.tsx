@@ -8,7 +8,7 @@ import { formatLocalDateShort, localDate, todayLocalDate } from '../../shared/lo
 import { isValidRpe } from '../../shared/rpe'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { Page } from '../../shared/ui'
-import { ExercisePicker, useExerciseCatalog } from '../exercises'
+import { ExercisePicker, frequentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { VoiceNoteField } from '../voice-input'
 import { useAuth } from '../../app/auth-context'
 import { parseQuickWorkoutEntry, resolveQuickWorkoutLine, type ParsedWorkoutExercise } from './quick-workout-entry'
@@ -58,6 +58,7 @@ export function TodayPage() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const [clientId, setClientId] = useState('')
+  const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId), enabled: Boolean(clientId) })
   const [recordMode, setRecordMode] = useState<RecordMode>('planned')
   const [workoutDate, setWorkoutDate] = useState(today)
   const [startTime, setStartTime] = useState('')
@@ -104,6 +105,7 @@ export function TodayPage() {
     ...parsed.unparsed.flatMap((item) => choices[item.line] ? [resolveQuickWorkoutLine(item.line, choices[item.line]!)] : []),
   ], [choices, parsed])
   const noMatches = Boolean(text.trim() && !resolved.length && parsed.unparsed.length)
+  const frequentExercises = useMemo(() => frequentExercisesForClient(catalog.exercises, clientWorkouts.data ?? []), [catalog.exercises, clientWorkouts.data])
 
   useEffect(() => {
     if (!openedTracked.current) {
@@ -291,6 +293,6 @@ export function TodayPage() {
     {screen === 'compose' && agenda}
     {draftNotice}
     {(clients.error ?? catalog.error ?? todayWorkouts.error ?? recentWorkouts.error) && <p className="error">{(clients.error ?? catalog.error ?? todayWorkouts.error ?? recentWorkouts.error)?.message}</p>}
-    {pickerOpen && <ExercisePicker catalog={catalog} onPick={(exercise) => pickExercises([exercise])} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} frequent={frequentExercises} onPick={(exercise) => pickExercises([exercise])} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
   </Page>
 }
