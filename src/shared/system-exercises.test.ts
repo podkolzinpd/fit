@@ -29,11 +29,21 @@ describe('system exercise catalog', () => {
       .toEqual(['Планка', 'Боковая планка'])
   })
 
+  it('добавляет кардио- и функциональные протоколы с корректным форматом факта', () => {
+    const protocol = (ref: string) => SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === ref)
+    for (const ref of ['interval-running', 'interval-bike', 'interval-rowing', 'interval-walking', 'farmer-carry', 'sled-push']) {
+      expect(protocol(ref)).toMatchObject({ muscleGroup: 'cardio', inputKind: 'distance' })
+    }
+    for (const ref of ['tabata', 'emom', 'amrap', 'circuit-training']) {
+      expect(protocol(ref)).toMatchObject({ muscleGroup: 'cardio', inputKind: 'reps' })
+    }
+  })
+
   it('добавляет импортированный каталог поверх базового без дублей', () => {
     // Полный каталог = 49 базовых + импортированные, ref уникальны.
-    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(500)
+    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(510)
     expect(IMPORTED_EXERCISES).toHaveLength(451)
-    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(SYSTEM_EXERCISES.length + IMPORTED_EXERCISES.length)
+    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(SYSTEM_EXERCISES.length + IMPORTED_EXERCISES.length + 10)
     expect(new Set(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.ref)).size).toBe(SYSTEM_EXERCISE_CATALOG.length)
   })
 
@@ -106,7 +116,7 @@ describe('system exercise catalog', () => {
   })
 
   it('каталог = обогащённые базовые + импортированные без дублей', () => {
-    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(BASE_EXERCISES.length + IMPORTED_EXERCISES.length)
+    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(BASE_EXERCISES.length + IMPORTED_EXERCISES.length + 10)
     expect(new Set(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.ref)).size).toBe(SYSTEM_EXERCISE_CATALOG.length)
   })
 

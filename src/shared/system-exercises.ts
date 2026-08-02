@@ -90,6 +90,22 @@ export const SYSTEM_EXERCISES = [
   { source: 'system', ref: 'burpees', name: 'Берпи', muscleGroup: 'cardio', inputKind: 'reps' },
 ] as const satisfies readonly ExerciseSnapshot[]
 
+// Протоколы — самостоятельные элементы каталога, а не силовые упражнения с
+// условным весом. Это даёт тренеру корректные поля ввода для функциональной
+// работы и позволяет сохранить факт без отдельных заметок.
+const FUNCTIONAL_PROTOCOLS = [
+  { source: 'system', ref: 'interval-running', name: 'Интервальный бег', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-running.jpg', equipment: 'Беговая дорожка', primaryMuscleDetail: 'Кардио', instructions: ['Укажите время и дистанцию одного интервала. Количество интервалов — числом подходов.'] },
+  { source: 'system', ref: 'interval-bike', name: 'Интервалы на велотренажёре', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-stationary-bike.jpg', equipment: 'Велотренажёр', primaryMuscleDetail: 'Кардио', instructions: ['Укажите время и дистанцию одного интервала.'] },
+  { source: 'system', ref: 'interval-rowing', name: 'Интервалы на гребном тренажёре', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-rowing-machine.jpg', equipment: 'Гребной тренажёр', primaryMuscleDetail: 'Кардио', instructions: ['Укажите время и дистанцию одного интервала.'] },
+  { source: 'system', ref: 'interval-walking', name: 'Интервальная ходьба', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-walking.jpg', equipment: 'Беговая дорожка', primaryMuscleDetail: 'Кардио', instructions: ['Укажите время и дистанцию одного интервала.'] },
+  { source: 'system', ref: 'tabata', name: 'Табата', muscleGroup: 'cardio', inputKind: 'reps', imageUrl: '/exercises/base-burpees.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Кардио', instructions: ['Укажите время рабочего отрезка и число повторов. Отдых и движение добавьте в комментарий к упражнению.'] },
+  { source: 'system', ref: 'emom', name: 'EMOM', muscleGroup: 'cardio', inputKind: 'reps', imageUrl: '/exercises/base-burpees.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Кардио', instructions: ['Один подход — одна минута: укажите рабочее время и повторы.'] },
+  { source: 'system', ref: 'amrap', name: 'AMRAP', muscleGroup: 'cardio', inputKind: 'reps', imageUrl: '/exercises/base-burpees.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Кардио', instructions: ['Укажите лимит времени и число выполненных повторов или раундов.'] },
+  { source: 'system', ref: 'circuit-training', name: 'Круговая тренировка', muscleGroup: 'cardio', inputKind: 'reps', imageUrl: '/exercises/base-burpees.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Кардио', instructions: ['Укажите время круга и число повторов или раундов. Состав круга добавьте в комментарий.'] },
+  { source: 'system', ref: 'farmer-carry', name: 'Фермерская прогулка', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-walking.jpg', equipment: 'Гантели или гири', primaryMuscleDetail: 'Кардио', instructions: ['Укажите длительность и дистанцию проходки.'] },
+  { source: 'system', ref: 'sled-push', name: 'Толкание саней', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-walking.jpg', equipment: 'Сани', primaryMuscleDetail: 'Кардио', instructions: ['Укажите длительность и дистанцию проходки.'] },
+] as const satisfies readonly ExerciseSnapshot[]
+
 // Полный системный каталог: рукописные базовые + импортированные из открытой
 // базы. Импортированные добавляются в конец, дубли по ref отсекаются.
 const SEEN_REFS = new Set<string>(SYSTEM_EXERCISES.map((exercise) => exercise.ref))
@@ -99,4 +115,5 @@ const SEEN_REFS = new Set<string>(SYSTEM_EXERCISES.map((exercise) => exercise.re
 export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = [
   ...BASE_EXERCISES,
   ...IMPORTED_EXERCISES.filter((exercise) => !SEEN_REFS.has(exercise.ref)),
+  ...FUNCTIONAL_PROTOCOLS,
 ]
