@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type MouseEvent } from 'react'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
-import { MUSCLE_GROUP_LABELS, MUSCLE_GROUPS } from '../../shared/system-exercises'
+import { MUSCLE_GROUP_LABELS, MUSCLE_GROUPS, WARMUP_MOBILITY_REFS } from '../../shared/system-exercises'
 import type { ExerciseCatalogState } from './exercise-catalog'
 import { matchesExerciseSearch } from './exercise-search'
 import { readRecentKeys, recordRecent, resolveRecent } from './recent-exercises'
@@ -116,6 +116,14 @@ export function ExercisePicker({ catalog, frequent = [], onPick, onPickMany, mul
     () => (!hasFilters && !search.trim() ? resolveRecent(readRecentKeys(), catalog.exercises) : []),
     [hasFilters, search, catalog.exercises],
   )
+  const warmupAndMobility = useMemo(
+    () => (!hasFilters && !search.trim() ? catalog.exercises.filter((exercise) => WARMUP_MOBILITY_REFS.has(exercise.ref)) : []),
+    [hasFilters, search, catalog.exercises],
+  )
+  const listExercises = useMemo(
+    () => (!hasFilters && !search.trim() ? filtered.filter((exercise) => !WARMUP_MOBILITY_REFS.has(exercise.ref)) : filtered),
+    [hasFilters, search, filtered],
+  )
   function pick(exercise: ExerciseSnapshot) {
     if (!multiple) {
       recordRecent(exercise)
@@ -190,9 +198,10 @@ export function ExercisePicker({ catalog, frequent = [], onPick, onPickMany, mul
         {catalog.error && <div className="state"><p className="error">{catalog.error.message}</p><button type="button" className="secondary" onClick={catalog.retry}>Повторить</button></div>}
         {!catalog.loading && <div className="picker-list">
           {frequent.length > 0 && !hasFilters && !search.trim() && <><p className="picker-section-label">Часто у клиента</p>{frequent.map((exercise) => item(exercise, 'frequent'))}</>}
+          {warmupAndMobility.length > 0 && <><p className="picker-section-label">Разминка и мобилити</p>{warmupAndMobility.map((exercise) => item(exercise, 'warmup'))}</>}
           {recent.length > 0 && <><p className="picker-section-label">Недавние</p>{recent.map((exercise) => item(exercise, 'recent'))}</>}
-          {(frequent.length > 0 || recent.length > 0) && !hasFilters && !search.trim() && <p className="picker-section-label">Все упражнения</p>}
-          {filtered.length ? filtered.map((exercise) => item(exercise, 'all')) : <p className="state">Ничего не найдено</p>}
+          {(frequent.length > 0 || warmupAndMobility.length > 0 || recent.length > 0) && !hasFilters && !search.trim() && <p className="picker-section-label">Все упражнения</p>}
+          {listExercises.length ? listExercises.map((exercise) => item(exercise, 'all')) : <p className="state">Ничего не найдено</p>}
         </div>}
         {multiple && selected.size > 0 && <div className="picker-selection-bar"><span>Выбрано: {selected.size}</span><button type="button" onClick={addSelected}>Добавить {selected.size}</button></div>}
       </>}

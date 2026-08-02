@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { ExercisePicker, equipmentForSelection, filterExercises, musclesForGroup } from './ExercisePicker'
 import { frequentExercisesForClient } from './frequent-exercises'
 import type { ExerciseCatalogState } from './exercise-catalog'
-import { SYSTEM_EXERCISES } from '../../shared/system-exercises'
+import { SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISES } from '../../shared/system-exercises'
 import type { ExerciseSnapshot, Workout } from '../../shared/domain'
 
 // Обогащённая выборка для проверки иерархии
@@ -33,6 +33,12 @@ describe('ExercisePicker', () => {
     expect(filterExercises(SYSTEM_EXERCISES, 'legs', 'присед').map((exercise) => exercise.name))
       .toEqual(['Болгарский присед', 'Присед со штангой', 'Фронтальный присед'])
     expect(filterExercises(SYSTEM_EXERCISES, 'cardio', '')).toHaveLength(7)
+  })
+
+  it('показывает быстрый раздел разминки и мобилити', () => {
+    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={vi.fn()} onClose={vi.fn()} />)
+    expect(screen.getByText('Разминка и мобилити')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /Суставная разминка/ })).toHaveLength(1)
   })
 
   it('ставит частые упражнения клиента выше остальных по числу использований', () => {
