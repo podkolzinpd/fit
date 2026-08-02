@@ -22,6 +22,7 @@ import { QuickWorkoutEntry } from './QuickWorkoutEntry'
 import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
+import { setLiveScreenAwake } from './live-keep-awake'
 import { LoadMoreButton } from './LoadMoreButton'
 import { workoutCountLabel } from './workout-count-label'
 import { useAuth } from '../../app/auth-context'
@@ -556,6 +557,11 @@ export function LiveWorkoutPage() {
   const [askConfirm, confirmDialog] = useConfirm()
   const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
+  useEffect(() => {
+    if (query.data?.status !== 'in_progress') return
+    void setLiveScreenAwake(true)
+    return () => { void setLiveScreenAwake(false) }
+  }, [query.data?.status])
   useClientRealtime(query.data?.clientId)
   const catalog = useExerciseCatalog()
   const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', query.data?.clientId], queryFn: () => workoutsRepository.list(undefined, undefined, query.data!.clientId), enabled: Boolean(query.data?.clientId) })
