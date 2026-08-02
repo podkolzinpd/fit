@@ -3,6 +3,7 @@ import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/doma
 import { CloseIcon } from '../../shared/icons'
 import { MUSCLE_GROUP_LABELS, MUSCLE_GROUPS } from '../../shared/system-exercises'
 import type { ExerciseCatalogState } from './exercise-catalog'
+import { matchesExerciseSearch } from './exercise-search'
 import { readRecentKeys, recordRecent, resolveRecent } from './recent-exercises'
 
 export function filterExercises(
@@ -12,24 +13,12 @@ export function filterExercises(
   muscle: string | null = null,
   equipment: string | null = null,
 ): readonly ExerciseSnapshot[] {
-  const normalize = (value: string) => value
-    .toLocaleLowerCase('ru')
-    .replaceAll('ё', 'е')
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim()
-  const queryTokens = normalize(search).split(/\s+/).filter(Boolean)
   return exercises
     .filter((exercise) => {
-      const haystack = normalize([
-        exercise.name,
-        exercise.equipment,
-        exercise.primaryMuscleDetail,
-        MUSCLE_GROUP_LABELS[exercise.muscleGroup],
-      ].filter(Boolean).join(' '))
       return (category === 'all' || exercise.muscleGroup === category)
         && (!muscle || exercise.primaryMuscleDetail === muscle)
         && (!equipment || exercise.equipment === equipment)
-        && queryTokens.every((token) => haystack.includes(token))
+        && matchesExerciseSearch(exercise, search)
     })
     .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
 }
