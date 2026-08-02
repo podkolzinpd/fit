@@ -106,6 +106,24 @@ const FUNCTIONAL_PROTOCOLS = [
   { source: 'system', ref: 'sled-push', name: 'Толкание саней', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-walking.jpg', equipment: 'Сани', primaryMuscleDetail: 'Кардио', instructions: ['Укажите длительность и дистанцию проходки.'] },
 ] as const satisfies readonly ExerciseSnapshot[]
 
+// Короткий базовый набор, который тренер может быстро добавить перед основной
+// частью тренировки. Мобилити фиксируем временем, а не выдуманными повторами.
+export const WARMUP_MOBILITY_REFS = new Set([
+  'joint-warmup', 'shoulder-mobility', 'band-external-rotation', 'thoracic-mobility',
+  'hip-mobility', 'ankle-mobility', 'dynamic-hamstring-stretch', 'cat-cow',
+])
+
+const WARMUP_AND_MOBILITY = [
+  { source: 'system', ref: 'joint-warmup', name: 'Суставная разминка', muscleGroup: 'other', inputKind: 'duration', imageUrl: '/exercises/base-walking.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Разминка', instructions: ['Выполните мягкие круговые движения основными суставами без боли. Укажите общее время.'] },
+  { source: 'system', ref: 'shoulder-mobility', name: 'Мобилизация плеч', muscleGroup: 'shoulders', inputKind: 'duration', imageUrl: '/exercises/base-jump-rope.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Плечи', instructions: ['Выполните контролируемые движения плечами в комфортной амплитуде. Укажите время работы.'] },
+  { source: 'system', ref: 'band-external-rotation', name: 'Внешняя ротация плеча с резинкой', muscleGroup: 'shoulders', inputKind: 'duration', imageUrl: '/exercises/base-jump-rope.jpg', equipment: 'Резина', primaryMuscleDetail: 'Плечи', instructions: ['Держите локоть у корпуса и плавно поверните предплечье наружу. Укажите время работы.'] },
+  { source: 'system', ref: 'thoracic-mobility', name: 'Мобилизация грудного отдела', muscleGroup: 'core', inputKind: 'duration', imageUrl: '/exercises/base-walking.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Пресс', instructions: ['Выполняйте мягкие повороты и разгибание грудного отдела, не форсируя амплитуду. Укажите время.'] },
+  { source: 'system', ref: 'hip-mobility', name: 'Мобилизация тазобедренных суставов', muscleGroup: 'legs', inputKind: 'duration', imageUrl: '/exercises/base-walking.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Передняя поверхность бедра', instructions: ['Выполняйте контролируемые круговые движения и раскрытие таза. Укажите время работы.'] },
+  { source: 'system', ref: 'ankle-mobility', name: 'Мобилизация голеностопа', muscleGroup: 'legs', inputKind: 'duration', imageUrl: '/exercises/base-walking.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Икроножные', instructions: ['Плавно переносите колено над стопой, сохраняя пятку на полу. Укажите время работы.'] },
+  { source: 'system', ref: 'dynamic-hamstring-stretch', name: 'Динамическая растяжка задней поверхности бедра', muscleGroup: 'legs', inputKind: 'duration', imageUrl: '/exercises/base-walking.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Задняя поверхность бедра', instructions: ['Двигайтесь плавно в комфортной амплитуде, без пружинящих рывков. Укажите время работы.'] },
+  { source: 'system', ref: 'cat-cow', name: 'Кошка-корова', muscleGroup: 'core', inputKind: 'duration', imageUrl: '/exercises/base-walking.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Пресс', instructions: ['На четвереньках плавно чередуйте округление и прогиб спины. Укажите время работы.'] },
+] as const satisfies readonly ExerciseSnapshot[]
+
 // Полный системный каталог: рукописные базовые + импортированные из открытой
 // базы. Импортированные добавляются в конец, дубли по ref отсекаются.
 const SEEN_REFS = new Set<string>(SYSTEM_EXERCISES.map((exercise) => exercise.ref))
@@ -116,4 +134,5 @@ export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = [
   ...BASE_EXERCISES,
   ...IMPORTED_EXERCISES.filter((exercise) => !SEEN_REFS.has(exercise.ref)),
   ...FUNCTIONAL_PROTOCOLS,
+  ...WARMUP_AND_MOBILITY,
 ]

@@ -39,11 +39,16 @@ describe('system exercise catalog', () => {
     }
   })
 
+  it('добавляет отдельный набор разминки и мобилити с вводом времени', () => {
+    const refs = ['joint-warmup', 'shoulder-mobility', 'band-external-rotation', 'thoracic-mobility', 'hip-mobility', 'ankle-mobility', 'dynamic-hamstring-stretch', 'cat-cow']
+    for (const ref of refs) expect(SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === ref)).toMatchObject({ ref, inputKind: 'duration' })
+  })
+
   it('добавляет импортированный каталог поверх базового без дублей', () => {
     // Полный каталог = 49 базовых + импортированные, ref уникальны.
-    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(510)
+    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(518)
     expect(IMPORTED_EXERCISES).toHaveLength(451)
-    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(SYSTEM_EXERCISES.length + IMPORTED_EXERCISES.length + 10)
+    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(SYSTEM_EXERCISES.length + IMPORTED_EXERCISES.length + 18)
     expect(new Set(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.ref)).size).toBe(SYSTEM_EXERCISE_CATALOG.length)
   })
 
@@ -116,7 +121,7 @@ describe('system exercise catalog', () => {
   })
 
   it('каталог = обогащённые базовые + импортированные без дублей', () => {
-    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(BASE_EXERCISES.length + IMPORTED_EXERCISES.length + 10)
+    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(BASE_EXERCISES.length + IMPORTED_EXERCISES.length + 18)
     expect(new Set(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.ref)).size).toBe(SYSTEM_EXERCISE_CATALOG.length)
   })
 
