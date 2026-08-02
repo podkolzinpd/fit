@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(16);
+select plan(18);
 
 select ok(
   exists(select 1 from pg_matviews where schemaname = 'analytics' and matviewname = 'trainer_overview'),
@@ -113,6 +113,17 @@ select is(
 select is(
   (select is_test_account from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000003'),
   true, 'trainer with email test@test.com is flagged as test account'
+);
+
+select ok(
+  (select refreshed_at from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001')
+    between now() - interval '1 minute' and now() + interval '1 minute',
+  'refreshed_at is set to the moment of the last REFRESH MATERIALIZED VIEW'
+);
+select is(
+  (select count(distinct refreshed_at) from analytics.trainer_overview),
+  1::bigint,
+  'refreshed_at is the same snapshot moment across every row'
 );
 
 select * from finish();
