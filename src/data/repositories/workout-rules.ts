@@ -553,10 +553,13 @@ export function completedWorkoutDraft(source: Workout): WorkoutDraft {
     ...draft,
     exercises: draft.exercises.map((exercise, exerciseIndex) => ({
       ...exercise,
+      sourceExerciseId: source.exercises[exerciseIndex]?.id,
       sets: exercise.sets.map((set, setIndex) => {
-        const fact = source.exercises[exerciseIndex]?.sets[setIndex]?.fact
+        const sourceSet = source.exercises[exerciseIndex]?.sets[setIndex]
+        const fact = sourceSet?.fact
         return {
           ...set,
+          sourceSetId: sourceSet?.id,
           weightKg: fact?.weightKg ?? set.weightKg,
           reps: fact?.reps ?? set.reps,
           durationSec: fact?.durationSec ?? set.durationSec,

@@ -42,7 +42,9 @@ describe('workouts repository rules', () => {
       exercises: [{ id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: 'b1', blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90,
         sets: [{ id: 's1', position: 0, weightKg: 50, reps: 10, fact: { weightKg: 55, reps: 9, rpe: 8 }, confirmedAt: 'now', version: 2 }] }],
     }
-    expect(completedWorkoutDraft(source).exercises[0]?.sets[0]).toMatchObject({ weightKg: 55, reps: 9, rpe: 8 })
+    const draft = completedWorkoutDraft(source)
+    expect(draft.exercises[0]).toMatchObject({ sourceExerciseId: 'e1' })
+    expect(draft.exercises[0]?.sets[0]).toMatchObject({ sourceSetId: 's1', weightKg: 55, reps: 9, rpe: 8 })
   })
 })
 
