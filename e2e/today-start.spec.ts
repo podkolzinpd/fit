@@ -23,3 +23,19 @@ test('today: быстрый старт ведёт к единому выбору
   await expect(page.getByRole('button', { name: 'Записать как завершённую' })).toBeEnabled()
   await expect(page.getByLabel('Время тренировки')).toHaveCount(0)
 })
+
+test('создание из календаря: завершённая тренировка не остаётся в будущем', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/(today|clients)$/)
+
+  await page.goto('/workouts/new?date=2099-01-01')
+  const date = page.locator('input[name="date"]')
+  await expect(date).toHaveValue('2099-01-01')
+  await page.getByRole('button', { name: 'Завершённая' }).click()
+  const maxDate = await date.getAttribute('max')
+  expect(maxDate).not.toBeNull()
+  await expect(date).toHaveValue(maxDate!)
+})
