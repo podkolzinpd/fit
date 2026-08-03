@@ -11,6 +11,14 @@ const catalog: ExerciseSnapshot[] = [
 ]
 
 describe('parseQuickWorkoutEntry', () => {
+  it('понимает разговорное «гребля» как гребной тренажёр', () => {
+    const result = parseQuickWorkoutEntry('Гребля 10 мин 2 км', SYSTEM_EXERCISE_CATALOG)
+
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed[0]).toMatchObject({ exercise: { ref: 'rowing-machine' }, hasValues: true })
+    expect(result.parsed[0]?.sets[0]).toMatchObject({ durationSec: 600, distanceKm: 2 })
+  })
+
   it('разбирает силовое упражнение с количеством подходов, повторами и весом', () => {
     const result = parseQuickWorkoutEntry('Присед со штангой 3×8 80 кг', catalog)
     expect(result.unparsed).toEqual([])

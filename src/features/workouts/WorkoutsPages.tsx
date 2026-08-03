@@ -7,7 +7,7 @@ import { goalsRepository } from '../../data/repositories/goals.repository'
 import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
-import { blockLabel, chartUnitFor, completedWorkoutDraft, copyWorkout, durationLabel, durationSeconds, exerciseChartPoints, exerciseSummary, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, exerciseChartPoints, exerciseSummary, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { RPE_OPTIONS } from '../../shared/rpe'
 import { playGong } from '../../shared/gong'
@@ -202,11 +202,16 @@ export function WorkoutFormPage() {
   const stages = goal.data ? orderedStages(goal.data) : []
   // Этап по умолчанию: сохранённый у тренировки, иначе текущий по дате.
   const defaultStageId = source.data?.stageId ?? (goal.data ? currentStage(goal.data, todayLocalDate())?.id ?? '' : '')
-  const completedMode = recordCompleted || source.data?.status === 'done'
+  // Завершённой остаётся только редактируемая запись. Копия завершённой
+  // тренировки — это новый план, который тренер при необходимости может
+  // переключить в «Завершённую».
+  const completedMode = recordCompleted || Boolean(workoutId && source.data?.status === 'done')
   const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => completedMode ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: async (id) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['workout', id] }),
       queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+      queryClient.invalidateQueries({ queryKey: ['today-workouts'] }),
+      queryClient.invalidateQueries({ queryKey: ['today-recent-workouts'] }),
     ])
     navigate(`/workouts/${id}`)
   } })
@@ -558,10 +563,12 @@ export function LiveWorkoutPage() {
   const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   useEffect(() => {
-    if (query.data?.status !== 'in_progress') return
+    // Этот маршрут доступен только после старта тренировки. Включаем нативный
+    // keep-awake сразу при входе, не дожидаясь ответа БД со статусом: иначе
+    // медленный запрос оставлял экран без защиты от гашения.
     void setLiveScreenAwake(true)
     return () => { void setLiveScreenAwake(false) }
-  }, [query.data?.status])
+  }, [])
   useClientRealtime(query.data?.clientId)
   const catalog = useExerciseCatalog()
   const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', query.data?.clientId], queryFn: () => workoutsRepository.list(undefined, undefined, query.data!.clientId), enabled: Boolean(query.data?.clientId) })
@@ -595,7 +602,20 @@ export function LiveWorkoutPage() {
   const save = useMutation({
     mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.save(set, draft),
     onMutate: ({ set }) => { setSavingSetId(set.id); setSavedSetId(null); setSaveErrorSetId(null) },
-    onSuccess: async (_v, { set }) => { setSavingSetId(null); setSavedSetId(set.id); if (set.confirmedAt) await query.refetch() },
+    onSuccess: async (_v, { set }) => {
+      setSavingSetId(null)
+      setSavedSetId(set.id)
+      if (set.confirmedAt) {
+        const exercise = query.data?.exercises.find((item) => item.sets.some((itemSet) => itemSet.id === set.id))
+        if (exercise) setExpandedExercises((previous) => {
+          if (!previous.has(exercise.id)) return previous
+          const next = new Set(previous)
+          next.delete(exercise.id)
+          return next
+        })
+        await query.refetch()
+      }
+    },
     onError: (_error, { set }) => { setSavingSetId(null); setSaveErrorSetId(set.id) },
   })
   useEffect(() => {
@@ -624,7 +644,7 @@ export function LiveWorkoutPage() {
           ? lastExerciseOfRound && lastSetOfExercise && block!.exercises.every((ex) => ex.sets.every((s) => s.id === set.id || s.confirmedAt))
           : lastSetOfExercise
         const sec = blockFinished ? 0
-          : !multi ? exercise.restBetweenSetsSec
+          : !multi ? exercise.restBetweenSetsSec ?? DEFAULT_REST_BETWEEN_SETS
           : lastExerciseOfRound ? block!.restBetweenRoundsSec
           : block?.restBetweenExercisesSec ?? 0
         startRestUntil(restDeadline(sec), sec)
