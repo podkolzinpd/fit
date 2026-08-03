@@ -16,7 +16,14 @@ export class BrowserAudioRecorder implements AudioRecorder {
       throw new Error('Этот браузер не поддерживает запись с микрофона.')
     }
 
-    this.stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    this.stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    })
     try {
       this.recorder = new MediaRecorder(this.stream, preferredRecorderOptions())
       this.recorder.addEventListener('dataavailable', (event) => {

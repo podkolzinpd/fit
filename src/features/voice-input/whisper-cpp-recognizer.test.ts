@@ -25,7 +25,7 @@ describe('WhisperCppRecognizer', () => {
     expect(await recognizer.transcribe(new ArrayBuffer(4), progress)).toBe('Тестовая заметка')
     expect(whisper.init).toHaveBeenCalledOnce()
     expect(whisper.init.mock.calls[0]?.[0]).toMatchObject({
-      filePath: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-tiny-q5_1.bin',
+      filePath: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base-q5_1.bin',
       useGpu: false,
     })
     expect(runtime.transcribeData).toHaveBeenCalledWith(expect.any(ArrayBuffer), expect.objectContaining({ language: 'ru', onProgress: progress }))

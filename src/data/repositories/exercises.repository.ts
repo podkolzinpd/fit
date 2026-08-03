@@ -1,6 +1,6 @@
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
-import { exerciseQueries } from '../queries/exercises.queries'
+import { exerciseQueries, type WorkoutParseResponse } from '../queries/exercises.queries'
 import { repositoryError } from './error'
 
 export interface CustomExercise extends ExerciseSnapshot { id: string; archivedAt: string | null; version: number }
@@ -13,6 +13,11 @@ function map(row: { id: string; name: string; muscle_group: string; input_kind: 
 
 export const exercisesRepository = {
   system: SYSTEM_EXERCISE_CATALOG,
+  async parseWorkout(text: string, catalog: readonly ExerciseSnapshot[]): Promise<WorkoutParseResponse> {
+    const result = await exerciseQueries.parseWorkout(text, catalog)
+    if (result.error || !result.data) throw repositoryError(result.error ?? new Error('Пустой ответ парсера'))
+    return result.data
+  },
   async list(): Promise<CustomExercise[]> {
     const result = await exerciseQueries.list()
     if (result.error) throw repositoryError(result.error)

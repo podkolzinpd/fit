@@ -1,0 +1,9 @@
+syntax = "proto3";
+package yandex.cloud.ai.stt.v2;
+service SttService { rpc StreamingRecognize(stream StreamingRecognitionRequest) returns (stream StreamingRecognitionResponse); }
+message StreamingRecognitionRequest { oneof streaming_request { RecognitionConfig config = 1; bytes audio_content = 2; } }
+message StreamingRecognitionResponse { repeated SpeechRecognitionChunk chunks = 1; }
+message RecognitionConfig { RecognitionSpec specification = 1; string folder_id = 2; }
+message RecognitionSpec { enum AudioEncoding { AUDIO_ENCODING_UNSPECIFIED = 0; LINEAR16_PCM = 1; OGG_OPUS = 2; MP3 = 3; } AudioEncoding audio_encoding = 1; int64 sample_rate_hertz = 2; string language_code = 3; bool profanity_filter = 4; string model = 5; bool partial_results = 7; int64 audio_channel_count = 9; bool raw_results = 10; bool literature_text = 11; }
+message SpeechRecognitionChunk { repeated SpeechRecognitionAlternative alternatives = 1; bool final = 2; bool end_of_utterance = 3; }
+message SpeechRecognitionAlternative { string text = 1; float confidence = 2; }
