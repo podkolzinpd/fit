@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
-import { workoutsRepository } from '../../data/repositories/workouts.repository'
+import { workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, Workout, WorkoutDraft, WorkoutSetDraft } from '../../shared/domain'
 import { localDate, todayLocalDate } from '../../shared/local-date'
 import { isValidRpe } from '../../shared/rpe'
@@ -63,6 +63,7 @@ export function TodayPage() {
   const [workoutDate, setWorkoutDate] = useState(today)
   const [startTime, setStartTime] = useState('')
   const [quickClientName, setQuickClientName] = useState('')
+  const [prefillError, setPrefillError] = useState<string | null>(null)
   const [manualRefs, setManualRefs] = useState<string[]>([])
   const [removedRefs, setRemovedRefs] = useState<string[]>([])
   const [draftReady, setDraftReady] = useState(false)
@@ -170,19 +171,31 @@ export function TodayPage() {
     trackGoal('workout_review_opened')
   }
 
-  function addExercises(exercises: ExerciseSnapshot[]) {
+  async function previousResults(selected: ExerciseSnapshot[]): Promise<Map<string, PreviousExerciseResult>> {
+    if (!clientId) return new Map()
+    try {
+      setPrefillError(null)
+      return await workoutsRepository.latestExerciseResults(clientId, selected.map((exercise) => exercise.ref))
+    } catch {
+      setPrefillError('Не удалось подставить значения с прошлой тренировки')
+      return new Map()
+    }
+  }
+
+  async function addExercises(exercises: ExerciseSnapshot[]) {
+    const results = await previousResults(exercises)
     setManualRefs((current) => [...new Set([...current, ...exercises.map((exercise) => exercise.ref)])])
     setItems((current) => [...current, ...exercises.map((exercise) => ({
       line: exercise.name,
       exercise,
-      sets: [{ position: 0 }],
-      hasValues: false,
+      sets: results.get(exercise.ref)?.sets ?? [{ position: 0 }],
+      hasValues: Boolean(results.get(exercise.ref)),
     }))])
     setPickerOpen(false)
   }
 
-  function pickExercises(exercises: ExerciseSnapshot[]) {
-    if (replaceIndex === null) { addExercises(exercises); return }
+  async function pickExercises(exercises: ExerciseSnapshot[]) {
+    if (replaceIndex === null) { await addExercises(exercises); return }
     const exercise = exercises[0]
     if (!exercise) return
     const replacedRef = items[replaceIndex]?.exercise.ref
@@ -284,7 +297,7 @@ export function TodayPage() {
       <button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button>
       <label className="today-client"><span>Для кого тренировка</span><select value={clientId} onChange={(event) => setClientId(event.target.value)}><option value="">Выберите клиента</option>{clients.data?.map((client) => <option value={client.id} key={client.id}>{client.fullName}</option>)}</select></label>
       {!clientId && <section className="today-quick-client"><div><strong>Нет клиента?</strong><p>Добавьте только имя — остальное можно заполнить позже.</p></div><div className="today-quick-client-form"><input aria-label="Имя нового клиента" value={quickClientName} onChange={(event) => setQuickClientName(event.target.value)} placeholder="Имя клиента" /><button type="button" className="secondary" disabled={quickClientName.trim().length < 2 || createQuickClient.isPending} onClick={() => createQuickClient.mutate()}>Создать</button></div>{createQuickClient.error && <p className="error">{createQuickClient.error.message}</p>}</section>}
-      {save.error && <p className="error">{save.error.message}</p>}
+      {(prefillError || save.error) && <p className="error">{prefillError ?? save.error?.message}</p>}
       <section className="today-save-actions" aria-label="Тип записи">
         <div className="today-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={recordMode === 'planned' ? 'active' : ''} aria-pressed={recordMode === 'planned'} onClick={() => setRecordMode('planned')}>План</button><button type="button" className={recordMode === 'completed' ? 'active' : ''} aria-pressed={recordMode === 'completed'} onClick={() => { setRecordMode('completed'); setWorkoutDate((date) => workoutDateForRecordMode('completed', date, today)) }}>Завершённая</button></div>
         <div className="split"><label className="today-date-field"><span>Дата</span><input aria-label="Дата тренировки" type="date" value={workoutDate} max={recordMode === 'completed' ? today : undefined} onChange={(event) => setWorkoutDate(localDate(event.target.value))} required /></label>{recordMode === 'planned' && <label className="today-date-field"><span>Время</span><input aria-label="Время тренировки" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>}</div>
