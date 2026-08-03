@@ -18,6 +18,11 @@ async function getIamToken() {
 }
 
 wss.on('connection', async (socket) => {
+  const sessionId = Math.random().toString(36).slice(2, 10)
+  let bytes = 0
+  let partials = 0
+  let finals = 0
+  console.log(JSON.stringify({ event: 'ws_open', sessionId }))
   let auth
   try { auth = await getIamToken() } catch (error) { socket.send(JSON.stringify({ type: 'error', message: error.message })); socket.close(1011); return }
   const client = new stt.SttService('stt.api.cloud.yandex.net:443', grpc.credentials.createSsl())
@@ -29,18 +34,22 @@ wss.on('connection', async (socket) => {
     for (const chunk of chunks) {
       const alternatives = chunk.alternatives || []
       const text = alternatives[0]?.text || ''
-      if (text) socket.send(JSON.stringify({ type: chunk.final ? 'final' : 'partial', text }))
+      if (text) {
+        if (chunk.final) finals += 1
+        else partials += 1
+        socket.send(JSON.stringify({ type: chunk.final ? 'final' : 'partial', text }))
+      }
     }
   })
-  stream.on('error', (error) => socket.send(JSON.stringify({ type:'error', message:error.message })))
+  stream.on('error', (error) => { console.error(JSON.stringify({ event: 'speechkit_error', sessionId, message: error.message, bytes, partials, finals })); socket.send(JSON.stringify({ type:'error', message:error.message })) })
   socket.on('message', (raw, binary) => {
-    if (binary) stream.write({ audio_content: raw })
+    if (binary) { bytes += raw.byteLength; stream.write({ audio_content: raw }) }
     else {
       const message = JSON.parse(String(raw))
       if (message.type === 'config') stream.write({ config: { specification: { language_code: 'ru-RU', audio_encoding: 'LINEAR16_PCM', sample_rate_hertz: 16000, audio_channel_count: 1, partial_results: true }, folder_id: process.env.YANDEX_CLOUD_FOLDER_ID || '' } })
-      if (message.type === 'stop') stream.end()
+      if (message.type === 'stop') { console.log(JSON.stringify({ event: 'ws_stop', sessionId, bytes, partials, finals })); stream.end() }
     }
   })
-  socket.on('close', () => stream.end())
+  socket.on('close', () => { console.log(JSON.stringify({ event: 'ws_close', sessionId, bytes, partials, finals })); stream.end() })
 })
 server.listen(PORT, () => console.log(`speechkit relay listening on ${PORT}`))
