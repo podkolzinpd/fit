@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(8);
+select plan(9);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('50000000-0000-4000-8000-000000000030', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'completed30@example.test', '');
@@ -25,6 +25,7 @@ select public.save_completed_workout(
 ) as id;
 
 select is((select status from public.workouts where id = (select id from completed_workout)), 'done', 'ручная запись сразу завершена');
+select is((select created_by from public.workouts where id = (select id from completed_workout)), '50000000-0000-4000-8000-000000000030'::uuid, 'автор завершённой записи сохранён');
 select ok((select completed_at is not null from public.workouts where id = (select id from completed_workout)), 'у завершённой записи есть время завершения');
 select row_eq(
   $$select fact_weight_kg, fact_reps, fact_rpe, confirmed_at is not null from public.workout_sets where workout_exercise_id = (select id from public.workout_exercises where workout_id = (select id from completed_workout))$$,
