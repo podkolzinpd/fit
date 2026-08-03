@@ -13,6 +13,7 @@ import {
   shouldUseClientCache,
   yandexHttpError,
 } from "./self-service.ts"
+import { completedWorkoutsInPeriod } from "./workout-source.ts"
 
 const YANDEX_COMPLETION_URL =
   "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
@@ -28,7 +29,9 @@ type SummarizeRequest = {
 
 type WorkoutRow = {
   id: string
-  created_at: string
+  workout_date: string
+  status: string
+  deleted_at: string | null
 }
 
 type ExerciseRow = {
@@ -283,7 +286,7 @@ function buildProgressData(
   }
 
   const workoutDateById = new Map(
-    workouts.map((workout) => [workout.id, workout.created_at]),
+    workouts.map((workout) => [workout.id, workout.workout_date]),
   )
   const exerciseProgress = new Map<string, {
     name: string
@@ -364,7 +367,7 @@ function buildProgressData(
   }
 
   const workoutDates = workouts
-    .map((workout) => workout.created_at)
+    .map((workout) => workout.workout_date)
     .sort()
   const periodDays =
     (Date.parse(`${periodEnd}T00:00:00Z`) -
@@ -636,24 +639,31 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
 
       const { data: workouts, error: workoutsError } = await userClient
         .from("workouts")
-        .select("id,created_at")
+        .select("id,workout_date,status,deleted_at")
         .eq("client_id", input.client_id)
         .eq("trainer_id", trainerId)
-        .gte("created_at", `${input.period_start}T00:00:00.000Z`)
-        .lt("created_at", `${input.period_end}T23:59:59.999Z`)
-        .order("created_at")
+        .eq("status", "done")
+        .is("deleted_at", null)
+        .gte("workout_date", input.period_start)
+        .lte("workout_date", input.period_end)
+        .order("workout_date")
         .limit(MAX_SOURCE_ROWS)
       if (workoutsError) {
         throw new HttpError(500, "workouts_lookup_failed")
       }
-      if (workouts.length === 0) {
+      const completedWorkouts = completedWorkoutsInPeriod(
+        workouts,
+        input.period_start,
+        input.period_end,
+      )
+      if (completedWorkouts.length === 0) {
         throw new HttpError(422, "no_completed_workouts")
       }
       if (workouts.length === MAX_SOURCE_ROWS) {
         throw new HttpError(422, "source_row_limit_reached")
       }
 
-      const workoutIds = workouts.map((workout) => workout.id)
+      const workoutIds = completedWorkouts.map((workout) => workout.id)
         const { data: exercises, error: exercisesError } = await userClient
         .from("workout_exercises")
         .select("id,workout_id,exercise_ref,exercise_name,input_kind,position")
@@ -689,7 +699,7 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
       }
 
       const trainingData = buildProgressData(
-        workouts,
+        completedWorkouts,
         exercises,
         sets,
         input.period_start,
@@ -740,7 +750,7 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
           prompt_version: PROMPT_VERSION,
           input_fingerprint: inputFingerprint,
           input_stats: {
-            workouts: workouts.length,
+            workouts: completedWorkouts.length,
             exercises: exercises.length,
             sets: sets.length,
             model_version: generated.modelVersion,
