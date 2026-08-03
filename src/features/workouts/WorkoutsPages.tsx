@@ -239,10 +239,13 @@ export function WorkoutFormPage() {
     const results = await previousResults([selected])
     const previous = results.get(selected.ref)
     if (replaceIndex !== null) {
+      const clearFact = source.data?.status === 'done'
       // Если в истории этого упражнения ещё нет, сохраняем привычное поведение
       // замены: при одинаковом типе остаются уже набранные значения формы.
-      const draft = previous ? exerciseDraft(selected, replaceIndex, previous) : undefined
-      setDraftExercises(replaceExercise(exercises, replaceIndex, selected, draft))
+      // В завершённой тренировке значения нельзя приписать новому упражнению:
+      // замена всегда начинается без факта.
+      const draft = !clearFact && previous ? exerciseDraft(selected, replaceIndex, previous) : undefined
+      setDraftExercises(replaceExercise(exercises, replaceIndex, selected, draft, { clearFact }))
     }
     else setDraftExercises([...exercises, exerciseDraft(selected, exercises.length, previous)])
     closePicker()

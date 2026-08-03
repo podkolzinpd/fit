@@ -9,7 +9,7 @@ select is(
 );
 select is(
   (select count(*) from pg_proc procedure join pg_namespace namespace on namespace.oid = procedure.pronamespace where namespace.nspname = 'private' and procedure.proname like 'legacy_%'),
-  14::bigint,
+  15::bigint,
   'all legacy mutation functions live in private schema'
 );
 
