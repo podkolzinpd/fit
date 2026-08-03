@@ -7,7 +7,6 @@ export class SpeechKitStreamingSession {
   private processor: ScriptProcessorNode | null = null
   private stream: MediaStream | null = null
   private stopped = false
-  private finalResolver: (() => void) | null = null
 
   async start(onPartial: (text: string) => void, onFinal: (text: string) => void): Promise<void> {
     if (!navigator.mediaDevices?.getUserMedia || typeof WebSocket === 'undefined') throw new Error('Потоковое распознавание недоступно в этом браузере.')
@@ -24,7 +23,7 @@ export class SpeechKitStreamingSession {
     this.socket.onmessage = (event) => {
       const message = JSON.parse(String(event.data)) as { type: string; text?: string; message?: string }
       if (message.type === 'partial' && message.text) onPartial(message.text)
-      if (message.type === 'final' && message.text) { onFinal(message.text); this.finalResolver?.(); this.finalResolver = null }
+      if (message.type === 'final' && message.text) onFinal(message.text)
       if (message.type === 'error') onPartial(message.message || 'Ошибка распознавания')
     }
     this.context = new AudioContext()
@@ -43,10 +42,9 @@ export class SpeechKitStreamingSession {
     this.processor?.disconnect(); this.source?.disconnect()
     this.stream?.getTracks().forEach((track) => track.stop())
     if (this.socket?.readyState === WebSocket.OPEN) {
-      await new Promise<void>((resolve) => {
-        const timer = window.setTimeout(resolve, 1_500)
-        this.finalResolver = () => { window.clearTimeout(timer); resolve() }
-      })
+      // SpeechKit may emit several final chunks around a pause. Give the
+      // server time to flush all of them before closing the WebSocket.
+      await new Promise<void>((resolve) => { window.setTimeout(resolve, 1_500) })
     }
     this.socket?.close(); await this.context?.close()
     this.processor = null; this.source = null; this.stream = null; this.socket = null; this.context = null
