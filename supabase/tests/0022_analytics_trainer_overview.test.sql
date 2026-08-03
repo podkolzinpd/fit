@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(25);
+select plan(26);
 
 select ok(
   exists(select 1 from pg_matviews where schemaname = 'analytics' and matviewname = 'trainer_overview'),
@@ -9,6 +9,11 @@ select ok(
 select ok(
   has_table_privilege('datalens_reader', 'analytics.trainer_overview', 'SELECT'),
   'datalens_reader has select on analytics.trainer_overview'
+);
+select is(
+  (select schedule from cron.job where jobname = 'refresh-analytics-trainer-overview'),
+  '0 2,7,12,17,21 * * *',
+  'refresh job runs 5x/day at 05:00/10:00/15:00/20:00/00:00 MSK (02/07/12/17/21 UTC)'
 );
 
 -- Тренер 1: 3 клиента (1 архивный, 1 app-linked) и 3 тренировки на одном
