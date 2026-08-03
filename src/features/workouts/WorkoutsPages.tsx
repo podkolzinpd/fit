@@ -7,6 +7,7 @@ import { goalsRepository } from '../../data/repositories/goals.repository'
 import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
+import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
 import { blockLabel, chartUnitFor, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, exerciseChartPoints, exerciseSummary, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { RPE_OPTIONS } from '../../shared/rpe'
@@ -612,6 +613,11 @@ export function LiveWorkoutPage() {
   const [confirmFinish, setConfirmFinish] = useState(false)
   const [restRemaining, setRestRemaining] = useState<number | null>(null)
   const restEndsAt = useRef<number | null>(null)
+  useEffect(() => {
+    const deadline = restoreRestDeadline(workoutId)
+    restEndsAt.current = deadline
+    setRestRemaining(deadline === null ? null : Math.ceil((deadline - Date.now()) / 1000))
+  }, [workoutId])
   // При правке ПОДТВЕРЖДЁННОГО подхода (карандаш → «Сохранить») значение пишется
   // в БД, но без refetch локальный set остаётся старым и поле возвращает прежнее
   // число. Освежаем только для подтверждённых (в обычном вводе по blur refetch не
@@ -675,6 +681,7 @@ export function LiveWorkoutPage() {
   // (напр. между упражнениями суперсета, seconds=0): таймер не показываем.
   function startRestUntil(endsAt: number | null, seconds: number) {
     restEndsAt.current = endsAt
+    storeRestDeadline(workoutId, endsAt)
     setRestRemaining(endsAt === null ? null : seconds)
   }
   // Отдых на seconds секунд от текущего момента (вызывается из обработчика).
@@ -683,6 +690,7 @@ export function LiveWorkoutPage() {
   }
   function stopRest() {
     restEndsAt.current = null
+    storeRestDeadline(workoutId, null)
     setRestRemaining(null)
   }
   // Shift the running rest deadline by ±step, never below zero.
@@ -690,6 +698,7 @@ export function LiveWorkoutPage() {
     if (restEndsAt.current === null) return
     const nextEnd = Math.max(Date.now(), restEndsAt.current + deltaSeconds * 1000)
     restEndsAt.current = nextEnd
+    storeRestDeadline(workoutId, nextEnd)
     setRestRemaining(Math.max(0, Math.round((nextEnd - Date.now()) / 1000)))
   }
   const appendSet = useMutation({ mutationFn: (exerciseId: string) => workoutsRepository.appendLiveSet(query.data!, exerciseId), onSuccess: async () => { await query.refetch() } })
@@ -731,6 +740,7 @@ export function LiveWorkoutPage() {
       const left = Math.ceil((restEndsAt.current - Date.now()) / 1000)
       if (left <= 0) {
         restEndsAt.current = null
+        storeRestDeadline(workoutId, null)
         setRestRemaining(null)
         playGong()
       } else {

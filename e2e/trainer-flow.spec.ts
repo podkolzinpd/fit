@@ -126,6 +126,10 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByText(/Отдых 1:30/)).toBeVisible()
   // Отдых считается от абсолютного времени: через ~2 с значение должно уменьшиться.
   await expect(page.getByText(/Отдых 1:2\d/)).toBeVisible({ timeout: 4000 })
+  // Дедлайн переживает reload: тренер может вернуться к live после перехода
+  // или перезагрузки WebView, не теряя текущий отдых.
+  await page.reload()
+  await expect(page.getByText(/Отдых 1:2\d/)).toBeVisible()
   // Кнопка +15с продлевает текущий отдых.
   await page.getByRole('button', { name: 'Плюс 15 секунд' }).click()
   await expect(page.getByText(/Отдых 1:3\d/)).toBeVisible()
