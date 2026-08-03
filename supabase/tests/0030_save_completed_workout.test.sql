@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(14);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('50000000-0000-4000-8000-000000000030', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'completed30@example.test', '');
@@ -67,6 +67,27 @@ select row_eq(
   $$select plan_duration_sec, fact_duration_sec, fact_rpe, confirmed_at is not null from public.workout_sets where workout_exercise_id = (select id from public.workout_exercises where workout_id = (select id from completed_workout) and exercise_ref = 'plank')$$,
   row(null::integer, 45, 7::numeric, true),
   'добавленное после тренировки упражнение хранится как факт без плана'
+);
+
+select public.save_completed_workout(
+  jsonb_build_object(
+    'id', (select id from completed_workout),
+    'clientId', 'c0000000-0000-4000-8000-000000000030',
+    'workoutDate', '2026-07-29',
+    'exercises', jsonb_build_array(jsonb_build_object(
+      'sourceExerciseId', (select id from public.workout_exercises where workout_id = (select id from completed_workout) and exercise_ref = 'squat'),
+      'clearFact', true,
+      'source', 'system', 'ref', 'bench', 'name', 'Жим лёжа', 'muscleGroup', 'chest', 'inputKind', 'strength', 'position', 0,
+      'sets', jsonb_build_array(jsonb_build_object('sourceSetId', (select id from public.workout_sets where workout_exercise_id = (select id from public.workout_exercises where workout_id = (select id from completed_workout) and exercise_ref = 'squat')), 'position', 0))
+    ))
+  ),
+  (select version from public.workouts where id = (select id from completed_workout))
+);
+select is((select exercise_ref from public.workout_exercises where workout_id = (select id from completed_workout) and position = 0), 'bench', 'явная замена меняет упражнение');
+select row_eq(
+  $$select fact_weight_kg, fact_reps, fact_rpe, confirmed_at is not null from public.workout_sets where workout_exercise_id = (select id from public.workout_exercises where workout_id = (select id from completed_workout) and position = 0)$$,
+  row(null::numeric, null::integer, null::numeric, false),
+  'при замене упражнения факт не переносится'
 );
 select throws_ok(
   $$select public.save_completed_workout(jsonb_build_object('id', (select id from completed_workout), 'clientId', 'c0000000-0000-4000-8000-000000000031', 'workoutDate', '2026-07-29', 'exercises', '[]'::jsonb), (select version from public.workouts where id = (select id from completed_workout)))$$,

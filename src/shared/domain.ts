@@ -168,6 +168,8 @@ export interface WorkoutSetDraft {
 export interface WorkoutExerciseDraft extends ExerciseSnapshot {
   /** Идентификатор упражнения исходной тренировки при правке завершённой записи. */
   sourceExerciseId?: UUID
+  /** При замене упражнения в завершённой записи факт не переносится на новое. */
+  clearFact?: boolean
   position: number
   blockId?: UUID
   blockType?: BlockType

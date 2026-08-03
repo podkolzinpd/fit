@@ -580,6 +580,17 @@ describe('replaceExercise', () => {
     expect(out[0]!.sets).toEqual([{ position: 0 }, { position: 1 }])
   })
 
+  it('при замене завершённого упражнения очищает факт даже при том же типе', () => {
+    const start: WorkoutExerciseDraft[] = [{
+      source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength',
+      sourceExerciseId: 'exercise-1', position: 0,
+      sets: [{ sourceSetId: 'set-1', position: 0, weightKg: 80, reps: 8, rpe: 9 }],
+    }]
+    const out = replaceExercise(start, 0, bench, undefined, { clearFact: true })
+    expect(out[0]).toMatchObject({ ref: 'bench', clearFact: true, sourceExerciseId: 'exercise-1' })
+    expect(out[0]!.sets).toEqual([{ sourceSetId: 'set-1', position: 0 }])
+  })
+
   it('при замене может подставить все подходы из последнего выполнения', () => {
     const start: WorkoutExerciseDraft[] = [{ source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, sets: [{ position: 0 }] }]
     const out = replaceExercise(start, 0, bench, {
