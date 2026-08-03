@@ -457,14 +457,15 @@ export function bmiLabel(heightCm: number | null, weightKg: number | null): stri
 }
 
 // Total lifted volume (tonnage) over a workout: Σ weight × reps for every set
-// of strength exercises, using the actual result and falling back to the plan.
+// of strength exercises, using only confirmed actual results.
 export function workoutTonnage(workout: Workout): number {
   let total = 0
   for (const exercise of workout.exercises) {
     if (exercise.inputKind !== 'strength') continue
     for (const set of exercise.sets) {
-      const weight = set.fact.weightKg ?? set.weightKg
-      const reps = set.fact.reps ?? set.reps
+      if (!set.confirmedAt) continue
+      const weight = set.fact.weightKg
+      const reps = set.fact.reps
       if (weight && reps) total += weight * reps
     }
   }
@@ -481,6 +482,7 @@ export function tonnageLabel(kg: number): string {
 // Строго фактический результат подхода (без подмены планом): график прогрессии
 // отражает только реально выполненное. Подходы без факта отфильтровываются.
 function setMetric(inputKind: InputKind, set: WorkoutSet): number | undefined {
+  if (!set.confirmedAt) return undefined
   if (inputKind === 'distance') return set.fact.distanceKm
   if (inputKind === 'reps') return set.fact.reps
   if (inputKind === 'duration') return durationSeconds(set.fact.durationSec, set.fact.durationMin)
@@ -495,10 +497,9 @@ export function exerciseChartPoints(workouts: Workout[], exerciseRef: string): E
   const bestByDate = new Map<LocalDate, number>()
   for (const workout of workouts) {
     if (workout.status !== 'done') continue
-    const exercise = workout.exercises.find((item) => item.ref === exerciseRef)
-    if (!exercise) continue
-    const values = exercise.sets
-      .map((set) => setMetric(exercise.inputKind, set))
+    const values = workout.exercises
+      .filter((item) => item.ref === exerciseRef)
+      .flatMap((exercise) => exercise.sets.map((set) => setMetric(exercise.inputKind, set)))
       .filter((value): value is number => value !== undefined)
     if (values.length === 0) continue
     const best = Math.max(...values)
