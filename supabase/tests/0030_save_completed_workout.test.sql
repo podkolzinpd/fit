@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(11);
+select plan(12);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('50000000-0000-4000-8000-000000000030', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'completed30@example.test', '');
@@ -8,6 +8,8 @@ insert into public.profiles (id) values ('50000000-0000-4000-8000-000000000030')
 insert into public.trainers (profile_id) values ('50000000-0000-4000-8000-000000000030');
 insert into public.clients (id, trainer_id, full_name, gender, age_years, height_cm) values
   ('c0000000-0000-4000-8000-000000000030', '50000000-0000-4000-8000-000000000030', 'Дневник 30', 'male', 30, 180);
+insert into public.clients (id, trainer_id, full_name, gender, age_years, height_cm) values
+  ('c0000000-0000-4000-8000-000000000031', '50000000-0000-4000-8000-000000000030', 'Дневник 31', 'male', 31, 181);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '50000000-0000-4000-8000-000000000030', true);
@@ -65,6 +67,10 @@ select row_eq(
   $$select plan_duration_sec, fact_duration_sec, fact_rpe, confirmed_at is not null from public.workout_sets where workout_exercise_id = (select id from public.workout_exercises where workout_id = (select id from completed_workout) and exercise_ref = 'plank')$$,
   row(null::integer, 45, 7::numeric, true),
   'добавленное после тренировки упражнение хранится как факт без плана'
+);
+select throws_ok(
+  $$select public.save_completed_workout(jsonb_build_object('id', (select id from completed_workout), 'clientId', 'c0000000-0000-4000-8000-000000000031', 'workoutDate', '2026-07-29', 'exercises', '[]'::jsonb), (select version from public.workouts where id = (select id from completed_workout)))$$,
+  'PT409', 'workout_conflict', 'нельзя подменить клиента завершённой тренировки'
 );
 
 reset role;
