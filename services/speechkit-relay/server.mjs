@@ -38,6 +38,7 @@ wss.on('connection', async (socket) => {
     else {
       const message = JSON.parse(String(raw))
       if (message.type === 'config') stream.write({ config: { specification: { language_code: 'ru-RU', audio_encoding: 'LINEAR16_PCM', sample_rate_hertz: 16000, audio_channel_count: 1, partial_results: true }, folder_id: process.env.YANDEX_CLOUD_FOLDER_ID || '' } })
+      if (message.type === 'stop') stream.end()
     }
   })
   socket.on('close', () => stream.end())
