@@ -39,11 +39,15 @@ insert into public.workouts (id, trainer_id, client_id, workout_date, status, st
   ('63000000-0000-4000-8000-000000000002', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', '2026-07-16', 'in_progress', '2026-07-16 10:00:00+00', null),
   ('63000000-0000-4000-8000-000000000003', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', '2026-07-17', 'done', '2026-07-17 10:00:00+00', '2026-07-17 11:00:00+00');
 
+insert into public.workouts (id, trainer_id, client_id, workout_date, status, started_at, completed_at, deleted_at) values
+  ('63000000-0000-4000-8000-000000000004', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', '2026-07-18', 'done', '2026-07-18 10:00:00+00', '2026-07-18 11:00:00+00', '2026-07-18 12:00:00+00');
+
 insert into public.workout_exercises (workout_id, trainer_id, client_id, position, exercise_source, exercise_ref, exercise_name, muscle_group, input_kind) values
   ('63000000-0000-4000-8000-000000000001', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', 0, 'system', 'lunge', 'Lunge', 'legs', 'reps'),
   ('63000000-0000-4000-8000-000000000002', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', 0, 'system', 'deadlift', 'Deadlift', 'back', 'strength'),
   ('63000000-0000-4000-8000-000000000003', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', 0, 'system', 'squat', 'Squat', 'legs', 'strength'),
-  ('63000000-0000-4000-8000-000000000003', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', 1, 'system', 'bench_press', 'Bench Press', 'chest', 'strength');
+  ('63000000-0000-4000-8000-000000000003', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', 1, 'system', 'bench_press', 'Bench Press', 'chest', 'strength'),
+  ('63000000-0000-4000-8000-000000000004', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', 0, 'system', 'deadlift', 'Deadlift', 'back', 'strength');
 
 refresh materialized view analytics.trainer_overview;
 
@@ -74,7 +78,7 @@ select is(
 
 select is(
   (select workouts_total from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
-  3::bigint, 'workouts_total is 3, not 3x3=9 cartesian product with clients'
+  3::bigint, 'workouts_total ignores the deleted workout and avoids a cartesian product with clients'
 );
 select is(
   (select workouts_planned from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
@@ -96,7 +100,7 @@ select ok(
 
 select is(
   (select exercises_unique_used from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
-  2::bigint, 'exercises_unique_used only counts exercises from done workouts (squat, bench_press) not planned/in_progress'
+  2::bigint, 'exercises_unique_used only counts active done workouts (squat, bench_press)'
 );
 
 select is(
