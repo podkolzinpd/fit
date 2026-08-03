@@ -212,6 +212,7 @@ export function WorkoutFormPage() {
       queryClient.invalidateQueries({ queryKey: ['workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['today-workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['today-recent-workouts'] }),
+      queryClient.invalidateQueries({ queryKey: ['clients'] }),
     ])
     navigate(`/workouts/${id}`)
   } })
@@ -319,8 +320,8 @@ export function WorkoutDetailPage() {
   // Этап тренировки: get() отдаёт stageId, название берём из цели клиента.
   const goal = useQuery({ queryKey: ['client-goal', query.data?.clientId], queryFn: () => goalsRepository.get(query.data!.clientId), enabled: Boolean(query.data?.stageId && query.data?.clientId) })
   const stageTitle = query.data?.stageId ? goal.data?.stages.find((stage) => stage.id === query.data!.stageId)?.title ?? null : null
-  const start = useMutation({ mutationFn: () => workoutsRepository.start(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }); navigate(`/workouts/${workoutId}/live`) } })
-  const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workouts'] }); navigate(actor?.role === 'client' ? '/me/workouts' : '/schedule') } })
+  const start = useMutation({ mutationFn: () => workoutsRepository.start(query.data!), onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }), queryClient.invalidateQueries({ queryKey: ['clients'] })]); navigate(`/workouts/${workoutId}/live`) } })
+  const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['workouts'] }), queryClient.invalidateQueries({ queryKey: ['clients'] })]); navigate(actor?.role === 'client' ? '/me/workouts' : '/schedule') } })
   const workout = query.data
   const done = workout?.status === 'done'
   const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt) : null
@@ -693,6 +694,7 @@ export function LiveWorkoutPage() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }),
       queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+      queryClient.invalidateQueries({ queryKey: ['clients'] }),
       clientId ? queryClient.invalidateQueries({ queryKey: ['client-stats', clientId] }) : Promise.resolve(),
     ])
     navigate(`/workouts/${workoutId}`, { state: { justCompleted: true } })

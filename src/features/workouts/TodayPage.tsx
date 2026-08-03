@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, Workout, WorkoutDraft, WorkoutSetDraft } from '../../shared/domain'
-import { formatLocalDateShort, localDate, todayLocalDate } from '../../shared/local-date'
+import { localDate, todayLocalDate } from '../../shared/local-date'
 import { isValidRpe } from '../../shared/rpe'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { Page } from '../../shared/ui'
@@ -49,7 +49,6 @@ export function TodayPage() {
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
   const today = todayLocalDate()
   const todayWorkouts = useQuery({ queryKey: ['today-workouts', today], queryFn: () => workoutsRepository.list(today, today) })
-  const recentWorkouts = useQuery({ queryKey: ['today-recent-workouts', today], queryFn: () => workoutsRepository.listPage(undefined, today) })
   const catalog = useExerciseCatalog()
   const [screen, setScreen] = useState<Screen>('compose')
   const [text, setText] = useState('')
@@ -138,7 +137,7 @@ export function TodayPage() {
       removeTodayDraft(draftKey)
       await queryClient.invalidateQueries({ queryKey: ['workouts'] })
       await queryClient.invalidateQueries({ queryKey: ['today-workouts'] })
-      await queryClient.invalidateQueries({ queryKey: ['today-recent-workouts'] })
+      await queryClient.invalidateQueries({ queryKey: ['clients'] })
       navigate(`/workouts/${id}`)
     }, onError: () => trackGoal('today_workout_save_error'),
   })
@@ -248,11 +247,10 @@ export function TodayPage() {
 
   const currentWorkout = todayWorkouts.data?.find((workout) => workout.status === 'in_progress')
   const plannedWorkouts = todayWorkouts.data?.filter((workout) => workout.status === 'planned').sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')) ?? []
-  const completedWorkouts = recentWorkouts.data?.items.filter((workout) => workout.status === 'done').slice(0, 3) ?? []
   function workoutTime(workout: Workout) { return workout.startTime?.slice(0, 5) ?? 'Без времени' }
 
   const trainerInitial = actor?.firstName?.trim().slice(0, 1).toUpperCase() || 'П'
-  const agenda = (currentWorkout || plannedWorkouts.length > 0 || completedWorkouts.length > 0) && <section className="today-agenda"><div className="today-agenda-head"><div><p className="eyebrow">Рабочий день</p><h2>На сегодня</h2></div><Link className="link" to="/schedule">Расписание</Link></div>{currentWorkout && <Link className="today-current-workout" to={`/workouts/${currentWorkout.id}/live`}><span><strong>Продолжить тренировку</strong><small>{currentWorkout.clientName} · {workoutTime(currentWorkout)}</small></span><b>→</b></Link>}{plannedWorkouts.slice(0, 3).map((workout) => <Link className="today-planned-workout" key={workout.id} to={`/workouts/${workout.id}`}><span>{workoutTime(workout)}</span><strong>{workout.clientName}</strong><small>{workout.exercises.length ? workout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Без упражнений'}</small></Link>)}{completedWorkouts.length > 0 && <div className="today-recent-workouts"><p>Последние записи</p>{completedWorkouts.map((workout) => <Link className="today-recent-workout" key={workout.id} to={`/workouts/${workout.id}`}><span>{formatLocalDateShort(workout.workoutDate)}</span><strong>{workout.clientName}</strong><small>{workout.exercises.length} упр.</small></Link>)}</div>}</section>
+  const agenda = (currentWorkout || plannedWorkouts.length > 0) && <section className="today-agenda"><div className="today-agenda-head"><div><p className="eyebrow">Рабочий день</p><h2>На сегодня</h2></div><Link className="link" to="/schedule">Расписание</Link></div>{currentWorkout && <Link className="today-current-workout" to={`/workouts/${currentWorkout.id}/live`}><span><strong>Продолжить тренировку</strong><small>{currentWorkout.clientName} · {workoutTime(currentWorkout)}</small></span><b>→</b></Link>}{plannedWorkouts.slice(0, 3).map((workout) => <Link className="today-planned-workout" key={workout.id} to={`/workouts/${workout.id}`}><span>{workoutTime(workout)}</span><strong>{workout.clientName}</strong><small>{workout.exercises.length ? workout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Без упражнений'}</small></Link>)}</section>
   const draftNotice = draftRestored && <div className="today-draft-notice" role="status"><span><strong>Черновик восстановлен</strong><small>Можно продолжить с того же места.</small></span><button type="button" className="link" onClick={discardDraft}>Удалить</button></div>
 
   return <Page title="Сегодня" className="today-page today-start-page" action={<Link className="today-profile-avatar" to="/profile" aria-label="Открыть профиль">{trainerInitial}</Link>}>
@@ -294,7 +292,7 @@ export function TodayPage() {
     </section>}
     {screen === 'compose' && agenda}
     {draftNotice}
-    {(clients.error ?? catalog.error ?? todayWorkouts.error ?? recentWorkouts.error) && <p className="error">{(clients.error ?? catalog.error ?? todayWorkouts.error ?? recentWorkouts.error)?.message}</p>}
+    {(clients.error ?? catalog.error ?? todayWorkouts.error) && <p className="error">{(clients.error ?? catalog.error ?? todayWorkouts.error)?.message}</p>}
     {pickerOpen && <ExercisePicker catalog={catalog} frequent={frequentExercises} onPick={(exercise) => pickExercises([exercise])} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
   </Page>
 }
