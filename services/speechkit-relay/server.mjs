@@ -34,7 +34,7 @@ wss.on('connection', async (socket) => {
   })
   stream.on('error', (error) => socket.send(JSON.stringify({ type:'error', message:error.message })))
   socket.on('message', (raw, binary) => {
-    if (binary) call.write({ audio_content: raw })
+    if (binary) stream.write({ audio_content: raw })
     else {
       const message = JSON.parse(String(raw))
       if (message.type === 'config') stream.write({ config: { specification: { language_code: 'ru-RU', audio_encoding: 'LINEAR16_PCM', sample_rate_hertz: 16000, audio_channel_count: 1, partial_results: true }, folder_id: process.env.YANDEX_CLOUD_FOLDER_ID || '' } })

@@ -1,4 +1,4 @@
-const DEFAULT_RELAY_URL = 'wss://bbaqt2khfpvuq21u82i3.containers.yandexcloud.net/stt'
+const DEFAULT_RELAY_URL = 'wss://93-77-184-41.sslip.io/stt'
 
 export class SpeechKitStreamingSession {
   private socket: WebSocket | null = null
