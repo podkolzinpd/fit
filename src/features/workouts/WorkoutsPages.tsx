@@ -606,6 +606,7 @@ export function LiveWorkoutPage() {
     onSuccess: async (_v, { set }) => {
       setSavingSetId(null)
       setSavedSetId(set.id)
+      void queryClient.invalidateQueries({ queryKey: ['clients'] })
       if (set.confirmedAt) {
         const exercise = query.data?.exercises.find((item) => item.sets.some((itemSet) => itemSet.id === set.id))
         if (exercise) setExpandedExercises((previous) => {
@@ -651,6 +652,7 @@ export function LiveWorkoutPage() {
         startRestUntil(restDeadline(sec), sec)
       }
       void query.refetch()
+      void queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
   })
   // Запускает отдых до абсолютного момента endsAt (мс). null — отдыха нет
