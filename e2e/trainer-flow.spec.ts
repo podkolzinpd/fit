@@ -151,9 +151,9 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // за факт не выдаётся.
   await expect(page.locator('.plan-note').first()).toContainText('не выполнено')
   // Сводка завершённой тренировки: время, тоннаж, группы мышц.
-  // Тоннаж: факт 42.5×9 + план 35×12 (п2) + план 35×12 (п3, унаследован live «＋ Подход») ≈ 1.2 т.
+  // Тоннаж считает только подтверждённый факт: 42.5×9 = 383 кг.
   await expect(page.locator('.done-summary-3')).toContainText('Тоннаж')
-  await expect(page.locator('.done-summary-3')).toContainText('1.2 т')
+  await expect(page.locator('.done-summary-3')).toContainText('383 кг')
 
   // Завершённую тренировку можно исправить без возврата в live: редактор
   // открывает сохранённый факт, а после сохранения статус остаётся «Готово».
