@@ -185,6 +185,7 @@ export function WorkoutFormPage() {
   useClientRealtime(source.data?.clientId ?? (clientMode ? mine.data?.id : params.get('client') ?? undefined))
   const catalog = useExerciseCatalog()
   const [draftExercises, setDraftExercises] = useState<WorkoutDraft['exercises'] | null>(null)
+  const createRequestId = useRef(crypto.randomUUID())
   const [recordCompleted, setRecordCompleted] = useState(false)
   const [prefillError, setPrefillError] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -273,7 +274,7 @@ export function WorkoutFormPage() {
     event.preventDefault(); const form = new FormData(event.currentTarget)
     const submitClientId = String(form.get('clientId')); const date = localDate(String(form.get('date')))
     const stageId = String(form.get('stageId') || '') || null
-    mutation.mutate({ id: workoutId, clientId: submitClientId, workoutDate: date, startTime: String(form.get('startTime') || '') || undefined,
+    mutation.mutate({ id: workoutId, requestId: workoutId ? undefined : createRequestId.current, clientId: submitClientId, workoutDate: date, startTime: String(form.get('startTime') || '') || undefined,
       notes: String(form.get('notes') || '') || undefined, stageId, exercises, version: source.data?.version })
   }
   const availableClients = clientMode ? (mine.data ? [mine.data] : []) : clients.data

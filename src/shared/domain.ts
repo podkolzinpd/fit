@@ -186,6 +186,8 @@ export interface WorkoutExerciseDraft extends ExerciseSnapshot {
 
 export interface WorkoutDraft {
   id?: UUID
+  /** Стабильный ключ одного действия «Сохранить» для повтора после сбоя сети. */
+  requestId?: UUID
   clientId: UUID
   workoutDate: LocalDate
   startTime?: string
