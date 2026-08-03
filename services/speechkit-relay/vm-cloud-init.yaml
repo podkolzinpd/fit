@@ -1,0 +1,11 @@
+#cloud-config
+package_update: true
+packages:
+  - ca-certificates
+  - curl
+  - docker.io
+runcmd:
+  - systemctl enable --now docker
+  - bash -lc "curl -sS -H 'Metadata-Flavor: Google' http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token | sed -n 's/.*\"access_token\":\"\([^\"]*\)\".*/\1/p' | docker login --username iam --password-stdin cr.yandex"
+  - docker pull cr.yandex/crpi6b2hkik5oduf4kgj/fit-speechkit-relay:latest
+  - docker run -d --restart unless-stopped --name fit-speechkit-relay -p 8080:8080 -e PORT=8080 -e YANDEX_CLOUD_FOLDER_ID=b1g6sd1kdaiqd1frauk4 cr.yandex/crpi6b2hkik5oduf4kgj/fit-speechkit-relay:latest
