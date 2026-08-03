@@ -15,14 +15,14 @@ describe('appendTranscript', () => {
     expect(replaceWithTranscript('  ')).toBe('')
   })
 
-  it('replaces the existing note with recognized text and returns focus', async () => {
+  it('appends recognized text and returns focus', async () => {
     const user = userEvent.setup()
     render(<VoiceNoteField name="notes" source="test" defaultValue="Самочувствие хорошее" />)
 
     const textarea = screen.getByLabelText('Заметка')
     await user.click(screen.getByRole('button', { name: 'Надиктовать заметку' }))
 
-    expect(textarea).toHaveValue('Жим лёжа 40 кг')
+    expect(textarea).toHaveValue('Самочувствие хорошее\nЖим лёжа 40 кг')
     expect(textarea).toHaveFocus()
   })
 
@@ -33,6 +33,6 @@ describe('appendTranscript', () => {
 
     await user.click(screen.getByRole('button', { name: 'Надиктовать заметку' }))
 
-    expect(onValueChange).toHaveBeenCalledWith('Жим лёжа 40 кг')
+    expect(onValueChange).toHaveBeenCalledWith('Старый текст\nЖим лёжа 40 кг')
   })
 })
