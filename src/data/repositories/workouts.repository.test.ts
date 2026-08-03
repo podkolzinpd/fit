@@ -240,12 +240,12 @@ describe('bmiValue / bmiLabel', () => {
 })
 
 describe('workoutTonnage / tonnageLabel', () => {
-  it('суммирует вес × повторы по силовым подходам (факт или план)', () => {
+  it('суммирует вес × повторы только по подтверждённым фактическим подходам', () => {
     const workout = workoutWith('2026-07-20', 'squat', 'strength', [
       set({ weightKg: 60, reps: 10 }),       // факт 60×10 = 600
       { id: 'p', position: 1, weightKg: 50, reps: 8, fact: {}, confirmedAt: null, version: 1 }, // план 50×8 = 400
     ])
-    expect(workoutTonnage(workout)).toBe(1000)
+    expect(workoutTonnage(workout)).toBe(600)
   })
   it('игнорирует не-силовые упражнения', () => {
     const workout = workoutWith('2026-07-20', 'run', 'distance', [set({ distanceKm: 5, durationMin: 30 })])
