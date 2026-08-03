@@ -477,6 +477,12 @@ test('план: два упражнения объединяются в супе
   await expect(page.getByLabel('Кругов')).toHaveValue('')
   await page.getByLabel('Кругов').type('2')
   await expect(page.locator('.planned-round')).toHaveCount(2)
+  // В каждом подходе есть план: в live его можно быстро подтвердить без
+  // отдельного ручного ввода факта. Полностью пустые подходы не подтверждаются.
+  for (let index = 0; index < 2; index += 1) {
+    await page.getByLabel('Вес, подход 1').nth(index).fill('40')
+    await page.getByLabel('Повторы, подход 1').nth(index).fill('10')
+  }
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   // В просмотре тренировки виден бейдж «Сет · 2 кр.».
