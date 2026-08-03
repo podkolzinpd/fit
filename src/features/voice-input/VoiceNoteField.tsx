@@ -32,7 +32,7 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
     />
     <VoiceInputButton source={source} idleLabel={voiceLabel} beta={voiceBeta} onTranscript={(text) => {
       if (!textareaRef.current) return
-      const transcript = replaceWithTranscript(text)
+      const transcript = appendTranscript(textareaRef.current.value, text)
       if (onValueChange) onValueChange(transcript)
       else {
         textareaRef.current.value = transcript
@@ -43,6 +43,14 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
   </div>
 }
 
+export function appendTranscript(current: string, transcript: string): string {
+  const next = transcript.trim()
+  if (!next) return current
+  const existing = current.trimEnd()
+  return existing ? `${existing}\n${next}` : next
+}
+
+// Backward-compatible name for callers that only need normalization.
 export function replaceWithTranscript(transcript: string): string {
   return transcript.trim()
 }

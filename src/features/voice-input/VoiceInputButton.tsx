@@ -1,16 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { MicIcon, StopIcon } from '../../shared/icons'
-import { trackGoal } from '../../shared/yandex-metrika'
 import { BrowserAudioRecorder, decodeAudioToPcm16, type AudioRecorder } from './audio-recorder'
 import type { SpeechRecognizer } from './speech-recognizer'
 import { WhisperCppRecognizer } from './whisper-cpp-recognizer'
+import { SpeechKitStreamingSession } from './speechkit-streaming-recognizer'
+import { trackGoal } from '../../shared/yandex-metrika'
 
 type Phase = 'idle' | 'recording' | 'preparing' | 'loading' | 'transcribing'
 
 interface VoiceInputButtonProps {
   onTranscript: (text: string) => void
-  // Экран/форма, где стоит кнопка — попадает в идентификатор цели Метрики,
-  // чтобы в отчётах было видно, где именно надиктовали заметку.
   source: string
   recorderFactory?: () => AudioRecorder
   recognizerFactory?: () => SpeechRecognizer
@@ -40,6 +39,8 @@ export function VoiceInputButton({
   const timeoutRef = useRef<number | null>(null)
   const stoppingRef = useRef(false)
   const mountedRef = useRef(true)
+  const streamingRef = useRef<SpeechKitStreamingSession | null>(null)
+  const streamingTextRef = useRef('')
 
   useEffect(() => {
     mountedRef.current = true
@@ -47,6 +48,7 @@ export function VoiceInputButton({
       mountedRef.current = false
       clearTimers(intervalRef, timeoutRef)
       recorderRef.current?.cancel()
+      void streamingRef.current?.stop()
       if (recognizerRef.current) void recognizerRef.current.dispose()
     }
   }, [])
@@ -54,6 +56,18 @@ export function VoiceInputButton({
   async function startRecording() {
     setMessage(null)
     setProgress(0)
+    {
+      const streaming = new SpeechKitStreamingSession()
+      streamingTextRef.current = ''
+      try {
+        await streaming.start((text) => { if (mountedRef.current) setMessage(`Сейчас распознаю: ${text}`) }, (text) => { streamingTextRef.current += `${streamingTextRef.current ? ' ' : ''}${text}` })
+        streamingRef.current = streaming
+        setElapsedSeconds(0); setPhase('recording')
+        intervalRef.current = window.setInterval(() => setElapsedSeconds((seconds) => seconds + 1), 1_000)
+        timeoutRef.current = window.setTimeout(() => void finishStreaming(), maxDurationMs)
+        return
+      } catch { await streaming.stop() }
+    }
     const recorder = recorderFactory()
     try {
       await recorder.start()
@@ -72,6 +86,15 @@ export function VoiceInputButton({
       setMessage(recordingErrorMessage(error))
       setPhase('idle')
     }
+  }
+
+  async function finishStreaming() {
+    if (!streamingRef.current || stoppingRef.current) return
+    stoppingRef.current = true; clearTimers(intervalRef, timeoutRef)
+    const streaming = streamingRef.current; streamingRef.current = null
+    try { await streaming.stop(); const text = streamingTextRef.current.trim(); if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.'); onTranscript(text); setMessage('Текст добавлен в заметку. Проверьте его перед сохранением.') }
+    catch (error) { if (mountedRef.current) setMessage(error instanceof Error ? error.message : 'Не удалось распознать запись.') }
+    finally { stoppingRef.current = false; if (mountedRef.current) setPhase('idle') }
   }
 
   async function finishRecording() {
@@ -94,7 +117,7 @@ export function VoiceInputButton({
       if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.')
       if (!mountedRef.current) return
       onTranscript(text)
-      setMessage('Текст добавлен. Проверьте его перед разбором.')
+      setMessage('Текст добавлен в заметку. Проверьте его перед сохранением.')
     } catch (error) {
       if (!mountedRef.current) return
       setMessage(error instanceof Error ? error.message : 'Не удалось распознать запись.')
@@ -111,11 +134,7 @@ export function VoiceInputButton({
       type="button"
       className={`voice-input-button secondary ${recording ? 'recording' : ''}`}
       disabled={busy}
-      onClick={() => {
-        if (recording) { void finishRecording(); return }
-        trackGoal(`voice_note_start_click_${source}`)
-        void startRecording()
-      }}
+      onClick={() => { if (recording) { void (streamingRef.current ? finishStreaming() : finishRecording()); return }; trackGoal(`voice_note_start_click_${source}`); void startRecording() }}
     >
       {recording ? <StopIcon /> : <MicIcon />}
       {voiceButtonLabel(phase, elapsedSeconds, progress, idleLabel)}
