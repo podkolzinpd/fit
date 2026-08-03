@@ -21,11 +21,15 @@ import { ProfileIcon } from '../../shared/icons'
 
 export function ClientsPage() {
   const showArchived = localStorage.getItem('fit.showArchivedClients') === 'true'
-  const query = useQuery({ queryKey: ['clients', showArchived], queryFn: () => clientsRepository.list(showArchived) })
+  // Список — рабочая очередь тренера, поэтому при каждом входе показываем
+  // актуальную активность, а не данные из короткого SPA-кэша.
+  const query = useQuery({ queryKey: ['clients', showArchived], queryFn: () => clientsRepository.list(showArchived), refetchOnMount: 'always' })
   const [search, setSearch] = useState('')
   const clients = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase('ru')
-    return query.data?.filter((client) => !normalizedSearch || client.fullName.toLocaleLowerCase('ru').includes(normalizedSearch)) ?? []
+    return query.data
+      ?.filter((client) => !normalizedSearch || client.fullName.toLocaleLowerCase('ru').includes(normalizedSearch))
+      .sort((left, right) => (right.lastActivityAt ?? '').localeCompare(left.lastActivityAt ?? '')) ?? []
   }, [query.data, search])
   return <Page title="Клиенты" className="clients-page" action={<Link className="button" to="/clients/new">Добавить</Link>}>
     <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}
