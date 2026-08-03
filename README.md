@@ -59,6 +59,7 @@ npm run check
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — границы слоёв и работа с БД.
 - [FEATURE_PARITY.md](./FEATURE_PARITY.md) — контракт переноса V1.
 - [AI_AGENT_PROMPT.md](./AI_AGENT_PROMPT.md) — промпт, который добавляется к каждой задаче агента.
+- [docs/AI_AGENT_ONBOARDING.md](./docs/AI_AGENT_ONBOARDING.md) — выдача доступа к GitHub и полная локальная настройка ИИ-агента.
 - [OPERATIONS.md](./OPERATIONS.md) — secrets, Google OAuth, автодеплой БД и release gates.
 
 Текущий foundation переносит базовые CRUD и основной trainer flow. Полный статус переноса и ещё не закрытые UX-сценарии перечислены в `FEATURE_PARITY.md`; до их закрытия V1 не архивируется.
