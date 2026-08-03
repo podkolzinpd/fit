@@ -273,8 +273,19 @@ export function WorkoutFormPage() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget)
     const submitClientId = String(form.get('clientId')); const date = localDate(String(form.get('date')))
+    const startTime = String(form.get('startTime') || '')
+    const endTime = String(form.get('endTime') || '')
+    const endTimeInput = event.currentTarget.elements.namedItem('endTime') as HTMLInputElement
+    const timeError = endTime && !startTime
+      ? 'Укажите время начала тренировки'
+      : endTime && endTime <= startTime
+        ? 'Окончание должно быть позже начала'
+        : ''
+    endTimeInput.setCustomValidity(timeError)
+    if (timeError) { endTimeInput.reportValidity(); return }
     const stageId = String(form.get('stageId') || '') || null
-    mutation.mutate({ id: workoutId, requestId: workoutId ? undefined : createRequestId.current, clientId: submitClientId, workoutDate: date, startTime: String(form.get('startTime') || '') || undefined,
+    mutation.mutate({ id: workoutId, requestId: workoutId ? undefined : createRequestId.current, clientId: submitClientId, workoutDate: date, startTime: startTime || undefined,
+      endTime: endTime || undefined,
       notes: String(form.get('notes') || '') || undefined, stageId, exercises, version: source.data?.version })
   }
   const availableClients = clientMode ? (mine.data ? [mine.data] : []) : clients.data
@@ -288,7 +299,8 @@ export function WorkoutFormPage() {
         {clientMode
           ? <><input type="hidden" name="clientId" value={mine.data?.id ?? ''} /><Field label="Клиент"><input value={mine.data?.fullName ?? ''} disabled /></Field></>
           : <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} onChange={(event) => setSelectedClientId(event.target.value)} required><option value="">Выберите</option>{availableClients?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>}
-        <div className="split"><Field label="Дата"><input name="date" type="date" max={completedMode ? todayLocalDate() : undefined} defaultValue={initial?.workoutDate ?? params.get('date') ?? todayLocalDate()} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} /></Field></div>
+        <div className="split"><Field label="Дата"><input name="date" type="date" max={completedMode ? todayLocalDate() : undefined} defaultValue={initial?.workoutDate ?? params.get('date') ?? todayLocalDate()} required /></Field><Field label="Начало"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} onChange={(event) => (event.currentTarget.form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('')} /></Field></div>
+        <Field label="Окончание"><input name="endTime" type="time" defaultValue={initial?.endTime ?? ''} onChange={(event) => event.currentTarget.setCustomValidity('')} /></Field>
         {!workoutId && <div className="workout-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={!recordCompleted ? 'active' : ''} aria-pressed={!recordCompleted} onClick={() => setRecordCompleted(false)}>План</button><button type="button" className={recordCompleted ? 'active' : ''} aria-pressed={recordCompleted} onClick={() => setRecordCompleted(true)}>Завершённая</button></div>}
         {stages.length > 0 && <Field label="Этап цели">
           {/* key — чтобы defaultValue пересчитался при смене клиента/загрузке цели */}
