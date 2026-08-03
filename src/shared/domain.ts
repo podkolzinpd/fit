@@ -151,6 +151,8 @@ export interface ExerciseSnapshot {
 }
 
 export interface WorkoutSetDraft {
+  /** Идентификатор строки исходной тренировки при правке завершённой записи. */
+  sourceSetId?: UUID
   position: number
   weightKg?: number
   reps?: number
@@ -164,6 +166,8 @@ export interface WorkoutSetDraft {
 }
 
 export interface WorkoutExerciseDraft extends ExerciseSnapshot {
+  /** Идентификатор упражнения исходной тренировки при правке завершённой записи. */
+  sourceExerciseId?: UUID
   position: number
   blockId?: UUID
   blockType?: BlockType
