@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, completedWorkoutDraft, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, replaceExercise, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, completedWorkoutDraft, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, replaceExercise, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -224,6 +224,16 @@ describe('splitClientWorkouts', () => {
   it('идущая тренировка (in_progress) сегодня — в предстоящих', () => {
     const { upcoming } = splitClientWorkouts([bareWorkout('2026-07-22', 'in_progress')], TODAY)
     expect(upcoming).toHaveLength(1)
+  })
+})
+
+describe('clientWorkoutStatusLabel', () => {
+  it('does not call a past plan or stale live workout completed', () => {
+    expect(clientWorkoutStatusLabel(bareWorkout('2026-07-30', 'planned'), TODAY)).toBe('План')
+    expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'planned'), TODAY)).toBe('Не проведена')
+    expect(clientWorkoutStatusLabel(bareWorkout('2026-07-22', 'in_progress'), TODAY)).toBe('Идёт')
+    expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'in_progress'), TODAY)).toBe('Не завершена')
+    expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'done'), TODAY)).toBe('Готово')
   })
 })
 

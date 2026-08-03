@@ -5,7 +5,7 @@ import { clientsRepository } from './clients.repository'
 import { collectPages, pageFromLookahead } from './collect-pages'
 import { repositoryError } from './error'
 import { workoutQueries } from '../queries/workouts.queries'
-export { canTransition, copyWorkout, completedWorkoutDraft, computeClientStats, exerciseChartPoints, chartUnitFor, durationLabel, durationSeconds, formatFactVsPlan, factLine, splitClientWorkouts, workoutDurationLabel, muscleGroupLabels, exerciseSummary, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, BLOCK_PRESET_LABELS, PRESET_REST_DEFAULTS, DEFAULT_REST_BETWEEN_SETS, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockPreset, setBlockRest, syncBlockRounds, draftBlockRoundsView, moveBlock, replaceExercise } from './workout-rules'
+export { canTransition, copyWorkout, completedWorkoutDraft, computeClientStats, exerciseChartPoints, chartUnitFor, durationLabel, durationSeconds, formatFactVsPlan, factLine, splitClientWorkouts, clientWorkoutStatusLabel, workoutDurationLabel, muscleGroupLabels, exerciseSummary, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, BLOCK_PRESET_LABELS, PRESET_REST_DEFAULTS, DEFAULT_REST_BETWEEN_SETS, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockPreset, setBlockRest, syncBlockRounds, draftBlockRoundsView, moveBlock, replaceExercise } from './workout-rules'
 export type { ExerciseBlock, DraftBlock, DraftBlockRound, BlockRound } from './workout-rules'
 export type { ExerciseChartPoint } from './workout-rules'
 

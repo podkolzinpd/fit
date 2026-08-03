@@ -313,6 +313,15 @@ export function splitClientWorkouts(workouts: Workout[], today: LocalDate): { up
   return { upcoming, history }
 }
 
+// «Отменена» пока не является отдельным состоянием в модели: удалённые
+// тренировки намеренно не показываются. Просроченный план не выдаём за факт.
+export function clientWorkoutStatusLabel(workout: Workout, today: LocalDate): string {
+  if (workout.status === 'done') return 'Готово'
+  if (workout.status === 'in_progress' && workout.workoutDate >= today) return 'Идёт'
+  if (workout.status === 'planned' && workout.workoutDate >= today) return 'План'
+  return workout.status === 'in_progress' ? 'Не завершена' : 'Не проведена'
+}
+
 const ATTENTION_DAYS = 14
 
 function daysBetween(from: LocalDate, to: LocalDate): number {
