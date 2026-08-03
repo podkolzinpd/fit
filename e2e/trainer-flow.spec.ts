@@ -479,7 +479,7 @@ test('план: два упражнения объединяются в супе
   await expect(page.locator('.planned-round')).toHaveCount(2)
   // В каждом подходе есть план: в live его можно быстро подтвердить без
   // отдельного ручного ввода факта. Полностью пустые подходы не подтверждаются.
-  for (let index = 0; index < 4; index += 1) {
+  for (let index = 0; index < 2; index += 1) {
     await page.getByLabel('Вес, подход 1').nth(index).fill('40')
     await page.getByLabel('Повторы, подход 1').nth(index).fill('10')
   }
