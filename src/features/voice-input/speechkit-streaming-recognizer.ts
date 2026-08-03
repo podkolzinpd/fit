@@ -42,6 +42,7 @@ export class SpeechKitStreamingSession {
     this.processor?.disconnect(); this.source?.disconnect()
     this.stream?.getTracks().forEach((track) => track.stop())
     if (this.socket?.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify({ type: 'stop' }))
       // SpeechKit may emit several final chunks around a pause. Give the
       // server time to flush all of them before closing the WebSocket.
       await new Promise<void>((resolve) => { window.setTimeout(resolve, 1_500) })
