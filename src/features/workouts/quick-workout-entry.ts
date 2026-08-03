@@ -1,5 +1,6 @@
 import type { ExerciseSnapshot, WorkoutSetDraft } from '../../shared/domain'
 import { isValidRpe } from '../../shared/rpe'
+import { isExerciseSearchAlias, matchesExerciseSearch } from '../exercises/exercise-search'
 
 export interface ParsedWorkoutExercise {
   line: string
@@ -48,7 +49,6 @@ function exerciseNamePart(line: string): string {
 function matchingExercises(name: string, catalog: readonly ExerciseSnapshot[]): ExerciseSnapshot[] {
   const query = normalize(name)
   if (!query) return []
-  const tokens = query.split(' ')
   const exact = catalog.filter((exercise) => normalizedExerciseName(exercise.name) === query)
   if (exact.length === 1) return exact
   // Своё упражнение иногда повторяет системное по имени. Для записи без явного
@@ -56,21 +56,20 @@ function matchingExercises(name: string, catalog: readonly ExerciseSnapshot[]): 
   // Несколько системных совпадений по-прежнему считаем неоднозначностью.
   const exactSystem = exact.filter((exercise) => exercise.source === 'system')
   if (exactSystem.length === 1) return exactSystem
+  const aliases = catalog.filter((exercise) => isExerciseSearchAlias(exercise, query))
+  if (aliases.length === 1) return aliases
   // Одно короткое слово («присед») почти всегда скрывает вариацию. Не делаем
   // вид, что знаем намерение тренера: точные «Планка»/«Бег» уже прошли exact.
   if (query.split(' ').length < 2) {
     return catalog.filter((exercise) => normalizedExerciseName(exercise.name).includes(query))
   }
-  return catalog.filter((exercise) => {
-    const candidate = normalizedExerciseName(exercise.name)
-    return tokens.every((token) => candidate.includes(token))
-  })
+  return catalog.filter((exercise) => matchesExerciseSearch(exercise, name))
 }
 
 function needsTrainerChoice(name: string, catalog: readonly ExerciseSnapshot[]): boolean {
   const query = normalize(name)
   if (query.split(' ').length >= 2) return false
-  return !catalog.some((exercise) => normalizedExerciseName(exercise.name) === query)
+  return !catalog.some((exercise) => normalizedExerciseName(exercise.name) === query || isExerciseSearchAlias(exercise, query))
 }
 
 function quickWorkoutLines(text: string): string[] {

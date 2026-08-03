@@ -4,7 +4,7 @@ import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 // Разговорные варианты, которыми тренеры обычно называют базовые упражнения.
 // Каталожное название не меняем: эти слова участвуют только в поиске.
 const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
-  'barbell-squat': ['классический присед', 'скват'],
+  'barbell-squat': ['классический присед', 'приседания', 'присед штанга', 'скват'],
   'front-squat': ['фронтальный', 'фронт скват'],
   'leg-press': ['платформа', 'жим платформы'],
   'romanian-deadlift': ['румынка', 'рдл'],
@@ -41,10 +41,10 @@ const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   crunches: ['пресс', 'скручивания на пресс'],
   'leg-raise': ['подъемы ног', 'пресс ноги'],
   'side-plank': ['планка боковая'],
-  running: ['беговая дорожка', 'дорожка'],
-  'stationary-bike': ['велосипед', 'вело'],
-  elliptical: ['эллипсоид'],
-  'rowing-machine': ['гребля'],
+  running: ['беговая дорожка', 'дорожка', 'беговая', 'тредмил', 'тредмилл'],
+  'stationary-bike': ['велосипед', 'вело', 'велик', 'сайкл', 'спинбайк', 'airbike', 'ассолт байк'],
+  elliptical: ['эллипсоид', 'эллипс', 'орбитрек'],
+  'rowing-machine': ['гребля', 'гребной', 'гребной тренажер', 'гребной эргометр', 'эргометр', 'роуэр', 'rower'],
   walking: ['дорожка ходьба'],
   'jump-rope': ['скакалка'],
 }
@@ -97,4 +97,11 @@ export function matchesExerciseSearch(exercise: ExerciseSnapshot, search: string
   ].filter(Boolean).join(' ')
   const searchableTokens = normalizeExerciseSearch(searchableText).split(/\s+/).filter(Boolean)
   return queryTokens.every((token) => tokenMatches(token, searchableTokens))
+}
+
+// Точное разговорное имя — достаточное основание для разбора записи без
+// лишнего экрана выбора. Например «гребля 10 мин».
+export function isExerciseSearchAlias(exercise: ExerciseSnapshot, search: string): boolean {
+  const query = normalizeExerciseSearch(search)
+  return Boolean(query) && (SEARCH_ALIASES[exercise.ref] ?? []).some((alias) => normalizeExerciseSearch(alias) === query)
 }

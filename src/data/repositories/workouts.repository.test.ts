@@ -23,7 +23,7 @@ describe('workouts repository rules', () => {
     expect(canTransition('in_progress', 'done')).toBe(true)
   })
 
-  it('копирует план без факта и идентификаторов', () => {
+  it('копирует факт завершённой тренировки как план без идентификаторов', () => {
     const source: Workout = {
       id: 'w1', clientId: 'c1', clientName: 'Анна', workoutDate: localDate('2026-07-21'),
       startTime: null, endTime: null, startedAt: null, completedAt: null, status: 'done', notes: null, stageId: null, stageTitle: null, version: 3,
@@ -32,7 +32,7 @@ describe('workouts repository rules', () => {
     }
     const copy = copyWorkout(source, localDate('2026-07-22'))
     expect(copy.id).toBeUndefined()
-    expect(copy.exercises[0]?.sets[0]).toEqual({ position: 0, weightKg: 50, reps: 10, durationMin: undefined, distanceKm: undefined })
+    expect(copy.exercises[0]?.sets[0]).toEqual({ position: 0, weightKg: 55, reps: 9, durationMin: undefined, distanceKm: undefined })
   })
 
   it('открывает завершённую тренировку для правки по фактическим значениям', () => {

@@ -137,6 +137,8 @@ export function TodayPage() {
       setDraftReady(false)
       removeTodayDraft(draftKey)
       await queryClient.invalidateQueries({ queryKey: ['workouts'] })
+      await queryClient.invalidateQueries({ queryKey: ['today-workouts'] })
+      await queryClient.invalidateQueries({ queryKey: ['today-recent-workouts'] })
       navigate(`/workouts/${id}`)
     }, onError: () => trackGoal('today_workout_save_error'),
   })

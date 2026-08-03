@@ -531,9 +531,16 @@ export function copyWorkout(source: Workout, workoutDate = source.workoutDate): 
       blockId: nextBlockId(exercise.blockId), blockType: exercise.blockType, blockPreset: exercise.blockPreset, blockRounds: exercise.blockRounds,
       restBetweenExercisesSec: exercise.restBetweenExercisesSec, restBetweenRoundsSec: exercise.restBetweenRoundsSec, restBetweenSetsSec: exercise.restBetweenSetsSec,
       trainerComment: exercise.trainerComment,
-      sets: exercise.sets.map((set) => ({ position: set.position, weightKg: set.weightKg,
-        reps: set.reps, durationSec: set.durationSec, durationMin: set.durationMin,
-        distanceKm: set.distanceKm, rpe: set.rpe })),
+      // При копировании завершённой тренировки факт становится исходным
+      // планом новой. Иначе тренеру приходится заново набивать только что
+      // выполненные веса и повторы.
+      sets: exercise.sets.map((set) => ({ position: set.position,
+        weightKg: source.status === 'done' ? set.fact?.weightKg ?? set.weightKg : set.weightKg,
+        reps: source.status === 'done' ? set.fact?.reps ?? set.reps : set.reps,
+        durationSec: source.status === 'done' ? set.fact?.durationSec ?? set.durationSec : set.durationSec,
+        durationMin: source.status === 'done' ? set.fact?.durationMin ?? set.durationMin : set.durationMin,
+        distanceKm: source.status === 'done' ? set.fact?.distanceKm ?? set.distanceKm : set.distanceKm,
+        rpe: source.status === 'done' ? set.fact?.rpe ?? set.rpe : set.rpe })),
     })),
   }
 }
