@@ -22,6 +22,9 @@ wss.on('connection', async (socket) => {
   let bytes = 0
   let partials = 0
   let finals = 0
+  const pendingMessages = []
+  let handleMessage = (raw, binary) => { pendingMessages.push([raw, binary]) }
+  socket.on('message', (raw, binary) => handleMessage(raw, binary))
   console.log(JSON.stringify({ event: 'ws_open', sessionId }))
   let auth
   try { auth = await getIamToken() } catch (error) { socket.send(JSON.stringify({ type: 'error', message: error.message })); socket.close(1011); return }
@@ -42,14 +45,16 @@ wss.on('connection', async (socket) => {
     }
   })
   stream.on('error', (error) => { console.error(JSON.stringify({ event: 'speechkit_error', sessionId, message: error.message, bytes, partials, finals })); socket.send(JSON.stringify({ type:'error', message:error.message })) })
-  socket.on('message', (raw, binary) => {
+  handleMessage = (raw, binary) => {
     if (binary) { bytes += raw.byteLength; stream.write({ audio_content: raw }) }
     else {
       const message = JSON.parse(String(raw))
-      if (message.type === 'config') stream.write({ config: { specification: { language_code: 'ru-RU', audio_encoding: 'LINEAR16_PCM', sample_rate_hertz: 16000, audio_channel_count: 1, partial_results: true }, folder_id: process.env.YANDEX_CLOUD_FOLDER_ID || '' } })
+      if (message.type === 'config') stream.write({ config: { specification: { language_code: 'ru-RU', model: 'general', audio_encoding: 'LINEAR16_PCM', sample_rate_hertz: 16000, audio_channel_count: 1, partial_results: true, single_utterance: false, raw_results: false }, folder_id: process.env.YANDEX_CLOUD_FOLDER_ID || '' } })
       if (message.type === 'stop') { console.log(JSON.stringify({ event: 'ws_stop', sessionId, bytes, partials, finals })); stream.end() }
     }
-  })
+  }
+  for (const [raw, binary] of pendingMessages) handleMessage(raw, binary)
+  pendingMessages.length = 0
   socket.on('close', () => { console.log(JSON.stringify({ event: 'ws_close', sessionId, bytes, partials, finals })); stream.end() })
 })
 server.listen(PORT, () => console.log(`speechkit relay listening on ${PORT}`))

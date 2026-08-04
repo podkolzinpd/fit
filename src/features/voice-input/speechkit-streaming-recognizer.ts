@@ -7,25 +7,16 @@ export class SpeechKitStreamingSession {
   private processor: ScriptProcessorNode | null = null
   private stream: MediaStream | null = null
   private stopped = false
+  private onPartial: ((text: string) => void) | null = null
+  private onFinal: ((text: string) => void) | null = null
 
   async start(onPartial: (text: string) => void, onFinal: (text: string) => void): Promise<void> {
     if (!navigator.mediaDevices?.getUserMedia || typeof WebSocket === 'undefined') throw new Error('Потоковое распознавание недоступно в этом браузере.')
     this.stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
     const configuredUrl = (import.meta.env as unknown as { VITE_SPEECHKIT_RELAY_URL?: string }).VITE_SPEECHKIT_RELAY_URL
     const url = configuredUrl || DEFAULT_RELAY_URL
-    this.socket = new WebSocket(url)
-    this.socket.binaryType = 'arraybuffer'
-    await new Promise<void>((resolve, reject) => {
-      const socket = this.socket!
-      socket.onopen = () => { socket.send(JSON.stringify({ type: 'config' })); resolve() }
-      socket.onerror = () => reject(new Error('Не удалось подключиться к потоковому распознаванию.'))
-    })
-    this.socket.onmessage = (event) => {
-      const message = JSON.parse(String(event.data)) as { type: string; text?: string; message?: string }
-      if (message.type === 'partial' && message.text) onPartial(message.text)
-      if (message.type === 'final' && message.text) onFinal(message.text)
-      if (message.type === 'error') onPartial(message.message || 'Ошибка распознавания')
-    }
+    this.onPartial = onPartial
+    this.onFinal = onFinal
     this.context = new AudioContext()
     this.source = this.context.createMediaStreamSource(this.stream)
     this.processor = this.context.createScriptProcessor(4096, 1, 1)
@@ -35,6 +26,33 @@ export class SpeechKitStreamingSession {
     }
     this.source.connect(this.processor)
     this.processor.connect(this.context.destination)
+    await this.connectSocket(url)
+  }
+
+  private async connectSocket(url: string): Promise<void> {
+    this.socket = new WebSocket(url)
+    this.socket.binaryType = 'arraybuffer'
+    await new Promise<void>((resolve, reject) => {
+      const socket = this.socket!
+      socket.onopen = () => { socket.send(JSON.stringify({ type: 'config' })); resolve() }
+      socket.onerror = () => reject(new Error('Не удалось подключиться к потоковому распознаванию.'))
+    })
+    this.socket.onmessage = (event) => {
+      const message = JSON.parse(String(event.data)) as { type: string; text?: string; message?: string }
+      if (message.type === 'partial' && message.text) this.onPartial?.(message.text)
+      if (message.type === 'final' && message.text) this.onFinal?.(message.text)
+      if (message.type === 'error') this.onPartial?.(message.message || 'Ошибка распознавания')
+    }
+  }
+
+  async rotate(): Promise<void> {
+    if (this.stopped || !this.socket) return
+    const oldSocket = this.socket
+    if (oldSocket.readyState === WebSocket.OPEN) oldSocket.send(JSON.stringify({ type: 'stop' }))
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 500))
+    oldSocket.close()
+    const configuredUrl = (import.meta.env as unknown as { VITE_SPEECHKIT_RELAY_URL?: string }).VITE_SPEECHKIT_RELAY_URL
+    await this.connectSocket(configuredUrl || DEFAULT_RELAY_URL)
   }
 
   async stop(): Promise<void> {
