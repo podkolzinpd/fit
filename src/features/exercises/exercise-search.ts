@@ -17,7 +17,7 @@ export const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   'bench-press': ['жим штанги лежа', 'горизонтальный жим'],
   'dumbbell-bench-press': ['жим гантелей', 'гантели лежа'],
   'incline-bench-press': ['наклонный жим', 'верх груди'],
-  'fedb-incline-dumbbell-press': ['жим гантелей на наклон', 'жим гантелей наклон', 'наклон гантели', 'гантели на наклонной', 'гантели верх груди', 'наклонные гантели', 'инклайн гантели'],
+  'fedb-incline-dumbbell-press': ['жим гантелей на наклон', 'жим гантелей наклон', 'наклон гантели', 'гантели на наклонной', 'гантели верх груди', 'наклонные гантели', 'инклайн гантели', 'дб инклайн жим'],
   'fedb-hammer-grip-incline-db-bench-press': ['жим гантелей на наклон нейтральным', 'наклонные гантели нейтральным хватом', 'жим гантелей молотком на наклонной'],
   'fedb-incline-dumbbell-bench-with-palms-facing-in': ['жим гантелей на наклон ладонями внутрь', 'наклонные гантели ладони внутрь'],
   'dumbbell-fly': ['разводки', 'махи на грудь'],
@@ -54,13 +54,13 @@ export const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   'fedb-smith-machine-bench-press': ['жим в смите', 'смит жим'],
   'fedb-leg-press': ['жим в тренажере', 'платформа ногами'],
   'fedb-hack-squat': ['хак', 'хак присед', 'гакк присед'],
-  'fedb-hip-thrust': ['хиптраст', 'хип траст', 'ягодичный мост со штангой'],
-  'fedb-glute-bridge': ['ягодичный мост', 'глют бридж'],
+  'fedb-barbell-hip-thrust': ['хиптраст', 'хип траст', 'ягодичный мост со штангой'],
+  'fedb-butt-lift-bridge': ['ягодичный мост', 'глют бридж'],
   'fedb-cable-pull-through': ['пултру', 'пул тру', 'тяга между ног'],
   'fedb-sumo-deadlift': ['сумо', 'сумо тяга'],
   'fedb-lat-pulldown': ['верхний блок', 'тяга сверху'],
   'fedb-chest-supported-row': ['тяга с упором грудью', 'тяга к груди в тренажере'],
-  'fedb-t-bar-row': ['т-гриф', 'т тяга', 'тяга т грифа'],
+  'fedb-bent-over-two-arm-long-bar-row': ['т-гриф', 'т тяга', 'тяга т грифа', 'т бар', 'тяга т бар'],
   'fedb-face-pull': ['фейс пул', 'фейспул', 'тяга к лицу'],
   'fedb-cable-lateral-raise': ['мах в кроссовере', 'разводка в кроссовере'],
   'fedb-reverse-pec-deck': ['обратная бабочка', 'задняя дельта в бабочке'],
@@ -70,12 +70,38 @@ export const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   'fedb-concentration-curl': ['концентрированный бицепс', 'концентрированные сгибания'],
 }
 
+// Латиница и сокращения приходят как из заметок тренера, так и из голосового
+// ввода. Приводим их к одному языку до поиска, не меняя названия в каталоге.
+const SEARCH_PHRASE_REPLACEMENTS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/\bhip\s*thrust\b/giu, 'хип траст'],
+  [/\bface\s*pull\b/giu, 'фейс пул'],
+  [/\blat\s*pull\s*down\b/giu, 'верхний блок'],
+  [/\bt[\s-]*bar(?:\s*row)?\b/giu, 'тяга т грифа'],
+  [/\bhack\s*squat\b/giu, 'хак присед'],
+  [/\bromanian\s*deadlift\b/giu, 'румынка'],
+]
+
+const SEARCH_TOKEN_REPLACEMENTS: Readonly<Record<string, string>> = {
+  db: 'гантели', dumbbell: 'гантели', dumbbells: 'гантели',
+  bb: 'штанга', barbell: 'штанга',
+  smith: 'смит', hack: 'хак', squat: 'присед', press: 'жим', incline: 'наклон', row: 'тяга', curl: 'сгибания', extension: 'разгибание',
+  гант: 'гантели', гантель: 'гантели', гантелями: 'гантели',
+  накл: 'наклон', инклайн: 'наклон',
+  биц: 'бицепс', триц: 'трицепс',
+  гакк: 'хак', гак: 'хак',
+}
+
 export function normalizeExerciseSearch(value: string): string {
-  return value
+  let normalized = value
     .toLocaleLowerCase('ru')
     .replaceAll('ё', 'е')
+  for (const [pattern, replacement] of SEARCH_PHRASE_REPLACEMENTS) normalized = normalized.replace(pattern, replacement)
+  return normalized
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim()
+    .split(/\s+/)
+    .map((token) => SEARCH_TOKEN_REPLACEMENTS[token] ?? token)
+    .join(' ')
 }
 
 function editDistanceAtMostOne(left: string, right: string): boolean {
@@ -111,6 +137,14 @@ const OPTIONAL_VARIANT_TOKENS = new Set([
   'узким', 'широким', 'обратным', 'попеременный', 'одной', 'стоя', 'сидя',
 ])
 
+// У общих названий есть ожидаемое базовое движение. Без этого большой
+// импортированный каталог может поставить выше редкий вариант лишь по алфавиту.
+// Это влияет только на порядок подсказок: короткий запрос всё равно не
+// подставляется автоматически и требует подтверждения тренера.
+const DEFAULT_GENERIC_QUERY_REFS: Readonly<Record<string, string>> = {
+  присед: 'barbell-squat',
+}
+
 export interface RankedExerciseMatch {
   exercise: ExerciseSnapshot
   score: number
@@ -144,9 +178,13 @@ export function rankExerciseSearch(catalog: readonly ExerciseSnapshot[], search:
     const exactAlias = normalizedAliases.includes(query)
     const exactName = name === query
     const inOrder = name.includes(query) || normalizedAliases.some((alias) => alias.includes(query))
+    // Для короткого общего названия сперва показываем базовое движение:
+    // «присед» → «Присед со штангой», а не один из частных вариантов.
+    const startsWithQuery = name.startsWith(query)
     const nameTokens = name.split(/\s+/)
     const omittedVariantTokens = nameTokens.filter((token) => OPTIONAL_VARIANT_TOKENS.has(token) && !queryTokens.some((queryToken) => tokenMatches(queryToken, [token])))
-    const score = (exactName ? 240 : 0) + (exactAlias ? 220 : 0) + matchedTokens.length * 30 + (inOrder ? 24 : 0) - omittedVariantTokens.length * 18
+    const genericDefault = DEFAULT_GENERIC_QUERY_REFS[query] === exercise.ref
+    const score = (exactName ? 240 : 0) + (exactAlias ? 220 : 0) + (genericDefault ? 180 : 0) + matchedTokens.length * 30 + (inOrder ? 24 : 0) + (startsWithQuery ? 28 : 0) - omittedVariantTokens.length * 18
     return [{ exercise, score }]
   }).sort((left, right) => right.score - left.score || left.exercise.name.localeCompare(right.exercise.name, 'ru'))
 }

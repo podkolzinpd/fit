@@ -78,8 +78,10 @@ function matchingExercises(name: string, catalog: readonly ExerciseSnapshot[], p
   if (aliases.length === 1) return aliases
   // Одно короткое слово («присед») почти всегда скрывает вариацию. Не делаем
   // вид, что знаем намерение тренера: точные «Планка»/«Бег» уже прошли exact.
+  // Но для вариантов вроде «биц», «гакк» и «смит» учитываем алиасы, чтобы
+  // тренер хотя бы получил релевантные варианты, а не пустой результат.
   if (query.split(' ').length < 2) {
-    return prioritizePreferred(catalog.filter((exercise) => normalizedExerciseName(exercise.name).includes(query)), preferredExerciseRefs)
+    return prioritizePreferred(rankExerciseSearch(catalog, name).map(({ exercise }) => exercise), preferredExerciseRefs)
   }
   return prioritizePreferred(rankExerciseSearch(catalog, name).map(({ exercise }) => exercise), preferredExerciseRefs)
 }
