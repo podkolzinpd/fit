@@ -44,7 +44,7 @@ test('стартовый экран показывает точный резул
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
 
-  await page.goto('/')
+  await page.goto('/today')
   await page.getByLabel('Тренировка').fill('Жим гантелей на наклон 3×8 24 кг')
   await expect(page.getByLabel('Распознанные упражнения')).toContainText('Жим гантелей на наклонной')
   await expect(page.getByLabel('Распознанные упражнения')).toContainText('3 подхода')
