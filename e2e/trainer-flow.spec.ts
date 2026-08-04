@@ -38,6 +38,21 @@ test('форма: быстрый ввод разбирает текст в уп�
   await page.getByRole('button', { name: 'Отмена' }).click()
 })
 
+test('стартовый экран показывает точный результат автоматического распознавания до сохранения', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+
+  await page.goto('/')
+  await page.getByLabel('Тренировка').fill('Жим гантелей на наклон 3×8 24 кг')
+  await expect(page.getByLabel('Распознанные упражнения')).toContainText('Жим гантелей на наклонной')
+  await expect(page.getByLabel('Распознанные упражнения')).toContainText('3 подхода')
+  await expect(page.getByText('На следующем шаге упражнение можно заменить.')).toBeVisible()
+  await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+})
+
 test('trainer can create client, complete workout and save progress', async ({ page }, testInfo) => {
   const trainerAlias = `Анна ${testInfo.workerIndex}-${Date.now()}`
   await page.goto('/auth')
