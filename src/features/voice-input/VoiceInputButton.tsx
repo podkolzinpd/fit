@@ -94,7 +94,7 @@ export function VoiceInputButton({
     if (!streamingRef.current || stoppingRef.current) return
     stoppingRef.current = true; clearTimers(intervalRef, timeoutRef)
     const streaming = streamingRef.current; streamingRef.current = null
-    try { await streaming.stop(); const text = streamingTextRef.current.trim(); if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.'); const revert = onTranscript(text); setUndo(() => revert ?? null); setMessage('Текст добавлен.') }
+    try { await streaming.stop(); const text = streamingTextRef.current.trim(); if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.'); const revert = onTranscript(text); setUndo(() => revert ?? null); setMessage('Текст добавлен в заметку. Проверьте его перед сохранением.') }
     catch (error) { if (mountedRef.current) setMessage(error instanceof Error ? error.message : 'Не удалось распознать запись.') }
     finally { stoppingRef.current = false; if (mountedRef.current) setPhase('idle') }
   }
@@ -131,7 +131,7 @@ export function VoiceInputButton({
       if (!mountedRef.current) return
       const revert = onTranscript(text)
       setUndo(() => revert ?? null)
-      setMessage('Текст добавлен.')
+      setMessage('Текст добавлен в заметку. Проверьте его перед сохранением.')
     } catch (error) {
       if (!mountedRef.current) return
       setMessage(error instanceof Error ? error.message : 'Не удалось распознать запись.')
