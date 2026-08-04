@@ -171,6 +171,17 @@ export function TodayPage() {
   async function review() {
     trackGoal('workout_parse_submitted')
     setParsing(true)
+    // Локальный разбор быстрый и уже используется для превью. Показываем его
+    // сразу, чтобы переход к проверке не зависел от сети и задержки LLM.
+    if (resolved.length) {
+      const currentByRef = new Map(items.map((item) => [item.exercise.ref, item]))
+      const rebuilt = resolved
+        .filter((item) => !removedRefs.includes(item.exercise.ref))
+        .map((item) => manualRefs.includes(item.exercise.ref) ? currentByRef.get(item.exercise.ref) ?? item : item)
+      const manualOnly = items.filter((item) => manualRefs.includes(item.exercise.ref) && !rebuilt.some((next) => next.exercise.ref === item.exercise.ref))
+      setItems([...rebuilt, ...manualOnly])
+      setScreen('review')
+    }
     try {
       const llm = await Promise.race([
         parseWorkoutWithLlm(text, catalog.exercises),
