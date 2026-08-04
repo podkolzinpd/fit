@@ -12,7 +12,7 @@ import { ExercisePicker, frequentExercisesForClient, useExerciseCatalog } from '
 import { VoiceNoteField } from '../voice-input'
 import { useAuth } from '../../app/auth-context'
 import { formatWorkoutText, parseQuickWorkoutEntry, resolveQuickWorkoutLine, type ParsedWorkoutExercise } from './quick-workout-entry'
-import { parseWorkoutWithLlm } from './llm-workout-parser'
+import { formatLlmWorkoutText, parseWorkoutWithLlm } from './llm-workout-parser'
 import { rankExerciseSearch } from '../exercises/exercise-search'
 import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
 import { workoutDateForRecordMode, type WorkoutRecordMode } from './workout-entry-rules'
@@ -28,6 +28,11 @@ function setSummary(item: ParsedWorkoutExercise): string {
   if (first.distanceKm !== undefined) return `${item.sets.length} × ${first.distanceKm} км`
   const value = [first.weightKg !== undefined ? `${first.weightKg} кг` : '', first.reps !== undefined ? `${first.reps} повт.` : ''].filter(Boolean).join(' × ')
   return `${item.sets.length} × ${value || 'значения'}`
+}
+
+function appendVoiceText(previous: string, addition: string): string {
+  const prefix = previous.trimEnd()
+  return prefix ? `${prefix}\n${addition}` : addition
 }
 
 function draftExercise(item: ParsedWorkoutExercise, position: number): WorkoutDraft['exercises'][number] {
@@ -75,6 +80,7 @@ export function TodayPage() {
   const [draftRestored, setDraftRestored] = useState(false)
   const [parsing, setParsing] = useState(false)
   const [llmUnmatched, setLlmUnmatched] = useState<UnmatchedView[]>([])
+  const voiceParseVersion = useRef(0)
   const inputStarted = useRef(false)
   const openedTracked = useRef(false)
   const lastEmptyText = useRef('')
@@ -238,6 +244,23 @@ export function TodayPage() {
     trackGoal('workout_review_opened')
   }
 
+  async function refineVoiceTranscript(previousValue: string, value: string, transcript: string) {
+    const version = ++voiceParseVersion.current
+    try {
+      const llm = await parseWorkoutWithLlm(transcript, catalog.exercises)
+      if (version !== voiceParseVersion.current) return
+      const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: rankExerciseSearch(catalog.exercises, item.sourceText).slice(0, 4).map((result) => result.exercise) }))
+      setLlmUnmatched(unmatched)
+      // Не меняем текст, если модель не уверена или тренер уже успел его поправить.
+      if (unmatched.length) return
+      const formatted = formatLlmWorkoutText(llm, catalog.exercises)
+      if (!formatted) return
+      setText((current) => current === value ? appendVoiceText(previousValue, formatted) : current)
+    } catch {
+      // Превью локального парсера остаётся доступным при временной ошибке LLM.
+    }
+  }
+
   async function previousResults(selected: ExerciseSnapshot[]): Promise<Map<string, PreviousExerciseResult>> {
     if (!clientId) return new Map()
     try {
@@ -342,7 +365,7 @@ export function TodayPage() {
         <p>Напишите тренировку — мы разберём её по упражнениям и подходам.</p>
       </div>
       <div className="today-input-card">
-        <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать" voiceBeta placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} onValueChange={(value) => { setText(formatWorkoutText(value)); setLlmUnmatched([]) }} />
+        <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать" voiceBeta placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} onValueChange={(value) => { setText(formatWorkoutText(value, catalog.exercises)); setLlmUnmatched([]) }} onTranscriptAppended={({ previousValue, value, transcript }) => void refineVoiceTranscript(previousValue, formatWorkoutText(value, catalog.exercises), transcript)} />
         {text && <div className="today-input-actions"><button type="button" className="link" onClick={() => setText('')}>Очистить</button></div>}
       </div>
       {text.trim() && <div className="today-parse-preview" aria-live="polite">
