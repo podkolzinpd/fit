@@ -25,7 +25,7 @@ export function VoiceInputButton({
   recorderFactory = () => new BrowserAudioRecorder(),
   recognizerFactory = () => new WhisperCppRecognizer(),
   decodeAudio = decodeAudioToPcm16,
-  maxDurationMs = 60_000,
+  maxDurationMs = 270_000,
   idleLabel = 'Надиктовать заметку',
   beta = false,
 }: VoiceInputButtonProps) {

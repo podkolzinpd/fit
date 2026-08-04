@@ -49,7 +49,7 @@ wss.on('connection', async (socket) => {
     if (binary) { bytes += raw.byteLength; stream.write({ audio_content: raw }) }
     else {
       const message = JSON.parse(String(raw))
-      if (message.type === 'config') stream.write({ config: { specification: { language_code: 'ru-RU', audio_encoding: 'LINEAR16_PCM', sample_rate_hertz: 16000, audio_channel_count: 1, partial_results: true }, folder_id: process.env.YANDEX_CLOUD_FOLDER_ID || '' } })
+      if (message.type === 'config') stream.write({ config: { specification: { language_code: 'ru-RU', model: 'general', audio_encoding: 'LINEAR16_PCM', sample_rate_hertz: 16000, audio_channel_count: 1, partial_results: true, single_utterance: false, raw_results: false }, folder_id: process.env.YANDEX_CLOUD_FOLDER_ID || '' } })
       if (message.type === 'stop') { console.log(JSON.stringify({ event: 'ws_stop', sessionId, bytes, partials, finals })); stream.end() }
     }
   }
