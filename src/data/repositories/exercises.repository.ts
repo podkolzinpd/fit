@@ -3,6 +3,8 @@ import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
 import { exerciseQueries, type WorkoutParseResponse } from '../queries/exercises.queries'
 import { repositoryError } from './error'
 
+export type { WorkoutParseResponse } from '../queries/exercises.queries'
+
 export interface CustomExercise extends ExerciseSnapshot { id: string; archivedAt: string | null; version: number }
 
 function map(row: { id: string; name: string; muscle_group: string; input_kind: string; archived_at: string | null; version: number }): CustomExercise {

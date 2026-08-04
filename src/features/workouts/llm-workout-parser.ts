@@ -1,6 +1,5 @@
 import type { ExerciseSnapshot } from '../../shared/domain'
-import type { WorkoutParseResponse } from '../../data/queries/exercises.queries'
-import { exercisesRepository } from '../../data/repositories/exercises.repository'
+import { exercisesRepository, type WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 
 export async function parseWorkoutWithLlm(text: string, catalog: readonly ExerciseSnapshot[]) {
   return exercisesRepository.parseWorkout(text, catalog)
