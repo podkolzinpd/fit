@@ -8,6 +8,7 @@ interface VoiceNoteFieldProps {
   defaultValue?: string
   value?: string
   onValueChange?: (value: string) => void
+  onTranscriptAppended?: (event: { previousValue: string; value: string; transcript: string }) => void
   label?: string
   voiceLabel?: string
   voiceBeta?: boolean
@@ -15,7 +16,7 @@ interface VoiceNoteFieldProps {
   hideLabel?: boolean
 }
 
-export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false }: VoiceNoteFieldProps) {
+export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, onTranscriptAppended, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false }: VoiceNoteFieldProps) {
   const id = useId()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   return <div className="field voice-note-field">
@@ -33,15 +34,16 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
     <VoiceInputButton source={source} idleLabel={voiceLabel} beta={voiceBeta} onTranscript={(text) => {
       if (!textareaRef.current) return
       const previous = textareaRef.current.value
-      const transcript = appendTranscript(previous, text)
-      if (onValueChange) onValueChange(transcript)
+      const nextValue = appendTranscript(previous, text)
+      if (onValueChange) onValueChange(nextValue)
       else {
-        textareaRef.current.value = transcript
+        textareaRef.current.value = nextValue
         textareaRef.current.dispatchEvent(new Event('input', { bubbles: true }))
       }
+      onTranscriptAppended?.({ previousValue: previous, value: nextValue, transcript: text.trim() })
       textareaRef.current.focus()
       return () => {
-        if (!textareaRef.current || textareaRef.current.value !== transcript) return
+        if (!textareaRef.current || textareaRef.current.value !== nextValue) return
         if (onValueChange) onValueChange(previous)
         else {
           textareaRef.current.value = previous
