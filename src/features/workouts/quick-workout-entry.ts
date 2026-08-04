@@ -34,6 +34,22 @@ function normalize(value: string): string {
     .trim()
 }
 
+// Частые ошибки распознавания спортивной речи. Каноническое упражнение всё
+// равно берётся только из актуального каталога Supabase ниже.
+const sportSpeechAliases: Record<string, string> = {
+  'жим леха': 'жим лежа',
+  'жим лежа': 'жим лежа',
+  'присед со штангой': 'приседания со штангой',
+  'тяга верхнего блока': 'верхний блок',
+  'разводка': 'разведение рук',
+  'бицепс': 'сгибание рук',
+}
+
+function normalizeSportSpeech(value: string): string {
+  const normalized = normalize(value)
+  return sportSpeechAliases[normalized] ?? value
+}
+
 // В полном каталоге оборудование добавлено в имя в скобках, а тренер обычно
 // диктует короткое базовое название. Для поиска это один и тот же вариант.
 function normalizedExerciseName(value: string): string {
@@ -65,7 +81,7 @@ function prioritizePreferred(matches: readonly ExerciseSnapshot[], preferredExer
 }
 
 function matchingExercises(name: string, catalog: readonly ExerciseSnapshot[], preferredExerciseRefs: readonly string[]): ExerciseSnapshot[] {
-  const query = normalize(name)
+  const query = normalize(normalizeSportSpeech(name))
   if (!query) return []
   const exact = catalog.filter((exercise) => normalizedExerciseName(exercise.name) === query)
   if (exact.length === 1) return exact

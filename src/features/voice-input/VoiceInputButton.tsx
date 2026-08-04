@@ -25,7 +25,7 @@ export function VoiceInputButton({
   recorderFactory = () => new BrowserAudioRecorder(),
   recognizerFactory = () => new WhisperCppRecognizer(),
   decodeAudio = decodeAudioToPcm16,
-  maxDurationMs = 60_000,
+  maxDurationMs = 270_000,
   idleLabel = 'Надиктовать заметку',
   beta = false,
 }: VoiceInputButtonProps) {
@@ -64,7 +64,7 @@ export function VoiceInputButton({
         streamingRef.current = streaming
         setElapsedSeconds(0); setPhase('recording')
         intervalRef.current = window.setInterval(() => setElapsedSeconds((seconds) => seconds + 1), 1_000)
-        timeoutRef.current = window.setTimeout(() => void finishStreaming(), maxDurationMs)
+        timeoutRef.current = window.setTimeout(() => void rotateStreaming(), maxDurationMs)
         return
       } catch { await streaming.stop() }
     }
@@ -95,6 +95,17 @@ export function VoiceInputButton({
     try { await streaming.stop(); const text = streamingTextRef.current.trim(); if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.'); onTranscript(text); setMessage('Текст добавлен в заметку. Проверьте его перед сохранением.') }
     catch (error) { if (mountedRef.current) setMessage(error instanceof Error ? error.message : 'Не удалось распознать запись.') }
     finally { stoppingRef.current = false; if (mountedRef.current) setPhase('idle') }
+  }
+
+  async function rotateStreaming() {
+    const streaming = streamingRef.current
+    if (!streaming || stoppingRef.current) return
+    try {
+      await streaming.rotate()
+      timeoutRef.current = window.setTimeout(() => void rotateStreaming(), maxDurationMs)
+    } catch (error) {
+      if (mountedRef.current) setMessage(error instanceof Error ? error.message : 'Не удалось продолжить распознавание.')
+    }
   }
 
   async function finishRecording() {
