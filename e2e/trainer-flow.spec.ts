@@ -23,6 +23,8 @@ test('форма: быстрый ввод разбирает текст в уп�
   await page.getByLabel('Клиент').selectOption({ label: 'Анна Смирнова' })
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
   await page.getByLabel('Запись тренировки').fill('Присед 80 на 8, 85 на 6, 90 на 5 RPE 8 затем Планка 3 по 45 сек')
+  await expect(page.getByText('Уточните упражнение')).toBeVisible()
+  await expect(page.getByText('Выберите вариант ниже или допишите деталь: положение, тренажёр или оборудование.')).toBeVisible()
   await expect(page.getByText(/«Присед 80 на 8, 85 на 6, 90 на 5 RPE 8» — выберите вариант/)).toBeVisible()
   // Короткое название не угадывается: базовый присед идёт первым, но тренер
   // всё равно подтверждает подходящий вариант одним тапом.
@@ -30,6 +32,7 @@ test('форма: быстрый ввод разбирает текст в уп�
   await expect(squatCandidates).toHaveCount(3)
   await squatCandidates.first().click()
   await expect(page.getByText('Распознано: 2')).toBeVisible()
+  await expect(page.getByText('Уточните упражнение')).toBeHidden()
   await page.getByRole('button', { name: 'Добавить распознанные (2)' }).click()
   await expect(page.getByLabel('Вес, подход 1')).toHaveValue('80')
   await expect(page.getByLabel('Вес, подход 2')).toHaveValue('85')
@@ -50,7 +53,8 @@ test('стартовый экран показывает точный резул
   await page.getByLabel('Тренировка').fill('Жим гантелей на наклон 3×8 24 кг')
   await expect(page.getByLabel('Распознанные упражнения')).toContainText('Жим гантелей на наклонной')
   await expect(page.getByLabel('Распознанные упражнения')).toContainText('3 × 24 кг × 8 повт.')
-  await expect(page.getByText('На следующем шаге упражнение можно заменить.')).toBeVisible()
+  await expect(page.getByText('На следующем шаге упражнение можно заменить.')).toBeHidden()
+  await expect(page.getByText('Уточните упражнение')).toBeHidden()
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
 })

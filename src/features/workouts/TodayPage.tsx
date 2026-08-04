@@ -105,6 +105,15 @@ export function TodayPage() {
     ...parsed.parsed,
     ...parsed.unparsed.flatMap((item) => choices[item.line] ? [resolveQuickWorkoutLine(item.line, choices[item.line]!)] : []),
   ], [choices, parsed])
+  const unresolved = useMemo(() => parsed.unparsed.filter((item) => !choices[item.line]), [choices, parsed.unparsed])
+  const clarification = useMemo(() => {
+    const hasAmbiguous = unresolved.some((item) => item.reason === 'ambiguous')
+    const hasNotFound = unresolved.some((item) => item.reason === 'not-found')
+    if (hasAmbiguous && hasNotFound) return { title: 'Уточните упражнения', text: 'Выберите вариант ниже или дополните название.' }
+    if (hasAmbiguous) return { title: 'Уточните упражнение', text: 'Выберите вариант ниже или допишите деталь: положение, тренажёр или оборудование.' }
+    if (hasNotFound) return { title: 'Не нашли упражнение', text: 'Допишите название точнее или выберите его из каталога.' }
+    return null
+  }, [unresolved])
   const noMatches = Boolean(text.trim() && !resolved.length && parsed.unparsed.length)
   const frequentExercises = useMemo(() => frequentExercisesForClient(catalog.exercises, clientWorkouts.data ?? []), [catalog.exercises, clientWorkouts.data])
 
@@ -277,19 +286,17 @@ export function TodayPage() {
         <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать" voiceBeta placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} onValueChange={setText} />
         {text && <div className="today-input-actions"><button type="button" className="link" onClick={() => setText('')}>Очистить</button></div>}
       </div>
-      {items.length > 0 && <p className="today-hint">Ручные правки подходов и добавленные упражнения сохранятся при повторном разборе.</p>}
       {text.trim() && <div className="today-parse-preview" aria-live="polite">
         {resolved.length > 0 && <section className="today-recognized" aria-label="Распознанные упражнения">
           <p><strong>Распознано: {resolved.length}</strong></p>
           <ul>{resolved.map((item, index) => <li key={`${item.exercise.ref}-${index}`}><strong>{item.exercise.name}</strong><span>{setSummary(item)}</span></li>)}</ul>
-          <small>На следующем шаге упражнение можно заменить.</small>
         </section>}
-        {parsed.unparsed.map((item) => <div className="today-unparsed" key={item.line}>
+        {clarification && <section className="today-clarification" aria-label={clarification.title}><strong>{clarification.title}</strong><p>{clarification.text}</p></section>}
+        {unresolved.map((item) => <div className="today-unparsed" key={item.line}>
           <p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли в каталоге'}</p>
           {item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => setChoices((current) => ({ ...current, [item.line]: exercise }))}>{exercise.name}</button>)}</div>}
         </div>)}
       </div>}
-      {noMatches && <div className="today-empty-parse" role="status"><strong>Не нашли упражнение</strong><span>Проверьте название или добавьте его из каталога ниже.</span></div>}
       <button type="button" className="wide today-primary-cta" disabled={!text.trim()} onClick={review}>Разобрать тренировку</button>
       <button type="button" className="secondary wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}><span>Выбрать упражнения</span><small>Из каталога — можно несколько сразу</small></button>
     </section> : <section className="today-review">
