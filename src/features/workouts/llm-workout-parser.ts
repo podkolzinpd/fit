@@ -1,8 +1,13 @@
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { exercisesRepository, type WorkoutParseResponse } from '../../data/repositories/exercises.repository'
+import { splitWorkoutText, workoutCandidates } from './quick-workout-entry'
 
 export async function parseWorkoutWithLlm(text: string, catalog: readonly ExerciseSnapshot[]) {
-  return exercisesRepository.parseWorkout(text, catalog)
+  const segments = splitWorkoutText(text, catalog).map((sourceText) => ({
+    sourceText,
+    candidates: workoutCandidates(sourceText, catalog).map(({ ref, name, inputKind }) => ({ ref, name, inputKind })),
+  }))
+  return exercisesRepository.parseWorkout(text, catalog, segments)
 }
 
 function formatSet(set: WorkoutParseResponse['items'][number]['sets'][number]): string {
