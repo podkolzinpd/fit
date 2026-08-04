@@ -35,11 +35,13 @@ describe('ExercisePicker', () => {
     expect(filterExercises(SYSTEM_EXERCISES, 'cardio', '')).toHaveLength(7)
   })
 
+  // Полный каталог содержит 500+ упражнений: в CI его первичный рендер
+  // периодически дольше общего лимита unit-тестов, хотя сценарий корректен.
   it('показывает быстрый раздел разминки и мобилити', () => {
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={vi.fn()} onClose={vi.fn()} />)
     expect(screen.getByText('Разминка и мобилити')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /Суставная разминка/ })).toHaveLength(1)
-  })
+  }, 10_000)
 
   it('ставит частые упражнения клиента выше остальных по числу использований', () => {
     const workouts = [
