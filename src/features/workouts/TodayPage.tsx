@@ -187,6 +187,10 @@ export function TodayPage() {
         return [{ line: item.sourceText, exercise, sets, hasValues: sets.some((set) => Object.keys(set).some((key) => key !== 'position' && set[key as keyof typeof set] !== undefined)) }]
       })
       const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: rankExerciseSearch(catalog.exercises, item.sourceText).slice(0, 4).map((result) => result.exercise) }))
+      // Если LLM временно не знает формулировку, не теряем уже найденные
+      // локальным парсером упражнения и не оставляем тренера без экрана проверки.
+      // Это также покрывает старые/нестандартные каталоги до обновления prompt-а.
+      if (!parsedItems.length && resolved.length) throw new Error('LLM did not match any exercise')
       setLlmUnmatched(unmatched)
       if (!parsedItems.length && !unmatched.length) throw new Error('Пустой ответ парсера')
       const rebuilt = parsedItems.filter((item) => !removedRefs.includes(item.exercise.ref)).map((item) => manualRefs.includes(item.exercise.ref) ? currentByRef.get(item.exercise.ref) ?? item : item)
