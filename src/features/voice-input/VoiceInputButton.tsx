@@ -9,7 +9,7 @@ import { trackGoal } from '../../shared/yandex-metrika'
 type Phase = 'idle' | 'recording' | 'preparing' | 'loading' | 'transcribing'
 
 interface VoiceInputButtonProps {
-  onTranscript: (text: string) => void
+  onTranscript: (text: string) => void | (() => void)
   source: string
   recorderFactory?: () => AudioRecorder
   recognizerFactory?: () => SpeechRecognizer
@@ -33,6 +33,7 @@ export function VoiceInputButton({
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [progress, setProgress] = useState(0)
   const [message, setMessage] = useState<string | null>(null)
+  const [undo, setUndo] = useState<(() => void) | null>(null)
   const recorderRef = useRef<AudioRecorder | null>(null)
   const recognizerRef = useRef<SpeechRecognizer | null>(null)
   const intervalRef = useRef<number | null>(null)
@@ -55,6 +56,7 @@ export function VoiceInputButton({
 
   async function startRecording() {
     setMessage(null)
+    setUndo(null)
     setProgress(0)
     {
       const streaming = new SpeechKitStreamingSession()
@@ -92,7 +94,7 @@ export function VoiceInputButton({
     if (!streamingRef.current || stoppingRef.current) return
     stoppingRef.current = true; clearTimers(intervalRef, timeoutRef)
     const streaming = streamingRef.current; streamingRef.current = null
-    try { await streaming.stop(); const text = streamingTextRef.current.trim(); if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.'); onTranscript(text); setMessage('Текст добавлен в заметку. Проверьте его перед сохранением.') }
+    try { await streaming.stop(); const text = streamingTextRef.current.trim(); if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.'); const revert = onTranscript(text); setUndo(() => revert ?? null); setMessage('Текст добавлен.') }
     catch (error) { if (mountedRef.current) setMessage(error instanceof Error ? error.message : 'Не удалось распознать запись.') }
     finally { stoppingRef.current = false; if (mountedRef.current) setPhase('idle') }
   }
@@ -127,8 +129,9 @@ export function VoiceInputButton({
       })
       if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.')
       if (!mountedRef.current) return
-      onTranscript(text)
-      setMessage('Текст добавлен в заметку. Проверьте его перед сохранением.')
+      const revert = onTranscript(text)
+      setUndo(() => revert ?? null)
+      setMessage('Текст добавлен.')
     } catch (error) {
       if (!mountedRef.current) return
       setMessage(error instanceof Error ? error.message : 'Не удалось распознать запись.')
@@ -152,7 +155,7 @@ export function VoiceInputButton({
       {beta && phase === 'idle' && <span className="voice-beta">beta</span>}
     </button>
     {phase === 'loading' && <small className="muted">При первом запуске загружается локальная модель (~31 МБ).</small>}
-    {message && <small className={message.startsWith('Текст добавлен') ? 'success' : 'error'} role="status">{message}</small>}
+    {message && <div className="voice-input-status" role="status"><small className={message.startsWith('Текст добавлен') ? 'success' : 'error'}>{message}</small>{undo && <button type="button" className="link" onClick={() => { undo(); setUndo(null); setMessage(null) }}>Отменить</button>}</div>}
   </div>
 }
 

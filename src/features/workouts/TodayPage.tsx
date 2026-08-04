@@ -11,7 +11,7 @@ import { Page } from '../../shared/ui'
 import { ExercisePicker, frequentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { VoiceNoteField } from '../voice-input'
 import { useAuth } from '../../app/auth-context'
-import { parseQuickWorkoutEntry, resolveQuickWorkoutLine, type ParsedWorkoutExercise } from './quick-workout-entry'
+import { parseQuickWorkoutEntry, quickWorkoutExerciseName, resolveQuickWorkoutLine, type ParsedWorkoutExercise } from './quick-workout-entry'
 import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
 import { workoutDateForRecordMode, type WorkoutRecordMode } from './workout-entry-rules'
 
@@ -56,6 +56,7 @@ export function TodayPage() {
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
   const [items, setItems] = useState<ParsedWorkoutExercise[]>([])
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerSearch, setPickerSearch] = useState('')
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const [clientId, setClientId] = useState('')
   const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId), enabled: Boolean(clientId) })
@@ -164,6 +165,8 @@ export function TodayPage() {
 
   function review() {
     trackGoal('workout_parse_submitted')
+    if (parsed.unparsed.some((item) => item.reason === 'ambiguous')) trackGoal('workout_parse_ambiguous')
+    if (parsed.unparsed.some((item) => item.reason === 'not-found')) trackGoal('workout_parse_not_found')
     if (!resolved.length) {
       trackGoal('workout_parse_failed')
       return
@@ -201,6 +204,7 @@ export function TodayPage() {
       hasValues: Boolean(results.get(exercise.ref)),
     }))])
     setPickerOpen(false)
+    setPickerSearch('')
   }
 
   async function pickExercises(exercises: ExerciseSnapshot[]) {
@@ -219,6 +223,7 @@ export function TodayPage() {
     if (replacedRef) setRemovedRefs((current) => current.includes(replacedRef) ? current : [...current, replacedRef])
     setReplaceIndex(null)
     setPickerOpen(false)
+    setPickerSearch('')
   }
 
   function updateSet(itemIndex: number, setIndex: number, patch: Partial<WorkoutSetDraft>) {
@@ -294,7 +299,8 @@ export function TodayPage() {
         {clarification && <section className="today-clarification" aria-label={clarification.title}><strong>{clarification.title}</strong><p>{clarification.text}</p></section>}
         {unresolved.map((item) => <div className="today-unparsed" key={item.line}>
           <p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли в каталоге'}</p>
-          {item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => setChoices((current) => ({ ...current, [item.line]: exercise }))}>{exercise.name}</button>)}</div>}
+          {item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => { trackGoal('workout_parse_candidate_selected'); setChoices((current) => ({ ...current, [item.line]: exercise })) }}>{exercise.name}</button>)}</div>}
+          <button type="button" className="link quick-workout-all-options" onClick={() => { trackGoal('workout_parse_catalog_opened'); setPickerSearch(quickWorkoutExerciseName(item.line)); setReplaceIndex(null); setPickerOpen(true) }}>Все варианты</button>
         </div>)}
       </div>}
       <button type="button" className="wide today-primary-cta" disabled={!text.trim()} onClick={review}>Разобрать тренировку</button>
@@ -318,6 +324,6 @@ export function TodayPage() {
     {screen === 'compose' && agenda}
     {draftNotice}
     {(clients.error ?? catalog.error ?? todayWorkouts.error) && <p className="error">{(clients.error ?? catalog.error ?? todayWorkouts.error)?.message}</p>}
-    {pickerOpen && <ExercisePicker catalog={catalog} frequent={frequentExercises} onPick={(exercise) => pickExercises([exercise])} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} frequent={frequentExercises} initialSearch={pickerSearch} onPick={(exercise) => pickExercises([exercise])} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null); setPickerSearch('') }} />}
   </Page>
 }

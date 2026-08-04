@@ -198,6 +198,7 @@ export function WorkoutFormPage() {
   const [formDraftReady, setFormDraftReady] = useState(false)
   const [prefillError, setPrefillError] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerSearch, setPickerSearch] = useState('')
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const initial = source.data ? (workoutId ? { ...(source.data.status === 'done' ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, todayLocalDate())) : undefined
@@ -311,7 +312,7 @@ export function WorkoutFormPage() {
       }),
     ])
   }
-  function closePicker() { setPickerOpen(false); setReplaceIndex(null) }
+  function closePicker() { setPickerOpen(false); setReplaceIndex(null); setPickerSearch('') }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget)
     const submitClientId = String(form.get('clientId')); const date = workoutDateForRecordMode(completedMode ? 'completed' : 'planned', entryDate, todayLocalDate())
@@ -358,14 +359,14 @@ export function WorkoutFormPage() {
       </section>
       <section className="workout-form-section workout-form-exercises">
         <div className="workout-form-section-head"><p className="eyebrow">УПРАЖНЕНИЯ</p><h2>План и факт</h2></div>
-        <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={frequentExercises.map((exercise) => exercise.ref)} onAdd={(parsed) => void addQuickEntry(parsed)} defaultOpen />
+        <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={frequentExercises.map((exercise) => exercise.ref)} onAdd={(parsed) => void addQuickEntry(parsed)} onOpenCatalog={(search) => { setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) }} defaultOpen />
         <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>{recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить'}</button></div>
     </form>}</AsyncView>
-    {pickerOpen && <ExercisePicker catalog={catalog} frequent={frequentExercises} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} frequent={frequentExercises} initialSearch={pickerSearch} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
   </Page>
 }
 

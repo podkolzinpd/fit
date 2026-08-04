@@ -562,6 +562,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .quick-workout-candidates { display:flex; flex-wrap:wrap; gap:6px; }
 .quick-workout-candidates .secondary { min-height:36px; padding:6px 10px; font-size:14px; }
 .quick-workout-candidates .secondary.selected { border-color:var(--accent); color:var(--accent-strong); background:var(--accent-soft); }
+.quick-workout-all-options { justify-self:start; min-height:32px; padding:3px 0; font-size:14px; color:var(--accent-strong); font-weight:700; }
 .today-page { display:grid; gap:18px; }
 .today-clients { min-height:36px; padding:7px 10px; font-size:14px; }
 .today-composer, .today-review { display:grid; gap:14px; }.today-start-page { max-width:720px; margin:0 auto; }.today-start-page .page-header { margin-bottom:10px; }.today-start-page .page-header h1 { font-size:30px; }.today-profile-avatar { display:grid; place-items:center; width:46px; height:46px; border:1px solid var(--border); border-radius:50%; background:var(--accent-surface); color:var(--accent-strong); font-size:15px; font-weight:800; text-decoration:none; }.today-profile-avatar:focus-visible { outline:3px solid var(--accent-ring); outline-offset:2px; }
@@ -854,6 +855,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .voice-input-button svg { width: 19px; height: 19px }
 .voice-input-button.recording { border-color: #9d4651; background: #3a2026; color: #ff9aa3 }
 .voice-input small { line-height: 1.35 }
+.voice-input-status { display:flex; align-items:center; gap:8px; }.voice-input-status .link { min-height:28px; padding:2px 0; color:var(--accent-strong); font-size:13px; font-weight:700; }
 .clients-page { padding-bottom:calc(env(safe-area-inset-bottom) + 104px) }.clients-page .page-header { margin-bottom:18px }.clients-search { display:block; margin:0 0 12px }.clients-search input { min-height:50px; border-radius:16px; background:var(--surface-raised); font-size:16px }.clients-search-empty { margin:8px 0 0; padding:16px; color:var(--muted); border:1px dashed var(--border); border-radius:16px; text-align:center }.clients-list { gap:10px }.client-card { justify-content:flex-start; min-height:76px; padding:14px; border-radius:18px; box-shadow:none }.client-card > div { min-width:0; flex:1 }.client-card > .badge { margin-left:auto }.client-avatar { flex:0 0 auto; width:48px; height:48px; display:grid; place-items:center; border:1px solid var(--border); border-radius:50%; color:var(--text-muted); background:var(--surface-sunken) }.client-avatar svg { width:25px; height:25px; stroke-width:1.65 }.client-card-arrow { color:var(--text-muted); font-size:27px; font-weight:400; line-height:1 }.client-card p { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
 /* Профиль клиента продолжает визуальный язык стартового экрана: один чистый
    маршрут, крупная иерархия, спокойные белые секции и единственная CTA внизу. */

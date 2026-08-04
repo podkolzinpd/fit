@@ -32,13 +32,22 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
     />
     <VoiceInputButton source={source} idleLabel={voiceLabel} beta={voiceBeta} onTranscript={(text) => {
       if (!textareaRef.current) return
-      const transcript = appendTranscript(textareaRef.current.value, text)
+      const previous = textareaRef.current.value
+      const transcript = appendTranscript(previous, text)
       if (onValueChange) onValueChange(transcript)
       else {
         textareaRef.current.value = transcript
         textareaRef.current.dispatchEvent(new Event('input', { bubbles: true }))
       }
       textareaRef.current.focus()
+      return () => {
+        if (!textareaRef.current || textareaRef.current.value !== transcript) return
+        if (onValueChange) onValueChange(previous)
+        else {
+          textareaRef.current.value = previous
+          textareaRef.current.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+      }
     }} />
   </div>
 }
