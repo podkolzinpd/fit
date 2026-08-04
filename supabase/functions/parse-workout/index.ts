@@ -23,7 +23,19 @@ const OUTPUT_SCHEMA = {
         required: ["sourceText", "exerciseRef", "confidence", "sets"],
         properties: {
           sourceText: { type: "string" }, exerciseRef: { type: "string" }, confidence: { type: "number" },
-          sets: { type: "array", items: { type: "object", additionalProperties: false, properties: { weightKg: { type: "number" }, reps: { type: "number" }, durationMin: { type: "number" }, distanceKm: { type: "number" } } },
+          sets: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                weightKg: { type: "number" },
+                reps: { type: "number" },
+                durationMin: { type: "number" },
+                distanceKm: { type: "number" },
+              },
+            },
+          },
         },
       },
     },
