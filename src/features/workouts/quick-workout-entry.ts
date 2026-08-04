@@ -43,6 +43,15 @@ const sportSpeechAliases: Record<string, string> = {
   'тяга верхнего блока': 'верхний блок',
   'разводка': 'разведение рук',
   'бицепс': 'сгибание рук',
+  'жим гантелей в наклонной скамье': 'жим гантелей на наклонной',
+}
+
+const spokenExerciseStarts = ['румынская тяга', 'жим гантелей', 'жим лежа', 'жим лёжа', 'присед', 'планка', 'тяга', 'разведение', 'сгибание', 'выпады', 'отжимания', 'бег', 'гребля']
+
+/** Делит слитную SpeechKit-фразу перед новым упражнением, не меняя слова. */
+export function formatWorkoutText(text: string): string {
+  const starts = spokenExerciseStarts.map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
+  return text.replace(new RegExp(`\\s+(?=(?:${starts})\\b)`, 'giu'), '\n').replace(/\n{2,}/g, '\n').trim()
 }
 
 function normalizeSportSpeech(value: string): string {
