@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseQuickWorkoutEntry } from './quick-workout-entry'
+import { rankExerciseSearch } from '../exercises/exercise-search'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
 
@@ -32,6 +33,22 @@ describe('parseQuickWorkoutEntry', () => {
       ['хак присед 3×10 80 кг', 'fedb-hack-squat'],
       ['тяга к лицу 3×15', 'fedb-face-pull'],
       ['ягодичный мост со штангой 4×10 70 кг', 'fedb-barbell-hip-thrust'],
+    ] as const
+
+    for (const [text, ref] of cases) {
+      const result = parseQuickWorkoutEntry(text, SYSTEM_EXERCISE_CATALOG)
+      expect(result.unparsed, text).toEqual([])
+      expect(result.parsed[0]?.exercise.ref, text).toBe(ref)
+    }
+  })
+
+  it('понимает транслит, английские термины и сокращения тренера', () => {
+    const cases = [
+      ['smith squat 3×8 80 kg', 'fedb-smith-machine-squat'],
+      ['face pull 3×15', 'fedb-face-pull'],
+      ['hip thrust 3×8 80 kg', 'fedb-barbell-hip-thrust'],
+      ['t-bar row 3×10 40 kg', 'fedb-bent-over-two-arm-long-bar-row'],
+      ['db incline press 3×8 24 kg', 'fedb-incline-dumbbell-press'],
     ] as const
 
     for (const [text, ref] of cases) {
@@ -130,6 +147,30 @@ describe('parseQuickWorkoutEntry', () => {
     expect(result.parsed).toEqual([])
     expect(result.unparsed[0]).toMatchObject({ line: 'Присед 3×8 80 кг', reason: 'ambiguous', candidates: [{ ref: 'squat' }] })
     expect(result.unparsed[1]).toEqual({ line: 'Несуществующее 3×10', reason: 'not-found', candidates: [] })
+  })
+
+  it('выносит базовый присед выше частных вариаций при коротком запросе', () => {
+    expect(rankExerciseSearch(SYSTEM_EXERCISE_CATALOG, 'присед').slice(0, 3).map(({ exercise }) => exercise.ref))
+      .toContain('barbell-squat')
+    expect(rankExerciseSearch(SYSTEM_EXERCISE_CATALOG, 'присед')[0]?.exercise.ref).toBe('barbell-squat')
+  })
+
+  it('поднимает частое упражнение клиента среди неоднозначных вариантов, не включая автоподстановку', () => {
+    const result = parseQuickWorkoutEntry('Присед 3×8 80 кг', [
+      ...catalog,
+      { source: 'system', ref: 'front-squat', name: 'Фронтальный присед', muscleGroup: 'legs', inputKind: 'strength' },
+    ], { preferredExerciseRefs: ['front-squat', 'squat'] })
+
+    expect(result.parsed).toEqual([])
+    expect(result.unparsed[0]).toMatchObject({ reason: 'ambiguous' })
+    expect(result.unparsed[0]?.candidates.map((exercise) => exercise.ref)).toEqual(['front-squat', 'squat'])
+  })
+
+  it('понимает короткое тренерское сокращение для базового упражнения', () => {
+    const result = parseQuickWorkoutEntry('биц 3×12', SYSTEM_EXERCISE_CATALOG)
+
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed[0]?.exercise.ref).toBe('biceps-curl')
   })
 
   it('предпочитает системное упражнение одноимённому пользовательскому', () => {

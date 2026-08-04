@@ -21,12 +21,33 @@ export interface QuickWorkoutParseResult {
   unparsed: UnparsedWorkoutLine[]
 }
 
+export interface QuickWorkoutEntryOptions {
+  /** История клиента влияет только на порядок альтернатив, не на авто-выбор. */
+  preferredExerciseRefs?: readonly string[]
+}
+
 function normalize(value: string): string {
   return value
     .toLocaleLowerCase('ru')
     .replaceAll('ё', 'е')
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim()
+}
+
+// Частые ошибки распознавания спортивной речи. Каноническое упражнение всё
+// равно берётся только из актуального каталога Supabase ниже.
+const sportSpeechAliases: Record<string, string> = {
+  'жим леха': 'жим лежа',
+  'жим лежа': 'жим лежа',
+  'присед со штангой': 'приседания со штангой',
+  'тяга верхнего блока': 'верхний блок',
+  'разводка': 'разведение рук',
+  'бицепс': 'сгибание рук',
+}
+
+function normalizeSportSpeech(value: string): string {
+  const normalized = normalize(value)
+  return sportSpeechAliases[normalized] ?? value
 }
 
 // В полном каталоге оборудование добавлено в имя в скобках, а тренер обычно
@@ -46,8 +67,21 @@ function exerciseNamePart(line: string): string {
   return (metric ? line.slice(0, metric.index) : line).trim()
 }
 
-function matchingExercises(name: string, catalog: readonly ExerciseSnapshot[]): ExerciseSnapshot[] {
-  const query = normalize(name)
+function prioritizePreferred(matches: readonly ExerciseSnapshot[], preferredExerciseRefs: readonly string[]): ExerciseSnapshot[] {
+  if (!preferredExerciseRefs.length || matches.length < 2) return [...matches]
+  const preferredIndex = new Map(preferredExerciseRefs.map((ref, index) => [ref, index]))
+  return matches.slice().sort((left, right) => {
+    const leftIndex = preferredIndex.get(left.ref)
+    const rightIndex = preferredIndex.get(right.ref)
+    if (leftIndex === undefined && rightIndex === undefined) return 0
+    if (leftIndex === undefined) return 1
+    if (rightIndex === undefined) return -1
+    return leftIndex - rightIndex
+  })
+}
+
+function matchingExercises(name: string, catalog: readonly ExerciseSnapshot[], preferredExerciseRefs: readonly string[]): ExerciseSnapshot[] {
+  const query = normalize(normalizeSportSpeech(name))
   if (!query) return []
   const exact = catalog.filter((exercise) => normalizedExerciseName(exercise.name) === query)
   if (exact.length === 1) return exact
@@ -60,10 +94,12 @@ function matchingExercises(name: string, catalog: readonly ExerciseSnapshot[]): 
   if (aliases.length === 1) return aliases
   // Одно короткое слово («присед») почти всегда скрывает вариацию. Не делаем
   // вид, что знаем намерение тренера: точные «Планка»/«Бег» уже прошли exact.
+  // Но для вариантов вроде «биц», «гакк» и «смит» учитываем алиасы, чтобы
+  // тренер хотя бы получил релевантные варианты, а не пустой результат.
   if (query.split(' ').length < 2) {
-    return catalog.filter((exercise) => normalizedExerciseName(exercise.name).includes(query))
+    return prioritizePreferred(rankExerciseSearch(catalog, name).map(({ exercise }) => exercise), preferredExerciseRefs)
   }
-  return rankExerciseSearch(catalog, name).map(({ exercise }) => exercise)
+  return prioritizePreferred(rankExerciseSearch(catalog, name).map(({ exercise }) => exercise), preferredExerciseRefs)
 }
 
 function canResolveSafely(name: string, matches: readonly ExerciseSnapshot[], catalog: readonly ExerciseSnapshot[]): boolean {
@@ -149,14 +185,14 @@ export function resolveQuickWorkoutLine(line: string, exercise: ExerciseSnapshot
  * Строгий локальный разбор записи тренера. Он не угадывает похожие упражнения:
  * неуверенную строку возвращаем в unparsed, чтобы не записать факт не тому движению.
  */
-export function parseQuickWorkoutEntry(text: string, catalog: readonly ExerciseSnapshot[]): QuickWorkoutParseResult {
+export function parseQuickWorkoutEntry(text: string, catalog: readonly ExerciseSnapshot[], options: QuickWorkoutEntryOptions = {}): QuickWorkoutParseResult {
   const parsed: ParsedWorkoutExercise[] = []
   const unparsed: UnparsedWorkoutLine[] = []
   for (const rawLine of quickWorkoutLines(text)) {
     const line = rawLine.trim()
     if (!line) continue
     const name = exerciseNamePart(line)
-    const matches = matchingExercises(name, catalog)
+    const matches = matchingExercises(name, catalog, options.preferredExerciseRefs ?? [])
     if (needsTrainerChoice(name, catalog) || !canResolveSafely(name, matches, catalog)) {
       unparsed.push({ line, reason: matches.length ? 'ambiguous' : 'not-found', candidates: matches.slice(0, 3) })
       continue

@@ -7,17 +7,27 @@ interface QuickWorkoutEntryProps {
   catalog: readonly ExerciseSnapshot[]
   onAdd: (exercises: ParsedWorkoutExercise[]) => void
   defaultOpen?: boolean
+  preferredExerciseRefs?: readonly string[]
 }
 
-export function QuickWorkoutEntry({ catalog, onAdd, defaultOpen = false }: QuickWorkoutEntryProps) {
+export function QuickWorkoutEntry({ catalog, onAdd, defaultOpen = false, preferredExerciseRefs = [] }: QuickWorkoutEntryProps) {
   const [open, setOpen] = useState(defaultOpen)
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
-  const parsed = useMemo(() => parseQuickWorkoutEntry(text, catalog), [text, catalog])
+  const parsed = useMemo(() => parseQuickWorkoutEntry(text, catalog, { preferredExerciseRefs }), [text, catalog, preferredExerciseRefs])
   const resolved = useMemo(() => [
     ...parsed.parsed,
     ...parsed.unparsed.flatMap((item) => choices[item.line] ? [resolveQuickWorkoutLine(item.line, choices[item.line]!)] : []),
   ], [choices, parsed])
+  const unresolved = useMemo(() => parsed.unparsed.filter((item) => !choices[item.line]), [choices, parsed.unparsed])
+  const clarification = useMemo(() => {
+    const hasAmbiguous = unresolved.some((item) => item.reason === 'ambiguous')
+    const hasNotFound = unresolved.some((item) => item.reason === 'not-found')
+    if (hasAmbiguous && hasNotFound) return { title: 'Уточните упражнения', text: 'Выберите вариант ниже или дополните название.' }
+    if (hasAmbiguous) return { title: 'Уточните упражнение', text: 'Выберите вариант ниже или допишите деталь: положение, тренажёр или оборудование.' }
+    if (hasNotFound) return { title: 'Не нашли упражнение', text: 'Допишите название точнее или выберите его из каталога.' }
+    return null
+  }, [unresolved])
 
   function add() {
     if (!resolved.length) return
@@ -36,7 +46,8 @@ export function QuickWorkoutEntry({ catalog, onAdd, defaultOpen = false }: Quick
       <VoiceNoteField name="quick-workout-entry" source="workout_quick_entry" label="Запись тренировки" voiceLabel="Надиктовать тренировку" value={text} onValueChange={setText} />
       {text.trim() && <div className="quick-workout-preview" aria-live="polite">
         {resolved.length > 0 && <><p><strong>Распознано: {resolved.length}</strong></p><ul>{resolved.map((item, index) => <li key={`${item.exercise.ref}-${index}`}>{item.exercise.name} · {item.sets.length} {item.sets.length === 1 ? 'подход' : item.sets.length < 5 ? 'подхода' : 'подходов'}</li>)}</ul></>}
-        {parsed.unparsed.length > 0 && <div className="quick-workout-unparsed">{parsed.unparsed.map((item) => <div className="quick-workout-unparsed-line" key={item.line}><p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли совпадение'}</p>{item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => setChoices((current) => ({ ...current, [item.line]: exercise }))}>{exercise.name}</button>)}</div>}</div>)}</div>}
+        {clarification && <section className="quick-workout-clarification" aria-label={clarification.title}><strong>{clarification.title}</strong><p>{clarification.text}</p></section>}
+        {unresolved.length > 0 && <div className="quick-workout-unparsed">{unresolved.map((item) => <div className="quick-workout-unparsed-line" key={item.line}><p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли совпадение'}</p>{item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => setChoices((current) => ({ ...current, [item.line]: exercise }))}>{exercise.name}</button>)}</div>}</div>)}</div>}
       </div>}
       <button type="button" disabled={!resolved.length} onClick={add}>Добавить распознанные{resolved.length ? ` (${resolved.length})` : ''}</button>
     </div>}

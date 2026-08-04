@@ -23,12 +23,16 @@ test('форма: быстрый ввод разбирает текст в уп�
   await page.getByLabel('Клиент').selectOption({ label: 'Анна Смирнова' })
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
   await page.getByLabel('Запись тренировки').fill('Присед 80 на 8, 85 на 6, 90 на 5 RPE 8 затем Планка 3 по 45 сек')
+  await expect(page.getByText('Уточните упражнение')).toBeVisible()
+  await expect(page.getByText('Выберите вариант ниже или допишите деталь: положение, тренажёр или оборудование.')).toBeVisible()
   await expect(page.getByText(/«Присед 80 на 8, 85 на 6, 90 на 5 RPE 8» — выберите вариант/)).toBeVisible()
-  // Короткое название не угадывается: тренер выбирает подходящий присед одним тапом.
+  // Короткое название не угадывается: базовый присед идёт первым, но тренер
+  // всё равно подтверждает подходящий вариант одним тапом.
   const squatCandidates = page.locator('.quick-workout-candidates button')
   await expect(squatCandidates).toHaveCount(3)
   await squatCandidates.first().click()
   await expect(page.getByText('Распознано: 2')).toBeVisible()
+  await expect(page.getByText('Уточните упражнение')).toBeHidden()
   await page.getByRole('button', { name: 'Добавить распознанные (2)' }).click()
   await expect(page.getByLabel('Вес, подход 1')).toHaveValue('80')
   await expect(page.getByLabel('Вес, подход 2')).toHaveValue('85')
@@ -49,7 +53,8 @@ test('стартовый экран показывает точный резул
   await page.getByLabel('Тренировка').fill('Жим гантелей на наклон 3×8 24 кг')
   await expect(page.getByLabel('Распознанные упражнения')).toContainText('Жим гантелей на наклонной')
   await expect(page.getByLabel('Распознанные упражнения')).toContainText('3 × 24 кг × 8 повт.')
-  await expect(page.getByText('На следующем шаге упражнение можно заменить.')).toBeVisible()
+  await expect(page.getByText('На следующем шаге упражнение можно заменить.')).toBeHidden()
+  await expect(page.getByText('Уточните упражнение')).toBeHidden()
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
 })
@@ -604,7 +609,8 @@ test('schedule shows week strip and hour grid with day/week navigation', async (
   await expect(page.getByRole('button', { name: 'Сегодня' })).toBeDisabled()
 })
 
-test('расписание: создание тренировки из расписания с датой выбранного дня', async ({ page }) => {
+test('расписание: создание тренировки из расписания с датой выбранного дня', async ({ page }, testInfo) => {
+  const clientName = `Расписание ${testInfo.workerIndex}-${Date.now()}`
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -613,11 +619,11 @@ test('расписание: создание тренировки из расп�
 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
-  await page.getByLabel('Имя').fill('Расписание Клиент')
+  await page.getByLabel('Имя').fill(clientName)
   await fillNewClientProfile(page)
   await page.getByLabel('Начальный вес, кг').fill('80')
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Расписание Клиент' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: clientName })).toBeVisible()
 
   // Идём в расписание и создаём тренировку прямо оттуда.
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
@@ -626,7 +632,7 @@ test('расписание: создание тренировки из расп�
   // Форма открылась; дата предзаполнена (не пустая), клиента выбираем.
   await expect(page.locator('.workout-notes summary')).toBeVisible()
   await expect(page.getByLabel('Дата')).not.toHaveValue('')
-  await page.getByLabel('Клиент').selectOption({ label: 'Расписание Клиент' })
+  await page.getByLabel('Клиент').selectOption({ label: clientName })
   await page.getByRole('button', { name: '＋ Упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
   await page.getByRole('button', { name: /Присед со штангой/ }).first().click()
@@ -635,7 +641,28 @@ test('расписание: создание тренировки из расп�
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 })
 
-test('расписание: карточка события — время, имя клиента, до двух упражнений', async ({ page }) => {
+test('расписание: отмена создания возвращает к выбранному дню', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Расписание', exact: true }).click()
+  const selectedDay = page.locator('.week-day').nth(1)
+  await selectedDay.click()
+  const selectedNumber = await selectedDay.locator('.day-num').innerText()
+  await page.getByRole('link', { name: 'Новая тренировка' }).click()
+  const selectedDate = await page.getByLabel('Дата').inputValue()
+  await page.getByRole('button', { name: 'Отмена' }).click()
+
+  await expect(page.locator('.schedule-count')).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`date=${selectedDate}`))
+  await expect(page.locator('.week-day.active .day-num')).toHaveText(selectedNumber)
+})
+
+test('расписание: карточка события — время, имя клиента, до двух упражнений', async ({ page }, testInfo) => {
+  const clientName = `Карточка ${testInfo.workerIndex}-${Date.now()}`
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -643,15 +670,15 @@ test('расписание: карточка события — время, им
   await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Добавить' }).click()
-  await page.getByLabel('Имя').fill('Карточка Клиент')
+  await page.getByLabel('Имя').fill(clientName)
   await fillNewClientProfile(page)
   await page.getByLabel('Начальный вес, кг').fill('80')
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Карточка Клиент' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: clientName })).toBeVisible()
 
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
   await page.getByRole('link', { name: 'Новая тренировка' }).click()
-  await page.getByLabel('Клиент').selectOption({ label: 'Карточка Клиент' })
+  await page.getByLabel('Клиент').selectOption({ label: clientName })
   await page.getByLabel('Время').fill('09:00')
   // Три упражнения — на карточке должны показаться максимум два и « …».
   for (const q of ['присед со штангой', 'жим ногами', 'подтягивания']) {
@@ -663,10 +690,13 @@ test('расписание: карточка события — время, им
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
-  await page.getByRole('link', { name: 'Расписание', exact: true }).click()
-  const card = page.locator('.day-grid-event').filter({ hasText: 'Карточка Клиент' }).first()
+  // Навигация таббара проверяется отдельно; здесь фиксируем только
+  // отображение только что созданного события в расписании.
+  await page.goto('/schedule')
+  await expect(page.locator('.schedule-count')).toBeVisible()
+  const card = page.locator('.day-grid-event').filter({ hasText: clientName })
   await expect(card.locator('.day-grid-event-time')).toHaveText('09:00')
-  await expect(card.locator('.day-grid-event-name')).toHaveText('Карточка Клиент')
+  await expect(card.locator('.day-grid-event-name')).toHaveText(clientName)
   // Время и имя — в одной строке (общий контейнер .day-grid-event-top).
   await expect(card.locator('.day-grid-event-top .day-grid-event-name')).toBeVisible()
   // Упражнения — отдельными строками (до двух), третье свёрнуто в « … ».

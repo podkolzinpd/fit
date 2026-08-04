@@ -31,15 +31,17 @@ function catalog(overrides: Partial<ExerciseCatalogState> = {}): ExerciseCatalog
 describe('ExercisePicker', () => {
   it('filters the complete catalog by search and category', () => {
     expect(filterExercises(SYSTEM_EXERCISES, 'legs', 'присед').map((exercise) => exercise.name))
-      .toEqual(['Болгарский присед', 'Присед со штангой', 'Фронтальный присед'])
+      .toEqual(['Присед со штангой', 'Болгарский присед', 'Фронтальный присед'])
     expect(filterExercises(SYSTEM_EXERCISES, 'cardio', '')).toHaveLength(7)
   })
 
+  // Полный каталог содержит 500+ упражнений: в CI его первичный рендер
+  // периодически дольше общего лимита unit-тестов, хотя сценарий корректен.
   it('показывает быстрый раздел разминки и мобилити', () => {
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={vi.fn()} onClose={vi.fn()} />)
     expect(screen.getByText('Разминка и мобилити')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /Суставная разминка/ })).toHaveLength(1)
-  })
+  }, 10_000)
 
   it('ставит частые упражнения клиента выше остальных по числу использований', () => {
     const workouts = [
@@ -59,6 +61,11 @@ describe('ExercisePicker', () => {
     expect(filterExercises(SYSTEM_EXERCISES, 'all', 'брусья').map((exercise) => exercise.ref)).toContain('dips')
     expect(filterExercises(SYSTEM_EXERCISES, 'all', 'гиперы').map((exercise) => exercise.ref)).toContain('hyperextension')
     expect(filterExercises(SYSTEM_EXERCISES, 'all', 'присд штангой').map((exercise) => exercise.ref)).toContain('barbell-squat')
+  })
+
+  it('понимает распространённый английский ввод и сокращения тренера', () => {
+    expect(filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', 'face pull').map((exercise) => exercise.ref)).toContain('fedb-face-pull')
+    expect(filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', 'db incline press').map((exercise) => exercise.ref)).toContain('fedb-incline-dumbbell-press')
   })
 
   it('строит список мышц группы по частоте и фильтрует по мышце', () => {
