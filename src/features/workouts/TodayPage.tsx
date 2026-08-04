@@ -171,6 +171,7 @@ export function TodayPage() {
   async function review() {
     trackGoal('workout_parse_submitted')
     setParsing(true)
+    const hadLocalMatches = resolved.length > 0
     // Локальный разбор быстрый и уже используется для превью. Показываем его
     // сразу, чтобы переход к проверке не зависел от сети и задержки LLM.
     if (resolved.length) {
@@ -213,7 +214,7 @@ export function TodayPage() {
       // Если LLM нашла хотя бы одно упражнение, открываем проверку найденного.
       // Экран разбора оставляем только когда весь ввод не сопоставился — тогда
       // тренеру нужны саджесты каталога для ручного выбора.
-      setScreen(unmatched.length && !parsedItems.length ? 'compose' : 'review')
+      setScreen(hadLocalMatches || parsedItems.length > 0 ? 'review' : 'compose')
       trackGoal('workout_parse_completed')
       trackGoal('workout_review_opened')
       return
@@ -351,7 +352,7 @@ export function TodayPage() {
         </div>)}
       </div>}
        {noMatches && <div className="today-empty-parse" role="status"><strong>Не нашли упражнение</strong><span>Проверьте название или добавьте его из каталога ниже.</span></div>}
-       <button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>
+       <button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => { setScreen('review'); void review() }}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>
       <button type="button" className="secondary wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}><span>Выбрать упражнения</span><small>Из каталога — можно несколько сразу</small></button>
     </section> : <section className="today-review">
       <div className="today-review-head"><div><h1>Проверьте тренировку</h1></div><button type="button" className="link" onClick={() => setScreen('compose')}>Изменить текст</button></div>
