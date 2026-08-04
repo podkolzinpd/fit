@@ -12,11 +12,14 @@ import { ExercisePicker, frequentExercisesForClient, useExerciseCatalog } from '
 import { VoiceNoteField } from '../voice-input'
 import { useAuth } from '../../app/auth-context'
 import { parseQuickWorkoutEntry, resolveQuickWorkoutLine, type ParsedWorkoutExercise } from './quick-workout-entry'
+import { parseWorkoutWithLlm } from './llm-workout-parser'
+import { rankExerciseSearch } from '../exercises/exercise-search'
 import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
 import { workoutDateForRecordMode, type WorkoutRecordMode } from './workout-entry-rules'
 
 type Screen = 'compose' | 'review'
 type RecordMode = WorkoutRecordMode
+type UnmatchedView = { line: string; reason: 'not-found' | 'ambiguous'; candidates: ExerciseSnapshot[] }
 
 function setSummary(item: ParsedWorkoutExercise): string {
   const first = item.sets[0]
@@ -68,6 +71,8 @@ export function TodayPage() {
   const [removedRefs, setRemovedRefs] = useState<string[]>([])
   const [draftReady, setDraftReady] = useState(false)
   const [draftRestored, setDraftRestored] = useState(false)
+  const [parsing, setParsing] = useState(false)
+  const [llmUnmatched, setLlmUnmatched] = useState<UnmatchedView[]>([])
   const inputStarted = useRef(false)
   const openedTracked = useRef(false)
   const lastEmptyText = useRef('')
@@ -101,11 +106,12 @@ export function TodayPage() {
   }, [choices, clientId, draftKey, draftReady, items, manualRefs, recordMode, removedRefs, screen, startTime, text, workoutDate])
 
   const parsed = useMemo(() => parseQuickWorkoutEntry(text, catalog.exercises), [catalog.exercises, text])
+  const displayedUnparsed = llmUnmatched.length ? llmUnmatched : parsed.unparsed
   const resolved = useMemo(() => [
     ...parsed.parsed,
     ...parsed.unparsed.flatMap((item) => choices[item.line] ? [resolveQuickWorkoutLine(item.line, choices[item.line]!)] : []),
   ], [choices, parsed])
-  const noMatches = Boolean(text.trim() && !resolved.length && parsed.unparsed.length)
+  const noMatches = Boolean(text.trim() && !resolved.length && displayedUnparsed.length)
   const frequentExercises = useMemo(() => frequentExercisesForClient(catalog.exercises, clientWorkouts.data ?? []), [catalog.exercises, clientWorkouts.data])
 
   useEffect(() => {
@@ -153,12 +159,40 @@ export function TodayPage() {
     },
   })
 
-  function review() {
+  async function review() {
     trackGoal('workout_parse_submitted')
-    if (!resolved.length) {
-      trackGoal('workout_parse_failed')
+    setParsing(true)
+    try {
+      const llm = await parseWorkoutWithLlm(text, catalog.exercises)
+      const currentByRef = new Map(items.map((item) => [item.exercise.ref, item]))
+      const parsedItems: ParsedWorkoutExercise[] = llm.items.flatMap((item) => {
+        const exercise = catalog.exercises.find((candidate) => candidate.ref === item.exerciseRef)
+        if (!exercise) return []
+        const sets = item.sets.length ? item.sets.map((set, position) => ({
+          position,
+          weightKg: set.weightKg,
+          reps: set.reps,
+          durationSec: set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60),
+          distanceKm: set.distanceKm,
+        })) : [{ position: 0 }]
+        return [{ line: item.sourceText, exercise, sets, hasValues: sets.some((set) => Object.keys(set).some((key) => key !== 'position' && set[key as keyof typeof set] !== undefined)) }]
+      })
+      const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: rankExerciseSearch(catalog.exercises, item.sourceText).slice(0, 4).map((result) => result.exercise) }))
+      setLlmUnmatched(unmatched)
+      if (!parsedItems.length && !unmatched.length) throw new Error('Пустой ответ парсера')
+      const rebuilt = parsedItems.filter((item) => !removedRefs.includes(item.exercise.ref)).map((item) => manualRefs.includes(item.exercise.ref) ? currentByRef.get(item.exercise.ref) ?? item : item)
+      const manualOnly = items.filter((item) => manualRefs.includes(item.exercise.ref) && !rebuilt.some((next) => next.exercise.ref === item.exercise.ref))
+      setItems([...rebuilt, ...manualOnly])
+      // Если часть фраз не сопоставилась, оставляем экран разбора открытым:
+      // тренер увидит саджесты каталога и сможет выбрать упражнение вручную.
+      setScreen(unmatched.length ? 'compose' : 'review')
+      trackGoal('workout_parse_completed')
+      trackGoal('workout_review_opened')
       return
-    }
+    } catch {
+      // Локальный parser остаётся аварийным fallback при временной недоступности LLM.
+      if (!resolved.length) { trackGoal('workout_parse_failed'); return }
+    } finally { setParsing(false) }
     trackGoal(items.length ? 'today_reparse_success' : 'today_parse_success')
     trackGoal('workout_parse_completed')
     const currentByRef = new Map(items.map((item) => [item.exercise.ref, item]))
@@ -274,7 +308,7 @@ export function TodayPage() {
         <p>Напишите тренировку — мы разберём её по упражнениям и подходам.</p>
       </div>
       <div className="today-input-card">
-        <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать" voiceBeta placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} onValueChange={setText} />
+        <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать" voiceBeta placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} onValueChange={(value) => { setText(value); setLlmUnmatched([]) }} />
         {text && <div className="today-input-actions"><button type="button" className="link" onClick={() => setText('')}>Очистить</button></div>}
       </div>
       {items.length > 0 && <p className="today-hint">Ручные правки подходов и добавленные упражнения сохранятся при повторном разборе.</p>}
@@ -284,13 +318,13 @@ export function TodayPage() {
           <ul>{resolved.map((item, index) => <li key={`${item.exercise.ref}-${index}`}><strong>{item.exercise.name}</strong><span>{setSummary(item)}</span></li>)}</ul>
           <small>На следующем шаге упражнение можно заменить.</small>
         </section>}
-        {parsed.unparsed.map((item) => <div className="today-unparsed" key={item.line}>
+        {displayedUnparsed.map((item) => <div className="today-unparsed" key={item.line}>
           <p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли в каталоге'}</p>
           {item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => setChoices((current) => ({ ...current, [item.line]: exercise }))}>{exercise.name}</button>)}</div>}
         </div>)}
       </div>}
       {noMatches && <div className="today-empty-parse" role="status"><strong>Не нашли упражнение</strong><span>Проверьте название или добавьте его из каталога ниже.</span></div>}
-      <button type="button" className="wide today-primary-cta" disabled={!text.trim()} onClick={review}>Разобрать тренировку</button>
+      <button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>
       <button type="button" className="secondary wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}><span>Выбрать упражнения</span><small>Из каталога — можно несколько сразу</small></button>
     </section> : <section className="today-review">
       <div className="today-review-head"><div><h1>Проверьте тренировку</h1></div><button type="button" className="link" onClick={() => setScreen('compose')}>Изменить текст</button></div>
