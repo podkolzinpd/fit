@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('today: быстрый старт ведёт к единому выбору плана или завершённой тренировки', async ({ page }) => {
+test('today: быстрый старт ведёт к единому выбору плана или завершённой тренировки', async ({ page }, testInfo) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -17,8 +17,10 @@ test('today: быстрый старт ведёт к единому выбору
   await expect(page.getByLabel('Имя нового клиента')).toHaveCount(0)
   await page.getByRole('button', { name: '＋ Новый клиент' }).click()
   await expect(page.getByLabel('Имя нового клиента')).toBeVisible()
-  await page.getByRole('button', { name: 'Отмена' }).click()
-  await expect(page.getByLabel('Имя нового клиента')).toHaveCount(0)
+  const quickClientName = `Тест ${testInfo.workerIndex}-${Date.now()}`
+  await page.getByLabel('Имя нового клиента').fill(quickClientName)
+  await page.getByRole('button', { name: 'Создать' }).click()
+  await expect(page.getByLabel('Для кого тренировка').locator('option:checked')).toHaveText(quickClientName)
   await page.getByLabel('Для кого тренировка').selectOption({ label: 'Анна Смирнова' })
   await expect(page.getByText('Нет клиента?', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Запланировать' })).toBeEnabled()
