@@ -1,7 +1,4 @@
 -- Server-side guardrails for the live workout state.
-create unique index if not exists workouts_one_live_per_trainer_uidx
-  on public.workouts (trainer_id)
-  where status = 'in_progress' and deleted_at is null;
 
 create or replace function private.legacy_start_workout(p_workout_id uuid, p_expected_version bigint)
 returns bigint
@@ -21,14 +18,6 @@ begin
 
   if client_archived is null or client_archived then
     raise exception 'client_not_found' using errcode = 'PT404';
-  end if;
-
-  if exists (
-    select 1 from public.workouts
-    where trainer_id = actor_id and status = 'in_progress'
-      and deleted_at is null and id <> p_workout_id
-  ) then
-    raise exception 'workout_conflict' using errcode = 'PT409';
   end if;
 
   update public.workouts set status = 'in_progress', started_at = now(), version = version + 1
