@@ -84,6 +84,7 @@ export function TodayPage() {
   const inputStarted = useRef(false)
   const openedTracked = useRef(false)
   const lastEmptyText = useRef('')
+  const reviewRequest = useRef(0)
   const draftKey = todayDraftKey(actor!.userId)
 
   useEffect(() => {
@@ -179,26 +180,33 @@ export function TodayPage() {
   })
 
   async function review() {
+    const request = ++reviewRequest.current
     trackGoal('workout_parse_submitted')
-    setParsing(true)
-    const hadLocalMatches = resolved.length > 0
-    // Локальный разбор быстрый и уже используется для превью. Показываем его
-    // сразу, чтобы переход к проверке не зависел от сети и задержки LLM.
-    if (resolved.length) {
-      const currentByRef = new Map(items.map((item) => [item.exercise.ref, item]))
-      const rebuilt = resolved
-        .filter((item) => !removedRefs.includes(item.exercise.ref))
-        .map((item) => manualRefs.includes(item.exercise.ref) ? currentByRef.get(item.exercise.ref) ?? item : item)
-      const manualOnly = items.filter((item) => manualRefs.includes(item.exercise.ref) && !rebuilt.some((next) => next.exercise.ref === item.exercise.ref))
-      setItems([...rebuilt, ...manualOnly])
+    const currentByRef = new Map(items.map((item) => [item.exercise.ref, item]))
+    const localItems = resolved
+      .filter((item) => !removedRefs.includes(item.exercise.ref))
+      .map((item) => manualRefs.includes(item.exercise.ref) ? currentByRef.get(item.exercise.ref) ?? item : item)
+    const manualOnly = items.filter((item) => manualRefs.includes(item.exercise.ref) && !localItems.some((localItem) => localItem.exercise.ref === item.exercise.ref))
+    const baseItems = [...localItems, ...manualOnly]
+
+    // Локальный разбор появляется сразу. LLM ниже может только дополнить его,
+    // но никогда не удалит найденные карточки и не сменит выбранный экран.
+    if (baseItems.length) {
+      setLlmUnmatched([])
+      setItems(baseItems)
       setScreen('review')
+      trackGoal(items.length ? 'today_reparse_success' : 'today_parse_success')
+      trackGoal('workout_parse_completed')
+      trackGoal('workout_review_opened')
     }
+
+    setParsing(true)
     try {
       const llm = await Promise.race([
         parseWorkoutWithLlm(text, catalog.exercises),
         new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('LLM parser timeout')), 3500)),
       ])
-      const currentByRef = new Map(items.map((item) => [item.exercise.ref, item]))
+      if (request !== reviewRequest.current) return
       const parsedItems: ParsedWorkoutExercise[] = llm.items.flatMap((item) => {
         const exercise = catalog.exercises.find((candidate) => candidate.ref === item.exerciseRef)
         if (!exercise) return []
@@ -212,36 +220,22 @@ export function TodayPage() {
         return [{ line: item.sourceText, exercise, sets, hasValues: sets.some((set) => Object.keys(set).some((key) => key !== 'position' && set[key as keyof typeof set] !== undefined)) }]
       })
       const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: rankExerciseSearch(catalog.exercises, item.sourceText).slice(0, 4).map((result) => result.exercise) }))
-      // Если LLM временно не знает формулировку, не теряем уже найденные
-      // локальным парсером упражнения и не оставляем тренера без экрана проверки.
-      // Это также покрывает старые/нестандартные каталоги до обновления prompt-а.
-      if (!parsedItems.length && resolved.length) throw new Error('LLM did not match any exercise')
       setLlmUnmatched(unmatched)
-      if (!parsedItems.length && !unmatched.length) throw new Error('Пустой ответ парсера')
-      const rebuilt = parsedItems.filter((item) => !removedRefs.includes(item.exercise.ref)).map((item) => manualRefs.includes(item.exercise.ref) ? currentByRef.get(item.exercise.ref) ?? item : item)
-      const manualOnly = items.filter((item) => manualRefs.includes(item.exercise.ref) && !rebuilt.some((next) => next.exercise.ref === item.exercise.ref))
-      setItems([...rebuilt, ...manualOnly])
-      // Если LLM нашла хотя бы одно упражнение, открываем проверку найденного.
-      // Экран разбора оставляем только когда весь ввод не сопоставился — тогда
-      // тренеру нужны саджесты каталога для ручного выбора.
-      setScreen(hadLocalMatches || parsedItems.length > 0 ? 'review' : 'compose')
+      if (!parsedItems.length && !baseItems.length) {
+        trackGoal('workout_parse_failed')
+        return
+      }
+      const currentRefs = new Set(baseItems.map((item) => item.exercise.ref))
+      const additions = parsedItems.filter((item) => !currentRefs.has(item.exercise.ref))
+      if (additions.length) setItems([...baseItems, ...additions])
+      if (!baseItems.length) setScreen('review')
       trackGoal('workout_parse_completed')
       trackGoal('workout_review_opened')
-      return
     } catch {
-      // Локальный parser остаётся аварийным fallback при временной недоступности LLM.
-      if (!resolved.length) { trackGoal('workout_parse_failed'); return }
-    } finally { setParsing(false) }
-    trackGoal(items.length ? 'today_reparse_success' : 'today_parse_success')
-    trackGoal('workout_parse_completed')
-    const currentByRef = new Map(items.map((item) => [item.exercise.ref, item]))
-    const rebuilt = resolved
-      .filter((item) => !removedRefs.includes(item.exercise.ref))
-      .map((item) => manualRefs.includes(item.exercise.ref) ? currentByRef.get(item.exercise.ref) ?? item : item)
-    const manualOnly = items.filter((item) => manualRefs.includes(item.exercise.ref) && !rebuilt.some((rebuiltItem) => rebuiltItem.exercise.ref === item.exercise.ref))
-    setItems([...rebuilt, ...manualOnly])
-    setScreen('review')
-    trackGoal('workout_review_opened')
+      if (request === reviewRequest.current && !baseItems.length) trackGoal('workout_parse_failed')
+    } finally {
+      if (request === reviewRequest.current) setParsing(false)
+    }
   }
 
   async function refineVoiceTranscript(previousValue: string, value: string, transcript: string) {
@@ -380,10 +374,10 @@ export function TodayPage() {
         </div>)}
       </div>}
        {noMatches && <div className="today-empty-parse" role="status"><strong>Не нашли упражнение</strong><span>Проверьте название или добавьте его из каталога ниже.</span></div>}
-       <button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => { setScreen('review'); void review() }}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>
+       <button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>
       <button type="button" className="secondary wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}><span>Выбрать упражнения</span><small>Из каталога — можно несколько сразу</small></button>
     </section> : <section className="today-review">
-      <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => setScreen('compose')}>← Назад</button><h1>Проверьте тренировку</h1></div>
+      <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { reviewRequest.current += 1; setParsing(false); setScreen('compose') }}>← Назад</button><h1>Проверьте тренировку</h1></div>
       {items.length > 0 ? <div className="today-exercise-list">{items.map((item, index) => <article className="today-exercise" key={`${item.exercise.ref}-${index}`}>
         <div className="today-exercise-title"><div><strong>{item.exercise.name}</strong><p>{setSummary(item)}</p></div><button type="button" className="icon-button" aria-label={`Удалить ${item.exercise.name}`} onClick={() => { setRemovedRefs((current) => current.includes(item.exercise.ref) ? current : [...current, item.exercise.ref]); setItems((current) => current.filter((_, itemIndex) => itemIndex !== index)) }}>×</button></div>
         <details className="today-exercise-editor"><summary>Править</summary><button type="button" className="link" onClick={() => { setReplaceIndex(index); setPickerOpen(true) }}>Заменить упражнение</button><div className="today-set-list">{item.sets.map((set, setIndex) => <div className="today-set-editor" key={set.position}><strong>{setIndex + 1}</strong>{item.exercise.inputKind === 'strength' && <><label>Кг<input aria-label={`${item.exercise.name}: вес, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.weightKg ?? ''} onChange={(event) => updateSet(index, setIndex, { weightKg: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><label>Повт.<input aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label></>}{item.exercise.inputKind === 'duration' && <label>Сек.<input aria-label={`${item.exercise.name}: секунды, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.durationSec ?? ''} onChange={(event) => updateSet(index, setIndex, { durationSec: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.exercise.inputKind === 'reps' && <label>Повт.<input aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.exercise.inputKind === 'distance' && <label>Км<input aria-label={`${item.exercise.name}: километры, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.distanceKm ?? ''} onChange={(event) => updateSet(index, setIndex, { distanceKm: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}<label>RPE<input aria-label={`${item.exercise.name}: RPE, подход ${setIndex + 1}`} type="number" min="1" max="10" step="0.5" inputMode="decimal" value={set.rpe ?? ''} onChange={(event) => updateSet(index, setIndex, { rpe: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>{item.sets.length > 1 && <button type="button" className="link danger" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(index, setIndex)}>×</button>}</div>)}</div><button type="button" className="secondary today-add-set" onClick={() => addSet(index)}>＋ Подход</button></details>
