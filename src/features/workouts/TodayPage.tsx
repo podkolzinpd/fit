@@ -172,7 +172,10 @@ export function TodayPage() {
     trackGoal('workout_parse_submitted')
     setParsing(true)
     try {
-      const llm = await parseWorkoutWithLlm(text, catalog.exercises)
+      const llm = await Promise.race([
+        parseWorkoutWithLlm(text, catalog.exercises),
+        new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('LLM parser timeout')), 3500)),
+      ])
       const currentByRef = new Map(items.map((item) => [item.exercise.ref, item]))
       const parsedItems: ParsedWorkoutExercise[] = llm.items.flatMap((item) => {
         const exercise = catalog.exercises.find((candidate) => candidate.ref === item.exerciseRef)
