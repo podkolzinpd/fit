@@ -196,9 +196,10 @@ export function TodayPage() {
       const rebuilt = parsedItems.filter((item) => !removedRefs.includes(item.exercise.ref)).map((item) => manualRefs.includes(item.exercise.ref) ? currentByRef.get(item.exercise.ref) ?? item : item)
       const manualOnly = items.filter((item) => manualRefs.includes(item.exercise.ref) && !rebuilt.some((next) => next.exercise.ref === item.exercise.ref))
       setItems([...rebuilt, ...manualOnly])
-      // Если часть фраз не сопоставилась, оставляем экран разбора открытым:
-      // тренер увидит саджесты каталога и сможет выбрать упражнение вручную.
-      setScreen(unmatched.length ? 'compose' : 'review')
+      // Если LLM нашла хотя бы одно упражнение, открываем проверку найденного.
+      // Экран разбора оставляем только когда весь ввод не сопоставился — тогда
+      // тренеру нужны саджесты каталога для ручного выбора.
+      setScreen(unmatched.length && !parsedItems.length ? 'compose' : 'review')
       trackGoal('workout_parse_completed')
       trackGoal('workout_review_opened')
       return
