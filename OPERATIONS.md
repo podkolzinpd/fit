@@ -37,6 +37,17 @@ VITE_SUPABASE_PUBLISHABLE_KEY=<publishable key>
 
 `SUPABASE_DB_PASSWORD`, `SUPABASE_ACCESS_TOKEN`, service-role key и OAuth Client Secret в Vercel не добавляются. После первого production deploy его канонический URL фиксируется в Supabase Auth URL Configuration:
 
+Закрытый пилот Apple Health управляется build-time переменными Vercel:
+
+```text
+VITE_WEARABLES_ENABLED=true
+VITE_WEARABLES_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
+```
+
+По умолчанию и при пустом allowlist интеграция скрыта. Изменение списка требует
+нового deployment. UUID попадают во frontend bundle, поэтому этот механизм
+служит только для rollout интерфейса и не является границей авторизации.
+
 - Site URL: `https://<production-domain>`;
 - Redirect URLs: `https://<production-domain>/auth/callback` и `https://<production-domain>/auth/reset`;
 - локальные `http://localhost:5173/auth/callback` и `http://localhost:5173/auth/reset` остаются разрешёнными для разработки.
