@@ -61,6 +61,11 @@ describe('ExercisePicker', () => {
     expect(filterExercises(SYSTEM_EXERCISES, 'all', 'присд штангой').map((exercise) => exercise.ref)).toContain('barbell-squat')
   })
 
+  it('понимает распространённый английский ввод и сокращения тренера', () => {
+    expect(filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', 'face pull').map((exercise) => exercise.ref)).toContain('fedb-face-pull')
+    expect(filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', 'db incline press').map((exercise) => exercise.ref)).toContain('fedb-incline-dumbbell-press')
+  })
+
   it('строит список мышц группы по частоте и фильтрует по мышце', () => {
     expect(musclesForGroup(ENRICHED, 'legs')).toEqual(['Квадрицепс', 'Бицепс бедра'])
     expect(musclesForGroup(ENRICHED, 'chest')).toEqual(['Грудь'])

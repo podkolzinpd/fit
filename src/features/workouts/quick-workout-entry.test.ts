@@ -41,6 +41,22 @@ describe('parseQuickWorkoutEntry', () => {
     }
   })
 
+  it('понимает транслит, английские термины и сокращения тренера', () => {
+    const cases = [
+      ['smith squat 3×8 80 kg', 'fedb-smith-machine-squat'],
+      ['face pull 3×15', 'fedb-face-pull'],
+      ['hip thrust 3×8 80 kg', 'fedb-barbell-hip-thrust'],
+      ['t-bar row 3×10 40 kg', 'fedb-bent-over-two-arm-long-bar-row'],
+      ['db incline press 3×8 24 kg', 'fedb-incline-dumbbell-press'],
+    ] as const
+
+    for (const [text, ref] of cases) {
+      const result = parseQuickWorkoutEntry(text, SYSTEM_EXERCISE_CATALOG)
+      expect(result.unparsed, text).toEqual([])
+      expect(result.parsed[0]?.exercise.ref, text).toBe(ref)
+    }
+  })
+
   it('разбирает силовое упражнение с количеством подходов, повторами и весом', () => {
     const result = parseQuickWorkoutEntry('Присед со штангой 3×8 80 кг', catalog)
     expect(result.unparsed).toEqual([])
@@ -141,6 +157,13 @@ describe('parseQuickWorkoutEntry', () => {
     expect(result.parsed).toEqual([])
     expect(result.unparsed[0]).toMatchObject({ reason: 'ambiguous' })
     expect(result.unparsed[0]?.candidates.map((exercise) => exercise.ref)).toEqual(['front-squat', 'squat'])
+  })
+
+  it('понимает короткое тренерское сокращение для базового упражнения', () => {
+    const result = parseQuickWorkoutEntry('биц 3×12', SYSTEM_EXERCISE_CATALOG)
+
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed[0]?.exercise.ref).toBe('biceps-curl')
   })
 
   it('предпочитает системное упражнение одноимённому пользовательскому', () => {
