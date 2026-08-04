@@ -28,6 +28,7 @@ import { LoadMoreButton } from './LoadMoreButton'
 import { workoutCountLabel } from './workout-count-label'
 import { useAuth } from '../../app/auth-context'
 import { useClientRealtime } from '../../app/use-client-realtime'
+import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft } from './workout-form-draft'
 import { workoutDateForRecordMode } from './workout-entry-rules'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
@@ -190,12 +191,18 @@ export function WorkoutFormPage() {
   const createRequestId = useRef(crypto.randomUUID())
   const [recordCompleted, setRecordCompleted] = useState(false)
   const [entryDate, setEntryDate] = useState<LocalDate>(() => localDate(params.get('date') ?? todayLocalDate()))
+  const [startTime, setStartTime] = useState('')
+  const [endTime, setEndTime] = useState('')
+  const [notes, setNotes] = useState('')
+  const [stageId, setStageId] = useState('')
+  const [formDraftReady, setFormDraftReady] = useState(false)
   const [prefillError, setPrefillError] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const initial = source.data ? (workoutId ? { ...(source.data.status === 'done' ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, todayLocalDate())) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
+  const draftKey = workoutFormDraftKey(actor?.userId ?? 'anonymous', sourceId ?? `new-${params.get('client') ?? ''}-${params.get('date') ?? ''}`)
   // Клиент, для которого выбираем этап (реактивно — при смене в селекте).
   const defaultClientId = clientMode ? (mine.data?.id ?? '') : (initial?.clientId ?? params.get('client') ?? '')
   const [selectedClientId, setSelectedClientId] = useState<string>('')
@@ -211,10 +218,38 @@ export function WorkoutFormPage() {
   // переключить в «Завершённую».
   const completedMode = recordCompleted || Boolean(workoutId && source.data?.status === 'done')
   useEffect(() => {
-    if (!initial) return
+    if (!actor || source.isLoading || (clientMode && mine.isLoading) || formDraftReady) return
+    const saved = readWorkoutFormDraft(draftKey)
+    if (saved) {
+      setSelectedClientId(saved.clientId)
+      setEntryDate(saved.workoutDate)
+      setStartTime(saved.startTime)
+      setEndTime(saved.endTime)
+      setNotes(saved.notes)
+      setStageId(saved.stageId)
+      setRecordCompleted(saved.recordCompleted)
+      setDraftExercises(saved.exercises)
+    } else if (initial) {
+      setEntryDate(workoutDateForRecordMode(source.data?.status === 'done' ? 'completed' : 'planned', initial.workoutDate, todayLocalDate()))
+      setStartTime(initial.startTime ?? '')
+      setEndTime(initial.endTime ?? '')
+      setNotes(initial.notes ?? '')
+      setStageId(initial.stageId ?? '')
+    }
+    setFormDraftReady(true)
+  }, [actor, clientMode, draftKey, formDraftReady, initial, mine.isLoading, source.data?.status, source.isLoading])
+
+  useEffect(() => {
+    if (!formDraftReady || workoutId) return
+    writeWorkoutFormDraft(draftKey, { clientId, workoutDate: entryDate, startTime, endTime, notes, stageId, recordCompleted, exercises })
+  }, [clientId, draftKey, endTime, entryDate, exercises, formDraftReady, notes, recordCompleted, stageId, startTime, workoutId])
+
+  useEffect(() => {
+    if (!initial || formDraftReady) return
     setEntryDate(workoutDateForRecordMode(source.data?.status === 'done' ? 'completed' : 'planned', initial.workoutDate, todayLocalDate()))
-  }, [initial?.workoutDate, source.data?.status])
+  }, [formDraftReady, initial, source.data?.status])
   const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => completedMode ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: async (id) => {
+    if (!workoutId) removeWorkoutFormDraft(draftKey)
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['workout', id] }),
       queryClient.invalidateQueries({ queryKey: ['workouts'] }),
@@ -280,20 +315,20 @@ export function WorkoutFormPage() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget)
     const submitClientId = String(form.get('clientId')); const date = workoutDateForRecordMode(completedMode ? 'completed' : 'planned', entryDate, todayLocalDate())
-    const startTime = String(form.get('startTime') || '')
-    const endTime = String(form.get('endTime') || '')
+    const submittedStartTime = startTime
+    const submittedEndTime = endTime
     const endTimeInput = event.currentTarget.elements.namedItem('endTime') as HTMLInputElement
-    const timeError = endTime && !startTime
+    const timeError = submittedEndTime && !submittedStartTime
       ? 'Укажите время начала тренировки'
-      : endTime && endTime <= startTime
+      : submittedEndTime && submittedEndTime <= submittedStartTime
         ? 'Окончание должно быть позже начала'
         : ''
     endTimeInput.setCustomValidity(timeError)
     if (timeError) { endTimeInput.reportValidity(); return }
     const stageId = String(form.get('stageId') || '') || null
-    mutation.mutate({ id: workoutId, requestId: workoutId ? undefined : createRequestId.current, clientId: submitClientId, workoutDate: date, startTime: startTime || undefined,
-      endTime: endTime || undefined,
-      notes: String(form.get('notes') || '') || undefined, stageId, exercises, version: source.data?.version })
+    mutation.mutate({ id: workoutId, requestId: workoutId ? undefined : createRequestId.current, clientId: submitClientId, workoutDate: date, startTime: submittedStartTime || undefined,
+      endTime: submittedEndTime || undefined,
+      notes: notes || undefined, stageId: stageId || null, exercises, version: source.data?.version })
   }
   const availableClients = clientMode ? (mine.data ? [mine.data] : []) : clients.data
   const editingDenied = Boolean(clientMode && workoutId && source.data && source.data.createdBy !== actor?.userId)
@@ -305,20 +340,20 @@ export function WorkoutFormPage() {
         <div className="workout-form-section-head"><p className="eyebrow">ОСНОВНЫЕ ДАННЫЕ</p><h2>Тренировка</h2></div>
         {clientMode
           ? <><input type="hidden" name="clientId" value={mine.data?.id ?? ''} /><Field label="Клиент"><input value={mine.data?.fullName ?? ''} disabled /></Field></>
-          : <Field label="Клиент"><select name="clientId" defaultValue={initial?.clientId ?? params.get('client') ?? ''} onChange={(event) => setSelectedClientId(event.target.value)} required><option value="">Выберите</option>{availableClients?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>}
-        <div className="split"><Field label="Дата"><input name="date" type="date" max={completedMode ? todayLocalDate() : undefined} value={entryDate} onChange={(event) => setEntryDate(localDate(event.target.value))} required /></Field><Field label="Время"><input name="startTime" type="time" defaultValue={initial?.startTime ?? ''} onChange={(event) => (event.currentTarget.form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('')} /></Field></div>
-        <Field label="Окончание"><input name="endTime" type="time" defaultValue={initial?.endTime ?? ''} onChange={(event) => event.currentTarget.setCustomValidity('')} /></Field>
+          : <Field label="Клиент"><select name="clientId" value={clientId} onChange={(event) => setSelectedClientId(event.target.value)} required><option value="">Выберите</option>{availableClients?.map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}</select></Field>}
+        <div className="split"><Field label="Дата"><input name="date" type="date" max={completedMode ? todayLocalDate() : undefined} value={entryDate} onChange={(event) => setEntryDate(localDate(event.target.value))} required /></Field><Field label="Время"><input name="startTime" type="time" value={startTime} onChange={(event) => { setStartTime(event.target.value); (event.currentTarget.form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} /></Field></div>
+        <Field label="Окончание"><input name="endTime" type="time" value={endTime} onChange={(event) => { setEndTime(event.target.value); event.currentTarget.setCustomValidity('') }} /></Field>
         {!workoutId && <div className="workout-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={!recordCompleted ? 'active' : ''} aria-pressed={!recordCompleted} onClick={() => setRecordCompleted(false)}>План</button><button type="button" className={recordCompleted ? 'active' : ''} aria-pressed={recordCompleted} onClick={() => { setRecordCompleted(true); setEntryDate((date) => workoutDateForRecordMode('completed', date, todayLocalDate())) }}>Завершённая</button></div>}
         {stages.length > 0 && <Field label="Этап цели">
           {/* key — чтобы defaultValue пересчитался при смене клиента/загрузке цели */}
-          <select name="stageId" key={`${clientId}-${defaultStageId}`} defaultValue={defaultStageId}>
+          <select name="stageId" key={`${clientId}-${defaultStageId}`} value={stageId || defaultStageId} onChange={(event) => setStageId(event.target.value)}>
             <option value="">Без этапа</option>
             {stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.title}</option>)}
           </select>
         </Field>}
         <details className="workout-notes" open={Boolean(initial?.notes)}>
           <summary>Заметка <span>Необязательно</span></summary>
-          <VoiceNoteField name="notes" source="workout_form" defaultValue={initial?.notes ?? ''} hideLabel />
+          <VoiceNoteField name="notes" source="workout_form" value={notes} onValueChange={setNotes} hideLabel />
         </details>
       </section>
       <section className="workout-form-section workout-form-exercises">
