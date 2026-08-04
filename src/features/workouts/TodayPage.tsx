@@ -279,7 +279,11 @@ export function TodayPage() {
       </div>
       {items.length > 0 && <p className="today-hint">Ручные правки подходов и добавленные упражнения сохранятся при повторном разборе.</p>}
       {text.trim() && <div className="today-parse-preview" aria-live="polite">
-        {resolved.length > 0 && <p><strong>Найдены упражнения: {resolved.length}</strong></p>}
+        {resolved.length > 0 && <section className="today-recognized" aria-label="Распознанные упражнения">
+          <p><strong>Распознано: {resolved.length}</strong></p>
+          <ul>{resolved.map((item, index) => <li key={`${item.exercise.ref}-${index}`}><strong>{item.exercise.name}</strong><span>{setSummary(item)}</span></li>)}</ul>
+          <small>На следующем шаге упражнение можно заменить.</small>
+        </section>}
         {parsed.unparsed.map((item) => <div className="today-unparsed" key={item.line}>
           <p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли в каталоге'}</p>
           {item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => setChoices((current) => ({ ...current, [item.line]: exercise }))}>{exercise.name}</button>)}</div>}
