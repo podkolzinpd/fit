@@ -18,6 +18,8 @@ import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
 import { ProfileIcon } from '../../shared/icons'
+import { WearableHealthCard } from '../wearables'
+import { isWearablesPilotEnabled } from '../../app/feature-flags'
 
 export function ClientsPage() {
   const showArchived = localStorage.getItem('fit.showArchivedClients') === 'true'
@@ -69,6 +71,7 @@ export function MyClientPage() {
           <Link className="client-home-route primary" to="/me/workouts"><span>Тренировки</span><small>Планы и история занятий</small><b aria-hidden="true">›</b></Link>
           <Link className="client-home-route" to="/me/progress"><span>Прогресс</span><small>Замеры и динамика</small><b aria-hidden="true">›</b></Link>
         </section>
+        {actor && isWearablesPilotEnabled(actor.userId) && <WearableHealthCard />}
         <section className="client-home-connections"><div className="client-home-section-head"><div><p className="eyebrow">СВЯЗЬ С ТРЕНЕРОМ</p><h2>Тренеры</h2></div><button className="secondary" disabled={invite.isPending} onClick={() => invite.mutate(query.data!.id)}>Пригласить тренера</button></div>
         {invite.data && <div className="card"><div><strong>Код для тренера: {invite.data}</strong><p>Действует 7 дней и используется один раз.</p></div></div>}
         {invite.error && <p className="error">{invite.error.message}</p>}

@@ -901,6 +901,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .theme-light .goal-stages-hint { background: #fbf4f0 }
 .theme-light .overflow-list { background: var(--surface-elevated) }
 .theme-light .day-grid-hour-line { background: var(--hairline) }
+.wearable-card { display:grid; gap:14px; padding:20px; border:1px solid var(--border); border-radius:22px; background:var(--surface-raised); box-shadow:var(--shadow-card) }
+.wearable-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px }.wearable-card-head .eyebrow { margin:0 0 4px }.wearable-card-head h2 { margin:0; font-size:22px; line-height:1.15 }
+.wearable-empty { display:grid; gap:7px; padding:14px; border:1px solid var(--accent-surface-border); border-radius:16px; background:var(--accent-surface) }.wearable-empty p { margin:0; color:var(--muted); line-height:1.45 }.wearable-empty button { justify-self:start; margin-top:4px }
+.wearable-metrics { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:1px; overflow:hidden; border:1px solid var(--border); border-radius:16px; background:var(--border) }.wearable-metrics div { display:grid; gap:4px; min-height:78px; padding:13px; background:var(--surface-raised) }.wearable-metrics div:last-child { grid-column:1 / -1 }.wearable-metrics span { color:var(--muted); font-size:12px; font-weight:700 }.wearable-metrics strong { font-size:18px }.wearable-source { margin:0; color:var(--muted); font-size:12px; line-height:1.4 }
+.theme-light .wearable-card { background:#fffefc }
 /* Пикер упражнений (Этап 3, гр.2): плотный тёмный шит на светлой теме
    переопределяем точечно, остальной каталог уже работает на общих токенах. */
 .theme-light .exercise-picker { border-color: var(--border); background: var(--surface-elevated) }
