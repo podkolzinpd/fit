@@ -92,7 +92,7 @@ function number(value: string | undefined): number | undefined {
 }
 
 export function quickWorkoutExerciseName(line: string): string {
-  const metric = /\d+\s*(?:[xх×]|кг|kg|сек|мин|км|km|повт|раз\b|на\s*\d|(?:(?:подход(?:а|ов)?|сет(?:а|ов)?)(?:\s+по)?|по)\s*\d)/iu.exec(line)
+  const metric = /\d+\s*(?:[xх×]|кг|kg|килограмм(?:а|ов)?|сек|мин|км|km|повт|раз\b|на\s*\d|(?:(?:подход(?:а|ов)?|сет(?:а|ов)?)(?:\s+по)?|по)\s*\d)/iu.exec(line)
   return (metric ? line.slice(0, metric.index) : line).trim()
 }
 
@@ -147,10 +147,15 @@ function needsTrainerChoice(name: string, catalog: readonly ExerciseSnapshot[]):
   return !catalog.some((exercise) => normalizedExerciseName(exercise.name) === query || isExerciseSearchAlias(exercise, query))
 }
 
-function quickWorkoutLines(text: string, catalog: readonly ExerciseSnapshot[]): string[] {
+export function splitWorkoutText(text: string, catalog: readonly ExerciseSnapshot[]): string[] {
   // Whisper обычно сохраняет слова-связки, а не переносы. Разделяем только
   // явные «затем/потом» и найденные по каталогу начала упражнений.
   return formatWorkoutText(text, catalog).split(/[\n;]+/).flatMap((line) => line.split(/\s+(?:затем|потом|далее|после\s+этого)\s+/iu)).map((line) => line.trim()).filter(Boolean)
+}
+
+/** Кандидаты из каталога для одного фрагмента диктовки, в порядке релевантности. */
+export function workoutCandidates(line: string, catalog: readonly ExerciseSnapshot[]): ExerciseSnapshot[] {
+  return matchingExercises(quickWorkoutExerciseName(line), catalog, []).slice(0, 8)
 }
 
 function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { sets: WorkoutSetDraft[]; hasValues: boolean } {
@@ -159,7 +164,7 @@ function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { se
   // Отдельные пары веса и повторов — естественная запись факта после зала:
   // «80×8, 85×6, 90×5». Берём её только при двух и более парах, чтобы
   // обычное «3×8 80 кг» по-прежнему означало три одинаковых подхода.
-  const variableStrengthSets = [...line.matchAll(/(\d+(?:[.,]\d+)?)\s*(?:кг|kg)?\s*(?:[xх×]|на)\s*(\d+)/giu)]
+  const variableStrengthSets = [...line.matchAll(/(\d+(?:[.,]\d+)?)\s*(?:кг|kg|килограмм(?:а|ов)?)?\s*(?:[xх×]|на)\s*(\d+)/giu)]
     .map((match) => ({ weightKg: number(match[1]), reps: number(match[2]) }))
     .filter((set): set is { weightKg: number; reps: number } => set.weightKg !== undefined && set.reps !== undefined)
   const spokenWeightReps = /\d+(?:[.,]\d+)?\s*на\s*\d+/iu.test(line)
@@ -177,7 +182,7 @@ function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { se
   const count = weightRepsSetsMatch ? Number(weightRepsSetsMatch[3]) : setsByWordsMatch ? Number(setsByWordsMatch[1]) : setMatch ? Number(setMatch[1]) : 1
   const repeatedValue = number(weightRepsSetsMatch?.[2] ?? setsByWordsMatch?.[2] ?? setMatch?.[2])
   const repeatedUnit = (setsByWordsMatch?.[3] ?? setMatch?.[3])?.toLocaleLowerCase('ru')
-  const weight = number(/(\d+(?:[.,]\d+)?)\s*(?:кг|kg)/iu.exec(line)?.[1])
+  const weight = number(/(\d+(?:[.,]\d+)?)\s*(?:кг|kg|килограмм(?:а|ов)?)/iu.exec(line)?.[1])
     ?? number(weightRepsSetsMatch?.[1])
   const durationMatch = /(\d+(?:[.,]\d+)?)\s*(сек|с|мин|м)/iu.exec(line)
   const durationValue = number(durationMatch?.[1])
@@ -217,7 +222,7 @@ export function resolveQuickWorkoutLine(line: string, exercise: ExerciseSnapshot
 export function parseQuickWorkoutEntry(text: string, catalog: readonly ExerciseSnapshot[], options: QuickWorkoutEntryOptions = {}): QuickWorkoutParseResult {
   const parsed: ParsedWorkoutExercise[] = []
   const unparsed: UnparsedWorkoutLine[] = []
-  for (const rawLine of quickWorkoutLines(text, catalog)) {
+  for (const rawLine of splitWorkoutText(text, catalog)) {
     const line = rawLine.trim()
     if (!line) continue
     const name = quickWorkoutExerciseName(line)

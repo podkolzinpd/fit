@@ -6,8 +6,13 @@ export type WorkoutParseResponse = {
   unmatched: Array<{ sourceText: string; reason: string }>
 }
 
-export const parseWorkout = (text: string, catalog: readonly ExerciseSnapshot[]) =>
-  supabase.functions.invoke<WorkoutParseResponse>('parse-workout', { body: { text, catalog } })
+export type WorkoutParseSegment = {
+  sourceText: string
+  candidates: Array<{ ref: string; name: string; inputKind: string }>
+}
+
+export const parseWorkout = (text: string, catalog: readonly ExerciseSnapshot[], segments: readonly WorkoutParseSegment[]) =>
+  supabase.functions.invoke<WorkoutParseResponse>('parse-workout', { body: { text, catalog, segments } })
 
 const columns = 'id,name,muscle_group,input_kind,archived_at,version'
 

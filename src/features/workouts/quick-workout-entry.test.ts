@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatWorkoutText, parseQuickWorkoutEntry } from './quick-workout-entry'
+import { formatWorkoutText, parseQuickWorkoutEntry, splitWorkoutText, workoutCandidates } from './quick-workout-entry'
 import { rankExerciseSearch } from '../exercises/exercise-search'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
@@ -150,6 +150,18 @@ describe('parseQuickWorkoutEntry', () => {
     expect(formatted).toContain('\nЖим гантелей в наклонной скамье')
     expect(result.unparsed).toEqual([])
     expect(result.parsed.map((item) => item.exercise.ref)).toEqual(['romanian-deadlift', 'fedb-incline-dumbbell-press'])
+  })
+
+  it('готовит отдельные фрагменты и кандидатов для LLM-разбора слитой диктовки', () => {
+    const text = 'Жим лёжа 100 килограмм 3 подхода по 12 раз Присед со штангой 80 килограмм 4 подхода по 15 повторений'
+    const segments = splitWorkoutText(text, catalog)
+
+    expect(segments).toEqual([
+      'Жим лёжа 100 килограмм 3 подхода по 12 раз',
+      'Присед со штангой 80 килограмм 4 подхода по 15 повторений',
+    ])
+    expect(workoutCandidates(segments[0]!, catalog).map(({ ref }) => ref)).toContain('bench')
+    expect(workoutCandidates(segments[1]!, catalog).map(({ ref }) => ref)).toContain('squat')
   })
 
   it('не выбирает упражнение молча, если название неоднозначно или не найдено', () => {

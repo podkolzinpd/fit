@@ -20,6 +20,7 @@ import { workoutDateForRecordMode, type WorkoutRecordMode } from './workout-entr
 type Screen = 'compose' | 'review'
 type RecordMode = WorkoutRecordMode
 type UnmatchedView = { line: string; reason: 'not-found' | 'ambiguous'; candidates: ExerciseSnapshot[] }
+type VoiceRefinement = { state: 'loading' | 'success' | 'error'; message: string } | null
 
 function setSummary(item: ParsedWorkoutExercise): string {
   const first = item.sets[0]
@@ -80,6 +81,7 @@ export function TodayPage() {
   const [draftRestored, setDraftRestored] = useState(false)
   const [parsing, setParsing] = useState(false)
   const [llmUnmatched, setLlmUnmatched] = useState<UnmatchedView[]>([])
+  const [voiceRefinement, setVoiceRefinement] = useState<VoiceRefinement>(null)
   const voiceParseVersion = useRef(0)
   const inputStarted = useRef(false)
   const openedTracked = useRef(false)
@@ -202,10 +204,7 @@ export function TodayPage() {
 
     setParsing(true)
     try {
-      const llm = await Promise.race([
-        parseWorkoutWithLlm(text, catalog.exercises),
-        new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('LLM parser timeout')), 3500)),
-      ])
+      const llm = await parseWorkoutWithLlm(text, catalog.exercises)
       if (request !== reviewRequest.current) return
       const parsedItems: ParsedWorkoutExercise[] = llm.items.flatMap((item) => {
         const exercise = catalog.exercises.find((candidate) => candidate.ref === item.exerciseRef)
@@ -240,18 +239,32 @@ export function TodayPage() {
 
   async function refineVoiceTranscript(previousValue: string, value: string, transcript: string) {
     const version = ++voiceParseVersion.current
+    setVoiceRefinement({ state: 'loading', message: 'Разбираю диктовку по упражнениям…' })
+    trackGoal('voice_workout_parse_started')
     try {
       const llm = await parseWorkoutWithLlm(transcript, catalog.exercises)
       if (version !== voiceParseVersion.current) return
       const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: rankExerciseSearch(catalog.exercises, item.sourceText).slice(0, 4).map((result) => result.exercise) }))
       setLlmUnmatched(unmatched)
       // Не меняем текст, если модель не уверена или тренер уже успел его поправить.
-      if (unmatched.length) return
+      if (unmatched.length) {
+        setVoiceRefinement({ state: 'error', message: 'Часть упражнений нужно уточнить — варианты показаны ниже.' })
+        trackGoal('voice_workout_parse_partial')
+        return
+      }
       const formatted = formatLlmWorkoutText(llm, catalog.exercises)
-      if (!formatted) return
+      if (!formatted) {
+        setVoiceRefinement({ state: 'error', message: 'Не удалось получить структурированный разбор диктовки.' })
+        trackGoal('voice_workout_parse_failed')
+        return
+      }
       setText((current) => current === value ? appendVoiceText(previousValue, formatted) : current)
+      setVoiceRefinement({ state: 'success', message: 'Диктовка разобрана и отформатирована.' })
+      trackGoal('voice_workout_parse_completed')
     } catch {
-      // Превью локального парсера остаётся доступным при временной ошибке LLM.
+      if (version !== voiceParseVersion.current) return
+      setVoiceRefinement({ state: 'error', message: 'Не удалось обработать диктовку. Исходный текст сохранён.' })
+      trackGoal('voice_workout_parse_failed')
     }
   }
 
@@ -359,9 +372,10 @@ export function TodayPage() {
         <p>Напишите тренировку — мы разберём её по упражнениям и подходам.</p>
       </div>
       <div className="today-input-card">
-        <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать" voiceBeta placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} onValueChange={(value) => { setText(formatWorkoutText(value, catalog.exercises)); setLlmUnmatched([]) }} onTranscriptAppended={({ previousValue, value, transcript }) => void refineVoiceTranscript(previousValue, formatWorkoutText(value, catalog.exercises), transcript)} />
+        <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать" voiceBeta placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} onValueChange={(value) => { setText(formatWorkoutText(value, catalog.exercises)); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => void refineVoiceTranscript(previousValue, formatWorkoutText(value, catalog.exercises), transcript)} />
         {text && <div className="today-input-actions"><button type="button" className="link" onClick={() => setText('')}>Очистить</button></div>}
       </div>
+      {voiceRefinement && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
       {text.trim() && <div className="today-parse-preview" aria-live="polite">
         {resolved.length > 0 && <section className="today-recognized" aria-label="Распознанные упражнения">
           <p><strong>Распознано: {resolved.length}</strong></p>
