@@ -67,6 +67,7 @@ export function TodayPage() {
   const [startTime, setStartTime] = useState('')
   const [quickClientName, setQuickClientName] = useState('')
   const [quickClientOpen, setQuickClientOpen] = useState(false)
+  const [quickClientOption, setQuickClientOption] = useState<{ id: string; fullName: string } | null>(null)
   const [prefillError, setPrefillError] = useState<string | null>(null)
   const [manualRefs, setManualRefs] = useState<string[]>([])
   const [removedRefs, setRemovedRefs] = useState<string[]>([])
@@ -163,6 +164,7 @@ export function TodayPage() {
     mutationFn: () => clientsRepository.createQuick(quickClientName.trim()),
     onSuccess: async (id) => {
       trackGoal('today_quick_client_created')
+      setQuickClientOption({ id, fullName: quickClientName.trim() })
       setClientId(id)
       setQuickClientName('')
       setQuickClientOpen(false)
@@ -319,6 +321,7 @@ export function TodayPage() {
     setRecordMode('planned')
     setWorkoutDate(today)
     setStartTime('')
+    setQuickClientOption(null)
     setManualRefs([])
     setRemovedRefs([])
     setDraftRestored(false)
@@ -363,7 +366,7 @@ export function TodayPage() {
         <details className="today-exercise-editor"><summary>Править</summary><button type="button" className="link" onClick={() => { setReplaceIndex(index); setPickerOpen(true) }}>Заменить упражнение</button><div className="today-set-list">{item.sets.map((set, setIndex) => <div className="today-set-editor" key={set.position}><strong>{setIndex + 1}</strong>{item.exercise.inputKind === 'strength' && <><label>Кг<input aria-label={`${item.exercise.name}: вес, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.weightKg ?? ''} onChange={(event) => updateSet(index, setIndex, { weightKg: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><label>Повт.<input aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label></>}{item.exercise.inputKind === 'duration' && <label>Сек.<input aria-label={`${item.exercise.name}: секунды, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.durationSec ?? ''} onChange={(event) => updateSet(index, setIndex, { durationSec: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.exercise.inputKind === 'reps' && <label>Повт.<input aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.exercise.inputKind === 'distance' && <label>Км<input aria-label={`${item.exercise.name}: километры, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.distanceKm ?? ''} onChange={(event) => updateSet(index, setIndex, { distanceKm: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}<label>RPE<input aria-label={`${item.exercise.name}: RPE, подход ${setIndex + 1}`} type="number" min="1" max="10" step="0.5" inputMode="decimal" value={set.rpe ?? ''} onChange={(event) => updateSet(index, setIndex, { rpe: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>{item.sets.length > 1 && <button type="button" className="link danger" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(index, setIndex)}>×</button>}</div>)}</div><button type="button" className="secondary today-add-set" onClick={() => addSet(index)}>＋ Подход</button></details>
       </article>)}</div> : <section className="today-empty today-exercise-empty"><p>Добавьте упражнения из каталога — можно выбрать несколько сразу.</p><button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button></section>}
       {items.length > 0 && <button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button>}
-      <label className="today-client"><span>Для кого тренировка</span><select value={clientId} onChange={(event) => setClientId(event.target.value)}><option value="">Выберите клиента</option>{clients.data?.map((client) => <option value={client.id} key={client.id}>{client.fullName}</option>)}</select></label>
+      <label className="today-client"><span>Для кого тренировка</span><select value={clientId} onChange={(event) => setClientId(event.target.value)}><option value="">Выберите клиента</option>{quickClientOption && !clients.data?.some((client) => client.id === quickClientOption.id) && <option value={quickClientOption.id}>{quickClientOption.fullName}</option>}{clients.data?.map((client) => <option value={client.id} key={client.id}>{client.fullName}</option>)}</select></label>
       {!clientId && !quickClientOpen && <button type="button" className="link today-new-client" onClick={() => setQuickClientOpen(true)}>＋ Новый клиент</button>}
       {!clientId && quickClientOpen && <section className="today-quick-client"><div className="today-quick-client-head"><strong>Новый клиент</strong><button type="button" className="link" onClick={() => { setQuickClientOpen(false); setQuickClientName('') }}>Отмена</button></div><p>Укажите имя — остальное можно заполнить позже.</p><div className="today-quick-client-form"><input aria-label="Имя нового клиента" value={quickClientName} onChange={(event) => setQuickClientName(event.target.value)} placeholder="Имя клиента" autoFocus /><button type="button" className="secondary" disabled={quickClientName.trim().length < 2 || createQuickClient.isPending} onClick={() => createQuickClient.mutate()}>Создать</button></div>{createQuickClient.error && <p className="error">{createQuickClient.error.message}</p>}</section>}
       {(prefillError || save.error) && <p className="error">{prefillError ?? save.error?.message}</p>}
