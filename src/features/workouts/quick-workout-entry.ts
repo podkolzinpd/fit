@@ -1,6 +1,6 @@
 import type { ExerciseSnapshot, WorkoutSetDraft } from '../../shared/domain'
 import { isValidRpe } from '../../shared/rpe'
-import { isExerciseSearchAlias, rankExerciseSearch } from '../exercises/exercise-search'
+import { isExerciseSearchAlias, rankExerciseSearch, SEARCH_ALIASES } from '../exercises/exercise-search'
 
 export interface ParsedWorkoutExercise {
   line: string
@@ -46,12 +46,32 @@ const sportSpeechAliases: Record<string, string> = {
   'жим гантелей в наклонной скамье': 'жим гантелей на наклонной',
 }
 
-const spokenExerciseStarts = ['румынская тяга', 'жим гантелей', 'жим лежа', 'жим лёжа', 'присед', 'планка', 'тяга', 'разведение', 'сгибание', 'выпады', 'отжимания', 'бег', 'гребля']
+function exerciseStartPhrases(catalog: readonly ExerciseSnapshot[]): string[] {
+  return [...catalog.flatMap((exercise) => [
+    exercise.name.replace(/\s*\([^)]*\)\s*$/, ''),
+    ...(SEARCH_ALIASES[exercise.ref] ?? []),
+  ]), ...Object.keys(sportSpeechAliases)]
+    .map((value) => value.trim())
+    .filter((value) => value.split(/\s+/).length >= 2)
+    .sort((left, right) => right.length - left.length)
+}
 
-/** Делит слитную SpeechKit-фразу перед новым упражнением, не меняя слова. */
-export function formatWorkoutText(text: string): string {
-  const starts = spokenExerciseStarts.map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
-  return text.replace(new RegExp(`\\s+(?=(?:${starts})\\b)`, 'giu'), '\n').replace(/\n{2,}/g, '\n').trim()
+/**
+ * SpeechKit часто отдаёт несколько упражнений одной фразой. Ищем начала
+ * упражнений по актуальному каталогу и его алиасам, чтобы и превью, и
+ * саджесты работали с каждой частью ввода отдельно.
+ */
+export function formatWorkoutText(text: string, catalog: readonly ExerciseSnapshot[] = []): string {
+  const starts = exerciseStartPhrases(catalog)
+  if (!starts.length) return text.replace(/\n{2,}/g, '\n').trim()
+  const matches = starts.flatMap((phrase) => {
+    const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')
+    return [...text.matchAll(new RegExp(`(?:^|\\s)${escaped}(?=\\s|$)`, 'giu'))]
+      .map((match) => ({ index: (match.index ?? 0) + match[0].length - match[0].trimStart().length, length: phrase.length }))
+  }).sort((left, right) => left.index - right.index || right.length - left.length)
+  const startsAt = matches.reduce<number[]>((result, match) => result.some((index) => index === match.index) ? result : [...result, match.index], [])
+  if (startsAt.length < 2) return text.replace(/\n{2,}/g, '\n').trim()
+  return startsAt.slice(1).reverse().reduce((result, index) => `${result.slice(0, index).trimEnd()}\n${result.slice(index).trimStart()}`, text).replace(/\n{2,}/g, '\n').trim()
 }
 
 function normalizeSportSpeech(value: string): string {
@@ -72,7 +92,7 @@ function number(value: string | undefined): number | undefined {
 }
 
 export function quickWorkoutExerciseName(line: string): string {
-  const metric = /\d+\s*(?:[xх×]|кг|kg|сек|мин|км|km|повт|на\s*\d|(?:подход(?:а|ов)?|сет(?:а|ов)?)?\s*по\s*\d)/iu.exec(line)
+  const metric = /\d+\s*(?:[xх×]|кг|kg|сек|мин|км|km|повт|раз\b|на\s*\d|(?:(?:подход(?:а|ов)?|сет(?:а|ов)?)(?:\s+по)?|по)\s*\d)/iu.exec(line)
   return (metric ? line.slice(0, metric.index) : line).trim()
 }
 
@@ -127,10 +147,10 @@ function needsTrainerChoice(name: string, catalog: readonly ExerciseSnapshot[]):
   return !catalog.some((exercise) => normalizedExerciseName(exercise.name) === query || isExerciseSearchAlias(exercise, query))
 }
 
-function quickWorkoutLines(text: string): string[] {
+function quickWorkoutLines(text: string, catalog: readonly ExerciseSnapshot[]): string[] {
   // Whisper обычно сохраняет слова-связки, а не переносы. Разделяем только
-  // явные «затем/потом», чтобы не разрезать список подходов через запятую.
-  return text.split(/[\n;]+/).flatMap((line) => line.split(/\s+(?:затем|потом|далее|после\s+этого)\s+/iu)).map((line) => line.trim()).filter(Boolean)
+  // явные «затем/потом» и найденные по каталогу начала упражнений.
+  return formatWorkoutText(text, catalog).split(/[\n;]+/).flatMap((line) => line.split(/\s+(?:затем|потом|далее|после\s+этого)\s+/iu)).map((line) => line.trim()).filter(Boolean)
 }
 
 function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { sets: WorkoutSetDraft[]; hasValues: boolean } {
@@ -152,7 +172,7 @@ function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { se
   // Тренеры записывают и «3×8», и «3 подхода по 8». В тройной записи
   // «80×8×3» порядок привычный для зала: вес × повторы × подходы.
   const weightRepsSetsMatch = /(\d+(?:[.,]\d+)?)\s*[xх×]\s*(\d+(?:[.,]\d+)?)\s*[xх×]\s*(\d+)/iu.exec(line)
-  const setsByWordsMatch = /(\d+)\s*(?:подход(?:а|ов)?|сет(?:а|ов)?)?\s*по\s*(\d+(?:[.,]\d+)?)\s*(сек|с|мин|м)?\b/iu.exec(line)
+  const setsByWordsMatch = /(\d+)\s*(?:(?:подход(?:а|ов)?|сет(?:а|ов)?)(?:\s+по)?|по)\s*(\d+(?:[.,]\d+)?)\s*(сек|с|мин|м)?\b/iu.exec(line)
   const setMatch = /(\d+)\s*[xх×]\s*(\d+(?:[.,]\d+)?)\s*(сек|с|мин|м)?\b/iu.exec(line)
   const count = weightRepsSetsMatch ? Number(weightRepsSetsMatch[3]) : setsByWordsMatch ? Number(setsByWordsMatch[1]) : setMatch ? Number(setMatch[1]) : 1
   const repeatedValue = number(weightRepsSetsMatch?.[2] ?? setsByWordsMatch?.[2] ?? setMatch?.[2])
@@ -166,7 +186,7 @@ function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { se
     ? repeatedValue! * (repeatedUnit.startsWith('м') ? 60 : 1)
     : durationValue === undefined ? undefined : durationValue * (durationUnit?.startsWith('м') ? 60 : 1)
   const distanceKm = number(/(\d+(?:[.,]\d+)?)\s*(?:км|km)/iu.exec(line)?.[1])
-  const explicitReps = number(/(\d+)\s*(?:повт|повтор)/iu.exec(line)?.[1])
+  const explicitReps = number(/(\d+)\s*(?:повт|повтор|раз\b)/iu.exec(line)?.[1])
   const reps = repeatedUnit ? explicitReps : repeatedValue
   const hasValues = weight !== undefined || reps !== undefined || durationSec !== undefined || distanceKm !== undefined || validRpe !== undefined
   return {
@@ -197,7 +217,7 @@ export function resolveQuickWorkoutLine(line: string, exercise: ExerciseSnapshot
 export function parseQuickWorkoutEntry(text: string, catalog: readonly ExerciseSnapshot[], options: QuickWorkoutEntryOptions = {}): QuickWorkoutParseResult {
   const parsed: ParsedWorkoutExercise[] = []
   const unparsed: UnparsedWorkoutLine[] = []
-  for (const rawLine of quickWorkoutLines(text)) {
+  for (const rawLine of quickWorkoutLines(text, catalog)) {
     const line = rawLine.trim()
     if (!line) continue
     const name = quickWorkoutExerciseName(line)
