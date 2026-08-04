@@ -31,7 +31,7 @@ function catalog(overrides: Partial<ExerciseCatalogState> = {}): ExerciseCatalog
 describe('ExercisePicker', () => {
   it('filters the complete catalog by search and category', () => {
     expect(filterExercises(SYSTEM_EXERCISES, 'legs', 'присед').map((exercise) => exercise.name))
-      .toEqual(['Болгарский присед', 'Присед со штангой', 'Фронтальный присед'])
+      .toEqual(['Присед со штангой', 'Болгарский присед', 'Фронтальный присед'])
     expect(filterExercises(SYSTEM_EXERCISES, 'cardio', '')).toHaveLength(7)
   })
 

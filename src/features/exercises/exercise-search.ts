@@ -137,6 +137,14 @@ const OPTIONAL_VARIANT_TOKENS = new Set([
   'узким', 'широким', 'обратным', 'попеременный', 'одной', 'стоя', 'сидя',
 ])
 
+// У общих названий есть ожидаемое базовое движение. Без этого большой
+// импортированный каталог может поставить выше редкий вариант лишь по алфавиту.
+// Это влияет только на порядок подсказок: короткий запрос всё равно не
+// подставляется автоматически и требует подтверждения тренера.
+const DEFAULT_GENERIC_QUERY_REFS: Readonly<Record<string, string>> = {
+  присед: 'barbell-squat',
+}
+
 export interface RankedExerciseMatch {
   exercise: ExerciseSnapshot
   score: number
@@ -170,9 +178,13 @@ export function rankExerciseSearch(catalog: readonly ExerciseSnapshot[], search:
     const exactAlias = normalizedAliases.includes(query)
     const exactName = name === query
     const inOrder = name.includes(query) || normalizedAliases.some((alias) => alias.includes(query))
+    // Для короткого общего названия сперва показываем базовое движение:
+    // «присед» → «Присед со штангой», а не один из частных вариантов.
+    const startsWithQuery = name.startsWith(query)
     const nameTokens = name.split(/\s+/)
     const omittedVariantTokens = nameTokens.filter((token) => OPTIONAL_VARIANT_TOKENS.has(token) && !queryTokens.some((queryToken) => tokenMatches(queryToken, [token])))
-    const score = (exactName ? 240 : 0) + (exactAlias ? 220 : 0) + matchedTokens.length * 30 + (inOrder ? 24 : 0) - omittedVariantTokens.length * 18
+    const genericDefault = DEFAULT_GENERIC_QUERY_REFS[query] === exercise.ref
+    const score = (exactName ? 240 : 0) + (exactAlias ? 220 : 0) + (genericDefault ? 180 : 0) + matchedTokens.length * 30 + (inOrder ? 24 : 0) + (startsWithQuery ? 28 : 0) - omittedVariantTokens.length * 18
     return [{ exercise, score }]
   }).sort((left, right) => right.score - left.score || left.exercise.name.localeCompare(right.exercise.name, 'ru'))
 }

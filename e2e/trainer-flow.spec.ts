@@ -24,7 +24,8 @@ test('форма: быстрый ввод разбирает текст в уп�
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
   await page.getByLabel('Запись тренировки').fill('Присед 80 на 8, 85 на 6, 90 на 5 RPE 8 затем Планка 3 по 45 сек')
   await expect(page.getByText(/«Присед 80 на 8, 85 на 6, 90 на 5 RPE 8» — выберите вариант/)).toBeVisible()
-  // Короткое название не угадывается: тренер выбирает подходящий присед одним тапом.
+  // Короткое название не угадывается: базовый присед идёт первым, но тренер
+  // всё равно подтверждает подходящий вариант одним тапом.
   const squatCandidates = page.locator('.quick-workout-candidates button')
   await expect(squatCandidates).toHaveCount(3)
   await squatCandidates.first().click()

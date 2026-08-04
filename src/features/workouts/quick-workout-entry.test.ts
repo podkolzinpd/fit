@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseQuickWorkoutEntry } from './quick-workout-entry'
+import { rankExerciseSearch } from '../exercises/exercise-search'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
 
@@ -146,6 +147,12 @@ describe('parseQuickWorkoutEntry', () => {
     expect(result.parsed).toEqual([])
     expect(result.unparsed[0]).toMatchObject({ line: 'Присед 3×8 80 кг', reason: 'ambiguous', candidates: [{ ref: 'squat' }] })
     expect(result.unparsed[1]).toEqual({ line: 'Несуществующее 3×10', reason: 'not-found', candidates: [] })
+  })
+
+  it('выносит базовый присед выше частных вариаций при коротком запросе', () => {
+    expect(rankExerciseSearch(SYSTEM_EXERCISE_CATALOG, 'присед').slice(0, 3).map(({ exercise }) => exercise.ref))
+      .toContain('barbell-squat')
+    expect(rankExerciseSearch(SYSTEM_EXERCISE_CATALOG, 'присед')[0]?.exercise.ref).toBe('barbell-squat')
   })
 
   it('поднимает частое упражнение клиента среди неоднозначных вариантов, не включая автоподстановку', () => {
