@@ -3,7 +3,7 @@ import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 
 // Разговорные варианты, которыми тренеры обычно называют базовые упражнения.
 // Каталожное название не меняем: эти слова участвуют только в поиске.
-const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
+export const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   'barbell-squat': ['классический присед', 'приседания', 'присед штанга', 'скват'],
   'front-squat': ['фронтальный', 'фронт скват'],
   'leg-press': ['платформа', 'жим платформы'],
@@ -17,6 +17,9 @@ const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   'bench-press': ['жим штанги лежа', 'горизонтальный жим'],
   'dumbbell-bench-press': ['жим гантелей', 'гантели лежа'],
   'incline-bench-press': ['наклонный жим', 'верх груди'],
+  'fedb-incline-dumbbell-press': ['жим гантелей на наклон', 'жим гантелей наклон', 'наклон гантели', 'гантели на наклонной', 'гантели верх груди', 'наклонные гантели', 'инклайн гантели'],
+  'fedb-hammer-grip-incline-db-bench-press': ['жим гантелей на наклон нейтральным', 'наклонные гантели нейтральным хватом', 'жим гантелей молотком на наклонной'],
+  'fedb-incline-dumbbell-bench-with-palms-facing-in': ['жим гантелей на наклон ладонями внутрь', 'наклонные гантели ладони внутрь'],
   'dumbbell-fly': ['разводки', 'махи на грудь'],
   'push-ups': ['отжимашки'],
   dips: ['брусья'],
@@ -47,6 +50,24 @@ const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   'rowing-machine': ['гребля', 'гребной', 'гребной тренажер', 'гребной эргометр', 'эргометр', 'роуэр', 'rower'],
   walking: ['дорожка ходьба'],
   'jump-rope': ['скакалка'],
+  'fedb-smith-machine-squat': ['присед в смите', 'смит присед', 'присед смит'],
+  'fedb-smith-machine-bench-press': ['жим в смите', 'смит жим'],
+  'fedb-leg-press': ['жим в тренажере', 'платформа ногами'],
+  'fedb-hack-squat': ['хак', 'хак присед', 'гакк присед'],
+  'fedb-hip-thrust': ['хиптраст', 'хип траст', 'ягодичный мост со штангой'],
+  'fedb-glute-bridge': ['ягодичный мост', 'глют бридж'],
+  'fedb-cable-pull-through': ['пултру', 'пул тру', 'тяга между ног'],
+  'fedb-sumo-deadlift': ['сумо', 'сумо тяга'],
+  'fedb-lat-pulldown': ['верхний блок', 'тяга сверху'],
+  'fedb-chest-supported-row': ['тяга с упором грудью', 'тяга к груди в тренажере'],
+  'fedb-t-bar-row': ['т-гриф', 'т тяга', 'тяга т грифа'],
+  'fedb-face-pull': ['фейс пул', 'фейспул', 'тяга к лицу'],
+  'fedb-cable-lateral-raise': ['мах в кроссовере', 'разводка в кроссовере'],
+  'fedb-reverse-pec-deck': ['обратная бабочка', 'задняя дельта в бабочке'],
+  'fedb-triceps-rope-pushdown': ['канат', 'канат трицепс', 'разгибание канатом'],
+  'fedb-overhead-rope-extension': ['канат из-за головы', 'разгибание из за головы'],
+  'fedb-preacher-curl': ['скамья скотта', 'бицепс скотт'],
+  'fedb-concentration-curl': ['концентрированный бицепс', 'концентрированные сгибания'],
 }
 
 export function normalizeExerciseSearch(value: string): string {
@@ -83,6 +104,42 @@ function editDistanceAtMostOne(left: string, right: string): boolean {
 function tokenMatches(queryToken: string, searchableTokens: readonly string[]): boolean {
   return searchableTokens.some((token) => token.includes(queryToken)
     || (queryToken.length >= 5 && token.length >= 5 && editDistanceAtMostOne(queryToken, token)))
+}
+
+const OPTIONAL_VARIANT_TOKENS = new Set([
+  'нейтральным', 'нейтральный', 'ладонями', 'внутрь', 'наружу', 'отрицательным',
+  'узким', 'широким', 'обратным', 'попеременный', 'одной', 'стоя', 'сидя',
+])
+
+export interface RankedExerciseMatch {
+  exercise: ExerciseSnapshot
+  score: number
+}
+
+/**
+ * Ранжирование для свободного ввода. В отличие от фильтра, оно выбирает
+ * базовый вариант, если тренер не назвал специальный хват/угол/технику.
+ */
+export function rankExerciseSearch(catalog: readonly ExerciseSnapshot[], search: string): RankedExerciseMatch[] {
+  const query = normalizeExerciseSearch(search)
+  const queryTokens = query.split(/\s+/).filter(Boolean)
+  if (!queryTokens.length) return []
+  return catalog.flatMap((exercise) => {
+    const name = normalizeExerciseSearch(exercise.name.replace(/\s*\([^)]*\)\s*$/, ''))
+    const aliases = SEARCH_ALIASES[exercise.ref] ?? []
+    const normalizedAliases = aliases.map(normalizeExerciseSearch)
+    const searchableTokens = normalizeExerciseSearch([name, ...normalizedAliases, exercise.equipment ?? ''].join(' ')).split(/\s+/).filter(Boolean)
+    const matchedTokens = queryTokens.filter((token) => tokenMatches(token, searchableTokens))
+    if (matchedTokens.length !== queryTokens.length) return []
+
+    const exactAlias = normalizedAliases.includes(query)
+    const exactName = name === query
+    const inOrder = name.includes(query) || normalizedAliases.some((alias) => alias.includes(query))
+    const nameTokens = name.split(/\s+/)
+    const omittedVariantTokens = nameTokens.filter((token) => OPTIONAL_VARIANT_TOKENS.has(token) && !queryTokens.some((queryToken) => tokenMatches(queryToken, [token])))
+    const score = (exactName ? 240 : 0) + (exactAlias ? 220 : 0) + matchedTokens.length * 30 + (inOrder ? 24 : 0) - omittedVariantTokens.length * 18
+    return [{ exercise, score }]
+  }).sort((left, right) => right.score - left.score || left.exercise.name.localeCompare(right.exercise.name, 'ru'))
 }
 
 export function matchesExerciseSearch(exercise: ExerciseSnapshot, search: string): boolean {

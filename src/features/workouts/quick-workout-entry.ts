@@ -1,6 +1,6 @@
 import type { ExerciseSnapshot, WorkoutSetDraft } from '../../shared/domain'
 import { isValidRpe } from '../../shared/rpe'
-import { isExerciseSearchAlias, matchesExerciseSearch } from '../exercises/exercise-search'
+import { isExerciseSearchAlias, rankExerciseSearch } from '../exercises/exercise-search'
 
 export interface ParsedWorkoutExercise {
   line: string
@@ -63,7 +63,17 @@ function matchingExercises(name: string, catalog: readonly ExerciseSnapshot[]): 
   if (query.split(' ').length < 2) {
     return catalog.filter((exercise) => normalizedExerciseName(exercise.name).includes(query))
   }
-  return catalog.filter((exercise) => matchesExerciseSearch(exercise, name))
+  return rankExerciseSearch(catalog, name).map(({ exercise }) => exercise)
+}
+
+function canResolveSafely(name: string, matches: readonly ExerciseSnapshot[], catalog: readonly ExerciseSnapshot[]): boolean {
+  if (matches.length !== 1 && name.trim().split(/\s+/).length < 2) return false
+  if (matches.length === 1) return true
+  const ranked = rankExerciseSearch(catalog, name)
+  const [first, second] = ranked
+  // Для фразы из нескольких слов авто-выбор допустим, когда лучший вариант
+  // явно опережает следующий. Тренер всё равно видит итог и может его заменить.
+  return Boolean(first && second && first.score >= 84 && first.score - second.score >= 18)
 }
 
 function needsTrainerChoice(name: string, catalog: readonly ExerciseSnapshot[]): boolean {
@@ -147,8 +157,8 @@ export function parseQuickWorkoutEntry(text: string, catalog: readonly ExerciseS
     if (!line) continue
     const name = exerciseNamePart(line)
     const matches = matchingExercises(name, catalog)
-    if (needsTrainerChoice(name, catalog) || matches.length !== 1) {
-      unparsed.push({ line, reason: matches.length ? 'ambiguous' : 'not-found', candidates: matches.slice(0, 4) })
+    if (needsTrainerChoice(name, catalog) || !canResolveSafely(name, matches, catalog)) {
+      unparsed.push({ line, reason: matches.length ? 'ambiguous' : 'not-found', candidates: matches.slice(0, 3) })
       continue
     }
     parsed.push(resolveQuickWorkoutLine(line, matches[0]!))
