@@ -62,7 +62,7 @@ function number(value: string | undefined): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined
 }
 
-function exerciseNamePart(line: string): string {
+export function quickWorkoutExerciseName(line: string): string {
   const metric = /\d+\s*(?:[xх×]|кг|kg|сек|мин|км|km|повт|на\s*\d|(?:подход(?:а|ов)?|сет(?:а|ов)?)?\s*по\s*\d)/iu.exec(line)
   return (metric ? line.slice(0, metric.index) : line).trim()
 }
@@ -191,7 +191,7 @@ export function parseQuickWorkoutEntry(text: string, catalog: readonly ExerciseS
   for (const rawLine of quickWorkoutLines(text)) {
     const line = rawLine.trim()
     if (!line) continue
-    const name = exerciseNamePart(line)
+    const name = quickWorkoutExerciseName(line)
     const matches = matchingExercises(name, catalog, options.preferredExerciseRefs ?? [])
     if (needsTrainerChoice(name, catalog) || !canResolveSafely(name, matches, catalog)) {
       unparsed.push({ line, reason: matches.length ? 'ambiguous' : 'not-found', candidates: matches.slice(0, 3) })

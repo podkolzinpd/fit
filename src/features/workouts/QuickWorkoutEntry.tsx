@@ -1,16 +1,18 @@
 import { useMemo, useState } from 'react'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { VoiceNoteField } from '../voice-input'
-import { parseQuickWorkoutEntry, resolveQuickWorkoutLine, type ParsedWorkoutExercise } from './quick-workout-entry'
+import { parseQuickWorkoutEntry, quickWorkoutExerciseName, resolveQuickWorkoutLine, type ParsedWorkoutExercise } from './quick-workout-entry'
+import { trackGoal } from '../../shared/yandex-metrika'
 
 interface QuickWorkoutEntryProps {
   catalog: readonly ExerciseSnapshot[]
   onAdd: (exercises: ParsedWorkoutExercise[]) => void
   defaultOpen?: boolean
   preferredExerciseRefs?: readonly string[]
+  onOpenCatalog?: (search: string) => void
 }
 
-export function QuickWorkoutEntry({ catalog, onAdd, defaultOpen = false, preferredExerciseRefs = [] }: QuickWorkoutEntryProps) {
+export function QuickWorkoutEntry({ catalog, onAdd, defaultOpen = false, preferredExerciseRefs = [], onOpenCatalog }: QuickWorkoutEntryProps) {
   const [open, setOpen] = useState(defaultOpen)
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
@@ -31,6 +33,8 @@ export function QuickWorkoutEntry({ catalog, onAdd, defaultOpen = false, preferr
 
   function add() {
     if (!resolved.length) return
+    if (unresolved.some((item) => item.reason === 'ambiguous')) trackGoal('workout_parse_ambiguous')
+    if (unresolved.some((item) => item.reason === 'not-found')) trackGoal('workout_parse_not_found')
     onAdd(resolved)
     setText('')
     setChoices({})
@@ -47,7 +51,7 @@ export function QuickWorkoutEntry({ catalog, onAdd, defaultOpen = false, preferr
       {text.trim() && <div className="quick-workout-preview" aria-live="polite">
         {resolved.length > 0 && <><p><strong>Распознано: {resolved.length}</strong></p><ul>{resolved.map((item, index) => <li key={`${item.exercise.ref}-${index}`}>{item.exercise.name} · {item.sets.length} {item.sets.length === 1 ? 'подход' : item.sets.length < 5 ? 'подхода' : 'подходов'}</li>)}</ul></>}
         {clarification && <section className="quick-workout-clarification" aria-label={clarification.title}><strong>{clarification.title}</strong><p>{clarification.text}</p></section>}
-        {unresolved.length > 0 && <div className="quick-workout-unparsed">{unresolved.map((item) => <div className="quick-workout-unparsed-line" key={item.line}><p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли совпадение'}</p>{item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => setChoices((current) => ({ ...current, [item.line]: exercise }))}>{exercise.name}</button>)}</div>}</div>)}</div>}
+        {unresolved.length > 0 && <div className="quick-workout-unparsed">{unresolved.map((item) => <div className="quick-workout-unparsed-line" key={item.line}><p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли совпадение'}</p>{item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => { trackGoal('workout_parse_candidate_selected'); setChoices((current) => ({ ...current, [item.line]: exercise })) }}>{exercise.name}</button>)}</div>}{onOpenCatalog && <button type="button" className="link quick-workout-all-options" onClick={() => { trackGoal('workout_parse_catalog_opened'); onOpenCatalog(quickWorkoutExerciseName(item.line)) }}>Все варианты</button>}</div>)}</div>}
       </div>}
       <button type="button" disabled={!resolved.length} onClick={add}>Добавить распознанные{resolved.length ? ` (${resolved.length})` : ''}</button>
     </div>}

@@ -26,6 +26,9 @@ test('форма: быстрый ввод разбирает текст в уп�
   await expect(page.getByText('Уточните упражнение')).toBeVisible()
   await expect(page.getByText('Выберите вариант ниже или допишите деталь: положение, тренажёр или оборудование.')).toBeVisible()
   await expect(page.getByText(/«Присед 80 на 8, 85 на 6, 90 на 5 RPE 8» — выберите вариант/)).toBeVisible()
+  await page.getByRole('button', { name: 'Все варианты' }).click()
+  await expect(page.getByLabel('Поиск упражнения')).toHaveValue('Присед')
+  await page.getByRole('button', { name: 'Закрыть' }).click()
   // Короткое название не угадывается: базовый присед идёт первым, но тренер
   // всё равно подтверждает подходящий вариант одним тапом.
   const squatCandidates = page.locator('.quick-workout-candidates button')

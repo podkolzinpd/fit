@@ -58,6 +58,7 @@ interface ExercisePickerProps {
   onPick: (exercise: ExerciseSnapshot) => void
   onPickMany?: (exercises: ExerciseSnapshot[]) => void
   multiple?: boolean
+  initialSearch?: string
   onClose: () => void
 }
 
@@ -86,11 +87,11 @@ function useVisualViewportStyle() {
   return { style, keyboardOpen }
 }
 
-export function ExercisePicker({ catalog, frequent = [], onPick, onPickMany, multiple = false, onClose }: ExercisePickerProps) {
+export function ExercisePicker({ catalog, frequent = [], onPick, onPickMany, multiple = false, initialSearch = '', onClose }: ExercisePickerProps) {
   const [category, setCategory] = useState<'all' | MuscleGroup>('all')
   const [muscle, setMuscle] = useState<string | null>(null)
   const [equipment, setEquipment] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(initialSearch)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [customOnly, setCustomOnly] = useState(false)
   const [selected, setSelected] = useState<Map<string, ExerciseSnapshot>>(() => new Map())
