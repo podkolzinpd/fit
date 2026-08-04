@@ -54,7 +54,7 @@ jobs:
           version: 2.109.1
       - run: supabase start
       - run: supabase db reset --local
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:e2e
         env:
           VITE_SUPABASE_URL: http://127.0.0.1:54321
