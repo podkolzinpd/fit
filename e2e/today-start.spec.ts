@@ -15,10 +15,6 @@ test('today: быстрый старт ведёт к единому выбору
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
   await expect(page.getByLabel('Имя нового клиента')).toHaveCount(0)
-  await page.getByRole('button', { name: '← Назад' }).click()
-  await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
-  await expect(page.getByLabel('Тренировка')).toHaveValue('Присед 3×8 — 80 кг\nПланка 3×45 сек')
-  await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await page.getByRole('button', { name: '＋ Новый клиент' }).click()
   await expect(page.getByLabel('Имя нового клиента')).toBeVisible()
   await page.getByRole('button', { name: 'Отмена' }).click()
@@ -31,6 +27,9 @@ test('today: быстрый старт ведёт к единому выбору
   await page.getByRole('button', { name: 'Завершённая' }).click()
   await expect(page.getByRole('button', { name: 'Записать как завершённую' })).toBeEnabled()
   await expect(page.getByLabel('Время тренировки')).toHaveCount(0)
+  await page.getByRole('button', { name: '← Назад' }).click()
+  await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
+  await expect(page.getByLabel('Тренировка')).toHaveValue('Присед 3×8 — 80 кг\nПланка 3×45 сек')
 })
 
 test('создание из календаря: завершённая тренировка не остаётся в будущем', async ({ page }) => {
