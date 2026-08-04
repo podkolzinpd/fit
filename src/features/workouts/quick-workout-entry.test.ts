@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseQuickWorkoutEntry } from './quick-workout-entry'
+import { formatWorkoutText, parseQuickWorkoutEntry } from './quick-workout-entry'
 import { rankExerciseSearch } from '../exercises/exercise-search'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
@@ -140,6 +140,16 @@ describe('parseQuickWorkoutEntry', () => {
       { position: 1, durationSec: 45 },
       { position: 2, durationSec: 45 },
     ])
+  })
+
+  it('разделяет слитую диктовку по каталожному названию и спортивному алиасу', () => {
+    const text = 'Румынская тяга 3 подхода по 15 раз по 20 килограмм Жим гантелей в наклонной скамье 3 подхода 15 килограмм 15 раз'
+    const formatted = formatWorkoutText(text, SYSTEM_EXERCISE_CATALOG)
+    const result = parseQuickWorkoutEntry(text, SYSTEM_EXERCISE_CATALOG)
+
+    expect(formatted).toContain('\nЖим гантелей в наклонной скамье')
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed.map((item) => item.exercise.ref)).toEqual(['romanian-deadlift', 'fedb-incline-dumbbell-press'])
   })
 
   it('не выбирает упражнение молча, если название неоднозначно или не найдено', () => {
