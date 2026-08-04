@@ -7,13 +7,14 @@ interface QuickWorkoutEntryProps {
   catalog: readonly ExerciseSnapshot[]
   onAdd: (exercises: ParsedWorkoutExercise[]) => void
   defaultOpen?: boolean
+  preferredExerciseRefs?: readonly string[]
 }
 
-export function QuickWorkoutEntry({ catalog, onAdd, defaultOpen = false }: QuickWorkoutEntryProps) {
+export function QuickWorkoutEntry({ catalog, onAdd, defaultOpen = false, preferredExerciseRefs = [] }: QuickWorkoutEntryProps) {
   const [open, setOpen] = useState(defaultOpen)
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
-  const parsed = useMemo(() => parseQuickWorkoutEntry(text, catalog), [text, catalog])
+  const parsed = useMemo(() => parseQuickWorkoutEntry(text, catalog, { preferredExerciseRefs }), [text, catalog, preferredExerciseRefs])
   const resolved = useMemo(() => [
     ...parsed.parsed,
     ...parsed.unparsed.flatMap((item) => choices[item.line] ? [resolveQuickWorkoutLine(item.line, choices[item.line]!)] : []),

@@ -132,6 +132,17 @@ describe('parseQuickWorkoutEntry', () => {
     expect(result.unparsed[1]).toEqual({ line: 'Несуществующее 3×10', reason: 'not-found', candidates: [] })
   })
 
+  it('поднимает частое упражнение клиента среди неоднозначных вариантов, не включая автоподстановку', () => {
+    const result = parseQuickWorkoutEntry('Присед 3×8 80 кг', [
+      ...catalog,
+      { source: 'system', ref: 'front-squat', name: 'Фронтальный присед', muscleGroup: 'legs', inputKind: 'strength' },
+    ], { preferredExerciseRefs: ['front-squat', 'squat'] })
+
+    expect(result.parsed).toEqual([])
+    expect(result.unparsed[0]).toMatchObject({ reason: 'ambiguous' })
+    expect(result.unparsed[0]?.candidates.map((exercise) => exercise.ref)).toEqual(['front-squat', 'squat'])
+  })
+
   it('предпочитает системное упражнение одноимённому пользовательскому', () => {
     const result = parseQuickWorkoutEntry('Планка 45 сек', [...catalog, {
       source: 'custom', ref: 'custom-plank', customExerciseId: 'custom-plank', name: 'Планка', muscleGroup: 'core', inputKind: 'strength',
