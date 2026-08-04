@@ -128,7 +128,16 @@ export function rankExerciseSearch(catalog: readonly ExerciseSnapshot[], search:
     const name = normalizeExerciseSearch(exercise.name.replace(/\s*\([^)]*\)\s*$/, ''))
     const aliases = SEARCH_ALIASES[exercise.ref] ?? []
     const normalizedAliases = aliases.map(normalizeExerciseSearch)
-    const searchableTokens = normalizeExerciseSearch([name, ...normalizedAliases, exercise.equipment ?? ''].join(' ')).split(/\s+/).filter(Boolean)
+    // Используем тот же набор полей, что и обычный фильтр каталога: запрос
+    // «ноги тренажёр» должен находить упражнение даже если «ноги» указано
+    // только как группа, а не в самом названии.
+    const searchableTokens = normalizeExerciseSearch([
+      name,
+      exercise.equipment ?? '',
+      exercise.primaryMuscleDetail ?? '',
+      MUSCLE_GROUP_LABELS[exercise.muscleGroup],
+      ...normalizedAliases,
+    ].join(' ')).split(/\s+/).filter(Boolean)
     const matchedTokens = queryTokens.filter((token) => tokenMatches(token, searchableTokens))
     if (matchedTokens.length !== queryTokens.length) return []
 
