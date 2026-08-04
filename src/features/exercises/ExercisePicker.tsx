@@ -3,7 +3,7 @@ import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/doma
 import { CloseIcon } from '../../shared/icons'
 import { MUSCLE_GROUP_LABELS, MUSCLE_GROUPS, WARMUP_MOBILITY_REFS } from '../../shared/system-exercises'
 import type { ExerciseCatalogState } from './exercise-catalog'
-import { matchesExerciseSearch } from './exercise-search'
+import { matchesExerciseSearch, rankExerciseSearch } from './exercise-search'
 import { readRecentKeys, recordRecent, resolveRecent } from './recent-exercises'
 
 export function filterExercises(
@@ -13,14 +13,16 @@ export function filterExercises(
   muscle: string | null = null,
   equipment: string | null = null,
 ): readonly ExerciseSnapshot[] {
-  return exercises
+  const allowed = exercises
     .filter((exercise) => {
       return (category === 'all' || exercise.muscleGroup === category)
         && (!muscle || exercise.primaryMuscleDetail === muscle)
         && (!equipment || exercise.equipment === equipment)
-        && matchesExerciseSearch(exercise, search)
     })
-    .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+  if (!search.trim()) return allowed.sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+  return rankExerciseSearch(allowed, search)
+    .filter(({ exercise }) => matchesExerciseSearch(exercise, search))
+    .map(({ exercise }) => exercise)
 }
 
 // Детальные мышцы выбранной группы (2-й уровень иерархии), по частоте.

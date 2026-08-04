@@ -19,6 +19,28 @@ describe('parseQuickWorkoutEntry', () => {
     expect(result.parsed[0]?.sets[0]).toMatchObject({ durationSec: 600, distanceKm: 2 })
   })
 
+  it('автоматически выбирает базовый вариант, когда короткая фраза не содержит специальный хват', () => {
+    const result = parseQuickWorkoutEntry('Жим гантелей на наклон 3×8 24 кг', SYSTEM_EXERCISE_CATALOG)
+
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed[0]).toMatchObject({ exercise: { ref: 'fedb-incline-dumbbell-press' } })
+    expect(result.parsed[0]?.sets).toHaveLength(3)
+  })
+
+  it('понимает разговорные названия тренажёров и не смешивает их с похожими движениями', () => {
+    const cases = [
+      ['хак присед 3×10 80 кг', 'fedb-hack-squat'],
+      ['тяга к лицу 3×15', 'fedb-face-pull'],
+      ['ягодичный мост со штангой 4×10 70 кг', 'fedb-barbell-hip-thrust'],
+    ] as const
+
+    for (const [text, ref] of cases) {
+      const result = parseQuickWorkoutEntry(text, SYSTEM_EXERCISE_CATALOG)
+      expect(result.unparsed, text).toEqual([])
+      expect(result.parsed[0]?.exercise.ref, text).toBe(ref)
+    }
+  })
+
   it('разбирает силовое упражнение с количеством подходов, повторами и весом', () => {
     const result = parseQuickWorkoutEntry('Присед со штангой 3×8 80 кг', catalog)
     expect(result.unparsed).toEqual([])
