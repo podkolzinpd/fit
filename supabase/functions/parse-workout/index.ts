@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js@^2/edge-runtime.d.ts"
 import { createClient } from "npm:@supabase/supabase-js@2.110.8"
 
-const URL = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
+const URL = "https://ai.api.cloud.yandex.net/foundationModels/v1/completion"
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" }
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { ...CORS, "Content-Type": "application/json" } })
 
