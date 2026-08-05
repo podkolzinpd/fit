@@ -613,7 +613,6 @@ export function LiveWorkoutPage() {
   // такой же — иначе при переходе к следующему подходу строка мигнёт пустой.
   const [localSetDrafts, setLocalSetDrafts] = useState<Map<string, LiveSetDraft>>(() => new Map())
   const liveSetForms = useRef<Map<string, HTMLFormElement>>(new Map())
-  const [dirtySetIds, setDirtySetIds] = useState<Set<string>>(() => new Set())
   const [savingSetId, setSavingSetId] = useState<string | null>(null)
   const [savedSetId, setSavedSetId] = useState<string | null>(null)
   const [saveErrorSetId, setSaveErrorSetId] = useState<string | null>(null)
@@ -673,15 +672,21 @@ export function LiveWorkoutPage() {
     })
     save.mutate({ set, draft })
   }
+  function liveFormChanged(form: HTMLFormElement) {
+    return Array.from(form.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select'))
+      .some((field) => field.value !== (field instanceof HTMLInputElement
+        ? field.defaultValue
+        : field.options[field.selectedIndex]?.defaultSelected ? field.value : ''))
+  }
   function openLiveSet(exercise: WorkoutExercise, targetSetId: string) {
-    const currentSetId = expandedSetId ?? exercise.sets.find((set) => !set.confirmedAt)?.id
-    // В iOS WebView тап по следующей строке не всегда переводит фокус и не
-    // вызывает blur. Сохраняем только действительно изменённую текущую строку
-    // прямо перед переключением — так факт не зависит от поведения клавиатуры.
-    if (currentSetId && currentSetId !== targetSetId && dirtySetIds.has(currentSetId)) {
+    // На iOS WebView тап по следующей строке не всегда вызывает blur. Берём
+    // фактически открытую форму из DOM, а не состояние React: оно может ещё не
+    // успеть обновиться после ввода с экранной клавиатуры.
+    const current = [...liveSetForms.current.entries()].find(([setId]) => setId !== targetSetId)
+    if (current) {
+      const [currentSetId, form] = current
       const currentSet = exercise.sets.find((set) => set.id === currentSetId)
-      const form = liveSetForms.current.get(currentSetId)
-      if (currentSet && form) persistLiveDraft(currentSet, draftFrom(form))
+      if (currentSet && liveFormChanged(form)) persistLiveDraft(currentSet, draftFrom(form))
     }
     setExpandedSetId(targetSetId)
   }
@@ -853,7 +858,7 @@ export function LiveWorkoutPage() {
       </div>
     }
     const showRpe = rpeExercises.has(exercise.id)
-    return <form ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={set.id} onInput={() => setDirtySetIds((current) => new Set(current).add(set.id))} onBlur={(event) => {
+    return <form ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={set.id} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
       persistLiveDraft(set, draftFrom(event.currentTarget))
