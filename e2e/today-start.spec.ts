@@ -71,3 +71,27 @@ test('создание из календаря: завершённая трен�
   expect(maxDate).not.toBeNull()
   await expect(date).toHaveValue(maxDate!)
 })
+
+test('today: черновик сохраняет финальный шаг и последовательные возвраты', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/(today|clients)$/)
+  await page.goto('/today')
+  await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
+
+  const workoutText = 'Присед со штангой 3×8 — 80 кг\nПланка 3×45 сек'
+  await page.getByLabel('Тренировка').fill(workoutText)
+  await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+  await page.getByRole('button', { name: 'Далее' }).click()
+  await expect(page.getByRole('heading', { name: 'Сохраните тренировку' })).toBeVisible()
+
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Сохраните тренировку' })).toBeVisible()
+  await page.getByRole('button', { name: '← К проверке' }).click()
+  await expect(page.locator('.today-exercise')).toHaveCount(2)
+  await page.getByRole('button', { name: '← Назад' }).click()
+  await expect(page.getByLabel('Тренировка')).toHaveValue(workoutText)
+})
