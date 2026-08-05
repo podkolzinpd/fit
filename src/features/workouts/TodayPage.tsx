@@ -339,6 +339,7 @@ export function TodayPage() {
   function removeExercise(itemIndex: number) {
     const item = items[itemIndex]
     if (!item) return
+    trackGoal('today_review_exercise_removed')
     setRemovedItem({ item, index: itemIndex })
     setRemovedRefs((current) => current.includes(item.exercise.ref) ? current : [...current, item.exercise.ref])
     setItems((current) => current.filter((_, index) => index !== itemIndex))
@@ -346,6 +347,7 @@ export function TodayPage() {
 
   function undoRemoveExercise() {
     if (!removedItem) return
+    trackGoal('today_review_exercise_remove_undone')
     const { item, index } = removedItem
     setItems((current) => {
       if (current.some((currentItem) => currentItem.exercise.ref === item.exercise.ref)) return current
@@ -401,14 +403,14 @@ export function TodayPage() {
         {clarification && <section className="today-clarification" aria-label={clarification.title}><strong>{clarification.title}</strong><p>{clarification.text}</p></section>}
         {displayedUnparsed.map((item) => <div className="today-unparsed" key={item.line}>
           <p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли в каталоге'}</p>
-          {item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => { setChoices((current) => ({ ...current, [item.line]: exercise })); setRecognized((current) => current.some((recognizedItem) => recognizedItem.line === item.line) ? current : [...current, { line: item.line, exercise, sets: [{ position: 0 }], hasValues: false }]) }}>{exercise.name}</button>)}</div>}
+          {item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => { trackGoal('today_parse_candidate_selected'); setChoices((current) => ({ ...current, [item.line]: exercise })); setRecognized((current) => current.some((recognizedItem) => recognizedItem.line === item.line) ? current : [...current, { line: item.line, exercise, sets: [{ position: 0 }], hasValues: false }]) }}>{exercise.name}</button>)}</div>}
         </div>)}
       </div>}
        {noMatches && <div className="today-empty-parse" role="status"><strong>Не нашли упражнение</strong><span>Проверьте название или добавьте его из каталога ниже.</span></div>}
        <button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>
       <button type="button" className="secondary wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}><span>Выбрать упражнения</span><small>Поиск и массовый выбор</small></button>
     </section> : <section className="today-review">
-      <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { if (screen === 'review') { reviewRequest.current += 1; setParsing(false); setScreen('compose') } else setScreen('review') }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><div><h1>{screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'}</h1>{screen === 'review' && items.length > 0 && <p className="today-review-summary">Распознано: {items.length}</p>}</div></div>
+      <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><div><h1>{screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'}</h1>{screen === 'review' && items.length > 0 && <p className="today-review-summary">Распознано: {items.length}</p>}</div></div>
       {screen === 'review' && <>
       {items.length > 0 ? <div className="today-exercise-list">{items.map((item, index) => <article className="today-exercise" key={`${item.exercise.ref}-${index}`}>
         <div className="today-exercise-title"><div><strong>{item.exercise.name}</strong><p className={setSummary(item) === 'без значений' ? 'today-exercise-missing' : undefined}>{setSummary(item)}</p></div><button type="button" className="icon-button" aria-label={`Удалить ${item.exercise.name}`} onClick={() => removeExercise(index)}>×</button></div>
@@ -416,7 +418,7 @@ export function TodayPage() {
       </article>)}</div> : <section className="today-empty today-exercise-empty"><p>Добавьте упражнения из каталога — можно выбрать несколько сразу.</p><button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button></section>}
       {items.length > 0 && <button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button>}
       {removedItem && <div className="today-undo-remove" role="status"><span>Упражнение удалено</span><button type="button" className="link" onClick={undoRemoveExercise}>Отменить</button></div>}
-      {items.length > 0 && <button type="button" className="wide today-review-next" onClick={() => setScreen('save')}>Далее</button>}
+      {items.length > 0 && <button type="button" className="wide today-review-next" onClick={() => { trackGoal('today_save_step_opened'); setScreen('save') }}>Далее</button>}
       </>}
       {screen === 'save' && <section className="today-assignment">
       <label className="today-client"><span>Для кого тренировка</span><select value={clientId} onChange={(event) => setClientId(event.target.value)}><option value="">Выберите клиента</option>{quickClientOption && !clients.data?.some((client) => client.id === quickClientOption.id) && <option value={quickClientOption.id}>{quickClientOption.fullName}</option>}{clients.data?.map((client) => <option value={client.id} key={client.id}>{client.fullName}</option>)}</select></label>
