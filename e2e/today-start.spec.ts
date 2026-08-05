@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test'
 
+async function mockWorkoutParser(page: import('@playwright/test').Page, items: unknown[]) {
+  await page.route('**/functions/v1/parse-workout', async (route) => {
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ items, unmatched: [] }) })
+  })
+}
+
 test('today: быстрый старт ведёт к единому выбору плана или завершённой тренировки', async ({ page }, testInfo) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
@@ -10,6 +16,10 @@ test('today: быстрый старт ведёт к единому выбору
 
   await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Разобрать тренировку' })).toBeDisabled()
+  await mockWorkoutParser(page, [
+    { sourceText: 'Присед со штангой 3×8 — 80 кг', exerciseRef: 'barbell-squat', confidence: 1, sets: [{ weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }] },
+    { sourceText: 'Планка 3×45 сек', exerciseRef: 'plank', confidence: 1, sets: [{ durationMin: 0.75 }, { durationMin: 0.75 }, { durationMin: 0.75 }] },
+  ])
   await page.getByLabel('Тренировка').fill('Присед со штангой 3×8 — 80 кг\nПланка 3×45 сек')
   await expect(page.getByRole('button', { name: 'Разобрать тренировку' })).toBeEnabled()
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
@@ -82,6 +92,10 @@ test('today: черновик сохраняет финальный шаг и п
   await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
 
   const workoutText = 'Присед со штангой 3×8 — 80 кг\nПланка 3×45 сек'
+  await mockWorkoutParser(page, [
+    { sourceText: 'Присед со штангой 3×8 — 80 кг', exerciseRef: 'barbell-squat', confidence: 1, sets: [{ weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }] },
+    { sourceText: 'Планка 3×45 сек', exerciseRef: 'plank', confidence: 1, sets: [{ durationMin: 0.75 }, { durationMin: 0.75 }, { durationMin: 0.75 }] },
+  ])
   await page.getByLabel('Тренировка').fill(workoutText)
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()

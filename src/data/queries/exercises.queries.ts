@@ -3,16 +3,11 @@ import type { ExerciseSnapshot } from '../../shared/domain'
 
 export type WorkoutParseResponse = {
   items: Array<{ sourceText: string; exerciseRef: string; confidence: number; sets: Array<{ weightKg?: number; reps?: number; durationMin?: number; distanceKm?: number }> }>
-  unmatched: Array<{ sourceText: string; reason: string }>
+  unmatched: Array<{ sourceText: string; reason: string; suggestedExerciseRefs: string[] }>
 }
 
-export type WorkoutParseSegment = {
-  sourceText: string
-  candidates: Array<{ ref: string; name: string; inputKind: string }>
-}
-
-export const parseWorkout = (text: string, catalog: readonly ExerciseSnapshot[], segments: readonly WorkoutParseSegment[]) =>
-  supabase.functions.invoke<WorkoutParseResponse>('parse-workout', { body: { text, catalog, segments } })
+export const parseWorkout = (text: string, systemCatalog: readonly ExerciseSnapshot[]) =>
+  supabase.functions.invoke<WorkoutParseResponse>('parse-workout', { body: { text, systemCatalog } })
 
 const columns = 'id,name,muscle_group,input_kind,archived_at,version'
 
