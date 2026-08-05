@@ -593,6 +593,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .today-picker-cta small { font-size:14px; }
 .today-draft-notice { padding:8px 10px; font-size:14px; }
 .today-draft-notice .link { min-height:32px; padding:4px 0; font-size:14px; }
+.today-review-next { margin-top:2px; min-height:54px; border-radius:var(--radius-lg); }
+.today-assignment { display:grid; gap:14px; padding:16px; border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); box-shadow:var(--shadow-card); }
+.today-assignment .today-save-actions { margin-top:2px; }
+.today-assignment .today-save-actions .wide { min-height:54px; border-radius:var(--radius-lg); }
 .today-save-actions .wide { position:static !important; bottom:auto; z-index:auto; box-shadow:none; }
 
 /* Степпер: крупные −/+ вокруг поля факта (быстрый ввод одной рукой, P5). */

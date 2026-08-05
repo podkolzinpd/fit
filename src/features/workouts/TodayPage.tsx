@@ -17,7 +17,7 @@ import { rankExerciseSearch } from '../exercises/exercise-search'
 import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
 import { workoutDateForRecordMode, type WorkoutRecordMode } from './workout-entry-rules'
 
-type Screen = 'compose' | 'review'
+type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
 type UnmatchedView = { line: string; reason: 'not-found' | 'ambiguous'; candidates: ExerciseSnapshot[] }
 type VoiceRefinement = { state: 'loading' | 'success' | 'error'; message: string } | null
@@ -88,18 +88,19 @@ export function TodayPage() {
   const lastEmptyText = useRef('')
   const reviewRequest = useRef(0)
   const draftKey = todayDraftKey(actor!.userId)
-  const screen: Screen = new URLSearchParams(location.search).get('view') === 'review' ? 'review' : 'compose'
+  const view = new URLSearchParams(location.search).get('view')
+  const screen: Screen = view === 'review' || view === 'save' ? view : 'compose'
 
-  // Review — самостоятельный шаг сценария, а не только локальный state. Иначе
-  // жест «назад» iOS уводит на случайный прошлый таб вместо формы «Сегодня».
+  // Каждый шаг — отдельный маршрут. Так кнопка назад и системный жест iOS
+  // последовательно возвращают к предыдущему шагу, а не к случайному табу.
   function setScreen(next: Screen) {
     if (next === screen) return
-    if (next === 'review') {
-      navigate('/today?view=review', { state: { fromTodayReview: true } })
+    const previousScreen = (location.state as { fromTodayScreen?: Screen } | null)?.fromTodayScreen
+    if ((next === 'compose' && screen === 'review' && previousScreen === 'compose') || (next === 'review' && screen === 'save' && previousScreen === 'review')) {
+      navigate(-1)
       return
     }
-    if ((location.state as { fromTodayReview?: boolean } | null)?.fromTodayReview) navigate(-1)
-    else navigate('/today', { replace: true })
+    navigate(next === 'compose' ? '/today' : `/today?view=${next}`, { replace: next === 'compose', state: { fromTodayScreen: screen } })
   }
 
   useEffect(() => {
@@ -404,12 +405,16 @@ export function TodayPage() {
        <button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>
       <button type="button" className="secondary wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}><span>Выбрать упражнения</span><small>Поиск и массовый выбор</small></button>
     </section> : <section className="today-review">
-      <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { reviewRequest.current += 1; setParsing(false); setScreen('compose') }}>← Назад</button><div><h1>Проверьте тренировку</h1>{items.length > 0 && <p className="today-review-summary">Распознано: {items.length}</p>}</div></div>
+      <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { if (screen === 'review') { reviewRequest.current += 1; setParsing(false); setScreen('compose') } else setScreen('review') }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><div><h1>{screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'}</h1>{screen === 'review' && items.length > 0 && <p className="today-review-summary">Распознано: {items.length}</p>}</div></div>
+      {screen === 'review' && <>
       {items.length > 0 ? <div className="today-exercise-list">{items.map((item, index) => <article className="today-exercise" key={`${item.exercise.ref}-${index}`}>
         <div className="today-exercise-title"><div><strong>{item.exercise.name}</strong><p className={setSummary(item) === 'без значений' ? 'today-exercise-missing' : undefined}>{setSummary(item)}</p></div><button type="button" className="icon-button" aria-label={`Удалить ${item.exercise.name}`} onClick={() => { setRemovedRefs((current) => current.includes(item.exercise.ref) ? current : [...current, item.exercise.ref]); setItems((current) => current.filter((_, itemIndex) => itemIndex !== index)) }}>×</button></div>
         <details className="today-exercise-editor"><summary>{setSummary(item) === 'без значений' ? 'Добавить значения' : 'Править подходы'}</summary><button type="button" className="link" onClick={() => { setReplaceIndex(index); setPickerOpen(true) }}>Заменить упражнение</button><div className="today-set-list">{item.sets.map((set, setIndex) => <div className="today-set-editor" key={set.position}><strong>{setIndex + 1}</strong>{item.exercise.inputKind === 'strength' && <><label>Кг<input aria-label={`${item.exercise.name}: вес, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.weightKg ?? ''} onChange={(event) => updateSet(index, setIndex, { weightKg: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><label>Повт.<input aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label></>}{item.exercise.inputKind === 'duration' && <label>Сек.<input aria-label={`${item.exercise.name}: секунды, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.durationSec ?? ''} onChange={(event) => updateSet(index, setIndex, { durationSec: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.exercise.inputKind === 'reps' && <label>Повт.<input aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.exercise.inputKind === 'distance' && <label>Км<input aria-label={`${item.exercise.name}: километры, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.distanceKm ?? ''} onChange={(event) => updateSet(index, setIndex, { distanceKm: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}<label>RPE<input aria-label={`${item.exercise.name}: RPE, подход ${setIndex + 1}`} type="number" min="1" max="10" step="0.5" inputMode="decimal" value={set.rpe ?? ''} onChange={(event) => updateSet(index, setIndex, { rpe: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>{item.sets.length > 1 && <button type="button" className="link danger" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(index, setIndex)}>×</button>}</div>)}</div><button type="button" className="secondary today-add-set" onClick={() => addSet(index)}>＋ Подход</button></details>
       </article>)}</div> : <section className="today-empty today-exercise-empty"><p>Добавьте упражнения из каталога — можно выбрать несколько сразу.</p><button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button></section>}
       {items.length > 0 && <button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button>}
+      {items.length > 0 && <button type="button" className="wide today-review-next" onClick={() => setScreen('save')}>Далее</button>}
+      </>}
+      {screen === 'save' && <section className="today-assignment">
       <label className="today-client"><span>Для кого тренировка</span><select value={clientId} onChange={(event) => setClientId(event.target.value)}><option value="">Выберите клиента</option>{quickClientOption && !clients.data?.some((client) => client.id === quickClientOption.id) && <option value={quickClientOption.id}>{quickClientOption.fullName}</option>}{clients.data?.map((client) => <option value={client.id} key={client.id}>{client.fullName}</option>)}</select></label>
       {!clientId && !quickClientOpen && <button type="button" className="link today-new-client" onClick={() => setQuickClientOpen(true)}>＋ Новый клиент</button>}
       {!clientId && quickClientOpen && <section className="today-quick-client"><div className="today-quick-client-head"><strong>Новый клиент</strong><button type="button" className="link" onClick={() => { setQuickClientOpen(false); setQuickClientName('') }}>Отмена</button></div><p>Укажите имя — остальное можно заполнить позже.</p><div className="today-quick-client-form"><input aria-label="Имя нового клиента" value={quickClientName} onChange={(event) => setQuickClientName(event.target.value)} placeholder="Имя клиента" autoFocus /><button type="button" className="secondary" disabled={quickClientName.trim().length < 2 || createQuickClient.isPending} onClick={() => createQuickClient.mutate()}>Создать</button></div>{createQuickClient.error && <p className="error">{createQuickClient.error.message}</p>}</section>}
@@ -418,7 +423,7 @@ export function TodayPage() {
         <div className="today-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={recordMode === 'planned' ? 'active' : ''} aria-pressed={recordMode === 'planned'} onClick={() => setRecordMode('planned')}>План</button><button type="button" className={recordMode === 'completed' ? 'active' : ''} aria-pressed={recordMode === 'completed'} onClick={() => { setRecordMode('completed'); setWorkoutDate((date) => workoutDateForRecordMode('completed', date, today)) }}>Завершённая</button></div>
         <div className="split"><label className="today-date-field"><span>Дата</span><input aria-label="Дата тренировки" type="date" value={workoutDate} max={recordMode === 'completed' ? today : undefined} onChange={(event) => setWorkoutDate(localDate(event.target.value))} required /></label>{recordMode === 'planned' && <label className="today-date-field"><span>Время</span><input aria-label="Время тренировки" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>}</div>
         <button type="button" className="wide" disabled={!items.length || !clientId || save.isPending} onClick={() => save.mutate(recordMode)}>{recordMode === 'planned' ? 'Запланировать' : 'Записать как завершённую'}</button>
-      </section>
+      </section></section>}
     </section>}
     {screen === 'compose' && agenda}
     {draftNotice}
