@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { VoiceNoteField, replaceWithTranscript } from './VoiceNoteField'
@@ -34,5 +34,20 @@ describe('appendTranscript', () => {
     await user.click(screen.getByRole('button', { name: 'Надиктовать заметку' }))
 
     expect(onValueChange).toHaveBeenCalledWith('Старый текст\nЖим лёжа 40 кг')
+  })
+
+  it('shows processing status until the workout parser finishes', async () => {
+    const user = userEvent.setup()
+    let finishProcessing!: () => void
+    const onTranscriptAppended = vi.fn(() => new Promise<void>((resolve) => { finishProcessing = resolve }))
+    render(<VoiceNoteField name="workout" source="today" onTranscriptAppended={onTranscriptAppended} />)
+
+    await user.click(screen.getByRole('button', { name: 'Надиктовать заметку' }))
+
+    expect(screen.getByRole('status')).toHaveTextContent('Текст распознан. Обрабатываем упражнения…')
+    expect(onTranscriptAppended).toHaveBeenCalledWith(expect.objectContaining({ transcript: 'Жим лёжа 40 кг' }))
+
+    finishProcessing()
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
   })
 })
