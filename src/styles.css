@@ -898,7 +898,15 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .profile-form-section-head h2 { margin: 0; font-size: 24px; line-height: 1.12; letter-spacing: var(--tracking-tight) }
 .profile-form .field input { min-height: 50px; border-radius: 14px; background: var(--surface-sunken) }
 .profile-form .actions button:last-child { min-height: 52px; border-radius: 16px; font-size: 17px; font-weight: 800 }
-.planned-set { padding-top: 10px; border-top: 1px solid var(--border) }.planned-set:first-of-type { border-top: 0 }.planned-set-heading { color: var(--muted); font-size: 13px }
+/* Плановые подходы повторяют плотный ритм live: номер, значения, редкое
+   удаление. Семантика полей и доступные названия остаются прежними. */
+.planned-set { display:grid; grid-template-columns:24px minmax(0, 1fr) 32px; align-items:start; gap:8px; padding:10px 0; border-top:1px solid var(--border) }
+.planned-set:first-of-type { border-top:0 }
+.planned-set-number { display:grid; place-items:center; min-height:42px; color:var(--muted); font-size:13px; font-weight:800; font-variant-numeric:tabular-nums }
+.planned-set-fields { min-width:0 }
+.planned-set-fields .set-row { margin:0 0 5px }
+.planned-set-fields .set-rpe-field { margin:0 }
+.planned-set-remove { min-width:32px; min-height:42px; display:grid; place-items:center; padding:0; font-size:20px; line-height:1 }
 /* Отдых внутри закреплённого блока (.live-pinned) — свой sticky не нужен. */
 .rest-timer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 12px 14px; border: 1px solid var(--warning-border); border-radius: 13px; background: var(--warning-surface); color: var(--warning-fg) }
 .voice-input { display: flex; flex-direction: column; align-items: flex-start; gap: 7px }
