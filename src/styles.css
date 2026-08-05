@@ -920,13 +920,19 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .profile-form-section-head h2 { margin: 0; font-size: 24px; line-height: 1.12; letter-spacing: var(--tracking-tight) }
 .profile-form .field input { min-height: 50px; border-radius: 14px; background: var(--surface-sunken) }
 .profile-form .actions button:last-child { min-height: 52px; border-radius: 16px; font-size: 17px; font-weight: 800 }
-/* Плановые подходы повторяют плотный ритм live: номер, значения, редкое
+/* Плановые подходы повторяют ритм live: видимые колонки, номер и редкое
    удаление. Семантика полей и доступные названия остаются прежними. */
-.planned-set { display:grid; grid-template-columns:24px minmax(0, 1fr) 32px; align-items:start; gap:8px; padding:10px 0; border-top:1px solid var(--border) }
-.planned-set:first-of-type { border-top:0 }
+.planned-set-table { margin-top:8px; border-top:1px solid var(--border) }
+.planned-set-table-head { display:grid; grid-template-columns:24px minmax(0, 1fr) 32px; align-items:center; gap:8px; min-height:30px; color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase }
+.planned-set-table-head > :first-child { text-align:center }
+.planned-set-table-labels { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px }
+.planned-set-table-labels.single { grid-template-columns:1fr }
+.planned-set-table-labels span { padding:0 10px }
+.planned-set { display:grid; grid-template-columns:24px minmax(0, 1fr) 32px; align-items:start; gap:8px; padding:8px 0; border-top:1px solid var(--border) }
 .planned-set-number { display:grid; place-items:center; min-height:42px; color:var(--muted); font-size:13px; font-weight:800; font-variant-numeric:tabular-nums }
 .planned-set-fields { min-width:0 }
-.planned-set-fields .set-row { margin:0 0 5px }
+.planned-set-fields .set-row { gap:8px; margin:0 0 4px }
+.planned-set-fields .set-row input { min-height:44px; padding:8px 10px; border-radius:10px; font-weight:700 }
 .planned-set-fields .set-rpe-field { margin:0 }
 .planned-set-remove { min-width:32px; min-height:42px; display:grid; place-items:center; padding:0; font-size:20px; line-height:1 }
 /* Отдых внутри закреплённого блока (.live-pinned) — свой sticky не нужен. */
