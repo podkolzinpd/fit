@@ -129,6 +129,10 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // «＋ Подход» наследует параметры предыдущего подхода (40 кг × 10).
   await expect(page.getByLabel('Вес, подход 2')).toHaveValue('40')
   await expect(page.getByLabel('Повторы, подход 2')).toHaveValue('10')
+  await expect(page.locator('.planned-set-table-head')).toHaveCount(1)
+  await expect(page.locator('.planned-set-table-head')).toContainText('№')
+  await expect(page.locator('.planned-set-table-head')).toContainText('Кг')
+  await expect(page.locator('.planned-set-table-head')).toContainText(/Повт\./i)
   await expect(page.locator('.planned-set-number')).toHaveCount(2)
   await page.getByLabel('Вес, подход 2').fill('35')
   await page.getByLabel('Повторы, подход 2').fill('12')
