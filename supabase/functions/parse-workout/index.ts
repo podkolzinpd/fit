@@ -95,12 +95,36 @@ Deno.serve(async (request) => {
     if (!apiKey || !folderId) throw new Error("missing_yandex_cloud_credentials")
     const modelId = Deno.env.get("YANDEX_CLOUD_MODEL_ID") ?? "yandexgpt"
     const modelUri = `gpt://${folderId}/${modelId}/latest`
-    const response = await fetch(URL, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Api-Key " + apiKey }, body: JSON.stringify({ modelUri, completionOptions: { stream: false, temperature: 0, maxTokens: "2000" }, jsonSchema: { schema: OUTPUT_SCHEMA }, messages: [{ role: "user", text: prompt }] }) })
-    if (!response.ok) { console.error(JSON.stringify({ event: "workout_parse_llm_error", status: response.status })); return json({ error: { code: "llm_unavailable", message: "Модель разбора временно недоступна" } }, 502) }
-    const payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }> } }
-    const result = validate(JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? ""), catalog)
-    console.log(JSON.stringify({ event: "workout_parse_completed", items: result.items.length, unmatched: result.unmatched.length }))
-    return json(result)
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      let response: Response
+      try {
+        response = await fetch(URL, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Api-Key " + apiKey }, body: JSON.stringify({ modelUri, completionOptions: { stream: false, temperature: 0, maxTokens: "2000" }, jsonSchema: { schema: OUTPUT_SCHEMA }, messages: [{ role: "user", text: prompt }] }) })
+      } catch (error) {
+        console.error(JSON.stringify({ event: "workout_parse_llm_network_error", attempt, message: error instanceof Error ? error.message : "unknown" }))
+        if (attempt === 2) throw error
+        continue
+      }
+      if (!response.ok) {
+        console.error(JSON.stringify({ event: "workout_parse_llm_error", attempt, status: response.status }))
+        if (response.status >= 500 && attempt < 2) continue
+        return json({ error: { code: "llm_unavailable", message: "Модель разбора временно недоступна" } }, 502)
+      }
+      try {
+        const payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }> } }
+        const result = validate(JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? ""), catalog)
+        console.log(JSON.stringify({
+          event: "workout_parse_completed",
+          attempt,
+          items: result.items.map(({ exerciseRef, sets }) => ({ exerciseRef, sets })),
+          unmatched: result.unmatched.map(({ reason, suggestedExerciseRefs }) => ({ reason, suggestedExerciseRefs })),
+        }))
+        return json(result)
+      } catch (error) {
+        console.error(JSON.stringify({ event: "workout_parse_invalid_response", attempt, message: error instanceof Error ? error.message : "unknown" }))
+        if (attempt === 2) throw error
+      }
+    }
+    throw new Error("workout_parse_retry_exhausted")
   } catch (error) {
     console.error(JSON.stringify({ event: "workout_parse_failed", message: error instanceof Error ? error.message : "unknown" }))
     return json({ error: { code: "parse_failed", message: "Не удалось разобрать диктовку" } }, 502)
