@@ -518,7 +518,8 @@ test('план: два упражнения объединяются в супе
     await page.getByRole('button', { name: 'Добавить 1' }).click()
   }
   // Объединяем первое упражнение со следующим в блок → появляется селектор типа.
-  await page.getByRole('button', { name: /Объединить со следующим/ }).first().click()
+  await page.getByRole('button', { name: 'Ещё действия' }).first().click()
+  await page.getByRole('menuitem', { name: 'Объединить со следующим в блок' }).click()
   await expect(page.getByLabel('Тип блока')).toBeVisible()
   await expect(page.getByLabel('Тип блока')).toHaveValue('set')
   // Задаём 2 круга → форма раскладывается по кругам: «Круг 1» и «Круг 2»,
