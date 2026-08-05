@@ -1,4 +1,4 @@
-import { useId, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { VoiceInputButton } from './VoiceInputButton'
 
 interface VoiceNoteFieldProps {
@@ -14,11 +14,26 @@ interface VoiceNoteFieldProps {
   voiceBeta?: boolean
   placeholder?: string
   hideLabel?: boolean
+  autoResize?: boolean
+  maxHeightPx?: number
 }
 
-export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, onTranscriptAppended, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false }: VoiceNoteFieldProps) {
+export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, onTranscriptAppended, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false, autoResize = false, maxHeightPx = 264 }: VoiceNoteFieldProps) {
   const id = useId()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const resizeTextarea = () => {
+    if (!autoResize || !textareaRef.current) return
+    const textarea = textareaRef.current
+    textarea.style.height = 'auto'
+    const height = Math.min(textarea.scrollHeight, maxHeightPx)
+    textarea.style.height = `${height}px`
+    textarea.style.overflowY = textarea.scrollHeight > maxHeightPx ? 'auto' : 'hidden'
+  }
+
+  useEffect(() => {
+    resizeTextarea()
+  }, [autoResize, maxHeightPx, value])
   return <div className="field voice-note-field">
     {!hideLabel && <label htmlFor={id}>{label}</label>}
     <textarea
@@ -29,7 +44,10 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
       placeholder={placeholder}
       defaultValue={onValueChange ? undefined : defaultValue}
       value={onValueChange ? value ?? '' : undefined}
-      onChange={onValueChange ? (event) => onValueChange(event.target.value) : undefined}
+      onChange={onValueChange ? (event) => {
+        onValueChange(event.target.value)
+        window.requestAnimationFrame(resizeTextarea)
+      } : undefined}
     />
     <VoiceInputButton source={source} idleLabel={voiceLabel} beta={voiceBeta} onTranscript={(text) => {
       if (!textareaRef.current) return

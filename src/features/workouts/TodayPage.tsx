@@ -376,7 +376,7 @@ export function TodayPage() {
 
   const trainerInitial = actor?.firstName?.trim().slice(0, 1).toUpperCase() || 'П'
   const agenda = (currentWorkout || plannedWorkouts.length > 0) && <section className="today-agenda"><div className="today-agenda-head"><div><p className="eyebrow">Рабочий день</p><h2>На сегодня</h2></div><Link className="link" to="/schedule">Расписание</Link></div>{currentWorkout && <Link className="today-current-workout" to={`/workouts/${currentWorkout.id}/live`}><span><strong>Продолжить тренировку</strong><small>{currentWorkout.clientName} · {workoutTime(currentWorkout)}</small></span><b>→</b></Link>}{plannedWorkouts.slice(0, 3).map((workout) => <Link className="today-planned-workout" key={workout.id} to={`/workouts/${workout.id}`}><span>{workoutTime(workout)}</span><strong>{workout.clientName}</strong><small>{workout.exercises.length ? workout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Без упражнений'}</small></Link>)}</section>
-  const draftNotice = draftRestored && <div className="today-draft-notice" role="status"><span><strong>Черновик восстановлен</strong><small>Можно продолжить с того же места.</small></span><button type="button" className="link" onClick={discardDraft}>Удалить</button></div>
+  const draftNotice = draftRestored && <div className="today-draft-notice" role="status"><strong>Черновик восстановлен</strong><button type="button" className="link" onClick={discardDraft}>Удалить</button></div>
 
   return <Page title="Сегодня" className="today-page today-start-page" action={<Link className="today-profile-avatar" to="/profile" aria-label="Открыть профиль">{trainerInitial}</Link>}>
     {screen === 'compose' ? <section className="today-composer">
@@ -385,7 +385,7 @@ export function TodayPage() {
         <p>Напишите тренировку — мы разберём её по упражнениям и подходам.</p>
       </div>
       <div className="today-input-card">
-        <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать" voiceBeta placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} onValueChange={(value) => { setText(formatWorkoutText(value, catalog.exercises)); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => void refineVoiceTranscript(previousValue, formatWorkoutText(value, catalog.exercises), transcript)} />
+        <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать" voiceBeta placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} autoResize onValueChange={(value) => { setText(formatWorkoutText(value, catalog.exercises)); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => void refineVoiceTranscript(previousValue, formatWorkoutText(value, catalog.exercises), transcript)} />
         {text && <div className="today-input-actions"><button type="button" className="link" onClick={() => setText('')}>Очистить</button></div>}
       </div>
       {voiceRefinement && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
@@ -402,7 +402,7 @@ export function TodayPage() {
       </div>}
        {noMatches && <div className="today-empty-parse" role="status"><strong>Не нашли упражнение</strong><span>Проверьте название или добавьте его из каталога ниже.</span></div>}
        <button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>
-      <button type="button" className="secondary wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}><span>Выбрать упражнения</span><small>Из каталога — можно несколько сразу</small></button>
+      <button type="button" className="secondary wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}><span>Выбрать упражнения</span><small>Поиск и массовый выбор</small></button>
     </section> : <section className="today-review">
       <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { reviewRequest.current += 1; setParsing(false); setScreen('compose') }}>← Назад</button><h1>Проверьте тренировку</h1></div>
       {items.length > 0 ? <div className="today-exercise-list">{items.map((item, index) => <article className="today-exercise" key={`${item.exercise.ref}-${index}`}>
