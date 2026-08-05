@@ -612,6 +612,8 @@ export function LiveWorkoutPage() {
   // Держим конкретный введённый факт до тех пор, пока серверная копия не станет
   // такой же — иначе при переходе к следующему подходу строка мигнёт пустой.
   const [localSetDrafts, setLocalSetDrafts] = useState<Map<string, LiveSetDraft>>(() => new Map())
+  const liveSetForms = useRef<Map<string, HTMLFormElement>>(new Map())
+  const [dirtySetIds, setDirtySetIds] = useState<Set<string>>(() => new Set())
   const [savingSetId, setSavingSetId] = useState<string | null>(null)
   const [savedSetId, setSavedSetId] = useState<string | null>(null)
   const [saveErrorSetId, setSaveErrorSetId] = useState<string | null>(null)
@@ -670,6 +672,18 @@ export function LiveWorkoutPage() {
       return next
     })
     save.mutate({ set, draft })
+  }
+  function openLiveSet(exercise: WorkoutExercise, targetSetId: string) {
+    const currentSetId = expandedSetId ?? exercise.sets.find((set) => !set.confirmedAt)?.id
+    // В iOS WebView тап по следующей строке не всегда переводит фокус и не
+    // вызывает blur. Сохраняем только действительно изменённую текущую строку
+    // прямо перед переключением — так факт не зависит от поведения клавиатуры.
+    if (currentSetId && currentSetId !== targetSetId && dirtySetIds.has(currentSetId)) {
+      const currentSet = exercise.sets.find((set) => set.id === currentSetId)
+      const form = liveSetForms.current.get(currentSetId)
+      if (currentSet && form) persistLiveDraft(currentSet, draftFrom(form))
+    }
+    setExpandedSetId(targetSetId)
   }
   useEffect(() => {
     if (!savedSetId) return
@@ -835,11 +849,11 @@ export function LiveWorkoutPage() {
         <span className="live-set-compact-values"><strong>{fact ? `Факт ${fact}` : plan ? `План ${plan}` : 'Без значений'}</strong>{fact && plan && <small>План {plan}</small>}</span>
         {set.confirmedAt
           ? <button type="button" className="link live-set-compact-action" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>
-          : <button type="button" className="link live-set-compact-action" aria-label={`Ввести подход ${setNumber ?? ''}`} onClick={() => setExpandedSetId(set.id)}>Ввести</button>}
+          : <button type="button" className="link live-set-compact-action" aria-label={`Ввести подход ${setNumber ?? ''}`} onClick={() => openLiveSet(exercise, set.id)}>Ввести</button>}
       </div>
     }
     const showRpe = rpeExercises.has(exercise.id)
-    return <form className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={set.id} onBlur={(event) => {
+    return <form ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={set.id} onInput={() => setDirtySetIds((current) => new Set(current).add(set.id))} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
       persistLiveDraft(set, draftFrom(event.currentTarget))
