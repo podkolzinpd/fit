@@ -845,7 +845,8 @@ test('live: удаление подхода и наследование факт
 
   // Удаляем добавленный подход — остаётся один. Подтверждаем через in-app
   // confirm (useConfirm), а не нативный window.confirm.
-  await page.getByRole('button', { name: 'Удалить подход' }).first().click()
+  await page.getByRole('button', { name: 'Ещё действия' }).first().click()
+  await page.getByRole('menuitem', { name: 'Удалить подход' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click()
   await expect(page.locator('.exercise')).toHaveCount(1)
 })

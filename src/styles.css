@@ -707,7 +707,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-set-compact.confirmed .live-set-compact-action { color:var(--success-fg); font-size:18px }
 .live-set-grid { display:grid; grid-template-columns:24px minmax(0, 1fr) 52px; align-items:center; gap:8px }
 .live-set-number { display:grid; place-items:center; min-height:44px; color:var(--muted); font-size:13px; font-weight:800; font-variant-numeric:tabular-nums }
-.live-set-main { min-width:0; display:grid; gap:4px }
+.live-set-main { position:relative; min-width:0; display:grid; gap:4px }
 .live-set .set-head { min-height:auto; font-size:12px; line-height:1.25 }
 .live-set .set-head .muted { min-width: 0; overflow-wrap: anywhere }
 .live-set-fields .set-row { margin:0; gap:4px }
@@ -739,6 +739,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-set-expanded .live-set-fields .set-row input { min-height:40px; font-size:13px }
 .live-set-expanded .live-set-check,
 .live-set-expanded .live-set-save { width:44px; min-height:40px; border-radius:11px }
+.live-set-expanded .live-set-save-feedback .save-status { position:absolute; z-index:2; right:0; top:calc(100% + 2px); margin:0; padding:3px 6px; border-radius:7px; white-space:nowrap; font-size:11px; background:var(--surface-raised); box-shadow:var(--shadow-card) }
 @media (max-width: 360px) {
   .live-set-grid, .live-set-table-head, .live-set-compact { grid-template-columns:20px minmax(0, 1fr) 48px; gap:6px }
   .live-set-check, .live-set-save { width:48px }

@@ -821,12 +821,13 @@ export function LiveWorkoutPage() {
   // Меню упражнения в live (⋯): «Заменить» доступно, пока нет подтверждённых
   // подходов (начатое заменять нельзя — факт относился к старому упражнению).
   // В меню, чтобы редкое действие не конкурировало с подтверждением подхода.
-  function exerciseMenu(exercise: WorkoutExercise, canReorder = false) {
+  function exerciseMenu(exercise: WorkoutExercise, canReorder = false, removableSet?: WorkoutSet) {
     if (clientMode) return null
     const canReplace = !exercise.sets.some((set) => set.confirmedAt)
     return <OverflowMenu items={[
       ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
       ...(canReplace ? [{ label: 'Заменить', disabled: replaceLive.isPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } }] : []),
+      ...(removableSet ? [{ label: 'Удалить подход', danger: true, disabled: removeSet.isPending, onClick: async () => { if (await askConfirm({ message: 'Удалить этот подход?', confirmLabel: 'Удалить', danger: true })) removeSet.mutate(removableSet.id) } }] : []),
     ]} />
   }
   // Стрелки ↑/↓ видны только во временном режиме перестановки.
@@ -838,17 +839,16 @@ export function LiveWorkoutPage() {
     </span>
   }
   // Форма одного подхода в live: подтверждение / правка / удаление / автосейв по blur.
-  // canRemove — у упражнения больше одного подхода (последний убрать нельзя).
-  function renderLiveSet(exercise: WorkoutExercise, set: WorkoutSet, label?: string, current = false, canRemove = false) {
+  function renderLiveSet(exercise: WorkoutExercise, set: WorkoutSet, label?: string, current = false) {
     const isEditing = editingSets.has(set.id)
     const isExpanded = current || isEditing || expandedSetId === set.id
     // «Закрыто» (подтверждён) — зелёный; «в работе» (текущий) — серый.
     const stateClass = set.confirmedAt && !isEditing ? 'confirmed' : current && !isEditing ? 'current' : ''
     const saveStatus = savingSetId === set.id ? 'saving' : saveErrorSetId === set.id ? 'error' : savedSetId === set.id ? 'saved' : 'idle'
-    // Действия в шапке подхода: карандаш (правка подтверждённого) + крестик (удалить).
+    // Карандаш остаётся для правки; удаление вынесено в меню упражнения, чтобы
+    // не ломать однострочный ввод.
     const headActions = <span className="set-head-actions">
       {set.confirmedAt && !isEditing && <button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}
-      {!clientMode && canRemove && !isEditing && <button type="button" className="link set-remove" aria-label="Удалить подход" disabled={removeSet.isPending} onClick={async () => { if (await askConfirm({ message: 'Удалить этот подход?', confirmLabel: 'Удалить', danger: true })) removeSet.mutate(set.id) }}>✕</button>}
     </span>
     const setNumber = label?.match(/\d+/)?.[0]
     const confirmLabel = set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'
@@ -875,6 +875,7 @@ export function LiveWorkoutPage() {
           <div className="live-set-fields">
             <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} />
           </div>
+          <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} /></div>
           <div className="live-set-secondary">
             <details className="live-rpe-details">
               <summary>RPE</summary>
@@ -883,7 +884,6 @@ export function LiveWorkoutPage() {
             {!set.confirmedAt && planLine(exercise.inputKind, set) && <button type="button" className="link set-fill-plan"
               onPointerDown={(e) => e.preventDefault()}
               onClick={(event) => fillFactFromPlan(event.currentTarget.form, exercise.inputKind, set)}>= план</button>}
-            <SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} />
           </div>
           {deviationNote(exercise.inputKind, set) && <p className="set-deviation">{deviationNote(exercise.inputKind, set)}</p>}
         </div>
@@ -965,10 +965,10 @@ export function LiveWorkoutPage() {
               </button>
             }
             return <section key={exercise.id} className={`live-exercise ${blockStatus}`}>
-              <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{exerciseMenu(exercise, canReorder)}{reorder}</span></div>
+              <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</span></div>
               <div className="live-set-table">
                 <div className="live-set-table-head" aria-hidden="true"><span>№</span><span>Подход</span><span>Статус</span></div>
-                {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex, exercise.sets.length > 1))}
+                {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex))}
               </div>
               {!clientMode && <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
               {liveCommentField(exercise)}
