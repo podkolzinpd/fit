@@ -63,15 +63,17 @@ function exerciseStartPhrases(catalog: readonly ExerciseSnapshot[]): string[] {
  */
 export function formatWorkoutText(text: string, catalog: readonly ExerciseSnapshot[] = []): string {
   const starts = exerciseStartPhrases(catalog)
-  if (!starts.length) return text.replace(/\n{2,}/g, '\n').trim()
+  // Поле вызывает форматирование на каждом вводе. Не обрезаем хвост строки:
+  // иначе обычный пробел после последнего слова невозможно набрать.
+  if (!starts.length) return text.replace(/\n{2,}/g, '\n')
   const matches = starts.flatMap((phrase) => {
     const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')
     return [...text.matchAll(new RegExp(`(?:^|\\s)${escaped}(?=\\s|$)`, 'giu'))]
       .map((match) => ({ index: (match.index ?? 0) + match[0].length - match[0].trimStart().length, length: phrase.length }))
   }).sort((left, right) => left.index - right.index || right.length - left.length)
   const startsAt = matches.reduce<number[]>((result, match) => result.some((index) => index === match.index) ? result : [...result, match.index], [])
-  if (startsAt.length < 2) return text.replace(/\n{2,}/g, '\n').trim()
-  return startsAt.slice(1).reverse().reduce((result, index) => `${result.slice(0, index).trimEnd()}\n${result.slice(index).trimStart()}`, text).replace(/\n{2,}/g, '\n').trim()
+  if (startsAt.length < 2) return text.replace(/\n{2,}/g, '\n')
+  return startsAt.slice(1).reverse().reduce((result, index) => `${result.slice(0, index).trimEnd()}\n${result.slice(index).trimStart()}`, text).replace(/\n{2,}/g, '\n')
 }
 
 function normalizeSportSpeech(value: string): string {

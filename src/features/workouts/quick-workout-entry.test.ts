@@ -12,6 +12,10 @@ const catalog: ExerciseSnapshot[] = [
 ]
 
 describe('parseQuickWorkoutEntry', () => {
+  it('не съедает пробел, который тренер только что набрал в поле ввода', () => {
+    expect(formatWorkoutText('Жим лёжа ', SYSTEM_EXERCISE_CATALOG)).toBe('Жим лёжа ')
+  })
+
   it('понимает разговорное «гребля» как гребной тренажёр', () => {
     const result = parseQuickWorkoutEntry('Гребля 10 мин 2 км', SYSTEM_EXERCISE_CATALOG)
 
