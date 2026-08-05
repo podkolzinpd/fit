@@ -99,7 +99,11 @@ Deno.serve(async (request) => {
     if (!response.ok) { console.error(JSON.stringify({ event: "workout_parse_llm_error", status: response.status })); return json({ error: { code: "llm_unavailable", message: "Модель разбора временно недоступна" } }, 502) }
     const payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }> } }
     const result = validate(JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? ""), catalog)
-    console.log(JSON.stringify({ event: "workout_parse_completed", items: result.items.length, unmatched: result.unmatched.length }))
+    console.log(JSON.stringify({
+      event: "workout_parse_completed",
+      items: result.items.map(({ exerciseRef, sets }) => ({ exerciseRef, sets })),
+      unmatched: result.unmatched.map(({ reason, suggestedExerciseRefs }) => ({ reason, suggestedExerciseRefs })),
+    }))
     return json(result)
   } catch (error) {
     console.error(JSON.stringify({ event: "workout_parse_failed", message: error instanceof Error ? error.message : "unknown" }))
