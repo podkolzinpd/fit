@@ -141,10 +141,11 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('button', { name: 'Начать' }).click()
   // Крупный таймер тренировки по центру над подходами, идущий от старта (мм:сс).
   await expect(page.locator('.live-timer-big')).toContainText(/\d\d:\d\d/)
-  // Подходи — компактные строки единого упражнения, не самостоятельные карточки.
-  await expect(page.locator('.live-exercise > .live-set')).toHaveCount(2)
-  await expect(page.locator('.live-exercise > .live-set > .live-set-grid')).toHaveCount(2)
-  await expect(page.locator('.live-exercise > .live-set').nth(1)).toHaveCSS('border-top-width', '1px')
+  // Текущий подход раскрыт для ввода, следующий — компактной строкой.
+  await expect(page.locator('.live-set-table')).toHaveCount(1)
+  await expect(page.locator('.live-set-table > .live-set')).toHaveCount(1)
+  await expect(page.locator('.live-set-table > .live-set-compact')).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Ввести подход 2' })).toBeVisible()
   // Пока факт пуст, ± начинает от плана, а не от нуля.
   await page.getByRole('button', { name: 'Добавить вес' }).first().click()
   await expect(page.getByLabel('Фактический вес').first()).toHaveValue('42.5')
@@ -155,11 +156,9 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.locator('.live-timer-big').click()
   await expect(page.getByRole('status').filter({ hasText: 'Сохранено' })).toBeVisible()
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
-  await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
-  // Подтверждённый подход показывает зафиксированные значения ярко (не placeholder):
-  // поле веса заблокировано и содержит реальное значение 42.5.
-  await expect(page.locator('.set-row.locked input').first()).toHaveValue('42.5')
-  await expect(page.locator('.set-row.locked input').first()).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Редактировать подход' })).toBeVisible()
+  // Подтверждённый подход становится компактной строкой с зафиксированным фактом.
+  await expect(page.locator('.live-set-compact.confirmed')).toContainText('42.5 кг')
   await expect(page.getByText(/Отдых 1:30/)).toBeVisible()
   // Отдых считается от абсолютного времени: через ~2 с значение должно уменьшиться.
   await expect(page.getByText(/Отдых 1:2\d/)).toBeVisible({ timeout: 4000 })
@@ -300,13 +299,12 @@ test('live: планка вводится в секундах, таймер за
   // #6: подтверждаем подход, затем правим карандашом.
   await page.getByLabel('Фактическое время, сек').first().fill('75')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
-  await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
-  await expect(page.getByLabel('Фактическое время, сек').first()).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Редактировать подход' })).toBeVisible()
   await page.getByRole('button', { name: 'Редактировать подход' }).first().click()
   await expect(page.getByLabel('Фактическое время, сек').first()).toBeEnabled()
   await page.getByLabel('Фактическое время, сек').first().fill('90')
   await page.getByRole('button', { name: 'Сохранить' }).first().click()
-  await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Редактировать подход' })).toBeVisible()
 })
 
 test('план: порядок упражнений меняется в отдельном режиме и сохраняется', async ({ page }) => {
@@ -548,7 +546,7 @@ test('план: два упражнения объединяются в супе
   await expect(page.locator('.live-pinned .circuit-counter')).toHaveText('Круг 1 из 2')
   // Первое упражнение круга 1 — отдых НЕ запускается (круг ещё не завершён).
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
-  await expect(page.getByRole('button', { name: 'Подтверждено' })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Редактировать подход' })).toHaveCount(1)
   await expect(page.getByText(/Отдых/)).toHaveCount(0)
   // Второе (последнее) упражнение круга 1 — круг завершён, отдых запускается,
   // счётчик переключается на «Круг 2 из 2».
@@ -775,7 +773,7 @@ test('комментарий тренера к упражнению: план �
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   // Ждём, пока подход реально подтвердится (RPC), иначе «Завершить» словит
   // подтверждение частичного завершения (window.confirm) и не сработает.
-  await expect(page.getByRole('button', { name: 'Подтверждено' }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Редактировать подход' }).first()).toBeVisible()
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
@@ -832,7 +830,7 @@ test('live: удаление подхода и наследование факт
   await page.getByLabel('Фактический вес').first().fill('92.5')
   await page.getByLabel('Фактические повторы').first().fill('8')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
-  await expect(page.getByRole('button', { name: 'Подтверждено' }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Редактировать подход' }).first()).toBeVisible()
 
   // Правка подтверждённого подхода: 100×10 — значение должно сохраниться на экране.
   await page.getByRole('button', { name: 'Редактировать подход' }).first().click()
@@ -881,7 +879,7 @@ test('live: «Готово» без ввода факта — подход сч�
   await expect(page.locator('.live-timer-big')).toBeVisible()
   // Не вводим факт — сразу «Готово»: план должен стать фактом.
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
-  await expect(page.getByRole('button', { name: 'Подтверждено' }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Редактировать подход' }).first()).toBeVisible()
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 

@@ -652,6 +652,9 @@ export function LiveWorkoutPage() {
   const [replaceExerciseId, setReplaceExerciseId] = useState<string | null>(null)
   // Подтверждённые подходы, временно разблокированные для правки (по карандашику).
   const [editingSets, setEditingSets] = useState<Set<string>>(() => new Set())
+  // В обычном live разворачиваем только текущий подход. Тап по другой строке
+  // временно открывает её для ввода без превращения всей тренировки в форму.
+  const [expandedSetId, setExpandedSetId] = useState<string | null>(null)
   const [savingSetId, setSavingSetId] = useState<string | null>(null)
   const [savedSetId, setSavedSetId] = useState<string | null>(null)
   const [saveErrorSetId, setSaveErrorSetId] = useState<string | null>(null)
@@ -701,6 +704,7 @@ export function LiveWorkoutPage() {
   const confirm = useMutation({
     mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.confirm(set, draft),
     onSuccess: (_data, { set }) => {
+      setExpandedSetId(null)
       // Отдых берётся из настроек блока (Этап A), не хардкод:
       // - одиночное упражнение → отдых между подходами;
       // - группа: между упражнениями внутри круга → restBetweenExercisesSec;
@@ -839,6 +843,7 @@ export function LiveWorkoutPage() {
   // canRemove — у упражнения больше одного подхода (последний убрать нельзя).
   function renderLiveSet(exercise: WorkoutExercise, set: WorkoutSet, label?: string, current = false, canRemove = false) {
     const isEditing = editingSets.has(set.id)
+    const isExpanded = current || isEditing || expandedSetId === set.id
     // «Закрыто» (подтверждён) — зелёный; «в работе» (текущий) — серый.
     const stateClass = set.confirmedAt && !isEditing ? 'confirmed' : current && !isEditing ? 'current' : ''
     const saveStatus = savingSetId === set.id ? 'saving' : saveErrorSetId === set.id ? 'error' : savedSetId === set.id ? 'saved' : 'idle'
@@ -849,6 +854,17 @@ export function LiveWorkoutPage() {
     </span>
     const setNumber = label?.match(/\d+/)?.[0]
     const confirmLabel = set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'
+    if (!isExpanded) {
+      const plan = planLine(exercise.inputKind, set)
+      const fact = factLine(set)
+      return <div className={`live-set-compact ${set.confirmedAt ? 'confirmed' : 'upcoming'}`} key={set.id}>
+        <span className="live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
+        <span className="live-set-compact-values"><strong>{fact ? `Факт ${fact}` : plan ? `План ${plan}` : 'Без значений'}</strong>{fact && plan && <small>План {plan}</small>}</span>
+        {set.confirmedAt
+          ? <button type="button" className="link live-set-compact-action" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>
+          : <button type="button" className="link live-set-compact-action" aria-label={`Ввести подход ${setNumber ?? ''}`} onClick={() => setExpandedSetId(set.id)}>Ввести</button>}
+      </div>
+    }
     return <form className={`exercise live-set ${stateClass}`} key={set.id} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
@@ -946,7 +962,10 @@ export function LiveWorkoutPage() {
             }
             return <section key={exercise.id} className={`live-exercise ${blockStatus}`}>
               <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{exerciseMenu(exercise, canReorder)}{reorder}</span></div>
-              {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex, exercise.sets.length > 1))}
+              <div className="live-set-table">
+                <div className="live-set-table-head" aria-hidden="true"><span>№</span><span>Подход</span><span>Статус</span></div>
+                {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex, exercise.sets.length > 1))}
+              </div>
               {!clientMode && <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
               {liveCommentField(exercise)}
             </section>

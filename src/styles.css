@@ -689,13 +689,22 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-exercise { border-radius: 16px; transition: opacity .2s ease }
 .live-exercise.current { }
 .live-exercise.upcoming { opacity: .62 }
-/* Live показывает упражнение как единую рабочую поверхность. Подходи — не
-   отдельные карточки, а компактные строки с разделителем: это даёт больше
-   факта в зоне большого пальца, не меняя существующий ввод или сохранение. */
-.live-exercise > .live-set, .circuit-round .live-set { margin: 0; padding: 10px 0; border: 0; border-radius: 0; background: transparent; box-shadow: none }
-.live-exercise > .live-set + .live-set, .circuit-round .live-set + .live-set { border-top: 1px solid var(--hairline) }
-.live-exercise > .live-set.current, .circuit-round .live-set.current { margin: 0 -8px; padding: 10px 8px; border: 1px solid var(--neutral-current-border); border-radius: 13px; background: var(--neutral-current) }
-.live-exercise > .live-set.confirmed, .circuit-round .live-set.confirmed { background: transparent }
+/* Один рабочий блок упражнения: заголовок таблицы и короткие строки. Полный
+   ввод развёрнут только у выбранного подхода — остальные не дублируют форму. */
+.live-set-table { margin-top:8px; border-top:1px solid var(--border) }
+.live-set-table-head { display:grid; grid-template-columns:24px minmax(0, 1fr) 52px; align-items:center; gap:8px; min-height:30px; color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase }
+.live-set-table-head span:last-child { text-align:center }
+.live-set-table > .live-set, .circuit-round .live-set { margin:0; padding:10px 0; border:0; border-radius:0; background:transparent; box-shadow:none }
+.live-set-table > .live-set + .live-set, .circuit-round .live-set + .live-set { border-top:1px solid var(--hairline) }
+.live-set-table > .live-set.current, .circuit-round .live-set.current { margin:0 -8px; padding:10px 8px; border:1px solid var(--neutral-current-border); border-radius:13px; background:var(--neutral-current) }
+.live-set-table > .live-set.confirmed, .circuit-round .live-set.confirmed { background:transparent }
+.live-set-compact { display:grid; grid-template-columns:24px minmax(0, 1fr) 52px; align-items:center; gap:8px; min-height:52px; padding:8px 0; border-top:1px solid var(--hairline); background:transparent }
+.live-set-compact.confirmed { border-color:var(--success-border); background:transparent }
+.live-set-compact-values { min-width:0; display:flex; flex-direction:column; gap:1px; overflow:hidden }
+.live-set-compact-values strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--fg); font-size:14px }
+.live-set-compact-values small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:12px }
+.live-set-compact-action { min-height:36px; padding:4px 2px; color:var(--accent-strong); font-size:13px; font-weight:800; text-align:center }
+.live-set-compact.confirmed .live-set-compact-action { color:var(--success-fg); font-size:18px }
 .live-set-grid { display:grid; grid-template-columns:24px minmax(0, 1fr) 52px; align-items:start; gap:8px }
 .live-set-number { display:grid; place-items:center; min-height:44px; color:var(--muted); font-size:13px; font-weight:800; font-variant-numeric:tabular-nums }
 .live-set-main { min-width:0 }
@@ -713,7 +722,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-set-check, .live-set-save { width:52px; min-height:44px; padding:6px 3px; border-radius:12px; font-size:12px; font-weight:800; box-shadow:none }
 .live-set-check.done { color:var(--success-fg); background:var(--success-surface); border-color:var(--success-border); font-size:20px }
 @media (max-width: 360px) {
-  .live-set-grid { grid-template-columns:20px minmax(0, 1fr) 48px; gap:6px }
+  .live-set-grid, .live-set-table-head, .live-set-compact { grid-template-columns:20px minmax(0, 1fr) 48px; gap:6px }
   .live-set-check, .live-set-save { width:48px }
   .live-set-fields .stepper-btn { width:40px }
 }
