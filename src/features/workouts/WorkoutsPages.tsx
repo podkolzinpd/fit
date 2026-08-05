@@ -863,7 +863,7 @@ export function LiveWorkoutPage() {
           : <button type="button" className="link live-set-compact-action" aria-label={`Ввести подход ${setNumber ?? ''}`} onClick={() => setExpandedSetId(set.id)}>Ввести</button>}
       </div>
     }
-    return <form className={`exercise live-set ${stateClass}`} key={set.id} onBlur={(event) => {
+    return <form className={`exercise live-set live-set-expanded ${stateClass}`} key={set.id} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
       save.mutate({ set, draft: draftFrom(event.currentTarget) })
