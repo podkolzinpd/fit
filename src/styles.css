@@ -692,7 +692,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Один рабочий блок упражнения: заголовок таблицы и короткие строки. Полный
    ввод развёрнут только у выбранного подхода — остальные не дублируют форму. */
 .live-set-table { margin-top:8px; border-top:1px solid var(--border) }
-.live-set-table-head { display:grid; grid-template-columns:24px minmax(0, 1fr) 52px; align-items:center; gap:8px; min-height:30px; color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase }
+.live-set-table-head { display:grid; grid-template-columns:28px minmax(54px, .8fr) minmax(0, 1fr) minmax(0, 1fr) 44px; align-items:center; gap:6px; min-height:30px; color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase }
 .live-set-table-head span:last-child { text-align:center }
 .live-set-table > .live-set, .circuit-round .live-set { margin:0; padding:10px 0; border:0; border-radius:0; background:transparent; box-shadow:none }
 .live-set-table > .live-set + .live-set, .circuit-round .live-set + .live-set { border-top:1px solid var(--hairline) }
@@ -705,16 +705,18 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-set-compact-values small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:12px }
 .live-set-compact-action { min-height:36px; padding:4px 2px; color:var(--accent-strong); font-size:13px; font-weight:800; text-align:center }
 .live-set-compact.confirmed .live-set-compact-action { color:var(--success-fg); font-size:18px }
-.live-set-grid { display:grid; grid-template-columns:24px minmax(0, 1fr) 52px; align-items:center; gap:8px }
+.live-set-grid { position:relative; display:grid; grid-template-columns:28px minmax(54px, .8fr) minmax(0, 1fr) minmax(0, 1fr) 44px; align-items:center; gap:6px; min-height:50px }
 .live-set-number { display:grid; place-items:center; min-height:44px; color:var(--muted); font-size:13px; font-weight:800; font-variant-numeric:tabular-nums }
-.live-set-main { position:relative; min-width:0; display:grid; gap:4px }
+.live-set-plan { min-width:0; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums }
 .live-set .set-head { min-height:auto; font-size:12px; line-height:1.25 }
 .live-set .set-head .muted { min-width: 0; overflow-wrap: anywhere }
-.live-set-fields .set-row { margin:0; gap:4px }
-.live-set-fields .stepper { gap:4px }
-.live-set-fields .stepper-btn { width:44px; min-height:44px; border-radius:10px }
-.live-set-fields .set-row input { min-width:0; min-height:44px; padding:7px 4px; border-radius:10px; font-size:14px }
-.live-set-secondary { display:flex; align-items:center; flex-wrap:wrap; gap:6px; min-height:28px }
+.live-set-input { width:100%; min-width:0; min-height:40px; padding:6px 5px; border:1px solid var(--border); border-radius:9px; background:var(--surface-sunken); color:var(--fg); text-align:center; font-size:14px; font-weight:750; font-variant-numeric:tabular-nums }
+.live-set-input:focus { border-color:var(--accent-focus); box-shadow:0 0 0 3px var(--accent-ring); outline:none }
+.live-set-input:disabled { border-color:transparent; background:transparent; color:var(--fg); opacity:1 }
+.live-set-empty { min-height:40px }
+.live-set-rpe { width:100%; min-width:0; min-height:40px; padding:4px 2px; border:1px solid var(--border); border-radius:9px; background:var(--surface-sunken); color:var(--fg); text-align:center; font-size:12px; font-weight:750 }
+.live-set.rpe-visible .live-set-grid,
+.live-set-table-head.rpe-visible { grid-template-columns:24px minmax(46px, .75fr) minmax(0, 1fr) minmax(0, 1fr) 42px 44px; gap:4px }
 .live-rpe-details { position:relative; }
 .live-rpe-details summary { min-height:28px; padding:5px 8px; border:1px solid var(--border); border-radius:9px; color:var(--muted); background:var(--surface-sunken); font-size:12px; font-weight:800; line-height:16px; list-style:none; cursor:pointer }
 .live-rpe-details summary::-webkit-details-marker { display:none }
@@ -729,23 +731,16 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-set-check.done { color:var(--success-fg); background:var(--success-surface); border-color:var(--success-border); font-size:20px }
 /* Ввод подхода — одна рабочая строка: номер, два степпера и подтверждение.
    План остаётся базой значений, а RPE/отклонение не конкурируют с вводом. */
-.live-set-expanded .set-head,
-.live-set-expanded .live-set-secondary,
-.live-set-expanded .set-deviation { display:none }
-.live-set-expanded .live-set-grid { grid-template-columns:20px minmax(0, 1fr) 44px; gap:6px }
-.live-set-expanded .live-set-number { min-height:40px }
-.live-set-expanded .live-set-fields .set-row { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:4px }
-.live-set-expanded .live-set-fields .stepper-btn { width:40px; min-height:40px }
-.live-set-expanded .live-set-fields .set-row input { min-height:40px; font-size:13px }
 .live-set-expanded .live-set-check,
 .live-set-expanded .live-set-save { width:44px; min-height:40px; border-radius:11px }
-.live-set-expanded .live-set-save-feedback .save-status { position:absolute; z-index:2; right:0; top:calc(100% + 2px); margin:0; padding:3px 6px; border-radius:7px; white-space:nowrap; font-size:11px; background:var(--surface-raised); box-shadow:var(--shadow-card) }
+.live-set-save-feedback .save-status { position:absolute; z-index:2; right:0; top:calc(100% + 2px); margin:0; padding:3px 6px; border-radius:7px; white-space:nowrap; font-size:11px; background:var(--surface-raised); box-shadow:var(--shadow-card) }
 @media (max-width: 360px) {
-  .live-set-grid, .live-set-table-head, .live-set-compact { grid-template-columns:20px minmax(0, 1fr) 48px; gap:6px }
+  .live-set-compact { grid-template-columns:20px minmax(0, 1fr) 48px; gap:6px }
   .live-set-check, .live-set-save { width:48px }
   .live-set-fields .stepper-btn { width:40px }
-  .live-set-expanded .live-set-grid { grid-template-columns:18px minmax(0, 1fr) 40px; gap:4px }
-  .live-set-expanded .live-set-fields .stepper-btn { width:36px; min-height:40px }
+  .live-set-grid, .live-set-table-head { grid-template-columns:24px minmax(48px, .8fr) minmax(0, 1fr) minmax(0, 1fr) 40px; gap:4px }
+  .live-set.rpe-visible .live-set-grid,
+  .live-set-table-head.rpe-visible { grid-template-columns:20px minmax(42px, .75fr) minmax(0, 1fr) minmax(0, 1fr) 38px 40px; gap:3px }
   .live-set-expanded .live-set-check,
   .live-set-expanded .live-set-save { width:40px }
 }
@@ -959,17 +954,15 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Плановые подходы повторяют ритм live: видимые колонки, номер и редкое
    удаление. Семантика полей и доступные названия остаются прежними. */
 .planned-set-table { margin-top:8px; border-top:1px solid var(--border) }
-.planned-set-table-head { display:grid; grid-template-columns:24px minmax(0, 1fr) 32px; align-items:center; gap:8px; min-height:30px; color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase }
+.planned-set-table-head { display:grid; grid-template-columns:28px minmax(0, 1fr) minmax(0, 1fr) 32px; align-items:center; gap:6px; min-height:30px; color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase }
 .planned-set-table-head > :first-child { text-align:center }
-.planned-set-table-labels { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px }
-.planned-set-table-labels.single { grid-template-columns:1fr }
-.planned-set-table-labels span { padding:0 10px }
-.planned-set { display:grid; grid-template-columns:24px minmax(0, 1fr) 32px; align-items:start; gap:8px; padding:8px 0; border-top:1px solid var(--border) }
+.planned-set { display:grid; grid-template-columns:28px minmax(0, 1fr) minmax(0, 1fr) 32px; align-items:center; gap:6px; min-height:50px; padding:5px 0; border-top:1px solid var(--border) }
 .planned-set-number { display:grid; place-items:center; min-height:42px; color:var(--muted); font-size:13px; font-weight:800; font-variant-numeric:tabular-nums }
-.planned-set-fields { min-width:0 }
-.planned-set-fields .set-row { gap:8px; margin:0 0 4px }
-.planned-set-fields .set-row input { min-height:44px; padding:8px 10px; border-radius:10px; font-weight:700 }
-.planned-set-fields .set-rpe-field { margin:0 }
+.planned-set-input { width:100%; min-width:0; min-height:40px; padding:6px 5px; border:1px solid var(--border); border-radius:9px; background:var(--surface-sunken); color:var(--fg); text-align:center; font-size:14px; font-weight:750; font-variant-numeric:tabular-nums }
+.planned-set-input:focus { border-color:var(--accent-focus); box-shadow:0 0 0 3px var(--accent-ring); outline:none }
+.planned-set-rpe { width:100%; min-width:0; min-height:40px; padding:5px 3px; border:1px solid var(--border); border-radius:9px; background:var(--surface-sunken); color:var(--fg); text-align:center; font-size:13px; font-weight:750 }
+.planned-set-table.rpe-visible .planned-set-table-head,
+.planned-set.rpe-visible { grid-template-columns:28px minmax(0, 1fr) minmax(0, 1fr) 48px 32px; gap:5px }
 .planned-set-remove { min-width:32px; min-height:42px; display:grid; place-items:center; padding:0; font-size:20px; line-height:1 }
 /* Отдых внутри закреплённого блока (.live-pinned) — свой sticky не нужен. */
 .rest-timer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 12px 14px; border: 1px solid var(--warning-border); border-radius: 13px; background: var(--warning-surface); color: var(--warning-fg) }

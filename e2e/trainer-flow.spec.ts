@@ -46,7 +46,10 @@ test('форма: быстрый ввод разбирает текст в уп�
   await expect(page.getByLabel('Вес, подход 1')).toHaveValue('80')
   await expect(page.getByLabel('Вес, подход 2')).toHaveValue('85')
   await expect(page.getByLabel('Повторы, подход 3')).toHaveValue('5')
-  await expect(page.getByRole('article').filter({ hasText: 'Присед со штангой' }).getByLabel('Целевой RPE, подход 1')).toHaveValue('8')
+  const squatEditor = page.getByRole('article').filter({ hasText: 'Присед со штангой' })
+  await squatEditor.getByRole('button', { name: 'Ещё действия' }).click()
+  await page.getByRole('menuitem', { name: 'Указать RPE' }).click()
+  await expect(squatEditor.getByLabel('Целевой RPE, подход 1')).toHaveValue('8')
   await expect(page.getByLabel('Время, сек, подход 3')).toHaveValue('45')
   await page.getByRole('button', { name: 'Отмена' }).click()
 })
@@ -146,11 +149,9 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.live-set-table > .live-set')).toHaveCount(1)
   await expect(page.locator('.live-set-table > .live-set-compact')).toHaveCount(1)
   await expect(page.getByRole('button', { name: 'Ввести подход 2' })).toBeVisible()
-  // Пока факт пуст, ± начинает от плана, а не от нуля.
-  await page.getByRole('button', { name: 'Добавить вес' }).first().click()
-  await expect(page.getByLabel('Фактический вес').first()).toHaveValue('42.5')
-  await page.getByRole('button', { name: 'Убавить повторы' }).first().click()
-  await expect(page.getByLabel('Фактические повторы').first()).toHaveValue('9')
+  // Факт сразу начинается с плановых значений; тренер правит число напрямую.
+  await expect(page.getByLabel('Фактический вес').first()).toHaveValue('40')
+  await expect(page.getByLabel('Фактические повторы').first()).toHaveValue('10')
   await page.getByLabel('Фактический вес').first().fill('42.5')
   await page.getByLabel('Фактические повторы').first().fill('9')
   await page.locator('.live-timer-big').click()
@@ -439,9 +440,11 @@ test('замена упражнения: в форме плана и в live', a
   await page.getByLabel('Поиск упражнения').fill('Тяга верхнего блока')
   await page.getByRole('button', { name: /Тяга верхнего блока/ }).first().click()
   await expect(page.locator('.live-exercise-head h2').first()).toContainText('Тяга верхнего блока')
-  // После подтверждения подхода «⋯»-меню упражнения пропадает (заменять начатое нельзя).
+  // После подтверждения меню остаётся для редких действий, но «Заменить»
+  // пропадает: начатое упражнение нельзя подменить другим.
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
-  await expect(page.getByRole('button', { name: 'Ещё действия' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Ещё действия' }).click()
+  await expect(page.getByRole('menuitem', { name: 'Заменить' })).toHaveCount(0)
 })
 
 test('карточка упражнения: шапка с оборудованием/мышцами и табы', async ({ page }) => {
@@ -841,7 +844,7 @@ test('live: удаление подхода и наследование факт
 
   // Добавляем подход — наследует факт (100), а не план (90).
   await page.getByRole('button', { name: '＋ Подход' }).first().click()
-  await expect(page.getByLabel('Фактический вес').first()).toHaveAttribute('placeholder', '100 кг')
+  await expect(page.getByLabel('Фактический вес').first()).toHaveValue('100')
 
   // Удаляем добавленный подход — остаётся один. Подтверждаем через in-app
   // confirm (useConfirm), а не нативный window.confirm.

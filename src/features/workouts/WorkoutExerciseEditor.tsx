@@ -93,6 +93,7 @@ function setColumnLabels(inputKind: WorkoutExerciseDraft['inputKind']): string[]
 
 export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, showTrainerComments = true, entryMode = 'plan' }: WorkoutExerciseEditorProps) {
   const [reordering, setReordering] = useState(false)
+  const [rpeExercises, setRpeExercises] = useState<Set<number>>(() => new Set())
   function updateComment(exerciseIndex: number, comment: string) {
     onChange(exercises.map((exercise, current) => current === exerciseIndex ? { ...exercise, trainerComment: comment || undefined } : exercise))
   }
@@ -125,31 +126,35 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   const blocks = groupDraftsIntoBlocks([...exercises])
 
   // Поля одного подхода (вес/повторы или мин/дистанция по типу упражнения).
-  function setFields(exercise: WorkoutExerciseDraft, exerciseIndex: number, setIndex: number) {
+  function setFields(exercise: WorkoutExerciseDraft, exerciseIndex: number, setIndex: number, showRpe = false) {
     const set = exercise.sets[setIndex]
     if (!set) return null
     const durationSec = set.durationSec ?? (set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60))
-    const rpe = <label className="set-rpe-field">RPE
-      <select aria-label={`${entryMode === 'fact' ? 'Фактический' : 'Целевой'} RPE, подход ${setIndex + 1}`} value={set.rpe ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { rpe: inputNumber(event.target.value) })}>
-        <option value="">Не указывать</option>
-        {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
-      </select>
-    </label>
-    if (exercise.inputKind === 'strength') return <><div className="set-row" key={setIndex}>
-      <input aria-label={`${entryMode === 'fact' ? 'Фактический вес' : 'Вес'}, подход ${setIndex + 1}`} type="number" min="0" step="0.5" placeholder="кг" value={set.weightKg ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { weightKg: inputNumber(event.target.value) })} />
-      <input aria-label={`${entryMode === 'fact' ? 'Фактические повторы' : 'Повторы'}, подход ${setIndex + 1}`} type="number" min="0" placeholder="повт." value={set.reps ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />
-    </div>{rpe}</>
-    if (exercise.inputKind === 'reps') return <><div className="set-row" key={setIndex}>
-      <input aria-label={`Время, сек, подход ${setIndex + 1}`} type="number" min="0" step="15" placeholder="сек" value={durationSec ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationSec: inputNumber(event.target.value), durationMin: undefined })} />
-      <input aria-label={`Повторы, подход ${setIndex + 1}`} type="number" min="0" placeholder="повт." value={set.reps ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />
-    </div>{rpe}</>
-    if (exercise.inputKind === 'duration') return <><div className="set-row" key={setIndex}>
-      <input aria-label={`Время, сек, подход ${setIndex + 1}`} type="number" min="0" step="15" placeholder="сек" value={durationSec ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationSec: inputNumber(event.target.value), durationMin: undefined })} />
-    </div>{rpe}</>
-    return <><div className="set-row" key={setIndex}>
-      <input aria-label={`Время, сек, подход ${setIndex + 1}`} type="number" min="0" step="15" placeholder="сек" value={durationSec ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationSec: inputNumber(event.target.value), durationMin: undefined })} />
-      <input aria-label={`Расстояние, подход ${setIndex + 1}`} type="number" min="0" step="0.1" placeholder="км" value={set.distanceKm ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { distanceKm: inputNumber(event.target.value) })} />
-    </div>{rpe}</>
+    const inputClass = 'planned-set-input'
+    const rpeField = showRpe ? <select className="planned-set-rpe" aria-label={`${entryMode === 'fact' ? 'Фактический' : 'Целевой'} RPE, подход ${setIndex + 1}`} value={set.rpe ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { rpe: inputNumber(event.target.value) })}>
+      <option value="">—</option>
+      {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
+    </select> : null
+    if (exercise.inputKind === 'strength') return <>
+      <input className={inputClass} aria-label={`${entryMode === 'fact' ? 'Фактический вес' : 'Вес'}, подход ${setIndex + 1}`} type="number" inputMode="decimal" min="0" step="0.5" placeholder="кг" value={set.weightKg ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { weightKg: inputNumber(event.target.value) })} />
+      <input className={inputClass} aria-label={`${entryMode === 'fact' ? 'Фактические повторы' : 'Повторы'}, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder="повт." value={set.reps ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />
+      {rpeField}
+    </>
+    if (exercise.inputKind === 'reps') return <>
+      <input className={inputClass} aria-label={`Время, сек, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" step="15" placeholder="сек" value={durationSec ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationSec: inputNumber(event.target.value), durationMin: undefined })} />
+      <input className={inputClass} aria-label={`Повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder="повт." value={set.reps ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />
+      {rpeField}
+    </>
+    if (exercise.inputKind === 'duration') return <>
+      <input className={inputClass} aria-label={`Время, сек, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" step="15" placeholder="сек" value={durationSec ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationSec: inputNumber(event.target.value), durationMin: undefined })} />
+      <span aria-hidden="true" />
+      {rpeField}
+    </>
+    return <>
+      <input className={inputClass} aria-label={`Время, сек, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" step="15" placeholder="сек" value={durationSec ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationSec: inputNumber(event.target.value), durationMin: undefined })} />
+      <input className={inputClass} aria-label={`Расстояние, подход ${setIndex + 1}`} type="number" inputMode="decimal" min="0" step="0.1" placeholder="км" value={set.distanceKm ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { distanceKm: inputNumber(event.target.value) })} />
+      {rpeField}
+    </>
   }
 
   // Стрелки перемещения блока вверх/вниз (задизейблены на границах).
@@ -164,23 +169,27 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   // Одиночное упражнение (вне блока): подходы + «＋ Подход» + «Объединить».
   function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode, canReorder = false) {
     const columns = setColumnLabels(exercise.inputKind)
+    const showRpe = rpeExercises.has(exerciseIndex)
     return <article className="exercise" key={`${exercise.ref}-${exerciseIndex}`}>
       <header><strong>{exercise.name}</strong><span className="exercise-head-actions">{reorder}<OverflowMenu items={[
         ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
+        { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => setRpeExercises((current) => { const next = new Set(current); if (showRpe) next.delete(exerciseIndex); else next.add(exerciseIndex); return next }) },
         { label: 'Заменить', onClick: () => onReplaceExercise(exerciseIndex) },
         { label: 'Удалить', danger: true, onClick: () => removeExercise(exerciseIndex) },
       ]} /></span></header>
       {exercise.prefilledFromDate && <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p>}
-      <div className="planned-set-table">
+      <div className={`planned-set-table ${showRpe ? 'rpe-visible' : ''}`}>
         <div className="planned-set-table-head" aria-hidden="true">
           <span>№</span>
-          <span className={`planned-set-table-labels ${columns.length === 1 ? 'single' : ''}`}>{columns.map((column) => <span key={column}>{column}</span>)}</span>
+          {columns.map((column) => <span key={column}>{column}</span>)}
+          {columns.length === 1 && <span />}
+          {showRpe && <span>RPE</span>}
           <span />
         </div>
-        {exercise.sets.map((_set, setIndex) => <div className="planned-set" key={setIndex}>
+        {exercise.sets.map((_set, setIndex) => <div className={`planned-set ${showRpe ? 'rpe-visible' : ''}`} key={setIndex}>
           <span className="planned-set-number" aria-hidden="true">{setIndex + 1}</span>
           <span className="sr-only">Подход {setIndex + 1}</span>
-          <div className="planned-set-fields">{setFields(exercise, exerciseIndex, setIndex)}</div>
+          {setFields(exercise, exerciseIndex, setIndex, showRpe)}
           {exercise.sets.length > 1
             ? <button type="button" className="link danger planned-set-remove" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}>×</button>
             : <span className="planned-set-remove" aria-hidden="true" />}
