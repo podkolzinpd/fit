@@ -4,6 +4,7 @@ import type { ParsedWorkoutExercise } from './quick-workout-entry'
 export interface TodayDraft {
   screen: 'compose' | 'review' | 'save'
   text: string
+  lastLlmText?: string
   choices: Record<string, ExerciseSnapshot>
   items: ParsedWorkoutExercise[]
   clientId: string
@@ -19,6 +20,7 @@ function isDraft(value: unknown): value is TodayDraft {
   const draft = value as Partial<TodayDraft>
   return (draft.screen === 'compose' || draft.screen === 'review' || draft.screen === 'save')
     && typeof draft.text === 'string'
+    && (draft.lastLlmText === undefined || typeof draft.lastLlmText === 'string')
     && typeof draft.clientId === 'string'
     && Array.isArray(draft.items)
     && Boolean(draft.choices && typeof draft.choices === 'object')
