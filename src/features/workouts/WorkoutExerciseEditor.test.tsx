@@ -94,6 +94,18 @@ describe('workout exercise editor rules', () => {
     expect(screen.getByLabelText('Комментарий к упражнению')).toBeInTheDocument()
   })
 
+  it('keeps RPE hidden until it is requested from the exercise menu', async () => {
+    const user = userEvent.setup()
+    render(<EditorHarness onOpenPicker={vi.fn()} />)
+
+    expect(screen.queryByLabelText('Целевой RPE, подход 1')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Указать RPE' }))
+    expect(screen.getByLabelText('Целевой RPE, подход 1')).toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText('Целевой RPE, подход 1'), '8')
+    expect(screen.getByLabelText('Целевой RPE, подход 1')).toHaveValue('8')
+  })
+
   it('shows reorder arrows only in the explicit reorder mode', async () => {
     const user = userEvent.setup()
     render(<ReorderEditorHarness />)
