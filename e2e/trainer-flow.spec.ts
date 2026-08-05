@@ -1,5 +1,11 @@
 import { expect, test, type Page } from '@playwright/test'
 
+async function mockWorkoutParser(page: Page, items: unknown[]) {
+  await page.route('**/functions/v1/parse-workout', async (route) => {
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ items, unmatched: [] }) })
+  })
+}
+
 async function fillNewClientProfile(page: Page) {
   await page.getByLabel('Пол').selectOption('female')
   await page.getByLabel('Возраст').fill('30')
@@ -53,13 +59,11 @@ test('стартовый экран показывает точный резул
   await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
 
   await page.goto('/today')
+  await mockWorkoutParser(page, [{ sourceText: 'Жим гантелей на наклон 3×8 24 кг', exerciseRef: 'fedb-incline-dumbbell-press', confidence: 1, sets: [{ weightKg: 24, reps: 8 }, { weightKg: 24, reps: 8 }, { weightKg: 24, reps: 8 }] }])
   await page.getByLabel('Тренировка').fill('Жим гантелей на наклон 3×8 24 кг')
-  await expect(page.getByLabel('Распознанные упражнения')).toContainText('Жим гантелей на наклонной')
-  await expect(page.getByLabel('Распознанные упражнения')).toContainText('3 × 24 кг × 8 повт.')
-  await expect(page.getByText('На следующем шаге упражнение можно заменить.')).toBeHidden()
-  await expect(page.getByText('Уточните упражнение')).toBeHidden()
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+  await expect(page.getByText('Жим гантелей на наклонной')).toBeVisible()
 })
 
 test('trainer can create client, complete workout and save progress', async ({ page }, testInfo) => {
