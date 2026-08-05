@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js@^2/edge-runtime.d.ts"
 import { createClient } from "npm:@supabase/supabase-js@2.110.8"
 
-const URL = "https://ai.api.cloud.yandex.net/foundationModels/v1/completion"
+const URL = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" }
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { ...CORS, "Content-Type": "application/json" } })
 
@@ -90,8 +90,12 @@ Deno.serve(async (request) => {
       "Текст: " + body.text,
       "Каталог: " + JSON.stringify(catalog),
     ].join("\n")
-    const modelUri = "gpt://" + Deno.env.get("YANDEX_CLOUD_FOLDER_ID") + "/yandexgpt-pro/latest"
-    const response = await fetch(URL, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Api-Key " + Deno.env.get("YANDEX_CLOUD_API_KEY") }, body: JSON.stringify({ modelUri, completionOptions: { stream: false, temperature: 0, maxTokens: "2000" }, jsonSchema: { schema: OUTPUT_SCHEMA }, messages: [{ role: "user", text: prompt }] }) })
+    const apiKey = Deno.env.get("YANDEX_CLOUD_API_KEY")
+    const folderId = Deno.env.get("YANDEX_CLOUD_FOLDER_ID")
+    if (!apiKey || !folderId) throw new Error("missing_yandex_cloud_credentials")
+    const modelId = Deno.env.get("YANDEX_CLOUD_MODEL_ID") ?? "yandexgpt"
+    const modelUri = `gpt://${folderId}/${modelId}/latest`
+    const response = await fetch(URL, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Api-Key " + apiKey }, body: JSON.stringify({ modelUri, completionOptions: { stream: false, temperature: 0, maxTokens: "2000" }, jsonSchema: { schema: OUTPUT_SCHEMA }, messages: [{ role: "user", text: prompt }] }) })
     if (!response.ok) { console.error(JSON.stringify({ event: "workout_parse_llm_error", status: response.status })); return json({ error: { code: "llm_unavailable", message: "Модель разбора временно недоступна" } }, 502) }
     const payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }> } }
     const result = validate(JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? ""), catalog)
