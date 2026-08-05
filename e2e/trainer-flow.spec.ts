@@ -139,6 +139,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.live-timer-big')).toContainText(/\d\d:\d\d/)
   // Подходи — компактные строки единого упражнения, не самостоятельные карточки.
   await expect(page.locator('.live-exercise > .live-set')).toHaveCount(2)
+  await expect(page.locator('.live-exercise > .live-set > .live-set-grid')).toHaveCount(2)
   await expect(page.locator('.live-exercise > .live-set').nth(1)).toHaveCSS('border-top-width', '1px')
   // Пока факт пуст, ± начинает от плана, а не от нуля.
   await page.getByRole('button', { name: 'Добавить вес' }).first().click()
@@ -169,7 +170,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('button', { name: '＋ Подход' }).click()
   // Дождаться, пока добавленный подход подтянется (refetch завершён и version
   // актуальна), иначе следующая правка ловит конфликт оптимистичной блокировки.
-  await expect(page.getByText('Подход 3')).toBeVisible()
+  await expect(page.locator('.live-set-number', { hasText: '3' })).toBeVisible()
   await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Берпи')
   await page.getByRole('button', { name: /^Берпи/ }).click()
