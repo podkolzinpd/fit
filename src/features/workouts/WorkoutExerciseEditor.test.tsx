@@ -119,4 +119,14 @@ describe('workout exercise editor rules', () => {
     await user.click(screen.getByRole('button', { name: 'Готово' }))
     expect(screen.queryByRole('button', { name: 'Вверх' })).not.toBeInTheDocument()
   })
+
+  it('keeps merging with the next exercise available from the menu', async () => {
+    const user = userEvent.setup()
+    render(<ReorderEditorHarness />)
+
+    expect(screen.queryByRole('button', { name: '⛓ Объединить со следующим в блок' })).not.toBeInTheDocument()
+    await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
+    await user.click(screen.getByRole('menuitem', { name: 'Объединить со следующим в блок' }))
+    expect(screen.getByLabelText('Тип блока')).toBeInTheDocument()
+  })
 })
