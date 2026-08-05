@@ -87,6 +87,7 @@ export function TodayPage() {
   const [prefillError, setPrefillError] = useState<string | null>(null)
   const [manualRefs, setManualRefs] = useState<string[]>([])
   const [removedRefs, setRemovedRefs] = useState<string[]>([])
+  const [removedItem, setRemovedItem] = useState<{ item: ParsedWorkoutExercise; index: number } | null>(null)
   const [draftReady, setDraftReady] = useState(false)
   const [draftRestored, setDraftRestored] = useState(false)
   const [parsing, setParsing] = useState(false)
@@ -335,6 +336,27 @@ export function TodayPage() {
     }))
   }
 
+  function removeExercise(itemIndex: number) {
+    const item = items[itemIndex]
+    if (!item) return
+    setRemovedItem({ item, index: itemIndex })
+    setRemovedRefs((current) => current.includes(item.exercise.ref) ? current : [...current, item.exercise.ref])
+    setItems((current) => current.filter((_, index) => index !== itemIndex))
+  }
+
+  function undoRemoveExercise() {
+    if (!removedItem) return
+    const { item, index } = removedItem
+    setItems((current) => {
+      if (current.some((currentItem) => currentItem.exercise.ref === item.exercise.ref)) return current
+      const next = [...current]
+      next.splice(Math.min(index, next.length), 0, item)
+      return next
+    })
+    setRemovedRefs((current) => current.filter((ref) => ref !== item.exercise.ref))
+    setRemovedItem(null)
+  }
+
   function discardDraft() {
     removeTodayDraft(draftKey)
     setScreen('compose')
@@ -389,10 +411,11 @@ export function TodayPage() {
       <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { if (screen === 'review') { reviewRequest.current += 1; setParsing(false); setScreen('compose') } else setScreen('review') }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><div><h1>{screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'}</h1>{screen === 'review' && items.length > 0 && <p className="today-review-summary">Распознано: {items.length}</p>}</div></div>
       {screen === 'review' && <>
       {items.length > 0 ? <div className="today-exercise-list">{items.map((item, index) => <article className="today-exercise" key={`${item.exercise.ref}-${index}`}>
-        <div className="today-exercise-title"><div><strong>{item.exercise.name}</strong><p className={setSummary(item) === 'без значений' ? 'today-exercise-missing' : undefined}>{setSummary(item)}</p></div><button type="button" className="icon-button" aria-label={`Удалить ${item.exercise.name}`} onClick={() => { setRemovedRefs((current) => current.includes(item.exercise.ref) ? current : [...current, item.exercise.ref]); setItems((current) => current.filter((_, itemIndex) => itemIndex !== index)) }}>×</button></div>
+        <div className="today-exercise-title"><div><strong>{item.exercise.name}</strong><p className={setSummary(item) === 'без значений' ? 'today-exercise-missing' : undefined}>{setSummary(item)}</p></div><button type="button" className="icon-button" aria-label={`Удалить ${item.exercise.name}`} onClick={() => removeExercise(index)}>×</button></div>
         <details className="today-exercise-editor"><summary>{setSummary(item) === 'без значений' ? 'Добавить значения' : 'Править подходы'}</summary><button type="button" className="link" onClick={() => { setReplaceIndex(index); setPickerOpen(true) }}>Заменить упражнение</button><div className="today-set-list">{item.sets.map((set, setIndex) => <div className="today-set-editor" key={set.position}><strong>{setIndex + 1}</strong>{item.exercise.inputKind === 'strength' && <><label>Кг<input aria-label={`${item.exercise.name}: вес, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.weightKg ?? ''} onChange={(event) => updateSet(index, setIndex, { weightKg: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><label>Повт.<input aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label></>}{item.exercise.inputKind === 'duration' && <label>Сек.<input aria-label={`${item.exercise.name}: секунды, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.durationSec ?? ''} onChange={(event) => updateSet(index, setIndex, { durationSec: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.exercise.inputKind === 'reps' && <label>Повт.<input aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.exercise.inputKind === 'distance' && <label>Км<input aria-label={`${item.exercise.name}: километры, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.distanceKm ?? ''} onChange={(event) => updateSet(index, setIndex, { distanceKm: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}<label>RPE<input aria-label={`${item.exercise.name}: RPE, подход ${setIndex + 1}`} type="number" min="1" max="10" step="0.5" inputMode="decimal" value={set.rpe ?? ''} onChange={(event) => updateSet(index, setIndex, { rpe: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>{item.sets.length > 1 && <button type="button" className="link danger" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(index, setIndex)}>×</button>}</div>)}</div><button type="button" className="secondary today-add-set" onClick={() => addSet(index)}>＋ Подход</button></details>
       </article>)}</div> : <section className="today-empty today-exercise-empty"><p>Добавьте упражнения из каталога — можно выбрать несколько сразу.</p><button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button></section>}
       {items.length > 0 && <button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button>}
+      {removedItem && <div className="today-undo-remove" role="status"><span>Упражнение удалено</span><button type="button" className="link" onClick={undoRemoveExercise}>Отменить</button></div>}
       {items.length > 0 && <button type="button" className="wide today-review-next" onClick={() => setScreen('save')}>Далее</button>}
       </>}
       {screen === 'save' && <section className="today-assignment">

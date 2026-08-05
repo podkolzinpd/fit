@@ -597,6 +597,14 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .today-assignment { display:grid; gap:14px; padding:16px; border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); box-shadow:var(--shadow-card); }
 .today-assignment .today-save-actions { margin-top:2px; }
 .today-assignment .today-save-actions .wide { min-height:54px; border-radius:var(--radius-lg); }
+.today-exercise { padding:14px; border-radius:var(--radius-lg); box-shadow:none; }
+.today-exercise-title > div { min-width:0; }
+.today-exercise-title strong { overflow-wrap:anywhere; font-size:16px; line-height:1.25; }
+.today-exercise .icon-button { width:32px; height:32px; border:0; background:transparent; color:var(--muted); font-size:22px; }
+.today-exercise-editor { padding-top:7px; }
+.today-exercise-editor summary { display:inline-flex; min-height:36px; align-items:center; color:var(--accent-strong); font-size:14px; }
+.today-undo-remove { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 12px; border:1px solid var(--accent-surface-border); border-radius:12px; background:var(--accent-surface); font-size:14px; }
+.today-undo-remove .link { min-height:32px; padding:4px 0; color:var(--accent-strong); font-size:14px; font-weight:750; }
 .today-save-actions .wide { position:static !important; bottom:auto; z-index:auto; box-shadow:none; }
 
 /* Степпер: крупные −/+ вокруг поля факта (быстрый ввод одной рукой, P5). */
