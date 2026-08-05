@@ -161,8 +161,12 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       ]} /></span></header>
       {exercise.prefilledFromDate && <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p>}
       {exercise.sets.map((_set, setIndex) => <div className="planned-set" key={setIndex}>
-        <div className="planned-set-heading"><span>Подход {setIndex + 1}</span>{exercise.sets.length > 1 && <button type="button" className="link danger" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}>×</button>}</div>
-        {setFields(exercise, exerciseIndex, setIndex)}
+        <span className="planned-set-number" aria-hidden="true">{setIndex + 1}</span>
+        <span className="sr-only">Подход {setIndex + 1}</span>
+        <div className="planned-set-fields">{setFields(exercise, exerciseIndex, setIndex)}</div>
+        {exercise.sets.length > 1
+          ? <button type="button" className="link danger planned-set-remove" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}>×</button>
+          : <span className="planned-set-remove" aria-hidden="true" />}
       </div>)}
       <div className="set-add-row">
         <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
