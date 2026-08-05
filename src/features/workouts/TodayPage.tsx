@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, Workout, WorkoutDraft, WorkoutSetDraft } from '../../shared/domain'
@@ -54,13 +54,13 @@ function draftExercise(item: ParsedWorkoutExercise, position: number): WorkoutDr
 
 export function TodayPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useQueryClient()
   const { actor } = useAuth()
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
   const today = todayLocalDate()
   const todayWorkouts = useQuery({ queryKey: ['today-workouts', today], queryFn: () => workoutsRepository.list(today, today) })
   const catalog = useExerciseCatalog()
-  const [screen, setScreen] = useState<Screen>('compose')
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
   const [items, setItems] = useState<ParsedWorkoutExercise[]>([])
@@ -88,6 +88,19 @@ export function TodayPage() {
   const lastEmptyText = useRef('')
   const reviewRequest = useRef(0)
   const draftKey = todayDraftKey(actor!.userId)
+  const screen: Screen = new URLSearchParams(location.search).get('view') === 'review' ? 'review' : 'compose'
+
+  // Review — самостоятельный шаг сценария, а не только локальный state. Иначе
+  // жест «назад» iOS уводит на случайный прошлый таб вместо формы «Сегодня».
+  function setScreen(next: Screen) {
+    if (next === screen) return
+    if (next === 'review') {
+      navigate('/today?view=review', { state: { fromTodayReview: true } })
+      return
+    }
+    if ((location.state as { fromTodayReview?: boolean } | null)?.fromTodayReview) navigate(-1)
+    else navigate('/today', { replace: true })
+  }
 
   useEffect(() => {
     const draft = readTodayDraft(draftKey)
@@ -166,7 +179,7 @@ export function TodayPage() {
       await queryClient.invalidateQueries({ queryKey: ['workouts'] })
       await queryClient.invalidateQueries({ queryKey: ['today-workouts'] })
       await queryClient.invalidateQueries({ queryKey: ['clients'] })
-      navigate(`/workouts/${id}`)
+      navigate(`/workouts/${id}`, { state: { returnTo: '/today' } })
     }, onError: () => trackGoal('today_workout_save_error'),
   })
   const createQuickClient = useMutation({

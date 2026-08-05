@@ -388,13 +388,13 @@ export function WorkoutDetailPage() {
   const tonnage = workout ? workoutTonnage(workout) : 0
   const sets = workout?.exercises.flatMap((exercise) => exercise.sets) ?? []
   const completedSets = sets.filter((set) => set.confirmedAt).length
-  const justCompleted = done && (location.state as { justCompleted?: boolean } | null)?.justCompleted === true
-  // «Назад» ведёт в расписание (все запланированные), а не -1 по истории
-  // браузера: -1 создавал петлю тренировка ↔ история упражнения после захода
-  // в аналитику.
+  const navigationState = location.state as { justCompleted?: boolean; returnTo?: string } | null
+  const justCompleted = done && navigationState?.justCompleted === true
   const clientMode = actor?.role === 'client'
   const clientOwned = clientMode && workout?.createdBy === actor.userId
-  const backTo = clientMode ? '/me/workouts' : '/schedule'
+  // Карточка не должна угадывать источник открытия. Быстрый сценарий «Сегодня»
+  // передаёт returnTo, остальные пути сохраняют прежний безопасный fallback.
+  const backTo = navigationState?.returnTo ?? (clientMode ? '/me/workouts' : '/schedule')
   return <Page title="Тренировка" className="workout-detail-page" back={backTo}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       {justCompleted && <section className="workout-completion" aria-labelledby="workout-completion-title">
