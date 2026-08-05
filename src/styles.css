@@ -532,6 +532,15 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-page > .cards > .exercise { margin: 0; padding: 16px; border-radius: 18px; box-shadow: var(--shadow-card) }
 .workout-detail-page .exercise-name-link { max-width: 100%; overflow-wrap: anywhere }
 .workout-detail-page .exercise-name-hint { flex: 0 0 auto }
+.workout-history-sets { display:grid; margin-top:10px; border-top:1px solid var(--hairline) }
+.workout-history-set { display:grid; grid-template-columns:24px minmax(0, 1fr) 24px; align-items:center; gap:8px; min-height:48px; padding:8px 0; border-bottom:1px solid var(--hairline) }
+.workout-history-set-number { display:grid; place-items:center; width:24px; height:24px; border-radius:50%; color:var(--muted); background:var(--surface-sunken); font-size:12px; font-weight:800; font-variant-numeric:tabular-nums }
+.workout-history-set-result { min-width:0; display:grid; gap:2px }
+.workout-history-set-result strong { overflow-wrap:anywhere; font-size:15px; line-height:1.25 }
+.workout-history-set .plan-note { display:block; color:var(--muted); font-size:12px; line-height:1.25 }
+.workout-history-set-status { display:grid; place-items:center; width:24px; height:24px; border-radius:50%; color:var(--success-fg); background:var(--success-mark-surface); font-size:14px; font-weight:800 }
+.workout-history-set.missed { opacity:.72 }
+.workout-history-set.missed .workout-history-set-status { color:var(--muted); background:var(--surface-sunken); font-weight:700 }
 .workout-detail-page > .actions { margin-top: 18px }
 .workout-detail-page > .actions .button { min-height: 48px; border-radius: 15px }
 .workout-detail-page > .danger.wide { margin-top: 10px; min-height: 46px; border-radius: 15px }
@@ -676,6 +685,21 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-exercise { border-radius: 16px; transition: opacity .2s ease }
 .live-exercise.current { }
 .live-exercise.upcoming { opacity: .62 }
+/* Live показывает упражнение как единую рабочую поверхность. Подходи — не
+   отдельные карточки, а компактные строки с разделителем: это даёт больше
+   факта в зоне большого пальца, не меняя существующий ввод или сохранение. */
+.live-exercise > .live-set, .circuit-round .live-set { margin: 0; padding: 11px 0; border: 0; border-radius: 0; background: transparent; box-shadow: none }
+.live-exercise > .live-set + .live-set, .circuit-round .live-set + .live-set { border-top: 1px solid var(--hairline) }
+.live-exercise > .live-set.current, .circuit-round .live-set.current { margin: 0 -8px; padding: 11px 8px; border: 1px solid var(--neutral-current-border); border-radius: 13px; background: var(--neutral-current) }
+.live-exercise > .live-set.confirmed, .circuit-round .live-set.confirmed { background: transparent }
+.live-set .set-head { min-height: 22px; font-size: 13px }
+.live-set .set-head .muted { min-width: 0; overflow-wrap: anywhere }
+.live-set-fields .set-row { margin: 7px 0 5px }
+.live-set-fields .set-rpe-field { margin: 0 0 6px }
+.live-set .set-fill-plan { min-height: 32px; margin: 0; padding: 3px 0; font-size: 13px }
+.live-set .set-deviation { margin-top: 2px }
+.live-set .live-confirm { min-height: 44px; margin-top: 4px; border-radius: 12px }
+.live-set .set-edit, .live-set .set-remove { min-width: 36px; min-height: 36px; padding: 2px 6px }
 /* Верх live-экрана остаётся вторичным: главные фокусы — таймер и текущий
    подход. Имя спортсмена даёт контекст, но не конкурирует с ними. */
 .live-workout-page .page-header { margin-bottom: 8px }
@@ -883,7 +907,15 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .profile-form-section-head h2 { margin: 0; font-size: 24px; line-height: 1.12; letter-spacing: var(--tracking-tight) }
 .profile-form .field input { min-height: 50px; border-radius: 14px; background: var(--surface-sunken) }
 .profile-form .actions button:last-child { min-height: 52px; border-radius: 16px; font-size: 17px; font-weight: 800 }
-.planned-set { padding-top: 10px; border-top: 1px solid var(--border) }.planned-set:first-of-type { border-top: 0 }.planned-set-heading { color: var(--muted); font-size: 13px }
+/* Плановые подходы повторяют плотный ритм live: номер, значения, редкое
+   удаление. Семантика полей и доступные названия остаются прежними. */
+.planned-set { display:grid; grid-template-columns:24px minmax(0, 1fr) 32px; align-items:start; gap:8px; padding:10px 0; border-top:1px solid var(--border) }
+.planned-set:first-of-type { border-top:0 }
+.planned-set-number { display:grid; place-items:center; min-height:42px; color:var(--muted); font-size:13px; font-weight:800; font-variant-numeric:tabular-nums }
+.planned-set-fields { min-width:0 }
+.planned-set-fields .set-row { margin:0 0 5px }
+.planned-set-fields .set-rpe-field { margin:0 }
+.planned-set-remove { min-width:32px; min-height:42px; display:grid; place-items:center; padding:0; font-size:20px; line-height:1 }
 /* Отдых внутри закреплённого блока (.live-pinned) — свой sticky не нужен. */
 .rest-timer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 12px 14px; border: 1px solid var(--warning-border); border-radius: 13px; background: var(--warning-surface); color: var(--warning-fg) }
 .voice-input { display: flex; flex-direction: column; align-items: flex-start; gap: 7px }

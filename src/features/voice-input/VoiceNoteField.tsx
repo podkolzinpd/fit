@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { VoiceInputButton } from './VoiceInputButton'
 
 interface VoiceNoteFieldProps {
@@ -8,7 +8,7 @@ interface VoiceNoteFieldProps {
   defaultValue?: string
   value?: string
   onValueChange?: (value: string) => void
-  onTranscriptAppended?: (event: { previousValue: string; value: string; transcript: string }) => void
+  onTranscriptAppended?: (event: { previousValue: string; value: string; transcript: string }) => void | Promise<void>
   label?: string
   voiceLabel?: string
   voiceBeta?: boolean
@@ -21,6 +21,7 @@ interface VoiceNoteFieldProps {
 export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, onTranscriptAppended, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false, autoResize = false, maxHeightPx = 264 }: VoiceNoteFieldProps) {
   const id = useId()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [isTranscriptProcessing, setIsTranscriptProcessing] = useState(false)
 
   const resizeTextarea = () => {
     if (!autoResize || !textareaRef.current) return
@@ -58,7 +59,12 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
         textareaRef.current.value = nextValue
         textareaRef.current.dispatchEvent(new Event('input', { bubbles: true }))
       }
-      onTranscriptAppended?.({ previousValue: previous, value: nextValue, transcript: text.trim() })
+      if (onTranscriptAppended) {
+        setIsTranscriptProcessing(true)
+        const processing = onTranscriptAppended({ previousValue: previous, value: nextValue, transcript: text.trim() })
+        if (processing && typeof processing.then === 'function') void processing.finally(() => setIsTranscriptProcessing(false))
+        else setIsTranscriptProcessing(false)
+      }
       textareaRef.current.focus()
       return () => {
         if (!textareaRef.current || textareaRef.current.value !== nextValue) return
@@ -69,6 +75,7 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
         }
       }
     }} />
+    {isTranscriptProcessing && <div className="voice-input-status" role="status"><small>Текст распознан. Обрабатываем упражнения…</small></div>}
   </div>
 }
 
