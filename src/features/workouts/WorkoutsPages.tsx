@@ -8,7 +8,7 @@ import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, exerciseChartPoints, exerciseSummary, factLine, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { RPE_OPTIONS } from '../../shared/rpe'
 import { playGong } from '../../shared/gong'
@@ -420,7 +420,7 @@ export function WorkoutDetailPage() {
       <div className="cards">{groupIntoBlocks(workout.exercises).map((block) => {
         const articles = block.exercises.map((exercise) => <article className="exercise" key={exercise.id}>
           <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
-          {exercise.sets.map((set) => <p key={set.id}>{done ? <FactVsPlan set={set} /> : formatSet(set)}</p>)}
+          <div className="workout-history-sets">{exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} />)}</div>
           {exercise.trainerComment && <p className="exercise-comment-note">💬 {exercise.trainerComment}</p>}
         </article>)
         if (block.blockType === 'single' || block.exercises.length === 1) return articles
@@ -441,12 +441,18 @@ export function WorkoutDetailPage() {
 
 function formatSet(set: WorkoutSet) { const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, set.distanceKm && `${set.distanceKm} км`, durationLabel(set.durationSec, set.durationMin), set.rpe !== undefined && `RPE ${set.rpe}`].filter(Boolean).join(' × '); return plan || 'Подход без плана' }
 
-// Результат подхода в завершённой тренировке: подтверждённый — только факт;
-// неподтверждённый — план с пометкой «не выполнено» (план за факт не выдаём).
-function FactVsPlan({ set }: { set: WorkoutSet }) {
-  const fact = factLine(set)
-  if (fact) return <>{fact}</>
-  return <>{formatSet(set)}<span className="plan-note"> · не выполнено</span></>
+function WorkoutHistorySet({ set, index, done }: { set: WorkoutSet; index: number; done: boolean }) {
+  const confirmed = Boolean(set.confirmedAt)
+  const { fact, planNote } = formatFactVsPlan(set)
+  const result = done ? fact : formatSet(set)
+  return <div className={`workout-history-set ${confirmed ? 'confirmed' : 'missed'}`}>
+    <span className="workout-history-set-number" aria-label={`Подход ${index + 1}`}>{index + 1}</span>
+    <span className="workout-history-set-result"><strong>{result}</strong>
+      {done && !confirmed && <span className="plan-note">не выполнено</span>}
+      {done && confirmed && planNote && <span className="plan-note">{planNote}</span>}
+    </span>
+    {done && <span className="workout-history-set-status" aria-label={confirmed ? 'Выполнен' : 'Не выполнен'}>{confirmed ? '✓' : '—'}</span>}
+  </div>
 }
 
 
