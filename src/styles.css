@@ -421,6 +421,19 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .theme-light .day-grid-event { box-shadow: 0 4px 12px #b8481c12 }
 .exercise { border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin: 10px 0; background: var(--surface-raised) }
 .cards > .exercise { margin: 0 }
+/* Планирование — рабочий список, а не набор тяжёлых карточек. Базовый .exercise
+   остаётся для live и просмотра: этот модификатор применяется только в редакторе. */
+.planned-exercise { margin:0; padding:14px 0 16px; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
+.planned-exercise:first-of-type { padding-top:4px }
+.planned-exercise header { min-height:40px; align-items:center }
+.planned-exercise header > strong { font-size:18px; line-height:1.25 }
+.planned-exercise .overflow-trigger { min-width:40px; min-height:40px }
+.planned-exercise .planned-set-table { margin-top:4px }
+.planned-exercise .planned-set { min-height:46px; padding:3px 0 }
+.planned-exercise .planned-set-number, .planned-exercise .planned-set-remove { min-height:38px }
+.planned-exercise .planned-set-input, .planned-exercise .planned-set-rpe { min-height:38px }
+.planned-exercise .set-add-row { grid-template-columns:auto; justify-content:start; margin-top:8px }
+.planned-exercise .set-add-row > .secondary { width:auto; min-height:36px; padding:6px 12px }
 /* Блок упражнений (суперсет/трисет/круговая): рамка с левой акцентной линией. */
 .exercise-block { border: 1px solid var(--accent-surface-border); border-left: 3px solid var(--accent-label); border-radius: 14px; padding: 10px; margin: 10px 0; background: #241b16; display: flex; flex-direction: column; gap: 8px }
 .exercise-block .exercise { margin: 0 }
