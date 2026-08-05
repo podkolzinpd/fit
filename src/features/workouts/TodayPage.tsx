@@ -251,8 +251,8 @@ export function TodayPage() {
       if (version !== voiceParseVersion.current) return
       const parsedItems = parsedLlmItems(llm, catalog.exercises)
       const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: item.suggestedExerciseRefs.flatMap((ref) => catalog.exercises.find((exercise) => exercise.ref === ref) ?? []) }))
-      setLlmUnmatched(unmatched)
-      setRecognized(parsedItems)
+      setLlmUnmatched((current) => [...current, ...unmatched.filter((item) => !current.some((existing) => existing.line === item.line))])
+      setRecognized((current) => [...current, ...parsedItems.filter((item) => !current.some((existing) => existing.line === item.line && existing.exercise.ref === item.exercise.ref))])
       const formatted = formatLlmWorkoutText(llm, catalog.exercises)
       if (!formatted) {
         setVoiceRefinement({ state: 'error', message: 'Не удалось получить структурированный разбор диктовки.' })
@@ -288,11 +288,13 @@ export function TodayPage() {
       const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: item.suggestedExerciseRefs.flatMap((ref) => catalog.exercises.find((exercise) => exercise.ref === ref) ?? []) }))
       setLlmUnmatched(unmatched)
       setRecognized(parsedItems)
+      const formatted = formatLlmWorkoutText(llm, catalog.exercises)
       if (!parsedItems.length && !unmatched.length) {
         setVoiceRefinement({ state: 'error', message: 'Не удалось распознать упражнения. Проверьте текст и попробуйте ещё раз.' })
         trackGoal('manual_workout_parse_failed')
         return
       }
+      if (formatted) setText(formatted)
       if (unmatched.length) {
         setVoiceRefinement({ state: 'error', message: 'Упражнения найдены частично. Выберите подсказку или уточните текст.' })
         trackGoal('manual_workout_parse_partial')
@@ -437,7 +439,7 @@ export function TodayPage() {
         <p>Напишите тренировку — мы разберём её по упражнениям и подходам.</p>
       </div>
       <div className="today-input-card">
-        <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать" voiceBeta placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} autoResize onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null); setManualRecognitionLoading(false) }} onManualValueChange={(value) => setManualRecognitionAvailable(Boolean(value.trim()))} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} />
+        <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать" voiceBeta placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} autoResize onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null); setManualRecognitionLoading(false) }} onManualValueChange={(value) => setManualRecognitionAvailable(Boolean(value.trim()))} onTranscriptValueChange={(value) => { setText(value); setVoiceRefinement(null); setManualRecognitionLoading(false) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} />
         {text && <div className="today-input-actions"><button type="button" className="link" onClick={() => { setText(''); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null); setManualRecognitionAvailable(false); setManualRecognitionLoading(false) }}>Очистить</button></div>}
       </div>
       {manualRecognitionAvailable && text.trim() && <div className="today-manual-recognition" aria-label="Распознавание ручного текста"><span>Черновик</span><button type="button" className="secondary" disabled={manualRecognitionLoading} onClick={() => void recognizeManualInput()}>{manualRecognitionLoading ? 'Распознаю…' : '✨ Распознать'}</button></div>}
