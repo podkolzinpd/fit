@@ -432,6 +432,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .reorder-btn { width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-raised); color: var(--fg); font-size: 15px; line-height: 1; cursor: pointer }
 .reorder-btn:hover:not(:disabled) { border-color: var(--accent-surface-border) }
 .reorder-btn:disabled { opacity: .35; cursor: default }
+.reorder-mode, .live-reorder-mode { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--accent-surface-border); border-radius:12px; background:var(--accent-surface); color:var(--accent-label); font-size:13px; font-weight:800 }
+.reorder-mode .link { min-height:30px; padding:2px 0; color:var(--accent-strong) }
+.live-reorder-mode { display:flex; justify-content:space-between; margin:10px 0; padding:10px 12px }
+.live-reorder-mode .secondary { min-height:38px; padding:6px 12px }
 
 /* Меню «три точки»: редкие действия (заменить/удалить) вне постоянной видимости. */
 .overflow-menu { position: relative; display: inline-flex }

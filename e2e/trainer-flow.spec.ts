@@ -309,7 +309,7 @@ test('live: планка вводится в секундах, таймер за
   await expect(page.getByRole('button', { name: 'Подтверждено' })).toBeVisible()
 })
 
-test('план: порядок упражнений меняется стрелками и сохраняется', async ({ page }) => {
+test('план: порядок упражнений меняется в отдельном режиме и сохраняется', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -333,6 +333,11 @@ test('план: порядок упражнений меняется стрел�
     await page.getByRole('button', { name: new RegExp(q) }).first().click()
     await page.getByRole('button', { name: 'Добавить 1' }).click()
   }
+  // В обычном режиме стрелок нет: порядок включается из меню упражнения.
+  await expect(page.getByRole('button', { name: 'Вверх' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Ещё действия' }).first().click()
+  await page.getByRole('menuitem', { name: 'Изменить порядок' }).click()
+  await expect(page.getByText('Изменение порядка')).toBeVisible()
   // Первое «Вверх» задизейблено (граница), последнее «Вниз» — тоже.
   await expect(page.getByRole('button', { name: 'Вверх' }).first()).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Вниз' }).last()).toBeDisabled()
@@ -344,7 +349,7 @@ test('план: порядок упражнений меняется стрел�
   await expect(page.locator('.cards .exercise strong').first()).toContainText('Жим лёжа')
 })
 
-test('live: порядок упражнений меняется стрелками во время тренировки', async ({ page }) => {
+test('live: порядок упражнений меняется в отдельном режиме', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -373,6 +378,11 @@ test('live: порядок упражнений меняется стрелка�
 
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer-big')).toBeVisible()
+  // В обычном live стрелок нет; включаем отдельный режим в меню упражнения.
+  await expect(page.getByRole('button', { name: 'Вверх' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Ещё действия' }).first().click()
+  await page.getByRole('menuitem', { name: 'Изменить порядок' }).click()
+  await expect(page.getByText('Изменение порядка')).toBeVisible()
   // Границы: первое «Вверх» и последнее «Вниз» задизейблены.
   await expect(page.getByRole('button', { name: 'Вверх' }).first()).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Вниз' }).last()).toBeDisabled()

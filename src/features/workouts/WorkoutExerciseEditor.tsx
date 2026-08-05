@@ -92,6 +92,7 @@ function setColumnLabels(inputKind: WorkoutExerciseDraft['inputKind']): string[]
 }
 
 export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, showTrainerComments = true, entryMode = 'plan' }: WorkoutExerciseEditorProps) {
+  const [reordering, setReordering] = useState(false)
   function updateComment(exerciseIndex: number, comment: string) {
     onChange(exercises.map((exercise, current) => current === exerciseIndex ? { ...exercise, trainerComment: comment || undefined } : exercise))
   }
@@ -153,6 +154,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
 
   // Стрелки перемещения блока вверх/вниз (задизейблены на границах).
   function reorderButtons(blockId: string, isFirst: boolean, isLast: boolean) {
+    if (!reordering) return null
     return <span className="block-reorder">
       <button type="button" className="reorder-btn" aria-label="Вверх" disabled={isFirst} onClick={() => onChange(moveBlock([...exercises], blockId, -1))}>↑</button>
       <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast} onClick={() => onChange(moveBlock([...exercises], blockId, 1))}>↓</button>
@@ -160,10 +162,11 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   }
 
   // Одиночное упражнение (вне блока): подходы + «＋ Подход» + «Объединить».
-  function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode) {
+  function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode, canReorder = false) {
     const columns = setColumnLabels(exercise.inputKind)
     return <article className="exercise" key={`${exercise.ref}-${exerciseIndex}`}>
       <header><strong>{exercise.name}</strong><span className="exercise-head-actions">{reorder}<OverflowMenu items={[
+        ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
         { label: 'Заменить', onClick: () => onReplaceExercise(exerciseIndex) },
         { label: 'Удалить', danger: true, onClick: () => removeExercise(exerciseIndex) },
       ]} /></span></header>
@@ -197,7 +200,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   }
 
   return <section>
-    <div className="workout-editor-heading"><h2>Упражнения</h2>{exercises.length > 0 && <div className="workout-tools"><button type="button" className="link" onClick={() => onChange(clearWorkoutLoad(exercises))}>Сбросить значения</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, .95))}>−5%</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, 1.05))}>+5%</button></div>}</div>
+    <div className="workout-editor-heading"><h2>Упражнения</h2>{reordering ? <div className="reorder-mode"><span>Изменение порядка</span><button type="button" className="link" onClick={() => setReordering(false)}>Готово</button></div> : exercises.length > 0 && <div className="workout-tools"><button type="button" className="link" onClick={() => onChange(clearWorkoutLoad(exercises))}>Сбросить значения</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, .95))}>−5%</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, 1.05))}>+5%</button></div>}</div>
     {blocks.map((block, blockIndex) => {
       const lastIndex = exercises.length - 1
       const isFirst = blockIndex === 0
@@ -207,7 +210,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       const canMerge = (index: number) => index === blockLastIndex && index < lastIndex
       if (block.items.length === 1) {
         const { exercise, index } = block.items[0]!
-        return renderExercise(exercise, index, canMerge(index), blocks.length > 1 ? reorderButtons(block.blockId, isFirst, isLast) : undefined)
+        return renderExercise(exercise, index, canMerge(index), blocks.length > 1 ? reorderButtons(block.blockId, isFirst, isLast) : undefined, blocks.length > 1)
       }
       // Многоэлементный блок: раскладка ПО КРУГАМ (круг = все упражнения по очереди).
       const rounds = draftBlockRoundsView(block)
@@ -220,7 +223,10 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
           </select>
           <label className="block-rounds">Кругов<ClampedNumberInput label="Кругов" value={block.blockRounds} min={1} max={20} onCommit={(next) => onChange(syncBlockRounds([...exercises], block.blockId, next))} /></label>
           {blocks.length > 1 && reorderButtons(block.blockId, isFirst, isLast)}
-          <button type="button" className="link" onClick={() => onChange(splitBlock([...exercises], block.blockId))}>Разбить</button>
+          <OverflowMenu items={[
+            ...(blocks.length > 1 && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
+            { label: 'Разбить', onClick: () => onChange(splitBlock([...exercises], block.blockId)) },
+          ]} />
         </div>
         <OptionalDetails className="block-options" summary="Настройки блока" initialOpen={(() => {
           const defaults = PRESET_REST_DEFAULTS[block.blockPreset]
