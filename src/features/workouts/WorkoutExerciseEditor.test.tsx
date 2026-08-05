@@ -80,7 +80,7 @@ describe('workout exercise editor rules', () => {
     expect(onChange).toHaveBeenCalledTimes(3)
   })
 
-  it('hides optional rest and comment fields until requested', async () => {
+  it('keeps rest and trainer note compact until requested', async () => {
     const user = userEvent.setup()
     render(<EditorHarness onOpenPicker={vi.fn()} />)
 
@@ -91,6 +91,9 @@ describe('workout exercise editor rules', () => {
     await user.click(summary)
     expect(details).toHaveAttribute('open')
     expect(screen.getByLabelText('Отдых между подходами, с')).toBeInTheDocument()
+    expect(screen.getByLabelText('Комментарий к упражнению')).not.toBeVisible()
+
+    await user.click(screen.getByText('Заметка тренера', { exact: true }))
     expect(screen.getByLabelText('Комментарий к упражнению')).toBeInTheDocument()
   })
 

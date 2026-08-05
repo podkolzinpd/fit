@@ -761,14 +761,16 @@ test('комментарий тренера к упражнению: план �
   await page.getByLabel('Вес, подход 1').fill('90')
   await page.getByLabel('Повторы, подход 1').fill('8')
   // Комментарий тренера к упражнению в форме плана.
-  await page.getByText('Дополнительно', { exact: true }).click()
+  await page.getByText('Заметка тренера', { exact: true }).click()
   await page.getByLabel('Комментарий к упражнению').fill('Держи спину прямо')
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
-  // Проводим тренировку; в live поле комментария доступно.
+  // В live заметка компактна и раскрывается по нажатию.
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer-big')).toBeVisible()
+  await expect(page.getByLabel(/Комментарий: Присед/)).toBeHidden()
+  await page.getByText('Заметка тренера', { exact: true }).click()
   await expect(page.getByLabel(/Комментарий: Присед/)).toBeVisible()
   await page.getByLabel('Фактический вес').first().fill('92.5')
   await page.getByLabel('Фактические повторы').first().fill('8')
