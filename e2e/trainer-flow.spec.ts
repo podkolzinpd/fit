@@ -837,15 +837,15 @@ test('live: удаление подхода и наследование факт
   await page.getByLabel('Фактический вес').first().fill('100')
   await page.getByLabel('Фактические повторы').first().fill('10')
   await page.getByRole('button', { name: 'Сохранить' }).first().click()
-  await expect(page.getByLabel('Фактический вес').first()).toHaveValue('100')
+  await expect(page.locator('.live-set-compact.confirmed')).toContainText('100 кг')
 
   // Добавляем подход — наследует факт (100), а не план (90).
   await page.getByRole('button', { name: '＋ Подход' }).first().click()
-  await expect(page.getByLabel('Фактический вес').nth(1)).toHaveAttribute('placeholder', '100 кг')
+  await expect(page.getByLabel('Фактический вес').first()).toHaveAttribute('placeholder', '100 кг')
 
   // Удаляем добавленный подход — остаётся один. Подтверждаем через in-app
   // confirm (useConfirm), а не нативный window.confirm.
-  await page.getByRole('button', { name: 'Удалить подход' }).nth(1).click()
+  await page.getByRole('button', { name: 'Удалить подход' }).first().click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click()
   await expect(page.locator('.exercise')).toHaveCount(1)
 })
