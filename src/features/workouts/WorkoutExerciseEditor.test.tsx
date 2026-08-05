@@ -16,6 +16,14 @@ function EditorHarness({ onOpenPicker }: { onOpenPicker: () => void }) {
   return <WorkoutExerciseEditor exercises={draft} onChange={setDraft} onOpenPicker={onOpenPicker} onReplaceExercise={vi.fn()} />
 }
 
+function ReorderEditorHarness() {
+  const [draft, setDraft] = useState<WorkoutExerciseDraft[]>([
+    exercises[0]!,
+    { source: 'system', ref: 'bench', name: 'Жим лёжа', muscleGroup: 'chest', inputKind: 'strength', position: 1, sets: [{ position: 0 }] },
+  ])
+  return <WorkoutExerciseEditor exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />
+}
+
 describe('workout exercise editor rules', () => {
   it('rounds adjusted weights to 2.5 kg', () => {
     expect(roundToStep(52.5 * 1.05, 2.5)).toBe(55)
@@ -84,5 +92,19 @@ describe('workout exercise editor rules', () => {
     expect(details).toHaveAttribute('open')
     expect(screen.getByLabelText('Отдых между подходами, с')).toBeInTheDocument()
     expect(screen.getByLabelText('Комментарий к упражнению')).toBeInTheDocument()
+  })
+
+  it('shows reorder arrows only in the explicit reorder mode', async () => {
+    const user = userEvent.setup()
+    render(<ReorderEditorHarness />)
+
+    expect(screen.queryByRole('button', { name: 'Вверх' })).not.toBeInTheDocument()
+    await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
+    await user.click(screen.getByRole('menuitem', { name: 'Изменить порядок' }))
+    expect(screen.getByText('Изменение порядка')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Вверх' })).toHaveLength(2)
+
+    await user.click(screen.getByRole('button', { name: 'Готово' }))
+    expect(screen.queryByRole('button', { name: 'Вверх' })).not.toBeInTheDocument()
   })
 })

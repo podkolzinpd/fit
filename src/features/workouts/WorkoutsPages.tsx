@@ -645,6 +645,9 @@ export function LiveWorkoutPage() {
   ))
   const skipBlurForSet = useRef<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  // В обычной тренировке перестановка не нужна постоянно: включается из меню
+  // и только тогда показывает стрелки у блоков.
+  const [reordering, setReordering] = useState(false)
   // Упражнение, которое заменяем через пикер; null — режим добавления.
   const [replaceExerciseId, setReplaceExerciseId] = useState<string | null>(null)
   // Подтверждённые подходы, временно разблокированные для правки (по карандашику).
@@ -816,16 +819,17 @@ export function LiveWorkoutPage() {
   // Меню упражнения в live (⋯): «Заменить» доступно, пока нет подтверждённых
   // подходов (начатое заменять нельзя — факт относился к старому упражнению).
   // В меню, чтобы редкое действие не конкурировало с подтверждением подхода.
-  function exerciseMenu(exercise: WorkoutExercise) {
+  function exerciseMenu(exercise: WorkoutExercise, canReorder = false) {
     if (clientMode) return null
-    if (exercise.sets.some((set) => set.confirmedAt)) return null
+    const canReplace = !exercise.sets.some((set) => set.confirmedAt)
     return <OverflowMenu items={[
-      { label: 'Заменить', disabled: replaceLive.isPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } },
+      ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
+      ...(canReplace ? [{ label: 'Заменить', disabled: replaceLive.isPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } }] : []),
     ]} />
   }
-  // Стрелки ↑/↓ для перестановки блока в live (задизейблены на границах).
+  // Стрелки ↑/↓ видны только во временном режиме перестановки.
   function liveReorder(blockId: string, isFirst: boolean, isLast: boolean) {
-    if (clientMode) return null
+    if (clientMode || !reordering) return null
     return <span className="block-reorder">
       <button type="button" className="reorder-btn" aria-label="Вверх" disabled={isFirst || reorderBlock.isPending} onClick={() => reorderBlock.mutate({ blockId, direction: -1 })}>↑</button>
       <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast || reorderBlock.isPending} onClick={() => reorderBlock.mutate({ blockId, direction: 1 })}>↓</button>
@@ -907,6 +911,7 @@ export function LiveWorkoutPage() {
           </div>}
         </div>)
       })()}
+      {reordering && <div className="live-reorder-mode" role="status"><span>Изменение порядка</span><button type="button" className="secondary" onClick={() => setReordering(false)}>Готово</button></div>}
       {(() => { const liveBlocks = groupIntoBlocks(query.data.exercises);
         // Индекс первого блока с незавершёнными подходами = «текущий» блок.
         // До него — завершённые, после — предстоящие. Даёт статус за секунду.
@@ -914,7 +919,8 @@ export function LiveWorkoutPage() {
         return liveBlocks.map((block, blockIndex) => {
         // ↑/↓ показываем только когда блоков больше одного; двигать можно любые
         // блоки (в т.ч. с завершёнными подходами), кроме упора в границу.
-        const reorder = liveBlocks.length > 1 ? liveReorder(block.blockId, blockIndex === 0, blockIndex === liveBlocks.length - 1) : null
+        const canReorder = liveBlocks.length > 1
+        const reorder = canReorder ? liveReorder(block.blockId, blockIndex === 0, blockIndex === liveBlocks.length - 1) : null
         const blockStatus = currentBlockIndex === -1 ? 'done' : blockIndex < currentBlockIndex ? 'done' : blockIndex === currentBlockIndex ? 'current' : 'upcoming'
         // Одиночное упражнение (или блок из одного) — как раньше, по подходам.
         // Текущий подход (первый неподтверждённый) подсвечивается серым.
@@ -939,7 +945,7 @@ export function LiveWorkoutPage() {
               </button>
             }
             return <section key={exercise.id} className={`live-exercise ${blockStatus}`}>
-              <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{exerciseMenu(exercise)}{reorder}</span></div>
+              <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{exerciseMenu(exercise, canReorder)}{reorder}</span></div>
               {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex, exercise.sets.length > 1))}
               {!clientMode && <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
               {liveCommentField(exercise)}
@@ -957,6 +963,7 @@ export function LiveWorkoutPage() {
           <div className="circuit-head">
             <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
             <span className="circuit-counter">Круг {rounds[current]?.round ?? 1} из {rounds.length}</span>
+            {!clientMode && canReorder && !reordering && <OverflowMenu items={[{ label: 'Изменить порядок', onClick: () => setReordering(true) }]} />}
             {reorder}
           </div>
           {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt); return <div className={`circuit-round ${roundDone ? 'done' : roundIndex === current ? 'current' : ''}`} key={round.round}>
