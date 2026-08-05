@@ -15,6 +15,7 @@ test('today: быстрый старт ведёт к единому выбору
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
   await expect(page).toHaveURL(/\/today\?view=review$/)
+  await expect(page.getByText('Распознано: 2', { exact: true })).toBeVisible()
   await expect(page.locator('.today-exercise')).toHaveCount(2)
   await expect(page.getByLabel('Имя нового клиента')).toHaveCount(0)
   await page.getByRole('button', { name: '＋ Новый клиент' }).click()
