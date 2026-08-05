@@ -180,7 +180,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByLabel('Фактический вес').first().fill('37.5')
   await page.getByLabel('Фактические повторы').first().fill('11')
   await page.getByRole('button', { name: 'Ввести подход 3' }).click()
-  await expect(page.locator('.live-set-compact.upcoming')).toContainText('Факт 37.5 кг × 11 повт.')
+  await expect(page.locator('.live-set-compact.upcoming')).toContainText('Введено 37.5 кг × 11 повт.')
   await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Берпи')
   await page.getByRole('button', { name: /^Берпи/ }).click()

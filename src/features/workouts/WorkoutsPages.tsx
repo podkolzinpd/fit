@@ -8,7 +8,7 @@ import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -855,10 +855,10 @@ export function LiveWorkoutPage() {
     const confirmLabel = set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'
     if (!isExpanded) {
       const plan = planLine(exercise.inputKind, set)
-      const fact = factLine(displayedSet)
+      const fact = set.confirmedAt ? factLine(displayedSet) : enteredFactLine(displayedSet)
       return <div className={`live-set-compact ${set.confirmedAt ? 'confirmed' : 'upcoming'}`} key={set.id}>
         <span className="live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        <span className="live-set-compact-values"><strong>{fact ? `Факт ${fact}` : plan ? `План ${plan}` : 'Без значений'}</strong>{fact && plan && <small>План {plan}</small>}</span>
+        <span className="live-set-compact-values"><strong>{fact ? `${set.confirmedAt ? 'Факт' : 'Введено'} ${fact}` : plan ? `План ${plan}` : 'Без значений'}</strong>{fact && plan && <small>План {plan}</small>}</span>
         {set.confirmedAt
           ? <button type="button" className="link live-set-compact-action" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>
           : <button type="button" className="link live-set-compact-action" aria-label={`Ввести подход ${setNumber ?? ''}`} onPointerDown={() => saveOpenLiveSet(exercise, set.id)} onClick={() => openLiveSet(exercise, set.id)}>Ввести</button>}
