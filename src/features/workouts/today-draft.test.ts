@@ -29,6 +29,14 @@ describe('today draft', () => {
     expect(readTodayDraft(key)?.screen).toBe('save')
   })
 
+  it('сохраняет снимок текста после LLM-разбора', () => {
+    const key = todayDraftKey('trainer-a')
+    const text = 'Жим лёжа — 3 × 10 повт. × 100 кг'
+    writeTodayDraft(key, { screen: 'compose', text, lastLlmText: text, choices: {}, items: [], clientId: '' })
+
+    expect(readTodayDraft(key)?.lastLlmText).toBe(text)
+  })
+
   it('игнорирует повреждённые данные', () => {
     localStorage.setItem(todayDraftKey('trainer-a'), '{broken')
     expect(readTodayDraft(todayDraftKey('trainer-a'))).toBeNull()
