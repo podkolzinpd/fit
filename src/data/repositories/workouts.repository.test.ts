@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, completedWorkoutDraft, computeClientStats, copyWorkout, ensureBlockIds, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, replaceExercise, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, completedWorkoutDraft, computeClientStats, copyWorkout, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, replaceExercise, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -533,6 +533,11 @@ describe('factLine', () => {
     expect(factLine(mk({ weightKg: 50, reps: 10 }, {}, null))).toBeNull()
     // Даже если план есть, но подход не закрыт — факта нет.
     expect(factLine(mk({ weightKg: 50, reps: 10 }, { weightKg: 50, reps: 10 }, null))).toBeNull()
+  })
+  it('введённый неподтверждённый подход можно показать в live, но не как выполненный', () => {
+    const set = mk({ weightKg: 50, reps: 10 }, { weightKg: 37.5, reps: 11 }, null)
+    expect(enteredFactLine(set)).toBe('37.5 кг × 11 повт.')
+    expect(factLine(set)).toBeNull()
   })
   it('подтверждён, но факт пустой → null', () => {
     expect(factLine(mk({ weightKg: 50, reps: 10 }, {}, 'now'))).toBeNull()

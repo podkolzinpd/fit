@@ -412,14 +412,18 @@ export function formatFactVsPlan(set: WorkoutSet): { fact: string; planNote: str
   return { fact, planNote }
 }
 
-// Фактический результат подтверждённого подхода — строка вида «90 кг × 8 повт.».
-// Возвращает null, если подход не подтверждён (confirmedAt пуст) или у него нет
-// ни одного фактического значения: такой подход не выполнялся, план за факт не
-// выдаём (иначе история расходится с графиком «строго по факту»).
-export function factLine(set: WorkoutSet): string | null {
-  if (!set.confirmedAt) return null
+// Введённые фактические значения без учёта статуса подхода. Используется в live,
+// чтобы после перехода к следующей строке тренер видел набранные числа до
+// подтверждения подхода.
+export function enteredFactLine(set: WorkoutSet): string | null {
   const line = setLine(set.fact.weightKg, set.fact.reps, set.fact.distanceKm, set.fact.durationSec, set.fact.durationMin, set.fact.rpe)
   return line || null
+}
+
+// Фактический результат подтверждённого подхода — строка вида «90 кг × 8 повт.».
+// В истории и аналитике неподтверждённый ввод не считаем выполненным фактом.
+export function factLine(set: WorkoutSet): string | null {
+  return set.confirmedAt ? enteredFactLine(set) : null
 }
 
 // Ordered, de-duplicated muscle-group labels for a workout's exercises.

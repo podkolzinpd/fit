@@ -8,7 +8,7 @@ import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -23,7 +23,7 @@ import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
 import { RPE_OPTIONS } from '../../shared/rpe'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
-import { applyLiveSetDraft } from './live-set-cache'
+import { applyLiveSetDraft, setWithLocalDraft } from './live-set-cache'
 import { setLiveScreenAwake } from './live-keep-awake'
 import { LoadMoreButton } from './LoadMoreButton'
 import { workoutCountLabel } from './workout-count-label'
@@ -608,6 +608,11 @@ export function LiveWorkoutPage() {
   // В обычном live разворачиваем только текущий подход. Тап по другой строке
   // временно открывает её для ввода без превращения всей тренировки в форму.
   const [expandedSetId, setExpandedSetId] = useState<string | null>(null)
+  // Realtime может принести устаревший снимок между вводом и ответом RPC.
+  // Держим конкретный введённый факт до тех пор, пока серверная копия не станет
+  // такой же — иначе при переходе к следующему подходу строка мигнёт пустой.
+  const [localSetDrafts, setLocalSetDrafts] = useState<Map<string, LiveSetDraft>>(() => new Map())
+  const liveSetForms = useRef<Map<string, HTMLFormElement>>(new Map())
   const [savingSetId, setSavingSetId] = useState<string | null>(null)
   const [savedSetId, setSavedSetId] = useState<string | null>(null)
   const [saveErrorSetId, setSaveErrorSetId] = useState<string | null>(null)
@@ -657,6 +662,41 @@ export function LiveWorkoutPage() {
     },
     onError: (_error, { set }) => { setSavingSetId(null); setSaveErrorSetId(set.id) },
   })
+  function persistLiveDraft(set: WorkoutSet, draft: LiveSetDraft) {
+    // Запоминаем ввод до RPC. Это не меняет факт на сервере, но не даёт
+    // realtime-снимку с прежними данными скрыть его при переходе к другой строке.
+    setLocalSetDrafts((current) => {
+      const next = new Map(current)
+      next.set(set.id, draft)
+      return next
+    })
+    save.mutate({ set, draft })
+  }
+  function liveFormChanged(form: HTMLFormElement) {
+    return Array.from(form.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select'))
+      .some((field) => field.value !== (field instanceof HTMLInputElement
+        ? field.defaultValue
+        : field.options[field.selectedIndex]?.defaultSelected ? field.value : ''))
+  }
+  function saveOpenLiveSet(exercise: WorkoutExercise, targetSetId: string) {
+    // PointerDown происходит до blur: это единственный надёжный момент на iOS
+    // для чтения числа из строки, когда тренер тапаeт «Ввести» у следующей.
+    // При клавиатурной активации fallback берёт единственную открытую форму.
+    const focused = document.activeElement instanceof HTMLElement
+      ? document.activeElement.closest<HTMLFormElement>('form[data-live-set-id]')
+      : null
+    const fallback = [...liveSetForms.current.entries()].find(([setId]) => setId !== targetSetId)
+    const form = focused ?? fallback?.[1]
+    const currentSetId = form?.dataset.liveSetId ?? fallback?.[0]
+    const currentSet = currentSetId ? exercise.sets.find((set) => set.id === currentSetId) : undefined
+    if (currentSet && form && currentSet.id !== targetSetId && liveFormChanged(form)) {
+      persistLiveDraft(currentSet, draftFrom(form))
+    }
+  }
+  function openLiveSet(exercise: WorkoutExercise, targetSetId: string) {
+    saveOpenLiveSet(exercise, targetSetId)
+    setExpandedSetId(targetSetId)
+  }
   useEffect(() => {
     if (!savedSetId) return
     const timer = window.setTimeout(() => setSavedSetId(null), 2_500)
@@ -805,6 +845,7 @@ export function LiveWorkoutPage() {
   }
   // Форма одного подхода в live: подтверждение / правка / удаление / автосейв по blur.
   function renderLiveSet(exercise: WorkoutExercise, set: WorkoutSet, label?: string, current = false) {
+    const displayedSet = setWithLocalDraft(set, localSetDrafts.get(set.id))
     const isEditing = editingSets.has(set.id)
     const isExpanded = current || isEditing || expandedSetId === set.id
     // «Закрыто» (подтверждён) — зелёный; «в работе» (текущий) — серый.
@@ -814,30 +855,30 @@ export function LiveWorkoutPage() {
     const confirmLabel = set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'
     if (!isExpanded) {
       const plan = planLine(exercise.inputKind, set)
-      const fact = factLine(set)
+      const fact = set.confirmedAt ? factLine(displayedSet) : enteredFactLine(displayedSet)
       return <div className={`live-set-compact ${set.confirmedAt ? 'confirmed' : 'upcoming'}`} key={set.id}>
         <span className="live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        <span className="live-set-compact-values"><strong>{fact ? `Факт ${fact}` : plan ? `План ${plan}` : 'Без значений'}</strong>{fact && plan && <small>План {plan}</small>}</span>
+        <span className="live-set-compact-values"><strong>{fact ? `${set.confirmedAt ? 'Факт' : 'Введено'} ${fact}` : plan ? `План ${plan}` : 'Без значений'}</strong>{fact && plan && <small>План {plan}</small>}</span>
         {set.confirmedAt
           ? <button type="button" className="link live-set-compact-action" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>
-          : <button type="button" className="link live-set-compact-action" aria-label={`Ввести подход ${setNumber ?? ''}`} onClick={() => setExpandedSetId(set.id)}>Ввести</button>}
+          : <button type="button" className="link live-set-compact-action" aria-label={`Ввести подход ${setNumber ?? ''}`} onPointerDown={() => saveOpenLiveSet(exercise, set.id)} onClick={() => openLiveSet(exercise, set.id)}>Ввести</button>}
       </div>
     }
     const showRpe = rpeExercises.has(exercise.id)
-    return <form className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={set.id} onBlur={(event) => {
+    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={set.id} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
-      save.mutate({ set, draft: draftFrom(event.currentTarget) })
+      persistLiveDraft(set, draftFrom(event.currentTarget))
     }}>
       <div className="live-set-grid">
         <span className="live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
         <span className="live-set-plan" title={planLine(exercise.inputKind, set) ?? 'Без плана'}>{planLine(exercise.inputKind, set) ?? '—'}</span>
-        <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} showRpe={showRpe} />
+        <LiveSetFields inputKind={exercise.inputKind} set={displayedSet} editing={isEditing} showRpe={showRpe} />
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id }}
-                onClick={(event) => { const form = event.currentTarget.form; if (form) save.mutate({ set, draft: draftFrom(form) }); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}>✓</button>
+                onClick={(event) => { const form = event.currentTarget.form; if (form) persistLiveDraft(set, draftFrom(form)); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}>✓</button>
             : <button type="button" className={set.confirmedAt ? 'secondary live-set-check done' : 'live-set-check'} aria-label={confirmLabel} disabled={Boolean(set.confirmedAt) || confirm.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id }}
                 onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>✓</button>}
@@ -894,6 +935,10 @@ export function LiveWorkoutPage() {
         if (block.blockType === 'single' || block.exercises.length === 1) {
           return block.exercises.map((exercise) => {
             const currentSetIndex = exercise.sets.findIndex((set) => !set.confirmedAt)
+            // Открыта одна строка: по умолчанию первая незавершённая, после тапа
+            // — выбранная тренером. При уходе с предыдущей строки её черновик
+            // уже сохранён локально в persistLiveDraft.
+            const activeSetId = expandedSetId ?? exercise.sets[currentSetIndex]?.id
             const allDone = exercise.sets.every((set) => set.confirmedAt)
             // Завершённое упражнение сворачиваем в компактный итог, ТОЛЬКО пока
             // впереди есть незавершённый блок (тренер перешёл дальше). Когда всё
@@ -915,7 +960,7 @@ export function LiveWorkoutPage() {
               <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</span></div>
               <div className="live-set-table">
                 <div className={`live-set-table-head ${rpeExercises.has(exercise.id) ? 'rpe-visible' : ''}`} aria-hidden="true"><span>№</span><span>План</span><span>Кг</span><span>Повт.</span>{rpeExercises.has(exercise.id) && <span>RPE</span>}<span>Статус</span></div>
-                {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex))}
+                {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </div>
               {!clientMode && <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
               {liveCommentField(exercise)}
