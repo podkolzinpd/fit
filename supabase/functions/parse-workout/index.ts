@@ -10,12 +10,49 @@ type Item = { sourceText: string; exerciseRef: string; confidence: number; sets:
 type Unmatched = { sourceText: string; reason: string; suggestedExerciseRefs: string[] }
 
 const OUTPUT_SCHEMA = {
-  type: "object", additionalProperties: false, required: ["items", "unmatched"], properties: {
-    items: { type: "array", items: { type: "object", additionalProperties: false, required: ["sourceText", "exerciseRef", "confidence", "sets"], properties: {
-      sourceText: { type: "string" }, exerciseRef: { type: "string" }, confidence: { type: "number" },
-      sets: { type: "array", items: { type: "object", additionalProperties: false, properties: { weightKg: { type: "number" }, reps: { type: "number" }, durationMin: { type: "number" }, distanceKm: { type: "number" } } },
-    } } },
-    unmatched: { type: "array", items: { type: "object", additionalProperties: false, required: ["sourceText", "reason", "suggestedExerciseRefs"], properties: { sourceText: { type: "string" }, reason: { type: "string" }, suggestedExerciseRefs: { type: "array", items: { type: "string" } } } } },
+  type: "object",
+  additionalProperties: false,
+  required: ["items", "unmatched"],
+  properties: {
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["sourceText", "exerciseRef", "confidence", "sets"],
+        properties: {
+          sourceText: { type: "string" },
+          exerciseRef: { type: "string" },
+          confidence: { type: "number" },
+          sets: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                weightKg: { type: "number" },
+                reps: { type: "number" },
+                durationMin: { type: "number" },
+                distanceKm: { type: "number" },
+              },
+            },
+          },
+        },
+      },
+    },
+    unmatched: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["sourceText", "reason", "suggestedExerciseRefs"],
+        properties: {
+          sourceText: { type: "string" },
+          reason: { type: "string" },
+          suggestedExerciseRefs: { type: "array", items: { type: "string" } },
+        },
+      },
+    },
   },
 }
 
