@@ -136,6 +136,7 @@ export function TodayPage() {
       setStartTime(draft.startTime ?? '')
       setManualRefs(draft.manualRefs ?? [])
       setRemovedRefs(draft.removedRefs ?? [])
+      setManualRecognitionAvailable(Boolean(draft.text.trim()))
       setDraftRestored(true)
     }
     setDraftReady(true)
