@@ -8,6 +8,7 @@ interface VoiceNoteFieldProps {
   defaultValue?: string
   value?: string
   onValueChange?: (value: string) => void
+  onManualValueChange?: (value: string) => void
   onTranscriptAppended?: (event: { previousValue: string; value: string; transcript: string }) => void | Promise<void>
   label?: string
   voiceLabel?: string
@@ -18,7 +19,7 @@ interface VoiceNoteFieldProps {
   maxHeightPx?: number
 }
 
-export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, onTranscriptAppended, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false, autoResize = false, maxHeightPx = 264 }: VoiceNoteFieldProps) {
+export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, onManualValueChange, onTranscriptAppended, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false, autoResize = false, maxHeightPx = 264 }: VoiceNoteFieldProps) {
   const id = useId()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [isTranscriptProcessing, setIsTranscriptProcessing] = useState(false)
@@ -46,7 +47,9 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
       defaultValue={onValueChange ? undefined : defaultValue}
       value={onValueChange ? value ?? '' : undefined}
       onChange={onValueChange ? (event) => {
-        onValueChange(event.target.value)
+        const nextValue = event.target.value
+        onValueChange(nextValue)
+        onManualValueChange?.(nextValue)
         window.requestAnimationFrame(resizeTextarea)
       } : undefined}
     />
