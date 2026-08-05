@@ -573,23 +573,21 @@ function LiveSetFields({ inputKind, set, editing = false }: { inputKind: Exercis
   const value = (fact: number | undefined, plan: number | undefined) => (confirmed ? (fact ?? plan) : fact)
   const factDuration = durationSeconds(set.fact.durationSec, set.fact.durationMin)
   const planDuration = durationSeconds(set.durationSec, set.durationMin)
-  // Целевой RPE — ориентир из плана, а не автоматически внесённый факт.
-  const rpe = <LiveRpeField defaultValue={set.fact.rpe} disabled={locked} inputKey={`rpe-${k}`} />
   if (inputKind === 'strength') return <><div className={rowClass}>
     <LiveStepperInput name="weightKg" label="Фактический вес" shortLabel="вес" placeholder={set.weightKg === undefined ? 'кг' : `${set.weightKg} кг`} defaultValue={value(set.fact.weightKg, set.weightKg)} baselineValue={set.weightKg} step={2.5} disabled={locked} inputKey={`w-${k}`} />
     <LiveStepperInput name="reps" label="Фактические повторы" shortLabel="повторы" placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} defaultValue={value(set.fact.reps, set.reps)} baselineValue={set.reps} step={1} disabled={locked} inputKey={`r-${k}`} />
-  </div>{rpe}</>
+  </div></>
   if (inputKind === 'reps') return <><div className={rowClass}>
     <LiveStepperInput name="durationSec" label="Фактическое время, сек" shortLabel="секунды" placeholder={durationLabel(set.durationSec, set.durationMin) ?? 'сек'} defaultValue={value(factDuration, planDuration)} baselineValue={planDuration} step={15} disabled={locked} inputKey={`d-${k}`} />
     <LiveStepperInput name="reps" label="Фактические повторы" shortLabel="повторы" placeholder={set.reps === undefined ? 'повт.' : `${set.reps} повт.`} defaultValue={value(set.fact.reps, set.reps)} baselineValue={set.reps} step={1} disabled={locked} inputKey={`r-${k}`} />
-  </div>{rpe}</>
+  </div></>
   if (inputKind === 'duration') return <><div className={rowClass}>
     <LiveStepperInput name="durationSec" label="Фактическое время, сек" shortLabel="секунды" placeholder={durationLabel(set.durationSec, set.durationMin) ?? 'сек'} defaultValue={value(factDuration, planDuration)} baselineValue={planDuration} step={15} disabled={locked} inputKey={`d-${k}`} />
-  </div>{rpe}</>
+  </div></>
   return <><div className={rowClass}>
     <LiveStepperInput name="durationSec" label="Фактическое время, сек" shortLabel="секунды" placeholder={durationLabel(set.durationSec, set.durationMin) ?? 'сек'} defaultValue={value(factDuration, planDuration)} baselineValue={planDuration} step={15} disabled={locked} inputKey={`d-${k}`} />
     <LiveStepperInput name="distanceKm" label="Фактическая дистанция" shortLabel="дистанция" placeholder={set.distanceKm === undefined ? 'км' : `${set.distanceKm} км`} defaultValue={value(set.fact.distanceKm, set.distanceKm)} baselineValue={set.distanceKm} step={0.1} disabled={locked} inputKey={`dist-${k}`} />
-  </div>{rpe}</>
+  </div></>
 }
 
 const REST_STEP = 15
@@ -877,10 +875,16 @@ export function LiveWorkoutPage() {
           <div className="live-set-fields">
             <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} />
           </div>
-          <SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} />
-          {!set.confirmedAt && planLine(exercise.inputKind, set) && <button type="button" className="link set-fill-plan"
-            onPointerDown={(e) => e.preventDefault()}
-            onClick={(event) => fillFactFromPlan(event.currentTarget.form, exercise.inputKind, set)}>= план</button>}
+          <div className="live-set-secondary">
+            <details className="live-rpe-details">
+              <summary>RPE</summary>
+              <LiveRpeField defaultValue={set.fact.rpe} disabled={Boolean(set.confirmedAt) && !isEditing} inputKey={`rpe-${set.version}-${isEditing ? 'editing' : 'edit'}`} />
+            </details>
+            {!set.confirmedAt && planLine(exercise.inputKind, set) && <button type="button" className="link set-fill-plan"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={(event) => fillFactFromPlan(event.currentTarget.form, exercise.inputKind, set)}>= план</button>}
+            <SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} />
+          </div>
           {deviationNote(exercise.inputKind, set) && <p className="set-deviation">{deviationNote(exercise.inputKind, set)}</p>}
         </div>
         <div className="live-set-confirm">
