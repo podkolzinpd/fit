@@ -9,6 +9,7 @@ interface VoiceNoteFieldProps {
   value?: string
   onValueChange?: (value: string) => void
   onManualValueChange?: (value: string) => void
+  onTranscriptValueChange?: (value: string) => void
   onTranscriptAppended?: (event: { previousValue: string; value: string; transcript: string }) => void | Promise<void>
   label?: string
   voiceLabel?: string
@@ -19,7 +20,7 @@ interface VoiceNoteFieldProps {
   maxHeightPx?: number
 }
 
-export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, onManualValueChange, onTranscriptAppended, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false, autoResize = false, maxHeightPx = 264 }: VoiceNoteFieldProps) {
+export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, onManualValueChange, onTranscriptValueChange, onTranscriptAppended, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false, autoResize = false, maxHeightPx = 264 }: VoiceNoteFieldProps) {
   const id = useId()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [isTranscriptProcessing, setIsTranscriptProcessing] = useState(false)
@@ -57,7 +58,8 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
       if (!textareaRef.current) return
       const previous = textareaRef.current.value
       const nextValue = appendTranscript(previous, text)
-      if (onValueChange) onValueChange(nextValue)
+      if (onTranscriptValueChange) onTranscriptValueChange(nextValue)
+      else if (onValueChange) onValueChange(nextValue)
       else {
         textareaRef.current.value = nextValue
         textareaRef.current.dispatchEvent(new Event('input', { bubbles: true }))
@@ -71,7 +73,8 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
       textareaRef.current.focus()
       return () => {
         if (!textareaRef.current || textareaRef.current.value !== nextValue) return
-        if (onValueChange) onValueChange(previous)
+        if (onTranscriptValueChange) onTranscriptValueChange(previous)
+        else if (onValueChange) onValueChange(previous)
         else {
           textareaRef.current.value = previous
           textareaRef.current.dispatchEvent(new Event('input', { bubbles: true }))
