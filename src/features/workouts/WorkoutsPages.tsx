@@ -483,13 +483,13 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet): st
 // Одна ячейка факта в таблице подходов. В live основной сценарий — прямой
 // ввод: компактное число открывает цифровую клавиатуру и не разворачивает
 // строку в набор крупных степперов.
-function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, inputKey, decimal = false }: {
+function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, inputKey, decimal = false, planValue = false }: {
   name: string; label: string; placeholder: string; defaultValue: number | undefined
-  step: number; disabled: boolean; inputKey: string; decimal?: boolean
+  step: number; disabled: boolean; inputKey: string; decimal?: boolean; planValue?: boolean
 }) {
   return <input
     key={inputKey}
-    className="live-set-input"
+    className={`live-set-input ${planValue ? 'live-set-plan-value' : ''}`}
     aria-label={label}
     name={name}
     type="number"
@@ -499,6 +499,7 @@ function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, 
     disabled={disabled}
     defaultValue={defaultValue}
     placeholder={placeholder}
+    onInput={(event) => event.currentTarget.classList.remove('live-set-plan-value')}
   />
 }
 
@@ -513,9 +514,10 @@ function LiveSetFields({ inputKind, set, editing = false, showRpe = false }: { i
   // и версия бампится — иначе стабильный key оставил бы старое значение в поле.
   const mode = locked ? 'locked' : editing ? 'editing' : 'edit'
   const k = `${mode}-${set.version}`
-  // Факт при первом открытии начинается с плана: тренер видит готовые значения
-  // и меняет только нужное. После выполнения приоритет остаётся у факта.
+  // Логика неизменна: пока факта нет, в поле уже подставлен план. Отличается
+  // только вид — такие значения серые до первой ручной правки.
   const value = (fact: number | undefined, plan: number | undefined) => fact ?? plan
+  const isPlan = (fact: number | undefined, plan: number | undefined) => fact === undefined && plan !== undefined
   const factDuration = durationSeconds(set.fact.durationSec, set.fact.durationMin)
   const planDuration = durationSeconds(set.durationSec, set.durationMin)
   const rpeField = showRpe ? <select className="live-set-rpe" name="rpe" aria-label="Фактический RPE" defaultValue={set.fact.rpe ?? set.rpe ?? ''} disabled={locked}>
@@ -523,23 +525,23 @@ function LiveSetFields({ inputKind, set, editing = false, showRpe = false }: { i
     {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
   </select> : null
   if (inputKind === 'strength') return <>
-    <LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} step={2.5} disabled={locked} inputKey={`w-${k}`} decimal />
-    <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} />
+    <LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} planValue={isPlan(set.fact.weightKg, set.weightKg)} step={2.5} disabled={locked} inputKey={`w-${k}`} decimal />
+    <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planValue={isPlan(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} />
     {rpeField}
   </>
   if (inputKind === 'reps') return <>
-    <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
-    <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} />
+    <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} planValue={isPlan(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
+    <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planValue={isPlan(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} />
     {rpeField}
   </>
   if (inputKind === 'duration') return <>
-    <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
+    <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} planValue={isPlan(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
     <span className="live-set-empty" aria-hidden="true" />
     {rpeField}
   </>
   return <>
-    <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
-    <LiveSetInput name="distanceKm" label="Фактическая дистанция" placeholder="км" defaultValue={value(set.fact.distanceKm, set.distanceKm)} step={0.1} disabled={locked} inputKey={`dist-${k}`} decimal />
+    <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} planValue={isPlan(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
+    <LiveSetInput name="distanceKm" label="Фактическая дистанция" placeholder="км" defaultValue={value(set.fact.distanceKm, set.distanceKm)} planValue={isPlan(set.fact.distanceKm, set.distanceKm)} step={0.1} disabled={locked} inputKey={`dist-${k}`} decimal />
     {rpeField}
   </>
 }
@@ -614,6 +616,7 @@ export function LiveWorkoutPage() {
   // тренером (тап по свёрнутой карточке), чтобы поправить факт.
   const [expandedExercises, setExpandedExercises] = useState<Set<string>>(() => new Set())
   const [rpeExercises, setRpeExercises] = useState<Set<string>>(() => new Set())
+  const [commentEditors, setCommentEditors] = useState<Set<string>>(() => new Set())
   // Inline-подтверждение частичного завершения. window.confirm в нативной обёртке
   // (Capacitor/WKWebView) не показывается и блокировал выход из тренировки —
   // используем встроенный диалог в панели вместо нативного confirm.
@@ -734,7 +737,16 @@ export function LiveWorkoutPage() {
     ])
     navigate(`/workouts/${workoutId}`, { state: { justCompleted: true } })
   } })
-  function draftFrom(form: HTMLFormElement): LiveSetDraft { const values = new FormData(form); return { weightKg: numberValue(values.get('weightKg')), reps: numberValue(values.get('reps')), distanceKm: numberValue(values.get('distanceKm')), durationSec: numberValue(values.get('durationSec')), rpe: numberValue(values.get('rpe')) } }
+  function draftFrom(form: HTMLFormElement): LiveSetDraft {
+    const values = new FormData(form)
+    return {
+      weightKg: numberValue(values.get('weightKg')),
+      reps: numberValue(values.get('reps')),
+      distanceKm: numberValue(values.get('distanceKm')),
+      durationSec: numberValue(values.get('durationSec')),
+      rpe: numberValue(values.get('rpe')),
+    }
+  }
   // Derive the countdown from a wall-clock deadline so it stays correct even
   // when the tab is backgrounded and timers are throttled by the browser.
   const restActive = restRemaining !== null
@@ -770,8 +782,11 @@ export function LiveWorkoutPage() {
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
   function liveCommentField(exercise: WorkoutExercise) {
     if (clientMode) return null
+    const open = commentEditors.has(exercise.id)
+    if (!open && !exercise.trainerComment) return null
+    if (!open) return <button type="button" className="link live-comment-summary" onClick={() => setCommentEditors((current) => new Set(current).add(exercise.id))}>Заметка · {exercise.trainerComment}</button>
     return <textarea className="exercise-comment" aria-label={`Комментарий: ${exercise.name}`} placeholder="Комментарий к упражнению…" rows={1} defaultValue={exercise.trainerComment ?? ''} disabled={commentLive.isPending}
-      onBlur={(event) => { const next = event.target.value.trim(); if (next !== (exercise.trainerComment ?? '')) commentLive.mutate({ exerciseId: exercise.id, comment: next }) }} />
+      onBlur={(event) => { const next = event.target.value.trim(); if (next !== (exercise.trainerComment ?? '')) commentLive.mutate({ exerciseId: exercise.id, comment: next }); setCommentEditors((current) => { const copy = new Set(current); copy.delete(exercise.id); return copy }) }} />
   }
   // Меню упражнения в live (⋯): «Заменить» доступно, пока нет подтверждённых
   // подходов (начатое заменять нельзя — факт относился к старому упражнению).
@@ -780,9 +795,11 @@ export function LiveWorkoutPage() {
     if (clientMode) return null
     const canReplace = !exercise.sets.some((set) => set.confirmedAt)
     const showRpe = rpeExercises.has(exercise.id)
+    const commentOpen = commentEditors.has(exercise.id)
     return <OverflowMenu items={[
       ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
       { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => setRpeExercises((current) => { const next = new Set(current); if (showRpe) next.delete(exercise.id); else next.add(exercise.id); return next }) },
+      { label: commentOpen || exercise.trainerComment ? 'Изменить заметку' : 'Добавить заметку', onClick: () => setCommentEditors((current) => { const next = new Set(current); next.add(exercise.id); return next }) },
       ...(canReplace ? [{ label: 'Заменить', disabled: replaceLive.isPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } }] : []),
       ...(removableSet ? [{ label: 'Удалить подход', danger: true, disabled: removeSet.isPending, onClick: async () => { if (await askConfirm({ message: 'Удалить этот подход?', confirmLabel: 'Удалить', danger: true })) removeSet.mutate(removableSet.id) } }] : []),
     ]} />
@@ -823,7 +840,6 @@ export function LiveWorkoutPage() {
     }}>
       <div className="live-set-grid">
         <span className="live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        <span className="live-set-plan" title={planLine(exercise.inputKind, set) ?? 'Без плана'}>{planLine(exercise.inputKind, set) ?? '—'}</span>
         <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} showRpe={showRpe} />
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
@@ -906,10 +922,10 @@ export function LiveWorkoutPage() {
             return <section key={exercise.id} className={`live-exercise ${blockStatus}`}>
               <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</span></div>
               <div className="live-set-table">
-                <div className={`live-set-table-head ${rpeExercises.has(exercise.id) ? 'rpe-visible' : ''}`} aria-hidden="true"><span>№</span><span>План</span><span>Кг</span><span>Повт.</span>{rpeExercises.has(exercise.id) && <span>RPE</span>}<span>Статус</span></div>
+                <div className={`live-set-table-head ${rpeExercises.has(exercise.id) ? 'rpe-visible' : ''}`} aria-hidden="true"><span>№</span><span>Кг</span><span>Повт.</span>{rpeExercises.has(exercise.id) && <span>RPE</span>}<span>Статус</span></div>
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, index === currentSetIndex))}
               </div>
-              {!clientMode && <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
+              {!clientMode && <button type="button" className="link live-add-set" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
               {liveCommentField(exercise)}
             </section>
           })

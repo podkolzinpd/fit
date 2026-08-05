@@ -149,7 +149,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.live-set-table > .live-set')).toHaveCount(1)
   await expect(page.locator('.live-set-table > .live-set-compact')).toHaveCount(1)
   await expect(page.getByRole('button', { name: 'Ввести подход 2' })).toBeVisible()
-  // Факт сразу начинается с плановых значений; тренер правит число напрямую.
+  // План остаётся исходным значением поля, но в интерфейсе визуально приглушён.
   await expect(page.getByLabel('Фактический вес').first()).toHaveValue('40')
   await expect(page.getByLabel('Фактические повторы').first()).toHaveValue('10')
   await page.getByLabel('Фактический вес').first().fill('42.5')
