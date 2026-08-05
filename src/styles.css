@@ -480,6 +480,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-options-fields .block-rest-field { flex-direction: row; align-items: center; gap: 8px }
 .exercise-options-fields .block-rest-field input { min-height: 40px }
 .exercise-options-fields .exercise-comment { margin-top: 0 }
+.exercise-note { border-top:0; padding-top:0 }
+.exercise-note summary { min-height:38px; display:flex; align-items:center; color:var(--fg); font-size:13px }
+.exercise-note summary::after { content:'⌄'; margin-left:6px; color:var(--muted); font-size:16px; font-weight:400 }
+.exercise-note[open] summary::after { transform:rotate(180deg) }
+.exercise-note[open] .exercise-comment { margin-top:0 }
 .block-options { margin-top: 0; border-top: 0; padding-top: 0 }
 .block-options .block-rest { margin-top: 0 }
 /* «＋ Подход» и короткое поле «Отдых, с [90]» в один ряд (подпись и поле —
@@ -503,7 +508,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Больше воздуха в live: отступ под «＋ Подход» и до комментария. Секция live —
    это <section> с .live-exercise-head; целимся в его кнопку добавления и коммент. */
 .live-exercise-head ~ .secondary { margin: 14px 0 4px }
-.live-exercise-head ~ .exercise-comment { margin-top: 14px }
+.live-exercise-note { margin-top:12px; border-top:1px solid var(--border) }
+.live-exercise-note summary { min-height:42px; display:flex; align-items:center; cursor:pointer; color:var(--fg); font-size:13px; font-weight:700; list-style:none }
+.live-exercise-note summary::-webkit-details-marker { display:none }
+.live-exercise-note summary::after { content:'⌄'; margin-left:6px; color:var(--muted); font-size:16px; font-weight:400 }
+.live-exercise-note[open] summary::after { transform:rotate(180deg) }
+.live-exercise-note summary span { margin-left:auto; color:var(--muted); font-size:12px; font-weight:600 }
+.live-exercise-note[open] .exercise-comment { margin:0 0 4px }
 .exercise-comment { width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--fg); font: inherit; font-size: 13px; resize: vertical; box-sizing: border-box }
 .exercise-comment::placeholder { color: var(--muted) }
 .exercise-comment-note { color: var(--muted); font-size: 13px; margin-top: 4px }

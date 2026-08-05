@@ -189,12 +189,14 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       <div className="set-add-row">
         <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
       </div>
-      <OptionalDetails summary="Дополнительно" initialOpen={Boolean(exercise.trainerComment || (exercise.restBetweenSetsSec !== undefined && exercise.restBetweenSetsSec !== 90))}>
+      <OptionalDetails summary="Дополнительно" initialOpen={Boolean(exercise.restBetweenSetsSec !== undefined && exercise.restBetweenSetsSec !== 90)}>
         <div className="exercise-options-fields">
           <label className="block-rest-field"><ClampedNumberInput label="Отдых между подходами, с" value={exercise.restBetweenSetsSec ?? 90} min={0} max={600} onCommit={(next) => { if (exercise.blockId) onChange(setBlockRest([...exercises], exercise.blockId, { betweenSets: next })) }} /><span>Отдых, с</span></label>
-          {commentField(exercise, exerciseIndex)}
         </div>
       </OptionalDetails>
+      {showTrainerComments && <OptionalDetails className="exercise-note" summary={exercise.trainerComment ? 'Заметка тренера · есть текст' : 'Заметка тренера'}>
+        {commentField(exercise, exerciseIndex)}
+      </OptionalDetails>}
       {canMergeNext && <button type="button" className="link block-merge" onClick={() => onChange(mergeBlockWithNext([...exercises], exerciseIndex))}>⛓ Объединить со следующим в блок</button>}
     </article>
   }
@@ -241,7 +243,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         <div className="block-exercises">{block.items.map(({ exercise, index }) => <div className="block-exercise-row" key={exercise.blockId ? `${exercise.ref}-${index}` : index}><div className="block-exercise-head"><strong>{exercise.name}</strong><span className="exercise-head-actions"><OverflowMenu items={[
           { label: 'Заменить', onClick: () => onReplaceExercise(index) },
           { label: 'Удалить', danger: true, onClick: () => removeExercise(index) },
-        ]} /></span></div>{showTrainerComments && <OptionalDetails className="exercise-comment-options" summary="Комментарий" initialOpen={Boolean(exercise.trainerComment)}>
+        ]} /></span></div>{showTrainerComments && <OptionalDetails className="exercise-comment-options exercise-note" summary={exercise.trainerComment ? 'Заметка тренера · есть текст' : 'Заметка тренера'}>
           {commentField(exercise, index)}
         </OptionalDetails>}</div>)}</div>
         {rounds.map((round) => <div className="planned-round" key={round.round}>

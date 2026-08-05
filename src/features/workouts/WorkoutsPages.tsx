@@ -813,8 +813,11 @@ export function LiveWorkoutPage() {
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
   function liveCommentField(exercise: WorkoutExercise) {
     if (clientMode) return null
-    return <textarea className="exercise-comment" aria-label={`Комментарий: ${exercise.name}`} placeholder="Комментарий к упражнению…" rows={1} defaultValue={exercise.trainerComment ?? ''} disabled={commentLive.isPending}
-      onBlur={(event) => { const next = event.target.value.trim(); if (next !== (exercise.trainerComment ?? '')) commentLive.mutate({ exerciseId: exercise.id, comment: next }) }} />
+    return <details className="live-exercise-note">
+      <summary>Заметка тренера{exercise.trainerComment && <span>Есть текст</span>}</summary>
+      <textarea className="exercise-comment" aria-label={`Комментарий: ${exercise.name}`} placeholder="Комментарий к упражнению…" rows={1} defaultValue={exercise.trainerComment ?? ''} disabled={commentLive.isPending}
+        onBlur={(event) => { const next = event.target.value.trim(); if (next !== (exercise.trainerComment ?? '')) commentLive.mutate({ exerciseId: exercise.id, comment: next }) }} />
+    </details>
   }
   // Меню упражнения в live (⋯): «Заменить» доступно, пока нет подтверждённых
   // подходов (начатое заменять нельзя — факт относился к старому упражнению).
