@@ -23,6 +23,7 @@ import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
 import { RPE_OPTIONS } from '../../shared/rpe'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
+import { applyLiveSetDraft } from './live-set-cache'
 import { setLiveScreenAwake } from './live-keep-awake'
 import { LoadMoreButton } from './LoadMoreButton'
 import { workoutCountLabel } from './workout-count-label'
@@ -632,10 +633,17 @@ export function LiveWorkoutPage() {
   const save = useMutation({
     mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.save(set, draft),
     onMutate: ({ set }) => { setSavingSetId(set.id); setSavedSetId(null); setSaveErrorSetId(null) },
-    onSuccess: async (_v, { set }) => {
+    onSuccess: async (version, { set, draft }) => {
       setSavingSetId(null)
       setSavedSetId(set.id)
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
+      // Автосейв незавершённой строки не делает refetch: он перемонтировал бы
+      // поля во время ввода. Вместо этого обновляем только сохранённый подход
+      // в кэше — при переходе дальше он сразу остаётся с введёнными цифрами.
+      if (!set.confirmedAt) queryClient.setQueryData<Workout>(
+        ['workout', workoutId],
+        (workout) => workout ? applyLiveSetDraft(workout, set.id, draft, version) : workout,
+      )
       if (set.confirmedAt) {
         const exercise = query.data?.exercises.find((item) => item.sets.some((itemSet) => itemSet.id === set.id))
         if (exercise) setExpandedExercises((previous) => {
