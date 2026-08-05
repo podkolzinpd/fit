@@ -170,7 +170,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode, canReorder = false) {
     const columns = setColumnLabels(exercise.inputKind)
     const showRpe = rpeExercises.has(exerciseIndex)
-    return <article className="exercise" key={`${exercise.ref}-${exerciseIndex}`}>
+    return <article className="exercise planned-exercise" key={`${exercise.ref}-${exerciseIndex}`}>
       <header><strong>{exercise.name}</strong><span className="exercise-head-actions">{reorder}<OverflowMenu items={[
         ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
         { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => setRpeExercises((current) => { const next = new Set(current); if (showRpe) next.delete(exerciseIndex); else next.add(exerciseIndex); return next }) },
