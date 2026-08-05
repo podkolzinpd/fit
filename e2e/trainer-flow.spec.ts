@@ -185,7 +185,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByText(/42\.5 кг × 9 повт\./)).toBeVisible()
   // Неподтверждённые подходы (план без факта) помечены «не выполнено», план
   // за факт не выдаётся.
-  await expect(page.locator('.plan-note').first()).toContainText('не выполнено')
+  await expect(page.locator('.workout-history-set.missed .plan-note').first()).toContainText('не выполнено')
   // Сводка завершённой тренировки: время, тоннаж, группы мышц.
   // Тоннаж считает только подтверждённый факт: 42.5×9 = 383 кг.
   await expect(page.locator('.done-summary-3')).toContainText('Тоннаж')
