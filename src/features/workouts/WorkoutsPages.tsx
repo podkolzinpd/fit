@@ -678,16 +678,23 @@ export function LiveWorkoutPage() {
         ? field.defaultValue
         : field.options[field.selectedIndex]?.defaultSelected ? field.value : ''))
   }
-  function openLiveSet(exercise: WorkoutExercise, targetSetId: string) {
-    // На iOS WebView тап по следующей строке не всегда вызывает blur. Берём
-    // фактически открытую форму из DOM, а не состояние React: оно может ещё не
-    // успеть обновиться после ввода с экранной клавиатуры.
-    const current = [...liveSetForms.current.entries()].find(([setId]) => setId !== targetSetId)
-    if (current) {
-      const [currentSetId, form] = current
-      const currentSet = exercise.sets.find((set) => set.id === currentSetId)
-      if (currentSet && liveFormChanged(form)) persistLiveDraft(currentSet, draftFrom(form))
+  function saveOpenLiveSet(exercise: WorkoutExercise, targetSetId: string) {
+    // PointerDown происходит до blur: это единственный надёжный момент на iOS
+    // для чтения числа из строки, когда тренер тапаeт «Ввести» у следующей.
+    // При клавиатурной активации fallback берёт единственную открытую форму.
+    const focused = document.activeElement instanceof HTMLElement
+      ? document.activeElement.closest<HTMLFormElement>('form[data-live-set-id]')
+      : null
+    const fallback = [...liveSetForms.current.entries()].find(([setId]) => setId !== targetSetId)
+    const form = focused ?? fallback?.[1]
+    const currentSetId = form?.dataset.liveSetId ?? fallback?.[0]
+    const currentSet = currentSetId ? exercise.sets.find((set) => set.id === currentSetId) : undefined
+    if (currentSet && form && currentSet.id !== targetSetId && liveFormChanged(form)) {
+      persistLiveDraft(currentSet, draftFrom(form))
     }
+  }
+  function openLiveSet(exercise: WorkoutExercise, targetSetId: string) {
+    saveOpenLiveSet(exercise, targetSetId)
     setExpandedSetId(targetSetId)
   }
   useEffect(() => {
@@ -854,11 +861,11 @@ export function LiveWorkoutPage() {
         <span className="live-set-compact-values"><strong>{fact ? `Факт ${fact}` : plan ? `План ${plan}` : 'Без значений'}</strong>{fact && plan && <small>План {plan}</small>}</span>
         {set.confirmedAt
           ? <button type="button" className="link live-set-compact-action" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>
-          : <button type="button" className="link live-set-compact-action" aria-label={`Ввести подход ${setNumber ?? ''}`} onClick={() => openLiveSet(exercise, set.id)}>Ввести</button>}
+          : <button type="button" className="link live-set-compact-action" aria-label={`Ввести подход ${setNumber ?? ''}`} onPointerDown={() => saveOpenLiveSet(exercise, set.id)} onClick={() => openLiveSet(exercise, set.id)}>Ввести</button>}
       </div>
     }
     const showRpe = rpeExercises.has(exercise.id)
-    return <form ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={set.id} onBlur={(event) => {
+    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={set.id} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
       persistLiveDraft(set, draftFrom(event.currentTarget))
