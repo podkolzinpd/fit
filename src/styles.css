@@ -676,6 +676,21 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-exercise { border-radius: 16px; transition: opacity .2s ease }
 .live-exercise.current { }
 .live-exercise.upcoming { opacity: .62 }
+/* Live показывает упражнение как единую рабочую поверхность. Подходи — не
+   отдельные карточки, а компактные строки с разделителем: это даёт больше
+   факта в зоне большого пальца, не меняя существующий ввод или сохранение. */
+.live-exercise > .live-set, .circuit-round .live-set { margin: 0; padding: 11px 0; border: 0; border-radius: 0; background: transparent; box-shadow: none }
+.live-exercise > .live-set + .live-set, .circuit-round .live-set + .live-set { border-top: 1px solid var(--hairline) }
+.live-exercise > .live-set.current, .circuit-round .live-set.current { margin: 0 -8px; padding: 11px 8px; border: 1px solid var(--neutral-current-border); border-radius: 13px; background: var(--neutral-current) }
+.live-exercise > .live-set.confirmed, .circuit-round .live-set.confirmed { background: transparent }
+.live-set .set-head { min-height: 22px; font-size: 13px }
+.live-set .set-head .muted { min-width: 0; overflow-wrap: anywhere }
+.live-set-fields .set-row { margin: 7px 0 5px }
+.live-set-fields .set-rpe-field { margin: 0 0 6px }
+.live-set .set-fill-plan { min-height: 32px; margin: 0; padding: 3px 0; font-size: 13px }
+.live-set .set-deviation { margin-top: 2px }
+.live-set .live-confirm { min-height: 44px; margin-top: 4px; border-radius: 12px }
+.live-set .set-edit, .live-set .set-remove { min-width: 36px; min-height: 36px; padding: 2px 6px }
 /* Верх live-экрана остаётся вторичным: главные фокусы — таймер и текущий
    подход. Имя спортсмена даёт контекст, но не конкурирует с ними. */
 .live-workout-page .page-header { margin-bottom: 8px }

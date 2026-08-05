@@ -837,13 +837,15 @@ export function LiveWorkoutPage() {
       {set.confirmedAt && !isEditing && <button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}
       {!clientMode && canRemove && !isEditing && <button type="button" className="link set-remove" aria-label="Удалить подход" disabled={removeSet.isPending} onClick={async () => { if (await askConfirm({ message: 'Удалить этот подход?', confirmLabel: 'Удалить', danger: true })) removeSet.mutate(set.id) }}>✕</button>}
     </span>
-    return <form className={`exercise ${stateClass}`} key={set.id} onBlur={(event) => {
+    return <form className={`exercise live-set ${stateClass}`} key={set.id} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
       save.mutate({ set, draft: draftFrom(event.currentTarget) })
     }}>
       <div className="set-head"><span className="muted">{label}{planLine(exercise.inputKind, set) ? <span className="set-plan"> · план {planLine(exercise.inputKind, set)}</span> : null}</span>{headActions}</div>
-      <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} />
+      <div className="live-set-fields">
+        <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} />
+      </div>
       <SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} />
       {/* «= план»: перенести плановые значения в поля факта одним тапом (когда
           подход ещё не подтверждён и план задан). Не забирает фокус. */}
