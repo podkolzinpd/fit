@@ -843,29 +843,36 @@ export function LiveWorkoutPage() {
       {set.confirmedAt && !isEditing && <button type="button" className="link set-edit" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>}
       {!clientMode && canRemove && !isEditing && <button type="button" className="link set-remove" aria-label="Удалить подход" disabled={removeSet.isPending} onClick={async () => { if (await askConfirm({ message: 'Удалить этот подход?', confirmLabel: 'Удалить', danger: true })) removeSet.mutate(set.id) }}>✕</button>}
     </span>
+    const setNumber = label?.match(/\d+/)?.[0]
+    const confirmLabel = set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'
     return <form className={`exercise live-set ${stateClass}`} key={set.id} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
       save.mutate({ set, draft: draftFrom(event.currentTarget) })
     }}>
-      <div className="set-head"><span className="muted">{label}{planLine(exercise.inputKind, set) ? <span className="set-plan"> · план {planLine(exercise.inputKind, set)}</span> : null}</span>{headActions}</div>
-      <div className="live-set-fields">
-        <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} />
+      <div className="live-set-grid">
+        <span className="live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
+        <div className="live-set-main">
+          <div className="set-head"><span className="muted">{planLine(exercise.inputKind, set) ? <span className="set-plan">План {planLine(exercise.inputKind, set)}</span> : <span className="set-plan">Без плана</span>}</span>{headActions}</div>
+          <div className="live-set-fields">
+            <LiveSetFields inputKind={exercise.inputKind} set={set} editing={isEditing} />
+          </div>
+          <SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} />
+          {!set.confirmedAt && planLine(exercise.inputKind, set) && <button type="button" className="link set-fill-plan"
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={(event) => fillFactFromPlan(event.currentTarget.form, exercise.inputKind, set)}>= план</button>}
+          {deviationNote(exercise.inputKind, set) && <p className="set-deviation">{deviationNote(exercise.inputKind, set)}</p>}
+        </div>
+        <div className="live-set-confirm">
+          {set.confirmedAt && isEditing
+            ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
+                onPointerDown={() => { skipBlurForSet.current = set.id }}
+                onClick={(event) => { const form = event.currentTarget.form; if (form) save.mutate({ set, draft: draftFrom(form) }); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}>✓</button>
+            : <button type="button" className={set.confirmedAt ? 'secondary live-set-check done' : 'live-set-check'} aria-label={confirmLabel} disabled={Boolean(set.confirmedAt) || confirm.isPending}
+                onPointerDown={() => { skipBlurForSet.current = set.id }}
+                onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>✓</button>}
+        </div>
       </div>
-      <SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} />
-      {/* «= план»: перенести плановые значения в поля факта одним тапом (когда
-          подход ещё не подтверждён и план задан). Не забирает фокус. */}
-      {!set.confirmedAt && planLine(exercise.inputKind, set) && <button type="button" className="link set-fill-plan"
-        onPointerDown={(e) => e.preventDefault()}
-        onClick={(event) => fillFactFromPlan(event.currentTarget.form, exercise.inputKind, set)}>= план</button>}
-      {deviationNote(exercise.inputKind, set) && <p className="set-deviation">{deviationNote(exercise.inputKind, set)}</p>}
-      {set.confirmedAt && isEditing
-        ? <button type="button" className="secondary" disabled={save.isPending}
-            onPointerDown={() => { skipBlurForSet.current = set.id }}
-            onClick={(event) => { const form = event.currentTarget.form; if (form) save.mutate({ set, draft: draftFrom(form) }); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}>Сохранить</button>
-        : <button type="button" className={set.confirmedAt ? 'secondary live-confirm' : 'live-confirm'} disabled={Boolean(set.confirmedAt) || confirm.isPending}
-            onPointerDown={() => { skipBlurForSet.current = set.id }}
-            onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>{set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'}</button>}
     </form>
   }
   // «Назад» ведёт в карточку тренировки: таб-бар в live скрыт, поэтому нужен
