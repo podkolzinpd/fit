@@ -92,6 +92,10 @@ test('today: черновик сохраняет финальный шаг и п
   await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
 
   const workoutText = 'Присед со штангой 3×8 — 80 кг\nПланка 3×45 сек'
+  await mockWorkoutParser(page, [
+    { sourceText: 'Присед со штангой 3×8 — 80 кг', exerciseRef: 'barbell-squat', confidence: 1, sets: [{ weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }] },
+    { sourceText: 'Планка 3×45 сек', exerciseRef: 'plank', confidence: 1, sets: [{ durationMin: 0.75 }, { durationMin: 0.75 }, { durationMin: 0.75 }] },
+  ])
   await page.getByLabel('Тренировка').fill(workoutText)
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
