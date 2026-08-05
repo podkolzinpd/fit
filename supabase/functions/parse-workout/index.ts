@@ -57,12 +57,16 @@ const OUTPUT_SCHEMA = {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value) }
+function isSetValue(key: string, value: unknown): value is number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return false
+  return key === "weightKg" ? value >= 0 : value > 0
+}
 function validate(value: unknown, catalog: Exercise[]): { items: Item[]; unmatched: Unmatched[] } {
   if (!isRecord(value) || !Array.isArray(value.items) || !Array.isArray(value.unmatched)) throw new Error("invalid_output")
   const allowed = new Set(catalog.map((item) => item.ref))
   const items = value.items.flatMap((raw) => {
     if (!isRecord(raw) || typeof raw.sourceText !== "string" || typeof raw.exerciseRef !== "string" || !allowed.has(raw.exerciseRef) || !Array.isArray(raw.sets)) return []
-    const sets = raw.sets.filter(isRecord).map((set) => Object.fromEntries(["weightKg", "reps", "durationMin", "distanceKm"].flatMap((key) => typeof set[key] === "number" ? [[key, set[key]]] : [])))
+    const sets = raw.sets.filter(isRecord).map((set) => Object.fromEntries(["weightKg", "reps", "durationMin", "distanceKm"].flatMap((key) => isSetValue(key, set[key]) ? [[key, set[key]]] : [])))
     return [{ sourceText: raw.sourceText.trim(), exerciseRef: raw.exerciseRef, confidence: typeof raw.confidence === "number" ? Math.max(0, Math.min(1, raw.confidence)) : 0, sets }]
   })
   const unmatched = value.unmatched.flatMap((raw) => isRecord(raw) && typeof raw.sourceText === "string" ? [{ sourceText: raw.sourceText.trim(), reason: typeof raw.reason === "string" ? raw.reason.trim() : "Не найдено в каталоге", suggestedExerciseRefs: Array.isArray(raw.suggestedExerciseRefs) ? raw.suggestedExerciseRefs.filter((ref): ref is string => typeof ref === "string" && allowed.has(ref)).slice(0, 4) : [] }] : [])
@@ -86,7 +90,7 @@ Deno.serve(async (request) => {
     const catalog = [...system, ...custom]
     if (!catalog.length) return json({ error: { code: "empty_catalog", message: "Каталог упражнений пуст" } }, 400)
     const prompt = [
-      "Разбери запись тренировки после диктовки. Сам раздели слитую речь на упражнения, исправь спортивные оговорки и выбери только существующие упражнения из каталога. Для каждого понятного упражнения верни item с подходами. Для неизвестного верни unmatched и до 4 близких ref из каталога. Не придумывай значения и не объединяй упражнения. Верни JSON строго по schema.",
+      "Разбери запись тренировки после диктовки. Сам раздели слитую речь на упражнения, исправь спортивные оговорки и выбери только существующие упражнения из каталога. Для каждого понятного упражнения верни item с подходами. Если сказано N подходов (например, «3 подхода по 15 на 100», «15 повторений, 3 подхода, 100 кг» или «3 по 15 на 100»), верни N одинаковых объектов в sets. Порядок чисел в речи не важен. Не придумывай значения: включай в set только явно названные метрики; не добавляй нули для отсутствующих повторов, веса, времени или дистанции. Для неизвестного верни unmatched и до 4 близких ref из каталога. Не объединяй упражнения. Верни JSON строго по schema.",
       "Текст: " + body.text,
       "Каталог: " + JSON.stringify(catalog),
     ].join("\n")
