@@ -11,9 +11,9 @@ import { Page } from '../../shared/ui'
 import { ExercisePicker, frequentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { VoiceNoteField } from '../voice-input'
 import { useAuth } from '../../app/auth-context'
-import { formatWorkoutText, parseQuickWorkoutEntry, resolveQuickWorkoutLine, type ParsedWorkoutExercise } from './quick-workout-entry'
+import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { formatLlmWorkoutText, parseWorkoutWithLlm } from './llm-workout-parser'
-import { rankExerciseSearch } from '../exercises/exercise-search'
+import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
 import { workoutDateForRecordMode, type WorkoutRecordMode } from './workout-entry-rules'
 
@@ -34,6 +34,16 @@ function setSummary(item: ParsedWorkoutExercise): string {
 function appendVoiceText(previous: string, addition: string): string {
   const prefix = previous.trimEnd()
   return prefix ? `${prefix}\n${addition}` : addition
+}
+
+function parsedLlmItems(response: WorkoutParseResponse, catalog: readonly ExerciseSnapshot[]): ParsedWorkoutExercise[] {
+  const byRef = new Map(catalog.map((exercise) => [exercise.ref, exercise]))
+  return response.items.flatMap((item) => {
+    const exercise = byRef.get(item.exerciseRef)
+    if (!exercise) return []
+    const sets = item.sets.length ? item.sets.map((set, position) => ({ position, weightKg: set.weightKg, reps: set.reps, durationSec: set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60), distanceKm: set.distanceKm })) : [{ position: 0 }]
+    return [{ line: item.sourceText, exercise, sets, hasValues: sets.some((set) => Object.keys(set).some((key) => key !== 'position' && set[key as keyof typeof set] !== undefined)) }]
+  })
 }
 
 function draftExercise(item: ParsedWorkoutExercise, position: number): WorkoutDraft['exercises'][number] {
@@ -81,6 +91,7 @@ export function TodayPage() {
   const [draftRestored, setDraftRestored] = useState(false)
   const [parsing, setParsing] = useState(false)
   const [llmUnmatched, setLlmUnmatched] = useState<UnmatchedView[]>([])
+  const [recognized, setRecognized] = useState<ParsedWorkoutExercise[]>([])
   const [voiceRefinement, setVoiceRefinement] = useState<VoiceRefinement>(null)
   const voiceParseVersion = useRef(0)
   const inputStarted = useRef(false)
@@ -130,13 +141,9 @@ export function TodayPage() {
     writeTodayDraft(draftKey, { screen, text, choices, items, clientId, manualRefs, removedRefs, recordMode, workoutDate, startTime })
   }, [choices, clientId, draftKey, draftReady, items, manualRefs, recordMode, removedRefs, screen, startTime, text, workoutDate])
 
-  const parsed = useMemo(() => parseQuickWorkoutEntry(text, catalog.exercises), [catalog.exercises, text])
-  const displayedUnparsed = llmUnmatched.length ? llmUnmatched : parsed.unparsed
-  const resolved = useMemo(() => [
-    ...parsed.parsed,
-    ...parsed.unparsed.flatMap((item) => choices[item.line] ? [resolveQuickWorkoutLine(item.line, choices[item.line]!)] : []),
-  ], [choices, parsed])
-  const unresolved = useMemo(() => parsed.unparsed.filter((item) => !choices[item.line]), [choices, parsed.unparsed])
+  const displayedUnparsed = llmUnmatched
+  const resolved = recognized
+  const unresolved = displayedUnparsed.filter((item) => !choices[item.line])
   const clarification = useMemo(() => {
     const hasAmbiguous = unresolved.some((item) => item.reason === 'ambiguous')
     const hasNotFound = unresolved.some((item) => item.reason === 'not-found')
@@ -198,54 +205,26 @@ export function TodayPage() {
   async function review() {
     const request = ++reviewRequest.current
     trackGoal('workout_parse_submitted')
-    const currentByRef = new Map(items.map((item) => [item.exercise.ref, item]))
-    const localItems = resolved
-      .filter((item) => !removedRefs.includes(item.exercise.ref))
-      .map((item) => manualRefs.includes(item.exercise.ref) ? currentByRef.get(item.exercise.ref) ?? item : item)
-    const manualOnly = items.filter((item) => manualRefs.includes(item.exercise.ref) && !localItems.some((localItem) => localItem.exercise.ref === item.exercise.ref))
-    const baseItems = [...localItems, ...manualOnly]
-
-    // Локальный разбор появляется сразу. LLM ниже может только дополнить его,
-    // но никогда не удалит найденные карточки и не сменит выбранный экран.
-    if (baseItems.length) {
-      setLlmUnmatched([])
-      setItems(baseItems)
-      setScreen('review')
-      trackGoal(items.length ? 'today_reparse_success' : 'today_parse_success')
-      trackGoal('workout_parse_completed')
-      trackGoal('workout_review_opened')
-    }
-
     setParsing(true)
     try {
       const llm = await parseWorkoutWithLlm(text, catalog.exercises)
       if (request !== reviewRequest.current) return
-      const parsedItems: ParsedWorkoutExercise[] = llm.items.flatMap((item) => {
-        const exercise = catalog.exercises.find((candidate) => candidate.ref === item.exerciseRef)
-        if (!exercise) return []
-        const sets = item.sets.length ? item.sets.map((set, position) => ({
-          position,
-          weightKg: set.weightKg,
-          reps: set.reps,
-          durationSec: set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60),
-          distanceKm: set.distanceKm,
-        })) : [{ position: 0 }]
-        return [{ line: item.sourceText, exercise, sets, hasValues: sets.some((set) => Object.keys(set).some((key) => key !== 'position' && set[key as keyof typeof set] !== undefined)) }]
-      })
-      const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: rankExerciseSearch(catalog.exercises, item.sourceText).slice(0, 4).map((result) => result.exercise) }))
+      const parsedItems = parsedLlmItems(llm, catalog.exercises)
+      const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: item.suggestedExerciseRefs.flatMap((ref) => catalog.exercises.find((exercise) => exercise.ref === ref) ?? []) }))
       setLlmUnmatched(unmatched)
-      if (!parsedItems.length && !baseItems.length) {
+      setRecognized(parsedItems)
+      const manualOnly = items.filter((item) => manualRefs.includes(item.exercise.ref))
+      const chosen = unmatched.flatMap((item) => choices[item.line] ? [{ line: item.line, exercise: choices[item.line]!, sets: [{ position: 0 }], hasValues: false }] : [])
+      if (!parsedItems.length && !manualOnly.length && !chosen.length) {
         trackGoal('workout_parse_failed')
         return
       }
-      const currentRefs = new Set(baseItems.map((item) => item.exercise.ref))
-      const additions = parsedItems.filter((item) => !currentRefs.has(item.exercise.ref))
-      if (additions.length) setItems([...baseItems, ...additions])
-      if (!baseItems.length) setScreen('review')
+      setItems([...manualOnly, ...parsedItems, ...chosen])
+      setScreen('review')
       trackGoal('workout_parse_completed')
       trackGoal('workout_review_opened')
     } catch {
-      if (request === reviewRequest.current && !baseItems.length) trackGoal('workout_parse_failed')
+      if (request === reviewRequest.current) trackGoal('workout_parse_failed')
     } finally {
       if (request === reviewRequest.current) setParsing(false)
     }
@@ -258,14 +237,10 @@ export function TodayPage() {
     try {
       const llm = await parseWorkoutWithLlm(transcript, catalog.exercises)
       if (version !== voiceParseVersion.current) return
-      const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: rankExerciseSearch(catalog.exercises, item.sourceText).slice(0, 4).map((result) => result.exercise) }))
+      const parsedItems = parsedLlmItems(llm, catalog.exercises)
+      const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: item.suggestedExerciseRefs.flatMap((ref) => catalog.exercises.find((exercise) => exercise.ref === ref) ?? []) }))
       setLlmUnmatched(unmatched)
-      // Не меняем текст, если модель не уверена или тренер уже успел его поправить.
-      if (unmatched.length) {
-        setVoiceRefinement({ state: 'error', message: 'Часть упражнений нужно уточнить — варианты показаны ниже.' })
-        trackGoal('voice_workout_parse_partial')
-        return
-      }
+      setRecognized(parsedItems)
       const formatted = formatLlmWorkoutText(llm, catalog.exercises)
       if (!formatted) {
         setVoiceRefinement({ state: 'error', message: 'Не удалось получить структурированный разбор диктовки.' })
@@ -273,8 +248,13 @@ export function TodayPage() {
         return
       }
       setText((current) => current === value ? appendVoiceText(previousValue, formatted) : current)
-      setVoiceRefinement({ state: 'success', message: 'Диктовка разобрана и отформатирована.' })
-      trackGoal('voice_workout_parse_completed')
+      if (unmatched.length) {
+        setVoiceRefinement({ state: 'error', message: 'Распознанные упражнения отформатированы; одно или несколько нужно уточнить.' })
+        trackGoal('voice_workout_parse_partial')
+      } else {
+        setVoiceRefinement({ state: 'success', message: 'Диктовка разобрана и отформатирована.' })
+        trackGoal('voice_workout_parse_completed')
+      }
     } catch {
       if (version !== voiceParseVersion.current) return
       setVoiceRefinement({ state: 'error', message: 'Не удалось обработать диктовку. Исходный текст сохранён.' })
@@ -360,6 +340,7 @@ export function TodayPage() {
     setScreen('compose')
     setText('')
     setChoices({})
+    setRecognized([])
     setItems([])
     setClientId('')
     setRecordMode('planned')
@@ -386,8 +367,8 @@ export function TodayPage() {
         <p>Напишите тренировку — мы разберём её по упражнениям и подходам.</p>
       </div>
       <div className="today-input-card">
-        <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать" voiceBeta placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} autoResize onValueChange={(value) => { setText(formatWorkoutText(value, catalog.exercises)); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => void refineVoiceTranscript(previousValue, formatWorkoutText(value, catalog.exercises), transcript)} />
-        {text && <div className="today-input-actions"><button type="button" className="link" onClick={() => setText('')}>Очистить</button></div>}
+        <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать" voiceBeta placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} autoResize onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => void refineVoiceTranscript(previousValue, value, transcript)} />
+        {text && <div className="today-input-actions"><button type="button" className="link" onClick={() => { setText(''); setChoices({}); setRecognized([]); setLlmUnmatched([]) }}>Очистить</button></div>}
       </div>
       {voiceRefinement && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
       {text.trim() && <div className="today-parse-preview" aria-live="polite">
@@ -398,7 +379,7 @@ export function TodayPage() {
         {clarification && <section className="today-clarification" aria-label={clarification.title}><strong>{clarification.title}</strong><p>{clarification.text}</p></section>}
         {displayedUnparsed.map((item) => <div className="today-unparsed" key={item.line}>
           <p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли в каталоге'}</p>
-          {item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => setChoices((current) => ({ ...current, [item.line]: exercise }))}>{exercise.name}</button>)}</div>}
+          {item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => { setChoices((current) => ({ ...current, [item.line]: exercise })); setRecognized((current) => current.some((recognizedItem) => recognizedItem.line === item.line) ? current : [...current, { line: item.line, exercise, sets: [{ position: 0 }], hasValues: false }]) }}>{exercise.name}</button>)}</div>}
         </div>)}
       </div>}
        {noMatches && <div className="today-empty-parse" role="status"><strong>Не нашли упражнение</strong><span>Проверьте название или добавьте его из каталога ниже.</span></div>}
