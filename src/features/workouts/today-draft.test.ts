@@ -23,6 +23,12 @@ describe('today draft', () => {
     expect(readTodayDraft(key)).toBeNull()
   })
 
+  it('восстанавливает черновик с финального шага сохранения', () => {
+    const key = todayDraftKey('trainer-a')
+    writeTodayDraft(key, { screen: 'save', text: 'Планка 3 по 45 сек', choices: {}, items: [], clientId: 'client-a', recordMode: 'planned', workoutDate: '2026-08-05' })
+    expect(readTodayDraft(key)?.screen).toBe('save')
+  })
+
   it('игнорирует повреждённые данные', () => {
     localStorage.setItem(todayDraftKey('trainer-a'), '{broken')
     expect(readTodayDraft(todayDraftKey('trainer-a'))).toBeNull()
