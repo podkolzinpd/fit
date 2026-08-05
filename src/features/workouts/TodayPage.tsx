@@ -100,6 +100,8 @@ export function TodayPage() {
   const [llmUnmatched, setLlmUnmatched] = useState<UnmatchedView[]>([])
   const [recognized, setRecognized] = useState<ParsedWorkoutExercise[]>([])
   const [voiceRefinement, setVoiceRefinement] = useState<VoiceRefinement>(null)
+  const [manualRecognitionAvailable, setManualRecognitionAvailable] = useState(false)
+  const [manualRecognitionLoading, setManualRecognitionLoading] = useState(false)
   const voiceParseVersion = useRef(0)
   const inputStarted = useRef(false)
   const openedTracked = useRef(false)
@@ -134,6 +136,7 @@ export function TodayPage() {
       setStartTime(draft.startTime ?? '')
       setManualRefs(draft.manualRefs ?? [])
       setRemovedRefs(draft.removedRefs ?? [])
+      setManualRecognitionAvailable(Boolean(draft.text.trim()))
       setDraftRestored(true)
     }
     setDraftReady(true)
@@ -238,6 +241,8 @@ export function TodayPage() {
   }
 
   async function refineVoiceTranscript(previousValue: string, value: string, transcript: string) {
+    setManualRecognitionAvailable(false)
+    setManualRecognitionLoading(false)
     const version = ++voiceParseVersion.current
     setVoiceRefinement({ state: 'loading', message: 'Разбираю диктовку по упражнениям…' })
     trackGoal('voice_workout_parse_started')
@@ -246,8 +251,8 @@ export function TodayPage() {
       if (version !== voiceParseVersion.current) return
       const parsedItems = parsedLlmItems(llm, catalog.exercises)
       const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: item.suggestedExerciseRefs.flatMap((ref) => catalog.exercises.find((exercise) => exercise.ref === ref) ?? []) }))
-      setLlmUnmatched(unmatched)
-      setRecognized(parsedItems)
+      setLlmUnmatched((current) => [...current, ...unmatched.filter((item) => !current.some((existing) => existing.line === item.line))])
+      setRecognized((current) => [...current, ...parsedItems.filter((item) => !current.some((existing) => existing.line === item.line && existing.exercise.ref === item.exercise.ref))])
       const formatted = formatLlmWorkoutText(llm, catalog.exercises)
       if (!formatted) {
         setVoiceRefinement({ state: 'error', message: 'Не удалось получить структурированный разбор диктовки.' })
@@ -266,6 +271,43 @@ export function TodayPage() {
       if (version !== voiceParseVersion.current) return
       setVoiceRefinement({ state: 'error', message: 'Не удалось обработать диктовку. Исходный текст сохранён.' })
       trackGoal('voice_workout_parse_failed')
+    }
+  }
+
+  async function recognizeManualInput() {
+    const manualText = text.trim()
+    if (!manualText) return
+    const version = ++voiceParseVersion.current
+    setManualRecognitionLoading(true)
+    setVoiceRefinement({ state: 'loading', message: 'Ищем упражнения в тексте…' })
+    trackGoal('manual_workout_parse_started')
+    try {
+      const llm = await parseWorkoutWithLlm(manualText, catalog.exercises)
+      if (version !== voiceParseVersion.current) return
+      const parsedItems = parsedLlmItems(llm, catalog.exercises)
+      const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: item.suggestedExerciseRefs.flatMap((ref) => catalog.exercises.find((exercise) => exercise.ref === ref) ?? []) }))
+      setLlmUnmatched(unmatched)
+      setRecognized(parsedItems)
+      const formatted = formatLlmWorkoutText(llm, catalog.exercises)
+      if (!parsedItems.length && !unmatched.length) {
+        setVoiceRefinement({ state: 'error', message: 'Не удалось распознать упражнения. Проверьте текст и попробуйте ещё раз.' })
+        trackGoal('manual_workout_parse_failed')
+        return
+      }
+      if (formatted) setText(formatted)
+      if (unmatched.length) {
+        setVoiceRefinement({ state: 'error', message: 'Упражнения найдены частично. Выберите подсказку или уточните текст.' })
+        trackGoal('manual_workout_parse_partial')
+      } else {
+        setVoiceRefinement({ state: 'success', message: 'Упражнения распознаны. Проверьте их перед разбором тренировки.' })
+        trackGoal('manual_workout_parse_completed')
+      }
+    } catch {
+      if (version !== voiceParseVersion.current) return
+      setVoiceRefinement({ state: 'error', message: 'Не удалось распознать упражнения. Исходный текст сохранён.' })
+      trackGoal('manual_workout_parse_failed')
+    } finally {
+      if (version === voiceParseVersion.current) setManualRecognitionLoading(false)
     }
   }
 
@@ -397,10 +439,11 @@ export function TodayPage() {
         <p>Напишите тренировку — мы разберём её по упражнениям и подходам.</p>
       </div>
       <div className="today-input-card">
-        <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать" voiceBeta placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} autoResize onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} />
-        {text && <div className="today-input-actions"><button type="button" className="link" onClick={() => { setText(''); setChoices({}); setRecognized([]); setLlmUnmatched([]) }}>Очистить</button></div>}
+        <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать" voiceBeta placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} autoResize onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null); setManualRecognitionLoading(false) }} onManualValueChange={(value) => setManualRecognitionAvailable(Boolean(value.trim()))} onTranscriptValueChange={(value) => { setText(value); setVoiceRefinement(null); setManualRecognitionLoading(false) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} />
+        {text && <div className="today-input-actions"><button type="button" className="link" onClick={() => { setText(''); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null); setManualRecognitionAvailable(false); setManualRecognitionLoading(false) }}>Очистить</button></div>}
       </div>
-      {voiceRefinement && voiceRefinement.state !== 'loading' && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
+      {manualRecognitionAvailable && text.trim() && <div className="today-manual-recognition" aria-label="Распознавание ручного текста"><span>Черновик</span><button type="button" className="secondary" disabled={manualRecognitionLoading} onClick={() => void recognizeManualInput()}>{manualRecognitionLoading ? 'Распознаю…' : '✨ Распознать'}</button></div>}
+      {voiceRefinement && (voiceRefinement.state !== 'loading' || manualRecognitionLoading) && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
       {text.trim() && <div className="today-parse-preview" aria-live="polite">
         {resolved.length > 0 && <section className="today-recognized" aria-label="Распознанные упражнения">
           <p><strong>Распознано: {resolved.length}</strong></p>

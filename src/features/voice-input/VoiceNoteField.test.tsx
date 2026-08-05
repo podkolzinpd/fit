@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import { useState } from 'react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { VoiceNoteField, replaceWithTranscript } from './VoiceNoteField'
@@ -34,6 +35,32 @@ describe('appendTranscript', () => {
     await user.click(screen.getByRole('button', { name: 'Надиктовать заметку' }))
 
     expect(onValueChange).toHaveBeenCalledWith('Старый текст\nЖим лёжа 40 кг')
+  })
+
+  it('allows voice updates to avoid the manual input handler', async () => {
+    const user = userEvent.setup()
+    const onValueChange = vi.fn()
+    const onTranscriptValueChange = vi.fn()
+    render(<VoiceNoteField name="note" source="test" value="Старый текст" onValueChange={onValueChange} onTranscriptValueChange={onTranscriptValueChange} />)
+
+    await user.click(screen.getByRole('button', { name: 'Надиктовать заметку' }))
+
+    expect(onTranscriptValueChange).toHaveBeenCalledWith('Старый текст\nЖим лёжа 40 кг')
+    expect(onValueChange).not.toHaveBeenCalled()
+  })
+
+  it('reports manual typing separately from voice transcription', async () => {
+    const user = userEvent.setup()
+    const onManualValueChange = vi.fn()
+    function ControlledField() {
+      const [value, setValue] = useState('')
+      return <VoiceNoteField name="note" source="test" value={value} onValueChange={setValue} onManualValueChange={onManualValueChange} />
+    }
+    render(<ControlledField />)
+
+    await user.type(screen.getByRole('textbox'), 'Жим лёжа')
+
+    expect(onManualValueChange).toHaveBeenLastCalledWith('Жим лёжа')
   })
 
   it('shows processing status until the workout parser finishes', async () => {
