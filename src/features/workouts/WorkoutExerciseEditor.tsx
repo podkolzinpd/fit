@@ -84,6 +84,13 @@ function inputNumber(value: string): number | undefined {
   return value === '' ? undefined : Number(value)
 }
 
+function setColumnLabels(inputKind: WorkoutExerciseDraft['inputKind']): string[] {
+  if (inputKind === 'strength') return ['Кг', 'Повт.']
+  if (inputKind === 'reps') return ['Сек.', 'Повт.']
+  if (inputKind === 'duration') return ['Сек.']
+  return ['Сек.', 'Км']
+}
+
 export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, showTrainerComments = true, entryMode = 'plan' }: WorkoutExerciseEditorProps) {
   function updateComment(exerciseIndex: number, comment: string) {
     onChange(exercises.map((exercise, current) => current === exerciseIndex ? { ...exercise, trainerComment: comment || undefined } : exercise))
@@ -154,20 +161,28 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
 
   // Одиночное упражнение (вне блока): подходы + «＋ Подход» + «Объединить».
   function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode) {
+    const columns = setColumnLabels(exercise.inputKind)
     return <article className="exercise" key={`${exercise.ref}-${exerciseIndex}`}>
       <header><strong>{exercise.name}</strong><span className="exercise-head-actions">{reorder}<OverflowMenu items={[
         { label: 'Заменить', onClick: () => onReplaceExercise(exerciseIndex) },
         { label: 'Удалить', danger: true, onClick: () => removeExercise(exerciseIndex) },
       ]} /></span></header>
       {exercise.prefilledFromDate && <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p>}
-      {exercise.sets.map((_set, setIndex) => <div className="planned-set" key={setIndex}>
-        <span className="planned-set-number" aria-hidden="true">{setIndex + 1}</span>
-        <span className="sr-only">Подход {setIndex + 1}</span>
-        <div className="planned-set-fields">{setFields(exercise, exerciseIndex, setIndex)}</div>
-        {exercise.sets.length > 1
-          ? <button type="button" className="link danger planned-set-remove" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}>×</button>
-          : <span className="planned-set-remove" aria-hidden="true" />}
-      </div>)}
+      <div className="planned-set-table">
+        <div className="planned-set-table-head" aria-hidden="true">
+          <span>№</span>
+          <span className={`planned-set-table-labels ${columns.length === 1 ? 'single' : ''}`}>{columns.map((column) => <span key={column}>{column}</span>)}</span>
+          <span />
+        </div>
+        {exercise.sets.map((_set, setIndex) => <div className="planned-set" key={setIndex}>
+          <span className="planned-set-number" aria-hidden="true">{setIndex + 1}</span>
+          <span className="sr-only">Подход {setIndex + 1}</span>
+          <div className="planned-set-fields">{setFields(exercise, exerciseIndex, setIndex)}</div>
+          {exercise.sets.length > 1
+            ? <button type="button" className="link danger planned-set-remove" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}>×</button>
+            : <span className="planned-set-remove" aria-hidden="true" />}
+        </div>)}
+      </div>
       <div className="set-add-row">
         <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
       </div>
