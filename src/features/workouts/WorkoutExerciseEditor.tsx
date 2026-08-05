@@ -174,6 +174,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       <header><strong>{exercise.name}</strong><span className="exercise-head-actions">{reorder}<OverflowMenu items={[
         ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
         { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => setRpeExercises((current) => { const next = new Set(current); if (showRpe) next.delete(exerciseIndex); else next.add(exerciseIndex); return next }) },
+        ...(canMergeNext ? [{ label: 'Объединить со следующим в блок', onClick: () => onChange(mergeBlockWithNext([...exercises], exerciseIndex)) }] : []),
         { label: 'Заменить', onClick: () => onReplaceExercise(exerciseIndex) },
         { label: 'Удалить', danger: true, onClick: () => removeExercise(exerciseIndex) },
       ]} /></span></header>
@@ -204,7 +205,6 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
           {commentField(exercise, exerciseIndex)}
         </div>
       </OptionalDetails>
-      {canMergeNext && <button type="button" className="link block-merge" onClick={() => onChange(mergeBlockWithNext([...exercises], exerciseIndex))}>⛓ Объединить со следующим в блок</button>}
     </article>
   }
 
