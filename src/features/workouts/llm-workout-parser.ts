@@ -9,8 +9,8 @@ function formatSet(set: WorkoutParseResponse['items'][number]['sets'][number]): 
   const value = [
     set.reps === undefined ? '' : `${set.reps} повт.`,
     set.weightKg === undefined ? '' : `${set.weightKg} кг`,
-    set.durationMin === undefined ? '' : `${set.durationMin} мин`,
-    set.distanceKm === undefined ? '' : `${set.distanceKm} км`,
+    typeof set.durationMin === 'number' && set.durationMin > 0 ? `${set.durationMin} мин` : '',
+    typeof set.distanceKm === 'number' && set.distanceKm > 0 ? `${set.distanceKm} км` : '',
   ].filter(Boolean)
   return value.join(' × ')
 }

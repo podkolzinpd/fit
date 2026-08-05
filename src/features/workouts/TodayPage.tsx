@@ -41,7 +41,13 @@ function parsedLlmItems(response: WorkoutParseResponse, catalog: readonly Exerci
   return response.items.flatMap((item) => {
     const exercise = byRef.get(item.exerciseRef)
     if (!exercise) return []
-    const sets = item.sets.length ? item.sets.map((set, position) => ({ position, weightKg: set.weightKg, reps: set.reps, durationSec: set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60), distanceKm: set.distanceKm })) : [{ position: 0 }]
+    const sets = item.sets.length ? item.sets.map((set, position) => ({
+      position,
+      weightKg: set.weightKg,
+      reps: set.reps,
+      ...(typeof set.durationMin === 'number' && set.durationMin > 0 ? { durationSec: Math.round(set.durationMin * 60) } : {}),
+      ...(typeof set.distanceKm === 'number' && set.distanceKm > 0 ? { distanceKm: set.distanceKm } : {}),
+    })) : [{ position: 0 }]
     return [{ line: item.sourceText, exercise, sets, hasValues: sets.some((set) => Object.keys(set).some((key) => key !== 'position' && set[key as keyof typeof set] !== undefined)) }]
   })
 }
