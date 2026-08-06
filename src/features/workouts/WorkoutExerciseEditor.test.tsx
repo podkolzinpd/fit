@@ -94,6 +94,19 @@ describe('workout exercise editor rules', () => {
     expect(screen.getByLabelText('Комментарий к упражнению')).toBeInTheDocument()
   })
 
+  it('keeps saved optional details collapsed and shows their compact summary', () => {
+    const withDetails: WorkoutExerciseDraft[] = [{
+      ...exercises[0]!,
+      trainerComment: 'Контролировать технику',
+      restBetweenSetsSec: 120,
+    }]
+    render(<WorkoutExerciseEditor exercises={withDetails} onChange={vi.fn()} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />)
+
+    const details = screen.getByText('Дополнительно').closest('details')
+    expect(details).not.toHaveAttribute('open')
+    expect(screen.getByText('заметка · отдых 120 с')).toBeInTheDocument()
+  })
+
   it('keeps RPE hidden until it is requested from the exercise menu', async () => {
     const user = userEvent.setup()
     render(<EditorHarness onOpenPicker={vi.fn()} />)

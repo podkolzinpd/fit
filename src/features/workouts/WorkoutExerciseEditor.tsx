@@ -35,7 +35,7 @@ function ClampedNumberInput({ value, min, max, label, onCommit }: {
 }
 
 function OptionalDetails({ summary, initialOpen = false, className = '', children }: {
-  summary: string
+  summary: ReactNode
   initialOpen?: boolean
   className?: string
   children: ReactNode
@@ -170,6 +170,11 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode, canReorder = false) {
     const columns = setColumnLabels(exercise.inputKind)
     const showRpe = rpeExercises.has(exerciseIndex)
+    const hasCustomRest = exercise.restBetweenSetsSec !== undefined && exercise.restBetweenSetsSec !== 90
+    const hasComment = Boolean(exercise.trainerComment)
+    const detailsHint = hasComment || hasCustomRest
+      ? <span className="exercise-options-hint">{[hasComment ? 'заметка' : '', hasCustomRest ? `отдых ${exercise.restBetweenSetsSec} с` : ''].filter(Boolean).join(' · ')}</span>
+      : null
     return <article className="exercise planned-exercise" key={`${exercise.ref}-${exerciseIndex}`}>
       <header><strong>{exercise.name}</strong><span className="exercise-head-actions">{reorder}<OverflowMenu items={[
         ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
@@ -199,7 +204,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       <div className="set-add-row">
         <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
       </div>
-      <OptionalDetails summary="Дополнительно" initialOpen={Boolean(exercise.trainerComment || (exercise.restBetweenSetsSec !== undefined && exercise.restBetweenSetsSec !== 90))}>
+      <OptionalDetails summary={<><span>Дополнительно</span>{detailsHint}</>}>
         <div className="exercise-options-fields">
           <label className="block-rest-field"><ClampedNumberInput label="Отдых между подходами, с" value={exercise.restBetweenSetsSec ?? 90} min={0} max={600} onCommit={(next) => { if (exercise.blockId) onChange(setBlockRest([...exercises], exercise.blockId, { betweenSets: next })) }} /><span>Отдых, с</span></label>
           {commentField(exercise, exerciseIndex)}
