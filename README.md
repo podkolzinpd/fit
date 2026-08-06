@@ -56,6 +56,7 @@ npm run check
 
 - [docs/PRODUCT_WIKI.md](./docs/PRODUCT_WIKI.md) — актуальная продуктовая wiki с описанием реализованного функционала.
 - [AGENTS.md](./AGENTS.md) — правила для людей и ИИ-агентов.
+- [docs/FIT_WORKFLOW.md](./docs/FIT_WORKFLOW.md) — компактный процесс выполнения задач с загрузкой контекста по необходимости.
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — границы слоёв и работа с БД.
 - [FEATURE_PARITY.md](./FEATURE_PARITY.md) — контракт переноса V1.
 - [AI_AGENT_PROMPT.md](./AI_AGENT_PROMPT.md) — промпт, который добавляется к каждой задаче агента.
