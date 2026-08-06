@@ -666,9 +666,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
    ширину карточки, крупная зона нажатия под большой палец (≥48px). */
 .live-confirm { width: 100%; min-height: 50px; margin-top: 4px; font-size: 16px }
 .exercise.current .live-confirm { box-shadow: 0 8px 22px #e0542f3d }
-/* Крупные зоны для правки/удаления подхода и «＋ Подход» в live. */
+/* Крупные зоны для правки/удаления подхода в live. */
 .set-edit, .set-remove { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center }
-.live-exercise-head ~ .secondary { min-height: 46px }
+/* Добавление следующего подхода — вторичное действие: оно не должно конкурировать
+   с вводом значений и подтверждением текущего подхода. */
+.live-exercise-head ~ .live-add-set { width:auto; min-height:30px; margin:4px 0 0; padding:2px 0; border:0; background:transparent; color:var(--accent-strong); box-shadow:none; font-size:15px }
+.live-exercise-head ~ .live-add-set:hover { background:transparent; color:var(--accent-label) }
 
 /* В live контент занимает всю высоту (таб-бар скрыт); снизу оставляем место
    под закреплённую панель «Завершить», чтобы она не перекрывала последнее упр. */
