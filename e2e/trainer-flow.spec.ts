@@ -524,6 +524,7 @@ test('план: два упражнения объединяются в супе
   await page.getByRole('menuitem', { name: 'Объединить со следующим в блок' }).click()
   await expect(page.getByLabel('Тип блока')).toBeVisible()
   await expect(page.getByLabel('Тип блока')).toHaveValue('set')
+  await expect(page.locator('.block-options')).not.toHaveAttribute('open', '')
   // Задаём 2 круга → форма раскладывается по кругам: «Круг 1» и «Круг 2»,
   // каждый содержит оба упражнения; кнопки «＋ Подход» внутри блока нет.
   await page.getByLabel('Кругов').fill('2')

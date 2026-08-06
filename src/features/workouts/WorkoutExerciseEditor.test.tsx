@@ -141,5 +141,6 @@ describe('workout exercise editor rules', () => {
     await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
     await user.click(screen.getByRole('menuitem', { name: 'Объединить со следующим в блок' }))
     expect(screen.getByLabelText('Тип блока')).toBeInTheDocument()
+    expect(screen.getByText('Настройки блока').closest('details')).not.toHaveAttribute('open')
   })
 })
