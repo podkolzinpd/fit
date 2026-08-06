@@ -431,7 +431,7 @@ export function factLine(set: WorkoutSet): string | null {
 export function previousResultLine(sets: readonly WorkoutSetDraft[]): string | null {
   for (let index = sets.length - 1; index >= 0; index -= 1) {
     const set = sets[index]!
-    const line = setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin, set.rpe)
+    const line = setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin)
     if (line) return line
   }
   return null

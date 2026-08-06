@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { useState } from 'react'
 import type { WorkoutExerciseDraft } from '../../shared/domain'
+import { localDate } from '../../shared/local-date'
 import { adjustWorkoutLoad, clearWorkoutLoad, roundToStep, WorkoutExerciseEditor } from './WorkoutExerciseEditor'
 
 const exercises: WorkoutExerciseDraft[] = [{
@@ -105,6 +106,16 @@ describe('workout exercise editor rules', () => {
     const details = screen.getByText('Дополнительно').closest('details')
     expect(details).not.toHaveAttribute('open')
     expect(screen.getByText('заметка · отдых 120 с')).toBeInTheDocument()
+  })
+
+  it('shows the latest completed result as a compact reference', () => {
+    const previousResults = new Map([['squat', {
+      workoutDate: localDate('2026-08-04'),
+      sets: [{ position: 0, weightKg: 50, reps: 10 }, { position: 1, weightKg: 55, reps: 8 }],
+    }]])
+    render(<WorkoutExerciseEditor exercises={exercises} onChange={vi.fn()} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} previousResults={previousResults} />)
+
+    expect(screen.getByText('В прошлый раз: 55 кг × 8 повт.')).toBeInTheDocument()
   })
 
   it('keeps RPE hidden until it is requested from the exercise menu', async () => {

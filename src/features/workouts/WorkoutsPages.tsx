@@ -189,6 +189,7 @@ export function WorkoutFormPage() {
   useClientRealtime(source.data?.clientId ?? (clientMode ? mine.data?.id : params.get('client') ?? undefined))
   const catalog = useExerciseCatalog()
   const [draftExercises, setDraftExercises] = useState<WorkoutDraft['exercises'] | null>(null)
+  const [previousResultReferences, setPreviousResultReferences] = useState<ReadonlyMap<string, PreviousExerciseResult>>(() => new Map())
   const createRequestId = useRef(crypto.randomUUID())
   const [recordCompleted, setRecordCompleted] = useState(false)
   const [entryDate, setEntryDate] = useState<LocalDate>(() => localDate(params.get('date') ?? todayLocalDate()))
@@ -210,7 +211,6 @@ export function WorkoutFormPage() {
   const [selectedClientId, setSelectedClientId] = useState<string>('')
   const clientId = selectedClientId || defaultClientId
   const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId), enabled: Boolean(clientId) })
-  const previousExerciseResults = useQuery({ queryKey: ['latest-exercise-results', clientId, exercises.map((exercise) => exercise.ref).join('|')], queryFn: () => workoutsRepository.latestExerciseResults(clientId, exercises.map((exercise) => exercise.ref)), enabled: Boolean(clientId && exercises.length && !workoutId) })
   const frequentExercises = useMemo(() => frequentExercisesForClient(catalog.exercises, clientWorkouts.data ?? []), [catalog.exercises, clientWorkouts.data])
   const goal = useQuery({ queryKey: ['client-goal', clientId], queryFn: () => goalsRepository.get(clientId), enabled: Boolean(clientId) })
   const stages = goal.data ? orderedStages(goal.data) : []
@@ -274,6 +274,10 @@ export function WorkoutFormPage() {
       return new Map<string, PreviousExerciseResult>()
     }
   }
+  function rememberPreviousResults(results: ReadonlyMap<string, PreviousExerciseResult>) {
+    if (!results.size) return
+    setPreviousResultReferences((current) => new Map([...current, ...results]))
+  }
   function exerciseDraft(selected: ExerciseSnapshot, position: number, result: PreviousExerciseResult | undefined) {
     return {
       ...selected, position, blockId: crypto.randomUUID(), blockType: 'single' as const, blockRounds: 1,
@@ -283,6 +287,7 @@ export function WorkoutFormPage() {
   }
   async function pickExercise(selected: ExerciseSnapshot) {
     const results = await previousResults([selected])
+    rememberPreviousResults(results)
     const previous = results.get(selected.ref)
     if (replaceIndex !== null) {
       const clearFact = source.data?.status === 'done'
@@ -298,6 +303,7 @@ export function WorkoutFormPage() {
   }
   async function pickExercises(selected: ExerciseSnapshot[]) {
     const results = await previousResults(selected)
+    rememberPreviousResults(results)
     setDraftExercises([
       ...exercises,
       ...selected.map((exercise, index) => exerciseDraft(exercise, exercises.length + index, results.get(exercise.ref))),
@@ -306,6 +312,7 @@ export function WorkoutFormPage() {
   }
   async function addQuickEntry(parsed: ParsedWorkoutExercise[]) {
     const results = await previousResults(parsed.map((item) => item.exercise))
+    rememberPreviousResults(results)
     setDraftExercises([
       ...exercises,
       ...parsed.map((item, index) => {
@@ -362,7 +369,7 @@ export function WorkoutFormPage() {
       <section className="workout-form-section workout-form-exercises">
         <div className="workout-form-section-head"><p className="eyebrow">УПРАЖНЕНИЯ</p><h2>План и факт</h2></div>
         <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={frequentExercises.map((exercise) => exercise.ref)} onAdd={(parsed) => void addQuickEntry(parsed)} onOpenCatalog={(search) => { setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) }} />
-        <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousExerciseResults.data} />
+        <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
