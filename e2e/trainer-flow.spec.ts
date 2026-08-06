@@ -104,6 +104,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('link', { name: /Запланировать/ }).click()
   await page.getByLabel('Клиент').selectOption({ label: trainerAlias })
   await expect(page.locator('.workout-notes summary')).toBeVisible()
+  await expect(page.getByRole('button', { name: '＋ Упражнение' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await expect(page.getByRole('button', { name: /Присед со штангой/ }).first()).toBeVisible()
   // Список упражнений маскируем: миниатюры-фото волатильны и различаются по ОС.
@@ -126,6 +127,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByText('Выбрано: 1')).toBeVisible()
   await expect(page).toHaveScreenshot('exercise-picker-selected-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.05, mask: [page.locator('.picker-list')] })
   await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await expect(page.getByRole('button', { name: '＋ Упражнение' })).toBeVisible()
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
   await page.getByRole('button', { name: '＋ Подход' }).click()

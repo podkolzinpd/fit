@@ -78,6 +78,8 @@ interface WorkoutExerciseEditorProps {
   onReplaceExercise: (index: number) => void
   showTrainerComments?: boolean
   entryMode?: 'plan' | 'fact'
+  /** Верхний вход в каталог уже есть у родительской формы. */
+  hideEmptyAddAction?: boolean
 }
 
 function inputNumber(value: string): number | undefined {
@@ -91,7 +93,7 @@ function setColumnLabels(inputKind: WorkoutExerciseDraft['inputKind']): string[]
   return ['Сек.', 'Км']
 }
 
-export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, showTrainerComments = true, entryMode = 'plan' }: WorkoutExerciseEditorProps) {
+export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false }: WorkoutExerciseEditorProps) {
   const [reordering, setReordering] = useState(false)
   const [rpeExercises, setRpeExercises] = useState<Set<number>>(() => new Set())
   function updateComment(exerciseIndex: number, comment: string) {
@@ -213,8 +215,11 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
     </article>
   }
 
+  const hasExercises = exercises.length > 0
+  const showEmptyAddAction = !hideEmptyAddAction
+
   return <section className="workout-exercise-editor">
-    {exercises.length > 0 && <div className="workout-editor-heading"><h2>Упражнения</h2>{reordering ? <div className="reorder-mode"><span>Изменение порядка</span><button type="button" className="link" onClick={() => setReordering(false)}>Готово</button></div> : <div className="workout-tools"><button type="button" className="link" onClick={() => onChange(clearWorkoutLoad(exercises))}>Сбросить значения</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, .95))}>−5%</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, 1.05))}>+5%</button></div>}</div>}
+    {hasExercises && <div className="workout-editor-heading"><h2>Упражнения</h2>{reordering ? <div className="reorder-mode"><span>Изменение порядка</span><button type="button" className="link" onClick={() => setReordering(false)}>Готово</button></div> : <div className="workout-tools"><button type="button" className="link" onClick={() => onChange(clearWorkoutLoad(exercises))}>Сбросить значения</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, .95))}>−5%</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, 1.05))}>+5%</button></div>}</div>}
     {blocks.map((block, blockIndex) => {
       const lastIndex = exercises.length - 1
       const isFirst = blockIndex === 0
@@ -265,6 +270,6 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         {blockMergeIndex >= 0 && <button type="button" className="link block-merge" onClick={() => onChange(mergeBlockWithNext([...exercises], blockMergeIndex))}>⛓ Объединить со следующим в блок</button>}
       </div>
     })}
-    {exercises.length > 0 && <button type="button" className="secondary wide" onClick={onOpenPicker}>＋ Упражнение</button>}
+    {(hasExercises || showEmptyAddAction) && <button type="button" className="secondary wide" onClick={onOpenPicker}>＋ Упражнение</button>}
   </section>
 }

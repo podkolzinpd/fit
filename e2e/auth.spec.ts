@@ -68,7 +68,7 @@ test('client registers, creates a standalone card and own workout without traine
   await expect(page.getByRole('heading', { name: 'Клиент Сам' })).toBeVisible()
   await page.getByRole('main').getByRole('link', { name: 'Тренировки' }).click()
   await page.getByRole('link', { name: 'Добавить' }).click()
-  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByLabel('Поиск упражнения').fill('Бег')
   await page.getByRole('button', { name: /^Бег / }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -100,7 +100,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   const clientDetailUrl = page.url()
   await page.getByRole('link', { name: '＋ Запланировать' }).click()
   await page.getByLabel('Клиент').selectOption({ label: 'Связанный клиент' })
-  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: 'Бег (Кардио) Кардио' }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await Promise.all([
@@ -134,7 +134,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.goto('/me/workouts')
   await page.getByRole('link', { name: 'Добавить' }).click()
   await expect(page.getByLabel('Клиент')).toHaveValue('Связанный клиент')
-  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: 'Бег (Кардио) Кардио' }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await Promise.all([
