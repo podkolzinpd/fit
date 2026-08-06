@@ -675,11 +675,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .circuit-round.done .exercise, .circuit-round.done .exercise.confirmed { border-color: var(--success-border); background: transparent }
 .live-dot { color: #d33030; font-weight: 800; font-size: 13px }
 .live-timer { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border: 1px solid var(--accent-surface-border); border-radius: 11px; background: var(--live-warm); color: var(--fg); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14px }
-/* Крупный таймер по центру над подходами. */
 /* Закреплённый блок live: таймер + отдых под ним, оба прилипают вверху вместе. */
-.live-pinned { position: sticky; top: 0; z-index: 3; margin: 0 0 18px; display: flex; flex-direction: column; gap: 10px; background: var(--surface); }
-.live-timer-big { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0; padding: 16px; border: 1px solid var(--accent-surface-border); border-radius: 16px; background: var(--live-warm); color: var(--fg); font-weight: 800; font-variant-numeric: tabular-nums; font-size: 40px; letter-spacing: 1px; box-shadow: 0 6px 20px #17131f66 }
-.live-timer-big .live-dot-mark { width: 14px; height: 14px }
+.live-pinned { position: sticky; top: 0; z-index: 3; margin: 0 0 14px; display: flex; flex-direction: column; gap: 8px; padding: 4px 0; background: var(--surface); }
 .live-dot-mark { width: 8px; height: 8px; border-radius: 50%; background: #d33030; box-shadow: 0 0 0 0 #d3303066; animation: live-pulse 1.6s ease-out infinite }
 @keyframes live-pulse { 0% { box-shadow: 0 0 0 0 #d3303066 } 70% { box-shadow: 0 0 0 6px #d3303000 } 100% { box-shadow: 0 0 0 0 #d3303000 } }
 .rest-controls { display: flex; align-items: center; gap: 8px }

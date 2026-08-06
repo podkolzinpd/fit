@@ -563,13 +563,13 @@ function formatElapsed(seconds: number): string {
   return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`
 }
 
-function WorkoutTimer({ startedAt, variant = 'chip' }: { startedAt: string | null; variant?: 'chip' | 'big' }) {
+function WorkoutTimer({ startedAt }: { startedAt: string | null }) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
   }, [])
-  const className = variant === 'big' ? 'live-timer-big' : 'live-timer'
+  const className = 'live-timer'
   if (!startedAt) return <span className={className}><span className="live-dot-mark" aria-hidden="true" />LIVE</span>
   const elapsed = Math.max(0, Math.floor((now - Date.parse(startedAt)) / 1000))
   return <span className={className}><span className="live-dot-mark" aria-hidden="true" />{formatElapsed(elapsed)}</span>
@@ -907,7 +907,7 @@ export function LiveWorkoutPage() {
         return (
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
         <div className="live-pinned">
-          <WorkoutTimer startedAt={query.data.startedAt ?? null} variant="big" />
+          <WorkoutTimer startedAt={query.data.startedAt ?? null} />
           {restRemaining !== null && <div className="rest-timer">
             <strong>Отдых {formatRest(restRemaining)}</strong>
             <div className="rest-controls">

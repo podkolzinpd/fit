@@ -145,7 +145,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Начать' }).click()
   // Крупный таймер тренировки по центру над подходами, идущий от старта (мм:сс).
-  await expect(page.locator('.live-timer-big')).toContainText(/\d\d:\d\d/)
+  await expect(page.locator('.live-timer')).toContainText(/\d\d:\d\d/)
   // Текущий подход раскрыт для ввода, следующий — компактной строкой.
   await expect(page.locator('.live-set-table')).toHaveCount(1)
   await expect(page.locator('.live-set-table > .live-set')).toHaveCount(1)
@@ -156,7 +156,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByLabel('Фактические повторы').first()).toHaveValue('10')
   await page.getByLabel('Фактический вес').first().fill('42.5')
   await page.getByLabel('Фактические повторы').first().fill('9')
-  await page.locator('.live-timer-big').click()
+  await page.locator('.live-timer').click()
   await expect(page.getByRole('status').filter({ hasText: 'Сохранено' })).toBeVisible()
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Редактировать подход' })).toBeVisible()
@@ -305,7 +305,7 @@ test('live: планка вводится в секундах, таймер за
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Начать' }).click()
-  await expect(page.locator('.live-timer-big')).toContainText(/\d\d:\d\d/)
+  await expect(page.locator('.live-timer')).toContainText(/\d\d:\d\d/)
   // #3: закреплённый блок с таймером (и отдыхом) sticky — не уезжает при скролле.
   await expect(page.locator('.live-pinned')).toHaveCSS('position', 'sticky')
   // #6: подтверждаем подход, затем правим карандашом.
@@ -387,7 +387,7 @@ test('live: порядок упражнений меняется в отдель
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Начать' }).click()
-  await expect(page.locator('.live-timer-big')).toBeVisible()
+  await expect(page.locator('.live-timer')).toBeVisible()
   // В обычном live стрелок нет; включаем отдельный режим в меню упражнения.
   await expect(page.getByRole('button', { name: 'Вверх' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
@@ -444,7 +444,7 @@ test('замена упражнения: в форме плана и в live', a
 
   // Live: заменяем нетронутое упражнение на «Тяга верхнего блока».
   await page.getByRole('button', { name: 'Начать' }).click()
-  await expect(page.locator('.live-timer-big')).toBeVisible()
+  await expect(page.locator('.live-timer')).toBeVisible()
   await expect(page.locator('.live-exercise-head h2').first()).toContainText('Жим лёжа')
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
   await page.getByRole('menuitem', { name: 'Заменить' }).click()
@@ -556,7 +556,7 @@ test('план: два упражнения объединяются в супе
   // Live идёт по кругам: круг 1 (упр.A → упр.B), потом круг 2. Счётчик показывает
   // текущий круг; отдых — после завершения круга (последнего упражнения круга).
   await page.getByRole('button', { name: 'Начать' }).click()
-  await expect(page.locator('.live-timer-big')).toBeVisible()
+  await expect(page.locator('.live-timer')).toBeVisible()
   // Счётчик круга закреплён с таймером (.live-pinned) и продублирован в шапке
   // блока — проверяем закреплённый (всегда виден при скролле по кругам).
   await expect(page.locator('.live-pinned .circuit-counter')).toHaveText('Круг 1 из 2')
@@ -783,7 +783,7 @@ test('комментарий тренера к упражнению: план �
   // В live заметка не занимает место до явного раскрытия, но сохранённый текст
   // остаётся доступен для правки.
   await page.getByRole('button', { name: 'Начать' }).click()
-  await expect(page.locator('.live-timer-big')).toBeVisible()
+  await expect(page.locator('.live-timer')).toBeVisible()
   const liveNote = page.locator('.live-exercise-note').first()
   await expect(liveNote.locator('summary')).toContainText('Заметка тренера')
   await expect(liveNote).not.toHaveAttribute('open')
@@ -846,7 +846,7 @@ test('live: удаление подхода и наследование факт
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Начать' }).click()
-  await expect(page.locator('.live-timer-big')).toBeVisible()
+  await expect(page.locator('.live-timer')).toBeVisible()
 
   // Подтверждаем факт 92.5×8.
   await page.getByLabel('Фактический вес').first().fill('92.5')
@@ -899,7 +899,7 @@ test('live: «Готово» без ввода факта — подход сч�
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Начать' }).click()
-  await expect(page.locator('.live-timer-big')).toBeVisible()
+  await expect(page.locator('.live-timer')).toBeVisible()
   // Не вводим факт — сразу «Готово»: план должен стать фактом.
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Редактировать подход' }).first()).toBeVisible()
