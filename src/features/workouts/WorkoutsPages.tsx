@@ -484,13 +484,13 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet): st
 // Одна ячейка факта в таблице подходов. В live основной сценарий — прямой
 // ввод: компактное число открывает цифровую клавиатуру и не разворачивает
 // строку в набор крупных степперов.
-function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, inputKey, decimal = false }: {
+function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, inputKey, decimal = false, planHint = false }: {
   name: string; label: string; placeholder: string; defaultValue: number | undefined
-  step: number; disabled: boolean; inputKey: string; decimal?: boolean
+  step: number; disabled: boolean; inputKey: string; decimal?: boolean; planHint?: boolean
 }) {
   return <input
     key={inputKey}
-    className="live-set-input"
+    className={`live-set-input${planHint ? ' plan-hint' : ''}`}
     aria-label={label}
     name={name}
     type="number"
@@ -500,6 +500,7 @@ function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, 
     disabled={disabled}
     defaultValue={defaultValue}
     placeholder={placeholder}
+    onInput={(event) => event.currentTarget.classList.remove('plan-hint')}
   />
 }
 
@@ -517,6 +518,7 @@ function LiveSetFields({ inputKind, set, editing = false, showRpe = false }: { i
   // Факт при первом открытии начинается с плана: тренер видит готовые значения
   // и меняет только нужное. После выполнения приоритет остаётся у факта.
   const value = (fact: number | undefined, plan: number | undefined) => fact ?? plan
+  const isPlanHint = (fact: number | undefined, plan: number | undefined) => !locked && fact === undefined && plan !== undefined
   const factDuration = durationSeconds(set.fact.durationSec, set.fact.durationMin)
   const planDuration = durationSeconds(set.durationSec, set.durationMin)
   const rpeField = showRpe ? <select className="live-set-rpe" name="rpe" aria-label="Фактический RPE" defaultValue={set.fact.rpe ?? set.rpe ?? ''} disabled={locked}>
@@ -524,23 +526,23 @@ function LiveSetFields({ inputKind, set, editing = false, showRpe = false }: { i
     {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
   </select> : null
   if (inputKind === 'strength') return <>
-    <LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} step={2.5} disabled={locked} inputKey={`w-${k}`} decimal />
-    <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} />
+    <LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step={2.5} disabled={locked} inputKey={`w-${k}`} decimal />
+    <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} />
     {rpeField}
   </>
   if (inputKind === 'reps') return <>
-    <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
-    <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} />
+    <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
+    <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} />
     {rpeField}
   </>
   if (inputKind === 'duration') return <>
-    <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
+    <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
     <span className="live-set-empty" aria-hidden="true" />
     {rpeField}
   </>
   return <>
-    <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
-    <LiveSetInput name="distanceKm" label="Фактическая дистанция" placeholder="км" defaultValue={value(set.fact.distanceKm, set.distanceKm)} step={0.1} disabled={locked} inputKey={`dist-${k}`} decimal />
+    <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
+    <LiveSetInput name="distanceKm" label="Фактическая дистанция" placeholder="км" defaultValue={value(set.fact.distanceKm, set.distanceKm)} planHint={isPlanHint(set.fact.distanceKm, set.distanceKm)} step={0.1} disabled={locked} inputKey={`dist-${k}`} decimal />
     {rpeField}
   </>
 }
@@ -872,7 +874,6 @@ export function LiveWorkoutPage() {
     }}>
       <div className="live-set-grid">
         <span className="live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        <span className="live-set-plan" title={planLine(exercise.inputKind, set) ?? 'Без плана'}>{planLine(exercise.inputKind, set) ?? '—'}</span>
         <LiveSetFields inputKind={exercise.inputKind} set={displayedSet} editing={isEditing} showRpe={showRpe} />
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
@@ -959,7 +960,7 @@ export function LiveWorkoutPage() {
             return <section key={exercise.id} className={`live-exercise ${blockStatus}`}>
               <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</span></div>
               <div className="live-set-table">
-                <div className={`live-set-table-head ${rpeExercises.has(exercise.id) ? 'rpe-visible' : ''}`} aria-hidden="true"><span>№</span><span>План</span><span>Кг</span><span>Повт.</span>{rpeExercises.has(exercise.id) && <span>RPE</span>}<span>Статус</span></div>
+              <div className={`live-set-table-head ${rpeExercises.has(exercise.id) ? 'rpe-visible' : ''}`} aria-hidden="true"><span>№</span><span>Кг</span><span>Повт.</span>{rpeExercises.has(exercise.id) && <span>RPE</span>}<span>Статус</span></div>
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </div>
               {!clientMode && <button type="button" className="secondary" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
