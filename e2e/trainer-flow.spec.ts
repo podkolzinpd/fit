@@ -774,9 +774,15 @@ test('комментарий тренера к упражнению: план �
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
-  // Проводим тренировку; в live поле комментария доступно.
+  // В live заметка не занимает место до явного раскрытия, но сохранённый текст
+  // остаётся доступен для правки.
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer-big')).toBeVisible()
+  const liveNote = page.locator('.live-exercise-note').first()
+  await expect(liveNote.locator('summary')).toContainText('Заметка тренера')
+  await expect(liveNote).not.toHaveAttribute('open')
+  await expect(page.getByLabel(/Комментарий: Присед/)).not.toBeVisible()
+  await liveNote.locator('summary').click()
   await expect(page.getByLabel(/Комментарий: Присед/)).toBeVisible()
   await page.getByLabel('Фактический вес').first().fill('92.5')
   await page.getByLabel('Фактические повторы').first().fill('8')
