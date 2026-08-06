@@ -556,6 +556,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-page > .completed-exercise-list { gap:0 }
 .workout-detail-page > .completed-exercise-list > .completed-exercise { margin:0; padding:12px 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
 .workout-detail-page > .completed-exercise-list > .completed-exercise:first-child { padding-top:4px }
+.workout-detail-page > .completed-exercise-list > .completed-exercise-block { margin:0; padding:8px 0 0 8px; border:0; border-left:2px solid var(--accent-label); border-radius:0; background:transparent; box-shadow:none; gap:0 }
+.workout-detail-page > .completed-exercise-list > .completed-exercise-block .block-badge { margin-bottom:2px }
+.workout-detail-page > .completed-exercise-list > .completed-exercise-block .completed-exercise { margin:0; padding:8px 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
+.workout-detail-page > .completed-exercise-list > .completed-exercise-block .completed-exercise:last-child { border-bottom:0 }
 .workout-detail-page .completed-exercise .exercise-name-link { font-size:18px; line-height:1.25 }
 .workout-detail-page .exercise-name-link { max-width: 100%; overflow-wrap: anywhere }
 .workout-detail-page .exercise-name-hint { flex: 0 0 auto }

@@ -425,7 +425,7 @@ export function WorkoutDetailPage() {
           {exercise.trainerComment && <p className="exercise-comment-note">💬 {exercise.trainerComment}</p>}
         </article>)
         if (block.blockType === 'single' || block.exercises.length === 1) return articles
-        return <div className="exercise-block view" key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
+        return <div className={`exercise-block view${done ? ' completed-exercise-block' : ''}`} key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
       })}</div>
       {workout.notes && <p>{workout.notes}</p>}
       {(!clientMode || clientOwned) && <><div className="actions">
