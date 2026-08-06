@@ -426,6 +426,17 @@ export function factLine(set: WorkoutSet): string | null {
   return set.confirmedAt ? enteredFactLine(set) : null
 }
 
+// Короткий ориентир для тренера: берём последний заполненный подход из прошлой
+// завершённой тренировки. Это только справка — текущие значения не меняем.
+export function previousResultLine(sets: readonly WorkoutSetDraft[]): string | null {
+  for (let index = sets.length - 1; index >= 0; index -= 1) {
+    const set = sets[index]!
+    const line = setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin, set.rpe)
+    if (line) return line
+  }
+  return null
+}
+
 // Ordered, de-duplicated muscle-group labels for a workout's exercises.
 export function muscleGroupLabels(workout: Workout): string[] {
   const seen = new Set<string>()

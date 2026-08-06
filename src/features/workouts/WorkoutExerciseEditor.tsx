@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import type { BlockPreset, WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
 import { formatLocalDate } from '../../shared/local-date'
 import { RPE_OPTIONS } from '../../shared/rpe'
+import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { previousResultLine } from '../../data/repositories/workouts.repository'
 import { groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
 import { OverflowMenu } from '../../shared/ui'
 
@@ -80,6 +82,7 @@ interface WorkoutExerciseEditorProps {
   entryMode?: 'plan' | 'fact'
   /** Верхний вход в каталог уже есть у родительской формы. */
   hideEmptyAddAction?: boolean
+  previousResults?: ReadonlyMap<string, PreviousExerciseResult>
 }
 
 function inputNumber(value: string): number | undefined {
@@ -93,7 +96,7 @@ function setColumnLabels(inputKind: WorkoutExerciseDraft['inputKind']): string[]
   return ['Сек.', 'Км']
 }
 
-export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false }: WorkoutExerciseEditorProps) {
+export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map() }: WorkoutExerciseEditorProps) {
   const [reordering, setReordering] = useState(false)
   const [rpeExercises, setRpeExercises] = useState<Set<number>>(() => new Set())
   function updateComment(exerciseIndex: number, comment: string) {
@@ -185,7 +188,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         { label: 'Заменить', onClick: () => onReplaceExercise(exerciseIndex) },
         { label: 'Удалить', danger: true, onClick: () => removeExercise(exerciseIndex) },
       ]} /></span></header>
-      {exercise.prefilledFromDate && <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p>}
+      {(() => { const previous = previousResults.get(exercise.ref); const line = previous && previousResultLine(previous.sets); return line ? <p className="exercise-prefill-note">В прошлый раз: {line}</p> : exercise.prefilledFromDate ? <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p> : null })()}
       <div className={`workout-set-table planned-set-table ${showRpe ? 'rpe-visible' : ''}`}>
         <div className="workout-set-table-head planned-set-table-head" aria-hidden="true">
           <span>№</span>
