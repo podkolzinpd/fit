@@ -25,7 +25,7 @@ test('trainer registers without surname or email confirmation', async ({ page },
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
 
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/profile')
   await expect(page.getByLabel('Имя')).toHaveValue('Тест')
   await page.getByRole('button', { name: 'Выйти' }).click()
@@ -89,6 +89,8 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
 
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByLabel('Имя').fill('Связанный клиент')
   await fillClientProfileDetails(page)

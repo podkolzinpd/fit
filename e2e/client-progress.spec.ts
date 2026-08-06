@@ -25,7 +25,7 @@ test('trainer reviews the client copy separately from internal attention items',
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(/\/clients$/)
+  await expect(page).toHaveURL(/\/today$/)
   await page.goto('/progress/11111111-1111-4111-8111-111111111111')
 
   await expect(page.getByText('AI-анализ тренировок')).toBeVisible()
