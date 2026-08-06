@@ -421,7 +421,7 @@ export function WorkoutDetailPage() {
       <div className={`cards ${done ? 'completed-exercise-list' : ''}`}>{groupIntoBlocks(workout.exercises).map((block) => {
         const articles = block.exercises.map((exercise) => <article className={`exercise ${done ? 'completed-exercise' : ''}`} key={exercise.id}>
           <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
-          <div className="workout-history-sets">{exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} />)}</div>
+          <div className="workout-set-table workout-history-sets">{exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} />)}</div>
           {exercise.trainerComment && <p className="exercise-comment-note">💬 {exercise.trainerComment}</p>}
         </article>)
         if (block.blockType === 'single' || block.exercises.length === 1) return articles
@@ -446,8 +446,8 @@ function WorkoutHistorySet({ set, index, done }: { set: WorkoutSet; index: numbe
   const confirmed = Boolean(set.confirmedAt)
   const { fact, planNote } = formatFactVsPlan(set)
   const result = done ? fact : formatSet(set)
-  return <div className={`workout-history-set ${confirmed ? 'confirmed' : 'missed'}`}>
-    <span className="workout-history-set-number" aria-label={`Подход ${index + 1}`}>{index + 1}</span>
+  return <div className={`workout-set-row workout-history-set ${confirmed ? 'confirmed' : 'missed'}`}>
+    <span className="workout-set-number workout-history-set-number" aria-label={`Подход ${index + 1}`}>{index + 1}</span>
     <span className="workout-history-set-result"><strong>{result}</strong>
       {done && !confirmed && <span className="plan-note">не выполнено</span>}
       {done && confirmed && planNote && <span className="plan-note">{planNote}</span>}
@@ -875,8 +875,8 @@ export function LiveWorkoutPage() {
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
       persistLiveDraft(set, draftFrom(event.currentTarget))
     }}>
-      <div className="live-set-grid">
-        <span className="live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
+      <div className="workout-set-row live-set-grid">
+        <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
         <LiveSetFields inputKind={exercise.inputKind} set={displayedSet} editing={isEditing} showRpe={showRpe} />
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
@@ -962,8 +962,8 @@ export function LiveWorkoutPage() {
             }
             return <section key={exercise.id} className={`live-exercise ${blockStatus}`}>
               <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</span></div>
-              <div className="live-set-table">
-              <div className={`live-set-table-head ${rpeExercises.has(exercise.id) ? 'rpe-visible' : ''}`} aria-hidden="true"><span>№</span><span>Кг</span><span>Повт.</span>{rpeExercises.has(exercise.id) && <span>RPE</span>}<span>Статус</span></div>
+              <div className="workout-set-table live-set-table">
+              <div className={`workout-set-table-head live-set-table-head ${rpeExercises.has(exercise.id) ? 'rpe-visible' : ''}`} aria-hidden="true"><span>№</span><span>Кг</span><span>Повт.</span>{rpeExercises.has(exercise.id) && <span>RPE</span>}<span>Статус</span></div>
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </div>
               {!clientMode && <button type="button" className="secondary live-add-set" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}

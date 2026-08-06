@@ -184,16 +184,16 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         { label: 'Удалить', danger: true, onClick: () => removeExercise(exerciseIndex) },
       ]} /></span></header>
       {exercise.prefilledFromDate && <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p>}
-      <div className={`planned-set-table ${showRpe ? 'rpe-visible' : ''}`}>
-        <div className="planned-set-table-head" aria-hidden="true">
+      <div className={`workout-set-table planned-set-table ${showRpe ? 'rpe-visible' : ''}`}>
+        <div className="workout-set-table-head planned-set-table-head" aria-hidden="true">
           <span>№</span>
           {columns.map((column) => <span key={column}>{column}</span>)}
           {columns.length === 1 && <span />}
           {showRpe && <span>RPE</span>}
           <span />
         </div>
-        {exercise.sets.map((_set, setIndex) => <div className={`planned-set ${showRpe ? 'rpe-visible' : ''}`} key={setIndex}>
-          <span className="planned-set-number" aria-hidden="true">{setIndex + 1}</span>
+        {exercise.sets.map((_set, setIndex) => <div className={`workout-set-row planned-set ${showRpe ? 'rpe-visible' : ''}`} key={setIndex}>
+          <span className="workout-set-number planned-set-number" aria-hidden="true">{setIndex + 1}</span>
           <span className="sr-only">Подход {setIndex + 1}</span>
           {setFields(exercise, exerciseIndex, setIndex, showRpe)}
           {exercise.sets.length > 1
