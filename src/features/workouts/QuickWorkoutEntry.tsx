@@ -1,19 +1,17 @@
 import { useMemo, useState } from 'react'
 import type { ExerciseSnapshot } from '../../shared/domain'
-import { VoiceNoteField } from '../voice-input'
 import { parseQuickWorkoutEntry, quickWorkoutExerciseName, resolveQuickWorkoutLine, type ParsedWorkoutExercise } from './quick-workout-entry'
 import { trackGoal } from '../../shared/yandex-metrika'
+import { WorkoutComposer } from './WorkoutComposer'
 
 interface QuickWorkoutEntryProps {
   catalog: readonly ExerciseSnapshot[]
   onAdd: (exercises: ParsedWorkoutExercise[]) => void
-  defaultOpen?: boolean
   preferredExerciseRefs?: readonly string[]
   onOpenCatalog?: (search: string) => void
 }
 
-export function QuickWorkoutEntry({ catalog, onAdd, defaultOpen = false, preferredExerciseRefs = [], onOpenCatalog }: QuickWorkoutEntryProps) {
-  const [open, setOpen] = useState(defaultOpen)
+export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], onOpenCatalog }: QuickWorkoutEntryProps) {
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
   const parsed = useMemo(() => parseQuickWorkoutEntry(text, catalog, { preferredExerciseRefs }), [text, catalog, preferredExerciseRefs])
@@ -38,22 +36,14 @@ export function QuickWorkoutEntry({ catalog, onAdd, defaultOpen = false, preferr
     onAdd(resolved)
     setText('')
     setChoices({})
-    setOpen(false)
   }
 
-  return <section className="quick-workout-entry">
-    <button type="button" className="secondary wide" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-      {open ? 'Скрыть быстрый ввод' : '⌁ Добавить из текста или голоса'}
-    </button>
-    {open && <div className="quick-workout-entry-panel">
-      <p className="muted">По одной строке: <strong>Присед со штангой 3×8 80 кг</strong>, <strong>80×8×3 RPE 8</strong>, <strong>80×8, 85×6, 90×5</strong> или <strong>Планка 3 по 45 сек</strong>. В голосовой записи разделяйте упражнения словом «затем».</p>
-      <VoiceNoteField name="quick-workout-entry" source="workout_quick_entry" label="Запись тренировки" voiceLabel="Надиктовать тренировку" value={text} onValueChange={setText} />
+  return <WorkoutComposer name="quick-workout-entry" source="workout_quick_entry" label="Запись тренировки" voiceLabel="Надиктовать тренировку" value={text} onValueChange={setText} onClear={() => { setText(''); setChoices({}) }} primaryAction={<button type="button" className="wide" disabled={!resolved.length} onClick={add}>Добавить распознанные{resolved.length ? ` (${resolved.length})` : ''}</button>} secondaryAction={onOpenCatalog ? <button type="button" className="secondary wide quick-workout-catalog" onClick={() => { trackGoal('exercise_picker_opened'); onOpenCatalog('') }}>Выбрать упражнения</button> : undefined}>
+      <p className="workout-composer-hint">Например: присед 3×8 80 кг. В диктовке говорите «затем» между упражнениями.</p>
       {text.trim() && <div className="quick-workout-preview" aria-live="polite">
         {resolved.length > 0 && <><p><strong>Распознано: {resolved.length}</strong></p><ul>{resolved.map((item, index) => <li key={`${item.exercise.ref}-${index}`}>{item.exercise.name} · {item.sets.length} {item.sets.length === 1 ? 'подход' : item.sets.length < 5 ? 'подхода' : 'подходов'}</li>)}</ul></>}
         {clarification && <section className="quick-workout-clarification" aria-label={clarification.title}><strong>{clarification.title}</strong><p>{clarification.text}</p></section>}
         {unresolved.length > 0 && <div className="quick-workout-unparsed">{unresolved.map((item) => <div className="quick-workout-unparsed-line" key={item.line}><p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли совпадение'}</p>{item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => { trackGoal('workout_parse_candidate_selected'); setChoices((current) => ({ ...current, [item.line]: exercise })) }}>{exercise.name}</button>)}</div>}{onOpenCatalog && <button type="button" className="link quick-workout-all-options" onClick={() => { trackGoal('workout_parse_catalog_opened'); onOpenCatalog(quickWorkoutExerciseName(item.line)) }}>Все варианты</button>}</div>)}</div>}
       </div>}
-      <button type="button" disabled={!resolved.length} onClick={add}>Добавить распознанные{resolved.length ? ` (${resolved.length})` : ''}</button>
-    </div>}
-  </section>
+  </WorkoutComposer>
 }

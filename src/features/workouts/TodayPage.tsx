@@ -9,13 +9,13 @@ import { isValidRpe } from '../../shared/rpe'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { Page } from '../../shared/ui'
 import { ExercisePicker, frequentExercisesForClient, useExerciseCatalog } from '../exercises'
-import { VoiceNoteField } from '../voice-input'
 import { useAuth } from '../../app/auth-context'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { formatLlmWorkoutText, parseWorkoutWithLlm } from './llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
 import { workoutDateForRecordMode, type WorkoutRecordMode } from './workout-entry-rules'
+import { WorkoutComposer } from './WorkoutComposer'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
@@ -402,10 +402,7 @@ export function TodayPage() {
         <h1>Новая тренировка</h1>
         <p>Напишите тренировку — мы разберём её по упражнениям и подходам.</p>
       </div>
-      <div className="today-input-card">
-        <VoiceNoteField name="today-workout" source="today_workout" label="Тренировка" voiceLabel="Надиктовать" placeholder={'Присед 3×8 — 80 кг\nПланка 3×45 сек'} value={text} autoResize onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} />
-        {text && <div className="today-input-actions"><button type="button" className="link" onClick={() => { setText(''); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }}>Очистить</button></div>}
-      </div>
+      <WorkoutComposer name="today-workout" source="today_workout" value={text} onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="secondary wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}><span>Выбрать упражнения</span><small>Поиск и массовый выбор</small></button>}>
       {voiceRefinement && voiceRefinement.state !== 'loading' && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
       {(resolved.length > 0 || clarification || displayedUnparsed.length > 0) && <div className="today-parse-preview" aria-live="polite">
         {resolved.length > 0 && <section className="today-recognized" aria-label="Распознанные упражнения">
@@ -419,8 +416,7 @@ export function TodayPage() {
         </div>)}
       </div>}
        {noMatches && <div className="today-empty-parse" role="status"><strong>Не нашли упражнение</strong><span>Проверьте название или добавьте его из каталога ниже.</span></div>}
-       <button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>
-      <button type="button" className="secondary wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}><span>Выбрать упражнения</span><small>Поиск и массовый выбор</small></button>
+      </WorkoutComposer>
     </section> : <section className="today-review">
       <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><div><h1>{screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'}</h1>{screen === 'review' && items.length > 0 && <p className="today-review-summary">Распознано: {items.length}</p>}</div></div>
       {screen === 'review' && <>
