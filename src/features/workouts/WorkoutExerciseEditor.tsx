@@ -213,8 +213,8 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
     </article>
   }
 
-  return <section>
-    <div className="workout-editor-heading"><h2>Упражнения</h2>{reordering ? <div className="reorder-mode"><span>Изменение порядка</span><button type="button" className="link" onClick={() => setReordering(false)}>Готово</button></div> : exercises.length > 0 && <div className="workout-tools"><button type="button" className="link" onClick={() => onChange(clearWorkoutLoad(exercises))}>Сбросить значения</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, .95))}>−5%</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, 1.05))}>+5%</button></div>}</div>
+  return <section className="workout-exercise-editor">
+    {exercises.length > 0 && <div className="workout-editor-heading"><h2>Упражнения</h2>{reordering ? <div className="reorder-mode"><span>Изменение порядка</span><button type="button" className="link" onClick={() => setReordering(false)}>Готово</button></div> : <div className="workout-tools"><button type="button" className="link" onClick={() => onChange(clearWorkoutLoad(exercises))}>Сбросить значения</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, .95))}>−5%</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, 1.05))}>+5%</button></div>}</div>}
     {blocks.map((block, blockIndex) => {
       const lastIndex = exercises.length - 1
       const isFirst = blockIndex === 0
@@ -265,6 +265,6 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         {blockMergeIndex >= 0 && <button type="button" className="link block-merge" onClick={() => onChange(mergeBlockWithNext([...exercises], blockMergeIndex))}>⛓ Объединить со следующим в блок</button>}
       </div>
     })}
-    <button type="button" className="secondary wide" onClick={onOpenPicker}>＋ Упражнение</button>
+    {exercises.length > 0 && <button type="button" className="secondary wide" onClick={onOpenPicker}>＋ Упражнение</button>}
   </section>
 }
