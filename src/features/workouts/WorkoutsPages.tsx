@@ -8,7 +8,7 @@ import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -189,6 +189,7 @@ export function WorkoutFormPage() {
   useClientRealtime(source.data?.clientId ?? (clientMode ? mine.data?.id : params.get('client') ?? undefined))
   const catalog = useExerciseCatalog()
   const [draftExercises, setDraftExercises] = useState<WorkoutDraft['exercises'] | null>(null)
+  const [previousResultReferences, setPreviousResultReferences] = useState<ReadonlyMap<string, PreviousExerciseResult>>(() => new Map())
   const createRequestId = useRef(crypto.randomUUID())
   const [recordCompleted, setRecordCompleted] = useState(false)
   const [entryDate, setEntryDate] = useState<LocalDate>(() => localDate(params.get('date') ?? todayLocalDate()))
@@ -273,6 +274,10 @@ export function WorkoutFormPage() {
       return new Map<string, PreviousExerciseResult>()
     }
   }
+  function rememberPreviousResults(results: ReadonlyMap<string, PreviousExerciseResult>) {
+    if (!results.size) return
+    setPreviousResultReferences((current) => new Map([...current, ...results]))
+  }
   function exerciseDraft(selected: ExerciseSnapshot, position: number, result: PreviousExerciseResult | undefined) {
     return {
       ...selected, position, blockId: crypto.randomUUID(), blockType: 'single' as const, blockRounds: 1,
@@ -282,6 +287,7 @@ export function WorkoutFormPage() {
   }
   async function pickExercise(selected: ExerciseSnapshot) {
     const results = await previousResults([selected])
+    rememberPreviousResults(results)
     const previous = results.get(selected.ref)
     if (replaceIndex !== null) {
       const clearFact = source.data?.status === 'done'
@@ -297,6 +303,7 @@ export function WorkoutFormPage() {
   }
   async function pickExercises(selected: ExerciseSnapshot[]) {
     const results = await previousResults(selected)
+    rememberPreviousResults(results)
     setDraftExercises([
       ...exercises,
       ...selected.map((exercise, index) => exerciseDraft(exercise, exercises.length + index, results.get(exercise.ref))),
@@ -305,6 +312,7 @@ export function WorkoutFormPage() {
   }
   async function addQuickEntry(parsed: ParsedWorkoutExercise[]) {
     const results = await previousResults(parsed.map((item) => item.exercise))
+    rememberPreviousResults(results)
     setDraftExercises([
       ...exercises,
       ...parsed.map((item, index) => {
@@ -361,7 +369,7 @@ export function WorkoutFormPage() {
       <section className="workout-form-section workout-form-exercises">
         <div className="workout-form-section-head"><p className="eyebrow">УПРАЖНЕНИЯ</p><h2>План и факт</h2></div>
         <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={frequentExercises.map((exercise) => exercise.ref)} onAdd={(parsed) => void addQuickEntry(parsed)} onOpenCatalog={(search) => { setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) }} />
-        <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction />
+        <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
@@ -593,6 +601,7 @@ export function LiveWorkoutPage() {
   useClientRealtime(query.data?.clientId)
   const catalog = useExerciseCatalog()
   const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', query.data?.clientId], queryFn: () => workoutsRepository.list(undefined, undefined, query.data!.clientId), enabled: Boolean(query.data?.clientId) })
+  const previousExerciseResults = useQuery({ queryKey: ['latest-exercise-results', query.data?.clientId, query.data?.exercises.map((exercise) => exercise.ref).join('|')], queryFn: () => workoutsRepository.latestExerciseResults(query.data!.clientId, query.data!.exercises.map((exercise) => exercise.ref)), enabled: Boolean(query.data?.clientId && query.data?.exercises.length) })
   const frequentExercises = useMemo(() => frequentExercisesForClient(catalog.exercises, clientWorkouts.data ?? []), [catalog.exercises, clientWorkouts.data])
   const [liveSets] = useState(() => createLiveSetCoordinator(
     (id, draft, version) => workoutsRepository.saveLiveSet(id, draft, version),
@@ -962,6 +971,7 @@ export function LiveWorkoutPage() {
             }
             return <section key={exercise.id} className={`live-exercise ${blockStatus}`}>
               <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</span></div>
+              {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
               <div className="workout-set-table live-set-table">
               <div className={`workout-set-table-head live-set-table-head ${rpeExercises.has(exercise.id) ? 'rpe-visible' : ''}`} aria-hidden="true"><span>№</span><span>Кг</span><span>Повт.</span>{rpeExercises.has(exercise.id) && <span>RPE</span>}<span>Статус</span></div>
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
