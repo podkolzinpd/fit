@@ -21,6 +21,9 @@ test('today: быстрый старт ведёт к единому выбору
     { sourceText: 'Планка 3×45 сек', exerciseRef: 'plank', confidence: 1, sets: [{ durationMin: 0.75 }, { durationMin: 0.75 }, { durationMin: 0.75 }] },
   ])
   await page.getByLabel('Тренировка').fill('Присед со штангой 3×8 — 80 кг\nПланка 3×45 сек')
+  await expect(page.getByRole('button', { name: /Распознать/ })).toHaveCount(0)
+  await expect(page.getByText('Черновик', { exact: true })).toHaveCount(0)
+  await expect(page.locator('.today-parse-preview')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Разобрать тренировку' })).toBeEnabled()
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
