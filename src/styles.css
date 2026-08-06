@@ -553,10 +553,18 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-page .summary.done-summary strong { font-size: 14px; line-height: 1.25 }
 .workout-detail-page > .cards { gap: 10px }
 .workout-detail-page > .cards > .exercise { margin: 0; padding: 16px; border-radius: 18px; box-shadow: var(--shadow-card) }
+.workout-detail-page > .completed-exercise-list { gap:0 }
+.workout-detail-page > .completed-exercise-list > .completed-exercise { margin:0; padding:12px 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
+.workout-detail-page > .completed-exercise-list > .completed-exercise:first-child { padding-top:4px }
+.workout-detail-page .completed-exercise .exercise-name-link { font-size:18px; line-height:1.25 }
 .workout-detail-page .exercise-name-link { max-width: 100%; overflow-wrap: anywhere }
 .workout-detail-page .exercise-name-hint { flex: 0 0 auto }
 .workout-history-sets { display:grid; margin-top:10px; border-top:1px solid var(--hairline) }
 .workout-history-set { display:grid; grid-template-columns:24px minmax(0, 1fr) 24px; align-items:center; gap:8px; min-height:48px; padding:8px 0; border-bottom:1px solid var(--hairline) }
+.completed-exercise .workout-history-sets { margin-top:6px }
+.completed-exercise .workout-history-set { min-height:42px; padding:4px 0 }
+.completed-exercise .workout-history-set-number { width:auto; height:auto; border-radius:0; background:transparent }
+.completed-exercise .workout-history-set-status { width:22px; height:22px; border-radius:8px }
 .workout-history-set-number { display:grid; place-items:center; width:24px; height:24px; border-radius:50%; color:var(--muted); background:var(--surface-sunken); font-size:12px; font-weight:800; font-variant-numeric:tabular-nums }
 .workout-history-set-result { min-width:0; display:grid; gap:2px }
 .workout-history-set-result strong { overflow-wrap:anywhere; font-size:15px; line-height:1.25 }
