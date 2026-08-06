@@ -28,6 +28,7 @@ import { setLiveScreenAwake } from './live-keep-awake'
 import { LoadMoreButton } from './LoadMoreButton'
 import { workoutCountLabel } from './workout-count-label'
 import { useAuth } from '../../app/auth-context'
+import { useRpeDisplay } from '../../app/rpe-display'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft } from './workout-form-draft'
 import { workoutDateForRecordMode } from './workout-entry-rules'
@@ -178,6 +179,7 @@ export function ClientWorkoutsPage() {
 export function WorkoutFormPage() {
   const { workoutId } = useParams()
   const { actor } = useAuth()
+  const showRpeByDefault = useRpeDisplay(actor?.userId)
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -369,7 +371,7 @@ export function WorkoutFormPage() {
       <section className="workout-form-section workout-form-exercises">
         <div className="workout-form-section-head"><p className="eyebrow">УПРАЖНЕНИЯ</p><h2>План и факт</h2></div>
         <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={frequentExercises.map((exercise) => exercise.ref)} onAdd={(parsed) => void addQuickEntry(parsed)} onOpenCatalog={(search) => { setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) }} />
-        <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} />
+        <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
@@ -586,6 +588,7 @@ function WorkoutTimer({ startedAt }: { startedAt: string | null }) {
 export function LiveWorkoutPage() {
   const { workoutId = '' } = useParams()
   const { actor } = useAuth()
+  const showRpeByDefault = useRpeDisplay(actor?.userId)
   const clientMode = actor?.role === 'client'
   const navigate = useNavigate()
   const [askConfirm, confirmDialog] = useConfirm()
@@ -630,7 +633,15 @@ export function LiveWorkoutPage() {
   // Завершённые упражнения по умолчанию свёрнуты; id здесь — принудительно раскрытые
   // тренером (тап по свёрнутой карточке), чтобы поправить факт.
   const [expandedExercises, setExpandedExercises] = useState<Set<string>>(() => new Set())
-  const [rpeExercises, setRpeExercises] = useState<Set<string>>(() => new Set())
+  // Общая настройка не меняет RPE-данные; меню упражнения позволяет временно
+  // показать или скрыть поле только для конкретного упражнения.
+  const [rpeOverrides, setRpeOverrides] = useState<Map<string, boolean>>(() => new Map())
+  function isRpeVisible(exerciseId: string) {
+    return rpeOverrides.get(exerciseId) ?? showRpeByDefault
+  }
+  function toggleRpe(exerciseId: string) {
+    setRpeOverrides((current) => new Map(current).set(exerciseId, !isRpeVisible(exerciseId)))
+  }
   // Inline-подтверждение частичного завершения. window.confirm в нативной обёртке
   // (Capacitor/WKWebView) не показывается и блокировал выход из тренировки —
   // используем встроенный диалог в панели вместо нативного confirm.
@@ -841,10 +852,10 @@ export function LiveWorkoutPage() {
   function exerciseMenu(exercise: WorkoutExercise, canReorder = false, removableSet?: WorkoutSet) {
     if (clientMode) return null
     const canReplace = !exercise.sets.some((set) => set.confirmedAt)
-    const showRpe = rpeExercises.has(exercise.id)
+    const showRpe = isRpeVisible(exercise.id)
     return <OverflowMenu items={[
       ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
-      { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => setRpeExercises((current) => { const next = new Set(current); if (showRpe) next.delete(exercise.id); else next.add(exercise.id); return next }) },
+      { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exercise.id) },
       ...(canReplace ? [{ label: 'Заменить', disabled: replaceLive.isPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } }] : []),
       ...(removableSet ? [{ label: 'Удалить подход', danger: true, disabled: removeSet.isPending, onClick: async () => { if (await askConfirm({ message: 'Удалить этот подход?', confirmLabel: 'Удалить', danger: true })) removeSet.mutate(removableSet.id) } }] : []),
     ]} />
@@ -878,7 +889,7 @@ export function LiveWorkoutPage() {
           : <button type="button" className="link live-set-compact-action" aria-label={`Ввести подход ${setNumber ?? ''}`} onPointerDown={() => saveOpenLiveSet(exercise, set.id)} onClick={() => openLiveSet(exercise, set.id)}>Ввести</button>}
       </div>
     }
-    const showRpe = rpeExercises.has(exercise.id)
+    const showRpe = isRpeVisible(exercise.id)
     return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={set.id} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
@@ -973,7 +984,7 @@ export function LiveWorkoutPage() {
               <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</span></div>
               {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
               <div className="workout-set-table live-set-table">
-              <div className={`workout-set-table-head live-set-table-head ${rpeExercises.has(exercise.id) ? 'rpe-visible' : ''}`} aria-hidden="true"><span>№</span><span>Кг</span><span>Повт.</span>{rpeExercises.has(exercise.id) && <span>RPE</span>}<span>Статус</span></div>
+              <div className={`workout-set-table-head live-set-table-head ${isRpeVisible(exercise.id) ? 'rpe-visible' : ''}`} aria-hidden="true"><span>№</span><span>Кг</span><span>Повт.</span>{isRpeVisible(exercise.id) && <span>RPE</span>}<span>Статус</span></div>
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </div>
               {!clientMode && <button type="button" className="secondary live-add-set" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}

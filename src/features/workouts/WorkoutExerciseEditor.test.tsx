@@ -130,6 +130,16 @@ describe('workout exercise editor rules', () => {
     expect(screen.getByLabelText('Целевой RPE, подход 1')).toHaveValue('8')
   })
 
+  it('uses the trainer RPE preference while keeping a per-exercise override', async () => {
+    const user = userEvent.setup()
+    render(<WorkoutExerciseEditor exercises={exercises} onChange={vi.fn()} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} showRpeByDefault />)
+
+    expect(screen.getByLabelText('Целевой RPE, подход 1')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Скрыть RPE' }))
+    expect(screen.queryByLabelText('Целевой RPE, подход 1')).not.toBeInTheDocument()
+  })
+
   it('shows reorder arrows only in the explicit reorder mode', async () => {
     const user = userEvent.setup()
     render(<ReorderEditorHarness />)
