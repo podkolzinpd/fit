@@ -82,6 +82,7 @@ interface WorkoutExerciseEditorProps {
   /** Верхний вход в каталог уже есть у родительской формы. */
   hideEmptyAddAction?: boolean
   previousResults?: ReadonlyMap<string, PreviousExerciseResult>
+  showRpeByDefault?: boolean
 }
 
 function inputNumber(value: string): number | undefined {
@@ -95,9 +96,16 @@ function setColumnLabels(inputKind: WorkoutExerciseDraft['inputKind']): string[]
   return ['Сек.', 'Км']
 }
 
-export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map() }: WorkoutExerciseEditorProps) {
+export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false }: WorkoutExerciseEditorProps) {
   const [reordering, setReordering] = useState(false)
-  const [rpeExercises, setRpeExercises] = useState<Set<number>>(() => new Set())
+  // Точечный выбор из меню имеет приоритет над общей настройкой тренера.
+  const [rpeOverrides, setRpeOverrides] = useState<Map<number, boolean>>(() => new Map())
+  function isRpeVisible(exerciseIndex: number) {
+    return rpeOverrides.get(exerciseIndex) ?? showRpeByDefault
+  }
+  function toggleRpe(exerciseIndex: number) {
+    setRpeOverrides((current) => new Map(current).set(exerciseIndex, !isRpeVisible(exerciseIndex)))
+  }
   function updateComment(exerciseIndex: number, comment: string) {
     onChange(exercises.map((exercise, current) => current === exerciseIndex ? { ...exercise, trainerComment: comment || undefined } : exercise))
   }
@@ -173,7 +181,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   // Одиночное упражнение (вне блока): подходы + «＋ Подход» + «Объединить».
   function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode, canReorder = false) {
     const columns = setColumnLabels(exercise.inputKind)
-    const showRpe = rpeExercises.has(exerciseIndex)
+    const showRpe = isRpeVisible(exerciseIndex)
     const hasCustomRest = exercise.restBetweenSetsSec !== undefined && exercise.restBetweenSetsSec !== 90
     const hasComment = Boolean(exercise.trainerComment)
     const detailsHint = hasComment || hasCustomRest
@@ -182,7 +190,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
     return <article className="exercise planned-exercise" key={`${exercise.ref}-${exerciseIndex}`}>
       <header><strong>{exercise.name}</strong><span className="exercise-head-actions">{reorder}<OverflowMenu items={[
         ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
-        { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => setRpeExercises((current) => { const next = new Set(current); if (showRpe) next.delete(exerciseIndex); else next.add(exerciseIndex); return next }) },
+        { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exerciseIndex) },
         ...(canMergeNext ? [{ label: 'Объединить со следующим в блок', onClick: () => onChange(mergeBlockWithNext([...exercises], exerciseIndex)) }] : []),
         { label: 'Заменить', onClick: () => onReplaceExercise(exerciseIndex) },
         { label: 'Удалить', danger: true, onClick: () => removeExercise(exerciseIndex) },
