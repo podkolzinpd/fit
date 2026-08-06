@@ -193,6 +193,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.workout-completion')).toContainText('Выполнено 1 из 4 подходов')
   await expect(page.locator('.completed-exercise-list')).toBeVisible()
   await expect(page.locator('.completed-exercise').first()).toBeVisible()
+  await expect(page.locator('.completed-exercise-block')).toHaveCount(0)
   // Завершённая тренировка показывает фактический результат (вес × повторы)
   // только по подтверждённым подходам, а не только название упражнения.
   await expect(page.getByText(/42\.5 кг × 9 повт\./)).toBeVisible()
