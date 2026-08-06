@@ -518,7 +518,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Больше воздуха в live: отступ под «＋ Подход» и до комментария. Секция live —
    это <section> с .live-exercise-head; целимся в его кнопку добавления и коммент. */
 .live-exercise-head ~ .secondary { margin: 14px 0 4px }
-.live-exercise-head ~ .exercise-comment { margin-top: 14px }
+.live-exercise-note { margin-top:6px; padding-top:6px; border-top:1px solid var(--border) }
+.live-exercise-note summary { width:fit-content; min-height:30px; padding:2px 0; color:var(--accent-strong); cursor:pointer; font-size:15px; font-weight:700; list-style-position:inside }
+.live-exercise-note summary span { color:var(--muted); font-weight:600 }
+.live-exercise-note[open] summary { margin-bottom:8px }
+.live-exercise-note .exercise-comment { margin:0 }
 .exercise-comment { width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--fg); font: inherit; font-size: 13px; resize: vertical; box-sizing: border-box }
 .exercise-comment::placeholder { color: var(--muted) }
 .exercise-comment-note { color: var(--muted); font-size: 13px; margin-top: 4px }
