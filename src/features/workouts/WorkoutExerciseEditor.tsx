@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import type { BlockPreset, WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
 import { formatLocalDate } from '../../shared/local-date'
 import { RPE_OPTIONS } from '../../shared/rpe'
-import { groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, PRESET_REST_DEFAULTS, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
+import { groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
 import { OverflowMenu } from '../../shared/ui'
 
 // Числовое поле, которое МОЖНО очистить курсором. Контролируемый input с value
@@ -242,10 +242,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
             { label: 'Разбить', onClick: () => onChange(splitBlock([...exercises], block.blockId)) },
           ]} />
         </div>
-        <OptionalDetails className="block-options" summary="Настройки блока" initialOpen={(() => {
-          const defaults = PRESET_REST_DEFAULTS[block.blockPreset]
-          return block.restBetweenExercisesSec !== defaults.betweenExercises || block.restBetweenRoundsSec !== defaults.betweenRounds
-        })()}>
+        <OptionalDetails className="block-options" summary="Настройки блока">
           <div className="block-rest">
             <label className="block-rest-field">Отдых между упр., с<ClampedNumberInput label="Отдых между упражнениями, с" value={block.restBetweenExercisesSec} min={0} max={600} onCommit={(next) => onChange(setBlockRest([...exercises], block.blockId, { betweenExercises: next }))} /></label>
             <label className="block-rest-field">Отдых между кругами, с<ClampedNumberInput label="Отдых между кругами, с" value={block.restBetweenRoundsSec} min={0} max={600} onCommit={(next) => onChange(setBlockRest([...exercises], block.blockId, { betweenRounds: next }))} /></label>
