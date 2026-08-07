@@ -34,6 +34,7 @@ import { useClientRealtime } from '../../app/use-client-realtime'
 import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft } from './workout-form-draft'
 import { workoutDateForRecordMode } from './workout-entry-rules'
 import { WorkoutSetTable } from './WorkoutSetTable'
+import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -995,12 +996,12 @@ export function LiveWorkoutPage() {
               const firstPlan = exercise.sets.map((set) => planLine(exercise.inputKind, set)).find(Boolean)
               const countLabel = exercise.sets.length === 1 ? 'подход' : exercise.sets.length < 5 ? 'подхода' : 'подходов'
               return <section key={exercise.id} className="live-exercise-upcoming">
-                <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status="upcoming" />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</span></div>
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<><StatusBadge status="upcoming" />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
                 <p className="live-upcoming-summary"><span>{exercise.sets.length} {countLabel}</span>{firstPlan && <span>План: {firstPlan}</span>}</p>
               </section>
             }
             return <section key={exercise.id} className={`live-exercise ${blockStatus}`}>
-              <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</span></div>
+              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<><StatusBadge status={blockStatus} />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
               {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
@@ -1027,7 +1028,7 @@ export function LiveWorkoutPage() {
           {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt); return <div className={`circuit-round ${roundDone ? 'done' : roundIndex === current ? 'current' : ''}`} key={round.round}>
             <div className="circuit-round-label">Круг {round.round}</div>
             {round.items.map(({ exercise, set }) => <section key={set.id}>
-              <div className="live-exercise-head"><h3>{exercise.name}</h3>{roundIndex === 0 && <span className="exercise-head-actions">{exerciseMenu(exercise)}</span>}</div>
+              <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={exercise.name} actions={roundIndex === 0 ? exerciseMenu(exercise) : undefined} />
               {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
               {roundIndex === 0 && liveCommentField(exercise)}
             </section>)}

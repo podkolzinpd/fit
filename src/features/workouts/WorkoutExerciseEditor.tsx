@@ -5,6 +5,7 @@ import { RPE_OPTIONS } from '../../shared/rpe'
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import { groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, previousResultLine, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
 import { OverflowMenu } from '../../shared/ui'
+import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { WorkoutSetTable } from './WorkoutSetTable'
 
 // Числовое поле, которое МОЖНО очистить курсором. Контролируемый input с value
@@ -181,13 +182,13 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       ? <span className="exercise-options-hint">{[hasComment ? 'заметка' : '', hasCustomRest ? `отдых ${exercise.restBetweenSetsSec} с` : ''].filter(Boolean).join(' · ')}</span>
       : null
     return <article className="exercise planned-exercise" key={`${exercise.ref}-${exerciseIndex}`}>
-      <header><strong>{exercise.name}</strong><span className="exercise-head-actions">{reorder}<OverflowMenu items={[
+      <WorkoutExerciseHeader as="header" titleAs="strong" className="planned-exercise-head" name={exercise.name} actions={<>{reorder}<OverflowMenu items={[
         ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
         { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exerciseIndex) },
         ...(canMergeNext ? [{ label: 'Объединить со следующим в блок', onClick: () => onChange(mergeBlockWithNext([...exercises], exerciseIndex)) }] : []),
         { label: 'Заменить', onClick: () => onReplaceExercise(exerciseIndex) },
         { label: 'Удалить', danger: true, onClick: () => removeExercise(exerciseIndex) },
-      ]} /></span></header>
+      ]} /></>} />
       {(() => { const previous = previousResults.get(exercise.ref); const line = previous && previousResultLine(previous.sets); return line ? <p className="exercise-prefill-note">В прошлый раз: {line}</p> : exercise.prefilledFromDate ? <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p> : null })()}
       <WorkoutSetTable variant="planned" inputKind={exercise.inputKind} showRpe={showRpe}>
         {exercise.sets.map((_set, setIndex) => <div className={`workout-set-row planned-set ${showRpe ? 'rpe-visible' : ''}`} key={setIndex}>
