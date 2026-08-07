@@ -117,10 +117,14 @@ Supabase CLI отдельно глобально устанавливать не
 
 ```text
 AGENTS.md
-ARCHITECTURE.md
-FEATURE_PARITY.md
-docs/PRODUCT_WIKI.md
+docs/FIT_WORKFLOW.md
+docs/CURRENT_STATE.md
 ```
+
+`ARCHITECTURE.md`, `FEATURE_PARITY.md`, `docs/PRODUCT_WIKI.md` и материалы из
+`docs/design/` читаются только релевантными текущей задаче разделами. После
+подтверждённого merge агент сам обновляет rolling snapshot в
+`docs/CURRENT_STATE.md`, не накапливая в нём историю.
 
 Затем устанавливает точные зависимости из lock-файла и запускает проект:
 
