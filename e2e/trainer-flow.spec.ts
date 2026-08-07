@@ -17,7 +17,8 @@ test('форма: быстрый ввод разбирает текст в уп�
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
 
   await page.goto('/workouts/new')
   // Таббар остаётся доступен, заметка не занимает экран до явного раскрытия,
@@ -59,7 +60,7 @@ test('стартовый экран показывает точный резул
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 
   await page.goto('/today')
   await mockWorkoutParser(page, [{ sourceText: 'Жим гантелей на наклон 3×8 24 кг', exerciseRef: 'fedb-incline-dumbbell-press', confidence: 1, sets: [{ weightKg: 24, reps: 8 }, { weightKg: 24, reps: 8 }, { weightKg: 24, reps: 8 }] }])
@@ -75,7 +76,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
@@ -279,7 +281,8 @@ test('live: планка вводится в секундах, таймер за
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
@@ -323,7 +326,8 @@ test('план: порядок упражнений меняется в отде
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
@@ -363,7 +367,8 @@ test('live: порядок упражнений меняется в отдель
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
@@ -408,7 +413,8 @@ test('замена упражнения: в форме плана и в live', a
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
@@ -462,7 +468,8 @@ test('карточка упражнения: шапка с оборудован�
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
@@ -502,7 +509,8 @@ test('план: два упражнения объединяются в супе
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
@@ -593,9 +601,11 @@ test('profile Cancel resets unsaved edits', async ({ page }) => {
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 
-  await page.getByRole('link', { name: 'Профиль', exact: true }).click()
+  // В новом стартовом маршруте профиль открывается из аватара, а не из таббара.
+  // Прямой переход исключает зависимость настройки профиля от структуры навигации.
+  await page.goto('/profile')
   await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
   const firstName = page.getByLabel('Имя')
   const original = await firstName.inputValue()
@@ -619,7 +629,8 @@ test('schedule shows week strip and hour grid with day/week navigation', async (
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
   // Заголовок «Расписание» намеренно скрыт (sr-only) — он дублирует таб-бар;
@@ -654,7 +665,8 @@ test('расписание: создание тренировки из расп�
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
@@ -685,7 +697,8 @@ test('расписание: отмена создания возвращает �
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
   const selectedDay = page.locator('.week-day').nth(1)
@@ -706,7 +719,8 @@ test('расписание: карточка события — время, им
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByLabel('Имя').fill(clientName)
@@ -750,7 +764,8 @@ test('комментарий тренера к упражнению: план �
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
@@ -824,7 +839,8 @@ test('live: удаление подхода и наследование факт
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByLabel('Имя').fill('Сет Клиент')
@@ -877,7 +893,8 @@ test('live: «Готово» без ввода факта — подход сч�
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByLabel('Имя').fill('Готово Клиент')
