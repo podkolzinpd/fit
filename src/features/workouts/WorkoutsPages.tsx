@@ -964,12 +964,11 @@ export function LiveWorkoutPage() {
             // уже сохранён локально в persistLiveDraft.
             const activeSetId = expandedSetId ?? exercise.sets[currentSetIndex]?.id
             const allDone = exercise.sets.every((set) => set.confirmedAt)
-            // Завершённое упражнение сворачиваем в компактный итог, ТОЛЬКО пока
-            // впереди есть незавершённый блок (тренер перешёл дальше). Когда всё
-            // готово (currentBlockIndex === -1), последнее упражнение оставляем
-            // раскрытым — это последнее действие, «сворачивать за» нечего, и там
-            // же остаются подтверждение/правка факта. Тап по свёрнутой — раскрыть.
-            const collapsed = allDone && !clientMode && currentBlockIndex !== -1 && !expandedExercises.has(exercise.id)
+            // В live рабочей остаётся только текущая карточка. Завершённые
+            // упражнения сжимаются в итог (тап открывает их исключительно для
+            // исправления факта), а будущие не показывают таблицу и RPE раньше
+            // времени. Это presentation-only: порядок, факт и RPC не меняются.
+            const collapsed = allDone && !expandedExercises.has(exercise.id)
             if (collapsed) {
               const doneCount = exercise.sets.length
               const best = exercise.sets.map((set) => factLine(set)).filter(Boolean).slice(-1)[0] ?? null
@@ -979,6 +978,14 @@ export function LiveWorkoutPage() {
                 <span className="live-collapsed-body"><strong>{exercise.name}</strong><span className="muted">{doneCount} {doneCount === 1 ? 'подход' : doneCount < 5 ? 'подхода' : 'подходов'}{best ? ` · ${best}` : ''}</span></span>
                 <StatusBadge status="done" />
               </button>
+            }
+            if (blockStatus === 'upcoming') {
+              const firstPlan = exercise.sets.map((set) => planLine(exercise.inputKind, set)).find(Boolean)
+              const countLabel = exercise.sets.length === 1 ? 'подход' : exercise.sets.length < 5 ? 'подхода' : 'подходов'
+              return <section key={exercise.id} className="live-exercise-upcoming">
+                <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status="upcoming" />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</span></div>
+                <p className="live-upcoming-summary"><span>{exercise.sets.length} {countLabel}</span>{firstPlan && <span>План: {firstPlan}</span>}</p>
+              </section>
             }
             return <section key={exercise.id} className={`live-exercise ${blockStatus}`}>
               <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</span></div>
