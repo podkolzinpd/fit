@@ -313,12 +313,13 @@ test('live: планка вводится в секундах, таймер за
   // #6: подтверждаем подход, затем правим карандашом.
   await page.getByLabel('Фактическое время, сек').first().fill('75')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await page.locator('.live-exercise-collapsed').click()
   await expect(page.getByRole('button', { name: 'Редактировать подход' })).toBeVisible()
   await page.getByRole('button', { name: 'Редактировать подход' }).first().click()
   await expect(page.getByLabel('Фактическое время, сек').first()).toBeEnabled()
   await page.getByLabel('Фактическое время, сек').first().fill('90')
   await page.getByRole('button', { name: 'Сохранить' }).first().click()
-  await expect(page.getByRole('button', { name: 'Редактировать подход' })).toBeVisible()
+  await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
 })
 
 test('план: порядок упражнений меняется в отдельном режиме и сохраняется', async ({ page }) => {
@@ -823,7 +824,7 @@ test('комментарий тренера к упражнению: план �
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   // Ждём, пока подход реально подтвердится (RPC), иначе «Завершить» словит
   // подтверждение частичного завершения (window.confirm) и не сработает.
-  await expect(page.getByRole('button', { name: 'Редактировать подход' }).first()).toBeVisible()
+  await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
@@ -881,6 +882,7 @@ test('live: удаление подхода и наследование факт
   await page.getByLabel('Фактический вес').first().fill('92.5')
   await page.getByLabel('Фактические повторы').first().fill('8')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await page.locator('.live-exercise-collapsed').click()
   await expect(page.getByRole('button', { name: 'Редактировать подход' }).first()).toBeVisible()
 
   // Правка подтверждённого подхода: 100×10 — значение должно сохраниться на экране.
@@ -888,6 +890,7 @@ test('live: удаление подхода и наследование факт
   await page.getByLabel('Фактический вес').first().fill('100')
   await page.getByLabel('Фактические повторы').first().fill('10')
   await page.getByRole('button', { name: 'Сохранить' }).first().click()
+  await page.locator('.live-exercise-collapsed').click()
   await expect(page.locator('.live-set-compact.confirmed')).toContainText('100 кг')
 
   // Добавляем подход — наследует факт (100), а не план (90).
@@ -932,7 +935,7 @@ test('live: «Готово» без ввода факта — подход сч�
   await expect(page.locator('.live-timer')).toBeVisible()
   // Не вводим факт — сразу «Готово»: план должен стать фактом.
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
-  await expect(page.getByRole('button', { name: 'Редактировать подход' }).first()).toBeVisible()
+  await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
