@@ -6,7 +6,7 @@ import { trainerHomePath } from './feature-flags'
 import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage } from '../features/auth'
 import { ClientDetailPage, ClientFormPage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
-import { AnalyticsPage, ProgressPage } from '../features/progress'
+import { ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
 
@@ -54,7 +54,6 @@ const router = createBrowserRouter([
       { path: '/clients/:clientId/workouts', element: <ClientWorkoutsPage /> },
       { path: '/schedule', element: <SchedulePage /> },
       { path: '/workouts/:workoutId/history/:exerciseRef', element: <ExerciseHistoryPage /> },
-      { path: '/analytics', element: <AnalyticsPage /> },
       { path: '/progress/:clientId', element: <ProgressPage /> },
       { path: '/exercises', element: <ExercisesPage /> },
     ] },

@@ -26,6 +26,9 @@ test('форма: быстрый ввод разбирает текст в уп�
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Аналитика', exact: true })).toHaveCount(0)
+  await page.goto('/analytics')
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
   await page.goto('/workouts/new')
@@ -273,16 +276,18 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.locator('.page-back').click()
   await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
 
-  // Прогресс сохраняем из карточки клиента («Замеры и аналитика»).
+  // Прогресс открывается из карточки клиента, без отдельного списка-посредника.
   await page.goto(clientUrl)
   await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
-  await page.getByRole('link', { name: 'Замеры и аналитика' }).click()
+  await page.getByRole('link', { name: 'Замеры и прогресс' }).click()
   await page.getByLabel('Дата').fill('2026-07-20')
   await page.getByLabel('Вес, кг').fill('61')
   await page.getByRole('button', { name: 'Сохранить замер' }).click()
   // История замеров свёрнута по умолчанию — разворачиваем, чтобы увидеть карточку.
   await page.getByRole('button', { name: 'Показать' }).click()
   await expect(page.getByText('61 кг')).toBeVisible()
+  await page.locator('.page-back').click()
+  await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
 })
 
 test('live: планка вводится в секундах, таймер закреплён, подтверждённый подход правится карандашом', async ({ page }) => {

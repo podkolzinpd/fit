@@ -335,7 +335,7 @@ export function ClientDetailPage() {
           <Link className="button" to={`/workouts/new?client=${clientId}`}>＋ Запланировать</Link>
           <Link className="button secondary" to={`/clients/${clientId}/workouts`}>История</Link>
         </div>
-        <Link className="button secondary wide" to={`/progress/${clientId}`}>Замеры и аналитика</Link>
+        <Link className="button secondary wide" to={`/progress/${clientId}`}>Замеры и прогресс</Link>
       </div>
       <ClientGoalBlock client={query.data} />
       <ClientNoteBlock client={query.data} />

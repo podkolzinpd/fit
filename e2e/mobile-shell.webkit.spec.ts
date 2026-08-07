@@ -151,6 +151,20 @@ test('iPhone: частично завершённая тренировка по�
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: прогресс открывается из карточки клиента на 390 px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+  await expect(page.getByRole('link', { name: 'Аналитика', exact: true })).toHaveCount(0)
+  await page.goto('/clients')
+  await page.getByRole('link', { name: /Анна Смирнова/ }).first().click()
+  await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()
+  await page.getByRole('link', { name: 'Замеры и прогресс' }).click()
+  await expect(page.getByRole('heading', { name: /Прогресс · Анна Смирнова/ })).toBeVisible()
+  await page.locator('.page-back').click()
+  await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+})
+
 test('iPhone: сет не ставит отдых внутри круга и не оставляет его после финала', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)

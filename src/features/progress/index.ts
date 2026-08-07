@@ -1,2 +1,2 @@
-export { AnalyticsPage, ProgressPage } from './ProgressPages'
+export { ProgressPage } from './ProgressPages'
 export { ClientTrainingSummaryCard } from './TrainingSummaryCard'

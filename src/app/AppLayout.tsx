@@ -48,7 +48,6 @@ export function AppLayout() {
     <NavLink to="/today"><ScheduleIcon />Сегодня</NavLink>
     {redesignedStart && <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>}
     <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>
-    <NavLink to="/analytics"><AnalyticsIcon />Аналитика</NavLink>
     {!redesignedStart && <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>}
   </nav>}</div>
 }
