@@ -75,5 +75,6 @@
 закреп круговой, «Готово»=факт, комментарии к упражнению, расписание, блоки/
 суперсеты/круги — в main. Полный список в git и YAFIT.
 
-Связанные документы: [[trainer-feedback-backlog]], [[trainer-workout-review]],
+Связанные документы: [[UX_AUDIT_IMPLEMENTATION_STATUS]],
+[[trainer-feedback-backlog]], [[trainer-workout-review]],
 [[catalog-reclassification-review]].
