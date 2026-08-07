@@ -386,44 +386,44 @@ export function durationLabel(durationSec?: number, durationMin?: number): strin
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
-function setLine(weightKg?: number, reps?: number, distanceKm?: number, durationSec?: number, durationMin?: number, rpe?: number): string {
-  return [weightKg && `${weightKg} кг`, reps && `${reps} повт.`, distanceKm && `${distanceKm} км`, durationLabel(durationSec, durationMin), rpe !== undefined && `RPE ${rpe}`].filter(Boolean).join(' × ')
+function setLine(weightKg?: number, reps?: number, distanceKm?: number, durationSec?: number, durationMin?: number, rpe?: number, showRpe = true): string {
+  return [weightKg && `${weightKg} кг`, reps && `${reps} повт.`, distanceKm && `${distanceKm} км`, durationLabel(durationSec, durationMin), showRpe && rpe !== undefined && `RPE ${rpe}`].filter(Boolean).join(' × ')
 }
 
 // Результат подхода: строка факта (факт, иначе план) и приписка плана — только
 // если факт был введён и отличается от плана хоть по одному параметру.
 // Совпал факт с планом или факта нет вовсе → planNote = null.
-export function formatFactVsPlan(set: WorkoutSet): { fact: string; planNote: string | null } {
+export function formatFactVsPlan(set: WorkoutSet, showRpe = true): { fact: string; planNote: string | null } {
   const weight = set.fact.weightKg ?? set.weightKg
   const reps = set.fact.reps ?? set.reps
   const distance = set.fact.distanceKm ?? set.distanceKm
   const durationSec = set.fact.durationSec ?? set.durationSec
   const durationMin = durationSec === undefined ? (set.fact.durationMin ?? set.durationMin) : undefined
   const rpe = set.fact.rpe ?? set.rpe
-  const fact = setLine(weight, reps, distance, durationSec, durationMin, rpe) || 'Без результата'
+  const fact = setLine(weight, reps, distance, durationSec, durationMin, rpe, showRpe) || 'Без результата'
   const differs =
     (set.fact.weightKg !== undefined && set.fact.weightKg !== set.weightKg) ||
     (set.fact.reps !== undefined && set.fact.reps !== set.reps) ||
     (set.fact.distanceKm !== undefined && set.fact.distanceKm !== set.distanceKm) ||
     (set.fact.durationSec !== undefined && set.fact.durationSec !== set.durationSec) ||
     (set.fact.durationMin !== undefined && set.fact.durationMin !== set.durationMin) ||
-    (set.fact.rpe !== undefined && set.fact.rpe !== set.rpe)
-  const planNote = differs ? `план ${setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin, set.rpe)}` : null
+    (showRpe && set.fact.rpe !== undefined && set.fact.rpe !== set.rpe)
+  const planNote = differs ? `план ${setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin, set.rpe, showRpe)}` : null
   return { fact, planNote }
 }
 
 // Введённые фактические значения без учёта статуса подхода. Используется в live,
 // чтобы после перехода к следующей строке тренер видел набранные числа до
 // подтверждения подхода.
-export function enteredFactLine(set: WorkoutSet): string | null {
-  const line = setLine(set.fact.weightKg, set.fact.reps, set.fact.distanceKm, set.fact.durationSec, set.fact.durationMin, set.fact.rpe)
+export function enteredFactLine(set: WorkoutSet, showRpe = true): string | null {
+  const line = setLine(set.fact.weightKg, set.fact.reps, set.fact.distanceKm, set.fact.durationSec, set.fact.durationMin, set.fact.rpe, showRpe)
   return line || null
 }
 
 // Фактический результат подтверждённого подхода — строка вида «90 кг × 8 повт.».
 // В истории и аналитике неподтверждённый ввод не считаем выполненным фактом.
-export function factLine(set: WorkoutSet): string | null {
-  return set.confirmedAt ? enteredFactLine(set) : null
+export function factLine(set: WorkoutSet, showRpe = true): string | null {
+  return set.confirmedAt ? enteredFactLine(set, showRpe) : null
 }
 
 // Короткий ориентир для тренера: берём последний заполненный подход из прошлой

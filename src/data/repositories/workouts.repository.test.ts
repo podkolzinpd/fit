@@ -530,6 +530,9 @@ describe('formatFactVsPlan', () => {
   it('нет ни плана, ни факта → «Без результата»', () => {
     expect(formatFactVsPlan(mk({}, {}))).toEqual({ fact: 'Без результата', planNote: null })
   })
+  it('скрывает RPE без пустой приписки плана', () => {
+    expect(formatFactVsPlan(mk({ weightKg: 50, reps: 10, rpe: 8 }, { weightKg: 50, reps: 10, rpe: 9 }), false)).toEqual({ fact: '50 кг × 10 повт.', planNote: null })
+  })
 })
 
 describe('factLine', () => {
@@ -550,6 +553,9 @@ describe('factLine', () => {
   })
   it('подтверждён, но факт пустой → null', () => {
     expect(factLine(mk({ weightKg: 50, reps: 10 }, {}, 'now'))).toBeNull()
+  })
+  it('может скрыть RPE в истории, не меняя факт', () => {
+    expect(factLine(mk({ weightKg: 50, reps: 10, rpe: 8 }, { weightKg: 55, reps: 8, rpe: 9 }, 'now'), false)).toBe('55 кг × 8 повт.')
   })
 })
 
