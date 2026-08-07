@@ -1,7 +1,7 @@
 import type { PropsWithChildren } from 'react'
 import type { InputKind } from '../../shared/domain'
 
-type SetTableVariant = 'planned' | 'live'
+type SetTableVariant = 'planned' | 'live' | 'history'
 type SetTableLayout = 'full' | 'singleValue'
 
 function columnLabels(inputKind: InputKind, layout: SetTableLayout): string[] {
@@ -21,14 +21,15 @@ interface WorkoutSetTableProps {
   inputKind: InputKind
   showRpe: boolean
   layout?: SetTableLayout
+  columnLabels?: readonly string[]
   trailingLabel?: string
   className?: string
 }
 
 // Общая presentation-основа таблиц подходов. Она отвечает только за подписи и
 // сетку колонок; ввод, факт и действия остаются в соответствующих сценариях.
-export function WorkoutSetTable({ variant, inputKind, showRpe, layout = 'full', trailingLabel, className = '', children }: PropsWithChildren<WorkoutSetTableProps>) {
-  const columns = columnLabels(inputKind, layout)
+export function WorkoutSetTable({ variant, inputKind, showRpe, layout = 'full', columnLabels: customColumnLabels, trailingLabel, className = '', children }: PropsWithChildren<WorkoutSetTableProps>) {
+  const columns = customColumnLabels ?? columnLabels(inputKind, layout)
   return <div className={`workout-set-table ${variant}-set-table ${showRpe ? 'rpe-visible' : ''} ${className}`.trim()}>
     <div className={`workout-set-table-head ${variant}-set-table-head ${showRpe ? 'rpe-visible' : ''}`} aria-hidden="true">
       <span>№</span>
