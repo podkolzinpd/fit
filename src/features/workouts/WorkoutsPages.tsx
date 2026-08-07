@@ -8,7 +8,7 @@ import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -108,7 +108,7 @@ export function SchedulePage() {
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       <div className="day-grid-scroll" ref={scrollRef}>
         {untimed.length > 0 && <div className="day-untimed">{untimed.map((workout) => (
-          <Link key={workout.id} className="card" to={`/workouts/${workout.id}`}><div><strong>{workout.clientName}</strong><p>{exerciseSummary(workout).map((e) => e.name).join(', ') || 'без упражнений'}</p></div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
+          <Link key={workout.id} className="card" to={`/workouts/${workout.id}`}><div><strong>{workout.clientName}</strong><p>{exerciseSummary(workout).map((e) => e.name).join(', ') || 'без упражнений'}</p></div><WorkoutStatusBadge workout={workout} /></Link>
         ))}</div>}
         <div className="day-grid" style={{ height: HOURS.length * HOUR_HEIGHT }}>
           {HOURS.map((hour) => (
@@ -143,7 +143,10 @@ export function SchedulePage() {
   </Page>
 }
 
-function statusLabel(status: string) { return status === 'planned' ? 'План' : status === 'in_progress' ? 'Идёт' : 'Готово' }
+export function WorkoutStatusBadge({ workout }: { workout: Workout }) {
+  const status = workoutStatusPresentation(workout, todayLocalDate())
+  return <span className={`badge ${status.tone}`}>{status.label}</span>
+}
 
 // Список упражнений тренировки для карточки (история/предстоящие): каждое
 // на своей строке, у упражнений с комментарием — сам комментарий ниже.
@@ -175,7 +178,7 @@ export function ClientWorkoutsPage() {
     const duration = workoutDurationLabel(workout.startedAt, workout.completedAt)
     const tonnage = workoutTonnage(workout)
     const meta = workout.status === 'done' ? [duration, tonnage > 0 ? tonnageLabel(tonnage) : null].filter(Boolean).join(' · ') : ''
-    return <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><WorkoutExercisesSummary workout={workout} />{meta && <p className="card-meta">{meta}</p>}</div><span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span></Link>
+    return <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><WorkoutExercisesSummary workout={workout} />{meta && <p className="card-meta">{meta}</p>}</div><WorkoutStatusBadge workout={workout} /></Link>
   })}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
 }
 
@@ -438,7 +441,7 @@ export function WorkoutDetailPage() {
       </section>}
       <section className="workout-title">
         <div><h2>{workout.clientName}</h2><p>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</p>{stageTitle && <p className="stage-tag">🎯 {stageTitle}</p>}</div>
-        <span className={`badge ${workout.status}`}>{statusLabel(workout.status)}</span>
+        <WorkoutStatusBadge workout={workout} />
       </section>
       {workout.status === 'planned' && <button className="wide" onClick={() => start.mutate()}>Начать тренировку</button>}
       {start.error && <p className="error">{start.error.message}</p>}

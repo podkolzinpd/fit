@@ -4,12 +4,12 @@ import { Link } from 'react-router-dom'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { progressRepository } from '../../data/repositories/progress.repository'
-import { clientWorkoutStatusLabel, splitClientWorkouts, workoutsRepository } from '../../data/repositories/workouts.repository'
+import { splitClientWorkouts, workoutsRepository } from '../../data/repositories/workouts.repository'
 import { formatLocalDate, localDate, todayLocalDate } from '../../shared/local-date'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ProgressChart } from '../progress/ProgressChart'
 import { ClientTrainingSummaryCard } from '../progress/TrainingSummaryCard'
-import { WorkoutExercisesSummary } from '../workouts'
+import { WorkoutExercisesSummary, WorkoutStatusBadge } from '../workouts'
 
 function useMine() {
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
@@ -26,8 +26,8 @@ export function MyWorkoutsPage() {
   })
   const items = workouts.data ? splitClientWorkouts(workouts.data, todayLocalDate()) : null
   return <Page className="client-workouts-page" title="Мои тренировки" back="/me" action={mine.data && <Link className="button" to="/workouts/new">Добавить</Link>}><AsyncView loading={mine.isLoading || workouts.isLoading} error={mine.error ?? workouts.error} onRetry={() => { void mine.refetch(); void workouts.refetch() }}>
-    {items && <div className="client-workouts-stack"><section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div>{items.upcoming.length ? <div className="cards client-workout-cards">{items.upcoming.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><WorkoutExercisesSummary workout={workout} /></div><span className={`badge ${workout.status}`}>{clientWorkoutStatusLabel(workout, todayLocalDate())}</span></Link>)}</div> : <p className="client-section-empty">Нет запланированных тренировок</p>}</section>
-    <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div>{items.history.length ? <div className="cards client-workout-cards">{items.history.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><WorkoutExercisesSummary workout={workout} /></div><span className={`badge ${workout.status}`}>{clientWorkoutStatusLabel(workout, todayLocalDate())}</span></Link>)}</div> : <p className="client-section-empty">История пока пуста</p>}</section></div>}
+    {items && <div className="client-workouts-stack"><section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div>{items.upcoming.length ? <div className="cards client-workout-cards">{items.upcoming.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><WorkoutExercisesSummary workout={workout} /></div><WorkoutStatusBadge workout={workout} /></Link>)}</div> : <p className="client-section-empty">Нет запланированных тренировок</p>}</section>
+    <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div>{items.history.length ? <div className="cards client-workout-cards">{items.history.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><WorkoutExercisesSummary workout={workout} /></div><WorkoutStatusBadge workout={workout} /></Link>)}</div> : <p className="client-section-empty">История пока пуста</p>}</section></div>}
   </AsyncView></Page>
 }
 

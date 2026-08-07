@@ -315,11 +315,32 @@ export function splitClientWorkouts(workouts: Workout[], today: LocalDate): { up
 
 // «Отменена» пока не является отдельным состоянием в модели: удалённые
 // тренировки намеренно не показываются. Просроченный план не выдаём за факт.
+export type WorkoutStatusTone = 'planned' | 'in_progress' | 'done' | 'partial' | 'skipped'
+
+export interface WorkoutStatusPresentation {
+  label: string
+  tone: WorkoutStatusTone
+}
+
+// Статус в карточке — производное представление, а не новый статус БД:
+// частичное завершение определяется только по подтверждённым подходам.
+export function workoutStatusPresentation(workout: Workout, today: LocalDate): WorkoutStatusPresentation {
+  if (workout.status === 'done') {
+    const sets = workout.exercises.flatMap((exercise) => exercise.sets)
+    const confirmed = sets.filter((set) => set.confirmedAt).length
+    if (confirmed > 0 && confirmed < sets.length) return { label: 'Частично', tone: 'partial' }
+    return { label: 'Готово', tone: 'done' }
+  }
+  if (workout.status === 'in_progress') return workout.workoutDate >= today
+    ? { label: 'Идёт', tone: 'in_progress' }
+    : { label: 'Не завершена', tone: 'in_progress' }
+  return workout.workoutDate >= today
+    ? { label: 'План', tone: 'planned' }
+    : { label: 'Пропущена', tone: 'skipped' }
+}
+
 export function clientWorkoutStatusLabel(workout: Workout, today: LocalDate): string {
-  if (workout.status === 'done') return 'Готово'
-  if (workout.status === 'in_progress' && workout.workoutDate >= today) return 'Идёт'
-  if (workout.status === 'planned' && workout.workoutDate >= today) return 'План'
-  return workout.status === 'in_progress' ? 'Не завершена' : 'Не проведена'
+  return workoutStatusPresentation(workout, today).label
 }
 
 const ATTENTION_DAYS = 14

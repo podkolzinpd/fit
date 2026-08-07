@@ -200,8 +200,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // Есть незавершённые подходы → inline-подтверждение частичного завершения.
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   await page.getByRole('button', { name: 'Завершить', exact: true }).click()
-  await expect(page.getByText('Готово', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
+  await expect(page.locator('.workout-detail-page .badge.partial')).toHaveText('Частично')
   await expect(page.locator('.workout-completion')).toContainText('Выполнено 1 из 4 подходов')
   await expect(page.locator('.completed-exercise-list')).toBeVisible()
   await expect(page.locator('.completed-exercise').first()).toBeVisible()
@@ -218,12 +218,13 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.done-summary-3')).toContainText('383 кг')
 
   // Завершённую тренировку можно исправить без возврата в live: редактор
-  // открывает сохранённый факт, а после сохранения статус остаётся «Готово».
+  // открывает сохранённый факт; сохранение дополняет все подходы и статус
+  // возвращается к полностью завершённой тренировке.
   await page.getByRole('link', { name: 'Изменить результат' }).click()
   await expect(page.getByLabel('Фактический вес, подход 1')).toHaveValue('42.5')
   await page.getByLabel('Фактический вес, подход 1').fill('45')
   await page.getByRole('button', { name: 'Сохранить изменения' }).click()
-  await expect(page.getByText('Готово', { exact: true })).toBeVisible()
+  await expect(page.locator('.workout-detail-page .badge.done')).toHaveText('Готово')
   await expect(page.getByText(/45 кг × 9 повт\./)).toBeVisible()
 
   // «Назад» с завершённой тренировки ведёт в расписание (все запланированные).
