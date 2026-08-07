@@ -677,6 +677,55 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .set-fill-plan { align-self: flex-start; margin: 6px 0 0; font-size: 13px }
 /* Зафиксированный подход: значения горят ярко, не тускнеют как disabled. */
 .set-row.locked input { color: var(--fg-on-surface); -webkit-text-fill-color: var(--fg-on-surface); opacity: 1; font-weight: 700; border-color: var(--success-border); background: var(--success-surface) }
+/* Voice-first Today: recorder/recognizer остаются внутри VoiceInputButton;
+   hero-вариант меняет только представление первого экрана. */
+.today-voice-home { min-height:calc(100dvh - 190px); align-content:start; gap:12px; }
+.today-greeting { margin:2px 0 0; color:var(--text); font-size:15px; line-height:1.35; }
+.voice-action { display:grid; justify-items:center; gap:14px; padding:2px 0 0; text-align:center; }
+.voice-action-copy { min-height:34px; display:grid; align-content:center; gap:8px; }
+.voice-action-copy h2 { margin:0; color:#17191d; font-size:21px; letter-spacing:-.02em; }
+.voice-action-button { position:relative; width:112px; height:112px; display:grid; place-items:center; padding:0; border:1px solid #f3b7a8; border-radius:50%; background:#fffefc; color:#f26b4a; box-shadow:0 12px 28px #a77d681f, inset 0 0 0 8px #fff7f3; transition:transform .16s ease, box-shadow .16s ease; }
+.voice-action-button::before { content:''; position:absolute; inset:-13px; border:1px solid #f26b4a36; border-radius:50%; }
+.voice-action-button:active { transform:scale(.965); box-shadow:0 7px 18px #a77d6829, inset 0 0 0 8px #fff3ed; }
+.voice-action-button:focus-visible { outline:3px solid var(--accent-ring); outline-offset:9px; }
+.voice-action-button:disabled { opacity:1; cursor:wait; }
+.voice-action-button svg { position:relative; z-index:1; width:47px; height:47px; }
+.voice-action-ring { position:absolute; inset:-7px; border-radius:50%; pointer-events:none; }
+.voice-action-recording .voice-action-button::before { animation:voice-breathe 1.9s ease-in-out infinite; }
+.voice-action-requesting .voice-action-ring, .voice-action-preparing .voice-action-ring, .voice-action-loading .voice-action-ring, .voice-action-transcribing .voice-action-ring { border:2px solid transparent; border-top-color:#f26b4a; animation:voice-spin 1s linear infinite; }
+.voice-action-label { display:grid; justify-items:center; gap:5px; max-width:300px; }
+.voice-action-label strong { color:#17191d; font-size:17px; }
+.voice-action-label span { color:#6c717a; font-size:14px; line-height:1.4; }
+.voice-action-transcript { max-width:310px; margin:0; color:#6c717a; font-size:14px; line-height:1.45; }
+.voice-action-recording-controls { width:min(100%, 280px); display:grid; gap:8px; }
+.voice-action-recording-controls .wide { min-height:50px; border-radius:18px; }
+.voice-action-recording-controls .link { justify-self:center; color:#17191d; }
+.voice-action-error { display:grid; justify-items:center; gap:8px; padding:12px 14px; border:1px solid var(--danger-border); border-radius:14px; background:var(--danger-surface); color:var(--fg); font-size:14px; text-align:center; }
+.today-text-toggle { justify-self:center; min-height:40px; padding:6px 18px; border:1px solid var(--border); border-radius:99px; color:#17191d; background:#fffefc; }
+.today-text-fallback { display:grid; gap:10px; padding-top:5px; }
+.today-text-fallback-head { display:flex; align-items:center; justify-content:space-between; gap:14px; }
+.today-text-fallback-head > div { display:grid; gap:2px; }
+.today-text-fallback-head strong { color:#17191d; font-size:18px; }
+.today-text-fallback-head small { color:#6c717a; }
+.today-text-fallback .today-picker-cta { min-height:38px; padding:5px; border:0; background:transparent; color:var(--accent-strong); font-size:14px; }
+.today-resume { display:grid; gap:10px; padding:13px 14px; border:1px solid var(--accent-surface-border); border-radius:16px; background:var(--accent-surface); }
+.today-resume > span { display:grid; gap:3px; }
+.today-resume small { color:var(--text-muted); }
+.today-resume > div { display:flex; gap:18px; }
+.today-resume .link { min-height:34px; padding:3px 0; }
+.today-context { display:grid; gap:7px; margin-top:5px; }
+.today-context > p { margin:0; color:#6c717a; font-size:13px; font-weight:650; }
+.today-context > a { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; column-gap:10px; row-gap:6px; min-height:66px; padding:11px 13px; border:1px solid #e5ded3; border-radius:15px; background:#fffefc; color:#17191d; text-decoration:none; box-shadow:0 6px 18px #a77d6812; }
+.today-context span { min-width:0; display:grid; gap:3px; }
+.today-context span + span { padding-top:6px; border-top:1px solid #eee8df; }
+.today-context strong, .today-context small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.today-context strong { font-size:14px; }
+.today-context small { color:#6c717a; font-size:12px; }
+.today-context b { grid-column:2; grid-row:1 / span 2; color:#8c9097; font-size:25px; font-weight:400; }
+@keyframes voice-breathe { 50% { transform:scale(1.035); border-color:#f26b4a70; } }
+@keyframes voice-spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce) { .voice-action-button, .voice-action-button::before, .voice-action-ring { animation:none !important; transition:none; } }
+@media (max-width:375px) { .today-voice-home { gap:9px; }.today-greeting { font-size:14px; }.voice-action { gap:11px; }.voice-action-copy h2 { font-size:19px; }.voice-action-button { width:102px; height:102px; }.voice-action-button svg { width:42px; height:42px; }.voice-action-label { gap:3px; }.today-context > a { min-height:60px; padding:9px 11px; } }
 .confirmed { border-color: var(--success-border); background: var(--success-surface) }
 /* Текущий подход (в работе) — серая подсветка. */
 .exercise.current { border-color: var(--neutral-current-border); background: var(--neutral-current) }

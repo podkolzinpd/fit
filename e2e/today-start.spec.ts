@@ -6,6 +6,78 @@ async function mockWorkoutParser(page: import('@playwright/test').Page, items: u
   })
 }
 
+async function mockStreamingVoice(page: import('@playwright/test').Page, transcript = 'Жим лёжа три подхода по десять 80 килограммов') {
+  await page.addInitScript((recognizedText) => {
+    const track = { stop() {} }
+    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { getUserMedia: () => Promise.resolve({ getTracks: () => [track] }) } })
+    class FakeAudioContext {
+      sampleRate = 48_000
+      destination = {}
+      createMediaStreamSource() { return { connect() {}, disconnect() {} } }
+      createScriptProcessor() { return { connect() {}, disconnect() {}, onaudioprocess: null } }
+      async close() {}
+    }
+    class FakeWebSocket {
+      static OPEN = 1
+      readyState = 1
+      binaryType = 'arraybuffer'
+      onopen: (() => void) | null = null
+      onerror: (() => void) | null = null
+      onmessage: ((event: { data: string }) => void) | null = null
+      constructor(url: string) { void url; window.setTimeout(() => this.onopen?.(), 0) }
+      send(data: string | ArrayBuffer) {
+        if (typeof data !== 'string') return
+        const message = JSON.parse(data) as { type?: string }
+        if (message.type === 'config') window.setTimeout(() => this.onmessage?.({ data: JSON.stringify({ type: 'partial', text: recognizedText.slice(0, 22) }) }), 20)
+        if (message.type === 'stop') window.setTimeout(() => this.onmessage?.({ data: JSON.stringify({ type: 'final', text: recognizedText }) }), 20)
+      }
+      close() { this.readyState = 3 }
+    }
+    Object.defineProperty(window, 'AudioContext', { configurable: true, value: FakeAudioContext })
+    Object.defineProperty(window, 'WebSocket', { configurable: true, value: FakeWebSocket })
+  }, transcript)
+}
+
+test('today: voice-first запускает запись, отменяет её и открывает review после transcript', async ({ page }) => {
+  await mockWorkoutParser(page, [{ sourceText: 'Жим лёжа три подхода по десять 80 килограммов', exerciseRef: 'bench-press', confidence: 1, sets: [{ weightKg: 80, reps: 10 }, { weightKg: 80, reps: 10 }, { weightKg: 80, reps: 10 }] }])
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/(today|clients)$/)
+  await mockStreamingVoice(page)
+  await page.goto('/today')
+
+  await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
+  await expect(page.getByRole('heading', { name: 'Слушаю…' })).toBeVisible()
+  await page.getByRole('button', { name: 'Отменить' }).click()
+  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
+  await expect(page.getByText(/Жим лёжа три подхода/)).toBeVisible()
+  await page.getByRole('button', { name: 'Готово' }).click()
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible({ timeout: 10_000 })
+  await expect(page.locator('.today-exercise')).toHaveCount(1)
+})
+
+test('today: ошибка voice-разбора сохраняет transcript и раскрывает текстовый fallback', async ({ page }) => {
+  await page.route('**/functions/v1/parse-workout', async (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporary' }) }))
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/(today|clients)$/)
+  await mockStreamingVoice(page)
+  await page.goto('/today')
+
+  await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
+  await page.getByRole('button', { name: 'Готово' }).click()
+  await expect(page.getByText('Не удалось обработать диктовку. Исходный текст сохранён.')).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByLabel('Тренировка')).toHaveValue('Жим лёжа три подхода по десять 80 килограммов')
+  await expect(page.getByRole('button', { name: 'Разобрать тренировку' })).toBeEnabled()
+})
+
 test('today: быстрый старт ведёт к единому выбору плана или завершённой тренировки', async ({ page }, testInfo) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
@@ -14,7 +86,11 @@ test('today: быстрый старт ведёт к единому выбору
   await expect(page).toHaveURL(/\/(today|clients)$/)
   await page.goto('/today')
 
-  await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
+  await expect(page.getByLabel('Тренировка')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Разобрать тренировку' })).toBeDisabled()
   await mockWorkoutParser(page, [
     { sourceText: 'Присед со штангой 3×8 — 80 кг', exerciseRef: 'barbell-squat', confidence: 1, sets: [{ weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }] },
@@ -69,11 +145,11 @@ test('today: быстрый старт ведёт к единому выбору
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
   await expect(page.locator('.today-exercise')).toHaveCount(2)
   await page.getByRole('button', { name: '← Назад' }).click()
-  await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
+  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
   await expect(page).toHaveURL(/\/today$/)
   await expect(page.getByLabel('Тренировка')).toHaveValue('Присед со штангой 3×8 — 80 кг\nПланка 3×45 сек')
   await page.waitForTimeout(3600)
-  await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
+  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
 })
 
 test('создание из календаря: завершённая тренировка не остаётся в будущем', async ({ page }) => {
@@ -102,6 +178,7 @@ test('today: quick review наследует настройку RPE тренер
   await page.goto('/profile')
   await page.getByRole('switch', { name: 'Показывать RPE в подходах' }).check()
   await page.goto('/today')
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await mockWorkoutParser(page, [{
     sourceText: 'Присед со штангой 3×8 — 80 кг', exerciseRef: 'barbell-squat', confidence: 1,
     sets: [{ weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }],
@@ -123,7 +200,9 @@ test('today: черновик сохраняет финальный шаг и п
   await page.getByRole('button', { name: 'Войти' }).click()
   await expect(page).toHaveURL(/\/(today|clients)$/)
   await page.goto('/today')
-  await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
 
   const workoutText = 'Присед со штангой 3×8 — 80 кг\nПланка 3×45 сек'
   await mockWorkoutParser(page, [

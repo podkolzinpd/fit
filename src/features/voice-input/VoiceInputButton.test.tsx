@@ -74,4 +74,26 @@ describe('VoiceInputButton', () => {
     await user.click(screen.getByRole('button', { name: /Остановить/ }))
     expect(await screen.findByText('Речь не распознана.')).toBeVisible()
   })
+
+  it('presents the reusable hero flow and cancels without returning a transcript', async () => {
+    const user = userEvent.setup()
+    const cancel = vi.fn()
+    const onTranscript = vi.fn()
+    render(<VoiceInputButton
+      variant="hero"
+      idleLabel="Надиктовать тренировку"
+      onTranscript={onTranscript}
+      source="today"
+      recorderFactory={() => recorder({ cancel })}
+    />)
+
+    expect(screen.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Надиктовать тренировку' }))
+    expect(await screen.findByRole('button', { name: /Завершить запись/ })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: 'Отменить' }))
+
+    expect(screen.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
+    expect(cancel).toHaveBeenCalledOnce()
+    expect(onTranscript).not.toHaveBeenCalled()
+  })
 })

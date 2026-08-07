@@ -18,9 +18,10 @@ interface VoiceNoteFieldProps {
   hideLabel?: boolean
   autoResize?: boolean
   maxHeightPx?: number
+  showVoice?: boolean
 }
 
-export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, onManualValueChange, onTranscriptValueChange, onTranscriptAppended, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false, autoResize = false, maxHeightPx = 264 }: VoiceNoteFieldProps) {
+export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, onManualValueChange, onTranscriptValueChange, onTranscriptAppended, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false, autoResize = false, maxHeightPx = 264, showVoice = true }: VoiceNoteFieldProps) {
   const id = useId()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [isTranscriptProcessing, setIsTranscriptProcessing] = useState(false)
@@ -54,7 +55,7 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
         window.requestAnimationFrame(resizeTextarea)
       } : undefined}
     />
-    <VoiceInputButton source={source} idleLabel={voiceLabel} beta={voiceBeta} onTranscript={(text) => {
+    {showVoice && <VoiceInputButton source={source} idleLabel={voiceLabel} beta={voiceBeta} onTranscript={(text) => {
       if (!textareaRef.current) return
       const previous = textareaRef.current.value
       const nextValue = appendTranscript(previous, text)
@@ -80,7 +81,7 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
           textareaRef.current.dispatchEvent(new Event('input', { bubbles: true }))
         }
       }
-    }} />
+    }} />}
     {isTranscriptProcessing && <div className="voice-input-status" role="status"><small>Текст распознан. Обрабатываем упражнения…</small></div>}
   </div>
 }

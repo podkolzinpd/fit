@@ -18,6 +18,7 @@ import type { WorkoutParseResponse } from '../../data/repositories/exercises.rep
 import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
 import { workoutDateForRecordMode, type WorkoutRecordMode } from './workout-entry-rules'
 import { WorkoutComposer } from './WorkoutComposer'
+import { VoiceInputButton, type VoiceInputPhase } from '../voice-input'
 import { WorkoutParseErrorNotice, workoutParseErrorKind, type WorkoutParseErrorKind } from './WorkoutParseErrorNotice'
 import { WorkoutSetTable } from './WorkoutSetTable'
 
@@ -80,6 +81,7 @@ export function TodayPage() {
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
   const today = todayLocalDate()
   const todayWorkouts = useQuery({ queryKey: ['today-workouts', today], queryFn: () => workoutsRepository.list(today, today) })
+  const workouts = useQuery({ queryKey: ['workouts'], queryFn: () => workoutsRepository.list() })
   const catalog = useExerciseCatalog()
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
@@ -98,6 +100,9 @@ export function TodayPage() {
   const [removedRefs, setRemovedRefs] = useState<string[]>([])
   const [removedItem, setRemovedItem] = useState<{ item: ParsedWorkoutExercise; index: number } | null>(null)
   const [draftReady, setDraftReady] = useState(false)
+  const [restoredDraftScreen, setRestoredDraftScreen] = useState<Screen | null>(null)
+  const [textComposerOpen, setTextComposerOpen] = useState(false)
+  const [voicePhase, setVoicePhase] = useState<VoiceInputPhase>('idle')
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState<WorkoutParseErrorKind | null>(null)
   const [llmUnmatched, setLlmUnmatched] = useState<UnmatchedView[]>([])
@@ -125,6 +130,10 @@ export function TodayPage() {
   // последовательно возвращают к предыдущему шагу, а не к случайному табу.
   function setScreen(next: Screen) {
     if (next === screen) return
+    if (next === 'compose') {
+      setRestoredDraftScreen(null)
+      setTextComposerOpen(true)
+    }
     const previousScreen = (location.state as { fromTodayScreen?: Screen } | null)?.fromTodayScreen
     if ((next === 'compose' && screen === 'review' && previousScreen === 'compose') || (next === 'review' && screen === 'save' && previousScreen === 'review')) {
       navigate(-1)
@@ -136,7 +145,7 @@ export function TodayPage() {
   useEffect(() => {
     const draft = readTodayDraft(draftKey)
     if (draft) {
-      setScreen(draft.screen)
+      setRestoredDraftScreen(screen === 'compose' ? draft.screen : null)
       setText(draft.text)
       setLastLlmText(draft.lastLlmText ?? null)
       setChoices(draft.choices)
@@ -249,7 +258,7 @@ export function TodayPage() {
     }
   }
 
-  async function refineVoiceTranscript(previousValue: string, value: string, transcript: string) {
+  async function refineVoiceTranscript(previousValue: string, value: string, transcript: string, openReview = false) {
     const version = ++voiceParseVersion.current
     setVoiceRefinement({ state: 'loading', message: 'Разбираю диктовку по упражнениям…' })
     trackGoal('voice_workout_parse_started')
@@ -263,6 +272,7 @@ export function TodayPage() {
       const formatted = formatLlmWorkoutText(llm, catalog.exercises)
       if (!formatted) {
         setVoiceRefinement({ state: 'error', message: 'Не удалось получить структурированный разбор диктовки.' })
+        if (openReview) setTextComposerOpen(true)
         trackGoal('voice_workout_parse_failed')
         return
       }
@@ -271,16 +281,32 @@ export function TodayPage() {
       setLastLlmText(normalizedText)
       if (unmatched.length) {
         setVoiceRefinement({ state: 'error', message: 'Распознанные упражнения отформатированы; одно или несколько нужно уточнить.' })
+        if (openReview) setTextComposerOpen(true)
         trackGoal('voice_workout_parse_partial')
       } else {
         setVoiceRefinement({ state: 'success', message: 'Диктовка разобрана и отформатирована.' })
+        if (openReview && parsedItems.length) {
+          setItems(parsedItems)
+          setScreen('review')
+          trackGoal('workout_review_opened')
+        }
         trackGoal('voice_workout_parse_completed')
       }
     } catch {
       if (version !== voiceParseVersion.current) return
       setVoiceRefinement({ state: 'error', message: 'Не удалось обработать диктовку. Исходный текст сохранён.' })
+      if (openReview) setTextComposerOpen(true)
       trackGoal('voice_workout_parse_failed')
     }
+  }
+
+  async function handleHeroTranscript(transcript: string) {
+    const previous = text
+    const value = appendVoiceText(previous, transcript)
+    setText(value)
+    setParseError(null)
+    setVoiceRefinement(null)
+    await refineVoiceTranscript(previous, value, transcript, true)
   }
 
   async function previousResults(selected: ExerciseSnapshot[]): Promise<Map<string, PreviousExerciseResult>> {
@@ -379,20 +405,42 @@ export function TodayPage() {
     setRemovedItem(null)
   }
 
+  function clearDraftAndForm() {
+    removeTodayDraft(draftKey)
+    setScreen('compose')
+    setText('')
+    setLastLlmText(null)
+    setChoices({})
+    setRecognized([])
+    setItems([])
+    setClientId('')
+    setRecordMode('planned')
+    setWorkoutDate(today)
+    setStartTime('')
+    setManualRefs([])
+    setRemovedRefs([])
+    setRestoredDraftScreen(null)
+    setTextComposerOpen(false)
+  }
+
   const currentWorkout = todayWorkouts.data?.find((workout) => workout.status === 'in_progress')
   const plannedWorkouts = todayWorkouts.data?.filter((workout) => workout.status === 'planned').sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')) ?? []
   function workoutTime(workout: Workout) { return workout.startTime?.slice(0, 5) ?? 'Без времени' }
 
   const trainerInitial = actor?.firstName?.trim().slice(0, 1).toUpperCase() || 'П'
-  const agenda = (currentWorkout || plannedWorkouts.length > 0) && <section className="today-agenda"><div className="today-agenda-head"><div><p className="eyebrow">Рабочий день</p><h2>На сегодня</h2></div><Link className="link" to="/schedule">Расписание</Link></div>{currentWorkout && <Link className="today-current-workout" to={`/workouts/${currentWorkout.id}/live`}><span><strong>Продолжить тренировку</strong><small>{currentWorkout.clientName} · {workoutTime(currentWorkout)}</small></span><b>→</b></Link>}{plannedWorkouts.slice(0, 3).map((workout) => <Link className="today-planned-workout" key={workout.id} to={`/workouts/${workout.id}`}><span>{workoutTime(workout)}</span><strong>{workout.clientName}</strong><small>{workout.exercises.length ? workout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Без упражнений'}</small></Link>)}</section>
+  const latestWorkout = workouts.data?.filter((workout) => workout.status === 'done').sort((a, b) => `${b.workoutDate}${b.startTime ?? ''}`.localeCompare(`${a.workoutDate}${a.startTime ?? ''}`))[0]
+  const contextWorkout = currentWorkout ?? plannedWorkouts[0] ?? latestWorkout
+  const contextTitle = currentWorkout ? 'Текущая тренировка' : plannedWorkouts[0] ? 'Ближайшая тренировка' : latestWorkout ? 'Последняя тренировка' : null
+  const contextCard = contextWorkout && contextTitle && <section className="today-context"><p>{contextTitle}</p><Link to={currentWorkout ? `/workouts/${contextWorkout.id}/live` : `/workouts/${contextWorkout.id}`}><span><strong>{contextWorkout.clientName}</strong><small>{contextWorkout.workoutDate === today ? `Сегодня, ${workoutTime(contextWorkout)}` : contextWorkout.workoutDate}</small></span><span><strong>{contextWorkout.exercises.length ? contextWorkout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Тренировка'}</strong><small>{contextWorkout.exercises.length} упражнений</small></span><b>›</b></Link></section>
+  const greeting = `${new Date().getHours() < 12 ? 'Доброе утро' : new Date().getHours() < 18 ? 'Добрый день' : 'Добрый вечер'}, ${actor?.firstName || 'тренер'}`
 
   return <Page title="Сегодня" className="today-page today-start-page" action={<Link className="today-profile-avatar" to="/profile" aria-label="Открыть профиль">{trainerInitial}</Link>}>
-    {screen === 'compose' ? <section className="today-composer">
-      <div className="today-hero">
-        <h1>Новая тренировка</h1>
-        <p>Напишите тренировку — мы разберём её по упражнениям и подходам.</p>
-      </div>
-      <WorkoutComposer name="today-workout" source="today_workout" value={text} onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="secondary wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}><span>Выбрать упражнения</span><small>Поиск и массовый выбор</small></button>}>
+    {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase}`}>
+      <p className="today-greeting">{greeting} 👋</p>
+      {restoredDraftScreen && <section className="today-resume"><span><strong>Есть незавершённая тренировка</strong><small>Продолжите с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={clearDraftAndForm}>Начать новую</button></div></section>}
+      {!restoredDraftScreen && !textComposerOpen && <VoiceInputButton variant="hero" source="today_workout" idleLabel="Надиктовать тренировку" onPhaseChange={setVoicePhase} onTranscript={handleHeroTranscript} />}
+      {!restoredDraftScreen && !textComposerOpen && voicePhase === 'idle' && <button type="button" className="link today-text-toggle" onClick={() => setTextComposerOpen(true)}>Ввести текстом</button>}
+      {textComposerOpen && <div className="today-text-fallback"><div className="today-text-fallback-head"><div><strong>Новая тренировка</strong><small>Введите упражнения, подходы и значения</small></div><button type="button" className="link" onClick={() => setTextComposerOpen(false)}>Скрыть</button></div><WorkoutComposer name="today-workout" source="today_workout" value={text} showVoice={false} onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="link wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}>Выбрать упражнения вручную</button>}>
       {voiceRefinement && voiceRefinement.state !== 'loading' && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
       {(resolved.length > 0 || clarification || displayedUnparsed.length > 0) && <div className="today-parse-preview" aria-live="polite">
         {resolved.length > 0 && <section className="today-recognized" aria-label="Распознанные упражнения">
@@ -406,7 +454,9 @@ export function TodayPage() {
         </div>)}
       </div>}
        {parseError && <WorkoutParseErrorNotice kind={parseError} onRetry={() => void review()} />}
-      </WorkoutComposer>
+      </WorkoutComposer></div>}
+      {voiceRefinement?.state === 'error' && !textComposerOpen && <div className="voice-action-error" role="alert"><strong>{voiceRefinement.message}</strong><button type="button" className="link" onClick={() => setTextComposerOpen(true)}>Редактировать текст</button></div>}
+      {voicePhase === 'idle' && contextCard}
     </section> : <section className="today-review">
       <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><div><h1>{screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'}</h1>{screen === 'review' && items.length > 0 && <p className="today-review-summary">Распознано: {items.length}</p>}</div></div>
       {screen === 'review' && <>
@@ -430,7 +480,6 @@ export function TodayPage() {
         <button type="button" className="wide" disabled={!items.length || !clientId || save.isPending} onClick={() => save.mutate(recordMode)}>{recordMode === 'planned' ? 'Запланировать' : 'Записать как завершённую'}</button>
       </section></section>}
     </section>}
-    {screen === 'compose' && agenda}
     {(catalog.error ?? todayWorkouts.error) && <p className="error">{(catalog.error ?? todayWorkouts.error)?.message}</p>}
     {pickerOpen && <ExercisePicker catalog={catalog} frequent={frequentExercises} onPick={(exercise) => pickExercises([exercise])} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
   </Page>
