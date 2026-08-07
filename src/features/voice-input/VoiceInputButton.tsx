@@ -6,10 +6,10 @@ import { WhisperCppRecognizer } from './whisper-cpp-recognizer'
 import { SpeechKitStreamingSession } from './speechkit-streaming-recognizer'
 import { trackGoal } from '../../shared/yandex-metrika'
 
-type Phase = 'idle' | 'recording' | 'preparing' | 'loading' | 'transcribing'
+export type VoiceInputPhase = 'idle' | 'requesting' | 'recording' | 'preparing' | 'loading' | 'transcribing'
 
 interface VoiceInputButtonProps {
-  onTranscript: (text: string) => void | (() => void)
+  onTranscript: (text: string) => void | (() => void) | Promise<void | (() => void)>
   source: string
   recorderFactory?: () => AudioRecorder
   recognizerFactory?: () => SpeechRecognizer
@@ -17,6 +17,8 @@ interface VoiceInputButtonProps {
   maxDurationMs?: number
   idleLabel?: string
   beta?: boolean
+  variant?: 'inline' | 'hero'
+  onPhaseChange?: (phase: VoiceInputPhase) => void
 }
 
 export function VoiceInputButton({
@@ -28,8 +30,10 @@ export function VoiceInputButton({
   maxDurationMs = 270_000,
   idleLabel = 'Надиктовать заметку',
   beta = false,
+  variant = 'inline',
+  onPhaseChange,
 }: VoiceInputButtonProps) {
-  const [phase, setPhase] = useState<Phase>('idle')
+  const [phase, setPhase] = useState<VoiceInputPhase>('idle')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [progress, setProgress] = useState(0)
   const [message, setMessage] = useState<string | null>(null)
@@ -54,10 +58,13 @@ export function VoiceInputButton({
     }
   }, [])
 
+  useEffect(() => { onPhaseChange?.(phase) }, [onPhaseChange, phase])
+
   async function startRecording() {
     setMessage(null)
     setUndo(null)
     setProgress(0)
+    setPhase('requesting')
     {
       const streaming = new SpeechKitStreamingSession()
       streamingTextRef.current = ''
@@ -94,7 +101,7 @@ export function VoiceInputButton({
     if (!streamingRef.current || stoppingRef.current) return
     stoppingRef.current = true; clearTimers(intervalRef, timeoutRef)
     const streaming = streamingRef.current; streamingRef.current = null
-    try { await streaming.stop(); const text = streamingTextRef.current.trim(); if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.'); const revert = onTranscript(text); setUndo(() => revert ?? null); setMessage('Текст добавлен в заметку. Проверьте его перед сохранением.') }
+    try { await streaming.stop(); const text = streamingTextRef.current.trim(); if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.'); setPhase('transcribing'); const revert = await onTranscript(text); setUndo(() => revert ?? null); setMessage(variant === 'hero' ? null : 'Текст добавлен в заметку. Проверьте его перед сохранением.') }
     catch (error) { if (mountedRef.current) setMessage(error instanceof Error ? error.message : 'Не удалось распознать запись.') }
     finally { stoppingRef.current = false; if (mountedRef.current) setPhase('idle') }
   }
@@ -129,9 +136,9 @@ export function VoiceInputButton({
       })
       if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.')
       if (!mountedRef.current) return
-      const revert = onTranscript(text)
+      const revert = await onTranscript(text)
       setUndo(() => revert ?? null)
-      setMessage('Текст добавлен в заметку. Проверьте его перед сохранением.')
+      setMessage(variant === 'hero' ? null : 'Текст добавлен в заметку. Проверьте его перед сохранением.')
     } catch (error) {
       if (!mountedRef.current) return
       setMessage(error instanceof Error ? error.message : 'Не удалось распознать запись.')
@@ -143,6 +150,41 @@ export function VoiceInputButton({
 
   const recording = phase === 'recording'
   const busy = phase !== 'idle' && !recording
+  function cancelRecording() {
+    clearTimers(intervalRef, timeoutRef)
+    recorderRef.current?.cancel()
+    recorderRef.current = null
+    const streaming = streamingRef.current
+    streamingRef.current = null
+    if (streaming) void streaming.stop()
+    streamingTextRef.current = ''
+    stoppingRef.current = false
+    setElapsedSeconds(0)
+    setProgress(0)
+    setMessage(null)
+    setPhase('idle')
+  }
+
+  if (variant === 'hero') return <section className={`voice-action voice-action-${phase}`} aria-live="polite">
+    <div className="voice-action-copy">
+      <h2>{recording ? 'Слушаю…' : busy ? voiceHeroStatus(phase) : 'Что будем делать?'}</h2>
+      {recording && message?.startsWith('Сейчас распознаю:') && <p className="voice-action-transcript">«{message.replace('Сейчас распознаю:', '').trim()}»</p>}
+    </div>
+    <button
+      type="button"
+      className="voice-action-button"
+      aria-label={recording ? `Завершить запись, ${formatDuration(elapsedSeconds)}` : busy ? voiceHeroStatus(phase) : idleLabel}
+      aria-pressed={recording}
+      disabled={busy}
+      onClick={() => { if (recording) { void (streamingRef.current ? finishStreaming() : finishRecording()); return }; trackGoal(`voice_note_start_click_${source}`); void startRecording() }}
+    >
+      {recording ? <StopIcon /> : <MicIcon />}
+      <span className="voice-action-ring" aria-hidden="true" />
+    </button>
+    {recording ? <div className="voice-action-recording-controls"><button type="button" className="wide" onClick={() => void (streamingRef.current ? finishStreaming() : finishRecording())}>Готово</button><button type="button" className="link" onClick={cancelRecording}>Отменить</button></div> : <div className="voice-action-label">{!busy && <strong>{idleLabel}</strong>}<span>{busy ? 'Это займёт несколько секунд' : 'Скажите упражнения, подходы, повторы и веса'}</span></div>}
+    {message && !message.startsWith('Сейчас распознаю:') && <div className="voice-action-error" role="alert"><strong>{message}</strong></div>}
+  </section>
+
   return <div className="voice-input">
     <button
       type="button"
@@ -159,12 +201,20 @@ export function VoiceInputButton({
   </div>
 }
 
-function voiceButtonLabel(phase: Phase, elapsedSeconds: number, progress: number, idleLabel: string) {
+function voiceButtonLabel(phase: VoiceInputPhase, elapsedSeconds: number, progress: number, idleLabel: string) {
   if (phase === 'recording') return `Остановить · ${formatDuration(elapsedSeconds)}`
   if (phase === 'preparing') return 'Подготавливаю запись…'
   if (phase === 'loading') return 'Загружаю модель…'
   if (phase === 'transcribing') return `Распознаю… ${progress}%`
   return idleLabel
+}
+
+function voiceHeroStatus(phase: VoiceInputPhase) {
+  if (phase === 'requesting') return 'Запрашиваю доступ…'
+  if (phase === 'preparing') return 'Подготавливаю запись…'
+  if (phase === 'loading') return 'Загружаю распознавание…'
+  if (phase === 'transcribing') return 'Разбираю тренировку…'
+  return 'Слушаю…'
 }
 
 function formatDuration(seconds: number) {

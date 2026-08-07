@@ -82,6 +82,7 @@ async function openReviewWithFixture(page: import('@playwright/test').Page) {
     })
   })
   await page.goto('/today')
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await page.getByLabel('Тренировка').fill('Жим лёжа (Штанга) 3×8 — 80 кг')
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
@@ -95,6 +96,10 @@ for (const viewport of mobileViewports) {
     for (const screen of ['/today', '/clients', '/schedule']) {
       await page.goto(screen)
       await expect(page.locator('main')).toBeVisible()
+      if (screen === '/today') {
+        await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
+        await expect(page.getByLabel('Тренировка')).toHaveCount(0)
+      }
       await expectNoHorizontalOverflow(page)
     }
 
