@@ -315,6 +315,8 @@ test('live: планка вводится в секундах, таймер за
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Начать' }).click()
+  await expect(page.locator('.live-set-table-head')).toContainText('Сек.')
+  await expect(page.locator('.live-set-table-head')).not.toContainText('Кг')
   await expect(page.locator('.live-timer')).toContainText(/\d\d:\d\d/)
   // #3: закреплённый блок с таймером (и отдыхом) sticky — не уезжает при скролле.
   await expect(page.locator('.live-pinned')).toHaveCSS('position', 'sticky')
