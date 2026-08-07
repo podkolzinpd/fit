@@ -39,13 +39,13 @@ npm run check
 
 1. Установите Xcode.
 2. `npm install`
-3. В `.env.local` (не коммитится) укажите production Supabase значения из Vercel — iOS-сборка использует их на этапе билда, приложение откроется с пустым экраном без ошибки, если их нет:
-   ```
-   VITE_SUPABASE_URL=https://xwfuzfkuhblswpdludbc.supabase.co
-   VITE_SUPABASE_PUBLISHABLE_KEY=<publishable key>
-   ```
-4. `npm run ios:open` — соберёт веб-приложение, засинкает его в `ios/` и откроет Xcode-проект. Запуск на симулятор/устройство — оттуда.
+3. Запустите локальный Supabase через `npm run db:start` (используется установленный Podman; Docker не требуется).
+4. `npm run ios:open` — соберёт локальный bundle с `.env.development`, засинкает его в `ios/` и откроет Xcode-проект. Запуск на симулятор/устройство — оттуда.
 5. После любых изменений в `src/` перезапустите `npm run ios:sync` (или `ios:open`) — Xcode не пересобирает веб-бандл сам.
+
+`npm run ios:sync:production` оставлен для release-сборки и требует production
+Supabase variables в окружении сборочной системы. Локальный simulator-flow не
+читает `.env.local` и не требует production-секретов.
 
 Светлая тема используется по умолчанию во всех сборках. Для временного отката
 на тёмную соберите приложение с `VITE_APP_THEME=dark`.

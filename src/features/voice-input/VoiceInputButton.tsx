@@ -19,6 +19,7 @@ interface VoiceInputButtonProps {
   beta?: boolean
   variant?: 'inline' | 'hero'
   onPhaseChange?: (phase: VoiceInputPhase) => void
+  onStart?: () => void
 }
 
 export function VoiceInputButton({
@@ -32,6 +33,7 @@ export function VoiceInputButton({
   beta = false,
   variant = 'inline',
   onPhaseChange,
+  onStart,
 }: VoiceInputButtonProps) {
   const [phase, setPhase] = useState<VoiceInputPhase>('idle')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -61,6 +63,7 @@ export function VoiceInputButton({
   useEffect(() => { onPhaseChange?.(phase) }, [onPhaseChange, phase])
 
   async function startRecording() {
+    onStart?.()
     setMessage(null)
     setUndo(null)
     setProgress(0)

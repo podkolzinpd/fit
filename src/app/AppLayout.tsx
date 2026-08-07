@@ -9,11 +9,17 @@ export function AppLayout() {
   const { actor } = useAuth()
   const theme = useAppTheme()
   const contentRef = useRef<HTMLDivElement>(null)
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const redesignedStart = isTodayStartRedesignEnabled()
   const [keyboardOpen, setKeyboardOpen] = useState(false)
 
-  useEffect(() => { contentRef.current?.scrollTo(0, 0) }, [pathname])
+  useEffect(() => {
+    // Route content can grow again while its draft is restored. Reset on the
+    // next frame so iOS scroll anchoring cannot reopen Today below its primary
+    // action after a longer form or review screen.
+    const frame = window.requestAnimationFrame(() => contentRef.current?.scrollTo(0, 0))
+    return () => window.cancelAnimationFrame(frame)
+  }, [pathname, search])
 
   // На iOS окно не всегда меняет высоту при открытии клавиатуры. Visual
   // Viewport даёт её фактическую высоту: таб-бар не мешает вводу и CTA.

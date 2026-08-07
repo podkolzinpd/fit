@@ -5,12 +5,12 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-07  
-Проверенный `main`: `9642ae3` (`YAFIT-214: balance trainer tabs and simplify draft restore (#321)`)
+Проверенный `main`: `1811189` (`YAFIT-215: make Today voice-first (#322)`)
 
 ## Активная работа
 
-- `YAFIT-215`: сделать `/today` voice-first, переиспользовав существующие
-  SpeechKit, LLM-разбор, review, draft и save flow без изменения их контрактов.
+- `YAFIT-216`: исправить post-merge регрессию `/today`: старый draft и
+  сохранённая позиция scroll не должны скрывать главное голосовое действие.
 
 ## Последняя проверенная продуктовая точка
 
@@ -34,11 +34,13 @@
   карточки клиента, клиентские маршруты прогресса сохранены.
 - `#321` / `YAFIT-214`: три trainer-вкладки выровнены; отдельная карточка
   восстановленного черновика удалена, тихое восстановление сохранено.
+- `#322` / `YAFIT-215`: `/today` стал voice-first; существующие SpeechKit,
+  LLM-разбор, review и save flow подключены без изменения их контрактов.
 
 ## Ближайшее действие
 
-1. Завершить voice-first presentation `/today` и проверить состояния voice,
-   text fallback, draft и context card на 390/375/360 px.
+1. Влить исправление YAFIT-216 и убедиться, что voice action виден с draft и
+   после возврата из длинного экрана.
 2. После merge обновить iOS bundle и открыть проект в Xcode.
 
 ## Проверки
@@ -50,6 +52,10 @@
   iPhone WebKit 390 px и полный `npm run check` (349 тестов).
 - `#321`: CI app, database, e2e и Vercel зелёные; post-merge bundle из
   `9642ae3` запущен в iPhone 17 Simulator, Xcode открыт.
+- `YAFIT-216` до PR: Today E2E 6/6; WebKit 390/375/360 и draft-in-viewport 4/4;
+  `npm run check` — 350 тестов, lint/typecheck/db types/build; локальный iOS
+  bundle синхронизирован через Podman-конфигурацию, собран и запущен на iPhone
+  17 Simulator, Xcode открыт.
 - Проверки следующего продуктового кода фиксируются только после фактического
   запуска, без переноса старых зелёных результатов на новый commit.
 
