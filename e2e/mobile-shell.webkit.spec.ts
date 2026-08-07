@@ -130,6 +130,27 @@ test('iPhone: одиночный отдых переживает reload, сдв�
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: частично завершённая тренировка помечена на 390 px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+  await page.goto('/workouts/new')
+  await selectClient(page)
+  await addExercise(page, 'Присед со штангой', true)
+  await page.getByLabel('Вес, подход 1').fill('40')
+  await page.getByLabel('Повторы, подход 1').fill('10')
+  await page.getByRole('button', { name: '＋ Подход' }).click()
+  await page.getByLabel('Вес, подход 2').fill('40')
+  await page.getByLabel('Повторы, подход 2').fill('10')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await page.getByRole('button', { name: 'Начать' }).click()
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await page.getByRole('button', { name: 'Завершить тренировку' }).click()
+  await page.getByRole('button', { name: 'Завершить', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
+  await expect(page.locator('.workout-detail-page .badge.partial')).toHaveText('Частично')
+  await expectNoHorizontalOverflow(page)
+})
+
 test('iPhone: сет не ставит отдых внутри круга и не оставляет его после финала', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)

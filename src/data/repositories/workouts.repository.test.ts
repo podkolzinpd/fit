@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, completedWorkoutDraft, computeClientStats, copyWorkout, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, previousResultLine, replaceExercise, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitBlock, splitClientWorkouts, tonnageLabel, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, completedWorkoutDraft, computeClientStats, copyWorkout, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, previousResultLine, replaceExercise, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitBlock, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -239,10 +239,26 @@ describe('splitClientWorkouts', () => {
 describe('clientWorkoutStatusLabel', () => {
   it('does not call a past plan or stale live workout completed', () => {
     expect(clientWorkoutStatusLabel(bareWorkout('2026-07-30', 'planned'), TODAY)).toBe('План')
-    expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'planned'), TODAY)).toBe('Не проведена')
+    expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'planned'), TODAY)).toBe('Пропущена')
     expect(clientWorkoutStatusLabel(bareWorkout('2026-07-22', 'in_progress'), TODAY)).toBe('Идёт')
     expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'in_progress'), TODAY)).toBe('Не завершена')
     expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'done'), TODAY)).toBe('Готово')
+  })
+
+  it('marks a completed workout with unconfirmed sets as partial', () => {
+    const partial: Workout = {
+      ...bareWorkout('2026-07-20', 'done'),
+      exercises: [{
+        id: 'exercise-1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0,
+        blockId: 'block-1', blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90,
+        sets: [
+          { id: 'set-1', position: 0, fact: {}, confirmedAt: '2026-07-20T10:00:00.000Z', version: 2 },
+          { id: 'set-2', position: 1, fact: {}, confirmedAt: null, version: 1 },
+        ],
+      }],
+    }
+
+    expect(workoutStatusPresentation(partial, TODAY)).toEqual({ label: 'Частично', tone: 'partial' })
   })
 })
 
