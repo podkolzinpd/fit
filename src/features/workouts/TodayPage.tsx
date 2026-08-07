@@ -98,7 +98,6 @@ export function TodayPage() {
   const [removedRefs, setRemovedRefs] = useState<string[]>([])
   const [removedItem, setRemovedItem] = useState<{ item: ParsedWorkoutExercise; index: number } | null>(null)
   const [draftReady, setDraftReady] = useState(false)
-  const [draftRestored, setDraftRestored] = useState(false)
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState<WorkoutParseErrorKind | null>(null)
   const [llmUnmatched, setLlmUnmatched] = useState<UnmatchedView[]>([])
@@ -148,7 +147,6 @@ export function TodayPage() {
       setStartTime(draft.startTime ?? '')
       setManualRefs(draft.manualRefs ?? [])
       setRemovedRefs(draft.removedRefs ?? [])
-      setDraftRestored(true)
     }
     setDraftReady(true)
   }, [draftKey, today])
@@ -381,30 +379,12 @@ export function TodayPage() {
     setRemovedItem(null)
   }
 
-  function discardDraft() {
-    removeTodayDraft(draftKey)
-    setScreen('compose')
-    setText('')
-    setLastLlmText(null)
-    setChoices({})
-    setRecognized([])
-    setItems([])
-    setClientId('')
-    setRecordMode('planned')
-    setWorkoutDate(today)
-    setStartTime('')
-    setManualRefs([])
-    setRemovedRefs([])
-    setDraftRestored(false)
-  }
-
   const currentWorkout = todayWorkouts.data?.find((workout) => workout.status === 'in_progress')
   const plannedWorkouts = todayWorkouts.data?.filter((workout) => workout.status === 'planned').sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')) ?? []
   function workoutTime(workout: Workout) { return workout.startTime?.slice(0, 5) ?? 'Без времени' }
 
   const trainerInitial = actor?.firstName?.trim().slice(0, 1).toUpperCase() || 'П'
   const agenda = (currentWorkout || plannedWorkouts.length > 0) && <section className="today-agenda"><div className="today-agenda-head"><div><p className="eyebrow">Рабочий день</p><h2>На сегодня</h2></div><Link className="link" to="/schedule">Расписание</Link></div>{currentWorkout && <Link className="today-current-workout" to={`/workouts/${currentWorkout.id}/live`}><span><strong>Продолжить тренировку</strong><small>{currentWorkout.clientName} · {workoutTime(currentWorkout)}</small></span><b>→</b></Link>}{plannedWorkouts.slice(0, 3).map((workout) => <Link className="today-planned-workout" key={workout.id} to={`/workouts/${workout.id}`}><span>{workoutTime(workout)}</span><strong>{workout.clientName}</strong><small>{workout.exercises.length ? workout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Без упражнений'}</small></Link>)}</section>
-  const draftNotice = draftRestored && <div className="today-draft-notice" role="status"><strong>Черновик восстановлен</strong><button type="button" className="link" onClick={discardDraft}>Удалить</button></div>
 
   return <Page title="Сегодня" className="today-page today-start-page" action={<Link className="today-profile-avatar" to="/profile" aria-label="Открыть профиль">{trainerInitial}</Link>}>
     {screen === 'compose' ? <section className="today-composer">
@@ -451,7 +431,6 @@ export function TodayPage() {
       </section></section>}
     </section>}
     {screen === 'compose' && agenda}
-    {draftNotice}
     {(catalog.error ?? todayWorkouts.error) && <p className="error">{(catalog.error ?? todayWorkouts.error)?.message}</p>}
     {pickerOpen && <ExercisePicker catalog={catalog} frequent={frequentExercises} onPick={(exercise) => pickExercises([exercise])} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
   </Page>
