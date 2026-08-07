@@ -1,0 +1,44 @@
+import { expect, test } from '@playwright/test'
+
+const demoClientId = '11111111-1111-4111-8111-111111111111'
+
+async function login(page: import('@playwright/test').Page, email: string) {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await Promise.all([
+    page.waitForURL(/\/(?:today|me)$/),
+    page.getByRole('button', { name: 'Войти' }).click(),
+  ])
+}
+
+test('iPhone: trainer review is editable by trainer and read-only for client', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await login(page, 'trainer@fit.local')
+  await expect(page.getByRole('heading', { name: 'Сегодня' })).toBeVisible()
+
+  await page.goto(`/workouts/new?client=${demoClientId}`)
+  await page.getByRole('button', { name: 'Завершённая' }).click()
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /Планка \(Своё тело\)/ }).first().click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.getByRole('button', { name: 'Записать тренировку' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Добавить', exact: true }).click()
+  const review = 'Отличная работа над техникой. На следующей тренировке сохрани спокойный темп между подходами.'
+  await page.getByRole('textbox', { name: 'Отзыв тренера', exact: true }).fill(review)
+  await page.getByRole('button', { name: 'Сохранить отзыв', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Изменить', exact: true })).toBeVisible()
+  await expect(page.getByText(review, { exact: true })).toBeVisible()
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+
+  const workoutUrl = page.url()
+  await page.goto('/profile')
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await login(page, 'client@fit.local')
+  await page.goto(workoutUrl)
+  await expect(page.getByText(review, { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Добавить|Изменить|Сохранить отзыв/ })).toHaveCount(0)
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+})
