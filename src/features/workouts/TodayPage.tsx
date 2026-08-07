@@ -18,6 +18,7 @@ import type { WorkoutParseResponse } from '../../data/repositories/exercises.rep
 import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
 import { workoutDateForRecordMode, type WorkoutRecordMode } from './workout-entry-rules'
 import { WorkoutComposer } from './WorkoutComposer'
+import { WorkoutParseErrorNotice, workoutParseErrorKind, type WorkoutParseErrorKind } from './WorkoutParseErrorNotice'
 import { WorkoutSetTable } from './WorkoutSetTable'
 
 type Screen = 'compose' | 'review' | 'save'
@@ -99,6 +100,7 @@ export function TodayPage() {
   const [draftReady, setDraftReady] = useState(false)
   const [draftRestored, setDraftRestored] = useState(false)
   const [parsing, setParsing] = useState(false)
+  const [parseError, setParseError] = useState<WorkoutParseErrorKind | null>(null)
   const [llmUnmatched, setLlmUnmatched] = useState<UnmatchedView[]>([])
   const [recognized, setRecognized] = useState<ParsedWorkoutExercise[]>([])
   const [voiceRefinement, setVoiceRefinement] = useState<VoiceRefinement>(null)
@@ -219,6 +221,7 @@ export function TodayPage() {
   async function review() {
     const request = ++reviewRequest.current
     trackGoal('workout_parse_submitted')
+    setParseError(null)
     setParsing(true)
     try {
       const llm = await parseWorkoutWithLlm(text, catalog.exercises)
@@ -231,14 +234,18 @@ export function TodayPage() {
       const chosen = unmatched.flatMap((item) => choices[item.line] ? [{ line: item.line, exercise: choices[item.line]!, sets: [{ position: 0 }], hasValues: false }] : [])
       if (!parsedItems.length && !manualOnly.length && !chosen.length) {
         trackGoal('workout_parse_failed')
+        setParseError('unrecognized')
         return
       }
       setItems([...manualOnly, ...parsedItems, ...chosen])
       setScreen('review')
       trackGoal('workout_parse_completed')
       trackGoal('workout_review_opened')
-    } catch {
-      if (request === reviewRequest.current) trackGoal('workout_parse_failed')
+    } catch (error) {
+      if (request === reviewRequest.current) {
+        trackGoal('workout_parse_failed')
+        setParseError(workoutParseErrorKind(error))
+      }
     } finally {
       if (request === reviewRequest.current) setParsing(false)
     }
@@ -405,7 +412,7 @@ export function TodayPage() {
         <h1>Новая тренировка</h1>
         <p>Напишите тренировку — мы разберём её по упражнениям и подходам.</p>
       </div>
-      <WorkoutComposer name="today-workout" source="today_workout" value={text} onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="secondary wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}><span>Выбрать упражнения</span><small>Поиск и массовый выбор</small></button>}>
+      <WorkoutComposer name="today-workout" source="today_workout" value={text} onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="secondary wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}><span>Выбрать упражнения</span><small>Поиск и массовый выбор</small></button>}>
       {voiceRefinement && voiceRefinement.state !== 'loading' && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
       {(resolved.length > 0 || clarification || displayedUnparsed.length > 0) && <div className="today-parse-preview" aria-live="polite">
         {resolved.length > 0 && <section className="today-recognized" aria-label="Распознанные упражнения">
@@ -418,7 +425,7 @@ export function TodayPage() {
           {item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => { trackGoal('today_parse_candidate_selected'); setChoices((current) => ({ ...current, [item.line]: exercise })); setRecognized((current) => current.some((recognizedItem) => recognizedItem.line === item.line) ? current : [...current, { line: item.line, exercise, sets: [{ position: 0 }], hasValues: false }]) }}>{exercise.name}</button>)}</div>}
         </div>)}
       </div>}
-       {noMatches && <div className="today-empty-parse" role="status"><strong>Не нашли упражнение</strong><span>Проверьте название или добавьте его из каталога ниже.</span></div>}
+       {parseError && <WorkoutParseErrorNotice kind={parseError} onRetry={() => void review()} />}
       </WorkoutComposer>
     </section> : <section className="today-review">
       <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><div><h1>{screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'}</h1>{screen === 'review' && items.length > 0 && <p className="today-review-summary">Распознано: {items.length}</p>}</div></div>
