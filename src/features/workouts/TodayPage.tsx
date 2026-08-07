@@ -9,6 +9,7 @@ import { isValidRpe } from '../../shared/rpe'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { Page } from '../../shared/ui'
 import { ExercisePicker, frequentExercisesForClient, useExerciseCatalog } from '../exercises'
+import { ClientPicker, type ClientPickerSelection } from '../clients'
 import { useAuth } from '../../app/auth-context'
 import { useRpeDisplay } from '../../app/rpe-display'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
@@ -90,9 +91,6 @@ export function TodayPage() {
   const [recordMode, setRecordMode] = useState<RecordMode>('planned')
   const [workoutDate, setWorkoutDate] = useState(today)
   const [startTime, setStartTime] = useState('')
-  const [quickClientName, setQuickClientName] = useState('')
-  const [quickClientOpen, setQuickClientOpen] = useState(false)
-  const [quickClientOption, setQuickClientOption] = useState<{ id: string; fullName: string } | null>(null)
   const [prefillError, setPrefillError] = useState<string | null>(null)
   const [manualRefs, setManualRefs] = useState<string[]>([])
   const [removedRefs, setRemovedRefs] = useState<string[]>([])
@@ -210,17 +208,12 @@ export function TodayPage() {
       navigate(`/workouts/${id}`, { state: { returnTo: '/today' } })
     }, onError: () => trackGoal('today_workout_save_error'),
   })
-  const createQuickClient = useMutation({
-    mutationFn: () => clientsRepository.createQuick(quickClientName.trim()),
-    onSuccess: async (id) => {
-      trackGoal('today_quick_client_created')
-      setQuickClientOption({ id, fullName: quickClientName.trim() })
-      setClientId(id)
-      setQuickClientName('')
-      setQuickClientOpen(false)
-      await queryClient.invalidateQueries({ queryKey: ['clients'] })
-    },
-  })
+  async function createQuickClient(fullName: string): Promise<ClientPickerSelection> {
+    const id = await clientsRepository.createQuick(fullName)
+    trackGoal('today_quick_client_created')
+    await queryClient.invalidateQueries({ queryKey: ['clients'] })
+    return { id, fullName }
+  }
 
   async function review() {
     const request = ++reviewRequest.current
@@ -392,7 +385,6 @@ export function TodayPage() {
     setRecordMode('planned')
     setWorkoutDate(today)
     setStartTime('')
-    setQuickClientOption(null)
     setManualRefs([])
     setRemovedRefs([])
     setDraftRestored(false)
@@ -444,9 +436,7 @@ export function TodayPage() {
       {items.length > 0 && <button type="button" className="wide today-review-next" onClick={() => { trackGoal('today_save_step_opened'); setScreen('save') }}>Далее</button>}
       </>}
       {screen === 'save' && <section className="today-assignment">
-      <label className="today-client"><span>Для кого тренировка</span><select value={clientId} onChange={(event) => setClientId(event.target.value)}><option value="">Выберите клиента</option>{quickClientOption && !clients.data?.some((client) => client.id === quickClientOption.id) && <option value={quickClientOption.id}>{quickClientOption.fullName}</option>}{clients.data?.map((client) => <option value={client.id} key={client.id}>{client.fullName}</option>)}</select></label>
-      {!clientId && !quickClientOpen && <button type="button" className="link today-new-client" onClick={() => setQuickClientOpen(true)}>＋ Новый клиент</button>}
-      {!clientId && quickClientOpen && <section className="today-quick-client"><div className="today-quick-client-head"><strong>Новый клиент</strong><button type="button" className="link" onClick={() => { setQuickClientOpen(false); setQuickClientName('') }}>Отмена</button></div><p>Укажите имя — остальное можно заполнить позже.</p><div className="today-quick-client-form"><input aria-label="Имя нового клиента" value={quickClientName} onChange={(event) => setQuickClientName(event.target.value)} placeholder="Имя клиента" autoFocus /><button type="button" className="secondary" disabled={quickClientName.trim().length < 2 || createQuickClient.isPending} onClick={() => createQuickClient.mutate()}>Создать</button></div>{createQuickClient.error && <p className="error">{createQuickClient.error.message}</p>}</section>}
+      <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={setClientId} label="Для кого тренировка" loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />
       {(prefillError || save.error) && <p className="error">{prefillError ?? save.error?.message}</p>}
       <section className="today-save-actions" aria-label="Тип записи">
         <div className="today-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={recordMode === 'planned' ? 'active' : ''} aria-pressed={recordMode === 'planned'} onClick={() => setRecordMode('planned')}>План</button><button type="button" className={recordMode === 'completed' ? 'active' : ''} aria-pressed={recordMode === 'completed'} onClick={() => { setRecordMode('completed'); setWorkoutDate((date) => workoutDateForRecordMode('completed', date, today)) }}>Завершённая</button></div>
@@ -456,7 +446,7 @@ export function TodayPage() {
     </section>}
     {screen === 'compose' && agenda}
     {draftNotice}
-    {(clients.error ?? catalog.error ?? todayWorkouts.error) && <p className="error">{(clients.error ?? catalog.error ?? todayWorkouts.error)?.message}</p>}
+    {(catalog.error ?? todayWorkouts.error) && <p className="error">{(catalog.error ?? todayWorkouts.error)?.message}</p>}
     {pickerOpen && <ExercisePicker catalog={catalog} frequent={frequentExercises} onPick={(exercise) => pickExercises([exercise])} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
   </Page>
 }
