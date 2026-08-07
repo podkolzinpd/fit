@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { clientsRepository } from '../../data/repositories/clients.repository'
@@ -24,14 +24,6 @@ const METRIC_TABS: Array<{ key: MetricKey; label: string; unit: string }> = [
 function metricField(metric: CustomMetric, entry: ProgressEntry | null, placeholder?: string) {
   return <input name={`metric-${metric.id}`} type="number" step="0.001" placeholder={placeholder}
     defaultValue={entry?.customMetrics.find((value) => value.metricId === metric.id)?.value} />
-}
-
-export function AnalyticsPage() {
-  const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
-  return <Page className="analytics-page" title="Аналитика"><AsyncView loading={clients.isLoading} error={clients.error} empty={!clients.data?.length}
-    emptyTitle="Аналитики пока нет"
-    emptyDescription="Добавьте клиента и первый замер — здесь появится динамика прогресса."
-    emptyAction={<Link className="button" to="/clients/new">Добавить клиента</Link>}><div className="analytics-list">{clients.data?.map((client) => <Link className="analytics-client-card" key={client.id} to={`/progress/${client.id}`}><span className="analytics-client-avatar" aria-hidden="true">◌</span><div><strong>{client.fullName}</strong><p>{client.currentWeightKg ? `Текущий вес: ${client.currentWeightKg} кг` : 'Нет замеров веса'}</p></div><span className="analytics-client-arrow" aria-hidden="true">→</span></Link>)}</div></AsyncView></Page>
 }
 
 export function ProgressPage() {
@@ -92,7 +84,7 @@ export function ProgressPage() {
     if (tabsDraggedRef.current) { tabsDraggedRef.current = false; return }
     action()
   }
-  return <Page className="progress-page" title={client.data ? `Прогресс · ${client.data.fullName}` : 'Прогресс'} back="/analytics"><AsyncView loading={loading} error={error}>{client.data && <>
+  return <Page className="progress-page" title={client.data ? `Прогресс · ${client.data.fullName}` : 'Прогресс'} back={`/clients/${clientId}`}><AsyncView loading={loading} error={error}>{client.data && <>
     <TrainerTrainingSummaryCard clientId={clientId} />
     {entries.data && entries.data.length > 0 && <>
       <div className="metric-tabs" ref={tabsRef}
