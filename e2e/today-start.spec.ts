@@ -90,6 +90,30 @@ test('создание из календаря: завершённая трен�
   await expect(date).toHaveValue(maxDate!)
 })
 
+test('today: quick review наследует настройку RPE тренера', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/(today|clients)$/)
+
+  await page.goto('/profile')
+  await page.getByRole('switch', { name: 'Показывать RPE в подходах' }).check()
+  await page.goto('/today')
+  await mockWorkoutParser(page, [{
+    sourceText: 'Присед со штангой 3×8 — 80 кг', exerciseRef: 'barbell-squat', confidence: 1,
+    sets: [{ weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }],
+  }])
+  await page.getByLabel('Тренировка').fill('Присед со штангой 3×8 — 80 кг')
+  await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
+
+  const exercise = page.locator('.today-exercise').first()
+  await exercise.locator('.today-exercise-editor summary').click()
+  await expect(exercise.getByLabel(/RPE, подход 1/)).toBeVisible()
+  await exercise.getByRole('button', { name: 'Скрыть RPE' }).click()
+  await expect(exercise.getByLabel(/RPE, подход 1/)).toHaveCount(0)
+})
+
 test('today: черновик сохраняет финальный шаг и последовательные возвраты', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')

@@ -384,6 +384,7 @@ export function WorkoutFormPage() {
 export function WorkoutDetailPage() {
   const { workoutId = '' } = useParams(); const navigate = useNavigate(); const location = useLocation(); const queryClient = useQueryClient()
   const { actor } = useAuth()
+  const showRpe = useRpeDisplay(actor?.userId)
   const [confirm, confirmDialog] = useConfirm()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   useClientRealtime(query.data?.clientId)
@@ -431,7 +432,7 @@ export function WorkoutDetailPage() {
       <div className={`cards ${done ? 'completed-exercise-list' : ''}`}>{groupIntoBlocks(workout.exercises).map((block) => {
         const articles = block.exercises.map((exercise) => <article className={`exercise ${done ? 'completed-exercise' : ''}`} key={exercise.id}>
           <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
-          <div className="workout-set-table workout-history-sets">{exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} />)}</div>
+          <div className="workout-set-table workout-history-sets">{exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} />)}</div>
           {exercise.trainerComment && <p className="exercise-comment-note">💬 {exercise.trainerComment}</p>}
         </article>)
         if (block.blockType === 'single' || block.exercises.length === 1) return articles
@@ -450,12 +451,12 @@ export function WorkoutDetailPage() {
   </Page>
 }
 
-function formatSet(set: WorkoutSet) { const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, set.distanceKm && `${set.distanceKm} км`, durationLabel(set.durationSec, set.durationMin), set.rpe !== undefined && `RPE ${set.rpe}`].filter(Boolean).join(' × '); return plan || 'Подход без плана' }
+function formatSet(set: WorkoutSet, showRpe: boolean) { const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, set.distanceKm && `${set.distanceKm} км`, durationLabel(set.durationSec, set.durationMin), showRpe && set.rpe !== undefined && `RPE ${set.rpe}`].filter(Boolean).join(' × '); return plan || 'Подход без плана' }
 
-function WorkoutHistorySet({ set, index, done }: { set: WorkoutSet; index: number; done: boolean }) {
+function WorkoutHistorySet({ set, index, done, showRpe }: { set: WorkoutSet; index: number; done: boolean; showRpe: boolean }) {
   const confirmed = Boolean(set.confirmedAt)
-  const { fact, planNote } = formatFactVsPlan(set)
-  const result = done ? fact : formatSet(set)
+  const { fact, planNote } = formatFactVsPlan(set, showRpe)
+  const result = done ? fact : formatSet(set, showRpe)
   return <div className={`workout-set-row workout-history-set ${confirmed ? 'confirmed' : 'missed'}`}>
     <span className="workout-set-number workout-history-set-number" aria-label={`Подход ${index + 1}`}>{index + 1}</span>
     <span className="workout-history-set-result"><strong>{result}</strong>
@@ -1052,6 +1053,8 @@ type ExerciseCardTab = 'stats' | 'history' | 'how'
 
 export function ExerciseHistoryPage() {
   const { workoutId = '', exerciseRef = '' } = useParams()
+  const { actor } = useAuth()
+  const showRpe = useRpeDisplay(actor?.userId)
   const [tab, setTab] = useState<ExerciseCardTab>('stats')
   const current = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   useClientRealtime(current.data?.clientId)
@@ -1111,7 +1114,7 @@ export function ExerciseHistoryPage() {
           .sort((a, b) => (a.workoutDate < b.workoutDate ? 1 : -1))
           .map((workout) => {
             const exercise = workout.exercises.find((item) => item.ref === exerciseRef)
-            const facts = (exercise?.sets ?? []).map((set) => factLine(set)).filter((line): line is string => line !== null)
+            const facts = (exercise?.sets ?? []).map((set) => factLine(set, showRpe)).filter((line): line is string => line !== null)
             return { workout, facts, comment: exercise?.trainerComment }
           })
           .filter((row) => row.facts.length > 0 || row.comment)
