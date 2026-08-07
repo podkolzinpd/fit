@@ -21,9 +21,11 @@
     "ai:smoke": "node scripts/run-yandex-summary-live.mjs",
     "check": "npm run lint && npm run typecheck && npm run test:coverage && npm run db:types:check && npm run build",
     "build:ios:local": "tsc -b && vite build --mode development",
-    "ios:sync": "npm run build:ios:local && npx cap sync ios",
-    "ios:sync:production": "npm run build && npx cap sync ios",
-    "ios:open": "npm run ios:sync && npx cap open ios"
+    "ios:sync": "npm run build && npx cap sync ios",
+    "ios:sync:local": "npm run build:ios:local && npx cap sync ios",
+    "ios:sync:production": "npm run ios:sync",
+    "ios:open": "npm run ios:sync && npx cap open ios",
+    "ios:open:local": "npm run ios:sync:local && npx cap open ios"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.1",
