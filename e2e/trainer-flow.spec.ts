@@ -386,12 +386,23 @@ test('live: порядок упражнений меняется в отдель
     await page.getByLabel('Поиск упражнения').fill(q)
     await page.getByRole('button', { name: new RegExp(q) }).first().click()
     await page.getByRole('button', { name: 'Добавить 1' }).click()
+    await page.getByLabel('Вес, подход 1').nth(index).fill(index === 0 ? '70' : '50')
+    await page.getByLabel('Повторы, подход 1').nth(index).fill(index === 0 ? '8' : '10')
   }
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
+  // В live рабочей остаётся только текущая карточка. Будущее упражнение —
+  // компактный ориентир: название, ближайший план, число подходов и меню,
+  // без таблицы подходов и RPE.
+  const upcomingExercise = page.locator('.live-exercise-upcoming')
+  await expect(upcomingExercise).toHaveCount(1)
+  await expect(upcomingExercise).toContainText('Жим лёжа')
+  await expect(upcomingExercise).toContainText('1 подход')
+  await expect(upcomingExercise).toContainText('План: 50 кг × 10 повт.')
+  await expect(upcomingExercise.locator('.workout-set-table')).toHaveCount(0)
   // В обычном live стрелок нет; включаем отдельный режим в меню упражнения.
   await expect(page.getByRole('button', { name: 'Вверх' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
@@ -402,9 +413,12 @@ test('live: порядок упражнений меняется в отдель
   await expect(page.getByRole('button', { name: 'Вниз' }).last()).toBeDisabled()
   // Первым идёт «Присед…», двигаем второе (Жим) вверх.
   await expect(page.locator('.live-exercise-head h2').first()).toContainText('Присед')
-  // Подтверждаем подход первого упражнения — двигать завершённые блоки можно.
+  // Подтверждаем подход первого упражнения: оно сворачивается, а второе
+  // автоматически становится текущим и остаётся доступно для ручной перестановки.
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
-  await page.getByRole('button', { name: 'Вверх' }).nth(1).click()
+  await expect(page.locator('.live-exercise-collapsed')).toHaveCount(1)
+  await expect(page.locator('.live-exercise.current .workout-set-table')).toHaveCount(1)
+  await page.locator('.live-exercise.current').getByRole('button', { name: 'Вверх' }).click()
   await expect(page.locator('.live-exercise-head h2').first()).toContainText('Жим лёжа')
 })
 
