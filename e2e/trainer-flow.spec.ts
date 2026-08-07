@@ -602,9 +602,10 @@ test('profile Cancel resets unsaved edits', async ({ page }) => {
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
-  await page.goto('/clients')
 
-  await page.getByRole('link', { name: 'Профиль', exact: true }).click()
+  // В новом стартовом маршруте профиль открывается из аватара, а не из таббара.
+  // Прямой переход исключает зависимость настройки профиля от структуры навигации.
+  await page.goto('/profile')
   await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
   const firstName = page.getByLabel('Имя')
   const original = await firstName.inputValue()
