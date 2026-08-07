@@ -138,8 +138,10 @@ test('today: черновик сохраняет финальный шаг и п
 
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Сохраните тренировку' })).toBeVisible()
+  await expect(page.getByText('Черновик восстановлен', { exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: '← К проверке' }).click()
   await expect(page.locator('.today-exercise')).toHaveCount(2)
   await page.getByRole('button', { name: '← Назад' }).click()
   await expect(page.getByLabel('Тренировка')).toHaveValue(workoutText)
+  await expect(page.getByText('Черновик восстановлен', { exact: true })).toHaveCount(0)
 })
