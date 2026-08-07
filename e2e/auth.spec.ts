@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test'
 
+async function selectClient(page: import('@playwright/test').Page, name: string) {
+  await page.locator('.client-picker-trigger').click()
+  await page.locator('.client-picker-item').filter({ hasText: name }).first().click()
+}
+
 async function fillClientProfileDetails(page: import('@playwright/test').Page) {
   await page.getByLabel('Пол').selectOption('female')
   await page.getByLabel('Возраст').fill('30')
@@ -101,7 +106,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   ])
   const clientDetailUrl = page.url()
   await page.getByRole('link', { name: '＋ Запланировать' }).click()
-  await page.getByLabel('Клиент').selectOption({ label: 'Связанный клиент' })
+  await selectClient(page, 'Связанный клиент')
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: 'Бег (Кардио) Кардио' }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
