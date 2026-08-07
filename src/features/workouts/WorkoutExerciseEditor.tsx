@@ -5,6 +5,7 @@ import { RPE_OPTIONS } from '../../shared/rpe'
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import { groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, previousResultLine, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
 import { OverflowMenu } from '../../shared/ui'
+import { WorkoutSetTable } from './WorkoutSetTable'
 
 // Числовое поле, которое МОЖНО очистить курсором. Контролируемый input с value
 // снаружи «возвращал» старое число при пустом вводе (стереть можно было только
@@ -87,13 +88,6 @@ interface WorkoutExerciseEditorProps {
 
 function inputNumber(value: string): number | undefined {
   return value === '' ? undefined : Number(value)
-}
-
-function setColumnLabels(inputKind: WorkoutExerciseDraft['inputKind']): string[] {
-  if (inputKind === 'strength') return ['Кг', 'Повт.']
-  if (inputKind === 'reps') return ['Сек.', 'Повт.']
-  if (inputKind === 'duration') return ['Сек.']
-  return ['Сек.', 'Км']
 }
 
 export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false }: WorkoutExerciseEditorProps) {
@@ -180,7 +174,6 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
 
   // Одиночное упражнение (вне блока): подходы + «＋ Подход» + «Объединить».
   function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode, canReorder = false) {
-    const columns = setColumnLabels(exercise.inputKind)
     const showRpe = isRpeVisible(exerciseIndex)
     const hasCustomRest = exercise.restBetweenSetsSec !== undefined && exercise.restBetweenSetsSec !== 90
     const hasComment = Boolean(exercise.trainerComment)
@@ -196,14 +189,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         { label: 'Удалить', danger: true, onClick: () => removeExercise(exerciseIndex) },
       ]} /></span></header>
       {(() => { const previous = previousResults.get(exercise.ref); const line = previous && previousResultLine(previous.sets); return line ? <p className="exercise-prefill-note">В прошлый раз: {line}</p> : exercise.prefilledFromDate ? <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p> : null })()}
-      <div className={`workout-set-table planned-set-table ${showRpe ? 'rpe-visible' : ''}`}>
-        <div className="workout-set-table-head planned-set-table-head" aria-hidden="true">
-          <span>№</span>
-          {columns.map((column) => <span key={column}>{column}</span>)}
-          {columns.length === 1 && <span />}
-          {showRpe && <span>RPE</span>}
-          <span />
-        </div>
+      <WorkoutSetTable variant="planned" inputKind={exercise.inputKind} showRpe={showRpe}>
         {exercise.sets.map((_set, setIndex) => <div className={`workout-set-row planned-set ${showRpe ? 'rpe-visible' : ''}`} key={setIndex}>
           <span className="workout-set-number planned-set-number" aria-hidden="true">{setIndex + 1}</span>
           <span className="sr-only">Подход {setIndex + 1}</span>
@@ -212,7 +198,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
             ? <button type="button" className="link danger planned-set-remove" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}>×</button>
             : <span className="planned-set-remove" aria-hidden="true" />}
         </div>)}
-      </div>
+      </WorkoutSetTable>
       <div className="set-add-row">
         <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
       </div>

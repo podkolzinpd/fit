@@ -33,6 +33,7 @@ import { useRpeDisplay } from '../../app/rpe-display'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft } from './workout-form-draft'
 import { workoutDateForRecordMode } from './workout-entry-rules'
+import { WorkoutSetTable } from './WorkoutSetTable'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -1001,10 +1002,9 @@ export function LiveWorkoutPage() {
             return <section key={exercise.id} className={`live-exercise ${blockStatus}`}>
               <div className="live-exercise-head"><h2>{exercise.name}</h2><span className="exercise-head-actions"><StatusBadge status={blockStatus} />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</span></div>
               {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
-              <div className="workout-set-table live-set-table">
-              <div className={`workout-set-table-head live-set-table-head ${isRpeVisible(exercise.id) ? 'rpe-visible' : ''}`} aria-hidden="true"><span>№</span><span>Кг</span><span>Повт.</span>{isRpeVisible(exercise.id) && <span>RPE</span>}<span>Статус</span></div>
+              <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
-              </div>
+              </WorkoutSetTable>
               {!clientMode && <button type="button" className="secondary live-add-set" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
               {liveCommentField(exercise)}
             </section>
