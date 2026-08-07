@@ -79,16 +79,19 @@ describe('VoiceInputButton', () => {
     const user = userEvent.setup()
     const cancel = vi.fn()
     const onTranscript = vi.fn()
+    const onStart = vi.fn()
     render(<VoiceInputButton
       variant="hero"
       idleLabel="Надиктовать тренировку"
       onTranscript={onTranscript}
+      onStart={onStart}
       source="today"
       recorderFactory={() => recorder({ cancel })}
     />)
 
     expect(screen.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Надиктовать тренировку' }))
+    expect(onStart).toHaveBeenCalledOnce()
     expect(await screen.findByRole('button', { name: /Завершить запись/ })).toHaveAttribute('aria-pressed', 'true')
     await user.click(screen.getByRole('button', { name: 'Отменить' }))
 

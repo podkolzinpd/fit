@@ -223,4 +223,17 @@ test('today: черновик сохраняет финальный шаг и п
   await page.getByRole('button', { name: '← Назад' }).click()
   await expect(page.getByLabel('Тренировка')).toHaveValue(workoutText)
   await expect(page.getByText('Черновик восстановлен', { exact: true })).toHaveCount(0)
+
+  await page.getByRole('link', { name: 'Клиенты' }).click()
+  await page.getByRole('link', { name: 'Сегодня', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
+  await expect(page.getByText('Есть незавершённая тренировка')).toBeVisible()
+  await page.getByRole('button', { name: 'Продолжить' }).click()
+  await expect(page.getByLabel('Тренировка')).toHaveValue(workoutText)
+
+  await page.getByRole('link', { name: 'Клиенты' }).click()
+  await page.getByRole('link', { name: 'Сегодня', exact: true }).click()
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await expect(page.getByLabel('Тренировка')).toHaveValue('')
+  await expect(page.getByText('Есть незавершённая тренировка')).toHaveCount(0)
 })

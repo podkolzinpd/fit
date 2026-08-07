@@ -20,7 +20,9 @@
     "db:types:check": "node scripts/check-db-types.mjs",
     "ai:smoke": "node scripts/run-yandex-summary-live.mjs",
     "check": "npm run lint && npm run typecheck && npm run test:coverage && npm run db:types:check && npm run build",
-    "ios:sync": "npm run build && npx cap sync ios",
+    "build:ios:local": "tsc -b && vite build --mode development",
+    "ios:sync": "npm run build:ios:local && npx cap sync ios",
+    "ios:sync:production": "npm run build && npx cap sync ios",
     "ios:open": "npm run ios:sync && npx cap open ios"
   },
   "dependencies": {

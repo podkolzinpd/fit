@@ -109,6 +109,21 @@ for (const viewport of mobileViewports) {
   })
 }
 
+test('iPhone: черновик не скрывает главное voice-действие на 390 px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await page.getByLabel('Тренировка').fill('Жим лёжа 3×10 — 80 кг')
+  await page.getByRole('link', { name: 'Клиенты' }).click()
+  await page.getByRole('link', { name: 'Сегодня', exact: true }).click()
+
+  await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeInViewport()
+  await expect(page.getByText('Есть незавершённая тренировка')).toBeVisible()
+  expect(await page.locator('.content').evaluate((element) => element.scrollTop)).toBe(0)
+  await expectNoHorizontalOverflow(page)
+})
+
 test('iPhone: одиночный отдых переживает reload, сдвиг и пропуск на 390 px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
