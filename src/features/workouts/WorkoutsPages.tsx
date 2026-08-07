@@ -405,6 +405,13 @@ export function WorkoutDetailPage() {
   const stageTitle = query.data?.stageId ? goal.data?.stages.find((stage) => stage.id === query.data!.stageId)?.title ?? null : null
   const start = useMutation({ mutationFn: () => workoutsRepository.start(query.data!), onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }), queryClient.invalidateQueries({ queryKey: ['clients'] })]); navigate(`/workouts/${workoutId}/live`) } })
   const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['workouts'] }), queryClient.invalidateQueries({ queryKey: ['clients'] })]); navigate(actor?.role === 'client' ? '/me/workouts' : '/schedule') } })
+  const review = useMutation({ mutationFn: (value: string) => workoutsRepository.setWorkoutReview(query.data!, value), onSuccess: async () => {
+    await Promise.all([
+      query.refetch(),
+      queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+      queryClient.invalidateQueries({ queryKey: ['clients'] }),
+    ])
+  } })
   const workout = query.data
   const done = workout?.status === 'done'
   const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt) : null
@@ -441,6 +448,7 @@ export function WorkoutDetailPage() {
         <div><span>Тоннаж</span><strong>{tonnageLabel(tonnage)}</strong></div>
         <div><span>Группы мышц</span><strong>{groups.length ? groups.join(', ') : '—'}</strong></div>
       </section>}
+      {done && <WorkoutTrainerReview workout={workout} canEdit={!clientMode} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
       <div className={`cards ${done ? 'completed-exercise-list' : ''}`}>{groupIntoBlocks(workout.exercises).map((block) => {
         const articles = block.exercises.map((exercise) => <article className={`exercise ${done ? 'completed-exercise' : ''}`} key={exercise.id}>
           <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
@@ -463,6 +471,46 @@ export function WorkoutDetailPage() {
       {confirmDialog}
     </>}</AsyncView>
   </Page>
+}
+
+function WorkoutTrainerReview({ workout, canEdit, saving, error, onSave }: {
+  workout: Workout
+  canEdit: boolean
+  saving: boolean
+  error: Error | null
+  onSave: (value: string) => Promise<unknown>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(workout.trainerReview ?? '')
+  const hasReview = Boolean(workout.trainerReview)
+
+  useEffect(() => {
+    if (!editing) setValue(workout.trainerReview ?? '')
+  }, [editing, workout.id, workout.trainerReview])
+
+  if (!canEdit && !hasReview) return null
+
+  return <section className="workout-review" aria-labelledby="workout-review-title">
+    <div className="workout-review-head">
+      <div><p className="eyebrow">ПОСЛЕ ТРЕНИРОВКИ</p><h2 id="workout-review-title">Отзыв тренера</h2></div>
+      {canEdit && !editing && <button type="button" className="secondary" onClick={() => setEditing(true)}>{hasReview ? 'Изменить' : 'Добавить'}</button>}
+    </div>
+    {editing ? <>
+      <VoiceNoteField name="trainerReview" source="workout_review" label="Отзыв тренера" placeholder="Как прошла тренировка, что получается и на что обратить внимание" value={value} onValueChange={setValue} autoResize />
+      {error && <p className="error">{error.message}</p>}
+      <div className="actions workout-review-actions">
+        <button type="button" className="secondary" disabled={saving} onClick={() => { setValue(workout.trainerReview ?? ''); setEditing(false) }}>Отмена</button>
+        <button type="button" disabled={saving} onClick={async () => {
+          try {
+            await onSave(value)
+            setEditing(false)
+          } catch {
+            // Ошибку мутации показывает общий экранный state ниже поля.
+          }
+        }}>{saving ? 'Сохраняем…' : 'Сохранить отзыв'}</button>
+      </div>
+    </> : <p className={hasReview ? 'workout-review-text' : 'muted'}>{hasReview ? workout.trainerReview : 'Добавьте короткий итог, пока впечатления свежие.'}</p>}
+  </section>
 }
 
 function formatSet(set: WorkoutSet, showRpe: boolean) { const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, set.distanceKm && `${set.distanceKm} км`, durationLabel(set.durationSec, set.durationMin), showRpe && set.rpe !== undefined && `RPE ${set.rpe}`].filter(Boolean).join(' × '); return plan || 'Подход без плана' }

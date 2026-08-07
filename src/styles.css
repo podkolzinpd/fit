@@ -552,6 +552,14 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-page .summary.done-summary { gap: 8px; margin: 14px 0 18px }
 .workout-detail-page .summary.done-summary div { min-height: 78px; justify-content: center; border-radius: 17px; box-shadow: var(--shadow-card) }
 .workout-detail-page .summary.done-summary strong { font-size: 14px; line-height: 1.25 }
+.workout-review { display:grid; gap:12px; margin:0 0 18px; padding:16px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:var(--shadow-card) }
+.workout-review-head { display:flex; align-items:start; justify-content:space-between; gap:12px }
+.workout-review-head h2 { margin:3px 0 0; font-size:18px }
+.workout-review-head .secondary { flex:0 0 auto; min-height:36px; padding:6px 11px }
+.workout-review-text { margin:0; white-space:pre-wrap; line-height:1.45 }
+.workout-review .voice-note-field { gap:8px }
+.workout-review .voice-note-field textarea { min-height:108px; resize:vertical }
+.workout-review-actions { margin-top:0 }
 .workout-detail-page > .cards { gap: 10px }
 .workout-detail-page > .cards > .exercise { margin: 0; padding: 16px; border-radius: 18px; box-shadow: var(--shadow-card) }
 .workout-detail-page > .completed-exercise-list { gap:0 }

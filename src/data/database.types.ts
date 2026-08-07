@@ -1,4 +1,4 @@
-// schema-sha256: 92e91daf6610d0112703ba6dfb13752c605e3938db78c067b88fa8d07d6b836a
+// schema-sha256: 5e3c1b777acd48e14f5def89372e4009d44c2d61e17dfe61d6c7ef6122d06949
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -23,7 +23,7 @@ type WorkoutListExerciseRow = {
 }
 export type WorkoutListRow = {
   id: string; client_id: string; client_name: string; workout_date: string; start_time: string | null; end_time: string | null
-  started_at: string | null; completed_at: string | null; status: string; notes: string | null; stage_id: string | null; stage_title: string | null
+  started_at: string | null; completed_at: string | null; status: string; notes: string | null; trainer_review: string | null; stage_id: string | null; stage_title: string | null
   version: number; total_count: number; exercises: WorkoutListExerciseRow[]
 }
 
@@ -927,6 +927,7 @@ export type Database = {
           started_at: string | null
           status: string
           trainer_id: string
+          trainer_review: string | null
           updated_at: string
           version: number
           workout_date: string
@@ -945,6 +946,7 @@ export type Database = {
           started_at?: string | null
           status?: string
           trainer_id: string
+          trainer_review?: string | null
           updated_at?: string
           version?: number
           workout_date: string
@@ -963,6 +965,7 @@ export type Database = {
           started_at?: string | null
           status?: string
           trainer_id?: string
+          trainer_review?: string | null
           updated_at?: string
           version?: number
           workout_date?: string
@@ -1223,6 +1226,14 @@ export type Database = {
           p_comment: string
           p_exercise_id: string
           p_expected_version: number
+        }
+        Returns: number
+      }
+      set_workout_review: {
+        Args: {
+          p_expected_version: number
+          p_review: string
+          p_workout_id: string
         }
         Returns: number
       }

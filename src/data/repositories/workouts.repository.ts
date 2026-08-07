@@ -67,7 +67,7 @@ async function get(id: string): Promise<Workout> {
     id: root.data.id, clientId: root.data.client_id, clientName: client.fullName, createdBy: root.data.created_by,
     workoutDate: localDate(root.data.workout_date), startTime: root.data.start_time,
     endTime: root.data.end_time, startedAt: root.data.started_at ?? null, completedAt: root.data.completed_at ?? null,
-    status: root.data.status as Workout['status'], notes: root.data.notes,
+    status: root.data.status as Workout['status'], notes: root.data.notes, trainerReview: root.data.trainer_review ?? undefined,
     stageId: root.data.stage_id ?? null, stageTitle: null,
     version: root.data.version, exercises: mappedExercises,
   }
@@ -86,6 +86,7 @@ function mapWorkout(row: WorkoutListRow): Workout {
     completedAt: row.completed_at ?? null,
     status: row.status as WorkoutStatus,
     notes: row.notes,
+    trainerReview: row.trainer_review ?? undefined,
     stageId: row.stage_id ?? null,
     stageTitle: row.stage_title ?? null,
     version: row.version,
@@ -208,6 +209,11 @@ export const workoutsRepository = {
   },
   async setExerciseComment(workout: Workout, exerciseId: string, comment: string): Promise<number> {
     const result = await workoutQueries.setExerciseComment(exerciseId, comment, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
+  async setWorkoutReview(workout: Workout, review: string): Promise<number> {
+    const result = await workoutQueries.setWorkoutReview(workout.id, review, workout.version)
     if (result.error) throw repositoryError(result.error)
     return result.data
   },

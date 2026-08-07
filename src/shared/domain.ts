@@ -241,6 +241,7 @@ export interface Workout {
   completedAt: string | null
   status: WorkoutStatus
   notes: string | null
+  trainerReview?: string
   stageId: UUID | null
   stageTitle: string | null
   version: number
