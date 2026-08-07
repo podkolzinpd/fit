@@ -38,4 +38,15 @@ describe('WorkoutSetTable', () => {
     expect(screen.getByText('Повт.')).toBeInTheDocument()
     expect(screen.queryByText('Сек.')).not.toBeInTheDocument()
   })
+
+  it('allows history to keep its result in one readable column', () => {
+    render(
+      <WorkoutSetTable variant="history" inputKind="strength" showRpe={false} columnLabels={['Результат']} trailingLabel="Статус">
+        <div>Подход 1</div>
+      </WorkoutSetTable>,
+    )
+
+    expect(screen.getByText('Результат')).toBeInTheDocument()
+    expect(screen.getByText('Статус')).toBeInTheDocument()
+  })
 })

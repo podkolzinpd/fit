@@ -444,7 +444,9 @@ export function WorkoutDetailPage() {
       <div className={`cards ${done ? 'completed-exercise-list' : ''}`}>{groupIntoBlocks(workout.exercises).map((block) => {
         const articles = block.exercises.map((exercise) => <article className={`exercise ${done ? 'completed-exercise' : ''}`} key={exercise.id}>
           <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
-          <div className="workout-set-table workout-history-sets">{exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} />)}</div>
+          <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={['Результат']} trailingLabel={done ? 'Статус' : undefined} className="workout-history-sets">
+            {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} />)}
+          </WorkoutSetTable>
           {exercise.trainerComment && <p className="exercise-comment-note">💬 {exercise.trainerComment}</p>}
         </article>)
         if (block.blockType === 'single' || block.exercises.length === 1) return articles

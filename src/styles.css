@@ -1018,6 +1018,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .planned-set.rpe-visible { grid-template-columns:28px minmax(0, 1fr) minmax(0, 1fr) 48px 32px; gap:5px }
 .planned-set-remove { min-width:32px; min-height:42px; display:grid; place-items:center; padding:0; font-size:20px; line-height:1 }
 .workout-history-sets.workout-set-table { margin-top:10px; border-top:1px solid var(--hairline) }
+.history-set-table-head { display:grid; grid-template-columns:24px minmax(0, 1fr) 24px; gap:8px }
+.history-set-table-head > :first-child, .history-set-table-head > :last-child { text-align:center }
 .workout-history-set.workout-set-row { min-height:48px; padding:8px 0; border-top:0; border-bottom:1px solid var(--hairline) }
 .completed-exercise .workout-history-set.workout-set-row { min-height:42px; padding:4px 0 }
 /* Отдых внутри закреплённого блока (.live-pinned) — свой sticky не нужен. */
