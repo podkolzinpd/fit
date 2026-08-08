@@ -2,7 +2,7 @@ import type { ExerciseSnapshot, LiveSetDraft, WorkoutDraft } from '../../shared/
 import { supabase } from './client'
 import { toJson } from './json'
 
-const rootColumns = 'id,client_id,created_by,workout_date,start_time,end_time,started_at,completed_at,status,notes,trainer_review,version,stage_id'
+const rootColumns = 'id,client_id,created_by,workout_date,start_time,end_time,started_at,completed_at,status,notes,trainer_review,client_comment,version,stage_id'
 
 export type { WorkoutListRow } from '../database.types'
 
@@ -54,6 +54,9 @@ export const workoutQueries = {
   }),
   setWorkoutReview: (workoutId: string, review: string, version: number) => supabase.rpc('set_workout_review', {
     p_workout_id: workoutId, p_review: review, p_expected_version: version,
+  }),
+  setClientWorkoutComment: (workoutId: string, comment: string, version: number) => supabase.rpc('set_client_workout_comment', {
+    p_workout_id: workoutId, p_comment: comment, p_expected_version: version,
   }),
   replaceLiveExercise: (workoutId: string, exerciseId: string, exercise: ExerciseSnapshot, version: number) => supabase.rpc('replace_live_exercise', {
     p_workout_id: workoutId, p_exercise_id: exerciseId, p_exercise: toJson(exercise), p_expected_version: version,

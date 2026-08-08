@@ -1,4 +1,4 @@
-// schema-sha256: 5e3c1b777acd48e14f5def89372e4009d44c2d61e17dfe61d6c7ef6122d06949
+// schema-sha256: ca997ebb06eb2354770e3711b51461da150759e9e026e3fc1944d4a9de4281e6
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -23,7 +23,7 @@ type WorkoutListExerciseRow = {
 }
 export type WorkoutListRow = {
   id: string; client_id: string; client_name: string; workout_date: string; start_time: string | null; end_time: string | null
-  started_at: string | null; completed_at: string | null; status: string; notes: string | null; trainer_review: string | null; stage_id: string | null; stage_title: string | null
+  started_at: string | null; completed_at: string | null; status: string; notes: string | null; trainer_review: string | null; client_comment: string | null; stage_id: string | null; stage_title: string | null
   version: number; total_count: number; exercises: WorkoutListExerciseRow[]
 }
 
@@ -914,6 +914,7 @@ export type Database = {
       }
       workouts: {
         Row: {
+          client_comment: string | null
           client_id: string
           completed_at: string | null
           created_at: string
@@ -933,6 +934,7 @@ export type Database = {
           workout_date: string
         }
         Insert: {
+          client_comment?: string | null
           client_id: string
           completed_at?: string | null
           created_at?: string
@@ -952,6 +954,7 @@ export type Database = {
           workout_date: string
         }
         Update: {
+          client_comment?: string | null
           client_id?: string
           completed_at?: string | null
           created_at?: string
@@ -1220,6 +1223,14 @@ export type Database = {
       save_workout: {
         Args: { p_expected_version?: number | null; p_workout: Json }
         Returns: string
+      }
+      set_client_workout_comment: {
+        Args: {
+          p_comment: string
+          p_expected_version: number
+          p_workout_id: string
+        }
+        Returns: number
       }
       set_exercise_comment: {
         Args: {
