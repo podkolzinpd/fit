@@ -93,6 +93,7 @@ test('iPhone: client voice-first home сохраняет тренировку т
 
   await page.goto('/me/profile')
   await expect(page.getByText('Клиент Обновлённый', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Пригласить тренера' })).toBeInViewport()
   await page.reload()
   await expect(page.getByText('Клиент Обновлённый', { exact: true })).toBeVisible()
   await expectNoHorizontalOverflow(page)

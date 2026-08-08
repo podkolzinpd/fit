@@ -5,6 +5,7 @@ import { setAppTheme, useAppTheme } from '../../app/theme'
 import { authRepository } from '../../data/repositories/auth.repository'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { AsyncView, Page, Switch } from '../../shared/ui'
+import { ClientTrainerConnections } from './ClientTrainerConnections'
 
 export function ClientProfilePage() {
   const { actor } = useAuth()
@@ -32,6 +33,7 @@ export function ClientProfilePage() {
           <div><strong>{client.data.fullName}</strong><p>{actor.email}</p></div>
         </section>
         <Link className="button secondary wide" to="/me/edit">Изменить данные</Link>
+        <ClientTrainerConnections clientId={client.data.id} />
       </>}
     </AsyncView>
     <section className="profile-settings" aria-label="Настройки">

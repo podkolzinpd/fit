@@ -86,7 +86,7 @@ test('client registers, creates a standalone card and own workout without traine
   await expect(page.getByText('Клиент Сам', { exact: true })).toBeVisible()
   await page.goto('/profile')
   await expect(page).toHaveURL(/\/me$/)
-  await page.goto('/me')
+  await page.goto('/me/profile')
   await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Тренировки' }).click()
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
