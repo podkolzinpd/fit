@@ -23,16 +23,18 @@ export function ClientProfilePage() {
     navigate('/auth')
   }
 
-  return <Page title="Профиль">
+  return <Page title="Профиль" className="client-profile-page">
     <AsyncView loading={client.isLoading} error={client.error} empty={!client.data} onRetry={() => void client.refetch()}>
       {client.data && <>
         <section className="client-profile-card">
-          <span className="client-profile-avatar">
-            {client.data.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}
-          </span>
-          <div><strong>{client.data.fullName}</strong><p>{actor.email}</p></div>
+          <div className="client-profile-identity">
+            <span className="client-profile-avatar">
+              {client.data.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}
+            </span>
+            <div><strong>{client.data.fullName}</strong><p>{actor.email}</p></div>
+          </div>
+          <Link className="button secondary client-profile-edit" to="/me/edit">Изменить данные</Link>
         </section>
-        <Link className="button secondary wide" to="/me/edit">Изменить данные</Link>
         <ClientTrainerConnections clientId={client.data.id} />
       </>}
     </AsyncView>
