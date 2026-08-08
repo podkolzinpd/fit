@@ -29,7 +29,7 @@ export function resolveRecent(
 
 function read(): string[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = window.localStorage.getItem(STORAGE_KEY)
     const parsed: unknown = raw ? JSON.parse(raw) : []
     return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
   } catch {
@@ -43,7 +43,7 @@ export function readRecentKeys(): string[] {
 
 export function recordRecent(exercise: Pick<ExerciseSnapshot, 'ref' | 'customExerciseId'>): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(pushRecent(read(), keyOf(exercise))))
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(pushRecent(read(), keyOf(exercise))))
   } catch {
     // localStorage недоступен (приватный режим) — недавние просто не сохраняются.
   }

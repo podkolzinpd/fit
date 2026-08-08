@@ -124,6 +124,21 @@ test('iPhone: черновик не скрывает главное voice-дей
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: ручной выбор начинает с недавних, а не с разминки на 390 px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+  await page.evaluate(() => window.localStorage.setItem('fit.recent-exercises', JSON.stringify(['bench-press'])))
+  await page.goto('/workouts/new')
+  await selectClient(page)
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+
+  await expect(page.getByText('Недавние')).toBeVisible()
+  await expect(page.getByText('Все упражнения')).toBeVisible()
+  await expect(page.getByText('Разминка и мобилити')).toHaveCount(0)
+  await expect(page.locator('.picker-item[data-exercise-ref="bench-press"]')).toHaveCount(1)
+  await expectNoHorizontalOverflow(page)
+})
+
 test('iPhone: одиночный отдых переживает reload, сдвиг и пропуск на 390 px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)

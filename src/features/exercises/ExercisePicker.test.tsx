@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ExercisePicker, equipmentForSelection, filterExercises, musclesForGroup } from './ExercisePicker'
-import { frequentExercisesForClient } from './frequent-exercises'
+import { recentExercisesForClient } from './client-recent-exercises'
 import type { ExerciseCatalogState } from './exercise-catalog'
 import { SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISES } from '../../shared/system-exercises'
 import type { ExerciseSnapshot, Workout } from '../../shared/domain'
@@ -15,6 +15,17 @@ const ENRICHED: ExerciseSnapshot[] = [
   { source: 'system', ref: 'c', name: 'Сгибание ног (Тренажёр)', muscleGroup: 'legs', inputKind: 'strength', primaryMuscleDetail: 'Бицепс бедра', equipment: 'Тренажёр' },
   { source: 'system', ref: 'd', name: 'Жим лёжа (Штанга)', muscleGroup: 'chest', inputKind: 'strength', primaryMuscleDetail: 'Грудь', equipment: 'Штанга' },
 ]
+
+const originalLocalStorage = Object.getOwnPropertyDescriptor(window, 'localStorage')
+const recentStore = new Map<string, string>()
+const browserStorage: Storage = {
+  get length() { return recentStore.size },
+  clear: () => recentStore.clear(),
+  getItem: (key) => recentStore.get(key) ?? null,
+  key: (index) => [...recentStore.keys()][index] ?? null,
+  removeItem: (key) => { recentStore.delete(key) },
+  setItem: (key, value) => { recentStore.set(key, value) },
+}
 
 function catalog(overrides: Partial<ExerciseCatalogState> = {}): ExerciseCatalogState {
   return {
@@ -29,6 +40,15 @@ function catalog(overrides: Partial<ExerciseCatalogState> = {}): ExerciseCatalog
 }
 
 describe('ExercisePicker', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: browserStorage })
+    browserStorage.clear()
+  })
+  afterEach(() => {
+    if (originalLocalStorage) Object.defineProperty(window, 'localStorage', originalLocalStorage)
+    else delete (window as { localStorage?: Storage }).localStorage
+  })
+
   it('filters the complete catalog by search and category', () => {
     expect(filterExercises(SYSTEM_EXERCISES, 'legs', 'присед').map((exercise) => exercise.name))
       .toEqual(['Присед со штангой', 'Болгарский присед', 'Фронтальный присед'])
@@ -37,18 +57,28 @@ describe('ExercisePicker', () => {
 
   // Полный каталог содержит 500+ упражнений: в CI его первичный рендер
   // периодически дольше общего лимита unit-тестов, хотя сценарий корректен.
-  it('показывает быстрый раздел разминки и мобилити', () => {
+  it('не поднимает разминку и мобилити над остальным каталогом', () => {
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={vi.fn()} onClose={vi.fn()} />)
-    expect(screen.getByText('Разминка и мобилити')).toBeInTheDocument()
+    expect(screen.queryByText('Разминка и мобилити')).not.toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /Суставная разминка/ })).toHaveLength(1)
   }, 10_000)
 
-  it('ставит частые упражнения клиента выше остальных по числу использований', () => {
+  it('ставит упражнения клиента по времени последнего использования, а не по частоте', () => {
     const workouts = [
       { workoutDate: '2026-08-01', exercises: [{ source: 'system', ref: 'd' }, { source: 'system', ref: 'a' }] },
       { workoutDate: '2026-07-30', exercises: [{ source: 'system', ref: 'a' }] },
     ] as unknown as Workout[]
-    expect(frequentExercisesForClient(ENRICHED, workouts).map((exercise) => exercise.ref)).toEqual(['a', 'd'])
+    expect(recentExercisesForClient(ENRICHED, workouts).map((exercise) => exercise.ref)).toEqual(['d', 'a'])
+  })
+
+  it('показывает клиента, недавние и остальные без дублей', () => {
+    window.localStorage.setItem('fit.recent-exercises', JSON.stringify(['b', 'd']))
+    render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} clientRecent={[ENRICHED[3]!]} onPick={vi.fn()} onClose={vi.fn()} />)
+    expect(screen.getAllByText(/Последние у клиента|Недавние|Все упражнения/).map((node) => node.textContent))
+      .toEqual(['Последние у клиента', 'Недавние', 'Все упражнения'])
+    expect(screen.getAllByRole('button', { name: /Жим лёжа/ })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: /Разгибание ног/ })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: /Присед/ })).toHaveLength(1)
   })
 
   it('ищет по словам в любом порядке, оборудованию и без различия е/ё', () => {

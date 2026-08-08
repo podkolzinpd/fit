@@ -1,5 +1,5 @@
 export { ExercisesPage } from './ExercisesPage'
 export { ExercisePicker, filterExercises } from './ExercisePicker'
-export { frequentExercisesForClient } from './frequent-exercises'
+export { recentExercisesForClient } from './client-recent-exercises'
 export { useExerciseCatalog } from './exercise-catalog'
 export type { ExerciseCatalogState } from './exercise-catalog'
