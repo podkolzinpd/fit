@@ -45,7 +45,7 @@ export function AppLayout() {
   const frameClass = `${theme === 'light' ? 'phone-frame theme-light' : 'phone-frame'}${redesignedStart && pathname === '/today' ? ' today-start-shell' : ''}${keyboardOpen ? ' keyboard-open' : ''}`
 
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
-    <NavLink to="/me"><ClientsIcon />Кабинет</NavLink>
+    <NavLink to="/me" end><ClientsIcon />Кабинет</NavLink>
     <NavLink to="/me/workouts"><ScheduleIcon />Тренировки</NavLink>
     <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
     <NavLink to="/me/profile"><ProfileIcon />Профиль</NavLink>

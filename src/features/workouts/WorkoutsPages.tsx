@@ -152,13 +152,23 @@ export function WorkoutStatusBadge({ workout }: { workout: Workout }) {
 // Список упражнений тренировки для карточки (история/предстоящие): каждое
 // на своей строке, у упражнений с комментарием — сам комментарий ниже.
 // Одинаково в плане и в истории.
-export function WorkoutExercisesSummary({ workout }: { workout: Workout }) {
+function exerciseCountLabel(count: number): string {
+  const lastTwo = count % 100
+  const last = count % 10
+  if (lastTwo >= 11 && lastTwo <= 14) return 'упражнений'
+  if (last === 1) return 'упражнение'
+  if (last >= 2 && last <= 4) return 'упражнения'
+  return 'упражнений'
+}
+
+export function WorkoutExercisesSummary({ workout, maxItems }: { workout: Workout; maxItems?: number }) {
   const items = exerciseSummary(workout)
   if (!items.length) return <p className="muted">Без упражнений</p>
-  return <ul className="workout-exercise-list">{items.map((item, index) => <li key={index}>
+  const visibleItems = maxItems === undefined ? items : items.slice(0, maxItems)
+  return <ul className="workout-exercise-list">{visibleItems.map((item, index) => <li key={index}>
     <span className="workout-exercise-name">{item.name}{item.comment && ' 💬'}</span>
     {item.comment && <span className="workout-exercise-comment">💬 {item.comment}</span>}
-  </li>)}</ul>
+  </li>)}{maxItems !== undefined && items.length > maxItems && <li className="workout-exercise-more">Ещё {items.length - maxItems} {exerciseCountLabel(items.length - maxItems)}</li>}</ul>
 }
 
 export function ClientWorkoutsPage() {

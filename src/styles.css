@@ -1128,6 +1128,44 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .theme-light .badge { color: #6d6673; background: #efeae6 }
 .theme-light .exercise-block { background: var(--accent-surface) }
 .theme-light .goal-stages-hint { background: #fbf4f0 }
+
+/* Клиентские корневые вкладки используют одну компактную сетку. Это не меняет
+   данные и сценарии: только приводит визуальную иерархию к канону Fit. */
+.client-workouts-page, .client-progress-page, .client-profile-page { padding: max(38px, calc(env(safe-area-inset-top) + 16px)) 20px 28px; }
+.client-workouts-page .page-header, .client-progress-page .page-header, .client-profile-page .page-header { margin-bottom: 20px; }
+.client-workouts-page .page-header h1, .client-progress-page .page-header h1, .client-profile-page .page-header h1 { font-size: clamp(27px, 7.4vw, 31px); }
+.client-workouts-page .page-header .button { min-height: 44px; padding: 10px 14px; border-radius: 14px; }
+.client-workouts-stack, .client-progress-stack { gap: 18px; }
+.client-workout-section, .client-progress-form, .client-progress-history { gap: 8px; }
+.client-workout-section-head, .client-progress-section-head { gap: 1px; }
+.client-workout-section-head h2, .client-progress-section-head h2 { font-size: 22px; line-height: 1.16; }
+.client-workout-cards { gap: 8px; }
+.client-workout-card { min-height: 0; padding: 14px 15px; border-radius: 18px; align-items: flex-start; }
+.client-workout-card strong { font-size: 17px; }
+.client-workout-card .workout-exercise-list { gap: 1px; margin-top: 5px; }
+.client-workout-card .workout-exercise-name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.client-workout-card .workout-exercise-comment { display: none; }
+.workout-exercise-more { color: var(--muted); font-size: 13px; line-height: 1.35; }
+.client-section-empty { padding: 14px 15px; border-radius: 16px; }
+.client-progress-form, .client-progress-history { padding: 16px; border-radius: 20px; }
+.client-progress-form .compact { gap: 12px; }
+.client-progress-form .field input, .client-progress-form .field textarea { border-radius: 13px; }
+.client-progress-form .field textarea { min-height: 64px; }
+.client-progress-card { margin: 0; border-radius: 20px; }
+.client-progress-card .ai-progress-header { padding: 15px 16px 10px; }
+.client-progress-card .ai-progress-periods { margin: 0 16px 12px; }
+.client-progress-card .ai-progress-empty { min-height: 116px; padding: 18px 16px; }
+.client-progress-card .ai-progress-footer { margin-top: 0; padding: 11px 16px; }
+.client-progress-card .ai-progress-footer button { min-height: 38px; padding: 8px 10px; }
+.client-profile-page { display: grid; gap: 16px; }
+.client-profile-page .profile-settings, .client-profile-page .menu { margin: 0; }
+.client-profile-page > .danger { margin-top: 0; }
+.client-profile-card { display: grid; gap: 14px; margin: 0; padding: 16px; border-radius: 20px; }
+.client-profile-identity { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.client-profile-identity > div { min-width: 0; }
+.client-profile-identity strong, .client-profile-identity p { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.client-profile-edit { min-height: 44px; margin: 0; border-radius: 14px; }
+.client-profile-page .client-home-connections { margin: 0; padding: 16px; border-radius: 20px; }
 .theme-light .overflow-list { background: var(--surface-elevated) }
 .theme-light .day-grid-hour-line { background: var(--hairline) }
 .wearable-card { display:grid; gap:14px; padding:20px; border:1px solid var(--border); border-radius:22px; background:var(--surface-raised); box-shadow:var(--shadow-card) }
@@ -1135,6 +1173,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .wearable-empty { display:grid; gap:7px; padding:14px; border:1px solid var(--accent-surface-border); border-radius:16px; background:var(--accent-surface) }.wearable-empty p { margin:0; color:var(--muted); line-height:1.45 }.wearable-empty button { justify-self:start; margin-top:4px }
 .wearable-metrics { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:1px; overflow:hidden; border:1px solid var(--border); border-radius:16px; background:var(--border) }.wearable-metrics div { display:grid; gap:4px; min-height:78px; padding:13px; background:var(--surface-raised) }.wearable-metrics div:last-child { grid-column:1 / -1 }.wearable-metrics span { color:var(--muted); font-size:12px; font-weight:700 }.wearable-metrics strong { font-size:18px }.wearable-source { margin:0; color:var(--muted); font-size:12px; line-height:1.4 }
 .theme-light .wearable-card { background:#fffefc }
+.today-start-page .wearable-card { gap:10px; padding:16px; border-radius:20px; }
+.today-start-page .wearable-card-head h2 { font-size:20px; }
+.today-start-page .wearable-empty { gap:5px; padding:12px; }
+.today-start-page .wearable-empty p { font-size:14px; line-height:1.35; }
 /* Пикер упражнений (Этап 3, гр.2): плотный тёмный шит на светлой теме
    переопределяем точечно, остальной каталог уже работает на общих токенах. */
 .theme-light .exercise-picker { border-color: var(--border); background: var(--surface-elevated) }
