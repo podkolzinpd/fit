@@ -212,7 +212,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('button', { name: 'Сохранить замер' }).click()
   await expect(page.getByText('59.5 кг')).toBeVisible()
 
-  await page.goto('/me')
+  await page.goto('/me/profile')
   await page.getByRole('button', { name: 'Пригласить тренера' }).click()
   const trainerCodeText = await page.getByText(/Код для тренера:/).textContent()
   const trainerCode = trainerCodeText?.match(/[A-F0-9]{12}/)?.[0]
