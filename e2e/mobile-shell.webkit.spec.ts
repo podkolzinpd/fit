@@ -14,6 +14,14 @@ async function loginAsTrainer(page: import('@playwright/test').Page) {
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 }
 
+async function login(page: import('@playwright/test').Page, email: string) {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/me$/)
+}
+
 async function expectNoHorizontalOverflow(page: import('@playwright/test').Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 }
@@ -97,6 +105,52 @@ test('iPhone: client voice-first home сохраняет тренировку т
   await page.reload()
   await expect(page.getByText('Клиент Обновлённый', { exact: true })).toBeVisible()
   await expectNoHorizontalOverflow(page)
+})
+
+test('iPhone: client edits shared progress, custom metrics and deletion safely', async ({ page }, testInfo) => {
+  testInfo.setTimeout(60_000)
+  await page.setViewportSize({ width: 390, height: 844 })
+  const clientId = '11111111-1111-4111-8111-111111111111'
+  const metricName = `Объём ${testInfo.workerIndex}-${Date.now()}`
+
+  await loginAsTrainer(page)
+  await page.goto(`/progress/${clientId}`)
+  await page.getByPlaceholder('Название').fill(metricName)
+  await page.getByPlaceholder('Единица').fill('балл')
+  await page.getByRole('button', { name: 'Добавить', exact: true }).last().click()
+  await expect(page.getByText(`${metricName}, балл`, { exact: true }).first()).toBeVisible()
+
+  await page.goto('/profile')
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await login(page, 'client@fit.local')
+  await page.goto('/me/progress')
+  await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
+  await expect(page.getByLabel(`${metricName}, балл`)).toBeVisible()
+
+  const trainerEntry = page.locator('.client-progress-history article.card').first()
+  await expect(trainerEntry).toContainText('27 июля 2026 г.')
+  await trainerEntry.getByRole('button', { name: 'Изменить' }).click()
+  await trainerEntry.getByLabel('Вес, кг').fill('65.7')
+  await trainerEntry.getByRole('button', { name: 'Сохранить замер' }).click()
+  await expect(trainerEntry).toContainText('65.7 кг')
+
+  await page.getByLabel(`${metricName}, балл`).fill('3')
+  await page.getByLabel('Заметка').fill('Проверила замер после тренировки')
+  await page.getByRole('button', { name: 'Сохранить замер' }).first().click()
+  const ownEntry = page.locator('.client-progress-history article.card').filter({ hasText: metricName })
+  await expect(ownEntry).toContainText('3 балл')
+  await expect(ownEntry).toContainText('Проверила замер после тренировки')
+
+  await ownEntry.getByRole('button', { name: 'Изменить' }).click()
+  await ownEntry.getByLabel(`${metricName}, балл`).fill('4')
+  await ownEntry.getByRole('button', { name: 'Сохранить замер' }).click()
+  await expect(ownEntry).toContainText('4 балл')
+
+  await ownEntry.getByRole('button', { name: 'Удалить' }).click()
+  await expect(page.getByRole('alertdialog')).toBeVisible()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click()
+  await expect(ownEntry).toHaveCount(0)
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
 
 async function selectClient(page: Page) {
