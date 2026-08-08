@@ -9,7 +9,7 @@ import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -464,13 +464,16 @@ export function WorkoutDetailPage() {
       {done && <WorkoutTrainerReview workout={workout} canEdit={!clientMode} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
       {((clientMode && !clientOwned) || (!clientMode && workout.clientComment)) && <WorkoutClientComment workout={workout} canEdit={clientMode && !clientOwned} saving={clientComment.isPending} error={clientComment.error} onSave={(value) => clientComment.mutateAsync(value)} />}
       <div className={`cards ${done ? 'completed-exercise-list' : ''}`}>{groupIntoBlocks(workout.exercises).map((block) => {
-        const articles = block.exercises.map((exercise) => <article className={`exercise ${done ? 'completed-exercise' : ''}`} key={exercise.id}>
+        const articles = block.exercises.map((exercise) => {
+          const compactPlan = workout.status === 'planned' ? compactPlannedSetSummary(exercise.sets, showRpe) : null
+          return <article className={`exercise ${done ? 'completed-exercise' : ''}`} key={exercise.id}>
           <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
-          <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={['Результат']} trailingLabel={done ? 'Статус' : undefined} className="workout-history-sets">
+          {compactPlan ? <p className="planned-set-summary"><span>План</span><strong>{compactPlan}</strong></p> : <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={['Результат']} trailingLabel={done ? 'Статус' : undefined} className="workout-history-sets">
             {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} />)}
-          </WorkoutSetTable>
+          </WorkoutSetTable>}
           {exercise.trainerComment && <p className="exercise-comment-note">💬 {exercise.trainerComment}</p>}
-        </article>)
+        </article>
+        })
         if (block.blockType === 'single' || block.exercises.length === 1) return articles
         return <div className={`exercise-block view${done ? ' completed-exercise-block' : ''}`} key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
       })}</div>

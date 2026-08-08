@@ -411,6 +411,16 @@ function setLine(weightKg?: number, reps?: number, distanceKm?: number, duration
   return [weightKg && `${weightKg} кг`, reps && `${reps} повт.`, distanceKm && `${distanceKm} км`, durationLabel(durationSec, durationMin), showRpe && rpe !== undefined && `RPE ${rpe}`].filter(Boolean).join(' × ')
 }
 
+// Короткий план допустим только когда каждая строка будет выглядеть одинаково.
+// Разные значения и пустой план сохраняют подробную таблицу: там важен порядок.
+export function compactPlannedSetSummary(sets: readonly WorkoutSet[], showRpe = false): string | null {
+  if (sets.length === 0) return null
+  const lines = sets.map((set) => setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin, set.rpe, showRpe))
+  const first = lines[0]
+  if (!first || !lines.every((line) => line === first)) return null
+  return sets.length === 1 ? first : `${sets.length} × ${first}`
+}
+
 // Результат подхода: строка факта (факт, иначе план) и приписка плана — только
 // если факт был введён и отличается от плана хоть по одному параметру.
 // Совпал факт с планом или факта нет вовсе → planNote = null.

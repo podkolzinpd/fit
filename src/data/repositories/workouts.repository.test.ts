@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, completedWorkoutDraft, computeClientStats, copyWorkout, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, previousResultLine, replaceExercise, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitBlock, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, previousResultLine, replaceExercise, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitBlock, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -17,6 +17,13 @@ function bareWorkout(date: string, status: WorkoutStatus): Workout {
 const TODAY = localDate('2026-07-22')
 
 describe('workouts repository rules', () => {
+  it('сворачивает одинаковый план и оставляет разные подходы подробными', () => {
+    const base = (position: number, reps = 10): WorkoutSet => ({ id: `compact-${position}`, position, weightKg: 150, reps, fact: {}, confirmedAt: null, version: 1 })
+    expect(compactPlannedSetSummary([base(0), base(1), base(2)])).toBe('3 × 150 кг × 10 повт.')
+    expect(compactPlannedSetSummary([base(0), base(1, 8)])).toBeNull()
+    expect(compactPlannedSetSummary([{ id: 'duration', position: 0, durationSec: 300, fact: {}, confirmedAt: null, version: 1 }])).toBe('5:00')
+  })
+
   it('показывает последний заполненный результат без RPE', () => {
     expect(previousResultLine([
       { position: 0, weightKg: 50, reps: 10, rpe: 7 },
