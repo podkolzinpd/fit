@@ -157,7 +157,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
 
   await page.goto('/me/workouts')
   await page.getByRole('link', { name: 'Добавить' }).click()
-  await expect(page.getByLabel('Клиент')).toHaveValue('Связанный клиент')
+  await expect(page.getByLabel('Клиент')).toHaveCount(0)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: 'Бег (Кардио) Кардио' }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
