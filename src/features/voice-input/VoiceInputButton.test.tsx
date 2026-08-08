@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { AudioRecorder } from './audio-recorder'
 import type { SpeechRecognizer } from './speech-recognizer'
+import type { StreamingSpeechSession } from './speechkit-streaming-recognizer'
 import { VoiceInputButton } from './VoiceInputButton'
 
 function recorder(overrides: Partial<AudioRecorder> = {}): AudioRecorder {
@@ -73,6 +74,30 @@ describe('VoiceInputButton', () => {
     await user.click(screen.getByRole('button', { name: 'Надиктовать заметку' }))
     await user.click(screen.getByRole('button', { name: /Остановить/ }))
     expect(await screen.findByText('Речь не распознана.')).toBeVisible()
+  })
+
+  it('leaves a stalled microphone request and keeps retry available', async () => {
+    const user = userEvent.setup()
+    const stop = vi.fn().mockResolvedValue(undefined)
+    const start = vi.fn(() => new Promise<void>(() => undefined))
+    const fallbackStart = vi.fn().mockResolvedValue(undefined)
+    const fallbackRecorder = recorder({ start: fallbackStart })
+    render(<VoiceInputButton
+      variant="hero"
+      idleLabel="Надиктовать тренировку"
+      onTranscript={vi.fn()}
+      source="today"
+      recorderFactory={() => fallbackRecorder}
+      streamingFactory={() => ({ start, stop, rotate: vi.fn() } satisfies StreamingSpeechSession)}
+      startupTimeoutMs={10}
+    />)
+
+    await user.click(screen.getByRole('button', { name: 'Надиктовать тренировку' }))
+
+    expect(await screen.findByText(/Микрофон не ответил/)).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Надиктовать тренировку' })).toBeEnabled()
+    expect(stop).toHaveBeenCalledOnce()
+    expect(fallbackStart).not.toHaveBeenCalled()
   })
 
   it('presents the reusable hero flow and cancels without returning a transcript', async () => {
