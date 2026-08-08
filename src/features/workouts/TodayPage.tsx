@@ -21,11 +21,17 @@ import { WorkoutComposer } from './WorkoutComposer'
 import { VoiceInputButton, type VoiceInputPhase } from '../voice-input'
 import { WorkoutParseErrorNotice, workoutParseErrorKind, type WorkoutParseErrorKind } from './WorkoutParseErrorNotice'
 import { WorkoutSetTable } from './WorkoutSetTable'
+import { WearableHealthCard } from '../wearables'
+import { isWearablesPilotEnabled } from '../../app/feature-flags'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
 type UnmatchedView = { line: string; reason: 'not-found' | 'ambiguous'; candidates: ExerciseSnapshot[] }
 type VoiceRefinement = { state: 'loading' | 'success' | 'error'; message: string } | null
+
+interface TodayPageProps {
+  clientMode?: boolean
+}
 
 function setSummary(item: ParsedWorkoutExercise): string {
   const first = item.sets[0]
@@ -73,15 +79,16 @@ function draftExercise(item: ParsedWorkoutExercise, position: number): WorkoutDr
   }
 }
 
-export function TodayPage() {
+export function TodayPage({ clientMode = false }: TodayPageProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const queryClient = useQueryClient()
   const { actor } = useAuth()
-  const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
+  const mine = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine(), enabled: clientMode })
+  const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false), enabled: !clientMode })
   const today = todayLocalDate()
-  const todayWorkouts = useQuery({ queryKey: ['today-workouts', today], queryFn: () => workoutsRepository.list(today, today) })
-  const workouts = useQuery({ queryKey: ['workouts'], queryFn: () => workoutsRepository.list() })
+  const todayWorkouts = useQuery({ queryKey: ['today-workouts', today, mine.data?.id], queryFn: () => workoutsRepository.list(today, today, clientMode ? mine.data!.id : undefined), enabled: !clientMode || Boolean(mine.data) })
+  const workouts = useQuery({ queryKey: ['workouts', mine.data?.id], queryFn: () => workoutsRepository.list(undefined, undefined, clientMode ? mine.data!.id : undefined), enabled: !clientMode || Boolean(mine.data) })
   const catalog = useExerciseCatalog()
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
@@ -115,6 +122,7 @@ export function TodayPage() {
   const lastEmptyText = useRef('')
   const reviewRequest = useRef(0)
   const draftKey = todayDraftKey(actor!.userId)
+  const todayPath = clientMode ? '/me' : '/today'
   const view = new URLSearchParams(location.search).get('view')
   const screen: Screen = view === 'review' || view === 'save' ? view : 'compose'
 
@@ -139,7 +147,7 @@ export function TodayPage() {
       navigate(-1)
       return
     }
-    navigate(next === 'compose' ? '/today' : `/today?view=${next}`, { replace: next === 'compose', state: { fromTodayScreen: screen } })
+    navigate(next === 'compose' ? todayPath : `${todayPath}?view=${next}`, { replace: next === 'compose', state: { fromTodayScreen: screen } })
   }
 
   useEffect(() => {
@@ -159,6 +167,10 @@ export function TodayPage() {
     }
     setDraftReady(true)
   }, [draftKey, today])
+
+  useEffect(() => {
+    if (clientMode && mine.data?.id) setClientId(mine.data.id)
+  }, [clientMode, mine.data?.id])
 
   useEffect(() => {
     if (!draftReady) return
@@ -214,8 +226,8 @@ export function TodayPage() {
       removeTodayDraft(draftKey)
       await queryClient.invalidateQueries({ queryKey: ['workouts'] })
       await queryClient.invalidateQueries({ queryKey: ['today-workouts'] })
-      await queryClient.invalidateQueries({ queryKey: ['clients'] })
-      navigate(`/workouts/${id}`, { state: { returnTo: '/today' } })
+      if (!clientMode) await queryClient.invalidateQueries({ queryKey: ['clients'] })
+      navigate(`/workouts/${id}`, { state: { returnTo: clientMode ? '/me' : '/today' } })
     }, onError: () => trackGoal('today_workout_save_error'),
   })
   async function createQuickClient(fullName: string): Promise<ClientPickerSelection> {
@@ -427,14 +439,15 @@ export function TodayPage() {
   const plannedWorkouts = todayWorkouts.data?.filter((workout) => workout.status === 'planned').sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')) ?? []
   function workoutTime(workout: Workout) { return workout.startTime?.slice(0, 5) ?? 'Без времени' }
 
-  const trainerInitial = actor?.firstName?.trim().slice(0, 1).toUpperCase() || 'П'
+  const profileInitial = actor?.firstName?.trim().slice(0, 1).toUpperCase() || (clientMode ? 'К' : 'П')
   const latestWorkout = workouts.data?.filter((workout) => workout.status === 'done').sort((a, b) => `${b.workoutDate}${b.startTime ?? ''}`.localeCompare(`${a.workoutDate}${a.startTime ?? ''}`))[0]
   const contextWorkout = currentWorkout ?? plannedWorkouts[0] ?? latestWorkout
   const contextTitle = currentWorkout ? 'Текущая тренировка' : plannedWorkouts[0] ? 'Ближайшая тренировка' : latestWorkout ? 'Последняя тренировка' : null
-  const contextCard = contextWorkout && contextTitle && <section className="today-context"><p>{contextTitle}</p><Link to={currentWorkout ? `/workouts/${contextWorkout.id}/live` : `/workouts/${contextWorkout.id}`}><span><strong>{contextWorkout.clientName}</strong><small>{contextWorkout.workoutDate === today ? `Сегодня, ${workoutTime(contextWorkout)}` : contextWorkout.workoutDate}</small></span><span><strong>{contextWorkout.exercises.length ? contextWorkout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Тренировка'}</strong><small>{contextWorkout.exercises.length} упражнений</small></span><b>›</b></Link></section>
-  const greeting = `${new Date().getHours() < 12 ? 'Доброе утро' : new Date().getHours() < 18 ? 'Добрый день' : 'Добрый вечер'}, ${actor?.firstName || 'тренер'}`
+  const contextCard = contextWorkout && contextTitle && <section className="today-context"><p>{contextTitle}</p><Link to={currentWorkout ? `/workouts/${contextWorkout.id}/live` : `/workouts/${contextWorkout.id}`}><span><strong>{clientMode ? 'Ваша тренировка' : contextWorkout.clientName}</strong><small>{contextWorkout.workoutDate === today ? `Сегодня, ${workoutTime(contextWorkout)}` : contextWorkout.workoutDate}</small></span><span><strong>{contextWorkout.exercises.length ? contextWorkout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Тренировка'}</strong><small>{contextWorkout.exercises.length} упражнений</small></span><b>›</b></Link></section>
+  const greetingName = clientMode ? mine.data?.fullName || actor?.firstName || 'спортсмен' : actor?.firstName || 'тренер'
+  const greeting = `${new Date().getHours() < 12 ? 'Доброе утро' : new Date().getHours() < 18 ? 'Добрый день' : 'Добрый вечер'}, ${greetingName}`
 
-  return <Page title="Сегодня" className="today-page today-start-page" action={<Link className="today-profile-avatar" to="/profile" aria-label="Открыть профиль">{trainerInitial}</Link>}>
+  return <Page title="Сегодня" className="today-page today-start-page" action={<Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}>
     {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase}`}>
       <p className="today-greeting">{greeting} 👋</p>
       {!textComposerOpen && <VoiceInputButton variant="hero" source="today_workout" idleLabel="Надиктовать тренировку" onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }} onPhaseChange={setVoicePhase} onTranscript={handleHeroTranscript} />}
@@ -457,6 +470,7 @@ export function TodayPage() {
       </WorkoutComposer></div>}
       {voiceRefinement?.state === 'error' && !textComposerOpen && <div className="voice-action-error" role="alert"><strong>{voiceRefinement.message}</strong><button type="button" className="link" onClick={() => setTextComposerOpen(true)}>Редактировать текст</button></div>}
       {voicePhase === 'idle' && !restoredDraftScreen && contextCard}
+      {clientMode && actor && isWearablesPilotEnabled(actor.userId) && <WearableHealthCard />}
     </section> : <section className="today-review">
       <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><div><h1>{screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'}</h1>{screen === 'review' && items.length > 0 && <p className="today-review-summary">Распознано: {items.length}</p>}</div></div>
       {screen === 'review' && <>
@@ -472,7 +486,9 @@ export function TodayPage() {
       {items.length > 0 && <button type="button" className="wide today-review-next" onClick={() => { trackGoal('today_save_step_opened'); setScreen('save') }}>Далее</button>}
       </>}
       {screen === 'save' && <section className="today-assignment">
-      <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={setClientId} label="Для кого тренировка" loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />
+      {clientMode
+        ? <p className="today-assignment-self">Тренировка будет сохранена в ваш кабинет</p>
+        : <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={setClientId} label="Для кого тренировка" loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
       {(prefillError || save.error) && <p className="error">{prefillError ?? save.error?.message}</p>}
       <section className="today-save-actions" aria-label="Тип записи">
         <div className="today-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={recordMode === 'planned' ? 'active' : ''} aria-pressed={recordMode === 'planned'} onClick={() => setRecordMode('planned')}>План</button><button type="button" className={recordMode === 'completed' ? 'active' : ''} aria-pressed={recordMode === 'completed'} onClick={() => { setRecordMode('completed'); setWorkoutDate((date) => workoutDateForRecordMode('completed', date, today)) }}>Завершённая</button></div>
@@ -480,7 +496,7 @@ export function TodayPage() {
         <button type="button" className="wide" disabled={!items.length || !clientId || save.isPending} onClick={() => save.mutate(recordMode)}>{recordMode === 'planned' ? 'Запланировать' : 'Записать как завершённую'}</button>
       </section></section>}
     </section>}
-    {(catalog.error ?? todayWorkouts.error) && <p className="error">{(catalog.error ?? todayWorkouts.error)?.message}</p>}
+    {(catalog.error ?? todayWorkouts.error ?? mine.error) && <p className="error">{(catalog.error ?? todayWorkouts.error ?? mine.error)?.message}</p>}
     {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} onPick={(exercise) => pickExercises([exercise])} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
   </Page>
 }
