@@ -1,28 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
+import { setAppTheme, useAppTheme } from '../../app/theme'
 import { authRepository } from '../../data/repositories/auth.repository'
 import { clientsRepository } from '../../data/repositories/clients.repository'
-import { AsyncView, Page } from '../../shared/ui'
-import { ClientTrainingSummaryCard } from '../progress'
-
-export function ClientProgressPage() {
-  const { actor } = useAuth()
-  if (!actor || actor.kind !== 'client') return null
-
-  return <Page title="Мой прогресс" className="client-progress-page">
-    <section className="client-welcome">
-      <span>Привет, {actor.firstName ?? actor.fullName}</span>
-      <h2>Посмотри, как меняются твои результаты</h2>
-      <p>Запроси свежий анализ в любой момент — тренерская версия останется закрытой.</p>
-    </section>
-    <ClientTrainingSummaryCard clientId={actor.clientId} />
-  </Page>
-}
+import { AsyncView, Page, Switch } from '../../shared/ui'
 
 export function ClientProfilePage() {
   const { actor } = useAuth()
   const navigate = useNavigate()
+  const theme = useAppTheme()
   const client = useQuery({
     queryKey: ['my-client'],
     queryFn: () => clientsRepository.getMine(),
@@ -47,6 +34,10 @@ export function ClientProfilePage() {
         <Link className="button secondary wide" to="/me/edit">Изменить данные</Link>
       </>}
     </AsyncView>
+    <section className="profile-settings" aria-label="Настройки">
+      <Switch label="Тёмная тема" checked={theme === 'dark'} onChange={(checked) => setAppTheme(checked ? 'dark' : 'light')} />
+    </section>
+    <div className="menu"><Link to="/join">Ввести код приглашения</Link></div>
     <button className="danger secondary wide" onClick={() => void logout()}>Выйти</button>
   </Page>
 }

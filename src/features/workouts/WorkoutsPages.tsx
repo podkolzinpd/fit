@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { goalsRepository } from '../../data/repositories/goals.repository'
+import { invitationsRepository } from '../../data/repositories/invitations.repository'
 import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
@@ -17,7 +18,7 @@ import {
 } from '../../shared/local-date'
 import { AsyncView, Field, OverflowMenu, Page, SaveStatus, StatusBadge, useConfirm } from '../../shared/ui'
 import { ExercisePicker, recentExercisesForClient, useExerciseCatalog } from '../exercises'
-import { ClientPicker, type ClientPickerSelection } from '../clients'
+import { clientWorkoutAuthorLabel, ClientPicker, type ClientPickerSelection } from '../clients'
 import { VoiceNoteField } from '../voice-input'
 import { QuickWorkoutEntry } from './QuickWorkoutEntry'
 import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
@@ -366,7 +367,7 @@ export function WorkoutFormPage() {
       <section className="workout-form-section">
         <div className="workout-form-section-head"><p className="eyebrow">ОСНОВНЫЕ ДАННЫЕ</p><h2>Тренировка</h2></div>
         {clientMode
-          ? <><input type="hidden" name="clientId" value={mine.data?.id ?? ''} /><Field label="Клиент"><input value={mine.data?.fullName ?? ''} disabled /></Field></>
+          ? <input type="hidden" name="clientId" value={mine.data?.id ?? ''} />
           : <ClientPicker userId={actor?.userId} clients={availableClients ?? []} selectedId={clientId} onChange={(id) => { setClientSelectionError(null); setSelectedClientId(id) }} selectionError={clientSelectionError} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
         <div className="split"><Field label="Дата"><input name="date" type="date" max={completedMode ? todayLocalDate() : undefined} value={entryDate} onChange={(event) => setEntryDate(localDate(event.target.value))} required /></Field><Field label="Время"><input name="startTime" type="time" value={startTime} onChange={(event) => { setStartTime(event.target.value); (event.currentTarget.form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} /></Field></div>
         <Field label="Окончание"><input name="endTime" type="time" value={endTime} onChange={(event) => { setEndTime(event.target.value); event.currentTarget.setCustomValidity('') }} /></Field>
@@ -426,6 +427,8 @@ export function WorkoutDetailPage() {
   const justCompleted = done && navigationState?.justCompleted === true
   const clientMode = actor?.role === 'client'
   const clientOwned = clientMode && workout?.createdBy === actor.userId
+  const trainers = useQuery({ queryKey: ['client-trainers', workout?.clientId], queryFn: () => invitationsRepository.listTrainers(workout!.clientId), enabled: clientMode && Boolean(workout?.clientId) })
+  const authorLabel = workout ? clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data) : null
   // Карточка не должна угадывать источник открытия. Быстрый сценарий «Сегодня»
   // передаёт returnTo, остальные пути сохраняют прежний безопасный fallback.
   const backTo = navigationState?.returnTo ?? (clientMode ? '/me/workouts' : '/schedule')
@@ -440,7 +443,7 @@ export function WorkoutDetailPage() {
         </div>
       </section>}
       <section className="workout-title">
-        <div><h2>{workout.clientName}</h2><p>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</p>{stageTitle && <p className="stage-tag">🎯 {stageTitle}</p>}</div>
+        <div><h2>{clientMode ? 'Ваша тренировка' : workout.clientName}</h2><p>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</p>{clientMode && authorLabel && <p className="muted">{authorLabel}</p>}{stageTitle && <p className="stage-tag">🎯 {stageTitle}</p>}</div>
         <WorkoutStatusBadge workout={workout} />
       </section>
       {workout.status === 'planned' && <button className="wide" onClick={() => start.mutate()}>Начать тренировку</button>}

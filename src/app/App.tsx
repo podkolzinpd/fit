@@ -4,8 +4,7 @@ import { trackPageView } from '../shared/yandex-metrika'
 import { AppLayout } from './AppLayout'
 import { trainerHomePath } from './feature-flags'
 import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage } from '../features/auth'
-import { ClientProfilePage } from '../features/client-app'
-import { ClientDetailPage, ClientFormPage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
+import { ClientDetailPage, ClientFormPage, ClientProfilePage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
@@ -53,6 +52,7 @@ const router = createBrowserRouter([
     { path: '/workouts/:workoutId/edit', element: <WorkoutFormPage /> },
     { path: '/workouts/:workoutId', element: <WorkoutDetailPage /> },
     { path: '/workouts/:workoutId/live', element: <LiveWorkoutPage /> },
+    { path: '/workouts/:workoutId/history/:exerciseRef', element: <ExerciseHistoryPage /> },
     { element: <TrainerOnly />, children: [
       { path: '/today', element: <TodayPage /> },
       { path: '/clients', element: <ClientsPage /> },
@@ -62,7 +62,6 @@ const router = createBrowserRouter([
       { path: '/clients/:clientId/edit', element: <ClientFormPage /> },
       { path: '/clients/:clientId/workouts', element: <ClientWorkoutsPage /> },
       { path: '/schedule', element: <SchedulePage /> },
-      { path: '/workouts/:workoutId/history/:exerciseRef', element: <ExerciseHistoryPage /> },
       { path: '/progress/:clientId', element: <ProgressPage /> },
       { path: '/exercises', element: <ExercisesPage /> },
       { path: '/profile', element: <ProfilePage /> },

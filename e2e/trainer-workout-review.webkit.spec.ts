@@ -40,5 +40,7 @@ test('iPhone: trainer review is editable by trainer and read-only for client', a
   await page.goto(workoutUrl)
   await expect(page.getByText(review, { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /Добавить|Изменить|Сохранить отзыв/ })).toHaveCount(0)
+  await page.getByRole('link', { name: /Планка.*история/ }).click()
+  await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
