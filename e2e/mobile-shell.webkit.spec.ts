@@ -37,7 +37,7 @@ test('iPhone: новое имя профиля сохраняется после
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: клиент меняет имя через свой профиль на 390 px', async ({ page }, testInfo) => {
+test('iPhone: client voice-first home сохраняет тренировку только себе на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
@@ -53,15 +53,47 @@ test('iPhone: клиент меняет имя через свой профил�
   await page.getByLabel('Начальный вес, кг').fill('65')
   await page.getByLabel('Цель').fill('Тренироваться регулярно')
   await page.getByRole('button', { name: 'Создать карточку' }).click()
-  await expect(page.getByRole('heading', { name: 'Клиент', exact: true })).toBeVisible()
-  await page.getByRole('link', { name: 'Профиль' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeInViewport()
+  await page.evaluate(() => Object.keys(localStorage)
+    .filter((key) => key.startsWith('fit.today-draft.'))
+    .forEach((key) => localStorage.removeItem(key)))
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeInViewport()
+  await page.route('**/functions/v1/parse-workout', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        items: [{
+          sourceText: 'Жим лёжа 3×8 — 80 кг',
+          exerciseRef: 'bench-press',
+          confidence: 1,
+          sets: [{ weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }],
+        }],
+        unmatched: [],
+      }),
+    })
+  })
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await page.getByLabel('Тренировка').fill('Жим лёжа 3×8 — 80 кг')
+  await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+  await page.getByRole('button', { name: 'Далее' }).click()
+  await expect(page.getByText('Тренировка будет сохранена в ваш кабинет')).toBeVisible()
+  await expect(page.locator('.client-picker-trigger')).toHaveCount(0)
+  await page.getByRole('link', { name: 'Профиль', exact: true }).click()
   await expect(page).toHaveURL(/\/me\/profile$/)
   await page.getByRole('link', { name: 'Изменить данные' }).click()
   await page.getByLabel('Имя').fill('Клиент Обновлённый')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await Promise.all([
+    page.waitForURL(/\/me$/),
+    page.getByRole('button', { name: 'Сохранить' }).click(),
+  ])
+  await expect(page.getByText(/Клиент Обновлённый/)).toBeVisible()
 
   await page.goto('/me/profile')
   await expect(page.getByText('Клиент Обновлённый', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Пригласить тренера' })).toBeInViewport()
   await page.reload()
   await expect(page.getByText('Клиент Обновлённый', { exact: true })).toBeVisible()
   await expectNoHorizontalOverflow(page)

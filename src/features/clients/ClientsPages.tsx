@@ -7,7 +7,7 @@ import { clientsRepository } from '../../data/repositories/clients.repository'
 import { goalsRepository } from '../../data/repositories/goals.repository'
 import { invitationsRepository } from '../../data/repositories/invitations.repository'
 import { bmiLabel, computeClientStats, splitClientWorkouts, workoutsRepository } from '../../data/repositories/workouts.repository'
-import { WorkoutExercisesSummary } from '../workouts'
+import { TodayPage, WorkoutExercisesSummary } from '../workouts'
 import type { Client, Gender } from '../../shared/domain'
 import { currentStage, daysToTarget, stageProgress } from '../../shared/goal-rules'
 import { formatLocalDate, formatLocalDateShort, localDate, todayLocalDate } from '../../shared/local-date'
@@ -18,8 +18,6 @@ import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
 import { ProfileIcon } from '../../shared/icons'
-import { WearableHealthCard } from '../wearables'
-import { isWearablesPilotEnabled } from '../../app/feature-flags'
 
 export function ClientsPage() {
   const showArchived = localStorage.getItem('fit.showArchivedClients') === 'true'
@@ -48,44 +46,10 @@ export function MyClientPage() {
   const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
   useClientRealtime(query.data?.id)
-  const trainers = useQuery({ queryKey: ['client-trainers', query.data?.id], queryFn: () => invitationsRepository.listTrainers(query.data!.id), enabled: Boolean(query.data) })
-  const invitations = useQuery({ queryKey: ['client-invitations', query.data?.id], queryFn: () => invitationsRepository.list(query.data!.id), enabled: Boolean(query.data) })
-  const invite = useMutation({ mutationFn: (clientId: string) => invitationsRepository.create(clientId, 'trainer'), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', query.data?.id] }) })
-  const revoke = useMutation({ mutationFn: (invitationId: string) => invitationsRepository.revoke(invitationId), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', query.data?.id] }) })
-  const removeTrainer = useMutation({ mutationFn: (trainerId: string) => invitationsRepository.removeTrainer(query.data!.id, trainerId), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-trainers', query.data?.id] }) })
-  const [confirm, confirmDialog] = useConfirm()
-  return <Page title="Кабинет" className="client-home-page" action={query.data && <Link className="button secondary" to="/me/edit">Изменить данные</Link>}>
+  if (query.data) return <TodayPage clientMode />
+  return <Page title="Кабинет" className="client-home-page">
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
-      {query.data ? <div className="stack client-home-stack">
-        <section className="client-home-hero">
-          <p className="eyebrow">МОЙ ПРОФИЛЬ</p>
-          <h2>{query.data.fullName}</h2>
-          <p>{query.data.goal || 'Добавьте цель — тренировки и прогресс будут понятнее.'}</p>
-        </section>
-        <section className="summary client-home-summary" aria-label="Параметры профиля">
-          <div><span>Возраст</span><strong>{query.data.ageYears ?? '—'}</strong></div>
-          <div><span>Рост</span><strong>{query.data.heightCm ? `${query.data.heightCm} см` : '—'}</strong></div>
-          <div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div>
-        </section>
-        <section className="client-home-routes" aria-label="Разделы кабинета">
-          <Link className="client-home-route primary" to="/me/workouts"><span>Тренировки</span><small>Планы и история занятий</small><b aria-hidden="true">›</b></Link>
-          <Link className="client-home-route" to="/me/progress"><span>Прогресс</span><small>Замеры и динамика</small><b aria-hidden="true">›</b></Link>
-        </section>
-        {actor && isWearablesPilotEnabled(actor.userId) && <WearableHealthCard />}
-        <section className="client-home-connections"><div className="client-home-section-head"><div><p className="eyebrow">СВЯЗЬ С ТРЕНЕРОМ</p><h2>Тренеры</h2></div><button className="secondary" disabled={invite.isPending} onClick={() => invite.mutate(query.data!.id)}>Пригласить тренера</button></div>
-        {invite.data && <div className="card"><div><strong>Код для тренера: {invite.data}</strong><p>Действует 7 дней и используется один раз.</p></div></div>}
-        {invite.error && <p className="error">{invite.error.message}</p>}
-          {trainers.isLoading && <p className="muted">Загрузка тренеров…</p>}
-          {trainers.error && <div><p className="error">{trainers.error.message}</p><button className="secondary" onClick={() => void trainers.refetch()}>Повторить</button></div>}
-          {trainers.data?.length === 0 && <p className="muted">Подключённых тренеров нет</p>}
-          {trainers.data?.map((trainer) => <article className="card" key={trainer.trainerId}><div><strong>{[trainer.firstName, trainer.lastName].filter(Boolean).join(' ') || 'Тренер'}</strong><p>{trainer.isRoot ? 'Основной тренер' : 'Подключённый тренер'}</p></div>{!trainer.isRoot && <button className="link danger" disabled={removeTrainer.isPending} onClick={async () => { if (await confirm({ message: 'Отключить этого тренера? Он потеряет доступ к вашим тренировкам и прогрессу.', confirmLabel: 'Отключить', danger: true })) removeTrainer.mutate(trainer.trainerId) }}>Отключить</button>}</article>)}
-        {invitations.isLoading && <p className="muted">Загрузка приглашений…</p>}
-        {invitations.data && invitations.data.length > 0 && <div className="client-home-invitations"><h3>Активные приглашения</h3>{invitations.data.map((item) => <article className="card" key={item.id}><div><strong>Приглашение для тренера</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU')}</p></div><button className="link danger" disabled={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Код больше нельзя будет использовать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>Отозвать</button></article>)}</div>}
-        {invitations.error && <div><p className="error">{invitations.error.message}</p><button className="secondary" onClick={() => void invitations.refetch()}>Повторить</button></div>}
-        {(removeTrainer.error || revoke.error) && <p className="error">{(removeTrainer.error ?? revoke.error)?.message}</p>}
-        </section>
-        {confirmDialog}
-      </div> : <div className="client-onboarding">
+      <div className="client-onboarding">
         <section className="client-onboarding-hero">
           <p className="eyebrow">ЛИЧНЫЙ ПРОФИЛЬ</p>
           <h2>Создайте личную карточку</h2>
@@ -100,7 +64,7 @@ export function MyClientPage() {
             await refresh()
           }}
         />
-      </div>}
+      </div>
     </AsyncView>
   </Page>
 }
