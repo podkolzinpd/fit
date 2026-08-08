@@ -61,14 +61,16 @@ describe('authRepository.initialize', () => {
     queries.getLinkedClient.mockResolvedValue({ data: null, error: null })
     queries.getTrainer.mockResolvedValue({ data: null, error: null })
     queries.initializeAccount.mockResolvedValue({ data: null, error: null })
-    queries.getProfile.mockResolvedValue({
-      data: {
-        first_name: 'Ирина',
-        last_name: null,
-        timezone: 'Europe/Moscow',
-      },
-      error: null,
-    })
+    queries.getProfile
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({
+        data: {
+          first_name: 'Ирина',
+          last_name: null,
+          timezone: 'Europe/Moscow',
+        },
+        error: null,
+      })
 
     const actor = await authRepository.initialize({
       id: 'trainer-1',
@@ -78,5 +80,28 @@ describe('authRepository.initialize', () => {
 
     expect(actor.kind).toBe('trainer')
     expect(queries.initializeAccount).toHaveBeenCalledWith('trainer', 'Ирина', undefined)
+  })
+
+  it('не перезаписывает сохранённое имя регистрационными metadata', async () => {
+    queries.getLinkedClient.mockResolvedValue({ data: null, error: null })
+    queries.getTrainer.mockResolvedValue({ data: { profile_id: 'trainer-1' }, error: null })
+    queries.getProfile.mockResolvedValue({
+      data: {
+        account_role: 'trainer',
+        first_name: 'Новое имя',
+        last_name: null,
+        timezone: 'Europe/Moscow',
+      },
+      error: null,
+    })
+
+    const actor = await authRepository.initialize({
+      id: 'trainer-1',
+      email: 'trainer@example.test',
+      user_metadata: { first_name: 'Старое имя' },
+    })
+
+    expect(actor.firstName).toBe('Новое имя')
+    expect(queries.initializeAccount).not.toHaveBeenCalled()
   })
 })

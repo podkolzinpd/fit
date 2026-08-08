@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { authRepository } from '../../data/repositories/auth.repository'
 import { Page } from '../../shared/ui'
@@ -35,7 +35,7 @@ export function ClientProfilePage() {
       </span>
       <div><strong>{actor.fullName}</strong><p>{actor.email}</p></div>
     </section>
-    <p className="muted">Тренировочный профиль связан с твоим тренером. Изменения данных пока выполняются через тренера.</p>
+    <Link className="button secondary wide" to="/me/edit">Изменить данные</Link>
     <button className="danger secondary wide" onClick={() => void logout()}>Выйти</button>
   </Page>
 }

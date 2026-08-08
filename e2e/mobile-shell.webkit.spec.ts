@@ -18,6 +18,25 @@ async function expectNoHorizontalOverflow(page: import('@playwright/test').Page)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 }
 
+test('iPhone: новое имя профиля сохраняется после reload на 390 px', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/auth')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Имя').fill('Профиль')
+  await page.getByLabel('Email').fill(`profile-name-${testInfo.workerIndex}-${Date.now()}@fit.local`)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+
+  await page.goto('/profile')
+  await page.getByLabel('Имя').fill('Новое имя')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('status')).toContainText('Сохранено')
+  await page.reload()
+  await expect(page.getByLabel('Имя')).toHaveValue('Новое имя')
+  await expectNoHorizontalOverflow(page)
+})
+
 async function selectClient(page: Page) {
   await page.locator('.client-picker-trigger').click()
   await page.locator('.client-picker-item').filter({ hasText: 'Анна Смирнова' }).first().click()

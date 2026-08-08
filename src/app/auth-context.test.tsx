@@ -35,6 +35,11 @@ function AuthProbe() {
   return <p>{state.loading ? 'loading' : state.actor?.email ?? state.error ?? 'anonymous'}</p>
 }
 
+function RefreshProbe() {
+  const state = useAuth()
+  return <><p>{state.actor?.firstName ?? 'anonymous'}</p><button onClick={() => void state.refresh()}>Обновить</button></>
+}
+
 function authCallback(): TestAuthCallback {
   const callback = auth.onAuthStateChange.mock.calls[0]?.[0]
   if (!callback) throw new Error('Auth callback was not registered')
@@ -71,6 +76,21 @@ describe('AuthProvider', () => {
 
     await waitFor(() => expect(screen.getByText(user.email)).toBeInTheDocument())
     expect(auth.initialize).toHaveBeenCalledOnce()
+  })
+
+  it('явно перечитывает профиль текущего пользователя при refresh', async () => {
+    auth.getSession.mockResolvedValue({ data: { session: { user } }, error: null })
+    auth.initialize
+      .mockResolvedValueOnce(actor)
+      .mockResolvedValueOnce({ ...actor, firstName: 'Мария' })
+    render(<AuthProvider><RefreshProbe /></AuthProvider>)
+
+    authCallback()('INITIAL_SESSION', { user })
+    await waitFor(() => expect(screen.getByText('Анна')).toBeInTheDocument())
+    screen.getByRole('button', { name: 'Обновить' }).click()
+
+    await waitFor(() => expect(screen.getByText('Мария')).toBeInTheDocument())
+    expect(auth.initialize).toHaveBeenCalledTimes(2)
   })
 
   it('ignores stale initialization after logout', async () => {

@@ -25,9 +25,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const initializationRef = useRef<{ userId: string; promise: Promise<SessionActor> } | null>(null)
   const sessionRevisionRef = useRef(0)
 
-  const initializeUser = useCallback((user: AuthUser) => {
-    if (actorRef.current?.userId === user.id) return Promise.resolve(actorRef.current)
-    if (initializationRef.current?.userId === user.id) return initializationRef.current.promise
+  const initializeUser = useCallback((user: AuthUser, force = false) => {
+    if (!force && actorRef.current?.userId === user.id) return Promise.resolve(actorRef.current)
+    if (!force && initializationRef.current?.userId === user.id) return initializationRef.current.promise
 
     const promise = authRepository.initialize(user).finally(() => {
       if (initializationRef.current?.promise === promise) initializationRef.current = null
@@ -36,7 +36,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return promise
   }, [])
 
-  const applyUser = useCallback(async (user: AuthUser | null) => {
+  const applyUser = useCallback(async (user: AuthUser | null, force = false) => {
     const revision = ++sessionRevisionRef.current
     if (!user) {
       actorRef.current = null
@@ -47,9 +47,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       return
     }
 
-    setLoading(true)
+    if (!force) setLoading(true)
     try {
-      const initialized = await initializeUser(user)
+      const initialized = await initializeUser(user, force)
       if (revision !== sessionRevisionRef.current) return
       actorRef.current = initialized
       setActor(initialized)
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setActor(null)
       setError(caught instanceof Error ? caught.message : 'Ошибка авторизации')
     } finally {
-      if (revision === sessionRevisionRef.current) setLoading(false)
+      if (revision === sessionRevisionRef.current && !force) setLoading(false)
     }
   }, [initializeUser])
 
@@ -69,7 +69,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const result = await authRepository.getSession()
       if (result.error) throw result.error
       const user = result.data.session?.user
-      await applyUser(user ? { id: user.id, email: user.email, user_metadata: user.user_metadata } : null)
+      await applyUser(user ? { id: user.id, email: user.email, user_metadata: user.user_metadata } : null, true)
     } catch (caught) {
       actorRef.current = null
       setActor(null)

@@ -69,20 +69,24 @@ export const authRepository = {
       : metadataRole === 'client' || metadataRole === 'trainer'
         ? metadataRole
         : pendingRole === 'client' ? 'client' : 'trainer'
-    const initialized = await authQueries.initializeAccount(role, firstName, lastName)
-    if (initialized.error) throw repositoryError(initialized.error)
+    let profileData = existing.data
+    if (!profileData) {
+      const initialized = await authQueries.initializeAccount(role, firstName, lastName)
+      if (initialized.error) throw repositoryError(initialized.error)
+      const profile = await authQueries.getProfile(user.id)
+      if (profile.error) throw repositoryError(profile.error)
+      profileData = profile.data
+    }
     sessionStorage.removeItem('fit.pendingAccountRole')
-    const profile = await authQueries.getProfile(user.id)
-    if (profile.error) throw repositoryError(profile.error)
-    if (!profile.data) throw new Error('Профиль пользователя не найден')
+    if (!profileData) throw new Error('Профиль пользователя не найден')
     return {
       kind: 'trainer',
       userId: user.id,
       role,
       email: user.email ?? null,
-      firstName: profile.data.first_name,
-      lastName: profile.data.last_name,
-      timezone: profile.data.timezone,
+      firstName: profileData.first_name,
+      lastName: profileData.last_name,
+      timezone: profileData.timezone,
     }
   },
   async updateProfile(actor: TrainerActor): Promise<TrainerActor> {
