@@ -45,7 +45,7 @@ test('iPhone: новое имя профиля сохраняется после
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: client voice-first home сохраняет тренировку только себе на 390 px', async ({ page }, testInfo) => {
+test('iPhone: client voice-first home сохраняет тренировку только себе, а Cancel профиля не мутирует данные на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
@@ -100,6 +100,14 @@ test('iPhone: client voice-first home сохраняет тренировку т
   await expect(page.getByText(/Клиент Обновлённый/)).toBeVisible()
 
   await page.goto('/me/profile')
+  await expect(page.getByText('Клиент Обновлённый', { exact: true })).toBeVisible()
+  await page.goto('/me/edit')
+  await expect(page.getByRole('heading', { name: 'Редактировать клиента' })).toBeVisible()
+  await page.getByLabel('Имя').fill('Черновик отмены')
+  await Promise.all([
+    page.waitForURL(/\/me\/profile$/),
+    page.getByRole('button', { name: 'Отмена' }).click(),
+  ])
   await expect(page.getByText('Клиент Обновлённый', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Пригласить тренера' })).toBeInViewport()
   await page.reload()
