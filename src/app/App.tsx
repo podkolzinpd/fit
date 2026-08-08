@@ -4,6 +4,7 @@ import { trackPageView } from '../shared/yandex-metrika'
 import { AppLayout } from './AppLayout'
 import { trainerHomePath } from './feature-flags'
 import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage } from '../features/auth'
+import { ClientProfilePage } from '../features/client-app'
 import { ClientDetailPage, ClientFormPage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
@@ -23,6 +24,11 @@ function TrainerOnly() {
   return actor?.role === 'trainer' ? <Outlet /> : <Navigate to="/me" replace />
 }
 
+function ClientOnly() {
+  const { actor } = useAuth()
+  return actor?.role === 'client' ? <Outlet /> : <Navigate to={trainerHomePath()} replace />
+}
+
 function Home() {
   const { actor } = useAuth()
   return <Navigate to={actor?.role === 'client' ? '/me' : trainerHomePath()} replace />
@@ -36,10 +42,13 @@ const router = createBrowserRouter([
   { element: <Protected />, children: [{ element: <AppLayout />, children: [
     { index: true, element: <Home /> },
     { path: '/join', element: <JoinPage /> },
-    { path: '/me', element: <MyClientPage /> },
-    { path: '/me/edit', element: <MyClientEditPage /> },
-    { path: '/me/workouts', element: <MyWorkoutsPage /> },
-    { path: '/me/progress', element: <MyProgressPage /> },
+    { element: <ClientOnly />, children: [
+      { path: '/me', element: <MyClientPage /> },
+      { path: '/me/edit', element: <MyClientEditPage /> },
+      { path: '/me/workouts', element: <MyWorkoutsPage /> },
+      { path: '/me/progress', element: <MyProgressPage /> },
+      { path: '/me/profile', element: <ClientProfilePage /> },
+    ] },
     { path: '/workouts/new', element: <WorkoutFormPage /> },
     { path: '/workouts/:workoutId/edit', element: <WorkoutFormPage /> },
     { path: '/workouts/:workoutId', element: <WorkoutDetailPage /> },
@@ -56,8 +65,8 @@ const router = createBrowserRouter([
       { path: '/workouts/:workoutId/history/:exerciseRef', element: <ExerciseHistoryPage /> },
       { path: '/progress/:clientId', element: <ProgressPage /> },
       { path: '/exercises', element: <ExercisesPage /> },
+      { path: '/profile', element: <ProfilePage /> },
     ] },
-    { path: '/profile', element: <ProfilePage /> },
   ] }] },
   { path: '*', element: <Navigate to="/" replace /> },
 ])

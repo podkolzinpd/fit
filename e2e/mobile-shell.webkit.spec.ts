@@ -37,6 +37,36 @@ test('iPhone: новое имя профиля сохраняется после
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: клиент меняет имя через свой профиль на 390 px', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/auth')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Тип аккаунта').selectOption('client')
+  await page.getByLabel('Имя').fill('Клиент')
+  await page.getByLabel('Email').fill(`client-profile-${testInfo.workerIndex}-${Date.now()}@fit.local`)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+
+  await page.getByLabel('Пол').selectOption('female')
+  await page.getByLabel('Возраст').fill('30')
+  await page.getByLabel('Рост, см').fill('170')
+  await page.getByLabel('Начальный вес, кг').fill('65')
+  await page.getByLabel('Цель').fill('Тренироваться регулярно')
+  await page.getByRole('button', { name: 'Создать карточку' }).click()
+  await expect(page.getByRole('heading', { name: 'Клиент', exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Профиль' }).click()
+  await expect(page).toHaveURL(/\/me\/profile$/)
+  await page.getByRole('link', { name: 'Изменить данные' }).click()
+  await page.getByLabel('Имя').fill('Клиент Обновлённый')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+
+  await page.goto('/me/profile')
+  await expect(page.getByText('Клиент Обновлённый', { exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.getByText('Клиент Обновлённый', { exact: true })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+})
+
 async function selectClient(page: Page) {
   await page.locator('.client-picker-trigger').click()
   await page.locator('.client-picker-item').filter({ hasText: 'Анна Смирнова' }).first().click()
