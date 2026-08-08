@@ -307,27 +307,41 @@ p { margin: 6px 0 }
 .today-assignment-self { margin: 0; padding: 13px 14px; border: 1px solid var(--accent-border); border-radius: 14px; background: var(--accent-soft); color: var(--accent-strong); font-weight: var(--weight-medium) }
 .client-onboarding { display:grid; gap:18px; max-width:640px; margin:0 auto; }.client-onboarding-hero { padding:8px 0 2px; }.client-onboarding-hero .eyebrow { margin:0 0 8px; }.client-onboarding-hero h2 { margin:0; font-size:clamp(30px, 8.2vw, 36px); line-height:1.08; letter-spacing:var(--tracking-tight); }.client-onboarding-hero > p:last-child { max-width:350px; margin:10px 0 0; color:var(--muted); font-size:16px; line-height:1.42; }
 .client-workouts-page .page-header, .client-progress-page .page-header { margin-bottom:18px; }.client-workouts-stack, .client-progress-stack { display:grid; gap:20px; }.client-workout-section, .client-progress-form, .client-progress-history { display:grid; gap:11px; }.client-workout-section-head, .client-progress-section-head { display:grid; gap:3px; }.client-workout-section-head .eyebrow, .client-progress-section-head .eyebrow { margin:0; }.client-workout-section-head h2, .client-progress-section-head h2 { margin:0; font-size:23px; letter-spacing:var(--tracking-tight); }.client-workout-cards { gap:9px; }.client-workout-card { min-height:78px; padding:14px 15px; border-radius:17px; box-shadow:var(--shadow-card); }.client-workout-card strong { font-size:16px; }.client-workout-card p { margin:4px 0 0; }.client-section-empty { margin:0; padding:16px; border:1px dashed var(--border); border-radius:16px; color:var(--muted); background:var(--surface-raised); font-size:14px; }.client-progress-form, .client-progress-history { padding:18px; border:1px solid var(--border); border-radius:20px; background:var(--surface-raised); box-shadow:var(--shadow-card); }.client-progress-form .compact { padding:0; border:0; background:transparent; }.client-progress-form .measure-grid input { background:var(--surface-sunken); }.client-progress-form .compact button { min-height:50px; border-radius:16px; font-size:16px; font-weight:800; }.client-progress-history .cards { gap:8px; }.client-progress-history .card { border-radius:14px; box-shadow:none; }
-/* Карточка спортсмена: те же спокойные карточки и иерархия, что на старте.
-   Шапка намеренно не центрируется: длинная CTA «Редактировать профиль» на 390 px
-   не должна забирать место у имени и кнопки назад. */
-.client-detail-page .page-header { align-items: flex-start; margin-bottom: 18px }
-.client-detail-page .page-header h1 { padding-top: 5px; font-size: clamp(28px, 7.5vw, 34px) }
-.client-detail-page .page-header .button { max-width: 148px; padding: 9px 11px; line-height: 1.15 }
-.client-detail-overview { display: grid; gap: 5px; margin: 0 0 14px; padding: 4px 0 0 }
+/* Карточка спортсмена использует ту же типографику и компактную сетку, что
+   клиентские корневые экраны. Имя занимает отдельную строку: редактирование и
+   кнопка назад больше не сжимают длинный заголовок на 390 px. */
+.client-detail-page { padding: max(38px, calc(env(safe-area-inset-top) + 16px)) 20px 28px }
+.client-detail-page .page-header { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 11px; margin-bottom: 18px }
+.client-detail-page .page-header .page-back { grid-column: 1; grid-row: 1 }
+.client-detail-page .page-header .button { grid-column: 3; grid-row: 1; min-height: 44px; max-width: none; padding: 9px 12px; border-radius: 14px; line-height: 1.15 }
+.client-detail-page .page-header h1 { grid-column: 1 / -1; grid-row: 2; padding: 0; font-size: clamp(29px, 8.2vw, 34px); line-height: 1.06 }
+.client-detail-overview { display: grid; gap: 5px; margin: 0 0 12px; padding: 15px 16px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
 .client-detail-overview .eyebrow { margin: 0; color: var(--accent-strong) }
-.client-detail-overview > p:last-child { max-width: 345px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.42 }
-.client-detail-summary { gap: 9px; margin-bottom: 12px }
-.client-detail-summary div, .client-detail-stats div { min-height: 76px; justify-content: center; border-radius: 18px; box-shadow: var(--shadow-card) }
-.client-detail-summary strong { font-size: 18px }
-.client-detail-stats { gap: 9px; margin-top: 10px }
-.client-detail-page .client-actions { gap: 10px; margin: 18px 0 }
-.client-detail-page .client-actions .button { min-height: 50px; border-radius: 16px }
-.client-detail-page .goal-block { margin-top: 14px; padding: 18px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
-.client-detail-page .goal-block + .goal-block { margin-top: 12px }
-.client-detail-page .goal-head h2 { margin: 0; font-size: 22px }
-.client-detail-page .goal-block > p { line-height: 1.42 }
-.client-detail-page .page-actions { display: grid; gap: 10px; margin-top: 18px }
-.client-detail-page .page-actions .card { border-radius: 16px; background: var(--surface-raised) }
+.client-detail-overview > p:last-child { margin: 0; color: var(--fg); font-size: 16px; font-weight: var(--weight-medium); line-height: 1.38 }
+.client-detail-summary, .client-detail-stats { gap: 1px; overflow: hidden; border: 1px solid var(--border); border-radius: 18px; background: var(--border) }
+.client-detail-summary { margin-bottom: 9px }
+.client-detail-summary div, .client-detail-stats div { min-height: 68px; justify-content: center; padding: 10px 5px; border: 0; border-radius: 0; box-shadow: none }
+.client-detail-summary strong, .client-detail-stats strong { font-size: 17px }
+.client-detail-stats { margin-top: 9px }
+.client-detail-page .attention { margin: 9px 0 0; border: 1px solid var(--danger-border); background: var(--danger-surface) }
+.client-detail-page .client-actions { gap: 9px; margin: 16px 0 }
+.client-detail-page .client-actions-row { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 9px }
+.client-detail-page .client-actions .button { min-height: 48px; margin: 0; padding: 10px 11px; border-radius: 15px; font-size: 15px }
+.client-detail-page .goal-block { margin-top: 12px; padding: 16px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
+.client-detail-page .goal-block + .goal-block { margin-top: 10px }
+.client-detail-page .goal-head { align-items: center }
+.client-detail-page .goal-head h2 { margin: 0; font-size: 21px; line-height: 1.16 }
+.client-detail-page .goal-head .link { min-height: 36px; padding: 6px 2px; color: var(--accent-strong); font-size: 14px; font-weight: var(--weight-semibold) }
+.client-detail-page .goal-block > p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.42 }
+.client-detail-page .goal-stages-hint { margin-top: 7px; padding: 12px; border-radius: 14px; background: var(--surface-sunken) }
+.client-detail-upcoming { display: grid; gap: 7px; margin-top: 18px }
+.client-detail-upcoming .eyebrow, .client-detail-upcoming h2 { margin: 0 }
+.client-detail-upcoming h2 { font-size: 22px }
+.client-detail-upcoming .cards { gap: 8px }
+.client-detail-upcoming .card { min-height: 76px; padding: 14px 15px; border-radius: 17px }
+.client-detail-page .page-actions { display: grid; gap: 9px; margin-top: 16px }
+.client-detail-page .page-actions .card { border-radius: 16px; background: var(--surface-raised); box-shadow: none }
+.client-detail-page .page-actions > button { min-height: 48px; margin: 0; border-radius: 15px }
 .attention { margin: 12px 0 0; align-self: flex-start; font-size: 13px; font-weight: 600; color: var(--danger); background: #3a1f24; padding: 7px 11px; border-radius: 10px }
 .goal-block { display: flex; flex-direction: column; gap: 8px; margin-top: 18px }
 .goal-block + .goal-block { margin-top: 22px }

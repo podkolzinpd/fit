@@ -236,12 +236,16 @@ for (const viewport of mobileViewports) {
     await page.setViewportSize(viewport)
     await loginAsTrainer(page)
 
-    for (const screen of ['/today', '/clients', '/schedule']) {
+    for (const screen of ['/today', '/clients', '/clients/11111111-1111-4111-8111-111111111111', '/schedule']) {
       await page.goto(screen)
       await expect(page.locator('main')).toBeVisible()
       if (screen === '/today') {
         await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
         await expect(page.getByLabel('Тренировка')).toHaveCount(0)
+      }
+      if (screen.includes('11111111')) {
+        await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()
+        await expect(page.getByRole('link', { name: 'Редактировать профиль' })).toBeVisible()
       }
       await expectNoHorizontalOverflow(page)
     }
