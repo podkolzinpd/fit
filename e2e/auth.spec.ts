@@ -95,6 +95,13 @@ test('client registers, creates a standalone card and own workout without traine
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Копировать' }).click()
+  await expect(page).toHaveURL(/\/workouts\/new\?copy=/)
+  await Promise.all([
+    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Сохранить' }).click(),
+  ])
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
   await page.goto('/clients')
   await expect(page).toHaveURL(/\/me$/)
