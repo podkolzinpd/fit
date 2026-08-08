@@ -178,7 +178,7 @@ function ClientForm({
       goal: parsed.goal, note: parsed.note, initialWeightKg: parsed.initialWeightKg,
       initialWeightRecordedOn: todayLocalDate() }
     return createMode === 'self' ? clientsRepository.createOwn(input) : clientsRepository.create(input)
-  }, onSuccess: (id) => void onSaved(id) })
+  }, onSuccess: (id) => onSaved(id) })
   const contents = <form className="stack client-profile-form" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
       <section className="client-form-section">
         <div className="client-form-section-head">
