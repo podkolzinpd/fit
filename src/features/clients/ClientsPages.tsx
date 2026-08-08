@@ -44,7 +44,7 @@ export function ClientsPage() {
 }
 
 export function MyClientPage() {
-  const { actor } = useAuth()
+  const { actor, refresh } = useAuth()
   const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
   useClientRealtime(query.data?.id)
@@ -97,6 +97,7 @@ export function MyClientPage() {
           embedded
           onSaved={async () => {
             await queryClient.invalidateQueries({ queryKey: ['my-client'] })
+            await refresh()
           }}
         />
       </div>}
@@ -126,11 +127,13 @@ export function ClientFormPage() {
 
 export function MyClientEditPage() {
   const navigate = useNavigate(); const queryClient = useQueryClient()
+  const { refresh } = useAuth()
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
   useClientRealtime(query.data?.id)
   return <AsyncView loading={query.isLoading} error={query.error} empty={!query.data} onRetry={() => void query.refetch()}>
     {query.data && <ClientForm existing={query.data} createMode="self" onSaved={async () => {
       await queryClient.invalidateQueries({ queryKey: ['my-client'] })
+      await refresh()
       navigate('/me')
     }} onCancel={() => navigate(-1)} />}
   </AsyncView>
