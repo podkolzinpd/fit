@@ -99,7 +99,7 @@ export function MyClientEditPage() {
       await queryClient.invalidateQueries({ queryKey: ['my-client'] })
       await refresh()
       navigate('/me')
-    }} onCancel={() => navigate(-1)} />}
+    }} onCancel={() => navigate('/me/profile')} />}
   </AsyncView>
 }
 
