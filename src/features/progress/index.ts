@@ -1,2 +1,4 @@
 export { ProgressPage } from './ProgressPages'
 export { ClientTrainingSummaryCard } from './TrainingSummaryCard'
+export { ProgressChart } from './ProgressChart'
+export { groupMetricRows } from './measure-presets'
