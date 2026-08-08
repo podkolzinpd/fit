@@ -242,6 +242,7 @@ export interface Workout {
   status: WorkoutStatus
   notes: string | null
   trainerReview?: string
+  clientComment?: string
   stageId: UUID | null
   stageTitle: string | null
   version: number

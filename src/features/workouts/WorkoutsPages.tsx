@@ -416,6 +416,13 @@ export function WorkoutDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
     ])
   } })
+  const clientComment = useMutation({ mutationFn: (value: string) => workoutsRepository.setClientWorkoutComment(query.data!, value), onSuccess: async () => {
+    await Promise.all([
+      query.refetch(),
+      queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+      queryClient.invalidateQueries({ queryKey: ['clients'] }),
+    ])
+  } })
   const workout = query.data
   const done = workout?.status === 'done'
   const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt) : null
@@ -455,6 +462,7 @@ export function WorkoutDetailPage() {
         <div><span>Группы мышц</span><strong>{groups.length ? groups.join(', ') : '—'}</strong></div>
       </section>}
       {done && <WorkoutTrainerReview workout={workout} canEdit={!clientMode} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
+      {((clientMode && !clientOwned) || (!clientMode && workout.clientComment)) && <WorkoutClientComment workout={workout} canEdit={clientMode && !clientOwned} saving={clientComment.isPending} error={clientComment.error} onSave={(value) => clientComment.mutateAsync(value)} />}
       <div className={`cards ${done ? 'completed-exercise-list' : ''}`}>{groupIntoBlocks(workout.exercises).map((block) => {
         const articles = block.exercises.map((exercise) => <article className={`exercise ${done ? 'completed-exercise' : ''}`} key={exercise.id}>
           <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
@@ -466,7 +474,7 @@ export function WorkoutDetailPage() {
         if (block.blockType === 'single' || block.exercises.length === 1) return articles
         return <div className={`exercise-block view${done ? ' completed-exercise-block' : ''}`} key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
       })}</div>
-      {workout.notes && <p>{workout.notes}</p>}
+      {workout.notes && <section className="workout-review"><div className="workout-review-head"><div><p className="eyebrow">{clientMode && !clientOwned ? 'ОТ ТРЕНЕРА' : 'К ТРЕНИРОВКЕ'}</p><h2>{clientMode && !clientOwned ? 'Инструкции' : 'Заметка'}</h2></div></div><p className="workout-review-text">{workout.notes}</p></section>}
       {(!clientMode || clientOwned) && <><div className="actions">
         {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
         <Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link>
@@ -516,6 +524,35 @@ function WorkoutTrainerReview({ workout, canEdit, saving, error, onSave }: {
         }}>{saving ? 'Сохраняем…' : 'Сохранить отзыв'}</button>
       </div>
     </> : <p className={hasReview ? 'workout-review-text' : 'muted'}>{hasReview ? workout.trainerReview : 'Добавьте короткий итог, пока впечатления свежие.'}</p>}
+  </section>
+}
+
+function WorkoutClientComment({ workout, canEdit, saving, error, onSave }: {
+  workout: Workout
+  canEdit: boolean
+  saving: boolean
+  error: Error | null
+  onSave: (value: string) => Promise<unknown>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(workout.clientComment ?? '')
+  const hasComment = Boolean(workout.clientComment)
+
+  useEffect(() => {
+    if (!editing) setValue(workout.clientComment ?? '')
+  }, [editing, workout.id, workout.clientComment])
+
+  if (!canEdit && !hasComment) return null
+
+  return <section className="workout-review" aria-labelledby="workout-client-comment-title">
+    <div className="workout-review-head"><div><p className="eyebrow">ОБРАТНАЯ СВЯЗЬ</p><h2 id="workout-client-comment-title">Комментарий клиента</h2></div>
+      {canEdit && !editing && <button type="button" className="secondary" onClick={() => setEditing(true)}>{hasComment ? 'Изменить' : 'Добавить'}</button>}
+    </div>
+    {editing ? <>
+      <Field label="Для тренера"><textarea aria-label="Комментарий для тренера" className="exercise-comment" rows={3} placeholder="Как прошла тренировка, что стоит обсудить" value={value} onChange={(event) => setValue(event.target.value)} /></Field>
+      {error && <p className="error">{error.message}</p>}
+      <div className="actions workout-review-actions"><button type="button" className="secondary" disabled={saving} onClick={() => { setValue(workout.clientComment ?? ''); setEditing(false) }}>Отмена</button><button type="button" disabled={saving} onClick={async () => { try { await onSave(value); setEditing(false) } catch { /* Ошибку показывает state мутации. */ } }}>{saving ? 'Сохраняем…' : 'Сохранить комментарий'}</button></div>
+    </> : <p className={hasComment ? 'workout-review-text' : 'muted'}>{hasComment ? workout.clientComment : 'Оставьте тренеру вопрос или короткий итог.'}</p>}
   </section>
 }
 
