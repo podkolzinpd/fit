@@ -146,7 +146,8 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByLabel('Email').fill(`invite-client-${suffix}@fit.local`)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
+  await expect(page).toHaveURL(/\/me$/)
+  await expect(page.getByRole('heading', { name: 'Создайте личную карточку' })).toBeVisible()
 
   await page.goto('/join')
   await page.getByLabel('Код приглашения').fill(code!)
@@ -217,14 +218,14 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   expect(trainerCode).toBeTruthy()
   await expect(page.getByRole('heading', { name: 'Активные приглашения' })).toBeVisible()
 
-  await page.goto('/profile')
+  await page.goto('/me/profile')
   await page.getByRole('button', { name: 'Выйти' }).click()
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Имя').fill('Второй тренер')
   await page.getByLabel('Email').fill(`member-trainer-${suffix}@fit.local`)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 
   await page.goto('/join')
   await page.getByLabel('Код приглашения').fill(trainerCode!)
