@@ -546,11 +546,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Просмотр тренировки — маршрут «статус → действие → факт», а не набор
    одинаковых блоков. Стили не меняют логику или подписи, только расставляют
    визуальные приоритеты для рабочего экрана на 390 px. */
-.workout-detail-page .page-header { margin-bottom: 18px }
-.workout-detail-page .workout-title { padding: 18px; border: 1px solid var(--border); border-radius: 21px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
+.workout-detail-page .page-header { margin-bottom: 12px }
+.workout-detail-page .workout-title { padding: 14px 16px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
 .workout-detail-page .workout-title h2 { font-size: 25px; line-height: 1.12; letter-spacing: var(--tracking-tight) }
 .workout-detail-page .workout-title p { color: var(--muted); font-size: 14px }
-.workout-detail-page > .wide { min-height: 54px; margin-top: -7px; border-radius: 17px; font-size: 17px; font-weight: 800 }
+.workout-detail-page > .wide { min-height: 50px; margin-top: -3px; border-radius: 16px; font-size: 17px; font-weight: 800 }
 .workout-detail-page .summary.done-summary { gap: 8px; margin: 14px 0 18px }
 .workout-detail-page .summary.done-summary div { min-height: 78px; justify-content: center; border-radius: 17px; box-shadow: var(--shadow-card) }
 .workout-detail-page .summary.done-summary strong { font-size: 14px; line-height: 1.25 }
@@ -562,8 +562,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-review .voice-note-field { gap:8px }
 .workout-review .voice-note-field textarea { min-height:108px; resize:vertical }
 .workout-review-actions { margin-top:0 }
-.workout-detail-page > .cards { gap: 10px }
-.workout-detail-page > .cards > .exercise { margin: 0; padding: 16px; border-radius: 18px; box-shadow: var(--shadow-card) }
+.workout-detail-page > .cards { gap: 8px }
+.workout-detail-page > .cards > .exercise { margin: 0; padding: 14px 16px; border-radius: 18px; box-shadow: var(--shadow-card) }
 .workout-detail-page > .completed-exercise-list { gap:0 }
 .workout-detail-page > .completed-exercise-list > .completed-exercise { margin:0; padding:12px 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
 .workout-detail-page > .completed-exercise-list > .completed-exercise:first-child { padding-top:4px }
@@ -574,7 +574,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-page .completed-exercise .exercise-name-link { font-size:18px; line-height:1.25 }
 .workout-detail-page .exercise-name-link { max-width: 100%; overflow-wrap: anywhere }
 .workout-detail-page .exercise-name-hint { flex: 0 0 auto }
-.workout-history-sets { display:grid; margin-top:10px; border-top:1px solid var(--hairline) }
+.workout-history-sets { display:grid; margin-top:8px; border-top:1px solid var(--hairline) }
+.planned-set-summary { display:flex; align-items:baseline; gap:8px; margin:8px 0 0; color:var(--muted); font-size:14px }
+.planned-set-summary span { font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase }
+.planned-set-summary strong { color:var(--fg); font-size:16px; line-height:1.25 }
 .workout-history-set { display:grid; grid-template-columns:24px minmax(0, 1fr) 24px; align-items:center; gap:8px; min-height:48px; padding:8px 0; border-bottom:1px solid var(--hairline) }
 .completed-exercise .workout-history-sets { margin-top:6px }
 .completed-exercise .workout-history-set { min-height:42px; padding:4px 0 }
