@@ -3,7 +3,7 @@ import { MicIcon, StopIcon } from '../../shared/icons'
 import { BrowserAudioRecorder, decodeAudioToPcm16, type AudioRecorder } from './audio-recorder'
 import type { SpeechRecognizer } from './speech-recognizer'
 import { WhisperCppRecognizer } from './whisper-cpp-recognizer'
-import { SpeechKitStreamingSession } from './speechkit-streaming-recognizer'
+import { SpeechKitStreamingSession, type StreamingSpeechSession } from './speechkit-streaming-recognizer'
 import { trackGoal } from '../../shared/yandex-metrika'
 
 export type VoiceInputPhase = 'idle' | 'requesting' | 'recording' | 'preparing' | 'loading' | 'transcribing'
@@ -20,6 +20,8 @@ interface VoiceInputButtonProps {
   variant?: 'inline' | 'hero'
   onPhaseChange?: (phase: VoiceInputPhase) => void
   onStart?: () => void
+  streamingFactory?: () => StreamingSpeechSession
+  startupTimeoutMs?: number
 }
 
 export function VoiceInputButton({
@@ -34,6 +36,8 @@ export function VoiceInputButton({
   variant = 'inline',
   onPhaseChange,
   onStart,
+  streamingFactory = () => new SpeechKitStreamingSession(),
+  startupTimeoutMs = 30_000,
 }: VoiceInputButtonProps) {
   const [phase, setPhase] = useState<VoiceInputPhase>('idle')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -46,7 +50,7 @@ export function VoiceInputButton({
   const timeoutRef = useRef<number | null>(null)
   const stoppingRef = useRef(false)
   const mountedRef = useRef(true)
-  const streamingRef = useRef<SpeechKitStreamingSession | null>(null)
+  const streamingRef = useRef<StreamingSpeechSession | null>(null)
   const streamingTextRef = useRef('')
 
   useEffect(() => {
@@ -69,16 +73,28 @@ export function VoiceInputButton({
     setProgress(0)
     setPhase('requesting')
     {
-      const streaming = new SpeechKitStreamingSession()
+      const streaming = streamingFactory()
       streamingTextRef.current = ''
       try {
-        await streaming.start((text) => { if (mountedRef.current) setMessage(`Сейчас распознаю: ${text}`) }, (text) => { streamingTextRef.current += `${streamingTextRef.current ? ' ' : ''}${text}` })
+        await withTimeout(
+          streaming.start((text) => { if (mountedRef.current) setMessage(`Сейчас распознаю: ${text}`) }, (text) => { streamingTextRef.current += `${streamingTextRef.current ? ' ' : ''}${text}` }),
+          startupTimeoutMs,
+        )
         streamingRef.current = streaming
         setElapsedSeconds(0); setPhase('recording')
         intervalRef.current = window.setInterval(() => setElapsedSeconds((seconds) => seconds + 1), 1_000)
         timeoutRef.current = window.setTimeout(() => void rotateStreaming(), maxDurationMs)
         return
-      } catch { await streaming.stop() }
+      } catch (error) {
+        await streaming.stop()
+        if (isMicrophoneStartFailure(error)) {
+          if (mountedRef.current) {
+            setMessage(recordingErrorMessage(error))
+            setPhase('idle')
+          }
+          return
+        }
+      }
     }
     const recorder = recorderFactory()
     try {
@@ -225,10 +241,39 @@ function formatDuration(seconds: number) {
 }
 
 function recordingErrorMessage(error: unknown) {
+  if (error instanceof VoiceStartupTimeoutError) {
+    return 'Микрофон не ответил. Проверьте разрешение микрофона для Fit или браузера и попробуйте снова.'
+  }
   if (error instanceof DOMException && (error.name === 'NotAllowedError' || error.name === 'SecurityError')) {
-    return 'Нет доступа к микрофону. Разрешите его в настройках браузера и попробуйте снова.'
+    return 'Нет доступа к микрофону. Разрешите его в настройках Fit или браузера и попробуйте снова.'
   }
   return error instanceof Error ? error.message : 'Не удалось включить микрофон.'
+}
+
+function isMicrophoneStartFailure(error: unknown) {
+  return error instanceof VoiceStartupTimeoutError
+    || (error instanceof DOMException && (error.name === 'NotAllowedError' || error.name === 'SecurityError'))
+}
+
+class VoiceStartupTimeoutError extends Error {
+  constructor() {
+    super('Микрофон не ответил.')
+    this.name = 'VoiceStartupTimeoutError'
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let timeout: number | null = null
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeout = window.setTimeout(() => reject(new VoiceStartupTimeoutError()), timeoutMs)
+      }),
+    ])
+  } finally {
+    if (timeout !== null) window.clearTimeout(timeout)
+  }
 }
 
 function clearTimers(intervalRef: { current: number | null }, timeoutRef: { current: number | null }) {

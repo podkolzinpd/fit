@@ -1,6 +1,13 @@
 const DEFAULT_RELAY_URL = 'wss://93-77-184-41.sslip.io/stt'
+const SOCKET_CONNECT_TIMEOUT_MS = 5_000
 
-export class SpeechKitStreamingSession {
+export interface StreamingSpeechSession {
+  start(onPartial: (text: string) => void, onFinal: (text: string) => void): Promise<void>
+  rotate(): Promise<void>
+  stop(): Promise<void>
+}
+
+export class SpeechKitStreamingSession implements StreamingSpeechSession {
   private socket: WebSocket | null = null
   private context: AudioContext | null = null
   private source: MediaStreamAudioSourceNode | null = null
@@ -12,7 +19,12 @@ export class SpeechKitStreamingSession {
 
   async start(onPartial: (text: string) => void, onFinal: (text: string) => void): Promise<void> {
     if (!navigator.mediaDevices?.getUserMedia || typeof WebSocket === 'undefined') throw new Error('Потоковое распознавание недоступно в этом браузере.')
-    this.stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+    if (this.stopped) {
+      stream.getTracks().forEach((track) => track.stop())
+      throw new Error('Запрос микрофона отменён.')
+    }
+    this.stream = stream
     const configuredUrl = (import.meta.env as unknown as { VITE_SPEECHKIT_RELAY_URL?: string }).VITE_SPEECHKIT_RELAY_URL
     const url = configuredUrl || DEFAULT_RELAY_URL
     this.onPartial = onPartial
@@ -34,8 +46,26 @@ export class SpeechKitStreamingSession {
     this.socket.binaryType = 'arraybuffer'
     await new Promise<void>((resolve, reject) => {
       const socket = this.socket!
-      socket.onopen = () => { socket.send(JSON.stringify({ type: 'config' })); resolve() }
-      socket.onerror = () => reject(new Error('Не удалось подключиться к потоковому распознаванию.'))
+      let settled = false
+      let timeout: number | null = null
+      const finish = (result: 'open' | 'error') => {
+        if (settled) return
+        settled = true
+        if (timeout !== null) window.clearTimeout(timeout)
+        if (result === 'open') {
+          socket.send(JSON.stringify({ type: 'config' }))
+          resolve()
+          return
+        }
+        reject(new Error('Не удалось подключиться к потоковому распознаванию.'))
+      }
+      timeout = window.setTimeout(() => {
+        finish('error')
+        socket.close()
+      }, SOCKET_CONNECT_TIMEOUT_MS)
+      socket.onopen = () => finish('open')
+      socket.onerror = () => finish('error')
+      socket.onclose = () => finish('error')
     })
     this.socket.onmessage = (event) => {
       const message = JSON.parse(String(event.data)) as { type: string; text?: string; message?: string }
