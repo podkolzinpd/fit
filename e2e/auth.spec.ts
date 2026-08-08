@@ -153,7 +153,8 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByLabel('Код приглашения').fill(code!)
   await page.getByRole('button', { name: 'Присоединиться' }).click()
   await expect(page).toHaveURL(/\/me$/)
-  await expect(page.getByRole('heading', { name: 'Связанный клиент' })).toBeVisible()
+  await expect(page.getByText(/Связанный клиент/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
 
   await page.goto('/me/workouts')
   await page.getByRole('link', { name: 'Добавить' }).click()
