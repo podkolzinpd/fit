@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(18);
+select plan(20);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('d1000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'alias-root@example.test', ''),
@@ -70,8 +70,8 @@ select is(
 select is(
   (select alias from public.client_trainers
    where trainer_id = 'd1000000-0000-4000-8000-000000000001'),
-  'Иван',
-  'client profile edit does not overwrite trainer alias'
+  'Иван Настоящий',
+  'client profile edit updates an inherited trainer alias'
 );
 select throws_ok(
   format(
@@ -96,7 +96,7 @@ reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'd1000000-0000-4000-8000-000000000001', true);
-select is((select full_name from public.list_clients()), 'Иван', 'root sees its own alias');
+select is((select full_name from public.list_clients()), 'Иван Настоящий', 'root sees the updated inherited alias');
 select lives_ok(
   format(
     'select public.update_client_trainer_preferences(%L, %L, %L, 1)',
@@ -122,10 +122,30 @@ select throws_ok(
 reset role;
 
 set local role authenticated;
+select set_config('request.jwt.claim.sub', 'd3000000-0000-4000-8000-000000000003', true);
+select lives_ok(
+  format(
+    'select public.update_own_client(%L::jsonb, 2)',
+    jsonb_build_object(
+      'id', (select id from public.clients where auth_user_id = 'd3000000-0000-4000-8000-000000000003'),
+      'fullName', 'Иван Финальный', 'gender', 'male', 'ageYears', 31,
+      'ageUpdatedAt', current_date, 'heightCm', 181, 'goal', 'Моя цель'
+    )::text
+  ),
+  'client updates the canonical name again'
+);
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'd1000000-0000-4000-8000-000000000001', true);
+select is((select full_name from public.list_clients()), 'Иван 1', 'client edit preserves a trainer-customized alias');
+reset role;
+
+set local role authenticated;
 select set_config('request.jwt.claim.sub', 'd2000000-0000-4000-8000-000000000002', true);
 select is(
   (select full_name from public.list_clients()),
-  'Иван Настоящий',
+  'Иван Финальный',
   'membership without alias falls back to canonical name'
 );
 select lives_ok(
