@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './app/App'
 import { AuthProvider } from './app/auth-context'
+import { AppErrorBoundary } from './app/error-boundary'
 import { QueryProvider } from './app/query-provider'
 import { applyAppTheme, getAppTheme } from './app/theme'
 import './styles.css'
@@ -10,4 +11,4 @@ import './styles.css'
 // восстановлении сессии не было вспышки другой палитры.
 applyAppTheme(getAppTheme())
 
-createRoot(document.getElementById('root')!).render(<StrictMode><QueryProvider><AuthProvider><App /></AuthProvider></QueryProvider></StrictMode>)
+createRoot(document.getElementById('root')!).render(<StrictMode><AppErrorBoundary><QueryProvider><AuthProvider><App /></AuthProvider></QueryProvider></AppErrorBoundary></StrictMode>)
