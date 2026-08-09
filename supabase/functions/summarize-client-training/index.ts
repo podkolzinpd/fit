@@ -615,11 +615,23 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
       if (clientError) {
         throw new HttpError(500, "client_lookup_failed")
       }
-      const actor = authorizeSummaryActor(actorId, client)
+      const { data: memberships, error: membershipsError } = await userClient
+        .from("client_trainers")
+        .select("trainer_id")
+        .eq("client_id", input.client_id)
+        .eq("trainer_id", actorId)
+      if (membershipsError) {
+        throw new HttpError(500, "client_memberships_lookup_failed")
+      }
+      const actor = authorizeSummaryActor(
+        actorId,
+        client,
+        memberships?.map((membership) => membership.trainer_id) ?? [],
+      )
       if (!actor) {
         throw new HttpError(404, "client_not_found")
       }
-      const { isTrainer, isClient, trainerId } = actor
+      const { isTrainer, isClient, isConnectedTrainer, trainerId } = actor
 
       if (isClient && !input.force) {
         const { data: cached, error: cacheError } = await userClient
@@ -734,7 +746,7 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
       )
       const displayMetrics = trainingData.consistency
 
-      const summaryStore = isClient ? serviceClient() : userClient
+      const summaryStore = isClient || isConnectedTrainer ? serviceClient() : userClient
       const { data: saved, error: saveError } = await summaryStore
         .from("client_training_summaries")
         .upsert({

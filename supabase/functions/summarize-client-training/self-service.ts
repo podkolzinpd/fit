@@ -7,18 +7,22 @@ export type SummaryClientLink = {
 export type SummaryActor = {
   isTrainer: boolean
   isClient: boolean
+  isConnectedTrainer: boolean
   trainerId: string
 }
 
 export function authorizeSummaryActor(
   actorId: string,
   client: SummaryClientLink | null,
+  connectedTrainerIds: readonly string[] = [],
 ): SummaryActor | null {
   if (!client) return null
-  const isTrainer = client.trainer_id === actorId
+  const isRootTrainer = client.trainer_id === actorId
+  const isConnectedTrainer = !isRootTrainer && connectedTrainerIds.includes(actorId)
+  const isTrainer = isRootTrainer || isConnectedTrainer
   const isClient = client.auth_user_id === actorId
   if (!isTrainer && !isClient) return null
-  return { isTrainer, isClient, trainerId: client.trainer_id }
+  return { isTrainer, isClient, isConnectedTrainer, trainerId: client.trainer_id }
 }
 
 export function shouldUseClientCache(

@@ -19,6 +19,7 @@ describe("summarize-client-training self-service contract", () => {
     expect(authorizeSummaryActor("user-1", client)).toEqual({
       isTrainer: false,
       isClient: true,
+      isConnectedTrainer: false,
       trainerId: "trainer-1",
     })
     expect(authorizeSummaryActor("user-1", {
@@ -31,6 +32,16 @@ describe("summarize-client-training self-service contract", () => {
   it("denies another client's request", () => {
     expect(authorizeSummaryActor("other-user", client)).toBeNull()
     expect(authorizeSummaryActor("user-1", null)).toBeNull()
+  })
+
+  it("allows only a trainer connected to this client", () => {
+    expect(authorizeSummaryActor("trainer-2", client, ["trainer-2"])).toEqual({
+      isTrainer: true,
+      isClient: false,
+      isConnectedTrainer: true,
+      trainerId: "trainer-1",
+    })
+    expect(authorizeSummaryActor("trainer-3", client, ["trainer-2"])).toBeNull()
   })
 
   it("never exposes trainer_summary in the client response", () => {
