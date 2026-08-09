@@ -16,6 +16,12 @@ export function repositoryError(error: unknown): RepositoryError {
   if (normalizedMessage.includes('workout_sets_rpe_valid')) {
     return new RepositoryError(code, 'В одном из подходов указано некорректное RPE. Выберите значение от 6 до 10 с шагом 0,5.')
   }
+  if (normalizedMessage.includes('invitation_invalid')) {
+    return new RepositoryError('invitation_invalid', 'Приглашение недействительно или срок его действия истёк. Попросите новый код.')
+  }
+  if (normalizedMessage.includes('invitation_role_mismatch')) {
+    return new RepositoryError('invitation_role_mismatch', 'Этот код приглашения предназначен для другого типа аккаунта.')
+  }
   if (code === 'PT409' && normalizedMessage.includes('active_workout_exists')) {
     return new RepositoryError('active_workout_exists', 'У клиента уже идёт другая тренировка. Откройте её и продолжите.')
   }
