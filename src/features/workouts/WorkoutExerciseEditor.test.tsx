@@ -81,6 +81,16 @@ describe('workout exercise editor rules', () => {
     expect(onChange).toHaveBeenCalledTimes(3)
   })
 
+  it('accepts copied factual seconds that are not multiples of 15', () => {
+    const copied: WorkoutExerciseDraft[] = [{
+      source: 'system', ref: 'running', name: 'Бег', muscleGroup: 'cardio', inputKind: 'distance', position: 0,
+      sets: [{ position: 0, durationSec: 25, distanceKm: 4 }],
+    }]
+    render(<WorkoutExerciseEditor exercises={copied} onChange={vi.fn()} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />)
+
+    expect(screen.getByLabelText('Время, сек, подход 1')).toBeValid()
+  })
+
   it('hides optional rest and comment fields until requested', async () => {
     const user = userEvent.setup()
     render(<EditorHarness onOpenPicker={vi.fn()} />)

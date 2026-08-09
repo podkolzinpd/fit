@@ -520,7 +520,7 @@ export function WorkoutDetailPage() {
         <Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link>
       </div>
       <button className="danger secondary wide" disabled={remove.isPending} onClick={async () => { if (await confirm({ message: 'Удалить тренировку?', confirmLabel: 'Удалить', danger: true })) remove.mutate() }}>Удалить тренировку</button></>}
-      {clientAuthoredReadOnly && <div className="actions"><Link className="button secondary" to={`/workouts/new?client=${workout.clientId}`}>Отправить новый план</Link></div>}
+      {clientAuthoredReadOnly && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Скопировать и отправить план</Link></div>}
       {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Создать свою копию</Link></div>}
       {remove.error && <p className="error">{remove.error.message}</p>}
       {confirmDialog}
