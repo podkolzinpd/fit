@@ -148,17 +148,17 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       {rpeField}
     </>
     if (exercise.inputKind === 'reps') return <>
-      <input className={inputClass} aria-label={`Время, сек, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" step="15" placeholder="сек" value={durationSec ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationSec: inputNumber(event.target.value), durationMin: undefined })} />
+      <input className={inputClass} aria-label={`Время, сек, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" step="1" placeholder="сек" value={durationSec ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationSec: inputNumber(event.target.value), durationMin: undefined })} />
       <input className={inputClass} aria-label={`Повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder="повт." value={set.reps ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />
       {rpeField}
     </>
     if (exercise.inputKind === 'duration') return <>
-      <input className={inputClass} aria-label={`Время, сек, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" step="15" placeholder="сек" value={durationSec ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationSec: inputNumber(event.target.value), durationMin: undefined })} />
+      <input className={inputClass} aria-label={`Время, сек, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" step="1" placeholder="сек" value={durationSec ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationSec: inputNumber(event.target.value), durationMin: undefined })} />
       <span aria-hidden="true" />
       {rpeField}
     </>
     return <>
-      <input className={inputClass} aria-label={`Время, сек, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" step="15" placeholder="сек" value={durationSec ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationSec: inputNumber(event.target.value), durationMin: undefined })} />
+      <input className={inputClass} aria-label={`Время, сек, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" step="1" placeholder="сек" value={durationSec ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationSec: inputNumber(event.target.value), durationMin: undefined })} />
       <input className={inputClass} aria-label={`Расстояние, подход ${setIndex + 1}`} type="number" inputMode="decimal" min="0" step="0.1" placeholder="км" value={set.distanceKm ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { distanceKm: inputNumber(event.target.value) })} />
       {rpeField}
     </>

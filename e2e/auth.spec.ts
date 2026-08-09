@@ -216,14 +216,13 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.getByRole('button', { name: 'Удалить тренировку' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Начать тренировку' })).toHaveCount(0)
 
-  // Тренер отправляет новый план уже после подключения аккаунта. Клиент
-  // предвыбран, а сохранение использует обычный защищённый путь назначения.
-  await page.getByRole('link', { name: 'Отправить новый план' }).click()
-  await selectClient(page, 'Связанный клиент')
-  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByLabel('Поиск упражнения').fill('Планка')
-  await page.getByRole('button', { name: /Планка/ }).first().click()
-  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  // Тренер создаёт новый план из клиентского результата: исходная запись
+  // остаётся read-only, а факт копии становится планом тренера.
+  await page.getByRole('link', { name: 'Скопировать и отправить план' }).click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/new\\?copy=${ownWorkoutPath.split('/').at(-1)}$`))
+  await expect(page.getByText('Бег (Кардио)', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Время, сек, подход 1')).toHaveValue('25')
+  await expect(page.getByLabel('Расстояние, подход 1')).toHaveValue('4')
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
     page.getByRole('button', { name: 'Сохранить' }).click(),
