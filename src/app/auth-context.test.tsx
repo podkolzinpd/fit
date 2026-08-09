@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider, useAuth } from './auth-context'
@@ -29,6 +30,8 @@ vi.mock('../data/repositories/auth.repository', () => ({
 
 const user = { id: 'user-1', email: 'trainer@example.com', user_metadata: { first_name: 'Анна' } }
 const actor = { userId: user.id, role: 'trainer' as const, email: user.email, firstName: 'Анна', lastName: null, timezone: 'Europe/Moscow' }
+const otherUser = { id: 'user-2', email: 'client@example.com', user_metadata: { first_name: 'Иван' } }
+const otherActor = { userId: otherUser.id, role: 'client' as const, email: otherUser.email, firstName: 'Иван', lastName: null, timezone: 'Europe/Moscow', clientId: 'client-2', trainerId: 'trainer-1', fullName: 'Иван' }
 
 function AuthProbe() {
   const state = useAuth()
@@ -46,6 +49,14 @@ function authCallback(): TestAuthCallback {
   return callback
 }
 
+function renderAuth(children: React.ReactNode) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return {
+    queryClient,
+    ...render(<QueryClientProvider client={queryClient}><AuthProvider>{children}</AuthProvider></QueryClientProvider>),
+  }
+}
+
 describe('AuthProvider', () => {
   beforeEach(() => {
     auth.getSession.mockReset()
@@ -55,7 +66,7 @@ describe('AuthProvider', () => {
   })
 
   it('initializes directly from the auth event without requesting the session again', async () => {
-    render(<AuthProvider><AuthProbe /></AuthProvider>)
+    renderAuth(<AuthProbe />)
 
     const callback = authCallback()
     callback('INITIAL_SESSION', { user })
@@ -67,7 +78,7 @@ describe('AuthProvider', () => {
   })
 
   it('reuses the initialized actor for repeated events from the same session', async () => {
-    render(<AuthProvider><AuthProbe /></AuthProvider>)
+    renderAuth(<AuthProbe />)
     const callback = authCallback()
 
     callback('INITIAL_SESSION', { user })
@@ -83,7 +94,7 @@ describe('AuthProvider', () => {
     auth.initialize
       .mockResolvedValueOnce(actor)
       .mockResolvedValueOnce({ ...actor, firstName: 'Мария' })
-    render(<AuthProvider><RefreshProbe /></AuthProvider>)
+    renderAuth(<RefreshProbe />)
 
     authCallback()('INITIAL_SESSION', { user })
     await waitFor(() => expect(screen.getByText('Анна')).toBeInTheDocument())
@@ -96,14 +107,40 @@ describe('AuthProvider', () => {
   it('ignores stale initialization after logout', async () => {
     let resolveInitialization: ((value: typeof actor) => void) | undefined
     auth.initialize.mockReturnValue(new Promise((resolve) => { resolveInitialization = resolve }))
-    render(<AuthProvider><AuthProbe /></AuthProvider>)
+    const { queryClient } = renderAuth(<AuthProbe />)
     const callback = authCallback()
 
     callback('SIGNED_IN', { user })
+    queryClient.setQueryData(['my-client'], { fullName: 'Анна' })
     callback('SIGNED_OUT', null)
     resolveInitialization?.(actor)
 
     await waitFor(() => expect(screen.getByText('anonymous')).toBeInTheDocument())
     expect(screen.queryByText(user.email)).not.toBeInTheDocument()
+    expect(queryClient.getQueryData(['my-client'])).toBeUndefined()
+  })
+
+  it('clears cached server data before restoring a session', async () => {
+    const { queryClient } = renderAuth(<AuthProbe />)
+    queryClient.setQueryData(['my-client'], { fullName: 'Чужой клиент' })
+
+    authCallback()('INITIAL_SESSION', { user })
+
+    await waitFor(() => expect(screen.getByText(user.email)).toBeInTheDocument())
+    expect(queryClient.getQueryData(['my-client'])).toBeUndefined()
+  })
+
+  it('clears cached data when the authenticated account changes', async () => {
+    const { queryClient } = renderAuth(<AuthProbe />)
+    const callback = authCallback()
+    callback('SIGNED_IN', { user })
+    await waitFor(() => expect(screen.getByText(user.email)).toBeInTheDocument())
+    queryClient.setQueryData(['workouts', 'client-1'], [{ id: 'old-workout' }])
+    auth.initialize.mockResolvedValueOnce(otherActor)
+
+    callback('SIGNED_IN', { user: otherUser })
+
+    await waitFor(() => expect(screen.getByText(otherUser.email)).toBeInTheDocument())
+    expect(queryClient.getQueryData(['workouts', 'client-1'])).toBeUndefined()
   })
 })
