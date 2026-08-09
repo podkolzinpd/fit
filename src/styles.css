@@ -206,6 +206,12 @@ p { margin: 6px 0 }
 .success { color: var(--success-fg) }
 .auth-links { display: flex; justify-content: space-between; align-items: center }
 .state { min-height: 180px; display: grid; place-content: center; text-align: center; color: var(--muted); gap: 10px }
+.app-render-error { min-height: 100%; display: grid; align-content: center; justify-items: center; gap: 12px; padding: 32px 24px; text-align: center; color: var(--fg); background: var(--bg) }
+.app-render-error-mark { width: 52px; height: 52px; display: grid; place-items: center; border: 1px solid var(--danger-border); border-radius: 17px; background: var(--danger-surface); color: var(--danger); font-size: 28px; font-weight: var(--weight-bold) }
+.app-render-error h1 { max-width: 330px; font-size: clamp(27px, 8vw, 34px) }
+.app-render-error p { max-width: 320px; margin: 0; color: var(--muted); line-height: 1.45 }
+.app-render-error-actions { display: grid; width: min(100%, 320px); gap: 10px; margin-top: 8px }
+.app-render-error-actions button { min-height: 50px; border-radius: 16px }
 .skeleton-stack { display: flex; flex-direction: column; gap: 12px }
 .skeleton-card { min-height: 96px; padding: 18px; border: 1px solid var(--border); border-radius: 19px; background: var(--surface-raised); box-shadow: var(--shadow-card); overflow: hidden }
 .skeleton-block { display: block; border-radius: 8px; background: linear-gradient(90deg, var(--surface-sunken) 20%, var(--surface-raised) 48%, var(--surface-sunken) 76%); background-size: 220% 100%; animation: skeleton-wave 1.35s ease-in-out infinite }
