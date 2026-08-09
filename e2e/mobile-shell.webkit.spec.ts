@@ -294,6 +294,25 @@ test('iPhone: черновик не скрывает главное voice-дей
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: voice-first и AI-поверхности сохраняют контраст в тёмной теме на 390 px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => window.localStorage.setItem('fit.appTheme', 'dark'))
+  await loginAsTrainer(page)
+
+  const voiceButton = page.getByRole('button', { name: 'Надиктовать тренировку' })
+  await expect(voiceButton).toBeVisible()
+  await expect(page.locator('.phone-frame')).not.toHaveClass(/theme-light/)
+  expect(await voiceButton.evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe('rgb(255, 254, 252)')
+  expect(await page.locator('.voice-action-label strong').evaluate((element) => getComputedStyle(element).color)).not.toBe('rgb(23, 25, 29)')
+  await expect(page.locator('.phone-frame')).toHaveScreenshot('today-voice-dark-390.png', { animations: 'disabled', maxDiffPixelRatio: 0.03 })
+
+  await page.goto('/progress/11111111-1111-4111-8111-111111111111')
+  const aiCard = page.locator('.ai-progress-card')
+  await expect(aiCard).toBeVisible()
+  expect(await aiCard.evaluate((element) => getComputedStyle(element).borderTopColor)).toBe('rgb(107, 68, 54)')
+  await expectNoHorizontalOverflow(page)
+})
+
 test('iPhone: ручной выбор начинает с недавних, а не с разминки на 390 px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
