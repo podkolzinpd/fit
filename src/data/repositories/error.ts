@@ -16,6 +16,9 @@ export function repositoryError(error: unknown): RepositoryError {
   if (normalizedMessage.includes('workout_sets_rpe_valid')) {
     return new RepositoryError(code, 'В одном из подходов указано некорректное RPE. Выберите значение от 6 до 10 с шагом 0,5.')
   }
+  if (code === 'PT409' && normalizedMessage.includes('active_workout_exists')) {
+    return new RepositoryError('active_workout_exists', 'У клиента уже идёт другая тренировка. Откройте её и продолжите.')
+  }
   if (code === 'PT409' || code === '40001') {
     return new RepositoryError(code, 'Данные уже изменились. Обновите страницу и повторите.')
   }

@@ -17,6 +17,13 @@ describe('repositoryError', () => {
     expect(error.message).toBe(message)
   })
 
+  it('preserves the active workout conflict for a recovery flow', () => {
+    const error = repositoryError({ code: 'PT409', message: 'active_workout_exists' })
+
+    expect(error.code).toBe('active_workout_exists')
+    expect(error.message).toBe('У клиента уже идёт другая тренировка. Откройте её и продолжите.')
+  })
+
   it('explains the RPE database constraint in Russian', () => {
     const error = repositoryError({ code: '23514', message: 'new row for relation "workout_sets" violates check constraint "workout_sets_rpe_valid"' })
 

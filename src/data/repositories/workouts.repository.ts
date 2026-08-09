@@ -140,19 +140,26 @@ async function listPage(from?: string, to?: string, clientId?: string, offset = 
   }
 }
 
+async function listSummaries(clientId: string): Promise<WorkoutSummary[]> {
+  const result = await workoutQueries.listSummaries(clientId)
+  if (result.error) throw repositoryError(result.error)
+  return result.data.map((row) => ({
+    id: row.id, workoutDate: localDate(row.workout_date), status: row.status as WorkoutStatus,
+  }))
+}
+
+async function findActive(clientId: string): Promise<WorkoutSummary | null> {
+  return (await listSummaries(clientId)).find((workout) => workout.status === 'in_progress') ?? null
+}
+
 export const workoutsRepository = {
   get,
   listPage,
   async list(from?: string, to?: string, clientId?: string): Promise<Workout[]> {
     return collectPages((offset) => listPage(from, to, clientId, offset))
   },
-  async listSummaries(clientId: string): Promise<WorkoutSummary[]> {
-    const result = await workoutQueries.listSummaries(clientId)
-    if (result.error) throw repositoryError(result.error)
-    return result.data.map((row) => ({
-      id: row.id, workoutDate: localDate(row.workout_date), status: row.status as WorkoutStatus,
-    }))
-  },
+  listSummaries,
+  findActive,
   async latestExerciseResults(clientId: string, exerciseRefs: string[]): Promise<Map<string, PreviousExerciseResult>> {
     if (!exerciseRefs.length) return new Map()
     const result = await workoutQueries.latestExerciseResults(clientId, exerciseRefs)
