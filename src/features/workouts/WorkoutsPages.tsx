@@ -173,6 +173,7 @@ export function WorkoutExercisesSummary({ workout, maxItems }: { workout: Workou
 
 export function ClientWorkoutsPage() {
   const { clientId = '' } = useParams()
+  const { actor } = useAuth()
   useClientRealtime(clientId)
   const query = useInfiniteQuery({
     queryKey: ['workouts', clientId],
@@ -189,7 +190,8 @@ export function ClientWorkoutsPage() {
     const duration = workoutDurationLabel(workout.startedAt, workout.completedAt)
     const tonnage = workoutTonnage(workout)
     const meta = workout.status === 'done' ? [duration, tonnage > 0 ? tonnageLabel(tonnage) : null].filter(Boolean).join(' · ') : ''
-    return <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><WorkoutExercisesSummary workout={workout} />{meta && <p className="card-meta">{meta}</p>}</div><WorkoutStatusBadge workout={workout} /></Link>
+    const clientAuthored = Boolean(workout.createdBy && workout.createdBy !== actor?.userId)
+    return <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong>{clientAuthored && <p className="card-author">Создано клиентом</p>}<WorkoutExercisesSummary workout={workout} />{meta && <p className="card-meta">{meta}</p>}</div><WorkoutStatusBadge workout={workout} /></Link>
   })}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
 }
 
@@ -246,16 +248,18 @@ export function WorkoutFormPage() {
     if (saved) {
       setSelectedClientId(saved.clientId)
       setEntryDate(saved.workoutDate)
-      setStartTime(saved.startTime)
-      setEndTime(saved.endTime)
+      setStartTime(saved.startTime.slice(0, 5))
+      setEndTime(saved.endTime.slice(0, 5))
       setNotes(saved.notes)
       setStageId(saved.stageId)
       setRecordCompleted(saved.recordCompleted)
       setDraftExercises(saved.exercises)
     } else if (initial) {
       setEntryDate(workoutDateForRecordMode(source.data?.status === 'done' ? 'completed' : 'planned', initial.workoutDate, todayLocalDate()))
-      setStartTime(initial.startTime ?? '')
-      setEndTime(initial.endTime ?? '')
+      // PostgreSQL возвращает time как HH:MM:SS, а нативный input[type=time]
+      // без шага секунд принимает HH:MM. Иначе браузер молча блокирует submit.
+      setStartTime(initial.startTime?.slice(0, 5) ?? '')
+      setEndTime(initial.endTime?.slice(0, 5) ?? '')
       setNotes(initial.notes ?? '')
       setStageId(initial.stageId ?? '')
     }
@@ -271,16 +275,18 @@ export function WorkoutFormPage() {
     if (!initial || formDraftReady) return
     setEntryDate(workoutDateForRecordMode(source.data?.status === 'done' ? 'completed' : 'planned', initial.workoutDate, todayLocalDate()))
   }, [formDraftReady, initial, source.data?.status])
-  const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => completedMode ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: async (id) => {
+  const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => completedMode ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: (id) => {
     if (!workoutId) removeWorkoutFormDraft(draftKey)
-    await Promise.all([
+    // Сохранение уже подтверждено сервером: сразу открываем результат, а
+    // списки обновляем фоном. Медленный refetch не должен удерживать форму.
+    navigate(`/workouts/${id}`)
+    void Promise.all([
       queryClient.invalidateQueries({ queryKey: ['workout', id] }),
       queryClient.invalidateQueries({ queryKey: ['workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['today-workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['today-recent-workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
     ])
-    navigate(`/workouts/${id}`)
   } })
 
   async function createQuickClient(fullName: string): Promise<ClientPickerSelection> {
@@ -444,6 +450,10 @@ export function WorkoutDetailPage() {
   const justCompleted = done && navigationState?.justCompleted === true
   const clientMode = actor?.role === 'client'
   const clientOwned = clientMode && workout?.createdBy === actor.userId
+  const trainerOwned = !clientMode && Boolean(workout && (!workout.createdBy || workout.createdBy === actor?.userId))
+  const canManage = clientMode ? clientOwned : trainerOwned
+  const canExecute = clientMode || trainerOwned
+  const clientAuthoredReadOnly = !clientMode && Boolean(workout && !trainerOwned)
   const trainers = useQuery({ queryKey: ['client-trainers', workout?.clientId], queryFn: () => invitationsRepository.listTrainers(workout!.clientId), enabled: clientMode && Boolean(workout?.clientId) })
   const authorLabel = workout ? clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data) : null
   // Карточка не должна угадывать источник открытия. Быстрый сценарий «Сегодня»
@@ -460,18 +470,18 @@ export function WorkoutDetailPage() {
         </div>
       </section>}
       <section className="workout-title">
-        <div><h2>{clientMode ? 'Ваша тренировка' : workout.clientName}</h2><p>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</p>{clientMode && authorLabel && <p className="muted">{authorLabel}</p>}{stageTitle && <p className="stage-tag">🎯 {stageTitle}</p>}</div>
+        <div><h2>{clientMode ? 'Ваша тренировка' : workout.clientName}</h2><p>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</p>{clientMode && authorLabel && <p className="muted">{authorLabel}</p>}{clientAuthoredReadOnly && <p className="card-author">Создано клиентом · только просмотр</p>}{stageTitle && <p className="stage-tag">🎯 {stageTitle}</p>}</div>
         <WorkoutStatusBadge workout={workout} />
       </section>
-      {workout.status === 'planned' && <button className="wide" onClick={() => start.mutate()}>Начать тренировку</button>}
+      {workout.status === 'planned' && canExecute && <button className="wide" onClick={() => start.mutate()}>Начать тренировку</button>}
       {start.error && <p className="error">{start.error.message}</p>}
-      {workout.status === 'in_progress' && <Link className="button wide" to={`/workouts/${workoutId}/live`}>Продолжить тренировку</Link>}
+      {workout.status === 'in_progress' && canExecute && <Link className="button wide" to={`/workouts/${workoutId}/live`}>Продолжить тренировку</Link>}
       {done && <section className="summary done-summary done-summary-3">
         <div><span>Время</span><strong>{duration ?? '—'}</strong></div>
         <div><span>Тоннаж</span><strong>{tonnageLabel(tonnage)}</strong></div>
         <div><span>Группы мышц</span><strong>{groups.length ? groups.join(', ') : '—'}</strong></div>
       </section>}
-      {done && <WorkoutTrainerReview workout={workout} canEdit={!clientMode} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
+      {done && <WorkoutTrainerReview workout={workout} canEdit={trainerOwned} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
       {((clientMode && !clientOwned) || (!clientMode && workout.clientComment)) && <WorkoutClientComment workout={workout} canEdit={clientMode && !clientOwned} saving={clientComment.isPending} error={clientComment.error} onSave={(value) => clientComment.mutateAsync(value)} />}
       <div className={`cards ${done ? 'completed-exercise-list' : ''}`}>{groupIntoBlocks(workout.exercises).map((block) => {
         const articles = block.exercises.map((exercise) => {
@@ -488,11 +498,12 @@ export function WorkoutDetailPage() {
         return <div className={`exercise-block view${done ? ' completed-exercise-block' : ''}`} key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
       })}</div>
       {workout.notes && <section className="workout-review"><div className="workout-review-head"><div><p className="eyebrow">{clientMode && !clientOwned ? 'ОТ ТРЕНЕРА' : 'К ТРЕНИРОВКЕ'}</p><h2>{clientMode && !clientOwned ? 'Инструкции' : 'Заметка'}</h2></div></div><p className="workout-review-text">{workout.notes}</p></section>}
-      {(!clientMode || clientOwned) && <><div className="actions">
+      {canManage && <><div className="actions">
         {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
         <Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link>
       </div>
       <button className="danger secondary wide" disabled={remove.isPending} onClick={async () => { if (await confirm({ message: 'Удалить тренировку?', confirmLabel: 'Удалить', danger: true })) remove.mutate() }}>Удалить тренировку</button></>}
+      {clientAuthoredReadOnly && <div className="actions"><Link className="button secondary" to={`/workouts/new?client=${workout.clientId}`}>Отправить новый план</Link></div>}
       {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Создать свою копию</Link></div>}
       {remove.error && <p className="error">{remove.error.message}</p>}
       {confirmDialog}

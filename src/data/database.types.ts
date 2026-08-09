@@ -1,4 +1,4 @@
-// schema-sha256: ed7c0107ccb4692c4112f331e66a80e82bfbbf4dd28c6c1760701d06ce2745c0
+// schema-sha256: 66325163984fbd794595ad2cb7d119cfa09e61828ee0c288a550d501679ff6ed
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -22,7 +22,7 @@ type WorkoutListExerciseRow = {
   sets: WorkoutListSetRow[]
 }
 export type WorkoutListRow = {
-  id: string; client_id: string; client_name: string; workout_date: string; start_time: string | null; end_time: string | null
+  id: string; client_id: string; client_name: string; created_by: string | null; workout_date: string; start_time: string | null; end_time: string | null
   started_at: string | null; completed_at: string | null; status: string; notes: string | null; trainer_review: string | null; client_comment: string | null; stage_id: string | null; stage_title: string | null
   version: number; total_count: number; exercises: WorkoutListExerciseRow[]
 }
