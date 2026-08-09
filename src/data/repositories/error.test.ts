@@ -24,6 +24,13 @@ describe('repositoryError', () => {
     expect(error.message).toBe('У клиента уже идёт другая тренировка. Откройте её и продолжите.')
   })
 
+  it('explains an invalid invitation without exposing database details', () => {
+    const error = repositoryError({ code: 'PT404', message: 'invitation_invalid' })
+
+    expect(error.code).toBe('invitation_invalid')
+    expect(error.message).toBe('Приглашение недействительно или срок его действия истёк. Попросите новый код.')
+  })
+
   it('explains the RPE database constraint in Russian', () => {
     const error = repositoryError({ code: '23514', message: 'new row for relation "workout_sets" violates check constraint "workout_sets_rpe_valid"' })
 
