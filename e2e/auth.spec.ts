@@ -116,10 +116,12 @@ test('client registers, creates a standalone card and own workout without traine
 test('trainer invitation links a client account', async ({ page }, testInfo) => {
   testInfo.setTimeout(120_000)
   const suffix = `${testInfo.workerIndex}-${Date.now()}`
+  const trainerEmail = `invite-trainer-${suffix}@fit.local`
+  const clientEmail = `invite-client-${suffix}@fit.local`
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Имя').fill('Тренер')
-  await page.getByLabel('Email').fill(`invite-trainer-${suffix}@fit.local`)
+  await page.getByLabel('Email').fill(trainerEmail)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
 
@@ -156,7 +158,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Тип аккаунта').selectOption('client')
   await page.getByLabel('Имя').fill('Клиент')
-  await page.getByLabel('Email').fill(`invite-client-${suffix}@fit.local`)
+  await page.getByLabel('Email').fill(clientEmail)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await expect(page).toHaveURL(/\/me$/)
@@ -180,6 +182,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
     page.getByRole('button', { name: 'Сохранить' }).click(),
   ])
   const ownWorkoutUrl = page.url()
+  const ownWorkoutPath = new URL(ownWorkoutUrl).pathname
   await page.getByRole('link', { name: 'Изменить' }).click()
   await page.getByLabel('Время', { exact: true }).fill('08:30')
   await Promise.all([
@@ -195,6 +198,51 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
     page.waitForURL(ownWorkoutUrl),
     page.getByRole('button', { name: 'Завершить тренировку' }).click(),
   ])
+
+  // Завершённая тренировка, которую клиент записал сам, входит в общую
+  // историю тренера, но остаётся недоступной для редактирования и запуска.
+  await page.goto('/me/profile')
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await page.getByLabel('Email').fill(trainerEmail)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto(`${clientDetailUrl}/workouts`)
+  const clientAuthoredCard = page.locator(`a[href="${ownWorkoutPath}"]`)
+  await expect(clientAuthoredCard).toContainText('Создано клиентом')
+  await clientAuthoredCard.click()
+  await expect(page.getByText('Создано клиентом · только просмотр')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Изменить результат' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Удалить тренировку' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Начать тренировку' })).toHaveCount(0)
+
+  // Тренер отправляет новый план уже после подключения аккаунта. Клиент
+  // предвыбран, а сохранение использует обычный защищённый путь назначения.
+  await page.getByRole('link', { name: 'Отправить новый план' }).click()
+  await selectClient(page, 'Связанный клиент')
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Планка')
+  await page.getByRole('button', { name: /Планка/ }).first().click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await Promise.all([
+    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Сохранить' }).click(),
+  ])
+  const sentPlanUrl = page.url()
+  const sentPlanPath = new URL(sentPlanUrl).pathname
+  expect(sentPlanUrl).not.toBe(ownWorkoutUrl)
+
+  await page.goto('/profile')
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await page.getByLabel('Email').fill(clientEmail)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/me$/)
+  await page.goto('/me/workouts')
+  await expect(page.locator(`a[href="${sentPlanPath}"]`)).toBeVisible()
+  await page.goto(sentPlanUrl)
+  await expect(page.getByText(/Назначил Тренер|Назначена тренером/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeVisible()
 
   await page.goto(workoutUrl)
   await page.getByRole('button', { name: 'Начать тренировку' }).click()

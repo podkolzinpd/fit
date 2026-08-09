@@ -78,7 +78,7 @@ function mapWorkout(row: WorkoutListRow): Workout {
     id: row.id,
     clientId: row.client_id,
     clientName: row.client_name,
-    createdBy: null,
+    createdBy: row.created_by,
     workoutDate: localDate(row.workout_date),
     startTime: row.start_time,
     endTime: row.end_time,
