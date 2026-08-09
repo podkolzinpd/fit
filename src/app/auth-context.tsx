@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react'
 import type { SessionActor } from '../shared/domain'
 import { authRepository } from '../data/repositories/auth.repository'
@@ -18,6 +19,7 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null)
 
 export function AuthProvider({ children }: PropsWithChildren) {
+  const queryClient = useQueryClient()
   const [actor, setActor] = useState<SessionActor | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -39,6 +41,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const applyUser = useCallback(async (user: AuthUser | null, force = false) => {
     const revision = ++sessionRevisionRef.current
     if (!user) {
+      // TanStack Query живёт выше AuthProvider. Без явной очистки следующий
+      // пользователь на общем устройстве может увидеть прошлый server state
+      // до первого разрешённого refetch.
+      queryClient.clear()
       actorRef.current = null
       initializationRef.current = null
       setActor(null)
@@ -47,6 +53,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       return
     }
 
+    // `force` используется для явного refresh профиля. Очищаем и в этом
+    // случае: actor может сменить тип/роль после привязки клиентского аккаунта.
+    if (force || actorRef.current?.userId !== user.id) queryClient.clear()
     if (!force) setLoading(true)
     try {
       const initialized = await initializeUser(user, force)
@@ -62,7 +71,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     } finally {
       if (revision === sessionRevisionRef.current && !force) setLoading(false)
     }
-  }, [initializeUser])
+  }, [initializeUser, queryClient])
 
   const refresh = useCallback(async () => {
     try {
@@ -71,12 +80,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const user = result.data.session?.user
       await applyUser(user ? { id: user.id, email: user.email, user_metadata: user.user_metadata } : null, true)
     } catch (caught) {
+      queryClient.clear()
       actorRef.current = null
       setActor(null)
       setError(caught instanceof Error ? caught.message : 'Ошибка авторизации')
       setLoading(false)
     }
-  }, [applyUser])
+  }, [applyUser, queryClient])
 
   useEffect(() => {
     const { data } = authRepository.onAuthStateChange((_event, session) => {
