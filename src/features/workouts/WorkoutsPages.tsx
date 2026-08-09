@@ -423,7 +423,24 @@ export function WorkoutDetailPage() {
   // Этап тренировки: get() отдаёт stageId, название берём из цели клиента.
   const goal = useQuery({ queryKey: ['client-goal', query.data?.clientId], queryFn: () => goalsRepository.get(query.data!.clientId), enabled: Boolean(query.data?.stageId && query.data?.clientId) })
   const stageTitle = query.data?.stageId ? goal.data?.stages.find((stage) => stage.id === query.data!.stageId)?.title ?? null : null
-  const start = useMutation({ mutationFn: () => workoutsRepository.start(query.data!), onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }), queryClient.invalidateQueries({ queryKey: ['clients'] })]); navigate(`/workouts/${workoutId}/live`) } })
+  const start = useMutation({
+    mutationFn: async () => {
+      const active = await workoutsRepository.findActive(query.data!.clientId)
+      if (active && active.id !== workoutId) return active.id
+      await workoutsRepository.start(query.data!)
+      return workoutId
+    },
+    onSuccess: async (activeWorkoutId) => {
+      await Promise.all([queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }), queryClient.invalidateQueries({ queryKey: ['clients'] })])
+      navigate(`/workouts/${activeWorkoutId}/live`)
+    },
+    onError: async (error) => {
+      if (error instanceof Error && 'code' in error && error.code === 'active_workout_exists') {
+        const active = await workoutsRepository.findActive(query.data!.clientId)
+        if (active) navigate(`/workouts/${active.id}/live`)
+      }
+    },
+  })
   const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['workouts'] }), queryClient.invalidateQueries({ queryKey: ['clients'] })]); navigate(actor?.role === 'client' ? '/me/workouts' : '/schedule') } })
   const review = useMutation({ mutationFn: (value: string) => workoutsRepository.setWorkoutReview(query.data!, value), onSuccess: async () => {
     await Promise.all([
