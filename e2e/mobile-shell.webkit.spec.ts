@@ -161,9 +161,32 @@ test('iPhone: client edits shared progress, custom metrics and deletion safely',
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
 
-async function selectClient(page: Page) {
+async function selectClient(page: Page, name = 'Анна Смирнова') {
   await page.locator('.client-picker-trigger').click()
-  await page.locator('.client-picker-item').filter({ hasText: 'Анна Смирнова' }).first().click()
+  await page.locator('.client-picker-item').filter({ hasText: name }).first().click()
+}
+
+async function createIsolatedClient(page: Page, testInfo: import('@playwright/test').TestInfo) {
+  const suffix = `${testInfo.workerIndex}-${Date.now()}`
+  const name = `WebKit клиент ${suffix}`
+  await page.goto('/auth')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Имя').fill('WebKit тренер')
+  await page.getByLabel('Email').fill(`webkit-trainer-${suffix}@fit.local`)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients/new')
+  await page.getByLabel('Имя').fill(name)
+  await page.getByLabel('Пол').selectOption('female')
+  await page.getByLabel('Возраст').fill('30')
+  await page.getByLabel('Рост, см').fill('170')
+  await page.getByLabel('Начальный вес, кг').fill('65')
+  await Promise.all([
+    page.waitForURL(/\/clients\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Сохранить' }).click(),
+  ])
+  return name
 }
 
 async function addExercise(page: Page, name: string, first = false) {
@@ -173,9 +196,9 @@ async function addExercise(page: Page, name: string, first = false) {
   await page.getByRole('button', { name: 'Добавить 1' }).click()
 }
 
-async function createGroupedWorkout(page: Page, preset: 'set' | 'circuit') {
+async function createGroupedWorkout(page: Page, clientName: string, preset: 'set' | 'circuit') {
   await page.goto('/workouts/new')
-  await selectClient(page)
+  await selectClient(page, clientName)
   await addExercise(page, 'Присед со штангой', true)
   await addExercise(page, 'Жим лёжа')
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
@@ -286,11 +309,11 @@ test('iPhone: ручной выбор начинает с недавних, а �
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: одиночный отдых переживает reload, сдвиг и пропуск на 390 px', async ({ page }) => {
+test('iPhone: одиночный отдых переживает reload, сдвиг и пропуск на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await loginAsTrainer(page)
+  const clientName = await createIsolatedClient(page, testInfo)
   await page.goto('/workouts/new')
-  await selectClient(page)
+  await selectClient(page, clientName)
   await addExercise(page, 'Присед со штангой', true)
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
@@ -312,11 +335,11 @@ test('iPhone: одиночный отдых переживает reload, сдв�
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: частично завершённая тренировка помечена на 390 px', async ({ page }) => {
+test('iPhone: частично завершённая тренировка помечена на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await loginAsTrainer(page)
+  const clientName = await createIsolatedClient(page, testInfo)
   await page.goto('/workouts/new')
-  await selectClient(page)
+  await selectClient(page, clientName)
   await addExercise(page, 'Присед со штангой', true)
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
@@ -354,10 +377,10 @@ test('iPhone: прогресс открывается из карточки кл
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: сет не ставит отдых внутри круга и не оставляет его после финала', async ({ page }) => {
+test('iPhone: сет не ставит отдых внутри круга и не оставляет его после финала', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await loginAsTrainer(page)
-  await createGroupedWorkout(page, 'set')
+  const clientName = await createIsolatedClient(page, testInfo)
+  await createGroupedWorkout(page, clientName, 'set')
   await confirmCurrentSet(page)
   await expect(currentRound(page).locator('.live-set-compact.confirmed')).toHaveCount(1)
   await expect(page.locator('.rest-timer')).toHaveCount(0)
@@ -375,10 +398,10 @@ test('iPhone: сет не ставит отдых внутри круга и н�
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: круговая использует отдых между упражнениями и между кругами', async ({ page }) => {
+test('iPhone: круговая использует отдых между упражнениями и между кругами', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await loginAsTrainer(page)
-  await createGroupedWorkout(page, 'circuit')
+  const clientName = await createIsolatedClient(page, testInfo)
+  await createGroupedWorkout(page, clientName, 'circuit')
   await confirmCurrentSet(page)
   await expect(currentRound(page).locator('.live-set-compact.confirmed')).toHaveCount(1)
   await expect(page.getByText(/Отдых 0:1[2-5]/)).toBeVisible()

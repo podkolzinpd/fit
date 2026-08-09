@@ -58,7 +58,7 @@ jobs:
       # Keep the CI container set minimal and avoid Mailpit's fixed port.
       - run: supabase start --exclude mailpit
       - run: supabase db reset --local
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:e2e
         env:
           VITE_SUPABASE_URL: http://127.0.0.1:54321
