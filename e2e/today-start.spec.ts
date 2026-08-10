@@ -38,7 +38,7 @@ async function mockStreamingVoice(page: import('@playwright/test').Page, transcr
   }, transcript)
 }
 
-test('today: voice-first запускает запись, отменяет её и открывает review после transcript', async ({ page }) => {
+test('today: voice-first запускает запись, отменяет её и добавляет карточку после transcript', async ({ page }) => {
   await mockWorkoutParser(page, [{ sourceText: 'Жим лёжа три подхода по десять 80 килограммов', exerciseRef: 'bench-press', confidence: 1, sets: [{ weightKg: 80, reps: 10 }, { weightKg: 80, reps: 10 }, { weightKg: 80, reps: 10 }] }])
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
@@ -51,17 +51,18 @@ test('today: voice-first запускает запись, отменяет её 
   await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Слушаю…' })).toBeVisible()
   await page.getByRole('button', { name: 'Отменить' }).click()
-  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Чем могу тебе помочь?' })).toBeVisible()
+  await expect(page.locator('.chat-thread')).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
   await expect(page.getByText(/Жим лёжа три подхода/)).toBeVisible()
   await page.getByRole('button', { name: 'Готово' }).click()
-  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible({ timeout: 10_000 })
+  await expect(page.locator('.chat-bubble-user', { hasText: 'Жим лёжа три подхода' })).toBeVisible({ timeout: 10_000 })
   await expect(page.locator('.today-exercise')).toHaveCount(1)
+  await expect(page).toHaveURL(/\/today$/)
 })
 
-test('today: ошибка voice-разбора сохраняет transcript и раскрывает текстовый fallback', async ({ page }) => {
+test('today: ошибка voice-разбора показывает карточку ошибки с реплики и повтором', async ({ page }) => {
   await page.route('**/functions/v1/parse-workout', async (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporary' }) }))
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
@@ -73,12 +74,12 @@ test('today: ошибка voice-разбора сохраняет transcript и 
 
   await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
   await page.getByRole('button', { name: 'Готово' }).click()
-  await expect(page.getByText('Не удалось обработать диктовку. Исходный текст сохранён.')).toBeVisible({ timeout: 10_000 })
-  await expect(page.getByLabel('Тренировка')).toHaveValue('Жим лёжа три подхода по десять 80 килограммов')
-  await expect(page.getByRole('button', { name: 'Разобрать тренировку' })).toBeEnabled()
+  await expect(page.locator('.chat-bubble-user', { hasText: 'Жим лёжа три подхода' })).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('Разбор временно недоступен')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Повторить' })).toBeVisible()
 })
 
-test('today: быстрый старт ведёт к единому выбору плана или завершённой тренировки', async ({ page }, testInfo) => {
+test('today: чат-ввод ведёт к единому выбору плана или завершённой тренировки', async ({ page }, testInfo) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -86,26 +87,24 @@ test('today: быстрый старт ведёт к единому выбору
   await expect(page).toHaveURL(/\/(today|clients)$/)
   await page.goto('/today')
 
-  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Чем могу тебе помочь?' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
-  await expect(page.getByLabel('Тренировка')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Ввести текстом' }).click()
-  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Разобрать тренировку' })).toBeDisabled()
+  await expect(page.getByLabel('Сообщение о тренировке')).toBeVisible()
+
   await mockWorkoutParser(page, [
     { sourceText: 'Присед со штангой 3×8 — 80 кг', exerciseRef: 'barbell-squat', confidence: 1, sets: [{ weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }] },
+  ])
+  await page.getByLabel('Сообщение о тренировке').fill('Присед со штангой 3×8 — 80 кг')
+  await page.getByLabel('Сообщение о тренировке').press('Enter')
+  await expect(page.locator('.today-exercise')).toHaveCount(1)
+
+  await mockWorkoutParser(page, [
     { sourceText: 'Планка 3×45 сек', exerciseRef: 'plank', confidence: 1, sets: [{ durationMin: 0.75 }, { durationMin: 0.75 }, { durationMin: 0.75 }] },
   ])
-  await page.getByLabel('Тренировка').fill('Присед со штангой 3×8 — 80 кг\nПланка 3×45 сек')
-  await expect(page.getByRole('button', { name: /Распознать/ })).toHaveCount(0)
-  await expect(page.getByText('Черновик', { exact: true })).toHaveCount(0)
-  await expect(page.locator('.today-parse-preview')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Разобрать тренировку' })).toBeEnabled()
-  await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
-  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
-  await expect(page).toHaveURL(/\/today\?view=review$/)
-  await expect(page.getByText('Распознано: 2', { exact: true })).toBeVisible()
+  await page.getByLabel('Сообщение о тренировке').fill('Планка 3×45 сек')
+  await page.getByLabel('Сообщение о тренировке').press('Enter')
   await expect(page.locator('.today-exercise')).toHaveCount(2)
+
   const firstExercise = page.locator('.today-exercise').first()
   await firstExercise.locator('.today-exercise-editor summary').click()
   await expect(firstExercise.getByLabel(/RPE, подход 1/)).toHaveCount(0)
@@ -117,7 +116,9 @@ test('today: быстрый старт ведёт к единому выбору
   await page.getByRole('button', { name: 'Отменить' }).click()
   await expect(page.locator('.today-exercise')).toHaveCount(2)
   await expect(page.getByLabel('Имя нового клиента')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Далее' }).click()
+
+  await page.getByRole('button', { name: 'Действия' }).click()
+  await page.getByRole('menuitem', { name: 'Завершить тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Сохраните тренировку' })).toBeVisible()
   await expect(page).toHaveURL(/\/today\?view=save$/)
   await page.locator('.client-picker-trigger').click()
@@ -141,15 +142,10 @@ test('today: быстрый старт ведёт к единому выбору
   await page.getByRole('button', { name: 'Завершённая' }).click()
   await expect(page.getByRole('button', { name: 'Записать как завершённую' })).toBeEnabled()
   await expect(page.getByLabel('Время тренировки')).toHaveCount(0)
-  await page.getByRole('button', { name: '← К проверке' }).click()
-  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
-  await expect(page.locator('.today-exercise')).toHaveCount(2)
   await page.getByRole('button', { name: '← Назад' }).click()
-  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Сообщение о тренировке')).toBeVisible()
+  await expect(page.locator('.today-exercise')).toHaveCount(2)
   await expect(page).toHaveURL(/\/today$/)
-  await expect(page.getByLabel('Тренировка')).toHaveValue('Присед со штангой 3×8 — 80 кг\nПланка 3×45 сек')
-  await page.waitForTimeout(3600)
-  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
 })
 
 test('создание из календаря: завершённая тренировка не остаётся в будущем', async ({ page }) => {
@@ -168,7 +164,7 @@ test('создание из календаря: завершённая трен�
   await expect(date).toHaveValue(maxDate!)
 })
 
-test('today: quick review наследует настройку RPE тренера', async ({ page }) => {
+test('today: чат-карточка наследует настройку RPE тренера', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -178,13 +174,12 @@ test('today: quick review наследует настройку RPE тренер
   await page.goto('/profile')
   await page.getByRole('switch', { name: 'Показывать RPE в подходах' }).check()
   await page.goto('/today')
-  await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await mockWorkoutParser(page, [{
     sourceText: 'Присед со штангой 3×8 — 80 кг', exerciseRef: 'barbell-squat', confidence: 1,
     sets: [{ weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }],
   }])
-  await page.getByLabel('Тренировка').fill('Присед со штангой 3×8 — 80 кг')
-  await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
+  await page.getByLabel('Сообщение о тренировке').fill('Присед со штангой 3×8 — 80 кг')
+  await page.getByLabel('Сообщение о тренировке').press('Enter')
 
   const exercise = page.locator('.today-exercise').first()
   await exercise.locator('.today-exercise-editor summary').click()
@@ -200,40 +195,46 @@ test('today: черновик сохраняет финальный шаг и п
   await page.getByRole('button', { name: 'Войти' }).click()
   await expect(page).toHaveURL(/\/(today|clients)$/)
   await page.goto('/today')
-  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
-  await page.getByRole('button', { name: 'Ввести текстом' }).click()
-  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Чем могу тебе помочь?' })).toBeVisible()
+  await expect(page.getByLabel('Сообщение о тренировке')).toBeVisible()
 
-  const workoutText = 'Присед со штангой 3×8 — 80 кг\nПланка 3×45 сек'
   await mockWorkoutParser(page, [
     { sourceText: 'Присед со штангой 3×8 — 80 кг', exerciseRef: 'barbell-squat', confidence: 1, sets: [{ weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }] },
+  ])
+  await page.getByLabel('Сообщение о тренировке').fill('Присед со штангой 3×8 — 80 кг')
+  await page.getByLabel('Сообщение о тренировке').press('Enter')
+  await expect(page.locator('.today-exercise')).toHaveCount(1)
+
+  await mockWorkoutParser(page, [
     { sourceText: 'Планка 3×45 сек', exerciseRef: 'plank', confidence: 1, sets: [{ durationMin: 0.75 }, { durationMin: 0.75 }, { durationMin: 0.75 }] },
   ])
-  await page.getByLabel('Тренировка').fill(workoutText)
-  await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
-  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
-  await page.getByRole('button', { name: 'Далее' }).click()
+  await page.getByLabel('Сообщение о тренировке').fill('Планка 3×45 сек')
+  await page.getByLabel('Сообщение о тренировке').press('Enter')
+  await expect(page.locator('.today-exercise')).toHaveCount(2)
+
+  await page.getByRole('button', { name: 'Действия' }).click()
+  await page.getByRole('menuitem', { name: 'Завершить тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Сохраните тренировку' })).toBeVisible()
 
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Сохраните тренировку' })).toBeVisible()
   await expect(page.getByText('Черновик восстановлен', { exact: true })).toHaveCount(0)
-  await page.getByRole('button', { name: '← К проверке' }).click()
-  await expect(page.locator('.today-exercise')).toHaveCount(2)
   await page.getByRole('button', { name: '← Назад' }).click()
-  await expect(page.getByLabel('Тренировка')).toHaveValue(workoutText)
-  await expect(page.getByText('Черновик восстановлен', { exact: true })).toHaveCount(0)
+  await expect(page.locator('.today-exercise')).toHaveCount(2)
+  await expect(page.getByLabel('Сообщение о тренировке')).toBeVisible()
 
   await page.getByRole('link', { name: 'Клиенты' }).click()
   await page.getByRole('link', { name: 'Сегодня', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
   await expect(page.getByText('Есть незавершённая тренировка')).toBeVisible()
   await page.getByRole('button', { name: 'Продолжить' }).click()
-  await expect(page.getByLabel('Тренировка')).toHaveValue(workoutText)
+  await expect(page.locator('.today-exercise')).toHaveCount(2)
+  await expect(page.getByText('Есть незавершённая тренировка')).toHaveCount(0)
 
   await page.getByRole('link', { name: 'Клиенты' }).click()
   await page.getByRole('link', { name: 'Сегодня', exact: true }).click()
-  await page.getByRole('button', { name: 'Ввести текстом' }).click()
-  await expect(page.getByLabel('Тренировка')).toHaveValue('')
+  await expect(page.getByText('Есть незавершённая тренировка')).toBeVisible()
+  await page.getByRole('button', { name: 'Удалить' }).click()
   await expect(page.getByText('Есть незавершённая тренировка')).toHaveCount(0)
+  await expect(page.locator('.today-exercise')).toHaveCount(0)
 })
