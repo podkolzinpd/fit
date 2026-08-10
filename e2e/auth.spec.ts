@@ -213,7 +213,10 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.locator('.live-exercise-head h2')).toHaveCount(2)
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
   await page.getByRole('menuitem', { name: 'Изменить порядок' }).click()
-  await expect(page.getByRole('button', { name: 'Вверх' })).toBeVisible()
+  // У первого упражнения кнопка «Вверх» отключена, у второго — активна.
+  // Берём именно активную, чтобы проверка не зависела от двух одинаковых
+  // aria-label в режиме перестановки.
+  await expect(page.getByRole('button', { name: 'Вверх' }).last()).toBeEnabled()
   await page.getByLabel('Фактическое время, сек').fill('25')
   await page.getByLabel('Фактическая дистанция').fill('4')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
@@ -246,9 +249,12 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // остаётся read-only, а факт копии становится планом тренера.
   await page.getByRole('link', { name: 'Скопировать и отправить план' }).click()
   await expect(page).toHaveURL(new RegExp(`/workouts/new\\?copy=${ownWorkoutPath.split('/').at(-1)}$`))
-  await expect(page.getByText('Бег (Кардио)', { exact: true })).toBeVisible()
-  await expect(page.getByLabel('Время, сек, подход 1')).toHaveValue('25')
-  await expect(page.getByLabel('Расстояние, подход 1')).toHaveValue('4')
+  // В этой тренировке два упражнения «Бег»: исходное и добавленное клиентом.
+  // Копия должна сохранить оба, а не полагаться на неоднозначный текстовый
+  // селектор.
+  await expect(page.getByText('Бег (Кардио)', { exact: true })).toHaveCount(2)
+  await expect(page.getByLabel('Время, сек, подход 1').first()).toHaveValue('25')
+  await expect(page.getByLabel('Расстояние, подход 1').first()).toHaveValue('4')
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
     page.getByRole('button', { name: 'Сохранить' }).click(),
