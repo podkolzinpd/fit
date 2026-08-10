@@ -190,13 +190,39 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
     page.getByRole('button', { name: 'Сохранить' }).click(),
   ])
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
+  // Собственную тренировку клиент ведёт так же гибко, как тренер: live-RPC
+  // разрешают эти изменения подключённому клиенту, поэтому UI не должен
+  // скрывать добавление подхода, упражнения, замену и перестановку.
+  await expect(page.getByRole('button', { name: '＋ Подход' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '＋ Ещё упражнение' })).toBeVisible()
+  await page.getByRole('button', { name: '＋ Подход' }).click()
+  await expect(page.locator('.live-set-compact')).toBeVisible()
+  await page.getByRole('button', { name: 'Ещё действия' }).first().click()
+  await page.getByRole('menuitem', { name: 'Заменить' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Планка')
+  await page.getByRole('button', { name: /^Планка/ }).first().click()
+  await expect(page.locator('.live-exercise-head h2').first()).toContainText('Планка')
+  await page.getByRole('button', { name: 'Ещё действия' }).first().click()
+  await page.getByRole('menuitem', { name: 'Заменить' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Бег')
+  await page.getByRole('button', { name: /^Бег/ }).first().click()
+  await expect(page.locator('.live-exercise-head h2').first()).toContainText('Бег')
+  await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Бег')
+  await page.getByRole('button', { name: /^Бег/ }).first().click()
+  await expect(page.locator('.live-exercise-head h2')).toHaveCount(2)
+  await page.getByRole('button', { name: 'Ещё действия' }).first().click()
+  await page.getByRole('menuitem', { name: 'Изменить порядок' }).click()
+  await expect(page.getByRole('button', { name: 'Вверх' })).toBeVisible()
   await page.getByLabel('Фактическое время, сек').fill('25')
   await page.getByLabel('Фактическая дистанция').fill('4')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
-  await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
+  // В тренировке остались добавленные подход и упражнение, поэтому завершение
+  // подтверждаем как частичное. Это сохраняет проверку структурных мутаций.
+  await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   await Promise.all([
     page.waitForURL(ownWorkoutUrl),
-    page.getByRole('button', { name: 'Завершить тренировку' }).click(),
+    page.getByRole('button', { name: 'Завершить', exact: true }).click(),
   ])
 
   // Завершённая тренировка, которую клиент записал сам, входит в общую
@@ -242,6 +268,22 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.goto(sentPlanUrl)
   await expect(page.getByText(/Назначил Тренер|Назначена тренером/)).toBeVisible()
   await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeVisible()
+  await page.getByRole('button', { name: 'Начать тренировку' }).click()
+  // В назначенном плане live-действия у клиента те же, что у тренера: клиент
+  // корректирует реальную тренировку, а проверка связи с его карточкой остаётся
+  // на сервере.
+  await expect(page.getByRole('button', { name: '＋ Подход' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '＋ Ещё упражнение' })).toBeVisible()
+  await page.getByRole('button', { name: '＋ Подход' }).click()
+  await expect(page.locator('.live-set-compact')).toBeVisible()
+  await page.getByRole('button', { name: 'Ещё действия' }).first().click()
+  await expect(page.getByRole('menuitem', { name: 'Заменить' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Завершить тренировку' }).click()
+  await Promise.all([
+    page.waitForURL(sentPlanUrl),
+    page.getByRole('button', { name: 'Завершить', exact: true }).click(),
+  ])
 
   await page.goto(workoutUrl)
   await page.getByRole('button', { name: 'Начать тренировку' }).click()

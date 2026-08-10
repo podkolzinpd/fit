@@ -75,11 +75,12 @@ select is(
   'client owner saves live fact'
 );
 select is(public.confirm_live_set('98000000-0000-4000-8000-000000000008', 2), 3::bigint, 'client owner confirms live set');
-select throws_ok(
-  $$select public.append_live_set('97000000-0000-4000-8000-000000000007', 2)$$,
-  'PT403', 'workout_access_denied', 'client owner cannot change trainer workout structure'
+select is(
+  public.append_live_set('97000000-0000-4000-8000-000000000007', 2),
+  3::bigint,
+  'client owner adds a set to trainer workout during live'
 );
-select is(public.finish_workout('96000000-0000-4000-8000-000000000006', 2), 3::bigint, 'client owner finishes workout');
+select is(public.finish_workout('96000000-0000-4000-8000-000000000006', 3), 4::bigint, 'client owner finishes workout');
 reset role;
 
 set local role authenticated;
