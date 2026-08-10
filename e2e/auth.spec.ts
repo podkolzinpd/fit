@@ -227,6 +227,18 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
     page.waitForURL(ownWorkoutUrl),
     page.getByRole('button', { name: 'Завершить', exact: true }).click(),
   ])
+  // Собственную завершённую тренировку клиент может исправить: перестановка
+  // не должна сталкиваться с промежуточным дубликатом позиции в БД.
+  await page.getByRole('link', { name: 'Изменить результат' }).click()
+  await page.getByRole('button', { name: 'Ещё действия' }).first().click()
+  await page.getByRole('menuitem', { name: 'Изменить порядок' }).click()
+  await expect(page.getByRole('button', { name: 'Вверх' }).last()).toBeEnabled()
+  await page.getByRole('button', { name: 'Вверх' }).last().click()
+  await Promise.all([
+    page.waitForURL(ownWorkoutUrl),
+    page.getByRole('button', { name: 'Сохранить изменения' }).click(),
+  ])
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
   // Завершённая тренировка, которую клиент записал сам, входит в общую
   // историю тренера, но остаётся недоступной для редактирования и запуска.
@@ -253,8 +265,10 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // Копия должна сохранить оба, а не полагаться на неоднозначный текстовый
   // селектор.
   await expect(page.getByText('Бег (Кардио)', { exact: true })).toHaveCount(2)
-  await expect(page.getByLabel('Время, сек, подход 1').first()).toHaveValue('25')
-  await expect(page.getByLabel('Расстояние, подход 1').first()).toHaveValue('4')
+  // Клиент поменял упражнения местами: факт остаётся у того же упражнения,
+  // поэтому заполненный «Бег» теперь второй, а не теряется или не переносится.
+  await expect(page.getByLabel('Время, сек, подход 1').last()).toHaveValue('25')
+  await expect(page.getByLabel('Расстояние, подход 1').last()).toHaveValue('4')
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
     page.getByRole('button', { name: 'Сохранить' }).click(),
