@@ -136,9 +136,11 @@ test('today: чат-ввод ведёт к единому выбору план�
   await expect(page.getByLabel('Время тренировки')).toBeVisible()
   const planButton = page.getByRole('button', { name: 'Запланировать' })
   await planButton.scrollIntoViewIfNeeded()
+  // Навигация тренера закреплена сверху: кнопка сохранения не должна
+  // перекрываться таб-баром, т.е. целиком лежит ниже его нижней границы.
   const [planBox, tabBarBox] = await Promise.all([planButton.boundingBox(), page.getByRole('navigation', { name: 'Основная навигация' }).boundingBox()])
   if (!planBox || !tabBarBox) throw new Error('Не удалось измерить кнопку сохранения или таббар')
-  expect(planBox.y + planBox.height).toBeLessThanOrEqual(tabBarBox.y)
+  expect(planBox.y).toBeGreaterThanOrEqual(tabBarBox.y + tabBarBox.height)
   await page.getByRole('button', { name: 'Завершённая' }).click()
   await expect(page.getByRole('button', { name: 'Записать как завершённую' })).toBeEnabled()
   await expect(page.getByLabel('Время тренировки')).toHaveCount(0)
@@ -224,7 +226,7 @@ test('today: черновик сохраняет финальный шаг и п
   await expect(page.getByLabel('Сообщение о тренировке')).toBeVisible()
 
   await page.getByRole('link', { name: 'Клиенты' }).click()
-  await page.getByRole('link', { name: 'Сегодня', exact: true }).click()
+  await page.getByRole('link', { name: 'Ассистент', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
   await expect(page.getByText('Есть незавершённая тренировка')).toBeVisible()
   await page.getByRole('button', { name: 'Продолжить' }).click()
@@ -232,7 +234,7 @@ test('today: черновик сохраняет финальный шаг и п
   await expect(page.getByText('Есть незавершённая тренировка')).toHaveCount(0)
 
   await page.getByRole('link', { name: 'Клиенты' }).click()
-  await page.getByRole('link', { name: 'Сегодня', exact: true }).click()
+  await page.getByRole('link', { name: 'Ассистент', exact: true }).click()
   await expect(page.getByText('Есть незавершённая тренировка')).toBeVisible()
   await page.getByRole('button', { name: 'Удалить' }).click()
   await expect(page.getByText('Есть незавершённая тренировка')).toHaveCount(0)

@@ -15,7 +15,7 @@ async function login(page: import('@playwright/test').Page, email: string) {
 test('iPhone: trainer review and client comment stay visible to the other side only', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await login(page, 'trainer@fit.local')
-  await expect(page.getByRole('heading', { name: 'Сегодня' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
 
   const today = new Date().toISOString().slice(0, 10)
   const targetDate = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10)

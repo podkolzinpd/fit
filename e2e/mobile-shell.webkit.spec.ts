@@ -11,7 +11,7 @@ async function loginAsTrainer(page: import('@playwright/test').Page) {
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
 }
 
 async function login(page: import('@playwright/test').Page, email: string) {
@@ -34,7 +34,7 @@ test('iPhone: новое имя профиля сохраняется после
   await page.getByLabel('Email').fill(`profile-name-${testInfo.workerIndex}-${Date.now()}@fit.local`)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
 
   await page.goto('/profile')
   await page.getByLabel('Имя').fill('Новое имя')
@@ -237,7 +237,7 @@ async function createIsolatedClient(page: Page, testInfo: import('@playwright/te
   await page.getByLabel('Email').fill(`webkit-trainer-${suffix}@fit.local`)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
   await page.goto('/clients/new')
   await page.getByLabel('Имя').fill(name)
   await page.getByLabel('Пол').selectOption('female')
@@ -346,7 +346,7 @@ test('iPhone: черновик не скрывает главное voice-дей
   await loginAsTrainer(page)
   await page.getByLabel('Сообщение о тренировке').fill('Жим лёжа 3×10 — 80 кг')
   await page.getByRole('link', { name: 'Клиенты' }).click()
-  await page.getByRole('link', { name: 'Сегодня', exact: true }).click()
+  await page.getByRole('link', { name: 'Ассистент', exact: true }).click()
 
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeInViewport()
@@ -443,10 +443,14 @@ test('iPhone: прогресс открывается из карточки кл
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
   await expect(page.getByRole('link', { name: 'Аналитика', exact: true })).toHaveCount(0)
+  // Навигация тренера: три текстовых таба + шестерёнка профиля, закреплена сверху.
   const trainerNavigation = page.getByRole('navigation', { name: 'Основная навигация' })
-  await expect(trainerNavigation.getByRole('link')).toHaveCount(3)
-  const trainerColumns = await trainerNavigation.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(' ').length)
-  expect(trainerColumns).toBe(3)
+  await expect(trainerNavigation.getByRole('link')).toHaveCount(4)
+  await expect(trainerNavigation.getByRole('link', { name: 'Ассистент', exact: true })).toBeVisible()
+  await expect(trainerNavigation.getByRole('link', { name: 'Открыть профиль' })).toBeVisible()
+  const navBox = await trainerNavigation.boundingBox()
+  if (!navBox) throw new Error('Не удалось измерить таб-бар')
+  expect(navBox.y + navBox.height).toBeLessThan(200)
   await page.goto('/clients')
   await page.getByRole('link', { name: /Анна Смирнова/ }).first().click()
   await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()

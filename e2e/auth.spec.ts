@@ -30,7 +30,7 @@ test('trainer registers without surname or email confirmation', async ({ page },
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
 
-  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
   await page.goto('/me/profile')
   await expect(page).toHaveURL(/\/today$/)
   await page.goto('/profile')
@@ -125,7 +125,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
 
-  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
   await page.goto('/clients')
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByLabel('Имя').fill('Связанный клиент')
@@ -248,7 +248,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByLabel('Email').fill(trainerEmail)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
   await page.goto(`${clientDetailUrl}/workouts`)
   const clientAuthoredCard = page.locator(`a[href="${ownWorkoutPath}"]`)
   await expect(clientAuthoredCard).toContainText('Создано клиентом')
@@ -349,7 +349,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByLabel('Email').fill(`member-trainer-${suffix}@fit.local`)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
 
   await page.goto('/join')
   await page.getByLabel('Код приглашения').fill(trainerCode!)
