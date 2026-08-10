@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(10);
+select plan(13);
 
 select ok(
   exists(select 1 from pg_matviews where schemaname = 'analytics' and matviewname = 'client_overview'),
@@ -46,6 +46,22 @@ insert into public.clients (id, trainer_id, auth_user_id, full_name, created_at)
   -- Клиент E: self-registered со своим тестовым email (смешанный регистр)
   ('71000000-0000-4000-8000-000000000005', '70000000-0000-4000-8000-000000000005', '70000000-0000-4000-8000-000000000005', 'Overview Client E', '2026-08-05');
 
+-- Активность самого клиента: только записи, созданные им самим
+-- (created_by = clients.auth_user_id). У клиента A нет auth_user_id —
+-- собственной активности быть не может, даже если тренер что-то заводит.
+-- У клиента B — своя тренировка (created_by = он сам) плюс отдельная
+-- тренировка, заведённая тренером с более поздним updated_at — проверяет,
+-- что тренерская запись НЕ попадает в подсчёт. У клиента C — своя
+-- тренировка и свой замер, greatest() берёт более позднюю из двух дат.
+insert into public.workouts (id, trainer_id, client_id, created_by, workout_date, status, updated_at) values
+  ('72000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '2026-08-06', 'planned', '2026-08-06 09:00:00+00'),
+  ('72000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000002', '2026-08-07', 'planned', '2026-08-07 10:00:00+00'),
+  ('72000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000001', '2026-08-08', 'planned', '2026-08-08 12:00:00+00'),
+  ('72000000-0000-4000-8000-000000000004', '70000000-0000-4000-8000-000000000003', '71000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000003', '2026-08-05', 'planned', '2026-08-05 09:00:00+00');
+
+insert into public.client_progress (id, trainer_id, client_id, created_by, recorded_on, updated_at) values
+  ('73000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000003', '71000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000003', '2026-08-09', '2026-08-09 09:00:00+00');
+
 refresh materialized view analytics.client_overview;
 
 select is(
@@ -84,6 +100,21 @@ select is(
 select is(
   (select is_test_account from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000005'),
   true, 'self-registered client with own email Knyaz187@mail.ru is flagged as test account (case-insensitive)'
+);
+
+select is(
+  (select last_client_activity_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000001'),
+  null, 'client without auth_user_id has no self-authored records: last_client_activity_at is null even though a trainer-authored workout exists'
+);
+select is(
+  (select last_client_activity_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000002'),
+  '2026-08-07 10:00:00+00'::timestamptz,
+  'last_client_activity_at reflects only the client-authored workout, ignoring the later trainer-authored one for the same client'
+);
+select is(
+  (select last_client_activity_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
+  '2026-08-09 09:00:00+00'::timestamptz,
+  'last_client_activity_at is greatest() of self-authored workout and progress entry'
 );
 
 select * from finish();
