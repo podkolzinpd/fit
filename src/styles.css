@@ -183,11 +183,12 @@ h2 { margin: 24px 0 12px; font-size: var(--text-section); font-weight: var(--wei
 h3 { font-size: var(--text-body); font-weight: var(--weight-semibold); line-height: var(--leading-snug) }
 p { margin: 6px 0 }
 .phone-frame { width: min(calc(100% - 32px), 440px); height: calc(100dvh - 32px); min-height: 0; margin: 16px auto; overflow: hidden; background: var(--frame-bg, radial-gradient(circle at 86% -12%, #3a2418 0, transparent 36%), linear-gradient(180deg, #1d1a24, #17151c)); display: flex; flex-direction: column; border: 1px solid var(--frame-border, #3a3544); border-radius: 26px; box-shadow: 0 18px 54px #17131f2b }
-.content { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-bottom: 94px; scrollbar-width: none }.content::-webkit-scrollbar { display: none }
-/* Верхний отступ учитывает вырез/Dynamic Island (safe-area). Без него в
-   полноэкранном мобильном режиме шапка (в т.ч. кнопка ＋) уходит под статус-бар
-   iPhone и не нажимается. На десктопе max() оставляет обычные 30px. */
-.page { padding: max(30px, calc(env(safe-area-inset-top) + 12px)) 18px 24px }
+.content { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-top: env(safe-area-inset-top); padding-bottom: 94px; scrollbar-width: none }.content::-webkit-scrollbar { display: none }
+/* Safe-area принадлежит прокручиваемому контейнеру .content: она не уезжает
+   под статус-бар iPhone. У страницы остаётся компактный отступ, на десктопе —
+   30px. */
+.page { padding: 12px 18px 24px }
+@media (min-width: 481px) { .page { padding-top: 30px } }
 .page-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; container-type: inline-size }
 .page-header .button { padding: 9px 13px; border-radius: 11px; font-size: var(--text-ui); flex-shrink: 0 }
 .page-back { flex: 0 0 auto; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 12px; background: #241f33; color: var(--fg); font-size: 20px; line-height: 1; cursor: pointer }
