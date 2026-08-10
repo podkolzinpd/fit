@@ -759,7 +759,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
    flex-колонки и физически не может «уехать», в отличие от sticky в растущем
    контейнере (sticky «плавает» вместе с высотой контейнера, а не вьюпорта). */
 .today-voice-home.chat-open { min-height:0; overflow:hidden; }
-.chat-open .chat-thread { flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; justify-content:flex-end; }
+.chat-open .chat-thread { flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.chat-thread-spacer { flex:1 1 auto; margin-top:auto; }
 .chat-open .chat-bar { flex:0 0 auto; padding-top:10px; }
 .today-greeting { margin:2px 0 0; color:var(--text); font-size:15px; line-height:1.35; }
 .voice-action { display:grid; justify-items:center; gap:14px; padding:2px 0 0; text-align:center; }

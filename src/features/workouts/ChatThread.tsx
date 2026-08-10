@@ -43,6 +43,11 @@ export function ChatThread({ messages, items, choices, isRpeVisible, onToggleRpe
   }
 
   return <div className="chat-thread" aria-live="polite">
+    {/* margin-top:auto вместо justify-content:flex-end на самом .chat-thread:
+        flex-end + overflow-y:auto в некоторых браузерах не даёт нормально
+        проскроллить контент, выходящий за верхнюю границу (виден баг, но
+        недоступен через scrollTop) — сообщения «протекали» поверх шапки. */}
+    <div className="chat-thread-spacer" aria-hidden="true" />
     {messages.map((message) => {
       if (message.kind === 'thinking') return <div className="chat-thinking" key={message.id}><span /><span /><span /></div>
 
