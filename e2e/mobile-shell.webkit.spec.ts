@@ -145,6 +145,36 @@ test('iPhone: в live клиент видит те же действия с тр
   await expect(page.getByRole('button', { name: '＋ Ещё упражнение' })).toBeInViewport()
   await page.getByRole('button', { name: 'Ещё действия' }).click()
   await expect(page.getByRole('menuitem', { name: 'Заменить' })).toBeVisible()
+
+  // Второй план не должен молча заменить первую незавершённую тренировку.
+  // Пользователь остаётся на выбранном плане, пока явно не согласится открыть
+  // уже идущую запись; после «Назад» возвращается в её собственную карточку.
+  const activeWorkoutPath = new URL(page.url()).pathname.replace(/\/live$/, '')
+  await page.getByRole('button', { name: 'Назад' }).click()
+  expect(new URL(page.url()).pathname).toBe(activeWorkoutPath)
+  await page.goto('/me/workouts')
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Планка')
+  await page.getByRole('button', { name: /^Планка/ }).first().click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await Promise.all([
+    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Сохранить' }).click(),
+  ])
+  const selectedPlanPath = new URL(page.url()).pathname
+  await page.getByRole('button', { name: 'Начать тренировку' }).click()
+  const recovery = page.getByRole('alertdialog')
+  await expect(recovery).toContainText('уже есть незавершённая тренировка')
+  expect(new URL(page.url()).pathname).toBe(selectedPlanPath)
+  await page.keyboard.press('Escape')
+  await expect(recovery).toHaveCount(0)
+  expect(new URL(page.url()).pathname).toBe(selectedPlanPath)
+  await page.getByRole('button', { name: 'Начать тренировку' }).click()
+  await recovery.getByRole('button', { name: 'Открыть незавершённую' }).click()
+  await expect(page).toHaveURL(new RegExp(`${activeWorkoutPath}/live$`))
+  await page.getByRole('button', { name: 'Назад' }).click()
+  expect(new URL(page.url()).pathname).toBe(activeWorkoutPath)
   await expectNoHorizontalOverflow(page)
 })
 

@@ -418,6 +418,7 @@ export function WorkoutDetailPage() {
   const { actor } = useAuth()
   const showRpe = useRpeDisplay(actor?.userId)
   const [confirm, confirmDialog] = useConfirm()
+  const [askActiveWorkoutRecovery, activeWorkoutRecoveryDialog] = useConfirm()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   useClientRealtime(query.data?.clientId)
   // Этап тренировки: get() отдаёт stageId, название берём из цели клиента.
@@ -426,18 +427,34 @@ export function WorkoutDetailPage() {
   const start = useMutation({
     mutationFn: async () => {
       const active = await workoutsRepository.findActive(query.data!.clientId)
-      if (active && active.id !== workoutId) return active.id
+      if (active && active.id !== workoutId) return { kind: 'active' as const, workout: active }
       await workoutsRepository.start(query.data!)
-      return workoutId
+      return { kind: 'started' as const, workoutId }
     },
-    onSuccess: async (activeWorkoutId) => {
+    onSuccess: async (result) => {
+      if (result.kind === 'active') {
+        const shouldResume = await askActiveWorkoutRecovery({
+          message: `У ${query.data!.clientName} уже есть незавершённая тренировка от ${formatLocalDate(result.workout.workoutDate)}. Откройте её, чтобы продолжить или завершить.`,
+          confirmLabel: 'Открыть незавершённую',
+          cancelLabel: 'Остаться в плане',
+        })
+        if (shouldResume) navigate(`/workouts/${result.workout.id}/live`)
+        return
+      }
       await Promise.all([queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }), queryClient.invalidateQueries({ queryKey: ['clients'] })])
-      navigate(`/workouts/${activeWorkoutId}/live`)
+      navigate(`/workouts/${result.workoutId}/live`)
     },
     onError: async (error) => {
       if (error instanceof Error && 'code' in error && error.code === 'active_workout_exists') {
         const active = await workoutsRepository.findActive(query.data!.clientId)
-        if (active) navigate(`/workouts/${active.id}/live`)
+        if (active) {
+          const shouldResume = await askActiveWorkoutRecovery({
+            message: `У ${query.data!.clientName} уже есть незавершённая тренировка от ${formatLocalDate(active.workoutDate)}. Откройте её, чтобы продолжить или завершить.`,
+            confirmLabel: 'Открыть незавершённую',
+            cancelLabel: 'Остаться в плане',
+          })
+          if (shouldResume) navigate(`/workouts/${active.id}/live`)
+        }
       }
     },
   })
@@ -490,8 +507,8 @@ export function WorkoutDetailPage() {
         <div><h2>{clientMode ? 'Ваша тренировка' : workout.clientName}</h2><p>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</p>{clientMode && authorLabel && <p className="muted">{authorLabel}</p>}{clientAuthoredReadOnly && <p className="card-author">Создано клиентом · только просмотр</p>}{stageTitle && <p className="stage-tag">🎯 {stageTitle}</p>}</div>
         <WorkoutStatusBadge workout={workout} />
       </section>
-      {workout.status === 'planned' && canExecute && <button className="wide" onClick={() => start.mutate()}>Начать тренировку</button>}
-      {start.error && <p className="error">{start.error.message}</p>}
+      {workout.status === 'planned' && canExecute && <button className="wide" disabled={start.isPending} onClick={() => start.mutate()}>Начать тренировку</button>}
+      {start.error && !(start.error instanceof Error && 'code' in start.error && start.error.code === 'active_workout_exists') && <p className="error">{start.error.message}</p>}
       {workout.status === 'in_progress' && canExecute && <Link className="button wide" to={`/workouts/${workoutId}/live`}>Продолжить тренировку</Link>}
       {done && <section className="summary done-summary done-summary-3">
         <div><span>Время</span><strong>{duration ?? '—'}</strong></div>
@@ -523,7 +540,7 @@ export function WorkoutDetailPage() {
       {clientAuthoredReadOnly && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Скопировать и отправить план</Link></div>}
       {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Создать свою копию</Link></div>}
       {remove.error && <p className="error">{remove.error.message}</p>}
-      {confirmDialog}
+      {confirmDialog}{activeWorkoutRecoveryDialog}
     </>}</AsyncView>
   </Page>
 }
