@@ -19,7 +19,9 @@ test('iPhone: trainer review and client comment stay visible to the other side o
 
   const today = new Date().toISOString().slice(0, 10)
   const targetDate = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10)
-  await page.goto(`/clients/${demoClientId}/goal`)
+  // Для SPA достаточно готового DOM. В WebKit ожидание полного load иногда
+  // задерживается фоновым соединением, хотя экран уже доступен пользователю.
+  await page.goto(`/clients/${demoClientId}/goal`, { waitUntil: 'domcontentloaded' })
   await page.getByLabel('Цель').fill('Вернуться к бегу')
   await page.getByLabel('Дата достижения').fill(targetDate)
   await page.getByRole('button', { name: 'Создать цель' }).click()

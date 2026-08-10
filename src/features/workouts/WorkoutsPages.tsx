@@ -741,6 +741,11 @@ export function LiveWorkoutPage() {
   const [askConfirm, confirmDialog] = useConfirm()
   const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
+  // Во время live и тренер, и клиент могут корректировать структуру: добавить
+  // или заменить упражнение, подход и порядок. Серверные live-RPC используют
+  // тот же authorisation путь с разрешённым выполнением для подключённого
+  // клиента; экран не должен скрывать доступные действия по роли.
+  const canManageLiveStructure = Boolean(query.data)
   useEffect(() => {
     // Этот маршрут доступен только после старта тренировки. Включаем нативный
     // keep-awake сразу при входе, не дожидаясь ответа БД со статусом: иначе
@@ -997,7 +1002,7 @@ export function LiveWorkoutPage() {
   // подходов (начатое заменять нельзя — факт относился к старому упражнению).
   // В меню, чтобы редкое действие не конкурировало с подтверждением подхода.
   function exerciseMenu(exercise: WorkoutExercise, canReorder = false, removableSet?: WorkoutSet) {
-    if (clientMode) return null
+    if (!canManageLiveStructure) return null
     const canReplace = !exercise.sets.some((set) => set.confirmedAt)
     const showRpe = isRpeVisible(exercise.id)
     return <OverflowMenu items={[
@@ -1009,7 +1014,7 @@ export function LiveWorkoutPage() {
   }
   // Стрелки ↑/↓ видны только во временном режиме перестановки.
   function liveReorder(blockId: string, isFirst: boolean, isLast: boolean) {
-    if (clientMode || !reordering) return null
+    if (!canManageLiveStructure || !reordering) return null
     return <span className="block-reorder">
       <button type="button" className="reorder-btn" aria-label="Вверх" disabled={isFirst || reorderBlock.isPending} onClick={() => reorderBlock.mutate({ blockId, direction: -1 })}>↑</button>
       <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast || reorderBlock.isPending} onClick={() => reorderBlock.mutate({ blockId, direction: 1 })}>↓</button>
@@ -1140,7 +1145,7 @@ export function LiveWorkoutPage() {
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </WorkoutSetTable>
-              {!clientMode && <button type="button" className="secondary live-add-set" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
+              {canManageLiveStructure && <button type="button" className="secondary live-add-set" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
               {liveCommentField(exercise)}
             </section>
           })
@@ -1156,7 +1161,7 @@ export function LiveWorkoutPage() {
           <div className="circuit-head">
             <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
             <span className="circuit-counter">Круг {rounds[current]?.round ?? 1} из {rounds.length}</span>
-            {!clientMode && canReorder && !reordering && <OverflowMenu items={[{ label: 'Изменить порядок', onClick: () => setReordering(true) }]} />}
+            {canManageLiveStructure && canReorder && !reordering && <OverflowMenu items={[{ label: 'Изменить порядок', onClick: () => setReordering(true) }]} />}
             {reorder}
           </div>
           {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt); return <div className={`circuit-round ${roundDone ? 'done' : roundIndex === current ? 'current' : ''}`} key={round.round}>
@@ -1169,7 +1174,7 @@ export function LiveWorkoutPage() {
           </div> })}
         </div>
       }) })()}
-      {!clientMode && <button type="button" className="secondary wide" onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
+      {canManageLiveStructure && <button type="button" className="secondary wide" onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
       {error && <p className="error">{error.message}</p>}
       {/* Закреплённая нижняя панель: «Завершить» — вторичная, чтобы не
           конкурировать с primary-подтверждением подхода в карточке.
@@ -1187,7 +1192,7 @@ export function LiveWorkoutPage() {
           : <button type="button" className="secondary wide" disabled={finish.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => exercise.sets.some((set) => !set.confirmedAt)); if (incomplete) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</button>}
       </div>
     </>}</AsyncView>
-    {!clientMode && pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} onPick={pickLiveExercise} onClose={closePicker} />}
+    {canManageLiveStructure && pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} onPick={pickLiveExercise} onClose={closePicker} />}
     {confirmDialog}
   </Page>
 }
