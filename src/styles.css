@@ -697,9 +697,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .quick-workout-candidates .secondary { min-height:36px; padding:6px 10px; font-size:14px; }
 .quick-workout-candidates .secondary.selected { border-color:var(--accent); color:var(--accent-strong); background:var(--accent-soft); }
 .quick-workout-all-options { justify-self:start; min-height:32px; padding:3px 0; font-size:14px; color:var(--accent-strong); font-weight:700; }
-.today-page { display:grid; gap:18px; }
+.today-page { display:flex; flex-direction:column; gap:18px; height:100%; min-height:0; }
+.today-page > .today-composer { flex:1 1 auto; min-height:0; }
 .today-clients { min-height:36px; padding:7px 10px; font-size:14px; }
-.today-composer, .today-review { display:grid; gap:14px; }.today-start-page { max-width:720px; margin:0 auto; }.today-start-page .page-header { margin-bottom:10px; }.today-start-page .page-header h1 { font-size:30px; }.today-profile-avatar { display:grid; place-items:center; width:46px; height:46px; border:1px solid var(--border); border-radius:50%; background:var(--accent-surface); color:var(--accent-strong); font-size:15px; font-weight:800; text-decoration:none; }.today-profile-avatar:focus-visible { outline:3px solid var(--accent-ring); outline-offset:2px; }
+.today-composer { display:flex; flex-direction:column; gap:14px; }.today-review { display:grid; gap:14px; }.today-start-page { max-width:720px; margin:0 auto; }.today-start-page .page-header { margin-bottom:10px; }.today-start-page .page-header h1 { font-size:30px; }.today-profile-avatar { display:grid; place-items:center; width:46px; height:46px; border:1px solid var(--border); border-radius:50%; background:var(--accent-surface); color:var(--accent-strong); font-size:15px; font-weight:800; text-decoration:none; }.today-profile-avatar:focus-visible { outline:3px solid var(--accent-ring); outline-offset:2px; }
 .today-hero { padding:12px 0 8px; }.today-hero h1, .today-review h1 { margin:0 0 14px; font-size:clamp(30px, 8.2vw, 36px); line-height:1.08; letter-spacing:-.045em; }.today-hero p:not(.eyebrow) { margin:0; color:var(--text-muted); font-size:19px; line-height:1.38; }
 .eyebrow { margin:0; color:var(--accent-strong); font-size:13px; font-weight:750; letter-spacing:.06em; text-transform:uppercase; }
 .today-composer .workout-composer-card { padding:18px 18px 14px; border-radius:25px; }.today-composer .workout-composer-card .voice-note-field > label { padding-bottom:10px; font-size:17px; }.today-composer .workout-composer-card .voice-note-field textarea { min-height:148px; padding:8px 16px 14px 1px; resize:vertical; font-size:20px; }.today-composer .workout-composer-card .voice-input { min-height:52px; padding:7px 0 7px 18px; }.today-composer .workout-composer-card .voice-input-button { min-height:40px; padding:7px 0; color:var(--accent-strong); font-size:16px; }.today-composer .workout-composer-clear { min-height:52px; }.today-composer .workout-composer-clear .link { min-height:40px; padding:7px 0; font-size:16px; }.today-hint { margin:-5px 0 0; color:var(--text-muted); font-size:13px; }.today-primary-cta { min-height:58px; border-radius:18px; background:#f26b4a; border-color:#f26b4a; box-shadow:none; font-size:20px; }.today-picker-cta { display:grid; justify-items:center; gap:2px; min-height:88px; padding:14px; border-radius:19px; text-align:center; font-size:20px; }.today-picker-cta small { color:var(--text-muted); font-size:15px; font-weight:500; }.today-parse-preview, .today-empty { display:grid; gap:8px; padding:12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); }.today-parse-preview p, .today-unparsed p, .today-empty p { margin:0; }.today-unparsed { display:grid; gap:7px; color:var(--warning-fg); }
@@ -750,7 +751,17 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .set-row.locked input { color: var(--fg-on-surface); -webkit-text-fill-color: var(--fg-on-surface); opacity: 1; font-weight: 700; border-color: var(--success-border); background: var(--success-surface) }
 /* Voice-first Today: recorder/recognizer остаются внутри VoiceInputButton;
    hero-вариант меняет только представление первого экрана. */
-.today-voice-home { min-height:calc(100dvh - 190px); align-content:start; gap:12px; }
+.today-voice-home { justify-content:flex-start; gap:12px; }
+.today-spacer { flex:1 1 auto; }
+.today-voice-home .chat-bar { padding-top:16px; }
+/* Открытая лента — контейнер ровно по высоте доступной области, скроллится
+   только сама лента (.chat-thread); панель ввода — просто последний элемент
+   flex-колонки и физически не может «уехать», в отличие от sticky в растущем
+   контейнере (sticky «плавает» вместе с высотой контейнера, а не вьюпорта). */
+.today-voice-home.chat-open { min-height:0; overflow:hidden; }
+.chat-open .chat-thread { flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.chat-thread-spacer { flex:1 1 auto; margin-top:auto; }
+.chat-open .chat-bar { flex:0 0 auto; padding-top:10px; }
 .today-greeting { margin:2px 0 0; color:var(--text); font-size:15px; line-height:1.35; }
 .voice-action { display:grid; justify-items:center; gap:14px; padding:2px 0 0; text-align:center; }
 .voice-action-copy { min-height:34px; display:grid; align-content:center; gap:8px; }
@@ -1129,9 +1140,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .planned-set-table-head { display:grid; grid-template-columns:28px minmax(0, 1fr) minmax(0, 1fr) 32px; gap:6px }
 .planned-set-table-head > :first-child { text-align:center }
 .planned-set { display:grid; grid-template-columns:28px minmax(0, 1fr) minmax(0, 1fr) 32px; gap:6px }
-.planned-set-input { width:100%; min-width:0; min-height:40px; padding:6px 5px; border:1px solid var(--border); border-radius:9px; background:var(--surface-sunken); color:var(--fg); text-align:center; font-size:14px; font-weight:750; font-variant-numeric:tabular-nums }
+.planned-set-input { width:100%; min-width:0; min-height:52px; padding:6px 5px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); text-align:center; font-size:20px; font-weight:800; font-variant-numeric:tabular-nums }
 .planned-set-input:focus { border-color:var(--accent-focus); box-shadow:0 0 0 3px var(--accent-ring); outline:none }
-.planned-set-rpe { width:100%; min-width:0; min-height:40px; padding:5px 3px; border:1px solid var(--border); border-radius:9px; background:var(--surface-sunken); color:var(--fg); text-align:center; font-size:13px; font-weight:750 }
+.planned-set-rpe { width:100%; min-width:0; min-height:52px; padding:5px 3px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); text-align:center; font-size:16px; font-weight:750 }
 .planned-set-table.rpe-visible .planned-set-table-head,
 .planned-set.rpe-visible { grid-template-columns:28px minmax(0, 1fr) minmax(0, 1fr) 48px 32px; gap:5px }
 .planned-set-remove { min-width:32px; min-height:42px; display:grid; place-items:center; padding:0; font-size:20px; line-height:1 }
@@ -1247,12 +1258,55 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .catalog-system-section summary span { display: grid; gap: 3px }.catalog-system-section summary small { color: var(--muted); font-size: 13px }.catalog-system-section summary b { color: var(--muted); font-size: 18px; font-weight: 400 }.catalog-system-section[open] summary b { transform: rotate(180deg) }
 .catalog-system-section .chips { max-height: 320px; overflow-y: auto; margin: 0; padding: 0 16px 16px; border-top: 1px solid var(--border) }
 .theme-light .catalog-custom-section, .theme-light .catalog-system-section { background: #fffefc }
-.today-exercise { display:grid; }.today-exercise.planned-exercise { padding:10px 0 12px; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none; }.today-exercise-title { display:flex; align-items:center; justify-content:space-between; gap:12px; }.today-exercise-editor { display:grid; gap:7px; padding-top:7px; }.today-exercise-editor summary { color:var(--accent-strong); font-weight:750; cursor:pointer; }.today-exercise-actions { display:flex; align-items:center; gap:12px; }.today-exercise-actions .link { min-height:30px; padding:2px 0; color:var(--muted); font-size:13px; }.today-exercise-actions .link:last-child { color:var(--accent-strong); }.today-set-list { display:grid; gap:0; }.today-set-editor { align-items:center; }.today-set-editor label { display:contents; }.today-set-editor .planned-set-input, .today-set-editor .planned-set-rpe { width:100%; }.today-add-set { justify-self:start; }
+.today-exercise { display:grid; }.today-exercise.planned-exercise { padding:16px; border:1px solid var(--border); border-radius:20px; background:var(--surface-raised); box-shadow:var(--shadow-card); }.today-exercise-title { display:flex; align-items:center; justify-content:space-between; gap:12px; }.today-exercise-editor { display:grid; gap:10px; padding-top:10px; }.today-exercise-editor summary { color:var(--accent-strong); font-weight:750; cursor:pointer; }.today-exercise-actions { display:flex; align-items:center; gap:12px; }.today-exercise-actions .link { min-height:30px; padding:2px 0; color:var(--muted); font-size:13px; }.today-exercise-actions .link:last-child { color:var(--accent-strong); }.today-set-list { display:grid; gap:8px; }.today-set-editor { align-items:center; padding:8px; border-radius:16px; background:var(--surface-sunken); }.today-set-editor label { display:contents; }.today-set-editor .planned-set-input, .today-set-editor .planned-set-rpe { width:100%; }.today-add-set { justify-self:start; }
 .today-parse-error { display:grid; gap:5px; margin:12px 0; padding:12px 14px; border:1px solid var(--warning-border); border-radius:14px; background:var(--warning-surface); color:var(--fg); }.today-parse-error strong { color:var(--warning-fg); }.today-parse-error span { color:var(--muted); font-size:14px; line-height:1.35; }.today-parse-error .link { justify-self:start; min-height:36px; padding:3px 0; color:var(--accent-strong); font-weight:750; }
 .today-empty-parse { display:grid; gap:3px; padding:12px; border:1px solid var(--accent-surface-border); border-radius:12px; background:var(--accent-surface); }.today-empty-parse span { color:var(--text-muted); font-size:14px; }
 .today-llm-status { margin:8px 0 0; font-size:14px; font-weight:650; }.today-llm-status.loading { color:var(--text-muted); }.today-llm-status.success { color:var(--success-fg); }.today-llm-status.error { color:var(--warning-fg); }
 .today-recognized { display:grid; gap:7px; }.today-recognized ul { display:grid; gap:5px; margin:0; padding:0; list-style:none; }.today-recognized li { display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:7px 9px; border-radius:9px; background:var(--accent-surface); color:var(--fg); font-size:14px; }.today-recognized li strong { min-width:0; }.today-recognized li span, .today-recognized small { color:var(--text-muted); font-size:12px; }.today-recognized li span { flex:0 0 auto; white-space:nowrap; }.today-recognized small { display:block; }
 .today-agenda { display:grid; gap:8px; }.today-agenda-head { display:flex; align-items:end; justify-content:space-between; }.today-agenda-head h2 { margin:2px 0 0; font-size:23px; }.today-current-workout, .today-planned-workout { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:9px; padding:12px; border:1px solid var(--border); border-radius:13px; background:var(--surface-raised); color:inherit; text-decoration:none; }.today-current-workout { background:var(--accent-surface); border-color:var(--accent-surface-border); }.today-current-workout span { display:grid; gap:3px; }.today-current-workout small, .today-planned-workout small { color:var(--text-muted); }.today-planned-workout > span { color:var(--accent-strong); font-size:13px; font-weight:750; }.today-planned-workout small { grid-column:2 / -1; font-size:13px; }.today-recent-workouts { display:grid; gap:6px; margin-top:4px; padding-top:12px; border-top:1px solid var(--border); }.today-recent-workouts > p { margin:0; color:var(--text-muted); font-size:13px; font-weight:750; }.today-recent-workout { display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; color:inherit; font-size:14px; text-decoration:none; }.today-recent-workout span, .today-recent-workout small { color:var(--text-muted); }.today-recent-workout small { font-size:12px; }
+/* Чат-лента «Быстрого ввода» (referencing Figma chat mockup, токены — текущие светлые/оранжевые). */
+.chat-thread { display:flex; flex-direction:column; gap:14px; padding:4px 0 8px; }
+.chat-turn { display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
+.chat-turn .today-exercise.planned-exercise { align-self:stretch; }
+.chat-bubble { position:relative; max-width:82%; padding:12px 34px 12px 15px; border-radius:20px 20px 4px 20px; background:var(--accent, #f26b4a); color:#fff; font-size:15px; line-height:1.42; white-space:pre-line; }
+.chat-bubble-edit { position:absolute; right:8px; bottom:7px; width:22px; height:22px; padding:0; display:grid; place-items:center; border:0; border-radius:50%; background:rgba(255,255,255,.22); color:#fff; }
+.chat-bubble-edit svg { width:13px; height:13px; }
+.chat-bubble-editing { width:100%; max-width:100%; padding:10px; background:var(--surface-sunken); color:var(--fg); border-radius:16px; }
+.chat-bubble-editing textarea { width:100%; min-height:56px; padding:0; border:0; background:transparent; color:inherit; font:inherit; resize:vertical; outline:none; }
+.chat-bubble-edit-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }
+.chat-bubble-edit-actions button { min-height:32px; padding:5px 12px; border:0; border-radius:9px; background:var(--surface-raised); color:var(--fg); font-size:13px; font-weight:700; }
+.chat-bubble-edit-actions button.ok { background:var(--accent); color:#fff; }
+.chat-thinking { align-self:flex-start; display:flex; align-items:center; gap:5px; padding:14px 16px; border-radius:20px 20px 20px 4px; background:var(--surface-raised); }
+.chat-thinking span { width:7px; height:7px; border-radius:50%; background:var(--muted); animation:chat-thinking-bounce 1.1s ease-in-out infinite; }
+.chat-thinking span:nth-child(2) { animation-delay:.15s; }
+.chat-thinking span:nth-child(3) { animation-delay:.3s; }
+@keyframes chat-thinking-bounce { 0%, 60%, 100% { transform:translateY(0); opacity:.5; } 30% { transform:translateY(-4px); opacity:1; } }
+.chat-clarification { align-self:stretch; display:grid; gap:7px; padding:14px 16px; border:1px solid var(--warning-border); border-radius:18px; background:var(--warning-surface); }
+.chat-clarification strong { color:var(--warning-fg); }
+.chat-clarification p { margin:0; color:var(--muted); font-size:13.5px; line-height:1.4; }
+.chat-bar { position:relative; display:flex; align-items:center; gap:8px; padding:8px 0 calc(8px + env(safe-area-inset-bottom)); }
+.chat-bar-field { flex:1; min-width:0; display:flex; align-items:center; gap:4px; height:50px; padding:0 4px 0 18px; border-radius:25px; background:var(--surface-raised); box-shadow:var(--shadow-card); }
+.chat-bar-field input { flex:1; min-width:0; height:100%; padding:0; border:0; background:transparent; color:var(--fg); font-size:16px; }
+.chat-bar-field input:focus { outline:none; }
+.chat-bar-mic .voice-input { display:contents; }
+.chat-bar-mic .voice-input-button { min-height:40px; width:40px; padding:0; border:0; border-radius:50%; background:transparent; color:var(--accent-strong); font-size:0; }
+.chat-bar-mic .voice-input-button svg { width:20px; height:20px; }
+.chat-bar-mic .voice-input-button.recording { background:var(--danger-surface); color:var(--danger); }
+.chat-bar-mic .voice-input-status, .chat-bar-mic small { position:absolute; right:0; bottom:calc(100% + 6px); max-width:260px; padding:6px 10px; border-radius:10px; background:var(--surface-elevated); box-shadow:var(--shadow-card); font-size:12px; white-space:normal; }
+.chat-bar-plus, .chat-bar-send { flex:0 0 auto; width:50px; height:50px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; color:#fff; background:var(--accent); box-shadow:var(--shadow-card); transition:transform .15s ease; }
+.chat-bar-plus { background:var(--surface-raised); color:var(--fg); }
+.chat-bar-plus.open { transform:rotate(45deg); }
+.chat-bar-menu { position:absolute; right:0; bottom:calc(100% + 10px); z-index:20; width:230px; overflow:hidden; border:1px solid var(--border); border-radius:16px; background:var(--surface-elevated); box-shadow:0 18px 44px #00000024; }
+.chat-bar-menu-item { display:block; width:100%; padding:13px 15px; border:0; border-bottom:1px solid var(--border); background:none; color:var(--fg); font-size:14.5px; text-align:left; }
+.chat-bar-menu-item:last-child { border-bottom:0; color:var(--accent-strong); font-weight:700; }
+.chat-bar-menu-item.danger { color:var(--danger); }
+.chat-bar-menu-item:disabled { opacity:.45; }
+.today-tip { display:grid; gap:5px; justify-items:start; min-height:64px; padding:12px 18px; border:1px solid var(--border); border-radius:20px; background:var(--surface-raised); text-align:left; }
+.today-tip small { color:var(--muted); font-size:12px; }
+.today-tip-text { color:var(--fg); font-size:14.5px; line-height:1.4; transition:opacity .22s ease, transform .22s ease; }
+.today-tip-text.out { opacity:0; transform:translateY(-6px); }
+@media (prefers-reduced-motion:reduce) { .today-tip-text { transition:none; } }
+
 /* Старт — утилитарный экран: обычный iOS-tabbar вплотную к низу, без плавающей
    капсулы и перекрытия поля. На клавиатуре он скрывается через VisualViewport. */
 .today-start-shell .tab-bar { left:50%; bottom:0; width:min(100%, 440px); transform:translateX(-50%); border:0; border-top:1px solid var(--border); border-radius:0; box-shadow:none; }.today-start-shell .content { padding-bottom:calc(86px + env(safe-area-inset-bottom)); }.today-start-shell.keyboard-open .tab-bar { display:none; }.today-start-shell.keyboard-open .content { padding-bottom:20px; }
