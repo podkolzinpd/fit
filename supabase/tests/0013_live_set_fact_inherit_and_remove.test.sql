@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(6);
+select plan(8);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('50000000-0000-4000-8000-000000000013', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'live13@example.test', '');
@@ -41,6 +41,11 @@ select is(
   (select plan_reps from public.workout_sets where workout_exercise_id = 'e0000000-0000-4000-8000-000000000013' and position = 1),
   8, 'новый подход наследует фактические повторы предыдущего'
 );
+select is(
+  (select updated_by from public.workout_sets where workout_exercise_id = 'e0000000-0000-4000-8000-000000000013' and position = 1),
+  '50000000-0000-4000-8000-000000000013'::uuid,
+  'append_live_set stamps the new set with updated_by'
+);
 
 -- remove_live_set удаляет второй подход и оставляет один, версия бампится снова.
 select is(public.remove_live_set(
@@ -49,6 +54,11 @@ select is(public.remove_live_set(
 select is(
   (select count(*) from public.workout_sets where workout_exercise_id = 'e0000000-0000-4000-8000-000000000013'),
   1::bigint, 'после удаления остаётся один подход'
+);
+select is(
+  (select updated_by from public.workouts where id = 'd0000000-0000-4000-8000-000000000013'),
+  '50000000-0000-4000-8000-000000000013'::uuid,
+  'remove_live_set stamps the parent workout with updated_by'
 );
 
 -- Последний подход удалить нельзя.

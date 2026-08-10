@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(7);
+select plan(8);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('50000000-0000-4000-8000-000000000009', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'reorder-a@example.test', ''),
@@ -47,6 +47,10 @@ select is(
 select is(
   (select version from public.workouts where id = 'd0000000-0000-4000-8000-000000000009'),
   2::bigint, 'version bumped to 2'
+);
+select is(
+  (select count(*) from public.workout_exercises where workout_id = 'd0000000-0000-4000-8000-000000000009' and updated_by = '50000000-0000-4000-8000-000000000009'::uuid),
+  3::bigint, 'reorder_live_block stamps every renumbered exercise with updated_by'
 );
 
 -- Граница: двигать B вверх, когда он уже первый — тихий no-op, версия растёт.
