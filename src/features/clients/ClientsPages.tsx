@@ -222,10 +222,10 @@ function ClientGoalBlock({ client }: { client: Client }) {
     const progress = stageProgress(goal, today)
     return <section className="goal-block">
       <div className="goal-head"><h2>Цель</h2><Link className="link" to={`/clients/${client.id}/goal`}>Открыть →</Link></div>
-      <p>{goal.title}</p>
-      {goal.targetDate && <p className="muted">До {formatLocalDateShort(localDate(goal.targetDate))}{days !== null ? ` · ${targetHint(days)}` : ''}</p>}
+      <p className="goal-title">{goal.title}</p>
+      {goal.targetDate && <p className="goal-deadline">До {formatLocalDateShort(localDate(goal.targetDate))}{days !== null ? ` · ${targetHint(days)}` : ''}</p>}
       {progress && progress.total > 0 && <p className="goal-stage-line">
-        {stage ? `Этап ${progress.index} из ${progress.total} · «${stage.title}»` : `${progress.total} ${progress.total === 1 ? 'этап' : 'этапа'}, между периодами`}
+        {stage ? <><span>Этап {progress.index} из {progress.total}</span><span className="goal-stage-title">«{stage.title}»</span></> : <span>{progress.total} {progress.total === 1 ? 'этап' : 'этапа'}, между периодами</span>}
       </p>}
     </section>
   }
@@ -287,7 +287,6 @@ export function ClientDetailPage() {
   const [confirm, confirmDialog] = useConfirm()
   return <Page title={query.data?.fullName ?? 'Клиент'} className="client-detail-page" back="/clients" action={query.data && <Link className="button secondary" to={`/clients/${clientId}/edit`}>Редактировать профиль</Link>}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
-      <section className="client-detail-overview"><p className="eyebrow">ПРОФИЛЬ СПОРТСМЕНА</p><p>{query.data.goal || 'Цель ещё не задана — добавьте её, чтобы держать фокус тренировок.'}</p></section>
       <section className="summary client-detail-summary"><div><span>Возраст</span><strong>{query.data.ageYears ?? '—'}</strong></div><div><span>Рост</span><strong>{query.data.heightCm ? `${query.data.heightCm} см` : '—'}</strong></div><div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div></section>
       {stats.data && <>
         {stats.data.needsAttention && <p className="attention">⚠ Давно не тренировался</p>}

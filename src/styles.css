@@ -183,10 +183,9 @@ h2 { margin: 24px 0 12px; font-size: var(--text-section); font-weight: var(--wei
 h3 { font-size: var(--text-body); font-weight: var(--weight-semibold); line-height: var(--leading-snug) }
 p { margin: 6px 0 }
 .phone-frame { width: min(calc(100% - 32px), 440px); height: calc(100dvh - 32px); min-height: 0; margin: 16px auto; overflow: hidden; background: var(--frame-bg, radial-gradient(circle at 86% -12%, #3a2418 0, transparent 36%), linear-gradient(180deg, #1d1a24, #17151c)); display: flex; flex-direction: column; border: 1px solid var(--frame-border, #3a3544); border-radius: 26px; box-shadow: 0 18px 54px #17131f2b }
-.content { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-top: env(safe-area-inset-top); padding-bottom: 94px; scrollbar-width: none }.content::-webkit-scrollbar { display: none }
-/* Safe-area принадлежит прокручиваемому контейнеру .content: она не уезжает
-   под статус-бар iPhone. У страницы остаётся компактный отступ, на десктопе —
-   30px. */
+.content { flex: 1; min-height: 0; margin-top: env(safe-area-inset-top); overflow-y: auto; overflow-x: hidden; padding-bottom: 94px; scrollbar-width: none }.content::-webkit-scrollbar { display: none }
+/* Верхняя safe-area находится снаружи scroll-container: при прокрутке она не
+   уезжает, и контент не оказывается под статус-баром iPhone. */
 .page { padding: 12px 18px 24px }
 @media (min-width: 481px) { .page { padding-top: 30px } }
 .page-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; container-type: inline-size }
@@ -363,14 +362,11 @@ p { margin: 6px 0 }
 /* Карточка спортсмена использует ту же типографику и компактную сетку, что
    клиентские корневые экраны. Имя занимает отдельную строку: редактирование и
    кнопка назад больше не сжимают длинный заголовок на 390 px. */
-.client-detail-page { padding: max(38px, calc(env(safe-area-inset-top) + 16px)) 20px 28px }
+.client-detail-page { padding: max(16px, calc(38px - env(safe-area-inset-top))) 20px 28px }
 .client-detail-page .page-header { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 11px; margin-bottom: 18px }
 .client-detail-page .page-header .page-back { grid-column: 1; grid-row: 1 }
 .client-detail-page .page-header .button { grid-column: 3; grid-row: 1; min-height: 44px; max-width: none; padding: 9px 12px; border-radius: 14px; line-height: 1.15 }
 .client-detail-page .page-header h1 { grid-column: 1 / -1; grid-row: 2; padding: 0; font-size: clamp(29px, 8.2vw, 34px); line-height: 1.06 }
-.client-detail-overview { display: grid; gap: 5px; margin: 0 0 12px; padding: 15px 16px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
-.client-detail-overview .eyebrow { margin: 0; color: var(--accent-strong) }
-.client-detail-overview > p:last-child { margin: 0; color: var(--fg); font-size: 16px; font-weight: var(--weight-medium); line-height: 1.38 }
 .client-detail-summary, .client-detail-stats { gap: 1px; overflow: hidden; border: 1px solid var(--border); border-radius: 18px; background: var(--border) }
 .client-detail-summary { margin-bottom: 9px }
 .client-detail-summary div, .client-detail-stats div { min-height: 68px; justify-content: center; padding: 10px 5px; border: 0; border-radius: 0; box-shadow: none }
@@ -386,6 +382,10 @@ p { margin: 6px 0 }
 .client-detail-page .goal-head h2 { margin: 0; font-size: 21px; line-height: 1.16 }
 .client-detail-page .goal-head .link { min-height: 36px; padding: 6px 2px; color: var(--accent-strong); font-size: 14px; font-weight: var(--weight-semibold) }
 .client-detail-page .goal-block > p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.42 }
+.client-detail-page .goal-block > .goal-title { color: var(--fg); font-size: 16px; font-weight: var(--weight-medium); line-height: 1.38 }
+.client-detail-page .goal-block > .goal-deadline { font-size: 14px; line-height: 1.35 }
+.client-detail-page .goal-stage-line { display: flex; flex-wrap: wrap; gap: 3px 6px; color: var(--muted); font-size: 14px; font-weight: var(--weight-medium); line-height: 1.35 }
+.client-detail-page .goal-stage-title { color: var(--fg); font-weight: var(--weight-semibold) }
 .client-detail-page .goal-stages-hint { margin-top: 7px; padding: 12px; border-radius: 14px; background: var(--surface-sunken) }
 .client-detail-upcoming { display: grid; gap: 7px; margin-top: 18px }
 .client-detail-upcoming .eyebrow, .client-detail-upcoming h2 { margin: 0 }
@@ -706,7 +706,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .today-clarification { display:grid; gap:3px; padding:2px 1px 8px; color:var(--text); }.today-clarification p { margin:0; color:var(--text-muted); font-size:14px; line-height:1.35; }
 .today-review-head { display:grid; gap:8px; padding:4px 0 2px; }.today-review h1 { max-width:300px; margin:0; font-size:clamp(28px, 7.6vw, 33px); }.today-review-summary { margin:5px 0 0; color:var(--accent-strong); font-size:14px; font-weight:750; }.today-review-back { justify-self:start; min-height:32px; padding:2px 0; color:var(--muted); font-size:14px; font-weight:700; }.today-exercise-list { display:grid; gap:10px; }.today-exercise { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px; border:1px solid var(--border); border-radius:20px; background:var(--surface-raised); box-shadow:var(--shadow-card); }.today-exercise strong { display:block; }.today-exercise p { margin:4px 0 0; color:var(--muted); font-size:14px; }.today-exercise p.today-exercise-missing { color:var(--warning-fg); font-weight:700; }.today-exercise .icon-button { flex:0 0 auto; width:38px; height:38px; padding:0; border:1px solid var(--danger-border); border-radius:50%; background:var(--danger-surface); color:var(--danger); box-shadow:none; font-size:24px; line-height:1; }.today-exercise-empty { gap:12px; padding:16px; border-radius:18px; }.today-exercise-empty p { color:var(--muted); font-size:15px; line-height:1.4; }.today-exercise-empty .wide { margin:0; min-height:48px; }.today-client { display:grid; gap:7px; font-weight:700; }.today-client select { width:100%; }.today-new-client { justify-self:start; min-height:34px; padding:3px 0; color:var(--accent-strong); font-size:14px; font-weight:700; }.today-no-client { margin:0; color:var(--warning-fg); font-size:14px; }.today-quick-client { display:grid; gap:9px; padding:14px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:var(--shadow-card); }.today-quick-client-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }.today-quick-client-head .link { min-height:32px; padding:3px 0; color:var(--muted); font-size:14px; }.today-quick-client p { margin:0; color:var(--muted); font-size:14px; }.today-quick-client-form { display:flex; gap:8px; }.today-quick-client-form input { min-width:0; flex:1; }.today-quick-client-form .secondary { flex:0 0 auto; min-height:42px; padding:8px 12px; }.today-save-actions { display:grid; gap:10px; }.today-save-actions .wide { position:sticky; bottom:calc(76px + env(safe-area-inset-bottom)); z-index:4; margin:0; min-height:50px; box-shadow:0 8px 20px var(--accent-shadow); }.today-start-shell.keyboard-open .today-save-actions .wide { position:static; }.today-record-mode { display:grid; grid-template-columns:1fr 1fr; gap:3px; padding:3px; border:1px solid var(--border); border-radius:13px; background:var(--surface); }.today-record-mode button { min-height:42px; padding:8px 10px; border:0; border-radius:10px; background:transparent; color:var(--muted); box-shadow:none; font-weight:700; }.today-record-mode button.active { background:var(--surface-raised); color:var(--fg); box-shadow:0 1px 4px #17191d14; }.today-date-field { display:grid; gap:6px; font-size:14px; font-weight:700; }.today-date-field span { color:var(--muted); }.today-date-field input { min-width:0; width:100%; }
 /* Review-экран: сохранение остаётся частью формы, не плавает над контентом. */
-.today-start-page { padding-top:max(34px, calc(env(safe-area-inset-top) + 16px)); }
+.today-start-page { padding-top: max(16px, calc(34px - env(safe-area-inset-top))); }
 .today-start-page .page-header { margin-bottom:6px; }
 .today-start-page .page-header h1 { font-size:clamp(28px, 7.6vw, 32px); }
 .today-profile-avatar { width:44px; height:44px; }
@@ -1178,7 +1178,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 
 /* Клиентские корневые вкладки используют одну компактную сетку. Это не меняет
    данные и сценарии: только приводит визуальную иерархию к канону Fit. */
-.client-workouts-page, .client-progress-page, .client-profile-page { padding: max(38px, calc(env(safe-area-inset-top) + 16px)) 20px 28px; }
+.client-workouts-page, .client-progress-page, .client-profile-page { padding: max(16px, calc(38px - env(safe-area-inset-top))) 20px 28px; }
 .client-workouts-page .page-header, .client-progress-page .page-header, .client-profile-page .page-header { margin-bottom: 20px; }
 .client-workouts-page .page-header h1, .client-progress-page .page-header h1, .client-profile-page .page-header h1 { font-size: clamp(27px, 7.4vw, 31px); }
 .client-workouts-page .page-header .button { min-height: 44px; padding: 10px 14px; border-radius: 14px; }

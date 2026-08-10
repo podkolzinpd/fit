@@ -302,6 +302,7 @@ for (const viewport of mobileViewports) {
       if (screen.includes('11111111')) {
         await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()
         await expect(page.getByRole('link', { name: 'Редактировать профиль' })).toBeVisible()
+        await expect(page.locator('.client-detail-overview')).toHaveCount(0)
       }
       await expectNoHorizontalOverflow(page)
     }
