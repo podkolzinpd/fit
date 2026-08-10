@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(8);
+select plan(9);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('50000000-0000-4000-8000-00000000000b', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'replace-a@example.test', ''),
@@ -54,6 +54,11 @@ select is(
 select is(
   (select version from public.workouts where id = 'd0000000-0000-4000-8000-00000000000b'),
   2::bigint, 'version bumped'
+);
+select is(
+  (select updated_by from public.workout_exercises where id = 'a0000000-0000-4000-8000-00000000000b'),
+  '50000000-0000-4000-8000-00000000000b'::uuid,
+  'replace_live_exercise stamps the replaced exercise with updated_by'
 );
 
 -- Начатое упражнение (B) заменять нельзя.
