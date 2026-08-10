@@ -12,7 +12,17 @@ export function repositoryError(error: unknown): RepositoryError {
   const candidate = error as { code?: unknown; message?: unknown }
   const code = typeof candidate.code === 'string' ? candidate.code : 'database_error'
   const message = typeof candidate.message === 'string' ? candidate.message : ''
+  const normalizedCode = code.toLocaleLowerCase('en')
   const normalizedMessage = message.toLocaleLowerCase('en')
+  if (normalizedCode === 'invalid_credentials' || normalizedMessage.includes('invalid login credentials')) {
+    return new RepositoryError('invalid_credentials', 'Неверный email или пароль. Проверьте данные и повторите попытку.')
+  }
+  if (normalizedCode.includes('rate_limit') || normalizedMessage.includes('too many requests')) {
+    return new RepositoryError('rate_limited', 'Слишком много попыток. Подождите немного и повторите.')
+  }
+  if (normalizedCode === 'email_not_confirmed') {
+    return new RepositoryError('email_not_confirmed', 'Подтвердите email по ссылке из письма и повторите попытку.')
+  }
   if (normalizedMessage.includes('workout_sets_rpe_valid')) {
     return new RepositoryError(code, 'В одном из подходов указано некорректное RPE. Выберите значение от 6 до 10 с шагом 0,5.')
   }

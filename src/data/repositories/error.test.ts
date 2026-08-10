@@ -31,6 +31,17 @@ describe('repositoryError', () => {
     expect(error.message).toBe('Приглашение недействительно или срок его действия истёк. Попросите новый код.')
   })
 
+  it.each([
+    [{ code: 'invalid_credentials', message: 'Invalid login credentials' }, 'invalid_credentials', 'Неверный email или пароль. Проверьте данные и повторите попытку.'],
+    [{ code: 'over_request_rate_limit', message: 'Too many requests' }, 'rate_limited', 'Слишком много попыток. Подождите немного и повторите.'],
+    [{ code: 'email_not_confirmed', message: 'Email not confirmed' }, 'email_not_confirmed', 'Подтвердите email по ссылке из письма и повторите попытку.'],
+  ])('maps safe auth feedback without exposing service details', (source, code, message) => {
+    const error = repositoryError(source)
+
+    expect(error.code).toBe(code)
+    expect(error.message).toBe(message)
+  })
+
   it('explains the RPE database constraint in Russian', () => {
     const error = repositoryError({ code: '23514', message: 'new row for relation "workout_sets" violates check constraint "workout_sets_rpe_valid"' })
 
