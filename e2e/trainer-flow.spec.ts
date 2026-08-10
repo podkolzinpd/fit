@@ -75,7 +75,6 @@ test('стартовый экран показывает точный резул
 
   await page.goto('/today')
   await mockWorkoutParser(page, [{ sourceText: 'Жим гантелей на наклон 3×8 24 кг', exerciseRef: 'fedb-incline-dumbbell-press', confidence: 1, sets: [{ weightKg: 24, reps: 8 }, { weightKg: 24, reps: 8 }, { weightKg: 24, reps: 8 }] }])
-  await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await page.getByLabel('Сообщение о тренировке').fill('Жим гантелей на наклон 3×8 24 кг')
   await page.getByLabel('Сообщение о тренировке').press('Enter')
   await expect(page.getByText('Жим гантелей на наклонной')).toBeVisible()

@@ -697,9 +697,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .quick-workout-candidates .secondary { min-height:36px; padding:6px 10px; font-size:14px; }
 .quick-workout-candidates .secondary.selected { border-color:var(--accent); color:var(--accent-strong); background:var(--accent-soft); }
 .quick-workout-all-options { justify-self:start; min-height:32px; padding:3px 0; font-size:14px; color:var(--accent-strong); font-weight:700; }
-.today-page { display:grid; gap:18px; }
+.today-page { display:flex; flex-direction:column; gap:18px; height:100%; min-height:0; }
+.today-page > .today-composer { flex:1 1 auto; min-height:0; }
 .today-clients { min-height:36px; padding:7px 10px; font-size:14px; }
-.today-composer, .today-review { display:grid; gap:14px; }.today-start-page { max-width:720px; margin:0 auto; }.today-start-page .page-header { margin-bottom:10px; }.today-start-page .page-header h1 { font-size:30px; }.today-profile-avatar { display:grid; place-items:center; width:46px; height:46px; border:1px solid var(--border); border-radius:50%; background:var(--accent-surface); color:var(--accent-strong); font-size:15px; font-weight:800; text-decoration:none; }.today-profile-avatar:focus-visible { outline:3px solid var(--accent-ring); outline-offset:2px; }
+.today-composer { display:flex; flex-direction:column; gap:14px; }.today-review { display:grid; gap:14px; }.today-start-page { max-width:720px; margin:0 auto; }.today-start-page .page-header { margin-bottom:10px; }.today-start-page .page-header h1 { font-size:30px; }.today-profile-avatar { display:grid; place-items:center; width:46px; height:46px; border:1px solid var(--border); border-radius:50%; background:var(--accent-surface); color:var(--accent-strong); font-size:15px; font-weight:800; text-decoration:none; }.today-profile-avatar:focus-visible { outline:3px solid var(--accent-ring); outline-offset:2px; }
 .today-hero { padding:12px 0 8px; }.today-hero h1, .today-review h1 { margin:0 0 14px; font-size:clamp(30px, 8.2vw, 36px); line-height:1.08; letter-spacing:-.045em; }.today-hero p:not(.eyebrow) { margin:0; color:var(--text-muted); font-size:19px; line-height:1.38; }
 .eyebrow { margin:0; color:var(--accent-strong); font-size:13px; font-weight:750; letter-spacing:.06em; text-transform:uppercase; }
 .today-composer .workout-composer-card { padding:18px 18px 14px; border-radius:25px; }.today-composer .workout-composer-card .voice-note-field > label { padding-bottom:10px; font-size:17px; }.today-composer .workout-composer-card .voice-note-field textarea { min-height:148px; padding:8px 16px 14px 1px; resize:vertical; font-size:20px; }.today-composer .workout-composer-card .voice-input { min-height:52px; padding:7px 0 7px 18px; }.today-composer .workout-composer-card .voice-input-button { min-height:40px; padding:7px 0; color:var(--accent-strong); font-size:16px; }.today-composer .workout-composer-clear { min-height:52px; }.today-composer .workout-composer-clear .link { min-height:40px; padding:7px 0; font-size:16px; }.today-hint { margin:-5px 0 0; color:var(--text-muted); font-size:13px; }.today-primary-cta { min-height:58px; border-radius:18px; background:#f26b4a; border-color:#f26b4a; box-shadow:none; font-size:20px; }.today-picker-cta { display:grid; justify-items:center; gap:2px; min-height:88px; padding:14px; border-radius:19px; text-align:center; font-size:20px; }.today-picker-cta small { color:var(--text-muted); font-size:15px; font-weight:500; }.today-parse-preview, .today-empty { display:grid; gap:8px; padding:12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); }.today-parse-preview p, .today-unparsed p, .today-empty p { margin:0; }.today-unparsed { display:grid; gap:7px; color:var(--warning-fg); }
@@ -750,7 +751,16 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .set-row.locked input { color: var(--fg-on-surface); -webkit-text-fill-color: var(--fg-on-surface); opacity: 1; font-weight: 700; border-color: var(--success-border); background: var(--success-surface) }
 /* Voice-first Today: recorder/recognizer остаются внутри VoiceInputButton;
    hero-вариант меняет только представление первого экрана. */
-.today-voice-home { min-height:calc(100dvh - 190px); align-content:start; gap:12px; }
+.today-voice-home { justify-content:flex-start; gap:12px; }
+.today-spacer { flex:1 1 auto; }
+.today-voice-home .chat-bar { padding-top:16px; }
+/* Открытая лента — контейнер ровно по высоте доступной области, скроллится
+   только сама лента (.chat-thread); панель ввода — просто последний элемент
+   flex-колонки и физически не может «уехать», в отличие от sticky в растущем
+   контейнере (sticky «плавает» вместе с высотой контейнера, а не вьюпорта). */
+.today-voice-home.chat-open { min-height:0; overflow:hidden; }
+.chat-open .chat-thread { flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; justify-content:flex-end; }
+.chat-open .chat-bar { flex:0 0 auto; padding-top:10px; }
 .today-greeting { margin:2px 0 0; color:var(--text); font-size:15px; line-height:1.35; }
 .voice-action { display:grid; justify-items:center; gap:14px; padding:2px 0 0; text-align:center; }
 .voice-action-copy { min-height:34px; display:grid; align-content:center; gap:8px; }
@@ -1290,6 +1300,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .chat-bar-menu-item:last-child { border-bottom:0; color:var(--accent-strong); font-weight:700; }
 .chat-bar-menu-item.danger { color:var(--danger); }
 .chat-bar-menu-item:disabled { opacity:.45; }
+.today-tip { display:grid; gap:5px; justify-items:start; min-height:64px; padding:12px 18px; border:1px solid var(--border); border-radius:20px; background:var(--surface-raised); text-align:left; }
+.today-tip small { color:var(--muted); font-size:12px; }
+.today-tip-text { color:var(--fg); font-size:14.5px; line-height:1.4; transition:opacity .22s ease, transform .22s ease; }
+.today-tip-text.out { opacity:0; transform:translateY(-6px); }
+@media (prefers-reduced-motion:reduce) { .today-tip-text { transition:none; } }
 
 /* Старт — утилитарный экран: обычный iOS-tabbar вплотную к низу, без плавающей
    капсулы и перекрытия поля. На клавиатуре он скрывается через VisualViewport. */

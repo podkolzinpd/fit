@@ -45,3 +45,8 @@ export function PlusIcon(props: IconProps) {
 export function SendIcon(props: IconProps) {
   return <Icon {...props}><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
 }
+
+/** Нейтральный значок ассистента (не микрофон) — для декоративного hero-круга на пустом экране чата. */
+export function AssistantIcon(props: IconProps) {
+  return <Icon {...props}><path d="M12 3.5l1.7 4.1 4.1 1.7-4.1 1.7L12 15l-1.7-4-4.1-1.7 4.1-1.7L12 3.5Z" /><path d="M18.5 14.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1Z" /></Icon>
+}

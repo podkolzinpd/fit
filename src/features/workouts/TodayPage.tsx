@@ -19,11 +19,13 @@ import type { WorkoutParseResponse } from '../../data/repositories/exercises.rep
 import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
 import { workoutDateForRecordMode, type WorkoutRecordMode } from './workout-entry-rules'
 import { VoiceInputButton, type VoiceInputPhase } from '../voice-input'
+import { AssistantIcon } from '../../shared/icons'
 import { workoutParseErrorKind } from './WorkoutParseErrorNotice'
 import { WearableHealthCard } from '../wearables'
 import { isWearablesPilotEnabled } from '../../app/feature-flags'
 import { currentStage } from '../../shared/goal-rules'
 import { ChatThread } from './ChatThread'
+import { TipCarousel } from './TipCarousel'
 import { ChatComposerBar } from './ChatComposerBar'
 import type { ChatMessage } from './chat-types'
 
@@ -398,19 +400,17 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const contextCard = contextWorkout && contextTitle && <section className="today-context"><p>{contextTitle}</p><Link to={currentWorkout ? `/workouts/${contextWorkout.id}/live` : `/workouts/${contextWorkout.id}`}><span><strong>{clientMode ? 'Ваша тренировка' : contextWorkout.clientName}</strong><small>{contextWorkout.workoutDate === today ? `Сегодня, ${workoutTime(contextWorkout)}` : contextWorkout.workoutDate}</small></span><span><strong>{contextWorkout.exercises.length ? contextWorkout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Тренировка'}</strong><small>{contextWorkout.exercises.length} упражнений</small></span><b>›</b></Link></section>
   const activeGoalStage = goal.data ? currentStage(goal.data, today) : null
   const goalCard = clientMode && goal.data && <section className="today-context today-goal-context"><p>ВАШ ФОКУС</p><Link to="/me/progress"><span><strong>{goal.data.title}</strong><small>{activeGoalStage ? `Текущий этап: ${activeGoalStage.title}` : 'Этап пока не задан'}</small></span><b>›</b></Link></section>
-  const greetingName = clientMode ? mine.data?.fullName || actor?.firstName || 'спортсмен' : actor?.firstName || 'тренер'
-  const greeting = `${new Date().getHours() < 12 ? 'Доброе утро' : new Date().getHours() < 18 ? 'Добрый день' : 'Добрый вечер'}, ${greetingName}`
-
   return <Page title="Сегодня" className="today-page today-start-page" action={<Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}>
-    {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase}`}>
-      {!textComposerOpen ? <>
-        <p className="today-greeting">{greeting} 👋</p>
-        <VoiceInputButton variant="hero" source="today_workout" idleLabel="Надиктовать тренировку" onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }} onPhaseChange={setVoicePhase} onTranscript={(transcript) => { sendChatMessage(transcript); return undefined }} />
-        {voicePhase === 'idle' && <button type="button" className="link today-text-toggle" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}>Ввести текстом</button>}
+    {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase} ${textComposerOpen ? 'chat-open' : ''}`}>
+      {!textComposerOpen && <>
+        <VoiceInputButton variant="hero" source="today_workout" idleLabel="Надиктовать тренировку" idleHeading="Чем могу тебе помочь?" idleIcon={<AssistantIcon />} hideIdleLabel onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }} onPhaseChange={setVoicePhase} onTranscript={(transcript) => { sendChatMessage(transcript); return undefined }} />
+        <div className="today-spacer" aria-hidden="true" />
+        {voicePhase === 'idle' && <TipCarousel />}
         {restoredDraftScreen && voicePhase === 'idle' && <section className="today-resume"><span><strong>Есть незавершённая тренировка</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); setTextComposerOpen(true); if (target !== 'compose') setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
         {voicePhase === 'idle' && !restoredDraftScreen && contextCard}
         {voicePhase === 'idle' && !restoredDraftScreen && goalCard}
-      </> : <>
+      </>}
+      {textComposerOpen && <>
         <ChatThread
           messages={messages}
           items={items}
@@ -428,19 +428,21 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         />
         {removedItem && <div className="today-undo-remove" role="status"><span>Упражнение удалено</span><button type="button" className="link" onClick={undoRemoveExercise}>Отменить</button></div>}
         {prefillError && <p className="error">{prefillError}</p>}
-        <ChatComposerBar
-          value={text}
-          onChange={setText}
-          onSend={sendChatMessage}
-          onTranscript={sendChatMessage}
-          disabled={sending}
-          menuActions={[
-            { label: 'Добавить подход', onClick: () => addSet(items.length - 1), disabled: !items.length },
-            { label: 'Добавить упражнение', onClick: () => { trackGoal('exercise_picker_opened'); setReplaceIndex(null); setPickerOpen(true) } },
-            { label: 'Завершить тренировку', onClick: () => { trackGoal('today_save_step_opened'); setScreen('save') }, disabled: !items.length },
-          ]}
-        />
       </>}
+      {/* Панель ввода видна сразу, ещё до первого сообщения (как в Figma-макете) —
+          набор текста или отправка неявно открывают ленту через sendChatMessage. */}
+      {(!restoredDraftScreen || textComposerOpen) && <ChatComposerBar
+        value={text}
+        onChange={setText}
+        onSend={sendChatMessage}
+        onTranscript={sendChatMessage}
+        disabled={sending}
+        menuActions={[
+          { label: 'Добавить подход', onClick: () => addSet(items.length - 1), disabled: !items.length },
+          { label: 'Добавить упражнение', onClick: () => { trackGoal('exercise_picker_opened'); setReplaceIndex(null); setPickerOpen(true) } },
+          { label: 'Завершить тренировку', onClick: () => { trackGoal('today_save_step_opened'); setScreen('save') }, disabled: !items.length },
+        ]}
+      />}
       {clientMode && actor && isWearablesPilotEnabled(actor.userId) && <WearableHealthCard />}
     </section> : <section className="today-review">
       <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => setScreen('compose')}>← Назад</button><div><h1>Сохраните тренировку</h1></div></div>

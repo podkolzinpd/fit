@@ -51,7 +51,7 @@ test('today: voice-first запускает запись, отменяет её 
   await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Слушаю…' })).toBeVisible()
   await page.getByRole('button', { name: 'Отменить' }).click()
-  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Чем могу тебе помочь?' })).toBeVisible()
   await expect(page.locator('.chat-thread')).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
@@ -87,10 +87,8 @@ test('today: чат-ввод ведёт к единому выбору план�
   await expect(page).toHaveURL(/\/(today|clients)$/)
   await page.goto('/today')
 
-  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Чем могу тебе помочь?' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
-  await expect(page.getByLabel('Сообщение о тренировке')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await expect(page.getByLabel('Сообщение о тренировке')).toBeVisible()
 
   await mockWorkoutParser(page, [
@@ -176,7 +174,6 @@ test('today: чат-карточка наследует настройку RPE �
   await page.goto('/profile')
   await page.getByRole('switch', { name: 'Показывать RPE в подходах' }).check()
   await page.goto('/today')
-  await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await mockWorkoutParser(page, [{
     sourceText: 'Присед со штангой 3×8 — 80 кг', exerciseRef: 'barbell-squat', confidence: 1,
     sets: [{ weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }],
@@ -198,8 +195,7 @@ test('today: черновик сохраняет финальный шаг и п
   await page.getByRole('button', { name: 'Войти' }).click()
   await expect(page).toHaveURL(/\/(today|clients)$/)
   await page.goto('/today')
-  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
-  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await expect(page.getByRole('heading', { name: 'Чем могу тебе помочь?' })).toBeVisible()
   await expect(page.getByLabel('Сообщение о тренировке')).toBeVisible()
 
   await mockWorkoutParser(page, [
@@ -237,7 +233,8 @@ test('today: черновик сохраняет финальный шаг и п
 
   await page.getByRole('link', { name: 'Клиенты' }).click()
   await page.getByRole('link', { name: 'Сегодня', exact: true }).click()
-  await page.getByRole('button', { name: 'Ввести текстом' }).click()
-  await expect(page.locator('.today-exercise')).toHaveCount(0)
+  await expect(page.getByText('Есть незавершённая тренировка')).toBeVisible()
+  await page.getByRole('button', { name: 'Удалить' }).click()
   await expect(page.getByText('Есть незавершённая тренировка')).toHaveCount(0)
+  await expect(page.locator('.today-exercise')).toHaveCount(0)
 })
