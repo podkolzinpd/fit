@@ -83,10 +83,11 @@ test('iPhone: client voice-first home сохраняет тренировку т
     })
   })
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
-  await page.getByLabel('Тренировка').fill('Жим лёжа 3×8 — 80 кг')
-  await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
-  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
-  await page.getByRole('button', { name: 'Далее' }).click()
+  await page.getByLabel('Сообщение о тренировке').fill('Жим лёжа 3×8 — 80 кг')
+  await page.getByLabel('Сообщение о тренировке').press('Enter')
+  await expect(page.locator('.today-exercise')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Действия' }).click()
+  await page.getByRole('menuitem', { name: 'Завершить тренировку' }).click()
   await expect(page.getByText('Тренировка будет сохранена в ваш кабинет')).toBeVisible()
   await expect(page.locator('.client-picker-trigger')).toHaveCount(0)
   await page.getByRole('link', { name: 'Профиль', exact: true }).click()
@@ -291,7 +292,7 @@ async function confirmCurrentSet(page: Page) {
 
 async function openReviewWithFixture(page: import('@playwright/test').Page) {
   // Изолированная тестовая заглушка: не меняет LLM-клиент, промпт или обработку ошибок
-  // в приложении, но стабильно создаёт самый плотный экран «Проверьте тренировку».
+  // в приложении, но стабильно создаёт самую плотную карточку в чат-ленте.
   await page.route('**/functions/v1/parse-workout', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -312,9 +313,9 @@ async function openReviewWithFixture(page: import('@playwright/test').Page) {
   })
   await page.goto('/today')
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
-  await page.getByLabel('Тренировка').fill('Жим лёжа (Штанга) 3×8 — 80 кг')
-  await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
-  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+  await page.getByLabel('Сообщение о тренировке').fill('Жим лёжа (Штанга) 3×8 — 80 кг')
+  await page.getByLabel('Сообщение о тренировке').press('Enter')
+  await expect(page.locator('.today-exercise')).toHaveCount(1)
 }
 
 for (const viewport of mobileViewports) {
@@ -327,7 +328,7 @@ for (const viewport of mobileViewports) {
       await expect(page.locator('main')).toBeVisible()
       if (screen === '/today') {
         await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
-        await expect(page.getByLabel('Тренировка')).toHaveCount(0)
+        await expect(page.getByLabel('Сообщение о тренировке')).toHaveCount(0)
       }
       if (screen.includes('11111111')) {
         await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()
@@ -347,7 +348,7 @@ test('iPhone: черновик не скрывает главное voice-дей
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
-  await page.getByLabel('Тренировка').fill('Жим лёжа 3×10 — 80 кг')
+  await page.getByLabel('Сообщение о тренировке').fill('Жим лёжа 3×10 — 80 кг')
   await page.getByRole('link', { name: 'Клиенты' }).click()
   await page.getByRole('link', { name: 'Сегодня', exact: true }).click()
 

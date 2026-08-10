@@ -33,3 +33,15 @@ export function MicIcon(props: IconProps) {
 export function StopIcon(props: IconProps) {
   return <Icon {...props}><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none" /></Icon>
 }
+
+export function PencilIcon(props: IconProps) {
+  return <Icon {...props}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></Icon>
+}
+
+export function PlusIcon(props: IconProps) {
+  return <Icon {...props}><path d="M12 5v14M5 12h14" /></Icon>
+}
+
+export function SendIcon(props: IconProps) {
+  return <Icon {...props}><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+}
