@@ -8,6 +8,8 @@ database password, OAuth secret or Terraform state.
 
 - one VPC and private subnet in `ru-central1-d`;
 - one private Managed PostgreSQL 17 host with no public IP;
+- separate `fit_owner` migration and non-owner `fit_api` runtime users;
+- one `fit` database owned only by the migration user;
 - one Serverless Container with 1 GB RAM and no provisioned instances;
 - one Container Registry repository with image retention;
 - one least-privilege runtime service account;
@@ -37,6 +39,6 @@ separate approval because Managed PostgreSQL and other resources are billable.
 
 - a single PostgreSQL host is the MVP cost choice, not a high-availability
   production topology;
-- database/user creation and actor context belong to the next migration step;
+- the first compatibility migration provides transaction-local actor context;
 - Yandex ID, public invocation and frontend switching are not implemented;
 - Terraform state backend and CI identity are selected before the first apply.

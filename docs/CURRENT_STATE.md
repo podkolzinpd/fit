@@ -5,13 +5,13 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-11
-Проверенный `main`: `299c496` (`feat: add Yandex Cloud API foundation (#369)`)
+Проверенный `main`: `4c85e9b` (`feat infra: describe Yandex Cloud stage foundation (#370)`)
 
 ## Активная работа
 
-- Активная инфраструктурная задача: Terraform foundation для stage в Yandex
-  Cloud без `apply` и без переключения production с Supabase.
-- Следующий этап после неё: воспроизводимый PostgreSQL baseline и actor context.
+- Активная инфраструктурная задача: воспроизводимый PostgreSQL baseline и
+  transaction-local actor context для будущего API в Yandex Cloud.
+- Следующий этап после неё: перенос SQL/RLS-контракта до domain endpoints.
 
 ## Последняя проверенная продуктовая точка
 
@@ -36,6 +36,9 @@
 - После `#369` в `services/api` существует изолированный Fastify foundation с
   `/health` и Podman-совместимым OCI-образом. Frontend, Supabase и production
   environment не переключены; платные ресурсы Yandex Cloud не создавались.
+- После `#370` stage-инфраструктура описана Terraform: private PostgreSQL,
+  Serverless Container, VPC, Registry, Lockbox и resource-level IAM. `apply`
+  не запускался, поэтому облачные ресурсы по-прежнему не создавались.
 
 ## Последние проверки
 
@@ -54,6 +57,9 @@
   возврат назад. После merge локальный iOS bundle собран, установлен и запущен
   на уже открытом iPhone 17 без нового окна Xcode.
 - `#369`: `npm run db:reset`; `npm run db:test` — 422 SQL/RLS-теста;
+  `npm run check` — 372 frontend-теста, Fastify API test/build, lint,
+  typecheck, DB types, iOS permissions и production build.
+- `#370`: Terraform `fmt -check` и `validate` на provider `0.215.0`;
   `npm run check` — 372 frontend-теста, Fastify API test/build, lint,
   typecheck, DB types, iOS permissions и production build.
 

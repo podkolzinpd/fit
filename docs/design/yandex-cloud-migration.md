@@ -31,15 +31,32 @@ The following remain unchanged during the foundation phase:
 
 1. [Done in #369] Add the isolated API process, container image and health
    checks.
-2. [In progress] Describe Yandex Cloud resources in Terraform without applying
+2. [Done in #370] Describe Yandex Cloud resources in Terraform without applying
    production.
-3. Add a reproducible Managed PostgreSQL baseline and actor context.
+3. [In progress] Add a reproducible Managed PostgreSQL baseline and actor
+   context.
 4. Port the existing SQL/RLS contract before exposing domain endpoints.
 5. Implement Yandex ID and the profile vertical slice on stage.
 6. Port clients, memberships, exercises, workouts, progress, goals and
    summaries in parity-tested vertical slices.
 7. Rehearse the data migration at least twice before the production cutover.
 8. Remove Supabase only after the rollback window closes.
+
+## Actor context decision
+
+Yandex ID provider subjects are not business entity identifiers and are never
+written into tenant columns or passed directly to PostgreSQL RLS:
+
+```text
+Yandex ID sub -> identity mapping -> internal profile UUID
+                                    -> transaction-local actor context
+                                    -> auth.uid() compatibility function
+```
+
+The API sets `request.jwt.claim.sub` only with the internal UUID, after opening
+an explicit database transaction. `COMMIT` or `ROLLBACK` clears the setting
+before a pooled connection can be reused. The migration owner and API runtime
+are separate PostgreSQL users so the runtime does not bypass RLS as table owner.
 
 ## Foundation acceptance
 
