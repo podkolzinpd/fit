@@ -45,6 +45,59 @@ resource "yandex_mdb_postgresql_cluster_v2" "fit" {
   }
 }
 
+resource "yandex_mdb_postgresql_user" "owner" {
+  cluster_id        = yandex_mdb_postgresql_cluster_v2.fit.id
+  name              = local.database_owner_user
+  generate_password = true
+  login             = true
+  conn_limit        = 5
+
+  settings = {
+    pool_mode                           = "session"
+    default_transaction_isolation       = "read committed"
+    idle_in_transaction_session_timeout = 30000
+    statement_timeout                   = 60000
+  }
+
+  user_connection_manager {
+    connection_folder_id = var.folder_id
+    secret_folder_id     = var.folder_id
+  }
+}
+
+resource "yandex_mdb_postgresql_database" "fit" {
+  cluster_id          = yandex_mdb_postgresql_cluster_v2.fit.id
+  name                = local.database_name
+  owner               = yandex_mdb_postgresql_user.owner.name
+  lc_collate          = "C"
+  lc_type             = "C"
+  deletion_protection = var.postgres_deletion_protection
+}
+
+resource "yandex_mdb_postgresql_user" "api" {
+  cluster_id        = yandex_mdb_postgresql_cluster_v2.fit.id
+  name              = local.database_runtime_user
+  generate_password = true
+  login             = true
+  conn_limit        = 20
+
+  permission {
+    database_name = yandex_mdb_postgresql_database.fit.name
+  }
+
+  settings = {
+    pool_mode                           = "session"
+    default_transaction_isolation       = "read committed"
+    idle_in_transaction_session_timeout = 15000
+    statement_timeout                   = 30000
+  }
+
+  user_connection_manager {
+    connection_folder_id = var.folder_id
+    secret_folder_id     = var.folder_id
+  }
+}
+
 resource "yandex_lockbox_secret" "database_url" {
   folder_id   = var.folder_id
   name        = "${local.name_prefix}-database-url"

@@ -7,16 +7,22 @@
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
+    "test:db": "vitest run src/db/actor-context.integration.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "db:migrate": "node-pg-migrate up --migrations-dir db/migrations --migrations-table fit_migrations --migrations-schema app_private --create-migrations-schema --verbose=false",
+    "db:migrate:dry-run": "node-pg-migrate up --migrations-dir db/migrations --migrations-table fit_migrations --migrations-schema app_private --create-migrations-schema --verbose=false --dry-run",
     "start": "node dist/server.js"
   },
   "dependencies": {
-    "fastify": "^5.6.2"
+    "fastify": "^5.6.2",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",
+    "@types/pg": "^8.21.0",
     "eslint": "^10.0.0",
+    "node-pg-migrate": "^9.0.0",
     "typescript": "^6.0.0",
     "typescript-eslint": "^8.65.0",
     "vitest": "^4.0.0"
