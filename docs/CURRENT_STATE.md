@@ -4,13 +4,14 @@
 > После каждого подтверждённого merge заменяйте сведения ниже, не добавляйте
 > хронологию: полная история уже хранится в Git и Tracker.
 
-Обновлено: 2026-08-10
-Проверенный `main`: `eeea962` (`fix: clarify active workout recovery (#359)`)
+Обновлено: 2026-08-11
+Проверенный `main`: `299c496` (`feat: add Yandex Cloud API foundation (#369)`)
 
 ## Активная работа
 
-- Активной продуктовой задачи нет. `YAFIT-272` закрыт после merge `#359`.
-- Следующую задачу брать только по приоритету пользователя из `YAFIT-25`.
+- Активная инфраструктурная задача: Terraform foundation для stage в Yandex
+  Cloud без `apply` и без переключения production с Supabase.
+- Следующий этап после неё: воспроизводимый PostgreSQL baseline и actor context.
 
 ## Последняя проверенная продуктовая точка
 
@@ -32,6 +33,9 @@
   matching, fallback и сохранение: в последних PR эти механики не менялись.
 - Тёмная тема voice-first и AI-поверхностей использует семантические токены и
   сохраняет контраст на мобильном экране.
+- После `#369` в `services/api` существует изолированный Fastify foundation с
+  `/health` и Podman-совместимым OCI-образом. Frontend, Supabase и production
+  environment не переключены; платные ресурсы Yandex Cloud не создавались.
 
 ## Последние проверки
 
@@ -49,6 +53,9 @@
   390 px проверяет отмену recovery-диалога, явное открытие active workout и
   возврат назад. После merge локальный iOS bundle собран, установлен и запущен
   на уже открытом iPhone 17 без нового окна Xcode.
+- `#369`: `npm run db:reset`; `npm run db:test` — 422 SQL/RLS-теста;
+  `npm run check` — 372 frontend-теста, Fastify API test/build, lint,
+  typecheck, DB types, iOS permissions и production build.
 
 ## Отложенный backlog
 
