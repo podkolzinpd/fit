@@ -1,0 +1,12 @@
+cloud_id  = "b1g00000000000000000"
+folder_id = "b1g00000000000000000"
+
+# Stage stays private until Yandex ID token verification is implemented.
+environment               = "stage"
+allow_unauthenticated_api = false
+
+# The tagged image must be pushed before apply.
+api_image_tag = "foundation"
+
+# Add only after creating a DATABASE_URL payload outside Terraform.
+# database_url_secret_version_id = "e6q00000000000000000"

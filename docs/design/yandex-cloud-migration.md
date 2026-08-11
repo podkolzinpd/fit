@@ -29,8 +29,10 @@ The following remain unchanged during the foundation phase:
 
 ## Delivery sequence
 
-1. Add the isolated API process, container image and health checks.
-2. Describe Yandex Cloud resources in Terraform without applying production.
+1. [Done in #369] Add the isolated API process, container image and health
+   checks.
+2. [In progress] Describe Yandex Cloud resources in Terraform without applying
+   production.
 3. Add a reproducible Managed PostgreSQL baseline and actor context.
 4. Port the existing SQL/RLS contract before exposing domain endpoints.
 5. Implement Yandex ID and the profile vertical slice on stage.
