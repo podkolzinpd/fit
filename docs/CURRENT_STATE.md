@@ -5,13 +5,14 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-11
-Проверенный `main`: `4c85e9b` (`feat infra: describe Yandex Cloud stage foundation (#370)`)
+Проверенный `main`: `22e85af` (`feat api: add PostgreSQL actor context baseline (#371)`)
 
 ## Активная работа
 
-- Активная инфраструктурная задача: воспроизводимый PostgreSQL baseline и
-  transaction-local actor context для будущего API в Yandex Cloud.
-- Следующий этап после неё: перенос SQL/RLS-контракта до domain endpoints.
+- Активная задача миграции: первый provider-independent SQL/RLS-срез для
+  PostgreSQL — профили, тренеры и tenant isolation будущего API.
+- Следующий этап после неё: перенос clients/memberships в отдельном срезе до
+  появления domain endpoints.
 
 ## Последняя проверенная продуктовая точка
 
@@ -39,6 +40,9 @@
 - После `#370` stage-инфраструктура описана Terraform: private PostgreSQL,
   Serverless Container, VPC, Registry, Lockbox и resource-level IAM. `apply`
   не запускался, поэтому облачные ресурсы по-прежнему не создавались.
+- После `#371` Managed PostgreSQL baseline разделяет migration owner и runtime
+  user, а Fastify API умеет задавать внутренний UUID пользователя только на
+  время транзакции. К маршрутам и frontend новый pool пока не подключён.
 
 ## Последние проверки
 
@@ -62,6 +66,9 @@
 - `#370`: Terraform `fmt -check` и `validate` на provider `0.215.0`;
   `npm run check` — 372 frontend-теста, Fastify API test/build, lint,
   typecheck, DB types, iOS permissions и production build.
+- `#371`: PostgreSQL integration test в одноразовом Podman-контейнере;
+  Terraform `fmt -check` и `validate`; `npm run check` — 372 frontend-теста,
+  5 API unit-тестов, lint, typecheck, DB types и production builds.
 
 ## Отложенный backlog
 

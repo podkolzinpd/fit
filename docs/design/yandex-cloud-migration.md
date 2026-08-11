@@ -33,9 +33,11 @@ The following remain unchanged during the foundation phase:
    checks.
 2. [Done in #370] Describe Yandex Cloud resources in Terraform without applying
    production.
-3. [In progress] Add a reproducible Managed PostgreSQL baseline and actor
+3. [Done in #371] Add a reproducible Managed PostgreSQL baseline and actor
    context.
-4. Port the existing SQL/RLS contract before exposing domain endpoints.
+4. [In progress] Port the existing SQL/RLS contract before exposing domain
+   endpoints. Start with provider-independent profiles, trainers and their
+   actor-scoped RLS; port domain tables in dependency-ordered slices.
 5. Implement Yandex ID and the profile vertical slice on stage.
 6. Port clients, memberships, exercises, workouts, progress, goals and
    summaries in parity-tested vertical slices.

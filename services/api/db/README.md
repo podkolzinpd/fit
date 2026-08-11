@@ -5,9 +5,11 @@ not replace or modify `supabase/migrations` while production still uses
 Supabase.
 
 The first migration recreates the `auth.uid()` contract on vanilla PostgreSQL.
-The API sets an internal profile UUID through `set_config` inside an explicit
-transaction. Provider subjects such as a Yandex ID `sub` must never be passed
-directly as this actor UUID.
+The second migration ports the provider-independent `profiles` and `trainers`
+contract, including least-privilege grants and actor-scoped RLS. The API sets
+an internal profile UUID through `set_config` inside an explicit transaction.
+Provider subjects such as a Yandex ID `sub` must never be passed directly as
+this actor UUID.
 
 ## Roles
 

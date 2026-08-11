@@ -9,6 +9,7 @@ import { PgDatabasePool } from './pg-pool.js'
 import type { DatabasePool } from './types.js'
 
 const ACTOR_ID = 'c9f75482-117d-4532-8f67-6c3d9b9f4a5e'
+const OTHER_ACTOR_ID = '974f21af-f304-421f-81bd-050dbfabdd46'
 const RUNTIME_PASSWORD = 'fit-api-test-only'
 const migrationsDirectory = fileURLToPath(
   new URL('../../db/migrations', import.meta.url),
@@ -16,6 +17,10 @@ const migrationsDirectory = fileURLToPath(
 
 interface ActorRow extends QueryResultRow {
   actor_id: string | null
+}
+
+interface ProfileRow extends QueryResultRow {
+  first_name: string | null
 }
 
 function requireLocalTestDatabaseUrl(): string {
@@ -75,6 +80,25 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         verbose: false,
       })
 
+      await ownerPool.query(
+        `
+          insert into public.profiles (id, first_name, account_role)
+          values ($1, 'Primary actor', 'trainer'), ($2, 'Other actor', 'client')
+          on conflict (id) do update set
+            first_name = excluded.first_name,
+            account_role = excluded.account_role
+        `,
+        [ACTOR_ID, OTHER_ACTOR_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into public.trainers (profile_id)
+          values ($1)
+          on conflict (profile_id) do nothing
+        `,
+        [ACTOR_ID],
+      )
+
       const runtimeUrl = new URL(ownerUrl)
       runtimeUrl.username = 'fit_api'
       runtimeUrl.password = RUNTIME_PASSWORD
@@ -107,6 +131,50 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
       expect(actorInsideTransaction).toBe(ACTOR_ID)
       expect(await readActor(runtimePool)).toBeNull()
+    })
+
+    it('keeps profile reads and updates inside the actor tenant', async () => {
+      if (runtimePool === undefined) throw new Error('Runtime pool is not ready')
+
+      await withActorTransaction(runtimePool, ACTOR_ID, async (client) => {
+        const visibleProfiles = await client.query<ProfileRow>(
+          'select first_name from public.profiles order by id',
+        )
+        expect(visibleProfiles).toEqual([{ first_name: 'Primary actor' }])
+
+        const hiddenUpdate = await client.query<ProfileRow>(
+          `
+            update public.profiles
+            set first_name = 'Changed by another actor'
+            where id = $1
+            returning first_name
+          `,
+          [OTHER_ACTOR_ID],
+        )
+        expect(hiddenUpdate).toEqual([])
+
+        const ownUpdate = await client.query<ProfileRow>(
+          `
+            update public.profiles
+            set first_name = 'Updated actor'
+            where id = $1
+            returning first_name
+          `,
+          [ACTOR_ID],
+        )
+        expect(ownUpdate).toEqual([{ first_name: 'Updated actor' }])
+
+        const visibleTrainers = await client.query(
+          'select profile_id from public.trainers',
+        )
+        expect(visibleTrainers).toEqual([{ profile_id: ACTOR_ID }])
+      })
+
+      const otherProfile = await ownerPool?.query<ProfileRow>(
+        'select first_name from public.profiles where id = $1',
+        [OTHER_ACTOR_ID],
+      )
+      expect(otherProfile?.rows).toEqual([{ first_name: 'Other actor' }])
     })
   },
 )
