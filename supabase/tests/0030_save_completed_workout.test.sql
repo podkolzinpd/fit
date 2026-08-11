@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(17);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('50000000-0000-4000-8000-000000000030', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'completed30@example.test', '');
@@ -28,7 +28,6 @@ select public.save_completed_workout(
 
 select is((select status from public.workouts where id = (select id from completed_workout)), 'done', 'ручная запись сразу завершена');
 select is((select created_by from public.workouts where id = (select id from completed_workout)), '50000000-0000-4000-8000-000000000030'::uuid, 'автор завершённой записи сохранён');
-select is((select updated_by from public.workouts where id = (select id from completed_workout)), '50000000-0000-4000-8000-000000000030'::uuid, 'updated_by завершённой записи сохранён');
 select ok((select completed_at is not null from public.workouts where id = (select id from completed_workout)), 'у завершённой записи есть время завершения');
 select row_eq(
   $$select fact_weight_kg, fact_reps, fact_rpe, confirmed_at is not null from public.workout_sets where workout_exercise_id = (select id from public.workout_exercises where workout_id = (select id from completed_workout) and exercise_ref = 'squat')$$,
@@ -58,7 +57,6 @@ select public.save_completed_workout(
 select is((select id from edited_completed_workout), (select id from completed_workout), 'правка сохраняет ту же тренировку');
 select is((select status from public.workouts where id = (select id from completed_workout)), 'done', 'после правки тренировка остаётся завершённой');
 select is((select workout_date from public.workouts where id = (select id from completed_workout)), '2026-07-29'::date, 'правится дата завершённой тренировки');
-select is((select updated_by from public.workouts where id = (select id from completed_workout)), '50000000-0000-4000-8000-000000000030'::uuid, 'правка завершённой тренировки обновляет updated_by');
 select row_eq(
   $$select fact_weight_kg, fact_reps, fact_rpe, confirmed_at is not null from public.workout_sets where workout_exercise_id = (select id from public.workout_exercises where workout_id = (select id from completed_workout) and exercise_ref = 'squat')$$,
   row(72.5::numeric, 9, 9::numeric, true),
@@ -145,11 +143,6 @@ select is(
   (select created_by from public.workouts where id = (select id from client_completed_workout)),
   '50000000-0000-4000-8000-000000000032'::uuid,
   'клиент создаёт собственную завершённую тренировку'
-);
-select is(
-  (select updated_by from public.workouts where id = (select id from client_completed_workout)),
-  '50000000-0000-4000-8000-000000000032'::uuid,
-  'updated_by собственной завершённой тренировки клиента совпадает с автором'
 );
 select public.save_completed_workout(
   jsonb_build_object(

@@ -38,7 +38,7 @@ test('client and trainer receive progress and workout changes without reload', a
 
   try {
     await register(trainer, { name: 'Realtime тренер', email: `realtime-trainer-${suffix}@fit.local` })
-    await expect(trainer.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
+    await expect(trainer.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
     await trainer.goto('/clients')
     await trainer.getByRole('link', { name: 'Добавить' }).click()
     await trainer.getByLabel('Имя').fill('Realtime клиент')

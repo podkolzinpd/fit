@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(28);
+select plan(21);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password)
 values ('40000000-0000-4000-8000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'rpc@example.test', '');
@@ -49,11 +49,6 @@ select lives_ok(
   'save_workout creates complete aggregate'
 );
 select is((select count(*) from public.workout_sets), 1::bigint, 'workout child set exists');
-select is(
-  (select updated_by from public.workouts limit 1),
-  '40000000-0000-4000-8000-000000000004'::uuid,
-  'save_workout sets updated_by to the acting trainer'
-);
 
 select throws_ok(
   format(
@@ -84,30 +79,15 @@ select lives_ok(
     (select id from public.workout_sets limit 1), '{"weightKg":42.5,"reps":9}'),
   'live draft saves fact without copying plan'
 );
-select is(
-  (select updated_by from public.workout_sets limit 1),
-  '40000000-0000-4000-8000-000000000004'::uuid,
-  'save_live_set_draft sets updated_by to the acting trainer'
-);
 select lives_ok(
   format('select public.confirm_live_set(%L::uuid, 2)', (select id from public.workout_sets limit 1)),
   'confirm_live_set confirms saved fact'
-);
-select is(
-  (select updated_by from public.workout_sets limit 1),
-  '40000000-0000-4000-8000-000000000004'::uuid,
-  'confirm_live_set keeps updated_by pointing at the acting trainer'
 );
 select lives_ok(
   format('select public.append_live_set(%L::uuid, 2)', (select id from public.workout_exercises limit 1)),
   'append_live_set adds a set to an in-progress workout'
 );
 select is((select count(*) from public.workout_sets), 2::bigint, 'appended live set exists');
-select is(
-  (select count(*) from public.workout_sets where updated_by = '40000000-0000-4000-8000-000000000004'::uuid),
-  2::bigint,
-  'append_live_set stamps the new set with updated_by'
-);
 select lives_ok(
   format(
     'select public.append_live_exercise(%L::uuid, %L::jsonb, 3)',
@@ -117,19 +97,9 @@ select lives_ok(
   'append_live_exercise adds an exercise and initial set'
 );
 select is((select count(*) from public.workout_sets), 3::bigint, 'appended live exercise has an initial set');
-select is(
-  (select updated_by from public.workout_exercises order by created_at desc limit 1),
-  '40000000-0000-4000-8000-000000000004'::uuid,
-  'append_live_exercise stamps the new exercise with updated_by'
-);
 select lives_ok(
   format('select public.finish_workout(%L::uuid, 4)', (select id from public.workouts limit 1)),
   'finish_workout completes in-progress workout'
-);
-select is(
-  (select updated_by from public.workouts limit 1),
-  '40000000-0000-4000-8000-000000000004'::uuid,
-  'finish_workout keeps updated_by pointing at the acting trainer'
 );
 
 select lives_ok(
@@ -138,11 +108,6 @@ select lives_ok(
     jsonb_build_object('clientId', (select id from public.clients limit 1), 'recordedOn', '2026-07-22', 'weightKg', 60.5, 'customMetrics', '[]'::jsonb)
   ),
   'save_progress creates progress aggregate'
-);
-select is(
-  (select updated_by from public.client_progress where recorded_on = '2026-07-22'),
-  '40000000-0000-4000-8000-000000000004'::uuid,
-  'save_progress sets updated_by to the acting trainer'
 );
 select throws_ok(
   format(

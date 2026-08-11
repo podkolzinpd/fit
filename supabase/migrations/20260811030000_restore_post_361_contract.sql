@@ -1,52 +1,22 @@
--- Добавляем updated_by (кто последний раз редактировал запись) для связки
--- "живая тренировка" + замеры: workouts, workout_exercises, workout_sets,
--- client_progress. Явно узнаём, кто последний раз трогал строку — созданный
--- created_by и updated_at этого не дают (updated_at трогается кем угодно,
--- created_by не переустанавливается на правках).
+-- YAFIT-279: exact server-side restoration of the post-#361 contract.
+-- PR #363 added updated_by and replaced these RPC implementations with
+-- actor-threaded overloads. Production has already applied that migration, so a
+-- Git revert alone cannot restore its behaviour. This migration reinstalls the
+-- exact #361 definitions first, removes the post-#361 overloads, restores the
+-- #361 analytics view and then removes the four added columns.
 --
--- Все мутации этих таблиц идут через security definer RPC, часть из которых
--- временно подменяет identity через set_config('request.jwt.claim.sub', ...)
--- перед вызовом внутренней private.legacy_*-функции (чтобы RLS-проверки
--- внутри видели владельца партиции, а не реального вызывающего). Пока эта
--- подмена активна, auth.uid() внутри legacy-функции возвращает подменённого
--- root_trainer, а не настоящего автора действия — поэтому триггер здесь
--- недопустим. Вместо этого настоящий actor_id захватывается в самом начале
--- внешней RPC-обёртки (до set_config) и передаётся дальше явным параметром
--- p_actor_id, использующимся только для updated_by (не для авторизации).
+-- It is deliberately safe on a clean database: the original #361 definitions
+-- already exist there, so CREATE OR REPLACE is idempotent and every DROP uses
+-- IF EXISTS. In production, it is the compensating migration for #363 and #365.
 
-alter table public.workouts add column updated_by uuid references public.profiles (id) on delete set null;
-alter table public.workout_exercises add column updated_by uuid references public.profiles (id) on delete set null;
-alter table public.workout_sets add column updated_by uuid references public.profiles (id) on delete set null;
-alter table public.client_progress add column updated_by uuid references public.profiles (id) on delete set null;
-
--- create or replace function не меняет сигнатуру существующей функции — при
--- добавлении параметра p_actor_id вместо замены создаётся ВТОРАЯ, перегруженная
--- функция, а старая (без updated_by) остаётся висеть мёртвым грузом. Дропаем
--- старые сигнатуры явно перед пересозданием.
-drop function if exists private.legacy_append_live_exercise(uuid, jsonb, bigint);
-drop function if exists private.legacy_append_live_set(uuid, bigint);
-drop function if exists private.legacy_confirm_live_set(uuid, bigint);
-drop function if exists private.legacy_finish_workout(uuid, bigint);
-drop function if exists private.legacy_remove_live_set(uuid, bigint);
-drop function if exists private.legacy_reorder_live_block(uuid, uuid, smallint, bigint);
-drop function if exists private.legacy_replace_live_exercise(uuid, uuid, jsonb, bigint);
-drop function if exists private.legacy_save_live_set_draft(uuid, jsonb, bigint);
-drop function if exists private.legacy_save_progress(jsonb, bigint);
-drop function if exists private.legacy_save_workout(jsonb, bigint);
-drop function if exists private.legacy_set_exercise_comment(uuid, text, bigint);
-drop function if exists private.legacy_soft_delete_progress(uuid, bigint);
-drop function if exists private.legacy_soft_delete_workout(uuid, bigint);
-drop function if exists private.legacy_start_workout(uuid, bigint);
-
--- ---------------------------------------------------------------------
--- private.legacy_append_live_exercise
--- ---------------------------------------------------------------------
-create or replace function private.legacy_append_live_exercise(p_workout_id uuid, p_exercise jsonb, p_expected_version bigint, p_actor_id uuid)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- Reinstall the exact private/public RPC contract as it existed after PR #361.
+-- function private.legacy_append_live_exercise(p_workout_id uuid, p_exercise jsonb, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_append_live_exercise(p_workout_id uuid, p_exercise jsonb, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
   actor_id uuid := auth.uid();
   client_id_value uuid;
@@ -77,7 +47,7 @@ begin
   end if;
 
   update public.workouts
-  set version = version + 1, updated_by = p_actor_id
+  set version = version + 1
   where id = p_workout_id and trainer_id = actor_id and status = 'in_progress'
     and deleted_at is null and version = p_expected_version
   returning client_id, version into client_id_value, next_version;
@@ -91,30 +61,30 @@ begin
   insert into public.workout_exercises (
     workout_id, trainer_id, client_id, position, exercise_source, exercise_ref,
     custom_exercise_id, exercise_name, muscle_group, input_kind, block_id, block_type, block_rounds,
-    block_preset, rest_between_exercises_sec, rest_between_rounds_sec, rest_between_sets_sec, updated_by
+    block_preset, rest_between_exercises_sec, rest_between_rounds_sec, rest_between_sets_sec
   ) values (
     p_workout_id, actor_id, client_id_value, next_position, source_value, ref_value,
     custom_id, name_value, group_value, kind_value, gen_random_uuid(), 'single', 1,
-    'set', 0, 90, 90, p_actor_id
+    'set', 0, 90, 90
   ) returning id into exercise_id;
 
   insert into public.workout_sets (
-    workout_exercise_id, trainer_id, client_id, position, updated_by
-  ) values (exercise_id, actor_id, client_id_value, 0, p_actor_id);
+    workout_exercise_id, trainer_id, client_id, position
+  ) values (exercise_id, actor_id, client_id_value, 0);
 
   return next_version;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
 
--- ---------------------------------------------------------------------
--- private.legacy_append_live_set
--- ---------------------------------------------------------------------
-create or replace function private.legacy_append_live_set(p_workout_exercise_id uuid, p_expected_version bigint, p_actor_id uuid)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function private.legacy_append_live_set(p_workout_exercise_id uuid, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_append_live_set(p_workout_exercise_id uuid, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
   actor_id uuid := auth.uid();
   workout_id_value uuid;
@@ -126,7 +96,7 @@ begin
   select e.workout_id, e.client_id into workout_id_value, client_id_value
   from public.workout_exercises e where e.id = p_workout_exercise_id and e.trainer_id = actor_id;
   if not found then raise exception 'exercise_not_found' using errcode = 'PT404'; end if;
-  update public.workouts set version = version + 1, updated_by = p_actor_id
+  update public.workouts set version = version + 1
   where id = workout_id_value and trainer_id = actor_id and status = 'in_progress'
     and deleted_at is null and version = p_expected_version
   returning version into next_version;
@@ -135,7 +105,7 @@ begin
   from public.workout_sets s where s.workout_exercise_id = p_workout_exercise_id;
   insert into public.workout_sets (
     workout_exercise_id, trainer_id, client_id, position,
-    plan_weight_kg, plan_reps, plan_duration_min, plan_duration_sec, plan_distance_km, plan_rpe, updated_by
+    plan_weight_kg, plan_reps, plan_duration_min, plan_duration_sec, plan_distance_km, plan_rpe
   )
   select
     p_workout_exercise_id, actor_id, client_id_value, next_position,
@@ -145,8 +115,7 @@ begin
     coalesce(last_set.fact_duration_sec, last_set.plan_duration_sec,
       round(last_set.fact_duration_min * 60)::integer, round(last_set.plan_duration_min * 60)::integer),
     coalesce(last_set.fact_distance_km, last_set.plan_distance_km),
-    coalesce(last_set.fact_rpe, last_set.plan_rpe),
-    p_actor_id
+    coalesce(last_set.fact_rpe, last_set.plan_rpe)
   from (
     select s.plan_weight_kg, s.plan_reps, s.plan_duration_min, s.plan_duration_sec, s.plan_distance_km, s.plan_rpe,
            s.fact_weight_kg, s.fact_reps, s.fact_duration_min, s.fact_duration_sec, s.fact_distance_km, s.fact_rpe
@@ -155,17 +124,17 @@ begin
   ) last_set right join (select 1) placeholder on true;
   return next_version;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
 
--- ---------------------------------------------------------------------
--- private.legacy_confirm_live_set
--- ---------------------------------------------------------------------
-create or replace function private.legacy_confirm_live_set(p_set_id uuid, p_expected_version bigint, p_actor_id uuid)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function private.legacy_confirm_live_set(p_set_id uuid, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_confirm_live_set(p_set_id uuid, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare next_version bigint;
 begin
   if not exists (
@@ -201,8 +170,7 @@ begin
     fact_duration_sec = coalesce(workout_set.fact_duration_sec, workout_set.plan_duration_sec, round(workout_set.fact_duration_min * 60)::integer, round(workout_set.plan_duration_min * 60)::integer),
     fact_distance_km = coalesce(workout_set.fact_distance_km, workout_set.plan_distance_km),
     fact_rpe = coalesce(workout_set.fact_rpe, workout_set.plan_rpe),
-    version = workout_set.version + 1,
-    updated_by = p_actor_id
+    version = workout_set.version + 1
   from public.workout_exercises exercise, public.workouts workout
   where workout_set.id = p_set_id and workout_set.version = p_expected_version
     and exercise.id = workout_set.workout_exercise_id and workout.id = exercise.workout_id
@@ -210,20 +178,20 @@ begin
   returning workout_set.version into next_version;
   return next_version;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
 
--- ---------------------------------------------------------------------
--- private.legacy_finish_workout
--- ---------------------------------------------------------------------
-create or replace function private.legacy_finish_workout(p_workout_id uuid, p_expected_version bigint, p_actor_id uuid)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function private.legacy_finish_workout(p_workout_id uuid, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_finish_workout(p_workout_id uuid, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare next_version bigint;
 begin
-  update public.workouts set status = 'done', completed_at = now(), version = version + 1, updated_by = p_actor_id
+  update public.workouts set status = 'done', completed_at = now(), version = version + 1
   where id = p_workout_id and trainer_id = auth.uid() and status = 'in_progress'
     and deleted_at is null and version = p_expected_version
   returning version into next_version;
@@ -232,17 +200,17 @@ begin
   end if;
   return next_version;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
 
--- ---------------------------------------------------------------------
--- private.legacy_remove_live_set
--- ---------------------------------------------------------------------
-create or replace function private.legacy_remove_live_set(p_set_id uuid, p_expected_version bigint, p_actor_id uuid)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function private.legacy_remove_live_set(p_set_id uuid, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_remove_live_set(p_set_id uuid, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
   actor_id uuid := auth.uid();
   exercise_id_value uuid;
@@ -271,7 +239,7 @@ begin
   end if;
 
   update public.workouts
-  set version = version + 1, updated_by = p_actor_id
+  set version = version + 1
   where id = workout_id_value and trainer_id = actor_id and status = 'in_progress'
     and deleted_at is null and version = p_expected_version
   returning version into next_version;
@@ -288,23 +256,23 @@ begin
     where workout_exercise_id = exercise_id_value
   )
   update public.workout_sets s
-  set position = ordered.new_position, updated_by = p_actor_id
+  set position = ordered.new_position
   from ordered
   where s.id = ordered.id and s.position <> ordered.new_position;
 
   return next_version;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
 
--- ---------------------------------------------------------------------
--- private.legacy_reorder_live_block
--- ---------------------------------------------------------------------
-create or replace function private.legacy_reorder_live_block(p_workout_id uuid, p_block_id uuid, p_direction smallint, p_expected_version bigint, p_actor_id uuid)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function private.legacy_reorder_live_block(p_workout_id uuid, p_block_id uuid, p_direction smallint, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_reorder_live_block(p_workout_id uuid, p_block_id uuid, p_direction smallint, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
   actor_id uuid := auth.uid();
   next_version bigint;
@@ -323,7 +291,7 @@ begin
   end if;
 
   update public.workouts
-  set version = version + 1, updated_by = p_actor_id
+  set version = version + 1
   where id = p_workout_id and trainer_id = actor_id and status = 'in_progress'
     and deleted_at is null and version = p_expected_version
   returning version into next_version;
@@ -395,7 +363,7 @@ begin
     order by sort_key
   loop
     update public.workout_exercises e
-    set position = cursor_position + sub.rn, updated_by = p_actor_id
+    set position = cursor_position + sub.rn
     from (
       select id, (row_number() over (order by position) - 1)::smallint as rn
       from public.workout_exercises
@@ -411,17 +379,17 @@ begin
 
   return next_version;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
 
--- ---------------------------------------------------------------------
--- private.legacy_replace_live_exercise
--- ---------------------------------------------------------------------
-create or replace function private.legacy_replace_live_exercise(p_workout_id uuid, p_exercise_id uuid, p_exercise jsonb, p_expected_version bigint, p_actor_id uuid)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function private.legacy_replace_live_exercise(p_workout_id uuid, p_exercise_id uuid, p_exercise jsonb, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_replace_live_exercise(p_workout_id uuid, p_exercise_id uuid, p_exercise jsonb, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
   actor_id uuid := auth.uid(); next_version bigint; old_kind text;
   source_value text := p_exercise->>'source'; ref_value text := p_exercise->>'ref';
@@ -435,7 +403,7 @@ begin
     from public.custom_exercises c where c.id = custom_id and c.trainer_id = actor_id and c.archived_at is null;
     if not found then raise exception 'exercise_not_found' using errcode = 'PT404'; end if;
   elsif source_value <> 'system' then raise exception 'exercise_not_found' using errcode = 'PT404'; end if;
-  update public.workouts set version = version + 1, updated_by = p_actor_id
+  update public.workouts set version = version + 1
   where id = p_workout_id and trainer_id = actor_id and status = 'in_progress'
     and deleted_at is null and version = p_expected_version returning version into next_version;
   if next_version is null then raise exception 'workout_conflict' using errcode = 'PT409'; end if;
@@ -447,29 +415,29 @@ begin
   end if;
   update public.workout_exercises e set
     exercise_source = source_value, exercise_ref = ref_value, custom_exercise_id = custom_id,
-    exercise_name = name_value, muscle_group = group_value, input_kind = kind_value, updated_by = p_actor_id
+    exercise_name = name_value, muscle_group = group_value, input_kind = kind_value
   where e.id = p_exercise_id;
   if old_kind is distinct from kind_value then
     update public.workout_sets s set
       plan_weight_kg = null, plan_reps = null, plan_duration_min = null, plan_duration_sec = null,
       plan_distance_km = null, plan_rpe = null,
       fact_weight_kg = null, fact_reps = null, fact_duration_min = null, fact_duration_sec = null,
-      fact_distance_km = null, fact_rpe = null, updated_by = p_actor_id
+      fact_distance_km = null, fact_rpe = null
     where s.workout_exercise_id = p_exercise_id;
   end if;
   return next_version;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
 
--- ---------------------------------------------------------------------
--- private.legacy_save_completed_workout (собственный actor_id, без нового параметра)
--- ---------------------------------------------------------------------
-create or replace function private.legacy_save_completed_workout(p_workout jsonb, p_expected_version bigint DEFAULT NULL::bigint)
- returns uuid
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function private.legacy_save_completed_workout(p_workout jsonb, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_save_completed_workout(p_workout jsonb, p_expected_version bigint DEFAULT NULL::bigint)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
   actor_id uuid := auth.uid();
   root_trainer uuid;
@@ -487,14 +455,14 @@ begin
     root_trainer := public.authorize_client_mutation(client_id_value, true);
     perform set_config('request.jwt.claim.sub', root_trainer::text, true);
     begin
-      result := private.legacy_save_workout(p_workout, p_expected_version, actor_id);
+      result := private.legacy_save_workout(p_workout, p_expected_version);
       update public.workout_sets set
         fact_weight_kg = plan_weight_kg, fact_reps = plan_reps,
         fact_duration_min = plan_duration_min, fact_duration_sec = plan_duration_sec,
         fact_distance_km = plan_distance_km, fact_rpe = plan_rpe,
-        confirmed_at = now(), version = version + 1, updated_by = actor_id
+        confirmed_at = now(), version = version + 1
       where workout_exercise_id in (select id from public.workout_exercises where workout_id = result);
-      update public.workouts set status = 'done', completed_at = now(), created_by = actor_id, updated_by = actor_id, version = version + 1 where id = result;
+      update public.workouts set status = 'done', completed_at = now(), created_by = actor_id, version = version + 1 where id = result;
     exception when others then
       perform set_config('request.jwt.claim.sub', original_sub, true);
       raise;
@@ -512,8 +480,7 @@ begin
       end_time = nullif(p_workout->>'endTime', '')::time,
       notes = nullif(btrim(p_workout->>'notes'), ''),
       stage_id = nullif(p_workout->>'stageId', '')::uuid,
-      version = version + 1,
-      updated_by = actor_id
+      version = version + 1
     where id = workout_id_value and client_id = client_id_value and status = 'done'
       and deleted_at is null and version = p_expected_version
     returning id into result;
@@ -524,7 +491,7 @@ begin
     update public.workout_sets workout_set set
       fact_weight_kg = null, fact_reps = null, fact_duration_min = null,
       fact_duration_sec = null, fact_distance_km = null, fact_rpe = null,
-      confirmed_at = null, version = version + 1, updated_by = actor_id
+      confirmed_at = null, version = version + 1
     from public.workout_exercises exercise
     where exercise.id = workout_set.workout_exercise_id and exercise.workout_id = result;
 
@@ -533,7 +500,7 @@ begin
       if exercise_id_value is not null and exists (
         select 1 from public.workout_exercises where id = exercise_id_value and workout_id = result
       ) then
-        update public.workout_exercises set position = (exercise_item->>'position')::smallint, updated_by = actor_id
+        update public.workout_exercises set position = (exercise_item->>'position')::smallint
         where id = exercise_id_value;
         inserted_exercise_id := exercise_id_value;
       else
@@ -541,7 +508,7 @@ begin
           workout_id, trainer_id, client_id, position, exercise_source, exercise_ref,
           custom_exercise_id, exercise_name, muscle_group, input_kind, block_id, block_type,
           block_rounds, trainer_comment, block_preset, rest_between_exercises_sec,
-          rest_between_rounds_sec, rest_between_sets_sec, updated_by
+          rest_between_rounds_sec, rest_between_sets_sec
         ) values (
           result, root_trainer, client_id_value, (exercise_item->>'position')::smallint,
           exercise_item->>'source', exercise_item->>'ref', nullif(exercise_item->>'customExerciseId', '')::uuid,
@@ -553,8 +520,7 @@ begin
           coalesce(nullif(exercise_item->>'blockPreset', ''), 'set'),
           coalesce(nullif(exercise_item->>'restBetweenExercisesSec', '')::smallint, 0),
           coalesce(nullif(exercise_item->>'restBetweenRoundsSec', '')::smallint, 90),
-          coalesce(nullif(exercise_item->>'restBetweenSetsSec', '')::smallint, 90),
-          actor_id
+          coalesce(nullif(exercise_item->>'restBetweenSetsSec', '')::smallint, 90)
         ) returning id into inserted_exercise_id;
       end if;
 
@@ -571,18 +537,18 @@ begin
             fact_duration_sec = nullif(set_item->>'durationSec', '')::integer,
             fact_distance_km = nullif(set_item->>'distanceKm', '')::numeric,
             fact_rpe = nullif(set_item->>'rpe', '')::numeric,
-            confirmed_at = now(), version = version + 1, updated_by = actor_id
+            confirmed_at = now(), version = version + 1
           where id = set_id_value;
         else
           insert into public.workout_sets (
             workout_exercise_id, trainer_id, client_id, position,
             fact_weight_kg, fact_reps, fact_duration_min, fact_duration_sec,
-            fact_distance_km, fact_rpe, confirmed_at, updated_by
+            fact_distance_km, fact_rpe, confirmed_at
           ) values (
             inserted_exercise_id, root_trainer, client_id_value, (set_item->>'position')::smallint,
             nullif(set_item->>'weightKg', '')::numeric, nullif(set_item->>'reps', '')::integer,
             nullif(set_item->>'durationMin', '')::numeric, nullif(set_item->>'durationSec', '')::integer,
-            nullif(set_item->>'distanceKm', '')::numeric, nullif(set_item->>'rpe', '')::numeric, now(), actor_id
+            nullif(set_item->>'distanceKm', '')::numeric, nullif(set_item->>'rpe', '')::numeric, now()
           );
         end if;
       end loop;
@@ -593,19 +559,18 @@ begin
   end;
   perform set_config('request.jwt.claim.sub', original_sub, true);
   return result;
-end $function$;
+end $function$
+;
+-- YAFIT279-END
 
--- ---------------------------------------------------------------------
--- private.legacy_save_completed_workout_request (без нового параметра, добавлен локальный actor_id)
--- ---------------------------------------------------------------------
-create or replace function private.legacy_save_completed_workout_request(p_workout jsonb, p_expected_version bigint DEFAULT NULL::bigint)
- returns uuid
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function private.legacy_save_completed_workout_request(p_workout jsonb, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_save_completed_workout_request(p_workout jsonb, p_expected_version bigint DEFAULT NULL::bigint)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
-  actor_id uuid := auth.uid();
   result uuid;
   exercise_item jsonb;
   source_exercise_id uuid;
@@ -626,31 +591,30 @@ begin
         custom_exercise_id = nullif(exercise_item->>'customExerciseId', '')::uuid,
         exercise_name = exercise_item->>'name',
         muscle_group = exercise_item->>'muscleGroup',
-        input_kind = exercise_item->>'inputKind',
-        updated_by = actor_id
+        input_kind = exercise_item->>'inputKind'
       where id = source_exercise_id and workout_id = result;
 
       update public.workout_sets set
         fact_weight_kg = null, fact_reps = null, fact_duration_min = null,
         fact_duration_sec = null, fact_distance_km = null, fact_rpe = null,
-        confirmed_at = null, version = version + 1, updated_by = actor_id
+        confirmed_at = null, version = version + 1
       where workout_exercise_id = source_exercise_id;
     end loop;
   end if;
 
   return result;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
 
--- ---------------------------------------------------------------------
--- private.legacy_save_live_set_draft
--- ---------------------------------------------------------------------
-create or replace function private.legacy_save_live_set_draft(p_set_id uuid, p_draft jsonb, p_expected_version bigint, p_actor_id uuid)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function private.legacy_save_live_set_draft(p_set_id uuid, p_draft jsonb, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_save_live_set_draft(p_set_id uuid, p_draft jsonb, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare next_version bigint;
 begin
   update public.workout_sets s set
@@ -663,8 +627,7 @@ begin
     ),
     fact_distance_km = nullif(p_draft->>'distanceKm', '')::numeric,
     fact_rpe = nullif(p_draft->>'rpe', '')::numeric,
-    version = s.version + 1,
-    updated_by = p_actor_id
+    version = s.version + 1
   from public.workout_exercises e, public.workouts w
   where s.id = p_set_id and s.version = p_expected_version
     and e.id = s.workout_exercise_id and w.id = e.workout_id
@@ -675,17 +638,17 @@ begin
   end if;
   return next_version;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
 
--- ---------------------------------------------------------------------
--- private.legacy_save_progress
--- ---------------------------------------------------------------------
-create or replace function private.legacy_save_progress(p_progress jsonb, p_expected_version bigint DEFAULT NULL::bigint, p_actor_id uuid DEFAULT NULL::uuid)
- returns uuid
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function private.legacy_save_progress(p_progress jsonb, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_save_progress(p_progress jsonb, p_expected_version bigint DEFAULT NULL::bigint)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
   actor_id uuid := auth.uid();
   root_id uuid := nullif(p_progress->>'id', '')::uuid;
@@ -701,15 +664,14 @@ begin
 
   if root_id is null then
     insert into public.client_progress (
-      trainer_id, client_id, recorded_on, weight_kg, chest_cm, waist_cm, hip_cm, notes, updated_by
+      trainer_id, client_id, recorded_on, weight_kg, chest_cm, waist_cm, hip_cm, notes
     ) values (
       actor_id, client_id_value, (p_progress->>'recordedOn')::date,
       nullif(p_progress->>'weightKg', '')::numeric,
       nullif(p_progress->>'chestCm', '')::numeric,
       nullif(p_progress->>'waistCm', '')::numeric,
       nullif(p_progress->>'hipCm', '')::numeric,
-      nullif(btrim(p_progress->>'notes'), ''),
-      p_actor_id
+      nullif(btrim(p_progress->>'notes'), '')
     ) returning id into root_id;
   else
     update public.client_progress set
@@ -719,8 +681,7 @@ begin
       waist_cm = nullif(p_progress->>'waistCm', '')::numeric,
       hip_cm = nullif(p_progress->>'hipCm', '')::numeric,
       notes = nullif(btrim(p_progress->>'notes'), ''),
-      version = version + 1,
-      updated_by = p_actor_id
+      version = version + 1
     where id = root_id and trainer_id = actor_id and client_id = client_id_value
       and deleted_at is null and version = p_expected_version;
     if not found then
@@ -746,17 +707,17 @@ begin
   end loop;
   return root_id;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
 
--- ---------------------------------------------------------------------
--- private.legacy_save_workout
--- ---------------------------------------------------------------------
-create or replace function private.legacy_save_workout(p_workout jsonb, p_expected_version bigint DEFAULT NULL::bigint, p_actor_id uuid DEFAULT NULL::uuid)
- returns uuid
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function private.legacy_save_workout(p_workout jsonb, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_save_workout(p_workout jsonb, p_expected_version bigint DEFAULT NULL::bigint)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
   actor_id uuid := auth.uid();
   root_id uuid := nullif(p_workout->>'id', '')::uuid;
@@ -819,7 +780,7 @@ begin
     insert into public.workout_exercises (
       workout_id, trainer_id, client_id, position, exercise_source, exercise_ref,
       custom_exercise_id, exercise_name, muscle_group, input_kind, block_id, block_type, block_rounds, trainer_comment,
-      block_preset, rest_between_exercises_sec, rest_between_rounds_sec, rest_between_sets_sec, updated_by
+      block_preset, rest_between_exercises_sec, rest_between_rounds_sec, rest_between_sets_sec
     ) values (
       root_id, actor_id, client_id_value, (exercise->>'position')::smallint,
       exercise->>'source', exercise->>'ref', nullif(exercise->>'customExerciseId', '')::uuid,
@@ -831,15 +792,14 @@ begin
       coalesce(nullif(exercise->>'blockPreset', ''), 'set'),
       coalesce(nullif(exercise->>'restBetweenExercisesSec', '')::smallint, 0),
       coalesce(nullif(exercise->>'restBetweenRoundsSec', '')::smallint, 90),
-      coalesce(nullif(exercise->>'restBetweenSetsSec', '')::smallint, 90),
-      p_actor_id
+      coalesce(nullif(exercise->>'restBetweenSetsSec', '')::smallint, 90)
     ) returning id into exercise_id;
 
     for set_item in select value from jsonb_array_elements(coalesce(exercise->'sets', '[]'::jsonb))
     loop
       insert into public.workout_sets (
         workout_exercise_id, trainer_id, client_id, position,
-        plan_weight_kg, plan_reps, plan_duration_min, plan_duration_sec, plan_distance_km, plan_rpe, updated_by
+        plan_weight_kg, plan_reps, plan_duration_min, plan_duration_sec, plan_distance_km, plan_rpe
       ) values (
         exercise_id, actor_id, client_id_value, (set_item->>'position')::smallint,
         nullif(set_item->>'weightKg', '')::numeric,
@@ -847,24 +807,23 @@ begin
         nullif(set_item->>'durationMin', '')::numeric,
         nullif(set_item->>'durationSec', '')::integer,
         nullif(set_item->>'distanceKm', '')::numeric,
-        nullif(set_item->>'rpe', '')::numeric,
-        p_actor_id
+        nullif(set_item->>'rpe', '')::numeric
       );
     end loop;
   end loop;
   return root_id;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
 
--- ---------------------------------------------------------------------
--- private.legacy_save_workout_request (собственный actor_id, без нового параметра)
--- ---------------------------------------------------------------------
-create or replace function private.legacy_save_workout_request(p_workout jsonb, p_expected_version bigint DEFAULT NULL::bigint)
- returns uuid
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function private.legacy_save_workout_request(p_workout jsonb, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_save_workout_request(p_workout jsonb, p_expected_version bigint DEFAULT NULL::bigint)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
   actor_id uuid := auth.uid();
   original_sub text := actor_id::text;
@@ -892,26 +851,24 @@ begin
     from jsonb_array_elements(coalesce(p_workout->'exercises', '[]'::jsonb)) exercise_item;
   end if;
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := private.legacy_save_workout(effective_workout, p_expected_version, actor_id);
+  begin result := private.legacy_save_workout(effective_workout, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true);
   if workout_id_value is null then
-    update public.workouts set created_by = actor_id, updated_by = actor_id where id = result;
-  else
-    update public.workouts set updated_by = actor_id where id = result;
+    update public.workouts set created_by = actor_id where id = result;
   end if;
   return result;
-end $function$;
+end $function$
+;
+-- YAFIT279-END
 
--- ---------------------------------------------------------------------
--- private.legacy_set_exercise_comment
--- ---------------------------------------------------------------------
-create or replace function private.legacy_set_exercise_comment(p_exercise_id uuid, p_comment text, p_expected_version bigint, p_actor_id uuid)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function private.legacy_set_exercise_comment(p_exercise_id uuid, p_comment text, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_set_exercise_comment(p_exercise_id uuid, p_comment text, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
   actor_id uuid := auth.uid();
   workout_id_value uuid;
@@ -929,7 +886,7 @@ begin
   end if;
 
   update public.workouts
-  set version = version + 1, updated_by = p_actor_id
+  set version = version + 1
   where id = workout_id_value and trainer_id = actor_id and status = 'in_progress'
     and deleted_at is null and version = p_expected_version
   returning version into next_version;
@@ -938,56 +895,56 @@ begin
   end if;
 
   update public.workout_exercises
-  set trainer_comment = nullif(btrim(p_comment), ''), updated_by = p_actor_id
+  set trainer_comment = nullif(btrim(p_comment), '')
   where id = p_exercise_id;
 
   return next_version;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
 
--- ---------------------------------------------------------------------
--- private.legacy_soft_delete_progress
--- ---------------------------------------------------------------------
-create or replace function private.legacy_soft_delete_progress(p_progress_id uuid, p_expected_version bigint, p_actor_id uuid)
- returns void
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function private.legacy_soft_delete_progress(p_progress_id uuid, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_soft_delete_progress(p_progress_id uuid, p_expected_version bigint)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 begin
-  update public.client_progress set deleted_at = now(), version = version + 1, updated_by = p_actor_id
+  update public.client_progress set deleted_at = now(), version = version + 1
   where id = p_progress_id and trainer_id = auth.uid() and deleted_at is null
     and version = p_expected_version;
   if not found then raise exception 'progress_conflict' using errcode = 'PT409'; end if;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
 
--- ---------------------------------------------------------------------
--- private.legacy_soft_delete_workout
--- ---------------------------------------------------------------------
-create or replace function private.legacy_soft_delete_workout(p_workout_id uuid, p_expected_version bigint, p_actor_id uuid)
- returns void
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function private.legacy_soft_delete_workout(p_workout_id uuid, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_soft_delete_workout(p_workout_id uuid, p_expected_version bigint)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 begin
-  update public.workouts set deleted_at = now(), version = version + 1, updated_by = p_actor_id
+  update public.workouts set deleted_at = now(), version = version + 1
   where id = p_workout_id and trainer_id = auth.uid() and deleted_at is null
     and version = p_expected_version;
   if not found then raise exception 'workout_conflict' using errcode = 'PT409'; end if;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
 
--- ---------------------------------------------------------------------
--- private.legacy_start_workout
--- ---------------------------------------------------------------------
-create or replace function private.legacy_start_workout(p_workout_id uuid, p_expected_version bigint, p_actor_id uuid)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function private.legacy_start_workout(p_workout_id uuid, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION private.legacy_start_workout(p_workout_id uuid, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
   actor_id uuid := auth.uid();
   client_archived boolean;
@@ -1002,7 +959,7 @@ begin
     raise exception 'client_not_found' using errcode = 'PT404';
   end if;
 
-  update public.workouts set status = 'in_progress', started_at = now(), version = version + 1, updated_by = p_actor_id
+  update public.workouts set status = 'in_progress', started_at = now(), version = version + 1
   where id = p_workout_id and trainer_id = actor_id and status = 'planned'
     and deleted_at is null and version = p_expected_version
   returning version into next_version;
@@ -1011,53 +968,56 @@ begin
   end if;
   return next_version;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
 
--- =======================================================================
--- Публичные обёртки: захватываем actor_id ДО подмены identity и прокидываем
--- в legacy-функции явным параметром.
--- =======================================================================
-
-create or replace function public.append_live_exercise(p_workout_id uuid, p_exercise jsonb, p_expected_version bigint)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
-declare actor_id uuid := auth.uid(); original_sub text := actor_id::text; root_trainer uuid; result bigint;
+-- function public.append_live_exercise(p_workout_id uuid, p_exercise jsonb, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION public.append_live_exercise(p_workout_id uuid, p_exercise jsonb, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare original_sub text := auth.uid()::text; root_trainer uuid; result bigint;
 begin
   root_trainer := public.authorize_workout_mutation(p_workout_id, true);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := private.legacy_append_live_exercise(p_workout_id, p_exercise, p_expected_version, actor_id);
+  begin result := private.legacy_append_live_exercise(p_workout_id, p_exercise, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
-end $function$;
+end $function$
+;
+-- YAFIT279-END
 
-create or replace function public.append_live_set(p_workout_exercise_id uuid, p_expected_version bigint)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
-declare actor_id uuid := auth.uid(); original_sub text := actor_id::text; root_trainer uuid; workout_id_value uuid; result bigint;
+-- function public.append_live_set(p_workout_exercise_id uuid, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION public.append_live_set(p_workout_exercise_id uuid, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare original_sub text := auth.uid()::text; root_trainer uuid; workout_id_value uuid; result bigint;
 begin
   select workout_id into workout_id_value from public.workout_exercises where id = p_workout_exercise_id;
   root_trainer := public.authorize_workout_mutation(workout_id_value, true);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := private.legacy_append_live_set(p_workout_exercise_id, p_expected_version, actor_id);
+  begin result := private.legacy_append_live_set(p_workout_exercise_id, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
-end $function$;
+end $function$
+;
+-- YAFIT279-END
 
-create or replace function public.confirm_live_set(p_set_id uuid, p_expected_version bigint)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function public.confirm_live_set(p_set_id uuid, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION public.confirm_live_set(p_set_id uuid, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
-  actor_id uuid := auth.uid();
-  original_sub text := actor_id::text;
+  original_sub text := auth.uid()::text;
   root_trainer uuid;
   workout_id_value uuid;
   result bigint;
@@ -1081,7 +1041,7 @@ begin
     for update of workout;
     if not found then raise exception 'live_set_conflict' using errcode = 'PT409'; end if;
 
-    result := private.legacy_confirm_live_set(p_set_id, p_expected_version, actor_id);
+    result := private.legacy_confirm_live_set(p_set_id, p_expected_version);
   exception when others then
     perform set_config('request.jwt.claim.sub', original_sub, true);
     raise;
@@ -1089,30 +1049,36 @@ begin
   perform set_config('request.jwt.claim.sub', original_sub, true);
   return result;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
 
-create or replace function public.finish_workout(p_workout_id uuid, p_expected_version bigint)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
-declare actor_id uuid := auth.uid(); original_sub text := actor_id::text; root_trainer uuid; result bigint;
+-- function public.finish_workout(p_workout_id uuid, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION public.finish_workout(p_workout_id uuid, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare original_sub text := auth.uid()::text; root_trainer uuid; result bigint;
 begin
   root_trainer := public.authorize_workout_mutation(p_workout_id, true);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := private.legacy_finish_workout(p_workout_id, p_expected_version, actor_id);
+  begin result := private.legacy_finish_workout(p_workout_id, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
-end $function$;
+end $function$
+;
+-- YAFIT279-END
 
-create or replace function public.remove_live_set(p_set_id uuid, p_expected_version bigint)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
-declare actor_id uuid := auth.uid(); original_sub text := actor_id::text; root_trainer uuid; workout_id_value uuid; result bigint;
+-- function public.remove_live_set(p_set_id uuid, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION public.remove_live_set(p_set_id uuid, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare original_sub text := auth.uid()::text; root_trainer uuid; workout_id_value uuid; result bigint;
 begin
   select exercise.workout_id into workout_id_value
   from public.workout_sets workout_set
@@ -1120,48 +1086,57 @@ begin
   where workout_set.id = p_set_id;
   root_trainer := public.authorize_workout_mutation(workout_id_value, true);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := private.legacy_remove_live_set(p_set_id, p_expected_version, actor_id);
+  begin result := private.legacy_remove_live_set(p_set_id, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
-end $function$;
+end $function$
+;
+-- YAFIT279-END
 
-create or replace function public.reorder_live_block(p_workout_id uuid, p_block_id uuid, p_direction smallint, p_expected_version bigint)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
-declare actor_id uuid := auth.uid(); original_sub text := actor_id::text; root_trainer uuid; result bigint;
+-- function public.reorder_live_block(p_workout_id uuid, p_block_id uuid, p_direction smallint, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION public.reorder_live_block(p_workout_id uuid, p_block_id uuid, p_direction smallint, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare original_sub text := auth.uid()::text; root_trainer uuid; result bigint;
 begin
   root_trainer := public.authorize_workout_mutation(p_workout_id, true);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := private.legacy_reorder_live_block(p_workout_id, p_block_id, p_direction, p_expected_version, actor_id);
+  begin result := private.legacy_reorder_live_block(p_workout_id, p_block_id, p_direction, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
-end $function$;
+end $function$
+;
+-- YAFIT279-END
 
-create or replace function public.replace_live_exercise(p_workout_id uuid, p_exercise_id uuid, p_exercise jsonb, p_expected_version bigint)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
-declare actor_id uuid := auth.uid(); original_sub text := actor_id::text; root_trainer uuid; result bigint;
+-- function public.replace_live_exercise(p_workout_id uuid, p_exercise_id uuid, p_exercise jsonb, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION public.replace_live_exercise(p_workout_id uuid, p_exercise_id uuid, p_exercise jsonb, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare original_sub text := auth.uid()::text; root_trainer uuid; result bigint;
 begin
   root_trainer := public.authorize_workout_mutation(p_workout_id, true);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := private.legacy_replace_live_exercise(p_workout_id, p_exercise_id, p_exercise, p_expected_version, actor_id);
+  begin result := private.legacy_replace_live_exercise(p_workout_id, p_exercise_id, p_exercise, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
-end $function$;
+end $function$
+;
+-- YAFIT279-END
 
-create or replace function public.save_live_set_draft(p_set_id uuid, p_draft jsonb, p_expected_version bigint)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
-declare actor_id uuid := auth.uid(); original_sub text := actor_id::text; root_trainer uuid; workout_id_value uuid; result bigint;
+-- function public.save_live_set_draft(p_set_id uuid, p_draft jsonb, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION public.save_live_set_draft(p_set_id uuid, p_draft jsonb, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare original_sub text := auth.uid()::text; root_trainer uuid; workout_id_value uuid; result bigint;
 begin
   select exercise.workout_id into workout_id_value
   from public.workout_sets workout_set
@@ -1169,17 +1144,20 @@ begin
   where workout_set.id = p_set_id;
   root_trainer := public.authorize_workout_mutation(workout_id_value, true);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := private.legacy_save_live_set_draft(p_set_id, p_draft, p_expected_version, actor_id);
+  begin result := private.legacy_save_live_set_draft(p_set_id, p_draft, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
-end $function$;
+end $function$
+;
+-- YAFIT279-END
 
-create or replace function public.save_progress(p_progress jsonb, p_expected_version bigint DEFAULT NULL::bigint)
- returns uuid
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function public.save_progress(p_progress jsonb, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION public.save_progress(p_progress jsonb, p_expected_version bigint DEFAULT NULL::bigint)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
   actor_id uuid := auth.uid();
   original_sub text := actor_id::text;
@@ -1199,35 +1177,41 @@ begin
     raise exception 'progress_edit_denied' using errcode = 'PT403';
   end if;
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := private.legacy_save_progress(p_progress, p_expected_version, actor_id);
+  begin result := private.legacy_save_progress(p_progress, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true);
   if root_id is null then update public.client_progress set created_by = actor_id where id = result; end if;
   return result;
-end $function$;
+end $function$
+;
+-- YAFIT279-END
 
-create or replace function public.set_exercise_comment(p_exercise_id uuid, p_comment text, p_expected_version bigint)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
-declare actor_id uuid := auth.uid(); original_sub text := actor_id::text; root_trainer uuid; workout_id_value uuid; result bigint;
+-- function public.set_exercise_comment(p_exercise_id uuid, p_comment text, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION public.set_exercise_comment(p_exercise_id uuid, p_comment text, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare original_sub text := auth.uid()::text; root_trainer uuid; workout_id_value uuid; result bigint;
 begin
   select workout_id into workout_id_value from public.workout_exercises where id = p_exercise_id;
   root_trainer := public.authorize_workout_mutation(workout_id_value, false);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin result := private.legacy_set_exercise_comment(p_exercise_id, p_comment, p_expected_version, actor_id);
+  begin result := private.legacy_set_exercise_comment(p_exercise_id, p_comment, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true); return result;
-end $function$;
+end $function$
+;
+-- YAFIT279-END
 
-create or replace function public.soft_delete_progress(p_progress_id uuid, p_expected_version bigint)
- returns void
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function public.soft_delete_progress(p_progress_id uuid, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION public.soft_delete_progress(p_progress_id uuid, p_expected_version bigint)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
   actor_id uuid := auth.uid();
   original_sub text := actor_id::text;
@@ -1246,35 +1230,40 @@ begin
     raise exception 'progress_delete_denied' using errcode = 'PT403';
   end if;
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin perform private.legacy_soft_delete_progress(p_progress_id, p_expected_version, actor_id);
+  begin perform private.legacy_soft_delete_progress(p_progress_id, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true);
-end $function$;
+end $function$
+;
+-- YAFIT279-END
 
-create or replace function public.soft_delete_workout(p_workout_id uuid, p_expected_version bigint)
- returns void
- language plpgsql
- security definer
- set search_path to ''
-as $function$
-declare actor_id uuid := auth.uid(); original_sub text := actor_id::text; root_trainer uuid;
+-- function public.soft_delete_workout(p_workout_id uuid, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION public.soft_delete_workout(p_workout_id uuid, p_expected_version bigint)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare original_sub text := auth.uid()::text; root_trainer uuid;
 begin
   root_trainer := public.authorize_workout_mutation(p_workout_id, false);
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
-  begin perform private.legacy_soft_delete_workout(p_workout_id, p_expected_version, actor_id);
+  begin perform private.legacy_soft_delete_workout(p_workout_id, p_expected_version);
   exception when others then perform set_config('request.jwt.claim.sub', original_sub, true); raise; end;
   perform set_config('request.jwt.claim.sub', original_sub, true);
-end $function$;
+end $function$
+;
+-- YAFIT279-END
 
-create or replace function public.start_workout(p_workout_id uuid, p_expected_version bigint)
- returns bigint
- language plpgsql
- security definer
- set search_path to ''
-as $function$
+-- function public.start_workout(p_workout_id uuid, p_expected_version bigint)
+CREATE OR REPLACE FUNCTION public.start_workout(p_workout_id uuid, p_expected_version bigint)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
-  actor_id uuid := auth.uid();
-  original_sub text := actor_id::text;
+  original_sub text := auth.uid()::text;
   root_trainer uuid;
   target_client_id uuid;
   active_workout_id uuid;
@@ -1299,7 +1288,7 @@ begin
 
   perform set_config('request.jwt.claim.sub', root_trainer::text, true);
   begin
-    result := private.legacy_start_workout(p_workout_id, p_expected_version, actor_id);
+    result := private.legacy_start_workout(p_workout_id, p_expected_version);
   exception
     when unique_violation then
       perform set_config('request.jwt.claim.sub', original_sub, true);
@@ -1311,4 +1300,97 @@ begin
   perform set_config('request.jwt.claim.sub', original_sub, true);
   return result;
 end;
-$function$;
+$function$
+;
+-- YAFIT279-END
+
+
+-- Private helpers are never executable by public roles. Recreating a previously
+-- dropped function resets its default EXECUTE grant, so restore the #361 policy.
+revoke all on function private.legacy_append_live_exercise(uuid, jsonb, bigint) from public, anon, authenticated;
+revoke all on function private.legacy_append_live_set(uuid, bigint) from public, anon, authenticated;
+revoke all on function private.legacy_confirm_live_set(uuid, bigint) from public, anon, authenticated;
+revoke all on function private.legacy_finish_workout(uuid, bigint) from public, anon, authenticated;
+revoke all on function private.legacy_remove_live_set(uuid, bigint) from public, anon, authenticated;
+revoke all on function private.legacy_reorder_live_block(uuid, uuid, smallint, bigint) from public, anon, authenticated;
+revoke all on function private.legacy_replace_live_exercise(uuid, uuid, jsonb, bigint) from public, anon, authenticated;
+revoke all on function private.legacy_save_completed_workout(jsonb, bigint) from public, anon, authenticated;
+revoke all on function private.legacy_save_completed_workout_request(jsonb, bigint) from public, anon, authenticated;
+revoke all on function private.legacy_save_live_set_draft(uuid, jsonb, bigint) from public, anon, authenticated;
+revoke all on function private.legacy_save_progress(jsonb, bigint) from public, anon, authenticated;
+revoke all on function private.legacy_save_workout(jsonb, bigint) from public, anon, authenticated;
+revoke all on function private.legacy_save_workout_request(jsonb, bigint) from public, anon, authenticated;
+revoke all on function private.legacy_set_exercise_comment(uuid, text, bigint) from public, anon, authenticated;
+revoke all on function private.legacy_soft_delete_progress(uuid, bigint) from public, anon, authenticated;
+revoke all on function private.legacy_soft_delete_workout(uuid, bigint) from public, anon, authenticated;
+revoke all on function private.legacy_start_workout(uuid, bigint) from public, anon, authenticated;
+
+-- Remove the overloads introduced after #361. Public wrappers above have
+-- already been restored and reference only the baseline signatures.
+drop function if exists private.legacy_append_live_exercise(uuid, jsonb, bigint, uuid);
+drop function if exists private.legacy_append_live_set(uuid, bigint, uuid);
+drop function if exists private.legacy_confirm_live_set(uuid, bigint, uuid);
+drop function if exists private.legacy_finish_workout(uuid, bigint, uuid);
+drop function if exists private.legacy_remove_live_set(uuid, bigint, uuid);
+drop function if exists private.legacy_reorder_live_block(uuid, uuid, smallint, bigint, uuid);
+drop function if exists private.legacy_replace_live_exercise(uuid, uuid, jsonb, bigint, uuid);
+drop function if exists private.legacy_save_live_set_draft(uuid, jsonb, bigint, uuid);
+drop function if exists private.legacy_save_progress(jsonb, bigint, uuid);
+drop function if exists private.legacy_save_workout(jsonb, bigint, uuid);
+drop function if exists private.legacy_set_exercise_comment(uuid, text, bigint, uuid);
+drop function if exists private.legacy_soft_delete_progress(uuid, bigint, uuid);
+drop function if exists private.legacy_soft_delete_workout(uuid, bigint, uuid);
+drop function if exists private.legacy_start_workout(uuid, bigint, uuid);
+
+-- PR #365 changed the activity contract. Return it exactly to the #361
+-- created_by definition before removing updated_by.
+drop materialized view if exists analytics.client_overview;
+
+create materialized view analytics.client_overview as
+select
+  c.id as client_id,
+  c.created_at as registered_at,
+  (c.auth_user_id is not null and c.trainer_id = c.auth_user_id) as is_self_registered,
+  lower(u.email) = any(array['test@test.com', 'knyaz187@mail.ru']) as is_test_account,
+  greatest(cw.last_client_workout_at, cp.last_client_progress_at) as last_client_activity_at
+from public.clients c
+join auth.users u on u.id = c.trainer_id
+left join (
+  select w.client_id, max(w.updated_at) as last_client_workout_at
+  from public.workouts w
+  join public.clients c2 on c2.id = w.client_id
+  where w.deleted_at is null
+    and c2.auth_user_id is not null
+    and w.created_by = c2.auth_user_id
+  group by w.client_id
+) cw on cw.client_id = c.id
+left join (
+  select p.client_id, max(p.updated_at) as last_client_progress_at
+  from public.client_progress p
+  join public.clients c2 on c2.id = p.client_id
+  where p.deleted_at is null
+    and c2.auth_user_id is not null
+    and p.created_by = c2.auth_user_id
+  group by p.client_id
+) cp on cp.client_id = c.id;
+
+grant select on analytics.client_overview to datalens_reader;
+
+-- #365 recreated the view and scheduled the same refresh a second time. Keep
+-- the original #361 schedule (the oldest job) and remove only later duplicates.
+select cron.unschedule(jobid)
+from cron.job
+where jobname = 'refresh-analytics-client-overview'
+  and jobid <> (
+    select min(jobid)
+    from cron.job
+    where jobname = 'refresh-analytics-client-overview'
+  );
+
+-- updated_by was introduced only by PR #363 and is not part of the #361
+-- contract. It carries no workout content; removing it restores the original
+-- schema and the generated database types.
+alter table public.workout_sets drop column if exists updated_by;
+alter table public.workout_exercises drop column if exists updated_by;
+alter table public.workouts drop column if exists updated_by;
+alter table public.client_progress drop column if exists updated_by;
