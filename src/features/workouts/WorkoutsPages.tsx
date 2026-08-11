@@ -9,7 +9,7 @@ import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -510,10 +510,10 @@ export function WorkoutDetailPage() {
       {workout.status === 'planned' && canExecute && <button className="wide" disabled={start.isPending} onClick={() => start.mutate()}>Начать тренировку</button>}
       {start.error && !(start.error instanceof Error && 'code' in start.error && start.error.code === 'active_workout_exists') && <p className="error">{start.error.message}</p>}
       {workout.status === 'in_progress' && canExecute && <Link className="button wide" to={`/workouts/${workoutId}/live`}>Продолжить тренировку</Link>}
-      {done && <section className="summary done-summary done-summary-3">
-        <div><span>Время</span><strong>{duration ?? '—'}</strong></div>
-        <div><span>Тоннаж</span><strong>{tonnageLabel(tonnage)}</strong></div>
-        <div><span>Группы мышц</span><strong>{groups.length ? groups.join(', ') : '—'}</strong></div>
+      {done && <section className="workout-fact-summary" aria-label="Сводка тренировки">
+        {duration && <p><span>Время</span><strong>{duration}</strong></p>}
+        {tonnage > 0 && <p><span>Тоннаж</span><strong>{tonnageLabel(tonnage)}</strong></p>}
+        {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
       </section>}
       {done && <WorkoutTrainerReview workout={workout} canEdit={trainerOwned} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
       {((clientMode && !clientOwned) || (!clientMode && workout.clientComment)) && <WorkoutClientComment workout={workout} canEdit={clientMode && !clientOwned} saving={clientComment.isPending} error={clientComment.error} onSave={(value) => clientComment.mutateAsync(value)} />}
@@ -522,7 +522,7 @@ export function WorkoutDetailPage() {
           const compactPlan = workout.status === 'planned' ? compactPlannedSetSummary(exercise.sets, showRpe) : null
           return <article className={`exercise ${done ? 'completed-exercise' : ''}`} key={exercise.id}>
           <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
-          {compactPlan ? <p className="planned-set-summary"><span>План</span><strong>{compactPlan}</strong></p> : <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={['Результат']} trailingLabel={done ? 'Статус' : undefined} className="workout-history-sets">
+          {done ? <p className="completed-set-summary">{compactCompletedSetSummary(exercise.sets, showRpe)}</p> : compactPlan ? <p className="planned-set-summary"><span>План</span><strong>{compactPlan}</strong></p> : <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={['Результат']} className="workout-history-sets">
             {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} />)}
           </WorkoutSetTable>}
           {exercise.trainerComment && <p className="exercise-comment-note">💬 {exercise.trainerComment}</p>}

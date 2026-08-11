@@ -421,6 +421,28 @@ export function compactPlannedSetSummary(sets: readonly WorkoutSet[], showRpe = 
   return sets.length === 1 ? first : `${sets.length} × ${first}`
 }
 
+// Итог тренировки — это чтение факта, а не таблица для редактирования. Одинаковые
+// подтверждённые подходы сворачиваются в одну строку; разные остаются в порядке
+// выполнения, но без служебных номера и статуса каждой строки.
+export function compactCompletedSetSummary(sets: readonly WorkoutSet[], showRpe = false): string {
+  const completed = sets.filter((set) => Boolean(set.confirmedAt))
+  const lines = completed.map((set) => {
+    const weight = set.fact.weightKg ?? set.weightKg
+    const reps = set.fact.reps ?? set.reps
+    const distance = set.fact.distanceKm ?? set.distanceKm
+    const durationSec = set.fact.durationSec ?? set.durationSec
+    const durationMin = durationSec === undefined ? (set.fact.durationMin ?? set.durationMin) : undefined
+    const rpe = set.fact.rpe ?? set.rpe
+    return setLine(weight, reps, distance, durationSec, durationMin, rpe, showRpe) || 'Без результата'
+  })
+  const first = lines[0]
+  const fact = !first ? 'Без выполненных подходов'
+    : lines.every((line) => line === first) && lines.length > 1 ? `${lines.length} × ${first}`
+      : lines.join(' · ')
+  const missed = sets.length - completed.length
+  return missed > 0 ? `${fact} · не выполнено: ${missed}` : fact
+}
+
 // Результат подхода: строка факта (факт, иначе план) и приписка плана — только
 // если факт был введён и отличается от плана хоть по одному параметру.
 // Совпал факт с планом или факта нет вовсе → planNote = null.
