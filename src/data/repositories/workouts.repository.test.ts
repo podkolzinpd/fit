@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, previousResultLine, replaceExercise, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitBlock, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, previousResultLine, replaceExercise, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -22,6 +22,13 @@ describe('workouts repository rules', () => {
     expect(compactPlannedSetSummary([base(0), base(1), base(2)])).toBe('3 × 150 кг × 10 повт.')
     expect(compactPlannedSetSummary([base(0), base(1, 8)])).toBeNull()
     expect(compactPlannedSetSummary([{ id: 'duration', position: 0, durationSec: 300, fact: {}, confirmedAt: null, version: 1 }])).toBe('5:00')
+  })
+
+  it('сворачивает одинаковый факт и кратко отмечает невыполненные подходы', () => {
+    const base = (position: number, weight = 150, reps = 10, confirmed = true): WorkoutSet => ({ id: `done-${position}`, position, weightKg: 100, reps: 8, fact: { weightKg: weight, reps }, confirmedAt: confirmed ? 'now' : null, version: 1 })
+    expect(compactCompletedSetSummary([base(0), base(1), base(2)])).toBe('3 × 150 кг × 10 повт.')
+    expect(compactCompletedSetSummary([base(0), base(1, 140, 8)])).toBe('150 кг × 10 повт. · 140 кг × 8 повт.')
+    expect(compactCompletedSetSummary([base(0), base(1, 150, 10, false)])).toBe('150 кг × 10 повт. · не выполнено: 1')
   })
 
   it('показывает последний заполненный результат без RPE', () => {
