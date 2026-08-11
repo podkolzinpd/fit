@@ -12,7 +12,6 @@ import { Page } from '../../shared/ui'
 import { ExercisePicker, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { ClientPicker, type ClientPickerSelection } from '../clients'
 import { useAuth } from '../../app/auth-context'
-import { isTodayStartRedesignEnabled } from '../../app/feature-flags'
 import { useRpeDisplay } from '../../app/rpe-display'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { parseWorkoutWithLlm } from './llm-workout-parser'
@@ -401,10 +400,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const contextCard = contextWorkout && contextTitle && <section className="today-context"><p>{contextTitle}</p><Link to={currentWorkout ? `/workouts/${contextWorkout.id}/live` : `/workouts/${contextWorkout.id}`}><span><strong>{clientMode ? 'Ваша тренировка' : contextWorkout.clientName}</strong><small>{contextWorkout.workoutDate === today ? `Сегодня, ${workoutTime(contextWorkout)}` : contextWorkout.workoutDate}</small></span><span><strong>{contextWorkout.exercises.length ? contextWorkout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Тренировка'}</strong><small>{contextWorkout.exercises.length} упражнений</small></span><b>›</b></Link></section>
   const activeGoalStage = goal.data ? currentStage(goal.data, today) : null
   const goalCard = clientMode && goal.data && <section className="today-context today-goal-context"><p>ВАШ ФОКУС</p><Link to="/me/progress"><span><strong>{goal.data.title}</strong><small>{activeGoalStage ? `Текущий этап: ${activeGoalStage.title}` : 'Этап пока не задан'}</small></span><b>›</b></Link></section>
-  // У тренера в редизайне заголовок дублирует активный верхний таб «Ассистент»,
-  // а профиль открывается шестерёнкой из той же строки — шапка страницы не нужна.
-  const trainerTopNav = !clientMode && isTodayStartRedesignEnabled()
-  return <Page title={trainerTopNav ? 'Ассистент' : 'Сегодня'} hideTitle={trainerTopNav} className="today-page today-start-page" action={trainerTopNav ? undefined : <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}>
+  return <Page title="Сегодня" className="today-page today-start-page" action={<Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}>
     {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase} ${textComposerOpen ? 'chat-open' : ''}`}>
       {!textComposerOpen && <>
         <VoiceInputButton variant="hero" source="today_workout" idleLabel="Надиктовать тренировку" idleHeading="Чем могу тебе помочь?" idleIcon={<AssistantIcon />} hideIdleLabel onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }} onPhaseChange={setVoicePhase} onTranscript={(transcript) => { sendChatMessage(transcript); return undefined }} />

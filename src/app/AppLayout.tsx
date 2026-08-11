@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { AnalyticsIcon, ClientsIcon, ProfileIcon, ScheduleIcon, SettingsIcon } from '../shared/icons'
+import { AnalyticsIcon, ClientsIcon, ProfileIcon, ScheduleIcon } from '../shared/icons'
 import { useAuth } from './auth-context'
 import { useAppTheme } from './theme'
 import { isTodayStartRedesignEnabled } from './feature-flags'
@@ -50,17 +50,10 @@ export function AppLayout() {
     <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
     <NavLink to="/me/profile"><ProfileIcon />Профиль</NavLink>
   </nav>}</div>
-  // Редизайн: навигация тренера — текстовые табы сверху, ассистент в центре;
-  // профиль доступен с любого таба через шестерёнку в той же строке.
-  if (redesignedStart) return <div className={`${frameClass} trainer-top-shell`}>{!immersive && <nav className="top-tab-bar" aria-label="Основная навигация">
-    <NavLink to="/clients" data-label="Клиенты">Клиенты</NavLink>
-    <NavLink to="/today" data-label="Ассистент">Ассистент</NavLink>
-    <NavLink to="/schedule" data-label="Расписание">Расписание</NavLink>
-    <NavLink to="/profile" className="top-tab-settings" aria-label="Открыть профиль"><SettingsIcon /></NavLink>
-  </nav>}<div className={contentClass} ref={contentRef}><Outlet /></div></div>
   return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
     <NavLink to="/today"><ScheduleIcon />Сегодня</NavLink>
+    {redesignedStart && <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>}
     <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>
-    <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>
+    {!redesignedStart && <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>}
   </nav>}</div>
 }
