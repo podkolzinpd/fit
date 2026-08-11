@@ -7,8 +7,6 @@ export interface ParsedWorkoutExercise {
   exercise: ExerciseSnapshot
   sets: WorkoutSetDraft[]
   hasValues: boolean
-  /** Стабильный клиентский id — привязывает карточку к сообщению чата, которое её породило. */
-  id?: string
 }
 
 export interface UnparsedWorkoutLine {

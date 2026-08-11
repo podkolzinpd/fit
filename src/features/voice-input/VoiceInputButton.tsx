@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MicIcon, StopIcon } from '../../shared/icons'
 import { BrowserAudioRecorder, decodeAudioToPcm16, type AudioRecorder } from './audio-recorder'
 import type { SpeechRecognizer } from './speech-recognizer'
@@ -16,12 +16,6 @@ interface VoiceInputButtonProps {
   decodeAudio?: (blob: Blob) => Promise<ArrayBuffer>
   maxDurationMs?: number
   idleLabel?: string
-  /** hero-вариант: заголовок над кнопкой (по умолчанию — «Что будем делать?»). */
-  idleHeading?: string
-  /** hero-вариант: своя иконка вместо микрофона для состояния ожидания (запись всё равно запускается по тапу). */
-  idleIcon?: ReactNode
-  /** hero-вариант: скрыть подпись под кнопкой в состоянии ожидания — когда рядом уже есть свой призыв к действию. */
-  hideIdleLabel?: boolean
   beta?: boolean
   variant?: 'inline' | 'hero'
   onPhaseChange?: (phase: VoiceInputPhase) => void
@@ -38,9 +32,6 @@ export function VoiceInputButton({
   decodeAudio = decodeAudioToPcm16,
   maxDurationMs = 270_000,
   idleLabel = 'Надиктовать заметку',
-  idleHeading = 'Что будем делать?',
-  idleIcon,
-  hideIdleLabel = false,
   beta = false,
   variant = 'inline',
   onPhaseChange,
@@ -195,7 +186,7 @@ export function VoiceInputButton({
 
   if (variant === 'hero') return <section className={`voice-action voice-action-${phase}`} aria-live="polite">
     <div className="voice-action-copy">
-      <h2>{recording ? 'Слушаю…' : busy ? voiceHeroStatus(phase) : idleHeading}</h2>
+      <h2>{recording ? 'Слушаю…' : busy ? voiceHeroStatus(phase) : 'Что будем делать?'}</h2>
       {recording && message?.startsWith('Сейчас распознаю:') && <p className="voice-action-transcript">«{message.replace('Сейчас распознаю:', '').trim()}»</p>}
     </div>
     <button
@@ -206,12 +197,10 @@ export function VoiceInputButton({
       disabled={busy}
       onClick={() => { if (recording) { void (streamingRef.current ? finishStreaming() : finishRecording()); return }; trackGoal(`voice_note_start_click_${source}`); void startRecording() }}
     >
-      {recording ? <StopIcon /> : (idleIcon ?? <MicIcon />)}
+      {recording ? <StopIcon /> : <MicIcon />}
       <span className="voice-action-ring" aria-hidden="true" />
     </button>
-    {recording
-      ? <div className="voice-action-recording-controls"><button type="button" className="wide" onClick={() => void (streamingRef.current ? finishStreaming() : finishRecording())}>Готово</button><button type="button" className="link" onClick={cancelRecording}>Отменить</button></div>
-      : (hideIdleLabel && !busy ? null : <div className="voice-action-label">{!busy && <strong>{idleLabel}</strong>}<span>{busy ? 'Это займёт несколько секунд' : 'Скажите упражнения, подходы, повторы и веса'}</span></div>)}
+    {recording ? <div className="voice-action-recording-controls"><button type="button" className="wide" onClick={() => void (streamingRef.current ? finishStreaming() : finishRecording())}>Готово</button><button type="button" className="link" onClick={cancelRecording}>Отменить</button></div> : <div className="voice-action-label">{!busy && <strong>{idleLabel}</strong>}<span>{busy ? 'Это займёт несколько секунд' : 'Скажите упражнения, подходы, повторы и веса'}</span></div>}
     {message && !message.startsWith('Сейчас распознаю:') && <div className="voice-action-error" role="alert"><strong>{message}</strong></div>}
   </section>
 

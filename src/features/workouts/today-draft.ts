@@ -1,5 +1,4 @@
 import type { ExerciseSnapshot } from '../../shared/domain'
-import type { ChatMessage } from './chat-types'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 
 export interface TodayDraft {
@@ -14,8 +13,6 @@ export interface TodayDraft {
   recordMode?: 'planned' | 'completed'
   workoutDate?: string
   startTime?: string
-  /** Лента чата «Быстрого ввода» — не обязательна: старые черновики без неё остаются валидными. */
-  messages?: ChatMessage[]
 }
 
 function isDraft(value: unknown): value is TodayDraft {
@@ -30,7 +27,6 @@ function isDraft(value: unknown): value is TodayDraft {
     && (draft.recordMode === undefined || draft.recordMode === 'planned' || draft.recordMode === 'completed')
     && (draft.workoutDate === undefined || typeof draft.workoutDate === 'string')
     && (draft.startTime === undefined || typeof draft.startTime === 'string')
-    && (draft.messages === undefined || Array.isArray(draft.messages))
 }
 
 export function todayDraftKey(userId: string): string {
