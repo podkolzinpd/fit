@@ -35,6 +35,10 @@ describe('repositoryError', () => {
     [{ code: 'invalid_credentials', message: 'Invalid login credentials' }, 'invalid_credentials', 'Неверный email или пароль. Проверьте данные и повторите попытку.'],
     [{ code: 'over_request_rate_limit', message: 'Too many requests' }, 'rate_limited', 'Слишком много попыток. Подождите немного и повторите.'],
     [{ code: 'email_not_confirmed', message: 'Email not confirmed' }, 'email_not_confirmed', 'Подтвердите email по ссылке из письма и повторите попытку.'],
+    [{ code: 'weak_password', message: 'Password should contain a digit' }, 'weak_password', 'Пароль слишком простой. Используйте не менее 8 символов, добавьте буквы и цифры и не используйте распространённый пароль.'],
+    [{ code: 'email_address_invalid', message: 'Email address is invalid' }, 'email_address_invalid', 'Проверьте email: адрес выглядит некорректно или не поддерживается.'],
+    [{ code: 'signup_disabled', message: 'Signups not allowed for this instance' }, 'signup_disabled', 'Регистрация по email сейчас недоступна. Попробуйте войти через Google.'],
+    [{ code: 'email_provider_disabled', message: 'Email provider is disabled' }, 'signup_disabled', 'Регистрация по email сейчас недоступна. Попробуйте войти через Google.'],
   ])('maps safe auth feedback without exposing service details', (source, code, message) => {
     const error = repositoryError(source)
 

@@ -23,6 +23,18 @@ export function repositoryError(error: unknown): RepositoryError {
   if (normalizedCode === 'email_not_confirmed') {
     return new RepositoryError('email_not_confirmed', 'Подтвердите email по ссылке из письма и повторите попытку.')
   }
+  if (normalizedCode === 'weak_password') {
+    return new RepositoryError(
+      'weak_password',
+      'Пароль слишком простой. Используйте не менее 8 символов, добавьте буквы и цифры и не используйте распространённый пароль.',
+    )
+  }
+  if (normalizedCode === 'email_address_invalid') {
+    return new RepositoryError('email_address_invalid', 'Проверьте email: адрес выглядит некорректно или не поддерживается.')
+  }
+  if (normalizedCode === 'signup_disabled' || normalizedCode === 'email_provider_disabled') {
+    return new RepositoryError('signup_disabled', 'Регистрация по email сейчас недоступна. Попробуйте войти через Google.')
+  }
   if (normalizedMessage.includes('workout_sets_rpe_valid')) {
     return new RepositoryError(code, 'В одном из подходов указано некорректное RPE. Выберите значение от 6 до 10 с шагом 0,5.')
   }
