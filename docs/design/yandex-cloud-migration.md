@@ -37,7 +37,9 @@ The following remain unchanged during the foundation phase:
    context.
 4. [In progress] Port the existing SQL/RLS contract before exposing domain
    endpoints. Start with provider-independent profiles, trainers and their
-   actor-scoped RLS; port domain tables in dependency-ordered slices.
+   actor-scoped RLS; then add read-only clients and trainer memberships before
+   invitation or mutation commands. Port remaining domain tables in
+   dependency-ordered slices.
 5. Implement Yandex ID and the profile vertical slice on stage.
 6. Port clients, memberships, exercises, workouts, progress, goals and
    summaries in parity-tested vertical slices.

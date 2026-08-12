@@ -10,6 +10,9 @@ import type { DatabasePool } from './types.js'
 
 const ACTOR_ID = 'c9f75482-117d-4532-8f67-6c3d9b9f4a5e'
 const OTHER_ACTOR_ID = '974f21af-f304-421f-81bd-050dbfabdd46'
+const MEMBER_TRAINER_ID = '8ffdb87b-078c-42d4-b6db-af8bc60f80f2'
+const OUTSIDE_TRAINER_ID = '3f520f21-0be4-4a38-bb2a-e25225e1e608'
+const CLIENT_ID = 'b3942b20-52a2-4d5d-9895-b3b63cf61442'
 const RUNTIME_PASSWORD = 'fit-api-test-only'
 const migrationsDirectory = fileURLToPath(
   new URL('../../db/migrations', import.meta.url),
@@ -21,6 +24,10 @@ interface ActorRow extends QueryResultRow {
 
 interface ProfileRow extends QueryResultRow {
   first_name: string | null
+}
+
+interface ClientRow extends QueryResultRow {
+  id: string
 }
 
 function requireLocalTestDatabaseUrl(): string {
@@ -97,6 +104,43 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           on conflict (profile_id) do nothing
         `,
         [ACTOR_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into public.profiles (id, first_name, account_role)
+          values
+            ($1, 'Member trainer', 'trainer'),
+            ($2, 'Outside trainer', 'trainer')
+          on conflict (id) do update set
+            first_name = excluded.first_name,
+            account_role = excluded.account_role
+        `,
+        [MEMBER_TRAINER_ID, OUTSIDE_TRAINER_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into public.trainers (profile_id)
+          values ($1), ($2)
+          on conflict (profile_id) do nothing
+        `,
+        [MEMBER_TRAINER_ID, OUTSIDE_TRAINER_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into public.clients (
+            id, trainer_id, auth_user_id, full_name, gender, age_years, height_cm
+          ) values ($1, $2, $3, 'Shared client', 'female', 30, 170)
+          on conflict (id) do nothing
+        `,
+        [CLIENT_ID, ACTOR_ID, OTHER_ACTOR_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into public.client_trainers (client_id, trainer_id, alias)
+          values ($1, $2, 'Root alias'), ($1, $3, 'Member alias')
+          on conflict (client_id, trainer_id) do nothing
+        `,
+        [CLIENT_ID, ACTOR_ID, MEMBER_TRAINER_ID],
       )
 
       const runtimeUrl = new URL(ownerUrl)
@@ -175,6 +219,73 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         [OTHER_ACTOR_ID],
       )
       expect(otherProfile?.rows).toEqual([{ first_name: 'Other actor' }])
+    })
+
+    it('shares a client only with its owner and connected trainers', async () => {
+      if (runtimePool === undefined) throw new Error('Runtime pool is not ready')
+
+      for (const actorId of [ACTOR_ID, OTHER_ACTOR_ID, MEMBER_TRAINER_ID]) {
+        const visibleClients = await withActorTransaction(
+          runtimePool,
+          actorId,
+          async (client) =>
+            client.query<ClientRow>('select id from public.clients'),
+        )
+        expect(visibleClients).toEqual([{ id: CLIENT_ID }])
+      }
+
+      const hiddenClients = await withActorTransaction(
+        runtimePool,
+        OUTSIDE_TRAINER_ID,
+        async (client) => client.query<ClientRow>('select id from public.clients'),
+      )
+      expect(hiddenClients).toEqual([])
+
+      const hiddenMemberships = await withActorTransaction(
+        runtimePool,
+        OUTSIDE_TRAINER_ID,
+        async (client) =>
+          client.query('select trainer_id from public.client_trainers'),
+      )
+      expect(hiddenMemberships).toEqual([])
+
+      const visibleMemberships = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        async (client) =>
+          client.query(
+            'select trainer_id from public.client_trainers order by trainer_id',
+          ),
+      )
+      expect(visibleMemberships).toHaveLength(2)
+    })
+
+    it('enforces relationship foreign keys and keeps runtime writes closed', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      await expect(
+        ownerPool.query(
+          `
+            insert into public.client_trainers (client_id, trainer_id)
+            values ($1, $2)
+          `,
+          ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', ACTOR_ID],
+        ),
+      ).rejects.toMatchObject({ code: '23503' })
+
+      await expect(
+        withActorTransaction(runtimePool, ACTOR_ID, async (client) =>
+          client.query(
+            `
+              insert into public.clients (trainer_id, full_name)
+              values ($1, 'Not allowed')
+            `,
+            [ACTOR_ID],
+          ),
+        ),
+      ).rejects.toMatchObject({ code: '42501' })
     })
   },
 )

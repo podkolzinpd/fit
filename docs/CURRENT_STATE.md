@@ -4,15 +4,15 @@
 > После каждого подтверждённого merge заменяйте сведения ниже, не добавляйте
 > хронологию: полная история уже хранится в Git и Tracker.
 
-Обновлено: 2026-08-11
-Проверенный `main`: `22e85af` (`feat api: add PostgreSQL actor context baseline (#371)`)
+Обновлено: 2026-08-12
+Проверенный `main`: `0f61adf` (`feat db: port core account schema (#372)`)
 
 ## Активная работа
 
-- Активная задача миграции: первый provider-independent SQL/RLS-срез для
-  PostgreSQL — профили, тренеры и tenant isolation будущего API.
-- Следующий этап после неё: перенос clients/memberships в отдельном срезе до
-  появления domain endpoints.
+- Активная задача миграции: read-only PostgreSQL-срез clients/memberships с
+  foreign keys и tenant isolation будущего API.
+- Следующий этап после неё: invitations и команды изменения membership в
+  отдельном срезе до появления domain endpoints.
 
 ## Последняя проверенная продуктовая точка
 
@@ -43,6 +43,9 @@
 - После `#371` Managed PostgreSQL baseline разделяет migration owner и runtime
   user, а Fastify API умеет задавать внутренний UUID пользователя только на
   время транзакции. К маршрутам и frontend новый pool пока не подключён.
+- После `#372` в отдельную PostgreSQL migration chain перенесены `profiles` и
+  `trainers`, минимальные grants и RLS собственного профиля. Production всё ещё
+  использует Supabase.
 
 ## Последние проверки
 
@@ -69,6 +72,8 @@
 - `#371`: PostgreSQL integration test в одноразовом Podman-контейнере;
   Terraform `fmt -check` и `validate`; `npm run check` — 372 frontend-теста,
   5 API unit-тестов, lint, typecheck, DB types и production builds.
+- `#372`: PostgreSQL 17 integration — actor context и cross-tenant profiles;
+  локальный Supabase reset, 422 SQL/RLS-теста и `npm run check` прошли.
 
 ## Отложенный backlog
 
