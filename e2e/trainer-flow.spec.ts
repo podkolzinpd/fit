@@ -912,6 +912,9 @@ test('live: удаление подхода и наследование факт
   await page.getByRole('button', { name: 'Сохранить' }).first().click()
   await page.locator('.live-exercise-collapsed').click()
   await expect(page.locator('.live-set-compact.confirmed')).toContainText('100 кг')
+  await page.reload()
+  await page.locator('.live-exercise-collapsed').click()
+  await expect(page.locator('.live-set-compact.confirmed')).toContainText('100 кг × 10 повт.')
 
   // Добавляем подход — наследует факт (100), а не план (90).
   await page.getByRole('button', { name: '＋ Подход' }).first().click()

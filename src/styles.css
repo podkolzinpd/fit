@@ -524,7 +524,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .overflow-menu { position: relative; display: inline-flex }
 .overflow-trigger { min-width: 44px; min-height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-raised); color: var(--fg); font-size: 20px; line-height: 1; cursor: pointer; box-shadow: none }
 .overflow-trigger:hover { border-color: var(--accent-surface-border) }
-.overflow-list { position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; min-width: 160px; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--border); border-radius: 12px; background: #221f2a; box-shadow: 0 14px 40px #00000066 }
+.overflow-list { position: fixed; z-index: 30; min-width: 160px; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-elevated); box-shadow: 0 14px 40px #00000066 }
 .overflow-item { min-height: 44px; padding: 10px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--fg); font-weight: 600; text-align: left; box-shadow: none; cursor: pointer }
 .overflow-item:hover { background: var(--secondary-hover) }
 .overflow-item.danger { color: var(--danger) }

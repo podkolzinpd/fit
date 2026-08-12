@@ -418,6 +418,48 @@ test('iPhone: одиночный отдых переживает reload, сдв�
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: отдых начинается после последнего подхода первого упражнения на 390 px', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const clientName = await createIsolatedClient(page, testInfo)
+  await page.goto('/workouts/new')
+  await selectClient(page, clientName)
+  await addExercise(page, 'Присед со штангой', true)
+  await addExercise(page, 'Жим лёжа')
+  await page.getByLabel('Вес, подход 1').first().fill('40')
+  await page.getByLabel('Повторы, подход 1').first().fill('10')
+  await page.getByLabel('Вес, подход 1').nth(1).fill('40')
+  await page.getByLabel('Повторы, подход 1').nth(1).fill('10')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await page.getByRole('button', { name: 'Начать' }).click()
+
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await expect(page.getByText(/Отдых 1:(2[7-9]|30)/)).toBeVisible()
+  await expect(page.locator('.live-exercise-upcoming')).toContainText('Жим лёжа')
+  await expectNoHorizontalOverflow(page)
+})
+
+test('iPhone: live-меню остаётся непрозрачным и не уходит под нижнюю панель на 390 px', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const clientName = await createIsolatedClient(page, testInfo)
+  await page.goto('/workouts/new')
+  await selectClient(page, clientName)
+  await addExercise(page, 'Присед со штангой', true)
+  await addExercise(page, 'Жим лёжа')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await page.getByRole('button', { name: 'Начать' }).click()
+  await page.getByRole('button', { name: 'Ещё действия' }).nth(1).click()
+
+  const menu = page.getByRole('menu')
+  await expect(menu).toBeVisible()
+  expect(await menu.evaluate((element) => getComputedStyle(element).opacity)).toBe('1')
+  const menuBox = await menu.boundingBox()
+  const footerBox = await page.locator('.live-bottom-bar').boundingBox()
+  expect(menuBox).not.toBeNull()
+  expect(footerBox).not.toBeNull()
+  expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(footerBox!.y)
+  await expectNoHorizontalOverflow(page)
+})
+
 test('iPhone: частично завершённая тренировка помечена на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const clientName = await createIsolatedClient(page, testInfo)
