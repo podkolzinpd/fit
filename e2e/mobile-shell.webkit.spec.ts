@@ -439,6 +439,8 @@ test('iPhone: частично завершённая тренировка по�
   await page.getByRole('button', { name: 'Завершить', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
   await expect(page.locator('.workout-detail-page .badge.partial')).toHaveText('Частично')
+  await expect(page.locator('.completed-set-summary')).toContainText('не выполнено:')
+  await expect(page.locator('.workout-history-sets')).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
 })
 

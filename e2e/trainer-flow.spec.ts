@@ -212,14 +212,14 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.completed-exercise-block')).toHaveCount(0)
   // Завершённая тренировка показывает фактический результат (вес × повторы)
   // только по подтверждённым подходам, а не только название упражнения.
-  await expect(page.getByText(/42\.5 кг × 9 повт\./)).toBeVisible()
+  await expect(page.locator('.completed-set-summary').filter({ hasText: /42\.5 кг × 9 повт\./ })).toBeVisible()
   // Неподтверждённые подходы (план без факта) помечены «не выполнено», план
   // за факт не выдаётся.
-  await expect(page.locator('.workout-history-set.missed .plan-note').first()).toContainText('не выполнено')
+  await expect(page.locator('.completed-set-summary').filter({ hasText: 'не выполнено:' }).first()).toBeVisible()
   // Сводка завершённой тренировки: время, тоннаж, группы мышц.
   // Тоннаж считает только подтверждённый факт: 42.5×9 = 383 кг.
-  await expect(page.locator('.done-summary-3')).toContainText('Тоннаж')
-  await expect(page.locator('.done-summary-3')).toContainText('383 кг')
+  await expect(page.locator('.workout-fact-summary')).toContainText('Тоннаж')
+  await expect(page.locator('.workout-fact-summary')).toContainText('383 кг')
 
   // Завершённую тренировку можно исправить без возврата в live: редактор
   // открывает сохранённый факт; сохранение дополняет все подходы и статус
