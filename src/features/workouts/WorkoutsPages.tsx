@@ -833,10 +833,10 @@ export function LiveWorkoutPage() {
       setSavingSetId(null)
       setSavedSetId(set.id)
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
-      // Автосейв незавершённой строки не делает refetch: он перемонтировал бы
-      // поля во время ввода. Вместо этого обновляем только сохранённый подход
-      // в кэше — при переходе дальше он сразу остаётся с введёнными цифрами.
-      if (!set.confirmedAt) queryClient.setQueryData<Workout>(
+      // Сразу закрепляем факт и новую версию в кэше для любого подхода. Раньше
+      // правка уже подтверждённого подхода ждала refetch и на iOS могла
+      // отрисоваться старым значением до второй попытки сохранения.
+      queryClient.setQueryData<Workout>(
         ['workout', workoutId],
         (workout) => workout ? applyLiveSetDraft(workout, set.id, draft, version) : workout,
       )
@@ -907,14 +907,11 @@ export function LiveWorkoutPage() {
         const block = groupIntoBlocks(workout.exercises).find((b) => b.blockId === exercise.blockId)
         const multi = Boolean(block && block.exercises.length > 1)
         const lastExerciseOfRound = block && block.exercises[block.exercises.length - 1]?.id === exercise.id
-        const lastSetOfExercise = [...exercise.sets].sort((a, b) => a.position - b.position).at(-1)?.id === set.id
-        // Блок/упражнение полностью завершены этим подходом → отдыха не нужно
-        // (для группы: последнее упражнение последнего круга; для одиночного:
-        // последний подход). Иначе — отдых по правилам блока.
-        const blockFinished = multi
-          ? lastExerciseOfRound && lastSetOfExercise && block!.exercises.every((ex) => ex.sets.every((s) => s.id === set.id || s.confirmedAt))
-          : lastSetOfExercise
-        const sec = blockFinished ? 0
+        // Отдых нужен и после последнего подхода упражнения, если тренировка
+        // ещё продолжается: это переход к следующему упражнению. Отключаем его
+        // только после действительно последнего подхода всей тренировки.
+        const workoutFinished = workout.exercises.every((item) => item.sets.every((itemSet) => itemSet.id === set.id || itemSet.confirmedAt))
+        const sec = workoutFinished ? 0
           : !multi ? exercise.restBetweenSetsSec ?? DEFAULT_REST_BETWEEN_SETS
           : lastExerciseOfRound ? block!.restBetweenRoundsSec
           : block?.restBetweenExercisesSec ?? 0
