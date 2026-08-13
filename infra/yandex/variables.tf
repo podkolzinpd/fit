@@ -41,6 +41,17 @@ variable "subnet_cidr" {
   default     = "10.42.0.0/24"
 }
 
+variable "serverless_service_cidr" {
+  description = "Yandex Serverless Containers service network that needs PostgreSQL pooler access."
+  type        = string
+  default     = "198.19.0.0/16"
+
+  validation {
+    condition     = can(cidrnetmask(var.serverless_service_cidr))
+    error_message = "serverless_service_cidr must be a valid IPv4 CIDR."
+  }
+}
+
 variable "postgres_version" {
   description = "Managed PostgreSQL major version."
   type        = string
@@ -109,4 +120,26 @@ variable "database_url_secret_version_id" {
   type        = string
   default     = null
   nullable    = true
+}
+
+variable "database_owner_url_secret_version_id" {
+  description = "Temporary Lockbox version containing the fit_owner URL. Setting it creates the private migration runner."
+  type        = string
+  default     = null
+  nullable    = true
+}
+
+variable "migration_invoker_member" {
+  description = "Temporary IAM member allowed to invoke the private migration runner, for example userAccount:<id>."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = (
+      var.migration_invoker_member == null
+      || can(regex("^(userAccount|serviceAccount|federatedUser|group):[^[:space:]]+$", var.migration_invoker_member))
+    )
+    error_message = "migration_invoker_member must be a supported scoped IAM member or null."
+  }
 }

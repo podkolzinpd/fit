@@ -11,7 +11,10 @@ resource "yandex_container_repository" "api" {
 resource "yandex_container_registry_iam_binding" "api_image_puller" {
   registry_id = yandex_container_registry.fit.id
   role        = "container-registry.images.puller"
-  members     = ["serviceAccount:${yandex_iam_service_account.api.id}"]
+  members = [
+    "serviceAccount:${yandex_iam_service_account.api.id}",
+    "serviceAccount:${yandex_iam_service_account.migration.id}",
+  ]
 }
 
 resource "yandex_container_repository_lifecycle_policy" "api" {

@@ -167,6 +167,7 @@ src/data/database.types.generated.ts
 *.tfplan
 *.tfvars
 *.tfvars.json
+**/backend.hcl
 crash.log
 crash.*.log
 override.tf

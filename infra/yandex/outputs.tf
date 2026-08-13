@@ -37,3 +37,13 @@ output "database_url_secret_id" {
   description = "Lockbox secret metadata ID. No credential payload is stored by this configuration."
   value       = yandex_lockbox_secret.database_url.id
 }
+
+output "database_owner_url_secret_id" {
+  description = "Temporary migration owner secret metadata ID. No payload is stored in Terraform."
+  value       = yandex_lockbox_secret.database_owner_url.id
+}
+
+output "migration_container_url" {
+  description = "Private migration runner URL, present only while an owner secret version is configured."
+  value       = try(yandex_serverless_container.migration[0].url, null)
+}

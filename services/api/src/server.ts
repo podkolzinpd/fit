@@ -1,4 +1,5 @@
 import { buildApp } from './app.js'
+import { PgDatabasePool } from './db/pg-pool.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -10,7 +11,13 @@ function parsePort(value: string | undefined): number {
   return port
 }
 
-const app = buildApp()
+const databasePool =
+  process.env.DATABASE_URL === undefined
+    ? undefined
+    : new PgDatabasePool({ connectionString: process.env.DATABASE_URL })
+const app = buildApp(
+  databasePool === undefined ? {} : { databasePool },
+)
 
 try {
   await app.listen({ host: '0.0.0.0', port: parsePort(process.env.PORT) })

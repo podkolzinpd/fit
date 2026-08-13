@@ -5,8 +5,17 @@ folder_id = "b1g00000000000000000"
 environment               = "stage"
 allow_unauthenticated_api = false
 
+# Yandex assigns network-connected Serverless Containers addresses from this
+# service range. Keep it explicit so a provider/platform change is reviewed.
+serverless_service_cidr = "198.19.0.0/16"
+
 # The tagged image must be pushed before apply.
 api_image_tag = "foundation"
 
 # Add only after creating a DATABASE_URL payload outside Terraform.
 # database_url_secret_version_id = "e6q00000000000000000"
+
+# Set only for a reviewed migration run, invoke the private migration
+# container once, then set back to null and apply to remove the runner.
+# database_owner_url_secret_version_id = "e6q00000000000000000"
+# migration_invoker_member             = "userAccount:aje00000000000000000"

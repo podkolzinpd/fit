@@ -110,3 +110,18 @@ resource "yandex_lockbox_secret_iam_member" "api_lockbox_reader" {
   role      = "lockbox.payloadViewer"
   member    = "serviceAccount:${yandex_iam_service_account.api.id}"
 }
+
+resource "yandex_lockbox_secret" "database_owner_url" {
+  folder_id   = var.folder_id
+  name        = "${local.name_prefix}-database-owner-url"
+  description = "Temporary fit_owner URL used only by the private migration runner"
+  labels      = local.labels
+}
+
+resource "yandex_lockbox_secret_iam_member" "migration_lockbox_reader" {
+  count = var.database_owner_url_secret_version_id == null || var.migration_invoker_member == null ? 0 : 1
+
+  secret_id = yandex_lockbox_secret.database_owner_url.id
+  role      = "lockbox.payloadViewer"
+  member    = "serviceAccount:${yandex_iam_service_account.migration.id}"
+}

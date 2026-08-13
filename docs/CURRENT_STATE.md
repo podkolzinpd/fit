@@ -4,15 +4,15 @@
 > После каждого подтверждённого merge заменяйте сведения ниже, не добавляйте
 > хронологию: полная история уже хранится в Git и Tracker.
 
-Обновлено: 2026-08-12
-Проверенный `main`: `0f61adf` (`feat db: port core account schema (#372)`)
+Обновлено: 2026-08-13
+Проверенный `main`: `ef14e92` (`feat db: port client memberships (#375)`)
 
 ## Активная работа
 
-- Активная задача миграции: read-only PostgreSQL-срез clients/memberships с
-  foreign keys и tenant isolation будущего API.
-- Следующий этап после неё: invitations и команды изменения membership в
-  отдельном срезе до появления domain endpoints.
+- Активная задача миграции: подготовить безопасный первый stage deploy без
+  `terraform apply` — remote state, network access, runbook и DB readiness.
+- Следующий этап после неё: первый одобренный stage apply и Yandex ID/profile
+  vertical slice; invitations и membership mutations остаются после auth.
 
 ## Последняя проверенная продуктовая точка
 
@@ -46,6 +46,9 @@
 - После `#372` в отдельную PostgreSQL migration chain перенесены `profiles` и
   `trainers`, минимальные grants и RLS собственного профиля. Production всё ещё
   использует Supabase.
+- После `#375` добавлены `clients`, `client_trainers`, foreign keys и read-only
+  RLS для владельца, root trainer и подключённых тренеров. Fastify routes и
+  production к новому контуру не подключены.
 
 ## Последние проверки
 
@@ -74,6 +77,9 @@
   5 API unit-тестов, lint, typecheck, DB types и production builds.
 - `#372`: PostgreSQL 17 integration — actor context и cross-tenant profiles;
   локальный Supabase reset, 422 SQL/RLS-теста и `npm run check` прошли.
+- `#375`: PostgreSQL 17 integration — 4 теста clients/memberships и FK;
+  локальный Supabase reset, 422 SQL/RLS-теста и `npm run check` прошли. После
+  flaky WebKit-навигации повторный E2E job полностью прошёл.
 
 ## Отложенный backlog
 
