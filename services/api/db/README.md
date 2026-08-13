@@ -11,6 +11,12 @@ an internal profile UUID through `set_config` inside an explicit transaction.
 Provider subjects such as a Yandex ID `sub` must never be passed directly as
 this actor UUID.
 
+The third migration adds client cards and trainer memberships. Runtime access
+is read-only at this stage: a client owner, the partition owner and connected
+trainers can read the card, while an unrelated actor cannot. Invitations and
+membership commands are intentionally deferred until their API boundary is
+ported.
+
 ## Roles
 
 - `fit_owner` owns the `fit` database and runs migrations only;
