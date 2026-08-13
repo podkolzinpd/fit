@@ -26,6 +26,27 @@ async function expectNoHorizontalOverflow(page: import('@playwright/test').Page)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 }
 
+async function expectOverflowMenuAboveBars(page: Page) {
+  const menu = page.getByRole('menu')
+  await expect(menu).toBeVisible()
+  const menuBox = await menu.boundingBox()
+  const frameBox = await page.locator('.phone-frame').boundingBox()
+  const barBoxes = await page.locator('.tab-bar, .live-bottom-bar').evaluateAll((bars) => bars
+    .filter((bar) => {
+      const style = window.getComputedStyle(bar)
+      return style.display !== 'none' && style.visibility !== 'hidden'
+    })
+    .map((bar) => {
+      const rect = bar.getBoundingClientRect()
+      return { top: rect.top, bottom: rect.bottom }
+    }))
+  expect(menuBox).not.toBeNull()
+  expect(frameBox).not.toBeNull()
+  expect(menuBox!.y).toBeGreaterThanOrEqual(frameBox!.y)
+  expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(Math.min(frameBox!.y + frameBox!.height, ...barBoxes.map((bar) => bar.top)))
+  expect(await menu.evaluate((element) => window.getComputedStyle(element).opacity)).toBe('1')
+}
+
 test('iPhone: новое имя профиля сохраняется после reload на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
@@ -145,6 +166,7 @@ test('iPhone: в live клиент видит те же действия с тр
   await expect(page.getByRole('button', { name: '＋ Ещё упражнение' })).toBeInViewport()
   await page.getByRole('button', { name: 'Ещё действия' }).click()
   await expect(page.getByRole('menuitem', { name: 'Заменить' })).toBeVisible()
+  await expectOverflowMenuAboveBars(page)
 
   // Второй план не должен молча заменить первую незавершённую тренировку.
   // Пользователь остаётся на выбранном плане, пока явно не согласится открыть
@@ -389,6 +411,22 @@ test('iPhone: ручной выбор начинает с недавних, а �
   await expect(page.getByText('Все упражнения')).toBeVisible()
   await expect(page.getByText('Разминка и мобилити')).toHaveCount(0)
   await expect(page.locator('.picker-item[data-exercise-ref="bench-press"]')).toHaveCount(1)
+  await expectNoHorizontalOverflow(page)
+})
+
+test('iPhone: меню упражнения плана не перекрывает нижнюю панель на 390 px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+  await page.goto('/workouts/new')
+  await selectClient(page)
+  await addExercise(page, 'Присед со штангой', true)
+  await addExercise(page, 'Планка')
+
+  const actions = page.getByRole('button', { name: 'Ещё действия' })
+  await actions.last().scrollIntoViewIfNeeded()
+  await actions.last().click()
+  await expect(page.getByRole('menuitem', { name: 'Удалить' })).toBeVisible()
+  await expectOverflowMenuAboveBars(page)
   await expectNoHorizontalOverflow(page)
 })
 

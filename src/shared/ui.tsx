@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type PropsWithChildren, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PropsWithChildren, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 
@@ -149,22 +149,70 @@ export interface OverflowMenuItem { label: string; onClick: () => void; danger?:
 // Пункты сохраняют свои названия (доступны по имени после раскрытия меню).
 export function OverflowMenu({ items, label = 'Ещё действия' }: { items: OverflowMenuItem[]; label?: string }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [position, setPosition] = useState<CSSProperties | null>(null)
+  const triggerRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current
+    const menu = menuRef.current
+    const frame = document.querySelector<HTMLElement>('.phone-frame')
+    if (!trigger || !menu) return
+
+    const triggerRect = trigger.getBoundingClientRect()
+    const menuRect = menu.getBoundingClientRect()
+    // В приложении ограничиваемся рамкой телефона. В изолированных частях UI
+    // (и их unit-тестах) оболочки может не быть — тогда граница это viewport.
+    const frameRect = frame?.getBoundingClientRect() ?? {
+      top: 0,
+      right: window.innerWidth,
+      bottom: window.innerHeight,
+      left: 0,
+    }
+    const lowerBars = Array.from(document.querySelectorAll<HTMLElement>('.tab-bar, .live-bottom-bar'))
+      .map((bar) => bar.getBoundingClientRect())
+      .filter((bar) => bar.width > 0 && bar.height > 0 && bar.left < frameRect.right && bar.right > frameRect.left)
+    const bottomLimit = Math.min(frameRect.bottom, ...lowerBars.map((bar) => bar.top))
+    const gap = 6
+    const minTop = frameRect.top + 8
+    const maxTop = Math.max(minTop, bottomLimit - menuRect.height - 8)
+    const opensAbove = triggerRect.bottom + gap + menuRect.height > bottomLimit
+    const proposedTop = opensAbove ? triggerRect.top - gap - menuRect.height : triggerRect.bottom + gap
+    const top = Math.min(Math.max(proposedTop, minTop), maxTop)
+    const minLeft = frameRect.left + 8
+    const maxLeft = Math.max(minLeft, frameRect.right - menuRect.width - 8)
+    const left = Math.min(Math.max(triggerRect.right - menuRect.width, minLeft), maxLeft)
+    setPosition({ top, left })
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!open) { setPosition(null); return }
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
+  }, [open, updatePosition])
   useEffect(() => {
     if (!open) return
-    const onDown = (event: PointerEvent) => { if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false) }
+    const onDown = (event: PointerEvent) => {
+      const target = event.target as Node
+      if (!triggerRef.current?.contains(target) && !menuRef.current?.contains(target)) setOpen(false)
+    }
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false) }
     document.addEventListener('pointerdown', onDown)
     document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('pointerdown', onDown); document.removeEventListener('keydown', onKey) }
   }, [open])
   if (items.length === 0) return null
-  return <div className="overflow-menu" ref={ref}>
+  const host = document.querySelector('.phone-frame') ?? document.body
+  return <div className="overflow-menu" ref={triggerRef}>
     <button type="button" className="overflow-trigger" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}>⋯</button>
-    {open && <div className="overflow-list" role="menu">
+    {open && createPortal(<div ref={menuRef} className="overflow-list" role="menu" style={position ?? { visibility: 'hidden' }}>
       {items.map((item) => <button key={item.label} type="button" role="menuitem" disabled={item.disabled}
         className={item.danger ? 'overflow-item danger' : 'overflow-item'}
         onClick={() => { setOpen(false); item.onClick() }}>{item.label}</button>)}
-    </div>}
+    </div>, host)}
   </div>
 }
