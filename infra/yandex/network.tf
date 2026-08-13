@@ -29,6 +29,13 @@ resource "yandex_vpc_security_group" "postgres" {
     port           = 6432
   }
 
+  ingress {
+    protocol       = "TCP"
+    description    = "Odyssey PostgreSQL pooler from Serverless Containers service network"
+    v4_cidr_blocks = [var.serverless_service_cidr]
+    port           = 6432
+  }
+
   egress {
     protocol       = "ANY"
     description    = "Response and managed service traffic"

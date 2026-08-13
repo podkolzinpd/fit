@@ -35,12 +35,12 @@ The following remain unchanged during the foundation phase:
    production.
 3. [Done in #371] Add a reproducible Managed PostgreSQL baseline and actor
    context.
-4. [In progress] Port the existing SQL/RLS contract before exposing domain
-   endpoints. Start with provider-independent profiles, trainers and their
-   actor-scoped RLS; then add read-only clients and trainer memberships before
-   invitation or mutation commands. Port remaining domain tables in
-   dependency-ordered slices.
-5. Implement Yandex ID and the profile vertical slice on stage.
+4. [In progress] Validate the minimum stage deployment before porting the
+   remaining domain: remote state, service-network access to private
+   PostgreSQL, reviewed migrations and database readiness checks. Profiles,
+   trainers, clients and read-only trainer memberships are already ported.
+5. Implement Yandex ID and the profile vertical slice on stage, then resume
+   invitation, mutation and domain slices in dependency order.
 6. Port clients, memberships, exercises, workouts, progress, goals and
    summaries in parity-tested vertical slices.
 7. Rehearse the data migration at least twice before the production cutover.

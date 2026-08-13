@@ -16,6 +16,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
+COPY certs/yandex-cloud-ca.pem ./certs/yandex-cloud-ca.pem
+COPY db/migrations ./db/migrations
 
 USER node
 CMD ["node", "dist/server.js"]
