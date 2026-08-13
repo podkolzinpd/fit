@@ -5,14 +5,14 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-13
-Проверенный `main`: `ef14e92` (`feat db: port client memberships (#375)`)
+Проверенный `main`: `b5122e0` (`feat infra: prepare Yandex Cloud stage (#379)`)
 
 ## Активная работа
 
-- Активная задача миграции: подготовить безопасный первый stage deploy без
-  `terraform apply` — remote state, network access, runbook и DB readiness.
-- Следующий этап после неё: первый одобренный stage apply и Yandex ID/profile
-  vertical slice; invitations и membership mutations остаются после auth.
+- Активная задача миграции: выполнить первый отдельно одобренный stage deploy
+  по `docs/STAGE_DEPLOYMENT.md`, проверить private API, PostgreSQL и миграции.
+- Следующий этап после успешного stage smoke: Yandex ID/profile vertical slice;
+  invitations и membership mutations остаются после auth.
 
 ## Последняя проверенная продуктовая точка
 
@@ -49,6 +49,9 @@
 - После `#375` добавлены `clients`, `client_trainers`, foreign keys и read-only
   RLS для владельца, root trainer и подключённых тренеров. Fastify routes и
   production к новому контуру не подключены.
+- После `#379` подготовлены remote state, private network access, TLS/readiness,
+  временный private migration runner и stage runbook. `terraform apply` ещё не
+  выполнялся; текущий Supabase production path не изменён.
 
 ## Последние проверки
 
@@ -80,6 +83,8 @@
 - `#375`: PostgreSQL 17 integration — 4 теста clients/memberships и FK;
   локальный Supabase reset, 422 SQL/RLS-теста и `npm run check` прошли. После
   flaky WebKit-навигации повторный E2E job полностью прошёл.
+- `#379`: `npm run check` — 377 frontend- и 10 API-тестов; Terraform
+  `fmt`/`validate`; Podman image smoke и PostgreSQL 17 migration E2E прошли.
 
 ## Отложенный backlog
 
