@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type PropsWithChildren, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PropsWithChildren, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 
@@ -149,22 +149,49 @@ export interface OverflowMenuItem { label: string; onClick: () => void; danger?:
 // Пункты сохраняют свои названия (доступны по имени после раскрытия меню).
 export function OverflowMenu({ items, label = 'Ещё действия' }: { items: OverflowMenuItem[]; label?: string }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [position, setPosition] = useState<{ top?: number; bottom?: number; right: number } | null>(null)
+  const placeMenu = useCallback(() => {
+    const trigger = triggerRef.current
+    if (!trigger) return
+    const rect = trigger.getBoundingClientRect()
+    const footerTop = document.querySelector<HTMLElement>('.live-bottom-bar')?.getBoundingClientRect().top
+    const lowerEdge = Math.min(window.innerHeight - 8, footerTop ? footerTop - 8 : window.innerHeight - 8)
+    const estimatedHeight = items.length * 48 + 20
+    const right = Math.max(8, window.innerWidth - rect.right)
+    if (rect.bottom + 6 + estimatedHeight > lowerEdge) {
+      setPosition({ bottom: Math.max(8, window.innerHeight - rect.top + 6), right })
+    } else {
+      setPosition({ top: rect.bottom + 6, right })
+    }
+  }, [items.length])
+  useLayoutEffect(() => {
+    if (!open) { setPosition(null); return }
+    placeMenu()
+    window.addEventListener('resize', placeMenu)
+    window.addEventListener('scroll', placeMenu, true)
+    return () => { window.removeEventListener('resize', placeMenu); window.removeEventListener('scroll', placeMenu, true) }
+  }, [open, placeMenu])
   useEffect(() => {
     if (!open) return
-    const onDown = (event: PointerEvent) => { if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false) }
+    const onDown = (event: PointerEvent) => {
+      const target = event.target as Node
+      if (!triggerRef.current?.contains(target) && !menuRef.current?.contains(target)) setOpen(false)
+    }
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false) }
     document.addEventListener('pointerdown', onDown)
     document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('pointerdown', onDown); document.removeEventListener('keydown', onKey) }
   }, [open])
   if (items.length === 0) return null
-  return <div className="overflow-menu" ref={ref}>
-    <button type="button" className="overflow-trigger" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}>⋯</button>
-    {open && <div className="overflow-list" role="menu">
+  const host = document.querySelector('.phone-frame') ?? document.body
+  return <div className="overflow-menu">
+    <button ref={triggerRef} type="button" className="overflow-trigger" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}>⋯</button>
+    {open && position && createPortal(<div ref={menuRef} className="overflow-list" role="menu" style={position}>
       {items.map((item) => <button key={item.label} type="button" role="menuitem" disabled={item.disabled}
         className={item.danger ? 'overflow-item danger' : 'overflow-item'}
         onClick={() => { setOpen(false); item.onClick() }}>{item.label}</button>)}
-    </div>}
+    </div>, host)}
   </div>
 }
