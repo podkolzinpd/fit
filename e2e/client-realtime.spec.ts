@@ -65,6 +65,19 @@ test('client and trainer receive progress and workout changes without reload', a
     await client.getByLabel('Код приглашения').fill(code!)
     await client.getByRole('button', { name: 'Присоединиться' }).click()
     await expect(client).toHaveURL(/\/me$/)
+    await expect(trainer.getByRole('button', { name: 'Пригласить клиента' })).toHaveCount(0)
+
+    await trainer.goto(`/clients/${clientId}/goal`)
+    await trainer.getByLabel('Цель').fill('Realtime цель')
+    await trainer.getByLabel('Дата достижения').fill(dateOffset(30))
+    await trainer.getByRole('button', { name: 'Создать цель' }).click()
+    await expect(client.getByText('Realtime цель', { exact: true })).toBeVisible({ timeout: 10_000 })
+    await trainer.getByRole('button', { name: '＋ Добавить' }).click()
+    await trainer.getByLabel('Название этапа').fill('Realtime этап')
+    await trainer.getByLabel('Начало').fill(dateOffset(0))
+    await trainer.getByLabel('Конец').fill(dateOffset(7))
+    await trainer.getByRole('button', { name: 'Добавить этап' }).click()
+    await expect(client.getByText('Текущий этап: Realtime этап', { exact: true })).toBeVisible({ timeout: 10_000 })
 
     await trainer.goto(`/progress/${clientId}`)
     await trainer.getByRole('button', { name: 'Показать' }).click()
@@ -90,11 +103,50 @@ test('client and trainer receive progress and workout changes without reload', a
     await trainer.getByLabel('Поиск упражнения').fill('Бег')
     await trainer.getByRole('button', { name: /^Бег / }).first().click()
     await trainer.getByRole('button', { name: 'Добавить 1' }).click()
-    await trainer.getByRole('button', { name: 'Сохранить' }).click()
+    await Promise.all([
+      trainer.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+      trainer.getByRole('button', { name: 'Сохранить' }).click(),
+    ])
+    const workoutUrl = trainer.url()
 
-    await expect(client.getByRole('link', { name: /Бег \(Кардио\).*План/ })).toBeVisible({ timeout: 10_000 })
+    const assignedWorkout = client.getByRole('link', { name: /Бег \(Кардио\).*План/ })
+    await expect(assignedWorkout).toBeVisible({ timeout: 10_000 })
+    await assignedWorkout.click()
+    await client.getByRole('button', { name: 'Начать тренировку' }).click()
+
+    // Обе стороны остаются на одном workout detail: старт и завершение должны
+    // появиться у тренера через realtime, без reload или повторной навигации.
+    await expect(trainer.getByRole('link', { name: 'Продолжить тренировку' })).toBeVisible({ timeout: 10_000 })
+    await client.getByLabel('Фактическое время, сек').fill('30')
+    await client.getByLabel('Фактическая дистанция').fill('5')
+    await client.getByRole('button', { name: 'Готово, отдых' }).click()
+    await expect(client.locator('.live-exercise-collapsed')).toBeVisible()
+    await Promise.all([
+      client.waitForURL(workoutUrl),
+      client.getByRole('button', { name: 'Завершить тренировку' }).click(),
+    ])
+    await expect(trainer.getByRole('heading', { name: 'Отзыв тренера' })).toBeVisible({ timeout: 10_000 })
+
+    const clientComment = `Realtime комментарий ${suffix}`
+    const clientCommentCard = client.locator('.workout-review').filter({
+      has: client.getByRole('heading', { name: 'Комментарий клиента' }),
+    })
+    await clientCommentCard.getByRole('button', { name: 'Добавить', exact: true }).click()
+    await client.getByRole('textbox', { name: 'Комментарий для тренера', exact: true }).fill(clientComment)
+    await client.getByRole('button', { name: 'Сохранить комментарий', exact: true }).click()
+    await expect(trainer.getByText(clientComment, { exact: true })).toBeVisible({ timeout: 10_000 })
+
+    const trainerReview = `Realtime отзыв ${suffix}`
+    const trainerReviewCard = trainer.locator('.workout-review').filter({
+      has: trainer.getByRole('heading', { name: 'Отзыв тренера' }),
+    })
+    await trainerReviewCard.getByRole('button', { name: 'Добавить', exact: true }).click()
+    await trainer.getByRole('textbox', { name: 'Отзыв тренера', exact: true }).fill(trainerReview)
+    await trainer.getByRole('button', { name: 'Сохранить отзыв', exact: true }).click()
+    await expect(client.getByText(trainerReview, { exact: true })).toBeVisible({ timeout: 10_000 })
   } finally {
-    await trainerContext.close()
-    await clientContext.close()
+    // Не маскируем исходное падение шага вторичной ошибкой teardown, если
+    // Playwright уже закрыл один из контекстов после общего timeout.
+    await Promise.allSettled([trainerContext.close(), clientContext.close()])
   }
 })

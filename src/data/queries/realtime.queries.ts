@@ -1,3 +1,4 @@
+import { REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js'
 import { supabase } from './client'
 
 export const clientRealtimeTables = [
@@ -8,6 +9,12 @@ export const clientRealtimeTables = [
   'client_progress',
   'client_progress_custom',
   'client_custom_metrics',
+  'client_goals',
+  'goal_stages',
+  'client_trainers',
+  'client_invitations',
+  'client_training_summaries',
+  'client_published_training_summaries',
 ] as const
 
 export type ClientRealtimeTable = (typeof clientRealtimeTables)[number]
@@ -19,7 +26,11 @@ export interface ClientRealtimeChange {
   old: Record<string, unknown>
 }
 
-export function subscribeToClientChanges(clientId: string, onChange: (change: ClientRealtimeChange) => void) {
+export function subscribeToClientChanges(
+  clientId: string,
+  onChange: (change: ClientRealtimeChange) => void,
+  onReady?: () => void,
+) {
   const channel = supabase.channel(`client:${clientId}`)
   for (const table of clientRealtimeTables) {
     const filter = table === 'clients' ? `id=eq.${clientId}` : `client_id=eq.${clientId}`
@@ -32,6 +43,8 @@ export function subscribeToClientChanges(clientId: string, onChange: (change: Cl
       })
     })
   }
-  channel.subscribe()
+  channel.subscribe((status) => {
+    if (status === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED) onReady?.()
+  })
   return () => { void supabase.removeChannel(channel) }
 }
