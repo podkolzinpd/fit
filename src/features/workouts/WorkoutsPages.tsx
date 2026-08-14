@@ -275,13 +275,14 @@ export function WorkoutFormPage() {
     if (!initial || formDraftReady) return
     setEntryDate(workoutDateForRecordMode(source.data?.status === 'done' ? 'completed' : 'planned', initial.workoutDate, todayLocalDate()))
   }, [formDraftReady, initial, source.data?.status])
-  const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => completedMode ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: (id) => {
+  const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => completedMode ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: async (id) => {
     if (!workoutId) removeWorkoutFormDraft(draftKey)
-    // Сохранение уже подтверждено сервером: сразу открываем результат, а
-    // списки обновляем фоном. Медленный refetch не должен удерживать форму.
+    // Перед переходом карточка должна получить новую optimistic-concurrency
+    // version. Иначе пользователь успевает запустить только что изменённую
+    // тренировку из устаревшего cache и получает ложный conflict.
+    await queryClient.invalidateQueries({ queryKey: ['workout', id] })
     navigate(`/workouts/${id}`)
     void Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['workout', id] }),
       queryClient.invalidateQueries({ queryKey: ['workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['today-workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['today-recent-workouts'] }),
