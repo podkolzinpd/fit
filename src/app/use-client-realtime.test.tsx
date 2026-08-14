@@ -11,7 +11,8 @@ import {
 
 const realtime = vi.hoisted(() => ({
   listener: undefined as ((change: ClientRealtimeChange) => void) | undefined,
-  subscribe: vi.fn<(clientId: string, listener: (change: ClientRealtimeChange) => void) => () => void>(),
+  ready: undefined as (() => void) | undefined,
+  subscribe: vi.fn<(clientId: string, listener: (change: ClientRealtimeChange) => void, onReady?: () => void) => () => void>(),
   unsubscribe: vi.fn(),
 }))
 
@@ -46,8 +47,10 @@ describe('client realtime', () => {
     visibility = 'visible'
     vi.spyOn(document, 'visibilityState', 'get').mockImplementation(() => visibility)
     realtime.listener = undefined
-    realtime.subscribe.mockReset().mockImplementation((_clientId, listener) => {
+    realtime.ready = undefined
+    realtime.subscribe.mockReset().mockImplementation((_clientId, listener, onReady) => {
       realtime.listener = listener
+      realtime.ready = onReady
       return realtime.unsubscribe
     })
     realtime.unsubscribe.mockReset()
@@ -72,13 +75,30 @@ describe('client realtime', () => {
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['workouts'] })
   })
 
+  it('refreshes goals, connections and summaries for the same client space', async () => {
+    const queryClient = new QueryClient()
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue()
+
+    await applyClientRealtimeChanges(queryClient, 'client-1', [
+      change('goal_stages', { client_id: 'client-1' }),
+      change('client_trainers', { client_id: 'client-1' }),
+      change('client_published_training_summaries', { client_id: 'client-1' }),
+    ])
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['client-goal', 'client-1'] })
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['client-trainers', 'client-1'] })
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['client-invitations', 'client-1'] })
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['training-summaries', 'trainer', 'client-1'] })
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['training-summaries', 'client', 'client-1'] })
+  })
+
   it('debounces aggregate events while keeping one channel for the open client', async () => {
     const queryClient = new QueryClient()
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue()
     const view = render(<Probe clientId="client-1" />, { wrapper: wrapper(queryClient) })
 
     expect(realtime.subscribe).toHaveBeenCalledOnce()
-    expect(realtime.subscribe).toHaveBeenCalledWith('client-1', expect.any(Function))
+    expect(realtime.subscribe).toHaveBeenCalledWith('client-1', expect.any(Function), expect.any(Function))
 
     act(() => {
       realtime.listener?.(change('workouts', { id: 'workout-1', client_id: 'client-1' }))
@@ -94,8 +114,21 @@ describe('client realtime', () => {
 
     view.rerender(<Probe clientId="client-2" />)
     expect(realtime.unsubscribe).toHaveBeenCalledOnce()
-    expect(realtime.subscribe).toHaveBeenLastCalledWith('client-2', expect.any(Function))
+    expect(realtime.subscribe).toHaveBeenLastCalledWith('client-2', expect.any(Function), expect.any(Function))
     view.unmount()
+  })
+
+  it('refetches once when the channel becomes ready to close the subscription race', async () => {
+    const queryClient = new QueryClient()
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue()
+    render(<Probe clientId="client-1" />, { wrapper: wrapper(queryClient) })
+
+    act(() => realtime.ready?.())
+    await Promise.resolve()
+
+    const readyOptions = invalidate.mock.calls.find(([options]) => options?.predicate)?.[0]
+    expect(readyOptions?.predicate).toBeTypeOf('function')
+    expect(readyOptions?.refetchType).toBe('active')
   })
 
   it('disconnects in a hidden tab and refetches the client space on return', async () => {
@@ -125,6 +158,7 @@ describe('client realtime', () => {
     queryClient.setQueryData(['profile'], { id: 'profile-1' })
     queryClient.setQueryData(['client', 'client-1'], { id: 'client-1' })
     queryClient.setQueryData(['client', 'client-2'], { id: 'client-2' })
+    queryClient.setQueryData(['client-goal', 'client-1'], { id: 'goal-1' })
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries')
 
     await refetchClientSpace(queryClient, 'client-1')
@@ -133,5 +167,6 @@ describe('client realtime', () => {
     expect(options?.predicate?.(queryClient.getQueryCache().find({ queryKey: ['profile'] })!)).toBe(false)
     expect(options?.predicate?.(queryClient.getQueryCache().find({ queryKey: ['client', 'client-1'] })!)).toBe(true)
     expect(options?.predicate?.(queryClient.getQueryCache().find({ queryKey: ['client', 'client-2'] })!)).toBe(false)
+    expect(options?.predicate?.(queryClient.getQueryCache().find({ queryKey: ['client-goal', 'client-1'] })!)).toBe(true)
   })
 })

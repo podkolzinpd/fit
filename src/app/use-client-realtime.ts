@@ -18,6 +18,10 @@ const clientSpaceRoots = new Set([
   'exercise-history',
   'progress',
   'metrics',
+  'client-goal',
+  'client-trainers',
+  'client-invitations',
+  'training-summaries',
 ])
 
 function recordId(change: ClientRealtimeChange, key: string): string | undefined {
@@ -76,6 +80,31 @@ export async function applyClientRealtimeChanges(
     tasks.push(queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }))
   }
 
+  if (tables.has('client_goals') || tables.has('goal_stages')) {
+    tasks.push(
+      queryClient.invalidateQueries({ queryKey: ['client-goal', clientId] }),
+      queryClient.invalidateQueries({ queryKey: ['client', clientId] }),
+      queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+      queryClient.invalidateQueries({ queryKey: ['workout'] }),
+    )
+  }
+
+  if (tables.has('client_trainers') || tables.has('client_invitations')) {
+    tasks.push(
+      queryClient.invalidateQueries({ queryKey: ['client-trainers', clientId] }),
+      queryClient.invalidateQueries({ queryKey: ['client-invitations', clientId] }),
+      queryClient.invalidateQueries({ queryKey: ['my-client'] }),
+      queryClient.invalidateQueries({ queryKey: ['clients'] }),
+    )
+  }
+
+  if (tables.has('client_training_summaries') || tables.has('client_published_training_summaries')) {
+    tasks.push(
+      queryClient.invalidateQueries({ queryKey: ['training-summaries', 'trainer', clientId] }),
+      queryClient.invalidateQueries({ queryKey: ['training-summaries', 'client', clientId] }),
+    )
+  }
+
   await Promise.all(tasks)
 }
 
@@ -114,6 +143,11 @@ export function useClientRealtime(clientId: string | undefined) {
         changes.push(change)
         if (debounceTimer) clearTimeout(debounceTimer)
         debounceTimer = setTimeout(flush, REALTIME_DEBOUNCE_MS)
+      }, () => {
+        // Изменение могло произойти между первым render и фактическим
+        // SUBSCRIBED. Одно серверное сравнение при готовности закрывает это
+        // окно, а последующие изменения уже приходят обычными событиями.
+        void refetchClientSpace(queryClient, clientId)
       })
     }
     const disconnect = () => {
