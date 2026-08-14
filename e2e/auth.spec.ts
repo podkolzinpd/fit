@@ -113,6 +113,82 @@ test('client registers, creates a standalone card and own workout without traine
   await expect(page).toHaveURL(/\/me$/)
 })
 
+test('invitation links reject the wrong role and revoked code without consuming a valid client code', async ({ page }, testInfo) => {
+  testInfo.setTimeout(90_000)
+  const suffix = `${testInfo.workerIndex}-${Date.now()}`
+  const trainerEmail = `invite-guard-trainer-${suffix}@fit.local`
+  const wrongRoleEmail = `invite-guard-wrong-${suffix}@fit.local`
+  const clientEmail = `invite-guard-client-${suffix}@fit.local`
+
+  await page.goto('/auth')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Имя').fill('Тренер приглашения')
+  await page.getByLabel('Email').fill(trainerEmail)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByLabel('Имя').fill('Клиент приглашения')
+  await fillClientProfileDetails(page)
+  await page.getByLabel('Начальный вес, кг').fill('60')
+  await Promise.all([
+    page.waitForURL(/\/clients\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Сохранить' }).click(),
+  ])
+  await page.getByRole('button', { name: 'Пригласить клиента' }).click()
+  const clientCode = (await page.getByText(/Код клиента:/).textContent())?.match(/[A-F0-9]{12}/)?.[0]
+  expect(clientCode).toBeTruthy()
+
+  // Тренер не может использовать код клиента; код остаётся действующим для
+  // правильного аккаунта и следующий переход по ссылке обрабатывается сам.
+  await page.goto('/profile')
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Имя').fill('Неверная роль')
+  await page.getByLabel('Email').fill(wrongRoleEmail)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page).toHaveURL(/\/(today|profile)$/)
+  await page.goto('/join')
+  await page.getByLabel('Код приглашения').fill(clientCode!)
+  await page.getByRole('button', { name: 'Присоединиться' }).click()
+  await expect(page.getByRole('alert')).toHaveText('Этот код приглашения предназначен для другого типа аккаунта.')
+
+  await page.goto('/profile')
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Тип аккаунта').selectOption('client')
+  await page.getByLabel('Имя').fill('Клиент приглашения')
+  await page.getByLabel('Email').fill(clientEmail)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page.getByRole('heading', { name: 'Создайте личную карточку' })).toBeVisible()
+  await page.goto(`/join?code=${clientCode}`)
+  await expect(page).toHaveURL(/\/me$/, { timeout: 15_000 })
+  await expect(page.getByText(/Клиент приглашения/)).toBeVisible()
+
+  await page.goto('/me/profile')
+  await page.getByRole('button', { name: 'Пригласить тренера' }).click()
+  const trainerCode = (await page.getByText(/Код для тренера:/).textContent())?.match(/[A-F0-9]{12}/)?.[0]
+  expect(trainerCode).toBeTruthy()
+  await page.getByRole('button', { name: 'Отозвать' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отозвать' }).click()
+  await expect(page.getByRole('heading', { name: 'Активные приглашения' })).toHaveCount(0)
+
+  await page.goto('/me/profile')
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
+  await page.getByLabel('Email').fill(wrongRoleEmail)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/(today|profile)$/)
+  await page.goto('/join')
+  await page.getByLabel('Код приглашения').fill(trainerCode!)
+  await page.getByRole('button', { name: 'Присоединиться' }).click()
+  await expect(page.getByRole('alert')).toHaveText('Приглашение недействительно или срок его действия истёк. Попросите новый код.')
+})
+
 test('trainer invitation links a client account', async ({ page }, testInfo) => {
   testInfo.setTimeout(120_000)
   const suffix = `${testInfo.workerIndex}-${Date.now()}`
