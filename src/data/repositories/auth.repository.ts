@@ -3,12 +3,32 @@ import { authQueries } from '../queries/auth.queries'
 import { repositoryError } from './error'
 
 const signupFailedMessage = 'Не удалось создать аккаунт. Попробуйте войти или используйте другой email.'
+const NETWORK_ERROR = /failed to fetch|fetch failed|networkerror|network request failed|load failed/i
+
+function isTransientNetworkError(error: unknown): boolean {
+  return error instanceof TypeError
+    || (error instanceof Error && NETWORK_ERROR.test(error.message))
+    || (typeof error === 'object' && error !== null && 'message' in error
+      && typeof error.message === 'string' && NETWORK_ERROR.test(error.message))
+}
+
+async function retrySignInAfterNetworkBlip(email: string, password: string) {
+  let result = await authQueries.signIn(email, password)
+  // В WKWebView короткий переход между Wi-Fi/сотовой сетью или включение VPN
+  // иногда обрывает первый HTTPS-запрос. Повторяем ровно один раз и только
+  // сетевую ошибку: неверный пароль и любые ответы Auth не маскируются.
+  if (result.error && isTransientNetworkError(result.error)) {
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 500))
+    result = await authQueries.signIn(email, password)
+  }
+  return result
+}
 
 export const authRepository = {
   getSession: authQueries.getSession,
   onAuthStateChange: authQueries.onAuthStateChange,
   async signIn(email: string, password: string) {
-    const { error } = await authQueries.signIn(email, password)
+    const { error } = await retrySignInAfterNetworkBlip(email, password)
     if (error) throw repositoryError(error)
   },
   async signUp(email: string, password: string, firstName: string, role: AccountRole) {
