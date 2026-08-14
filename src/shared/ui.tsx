@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PropsWithChildren, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PropsWithChildren, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 
@@ -149,30 +149,51 @@ export interface OverflowMenuItem { label: string; onClick: () => void; danger?:
 // Пункты сохраняют свои названия (доступны по имени после раскрытия меню).
 export function OverflowMenu({ items, label = 'Ещё действия' }: { items: OverflowMenuItem[]; label?: string }) {
   const [open, setOpen] = useState(false)
-  const triggerRef = useRef<HTMLButtonElement>(null)
+  const [position, setPosition] = useState<CSSProperties | null>(null)
+  const triggerRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
-  const [position, setPosition] = useState<{ top?: number; bottom?: number; right: number } | null>(null)
-  const placeMenu = useCallback(() => {
+  const updatePosition = useCallback(() => {
     const trigger = triggerRef.current
-    if (!trigger) return
-    const rect = trigger.getBoundingClientRect()
-    const footerTop = document.querySelector<HTMLElement>('.live-bottom-bar')?.getBoundingClientRect().top
-    const lowerEdge = Math.min(window.innerHeight - 8, footerTop ? footerTop - 8 : window.innerHeight - 8)
-    const estimatedHeight = items.length * 48 + 20
-    const right = Math.max(8, window.innerWidth - rect.right)
-    if (rect.bottom + 6 + estimatedHeight > lowerEdge) {
-      setPosition({ bottom: Math.max(8, window.innerHeight - rect.top + 6), right })
-    } else {
-      setPosition({ top: rect.bottom + 6, right })
+    const menu = menuRef.current
+    const frame = document.querySelector<HTMLElement>('.phone-frame')
+    if (!trigger || !menu) return
+
+    const triggerRect = trigger.getBoundingClientRect()
+    const menuRect = menu.getBoundingClientRect()
+    // В приложении ограничиваемся рамкой телефона. В изолированных частях UI
+    // (и их unit-тестах) оболочки может не быть — тогда граница это viewport.
+    const frameRect = frame?.getBoundingClientRect() ?? {
+      top: 0,
+      right: window.innerWidth,
+      bottom: window.innerHeight,
+      left: 0,
     }
-  }, [items.length])
+    const lowerBars = Array.from(document.querySelectorAll<HTMLElement>('.tab-bar, .live-bottom-bar'))
+      .map((bar) => bar.getBoundingClientRect())
+      .filter((bar) => bar.width > 0 && bar.height > 0 && bar.left < frameRect.right && bar.right > frameRect.left)
+    const bottomLimit = Math.min(frameRect.bottom, ...lowerBars.map((bar) => bar.top))
+    const gap = 6
+    const minTop = frameRect.top + 8
+    const maxTop = Math.max(minTop, bottomLimit - menuRect.height - 8)
+    const opensAbove = triggerRect.bottom + gap + menuRect.height > bottomLimit
+    const proposedTop = opensAbove ? triggerRect.top - gap - menuRect.height : triggerRect.bottom + gap
+    const top = Math.min(Math.max(proposedTop, minTop), maxTop)
+    const minLeft = frameRect.left + 8
+    const maxLeft = Math.max(minLeft, frameRect.right - menuRect.width - 8)
+    const left = Math.min(Math.max(triggerRect.right - menuRect.width, minLeft), maxLeft)
+    setPosition({ top, left })
+  }, [])
+
   useLayoutEffect(() => {
     if (!open) { setPosition(null); return }
-    placeMenu()
-    window.addEventListener('resize', placeMenu)
-    window.addEventListener('scroll', placeMenu, true)
-    return () => { window.removeEventListener('resize', placeMenu); window.removeEventListener('scroll', placeMenu, true) }
-  }, [open, placeMenu])
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
+  }, [open, updatePosition])
   useEffect(() => {
     if (!open) return
     const onDown = (event: PointerEvent) => {
@@ -186,9 +207,9 @@ export function OverflowMenu({ items, label = 'Ещё действия' }: { ite
   }, [open])
   if (items.length === 0) return null
   const host = document.querySelector('.phone-frame') ?? document.body
-  return <div className="overflow-menu">
-    <button ref={triggerRef} type="button" className="overflow-trigger" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}>⋯</button>
-    {open && position && createPortal(<div ref={menuRef} className="overflow-list" role="menu" style={position}>
+  return <div className="overflow-menu" ref={triggerRef}>
+    <button type="button" className="overflow-trigger" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}>⋯</button>
+    {open && createPortal(<div ref={menuRef} className="overflow-list" role="menu" style={position ?? { visibility: 'hidden' }}>
       {items.map((item) => <button key={item.label} type="button" role="menuitem" disabled={item.disabled}
         className={item.danger ? 'overflow-item danger' : 'overflow-item'}
         onClick={() => { setOpen(false); item.onClick() }}>{item.label}</button>)}
