@@ -39,12 +39,63 @@ The following remain unchanged during the foundation phase:
    remaining domain: remote state, service-network access to private
    PostgreSQL, reviewed migrations and database readiness checks. Profiles,
    trainers, clients and read-only trainer memberships are already ported.
-5. Implement Yandex ID and the profile vertical slice on stage, then resume
-   invitation, mutation and domain slices in dependency order.
-6. Port clients, memberships, exercises, workouts, progress, goals and
+5. Implement Yandex ID, identity mapping and the profile vertical slice on
+   stage. Add a server-side rollout assignment keyed by the internal profile
+   UUID; a frontend flag is not an authorization or routing boundary.
+6. Run the first allowlisted pilot with synthetic/internal accounts and
+   read-only behavior. Supabase remains the only write source during this gate.
+7. Port clients, memberships, exercises, workouts, progress, goals and
    summaries in parity-tested vertical slices.
-7. Rehearse the data migration at least twice before the production cutover.
-8. Remove Supabase only after the rollback window closes.
+8. Rehearse full tenant migration at least twice. Cut over one isolated tenant
+   cohort only after all data it can mutate is migrated and writes are frozen
+   for the cutover window.
+9. Expand sticky tenant cohorts gradually after monitoring data integrity,
+   authorization failures, latency and error rates.
+10. Remove Supabase only after all cohorts are migrated and the rollback window
+    closes.
+
+## Rollout decision
+
+Yandex Cloud rollout is controlled by the application after Yandex ID has been
+validated and mapped to an internal profile UUID. Client-provided headers,
+query parameters, email addresses and raw Yandex ID subjects never select a
+backend.
+
+```text
+validated Yandex ID -> internal profile UUID -> tenant rollout assignment
+                                            -> Supabase or Yandex API
+```
+
+The assignment is evaluated server-side and is sticky. Serverless Container
+revision activation applies to all requests, while API Gateway percentage
+canaries are random request routing; neither is the source of truth for a
+specific-user pilot.
+
+The safe migration unit is a tenant cohort, not always one account. A trainer,
+linked client profiles and their shared memberships/workouts must not be split
+between writable backends. An individual account can be moved alone only when
+its mutable data has no cross-account ownership or relationship dependency.
+
+No domain entity is dual-written. Before a cohort cutover, Supabase remains its
+only write source. During cutover, writes for the cohort are paused, its full
+required dataset is copied and verified, and then the assignment changes once
+to Yandex Cloud. After that point Yandex Cloud is the only write source for the
+cohort.
+
+A flag is an instant rollback only before the first Yandex Cloud write or for a
+read-only pilot. After writes begin, switching a cohort back to Supabase would
+lose or fork new data; rollback then requires a maintenance window and a
+reviewed reverse migration. Every cohort expansion therefore records a data
+checkpoint and an explicit forward-fix or reverse-migration decision.
+
+Rollout gates:
+
+1. synthetic and internal accounts on isolated stage;
+2. allowlisted read-only auth/profile pilot;
+3. complete tenant migration rehearsal with production-like data;
+4. one small production tenant cohort;
+5. gradual cohort expansion;
+6. final read-only window and global cutover.
 
 ## Actor context decision
 

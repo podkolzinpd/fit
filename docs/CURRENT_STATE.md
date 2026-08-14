@@ -11,8 +11,9 @@
 
 - Активная задача миграции: выполнить первый отдельно одобренный stage deploy
   по `docs/STAGE_DEPLOYMENT.md`, проверить private API, PostgreSQL и миграции.
-- Следующий этап после успешного stage smoke: Yandex ID/profile vertical slice;
-  invitations и membership mutations остаются после auth.
+- Следующий этап после успешного stage smoke: Yandex ID/profile vertical slice
+  и серверная tenant-allowlist для пилота; invitations и membership mutations
+  остаются после auth.
 
 ## Последняя проверенная продуктовая точка
 
