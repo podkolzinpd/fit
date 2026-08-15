@@ -5,7 +5,7 @@ import { clientsRepository } from '../../data/repositories/clients.repository'
 import { goalsRepository } from '../../data/repositories/goals.repository'
 import { workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, Workout, WorkoutDraft, WorkoutSetDraft } from '../../shared/domain'
-import { localDate, todayLocalDate } from '../../shared/local-date'
+import { localDate, todayInTimeZone } from '../../shared/local-date'
 import { isValidRpe } from '../../shared/rpe'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { Page } from '../../shared/ui'
@@ -88,7 +88,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const { actor } = useAuth()
   const mine = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine(), enabled: clientMode })
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false), enabled: !clientMode })
-  const today = todayLocalDate()
+  const today = todayInTimeZone(actor?.timezone)
   const todayWorkouts = useQuery({ queryKey: ['today-workouts', today, mine.data?.id], queryFn: () => workoutsRepository.list(today, today, clientMode ? mine.data!.id : undefined), enabled: !clientMode || Boolean(mine.data) })
   const workouts = useQuery({ queryKey: ['workouts', mine.data?.id], queryFn: () => workoutsRepository.list(undefined, undefined, clientMode ? mine.data!.id : undefined), enabled: !clientMode || Boolean(mine.data) })
   const goal = useQuery({ queryKey: ['client-goal', mine.data?.id], queryFn: () => goalsRepository.get(mine.data!.id), enabled: clientMode && Boolean(mine.data) })

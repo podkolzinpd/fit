@@ -7,6 +7,7 @@ const queries = vi.hoisted(() => ({
   getTrainer: vi.fn(),
   initializeAccount: vi.fn(),
   getProfile: vi.fn(),
+  updateProfile: vi.fn(),
 }))
 
 vi.mock('../queries/auth.queries', () => ({
@@ -16,6 +17,7 @@ vi.mock('../queries/auth.queries', () => ({
     getTrainer: queries.getTrainer,
     initializeAccount: queries.initializeAccount,
     getProfile: queries.getProfile,
+    updateProfile: queries.updateProfile,
   },
 }))
 
@@ -26,6 +28,7 @@ describe('authRepository.initialize', () => {
     queries.getTrainer.mockReset()
     queries.initializeAccount.mockReset()
     queries.getProfile.mockReset()
+    queries.updateProfile.mockReset()
   })
 
   it('повторяет вход один раз после краткого сетевого обрыва', async () => {
@@ -53,6 +56,10 @@ describe('authRepository.initialize', () => {
       },
       error: null,
     })
+    queries.getProfile.mockResolvedValue({
+      data: { first_name: 'Анна', last_name: 'Смирнова', timezone: 'Europe/Berlin', account_role: 'client' },
+      error: null,
+    })
 
     const actor = await authRepository.initialize({
       id: 'auth-client-1',
@@ -67,7 +74,7 @@ describe('authRepository.initialize', () => {
       email: 'client@example.test',
       firstName: 'Анна',
       lastName: 'Смирнова',
-      timezone: 'Europe/Moscow',
+      timezone: 'Europe/Berlin',
       clientId: 'client-1',
       trainerId: 'trainer-1',
       fullName: 'Анна Смирнова',
@@ -98,7 +105,7 @@ describe('authRepository.initialize', () => {
     })
 
     expect(actor.kind).toBe('trainer')
-    expect(queries.initializeAccount).toHaveBeenCalledWith('trainer', 'Ирина', undefined)
+    expect(queries.initializeAccount).toHaveBeenCalledWith('trainer', 'Ирина', undefined, expect.any(String))
   })
 
   it('не перезаписывает сохранённое имя регистрационными metadata', async () => {
@@ -122,5 +129,18 @@ describe('authRepository.initialize', () => {
 
     expect(actor.firstName).toBe('Новое имя')
     expect(queries.initializeAccount).not.toHaveBeenCalled()
+  })
+
+  it('не сохраняет некорректный часовой пояс профиля', async () => {
+    await expect(authRepository.updateProfile({
+      kind: 'trainer',
+      role: 'trainer',
+      userId: 'trainer-1',
+      email: 'trainer@example.test',
+      firstName: 'Ирина',
+      lastName: null,
+      timezone: 'Moscow',
+    })).rejects.toThrow('Укажите часовой пояс в формате Europe/Moscow')
+    expect(queries.updateProfile).not.toHaveBeenCalled()
   })
 })
