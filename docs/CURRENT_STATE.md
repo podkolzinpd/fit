@@ -4,18 +4,22 @@
 > После каждого подтверждённого merge заменяйте сведения ниже, не добавляйте
 > хронологию: полная история уже хранится в Git и Tracker.
 
-Обновлено: 2026-08-15
-Проверенный `main`: `c370328` (`YAFIT-285: короткий post-workout feedback клиента (#386)`)
+Обновлено: 2026-08-16
+Проверенный `main`: `b180f9a` (`YAFIT-256: добавить реакцию и ответ тренера (#387)`)
 
 ## Активная работа
 
-- Активная продуктовая задача: `YAFIT-256` — реакция 👍 / 🔥 / 💪 и короткий
-  ответ ответственного тренера на завершённое назначение или client-authored
-  workout; автор/время, realtime/refetch и запрет перезаписи другим тренером.
-- Следующая задача roadmap: `YAFIT-286` — weekly/monthly regularity.
+- Активная продуктовая задача: `YAFIT-286` — единый серверный week/month
+  aggregate план/факт для Client и Trainer; неделя понедельник–воскресенье,
+  client timezone, confirmed-only fact и RLS.
+- Следующая задача roadmap: `YAFIT-287` — прогресс упражнений и реальные PR.
 
 ## Последняя проверенная продуктовая точка
 
+- После `#387` ответственный тренер оставляет реакцию 👍 / 🔥 / 💪 и короткий
+  ответ на завершённое назначение или client-authored workout. Автор/время,
+  realtime/refetch, идемпотентный retry и запрет перезаписи другим тренером
+  закреплены отдельно от private notes и client feedback.
 - После `#386` клиент отдельно от завершения отправляет session RPE 1–10,
   wellbeing и дискомфорт для назначенной или самостоятельной тренировки.
   Точный повтор feedback идемпотентен, изменившийся stale payload конфликтует;
@@ -53,18 +57,20 @@
   reset БД, 440 SQL/RLS, 398 frontend, 10 API, WebKit 390 px и двухролевой
   Chromium realtime. После merge `c370328` production web bundle синхронизирован
   с iOS; свежий bundle собран, установлен и запущен на iPhone 17.
-- `YAFIT-256` в рабочей ветке: чистый reset БД, 465 SQL/RLS, `npm run check` —
-  398 frontend и 10 API; WebKit iPhone 390 px для назначения и client-authored
-  workout, а также двухролевой Chromium realtime прошли. LLM/SpeechKit не
-  менялись.
+- `#387` / `YAFIT-256`: GitHub CI app/database/e2e и Vercel прошли. Локально
+  reset БД, 465 SQL/RLS, 398 frontend, 10 API, WebKit iPhone 390 px и
+  двухролевой Chromium realtime. После merge `b180f9a` свежий iOS bundle
+  собран, установлен и запущен на iPhone 17. LLM/SpeechKit не менялись.
+- `YAFIT-286` в рабочей ветке: чистый reset БД и 474 SQL/RLS, полный
+  `npm run check` (403 frontend и 10 API), двухролевой Chromium realtime и
+  WebKit iPhone 390 px прошли. LLM/SpeechKit не менялись.
 
 ## Ближайший roadmap
 
-1. `YAFIT-256` — trainer reaction и короткий ответ.
-2. `YAFIT-286` — weekly/monthly regularity.
-3. `YAFIT-287` — прогресс упражнений и реальные PR.
-4. `YAFIT-288` — история как спортивная хроника.
-5. `YAFIT-289` — Client Home: следующее действие, неделя, один highlight.
+1. `YAFIT-286` — weekly/monthly regularity.
+2. `YAFIT-287` — прогресс упражнений и реальные PR.
+3. `YAFIT-288` — история как спортивная хроника.
+4. `YAFIT-289` — Client Home: следующее действие, неделя, один highlight.
 
 ## Отложенный backlog
 

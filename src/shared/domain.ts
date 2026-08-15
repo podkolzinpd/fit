@@ -285,6 +285,20 @@ export interface ClientStats {
   needsAttention: boolean
 }
 
+export type WorkoutRegularityPeriod = 'week' | 'month'
+
+export interface WorkoutRegularity {
+  period: WorkoutRegularityPeriod
+  periodStart: LocalDate
+  periodEnd: LocalDate
+  plannedCount: number
+  completedCount: number
+  completedPlannedCount: number
+  partialCount: number
+  skippedCount: number
+  completionPercent: number | null
+}
+
 export interface CustomMetric {
   id: UUID
   clientId: UUID
