@@ -458,6 +458,29 @@ test('iPhone: одиночный отдых переживает reload, сдв�
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: введённый live-факт переживает обрыв сети и reload на 390 px', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const clientName = await createIsolatedClient(page, testInfo)
+  await page.goto('/workouts/new')
+  await selectClient(page, clientName)
+  await addExercise(page, 'Присед со штангой', true)
+  await page.getByLabel('Вес, подход 1').fill('40')
+  await page.getByLabel('Повторы, подход 1').fill('10')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await page.getByRole('button', { name: 'Начать' }).click()
+
+  await page.route('**/rest/v1/rpc/save_live_set_draft', (route) => route.abort('failed'))
+  await page.getByLabel('Фактический вес').fill('55')
+  await page.locator('.live-timer').click()
+  await expect(page.locator('.error').filter({ hasText: 'Ответ сервера не получен' })).toBeVisible()
+  await page.unroute('**/rest/v1/rpc/save_live_set_draft')
+
+  await page.reload()
+  await expect(page.getByText(/Восстановили несохранённые данные/)).toBeVisible()
+  await expect(page.getByLabel('Фактический вес')).toHaveValue('55')
+  await expectNoHorizontalOverflow(page)
+})
+
 test('iPhone: отдых начинается после последнего подхода первого упражнения на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const clientName = await createIsolatedClient(page, testInfo)
