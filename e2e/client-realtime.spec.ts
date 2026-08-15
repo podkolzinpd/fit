@@ -150,6 +150,17 @@ test('client and trainer receive progress and workout changes without reload', a
     await trainer.getByRole('button', { name: 'Отправить ответ', exact: true }).click()
     await expect(client.getByText(trainerReview, { exact: true })).toBeVisible({ timeout: 10_000 })
     await expect(client.getByLabel('Реакция 👍', { exact: true })).toBeVisible({ timeout: 10_000 })
+
+    await Promise.all([
+      trainer.goto(`/progress/${clientId}`),
+      client.goto('/me/progress'),
+    ])
+    const trainerRegularity = trainer.getByLabel('Регулярность тренировок')
+    const clientRegularity = client.getByLabel('Регулярность тренировок')
+    await expect(trainerRegularity).toBeVisible()
+    await expect(clientRegularity).toBeVisible()
+    expect(await clientRegularity.textContent()).toBe(await trainerRegularity.textContent())
+    await expect(clientRegularity.getByText('100%').first()).toBeVisible()
   } finally {
     // Не маскируем исходное падение шага вторичной ошибкой teardown, если
     // Playwright уже закрыл один из контекстов после общего timeout.

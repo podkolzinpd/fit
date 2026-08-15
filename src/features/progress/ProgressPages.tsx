@@ -13,6 +13,7 @@ import { AsyncView, Field, Page } from '../../shared/ui'
 import { ProgressChart, type MetricKey, type MetricSelector } from './ProgressChart'
 import { MEASURE_PRESETS, groupMetricRows, presetMetricNames } from './measure-presets'
 import { TrainerTrainingSummaryCard } from './TrainingSummaryCard'
+import { WorkoutRegularityCard } from './WorkoutRegularityCard'
 
 const METRIC_TABS: Array<{ key: MetricKey; label: string; unit: string }> = [
   { key: 'weightKg', label: 'Вес', unit: 'кг' },
@@ -86,6 +87,7 @@ export function ProgressPage() {
     action()
   }
   return <Page className="progress-page" title={client.data ? `Прогресс · ${client.data.fullName}` : 'Прогресс'} back={`/clients/${clientId}`}><AsyncView loading={loading} error={error}>{client.data && <>
+    <WorkoutRegularityCard clientId={clientId} />
     <TrainerTrainingSummaryCard clientId={clientId} />
     {entries.data && entries.data.length > 0 && <>
       <div className="metric-tabs" ref={tabsRef}

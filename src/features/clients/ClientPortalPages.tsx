@@ -10,7 +10,7 @@ import { splitClientWorkouts, workoutsRepository } from '../../data/repositories
 import type { CustomMetric, ProgressEntry } from '../../shared/domain'
 import { formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, Field, Page, useConfirm } from '../../shared/ui'
-import { ClientTrainingSummaryCard, groupMetricRows, ProgressChart } from '../progress'
+import { ClientTrainingSummaryCard, groupMetricRows, ProgressChart, WorkoutRegularityCard } from '../progress'
 import { WorkoutExercisesSummary, WorkoutStatusBadge } from '../workouts'
 import { clientWorkoutAuthorLabel } from './workout-author'
 
@@ -78,7 +78,7 @@ export function MyProgressPage() {
     if (await confirm({ message: `Удалить замер за ${formatLocalDate(entry.recordedOn)}? Это действие нельзя отменить.`, confirmLabel: 'Удалить', danger: true })) remove.mutate(entry)
   }
   return <Page className="client-progress-page" title="Мой прогресс"><AsyncView loading={mine.isLoading || entries.isLoading || metrics.isLoading} error={mine.error ?? entries.error ?? metrics.error} onRetry={() => { void mine.refetch(); void entries.refetch(); void metrics.refetch() }}>
-    {entries.data && mine.data && <div className="client-progress-stack"><ClientTrainingSummaryCard clientId={mine.data.id} />
+    {entries.data && mine.data && <div className="client-progress-stack"><WorkoutRegularityCard clientId={mine.data.id} /><ClientTrainingSummaryCard clientId={mine.data.id} />
       <ClientProgressForm entry={null} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, null)} />
       {entries.data.length > 0 ? <><ProgressChart entries={entries.data} metric="weightKg" label="Вес" unit="кг" windowEnd={null} onWindowChange={() => undefined} /><section className="client-progress-history"><div className="client-progress-section-head"><p className="eyebrow">ДИНАМИКА</p><h2>История замеров</h2></div><div className="cards">{entries.data.map((entry) => editing?.id === entry.id
         ? <article className="card editing" key={entry.id}><ClientProgressForm entry={entry} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, entry)} onCancel={() => setEditing(null)} /></article>

@@ -111,6 +111,7 @@ describe('client realtime', () => {
     await Promise.resolve()
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['workouts'] })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['workout', 'workout-1'] })
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['workout-regularity', 'client-1'] })
 
     view.rerender(<Probe clientId="client-2" />)
     expect(realtime.unsubscribe).toHaveBeenCalledOnce()

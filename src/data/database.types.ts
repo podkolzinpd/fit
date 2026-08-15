@@ -1,4 +1,4 @@
-// schema-sha256: 0b3a82a0923510f8f3ab7fab64fdc8c8fdce45bfcb278f86d7b35ef268fa929f
+// schema-sha256: 513e4e98f1b943c232a9488af8c34ecc3bede18c88d3ea3f6ada5a7740f0ad73
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1084,6 +1084,20 @@ export type Database = {
           height_cm: number
           id: string
           version: number
+        }[]
+      }
+      get_workout_regularity: {
+        Args: { p_client_id: string; p_reference_time?: string }
+        Returns: {
+          completed_count: number
+          completed_planned_count: number
+          completion_percent: number | null
+          partial_count: number
+          period: string
+          period_end: string
+          period_start: string
+          planned_count: number
+          skipped_count: number
         }[]
       }
       initialize_account: {

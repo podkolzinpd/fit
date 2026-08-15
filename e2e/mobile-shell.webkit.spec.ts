@@ -401,6 +401,19 @@ test('iPhone: voice-first и AI-поверхности сохраняют кон
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: week/month регулярность помещается на Progress при 390 px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await login(page, 'client@fit.local')
+  await page.goto('/me/progress')
+
+  const regularity = page.getByLabel('Регулярность тренировок')
+  await expect(regularity).toBeVisible()
+  await expect(regularity.getByRole('heading', { name: 'Неделя' })).toBeVisible()
+  await expect(regularity.getByRole('heading', { name: 'Месяц' })).toBeVisible()
+  await expect(regularity.getByText('ПЛАН И ФАКТ')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+})
+
 test('iPhone: ручной выбор начинает с недавних, а не с разминки на 390 px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)

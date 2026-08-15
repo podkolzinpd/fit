@@ -22,6 +22,7 @@ const clientSpaceRoots = new Set([
   'client-trainers',
   'client-invitations',
   'training-summaries',
+  'workout-regularity',
 ])
 
 function recordId(change: ClientRealtimeChange, key: string): string | undefined {
@@ -51,6 +52,7 @@ export async function applyClientRealtimeChanges(
       queryClient.invalidateQueries({ queryKey: ['workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['client-stats', clientId] }),
       queryClient.invalidateQueries({ queryKey: ['exercise-history', clientId] }),
+      queryClient.invalidateQueries({ queryKey: ['workout-regularity', clientId] }),
     )
     const workoutIds = new Set(
       changes.flatMap((change) => {

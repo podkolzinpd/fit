@@ -17,7 +17,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | History | Done workouts only, set list and max-value chart | Implemented: set list and max-value progression chart (по типу упражнения) covered unit; broader visual pending |
 | Post-workout feedback | Клиент после завершения фиксирует session RPE 1–10, самочувствие и дискомфорт; тренер видит сигнал без доступа посторонних аккаунтов | Implemented: assigned и client-authored workout, отдельный idempotent submit с version check, RLS/SQL и WebKit 390 px acceptance |
 | Trainer response | После завершения клиент видит реакцию 👍 / 🔥 / 💪 и короткий ответ ответственного тренера | Implemented: trainer-author для назначения, root trainer для client-authored workout, автор/время, idempotent versioned RPC, realtime/refetch и RLS matrix |
-| Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; duplicate-date create opens the existing entry without a failing DB request; broader visual/E2E matrix pending |
+| Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; duplicate-date create opens the existing entry without a failing DB request; weekly/monthly regularity uses one role-safe server aggregate; broader visual/E2E matrix pending |
 | Wearables | Клиент подключает системное health-хранилище и видит локальные показатели активности и восстановления | Prototype: iOS HealthKit read-only PoC for sleep, steps, active energy, resting HR and HRV; server sync, trainer visibility and real-device acceptance pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; acceptance matrix pending |
 
@@ -46,6 +46,16 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - Самостоятельная карточка принадлежит клиентскому профилю и не создаёт строку `trainers`; тренеры появляются только через явное приглашение.
 - Обязательные проверки: owner/trainer/cross-tenant SQL matrix и E2E client create → edit → perform → finish.
 - Открытая карточка, история, тренировка и прогресс используют один realtime-канал конкретного `client_id`. Серия событий одной транзакции объединяется; скрытая вкладка отписывается и перечитывает активные данные после возвращения.
+
+## Workout regularity acceptance contract
+
+- Неделя длится с понедельника по воскресенье; текущие week/month границы сервер считает в timezone клиента. Если клиентский профиль ещё не связан, используется timezone root trainer, затем `Europe/Moscow`.
+- Запланировано — все trainer-authored назначения периода, включая будущие, выполненные и незавершённые. Самостоятельные планы клиента не раздувают denominator.
+- Выполнено — trainer- и client-authored workout со статусом `done`, где подтверждены все подходы; тренировка без строк подходов считается завершённой по корневому статусу.
+- Процент плана — полностью выполненные назначения тренера / все назначения тренера периода. Самостоятельные завершённые тренировки остаются в факте, но не могут поднять процент выше 100%.
+- Partial — `done` с частью подтверждённых подходов: подтверждённые строки остаются фактом, но вся тренировка не входит в completed. Неподтверждённый ввод фактом не считается.
+- Skipped — производное представление trainer-authored `planned` в прошлом. Новый статус БД не вводится; прошлый `in_progress` остаётся незавершённым, а не пропущенным.
+- Client, root trainer и connected trainer читают одни строки RPC; несвязанный аккаунт получает access denied. UI не загружает историю тренировок для пересчёта.
 
 ## Exercise acceptance contract
 

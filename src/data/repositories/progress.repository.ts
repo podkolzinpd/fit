@@ -1,4 +1,4 @@
-import type { CustomMetric, ProgressDraft, ProgressEntry } from '../../shared/domain'
+import type { CustomMetric, ProgressDraft, ProgressEntry, WorkoutRegularity, WorkoutRegularityPeriod } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { progressQueries } from '../queries/progress.queries'
 import { RepositoryError, repositoryError } from './error'
@@ -6,6 +6,21 @@ import { groupCustomMetricValues, roundMetric } from './progress-rules'
 export { roundMetric } from './progress-rules'
 
 export const progressRepository = {
+  async regularity(clientId: string): Promise<WorkoutRegularity[]> {
+    const result = await progressQueries.regularity(clientId)
+    if (result.error) throw repositoryError(result.error)
+    return result.data.map((row) => ({
+      period: row.period as WorkoutRegularityPeriod,
+      periodStart: localDate(row.period_start),
+      periodEnd: localDate(row.period_end),
+      plannedCount: row.planned_count,
+      completedCount: row.completed_count,
+      completedPlannedCount: row.completed_planned_count,
+      partialCount: row.partial_count,
+      skippedCount: row.skipped_count,
+      completionPercent: row.completion_percent ?? null,
+    }))
+  },
   async list(clientId: string): Promise<ProgressEntry[]> {
     const [result, custom] = await Promise.all([progressQueries.list(clientId), progressQueries.listCustomValues(clientId)])
     if (result.error) throw repositoryError(result.error)
