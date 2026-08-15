@@ -5,6 +5,14 @@ export class RepositoryError extends Error {
   }
 }
 
+export function isRepositoryConflict(error: unknown): error is RepositoryError {
+  return error instanceof RepositoryError && (error.code === 'PT409' || error.code === '40001')
+}
+
+export function isRepositoryNetworkError(error: unknown): error is RepositoryError {
+  return error instanceof RepositoryError && error.code === 'network_unavailable'
+}
+
 export function repositoryError(error: unknown): RepositoryError {
   if (!error || typeof error !== 'object') {
     return new RepositoryError('unknown', 'Не удалось выполнить действие. Попробуйте ещё раз.')
@@ -68,8 +76,8 @@ export function repositoryError(error: unknown): RepositoryError {
   if (code === '42501') {
     return new RepositoryError(code, 'Недостаточно прав для этого действия.')
   }
-  if (normalizedMessage.includes('failed to fetch') || normalizedMessage.includes('network')) {
-    return new RepositoryError(code, 'Не удалось подключиться к серверу. Проверьте интернет и повторите попытку.')
+  if (normalizedMessage.includes('failed to fetch') || normalizedMessage.includes('load failed') || normalizedMessage.includes('network')) {
+    return new RepositoryError('network_unavailable', 'Не удалось подключиться к серверу. Проверьте интернет и повторите попытку.')
   }
   return new RepositoryError(code, 'Не удалось выполнить действие. Попробуйте ещё раз.')
 }
