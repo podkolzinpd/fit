@@ -786,6 +786,7 @@ export function LiveWorkoutPage() {
     (id, version) => workoutsRepository.confirmLiveSet(id, version),
   ))
   const [liveWorkout] = useState(() => createLiveWorkoutCoordinator())
+  const completedLocally = useRef(false)
   const skipBlurForSet = useRef<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   // В обычной тренировке перестановка не нужна постоянно: включается из меню
@@ -832,6 +833,10 @@ export function LiveWorkoutPage() {
   useEffect(() => {
     if (query.data?.status !== 'done') return
     if (actor?.userId) clearPendingLiveSetDrafts(actor.userId, workoutId)
+    // При обычном успешном finish итоговый экран открывает onSuccess ниже с
+    // justCompleted. Этот fallback нужен только когда ответ потерялся, но
+    // refetch уже увидел завершённую тренировку, либо после reload live URL.
+    if (completedLocally.current) return
     navigate(`/workouts/${workoutId}`, { replace: true })
   }, [actor?.userId, navigate, query.data?.status, workoutId])
   function rememberLiveDraft(setId: string, draft: LiveSetDraft) {
@@ -1032,7 +1037,9 @@ export function LiveWorkoutPage() {
   }
   const finish = useMutation({ mutationFn: async () => {
     await liveSets.waitForIdle()
-    return runLiveWorkoutMutation('finish', (workout) => workoutsRepository.finish(workout))
+    const version = await runLiveWorkoutMutation('finish', (workout) => workoutsRepository.finish(workout))
+    completedLocally.current = true
+    return version
   }, onSuccess: async () => {
     const clientId = query.data?.clientId
     if (actor?.userId) clearPendingLiveSetDrafts(actor.userId, workoutId)
