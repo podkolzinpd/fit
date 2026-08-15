@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useAuth } from '../../app/auth-context'
 import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
 import type {
   ClientTrainingSummary,
@@ -7,7 +8,7 @@ import type {
   TrainingSummary,
   TrainingSummaryMetrics,
 } from '../../shared/domain'
-import { addDays, addMonths, daysBetween, formatLocalDate, todayLocalDate, type LocalDate } from '../../shared/local-date'
+import { addDays, addMonths, daysBetween, formatLocalDate, normalizeTimeZone, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 
@@ -19,7 +20,7 @@ const PERIODS: Array<{ key: SummaryPeriod; label: string; months: number }> = [
   { key: '6m', label: '6 месяцев', months: 6 },
 ]
 
-function periodRange(key: SummaryPeriod, end = todayLocalDate()): {
+function periodRange(key: SummaryPeriod, end: LocalDate): {
   start: LocalDate
   end: LocalDate
 } {
@@ -29,16 +30,17 @@ function periodRange(key: SummaryPeriod, end = todayLocalDate()): {
 
 // Сводку сопоставляем с выбранным периодом по ДЛИНЕ окна (в днях), а не по
 // точному совпадению дат. Точное равенство было хрупким: сводка генерируется по
-// current_date БД, а окно считается по todayLocalDate() приложения — при сдвиге
+// current_date БД, а окно считается по дате из профиля приложения — при сдвиге
 // на день (таймзона/смена суток/клэмп конца месяца) match терял запись и экран
 // показывал «сводка не запрошена». Берём запись, чья длина ближе всего к целевой
 // (с допуском), и среди подходящих — самую свежую по periodEnd.
 function periodMatch<T extends { periodStart: LocalDate; periodEnd: LocalDate }>(
   values: T[],
   key: SummaryPeriod,
+  today: LocalDate,
 ): T | undefined {
   const months = PERIODS.find((period) => period.key === key)?.months ?? 6
-  const target = daysBetween(addMonths(todayLocalDate(), -months), todayLocalDate())
+  const target = daysBetween(addMonths(today, -months), today)
   // Допуск: половина месяца — уверенно отделяет 1m от 3m от 6m, но переживает
   // сдвиг границ на несколько дней.
   const tolerance = 15
@@ -95,14 +97,17 @@ function SummaryHeader({ client = false, published }: { client?: boolean; publis
 }
 
 export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
+  const { actor } = useAuth()
+  const today = todayInTimeZone(actor?.timezone)
+  const timeZone = normalizeTimeZone(actor?.timezone)
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState<SummaryPeriod>('6m')
   const query = useQuery({
     queryKey: ['training-summaries', 'trainer', clientId],
     queryFn: () => trainingSummariesRepository.listForTrainer(clientId),
   })
-  const summary = periodMatch(query.data ?? [], period)
-  const range = periodRange(period)
+  const summary = periodMatch(query.data ?? [], period, today)
+  const range = periodRange(period, today)
   const generate = useMutation({
     mutationFn: () => trainingSummariesRepository.generate(
       clientId,
@@ -138,7 +143,7 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
           </div>}
     </AsyncView>
     <footer className="ai-progress-footer">
-      <span>{summary ? `Обновлено ${new Date(summary.generatedAt).toLocaleString('ru-RU')}` : 'Данные клиента не отправляются без действия тренера'}</span>
+      <span>{summary ? `Обновлено ${new Date(summary.generatedAt).toLocaleString('ru-RU', { timeZone })}` : 'Данные клиента не отправляются без действия тренера'}</span>
       <button
         type="button"
         className="secondary"
@@ -245,6 +250,9 @@ function ClientCopyEditor({ summary, clientId, onChanged }: {
 }
 
 export function ClientTrainingSummaryCard({ clientId }: { clientId: string }) {
+  const { actor } = useAuth()
+  const today = todayInTimeZone(actor?.timezone)
+  const timeZone = normalizeTimeZone(actor?.timezone)
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState<SummaryPeriod>('6m')
   const query = useQuery({
@@ -252,12 +260,12 @@ export function ClientTrainingSummaryCard({ clientId }: { clientId: string }) {
     queryFn: () => trainingSummariesRepository.listForClient(clientId),
   })
   const summary = useMemo(
-    () => periodMatch(query.data ?? [], period),
-    [query.data, period],
+    () => periodMatch(query.data ?? [], period, today),
+    [query.data, period, today],
   )
   const generate = useMutation({
     mutationFn: () => {
-      const range = periodRange(period)
+      const range = periodRange(period, today)
       return trainingSummariesRepository.generate(clientId, range.start, range.end, true)
     },
     onSuccess: async () => queryClient.invalidateQueries({
@@ -269,13 +277,13 @@ export function ClientTrainingSummaryCard({ clientId }: { clientId: string }) {
     <SummaryHeader client />
     <PeriodTabs value={period} onChange={setPeriod} />
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
-      {summary ? <ClientSummaryContent summary={summary} /> : <div className="ai-progress-empty">
+      {summary ? <ClientSummaryContent summary={summary} timeZone={timeZone} /> : <div className="ai-progress-empty">
         <strong>За этот период сводка ещё не запрошена</strong>
         <p>Запроси анализ — Yandex Cloud соберёт прогресс по твоим тренировкам.</p>
       </div>}
     </AsyncView>
     <footer className="ai-progress-footer">
-      <span>{summary ? `Обновлено ${new Date(summary.generatedAt).toLocaleString('ru-RU')}` : 'Можно запросить первый анализ'}</span>
+      <span>{summary ? `Обновлено ${new Date(summary.generatedAt).toLocaleString('ru-RU', { timeZone })}` : 'Можно запросить первый анализ'}</span>
       <button
         type="button"
         className="secondary"
@@ -289,7 +297,7 @@ export function ClientTrainingSummaryCard({ clientId }: { clientId: string }) {
   </section>
 }
 
-function ClientSummaryContent({ summary }: { summary: PublishedTrainingSummary }) {
+function ClientSummaryContent({ summary, timeZone }: { summary: PublishedTrainingSummary; timeZone: string }) {
   return <>
     <div className="ai-progress-hero"><span>Главный результат</span><strong>{summary.summary.headline}</strong></div>
     <Metrics metrics={summary.metrics} audience="client" />
@@ -303,7 +311,7 @@ function ClientSummaryContent({ summary }: { summary: PublishedTrainingSummary }
     </div>
     <div className="client-encouragement"><span aria-hidden="true">✦</span><p>{summary.summary.encouragement}</p></div>
     <footer className="ai-progress-footer">
-      <span>Сводка сформирована {new Date(summary.publishedAt).toLocaleDateString('ru-RU')}</span>
+      <span>Сводка сформирована {new Date(summary.publishedAt).toLocaleDateString('ru-RU', { timeZone })}</span>
     </footer>
   </>
 }

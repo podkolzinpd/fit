@@ -10,7 +10,7 @@ import { bmiLabel, computeClientStats, splitClientWorkouts, workoutsRepository }
 import { TodayPage, WorkoutExercisesSummary } from '../workouts'
 import type { Client, Gender } from '../../shared/domain'
 import { currentStage, daysToTarget, stageProgress } from '../../shared/goal-rules'
-import { formatLocalDate, formatLocalDateShort, localDate, todayLocalDate } from '../../shared/local-date'
+import { formatLocalDate, formatLocalDateShort, localDate, normalizeTimeZone, todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Field, Page, useConfirm } from '../../shared/ui'
 import { clientSchema } from '../../shared/validation'
 import { VoiceNoteField } from '../voice-input'
@@ -118,6 +118,8 @@ function ClientForm({
   onSaved: (id: string) => Promise<void>
   onCancel?: () => void
 }) {
+  const { actor } = useAuth()
+  const today = todayInTimeZone(actor?.timezone)
   const form = useForm<ClientProfileValues>({ resolver: zodResolver(clientProfileSchema), defaultValues: existing ? {
     fullName: existing.fullName, gender: existing.gender ?? undefined, ageYears: existing.ageYears ?? undefined, heightCm: existing.heightCm ?? undefined,
     goal: existing.goal ?? '', note: existing.note ?? '', alias: existing.fullName, privateNote: existing.note ?? '',
@@ -126,7 +128,7 @@ function ClientForm({
     const parsed = clientSchema.parse(values)
     if (existing) {
       const input = { id: existing.id, version: existing.version, fullName: parsed.fullName,
-        gender: parsed.gender as Gender, ageYears: parsed.ageYears, ageUpdatedAt: existing.ageUpdatedAt ?? todayLocalDate(),
+        gender: parsed.gender as Gender, ageYears: parsed.ageYears, ageUpdatedAt: existing.ageUpdatedAt ?? today,
         heightCm: parsed.heightCm, goal: parsed.goal, note: parsed.note }
       if (createMode === 'self') await clientsRepository.updateOwn(input)
       else {
@@ -138,9 +140,9 @@ function ClientForm({
       return existing.id
     }
     const input = { fullName: parsed.fullName, gender: parsed.gender as Gender,
-      ageYears: parsed.ageYears, ageUpdatedAt: todayLocalDate(), heightCm: parsed.heightCm,
+      ageYears: parsed.ageYears, ageUpdatedAt: today, heightCm: parsed.heightCm,
       goal: parsed.goal, note: parsed.note, initialWeightKg: parsed.initialWeightKg,
-      initialWeightRecordedOn: todayLocalDate() }
+      initialWeightRecordedOn: today }
     return createMode === 'self' ? clientsRepository.createOwn(input) : clientsRepository.create(input)
   }, onSuccess: (id) => onSaved(id) })
   const contents = <form className="stack client-profile-form" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
@@ -207,6 +209,7 @@ function targetHint(days: number): string {
 }
 
 function ClientGoalBlock({ client }: { client: Client }) {
+  const { actor } = useAuth()
   const goalQuery = useQuery({ queryKey: ['client-goal', client.id], queryFn: () => goalsRepository.get(client.id) })
   const [editingText, setEditingText] = useState(false)
   const form = useForm<{ goal: string }>({ defaultValues: { goal: client.goal ?? '' } })
@@ -216,7 +219,7 @@ function ClientGoalBlock({ client }: { client: Client }) {
   // Цель как сущность (client_goals) — приоритетна: заголовок + дата + текущий этап.
   const goal = goalQuery.data
   if (goal) {
-    const today = todayLocalDate()
+    const today = todayInTimeZone(actor?.timezone)
     const days = daysToTarget(goal, today)
     const stage = currentStage(goal, today)
     const progress = stageProgress(goal, today)
@@ -272,11 +275,12 @@ function ClientNoteBlock({ client }: { client: Client }) {
 export function ClientDetailPage() {
   const { clientId = '' } = useParams(); const queryClient = useQueryClient()
   const { actor } = useAuth(); const navigate = useNavigate()
+  const today = todayInTimeZone(actor?.timezone)
   useClientRealtime(clientId)
   const query = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
-  const stats = useQuery({ queryKey: ['client-stats', clientId], queryFn: async () => computeClientStats(await workoutsRepository.listSummaries(clientId), todayLocalDate()) })
+  const stats = useQuery({ queryKey: ['client-stats', clientId, today], queryFn: async () => computeClientStats(await workoutsRepository.listSummaries(clientId), today) })
   const workouts = useQuery({ queryKey: ['workouts', clientId, 'upcoming'], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
-  const upcoming = workouts.data ? splitClientWorkouts(workouts.data, todayLocalDate()).upcoming : []
+  const upcoming = workouts.data ? splitClientWorkouts(workouts.data, today).upcoming : []
   const archive = useMutation({ mutationFn: (client: Client) => clientsRepository.setArchived(client, !client.archivedAt), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); await query.refetch() } })
   const invitations = useQuery({ queryKey: ['client-invitations', clientId], queryFn: () => invitationsRepository.list(clientId) })
   const invite = useMutation({ mutationFn: () => invitationsRepository.create(clientId, 'client'), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', clientId] }) })
@@ -309,7 +313,7 @@ export function ClientDetailPage() {
       <div className="page-actions">
         {query.data.hasAccount === false && <button className="secondary wide" disabled={invite.isPending} onClick={() => invite.mutate()}>Пригласить клиента</button>}
         {invite.data && <div className="card"><strong>Код клиента: {invite.data}</strong><p>Передайте код клиенту. Он действует 7 дней и используется один раз.</p></div>}
-        {invitations.data?.map((item) => <article className="card" key={item.id}><div><strong>Активное приглашение клиента</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU')}</p></div><button className="link danger" disabled={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Код больше нельзя будет использовать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>Отозвать</button></article>)}
+        {invitations.data?.map((item) => <article className="card" key={item.id}><div><strong>Активное приглашение клиента</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU', { timeZone: normalizeTimeZone(actor?.timezone) })}</p></div><button className="link danger" disabled={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Код больше нельзя будет использовать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>Отозвать</button></article>)}
         {invite.error && <p className="error">{invite.error.message}</p>}
         {revoke.error && <p className="error">{revoke.error.message}</p>}
         {currentMembership && !currentMembership.isRoot && <button className="danger secondary wide" disabled={leave.isPending} onClick={async () => { if (await confirm({ message: 'Покинуть пространство клиента? Доступ к тренировкам и прогрессу будет закрыт.', confirmLabel: 'Покинуть', danger: true })) leave.mutate() }}>Покинуть пространство клиента</button>}

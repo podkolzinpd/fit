@@ -59,10 +59,12 @@ test('iPhone: новое имя профиля сохраняется после
 
   await page.goto('/profile')
   await page.getByLabel('Имя').fill('Новое имя')
+  await page.getByLabel('Часовой пояс').fill('Europe/Berlin')
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('status')).toContainText('Сохранено')
   await page.reload()
   await expect(page.getByLabel('Имя')).toHaveValue('Новое имя')
+  await expect(page.getByLabel('Часовой пояс')).toHaveValue('Europe/Berlin')
   await expectNoHorizontalOverflow(page)
 })
 

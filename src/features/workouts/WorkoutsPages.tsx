@@ -13,7 +13,7 @@ import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactPlannedSet
 import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
-  addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayLocalDate, weekdayShort,
+  addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayInTimeZone, weekdayShort,
   type LocalDate,
 } from '../../shared/local-date'
 import { AsyncView, Field, OverflowMenu, Page, SaveStatus, StatusBadge, useConfirm } from '../../shared/ui'
@@ -53,8 +53,9 @@ function eventTime(workout: Workout): string {
 
 export function SchedulePage() {
   const [params, setParams] = useSearchParams()
-  const selected = params.get('date') ? localDate(params.get('date')!) : todayLocalDate()
-  const today = todayLocalDate()
+  const { actor } = useAuth()
+  const today = todayInTimeZone(actor?.timezone)
+  const selected = params.get('date') ? localDate(params.get('date')!) : today
   const weekStart = startOfWeek(selected)
   const weekDays = useMemo(() => HOURS.slice(0, 7).map((offset) => addDays(weekStart, offset)), [weekStart])
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -145,7 +146,8 @@ export function SchedulePage() {
 }
 
 export function WorkoutStatusBadge({ workout }: { workout: Workout }) {
-  const status = workoutStatusPresentation(workout, todayLocalDate())
+  const { actor } = useAuth()
+  const status = workoutStatusPresentation(workout, todayInTimeZone(actor?.timezone))
   return <span className={`badge ${status.tone}`}>{status.label}</span>
 }
 
@@ -182,7 +184,7 @@ export function ClientWorkoutsPage() {
     getNextPageParam: (page) => page.nextOffset,
   })
   const items = query.data?.pages.flatMap((page) => page.items) ?? []
-  const history = splitClientWorkouts(items, todayLocalDate()).history
+  const history = splitClientWorkouts(items, todayInTimeZone(actor?.timezone)).history
   return <Page title="История тренировок" back={`/clients/${clientId}`} action={<Link className="button" to={`/workouts/new?client=${clientId}`}>Добавить</Link>}><AsyncView loading={query.isLoading} error={query.error} empty={!history.length} onRetry={() => void query.refetch()}
     emptyTitle="История пока пуста"
     emptyDescription="Завершённые тренировки появятся здесь вместе с результатами."
@@ -198,6 +200,7 @@ export function ClientWorkoutsPage() {
 export function WorkoutFormPage() {
   const { workoutId } = useParams()
   const { actor } = useAuth()
+  const today = todayInTimeZone(actor?.timezone)
   const showRpeByDefault = useRpeDisplay(actor?.userId)
   const [params] = useSearchParams()
   const navigate = useNavigate()
@@ -213,7 +216,7 @@ export function WorkoutFormPage() {
   const [previousResultReferences, setPreviousResultReferences] = useState<ReadonlyMap<string, PreviousExerciseResult>>(() => new Map())
   const createRequestId = useRef(crypto.randomUUID())
   const [recordCompleted, setRecordCompleted] = useState(false)
-  const [entryDate, setEntryDate] = useState<LocalDate>(() => localDate(params.get('date') ?? todayLocalDate()))
+  const [entryDate, setEntryDate] = useState<LocalDate>(() => localDate(params.get('date') ?? today))
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [notes, setNotes] = useState('')
@@ -225,7 +228,7 @@ export function WorkoutFormPage() {
   const [pickerSearch, setPickerSearch] = useState('')
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
-  const initial = source.data ? (workoutId ? { ...(source.data.status === 'done' ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, todayLocalDate())) : undefined
+  const initial = source.data ? (workoutId ? { ...(source.data.status === 'done' ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today)) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
   const draftKey = workoutFormDraftKey(actor?.userId ?? 'anonymous', sourceId ?? `new-${params.get('client') ?? ''}-${params.get('date') ?? ''}`)
   // Клиент, для которого выбираем этап (реактивно — при смене в селекте).
@@ -237,7 +240,7 @@ export function WorkoutFormPage() {
   const goal = useQuery({ queryKey: ['client-goal', clientId], queryFn: () => goalsRepository.get(clientId), enabled: Boolean(clientId) })
   const stages = goal.data ? orderedStages(goal.data) : []
   // Этап по умолчанию: сохранённый у тренировки, иначе текущий по дате.
-  const defaultStageId = source.data?.stageId ?? (goal.data ? currentStage(goal.data, todayLocalDate())?.id ?? '' : '')
+  const defaultStageId = source.data?.stageId ?? (goal.data ? currentStage(goal.data, today)?.id ?? '' : '')
   // Завершённой остаётся только редактируемая запись. Копия завершённой
   // тренировки — это новый план, который тренер при необходимости может
   // переключить в «Завершённую».
@@ -255,7 +258,7 @@ export function WorkoutFormPage() {
       setRecordCompleted(saved.recordCompleted)
       setDraftExercises(saved.exercises)
     } else if (initial) {
-      setEntryDate(workoutDateForRecordMode(source.data?.status === 'done' ? 'completed' : 'planned', initial.workoutDate, todayLocalDate()))
+      setEntryDate(workoutDateForRecordMode(source.data?.status === 'done' ? 'completed' : 'planned', initial.workoutDate, today))
       // PostgreSQL возвращает time как HH:MM:SS, а нативный input[type=time]
       // без шага секунд принимает HH:MM. Иначе браузер молча блокирует submit.
       setStartTime(initial.startTime?.slice(0, 5) ?? '')
@@ -273,7 +276,7 @@ export function WorkoutFormPage() {
 
   useEffect(() => {
     if (!initial || formDraftReady) return
-    setEntryDate(workoutDateForRecordMode(source.data?.status === 'done' ? 'completed' : 'planned', initial.workoutDate, todayLocalDate()))
+    setEntryDate(workoutDateForRecordMode(source.data?.status === 'done' ? 'completed' : 'planned', initial.workoutDate, today))
   }, [formDraftReady, initial, source.data?.status])
   const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => completedMode ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: async (id) => {
     if (!workoutId) removeWorkoutFormDraft(draftKey)
@@ -359,7 +362,7 @@ export function WorkoutFormPage() {
     event.preventDefault(); const form = new FormData(event.currentTarget)
     const submitClientId = String(form.get('clientId'))
     if (!submitClientId) { setClientSelectionError('Выберите клиента для тренировки'); return }
-    const date = workoutDateForRecordMode(completedMode ? 'completed' : 'planned', entryDate, todayLocalDate())
+    const date = workoutDateForRecordMode(completedMode ? 'completed' : 'planned', entryDate, today)
     const submittedStartTime = startTime
     const submittedEndTime = endTime
     const endTimeInput = event.currentTarget.elements.namedItem('endTime') as HTMLInputElement
@@ -386,9 +389,9 @@ export function WorkoutFormPage() {
         {clientMode
           ? <input type="hidden" name="clientId" value={mine.data?.id ?? ''} />
           : <ClientPicker userId={actor?.userId} clients={availableClients ?? []} selectedId={clientId} onChange={(id) => { setClientSelectionError(null); setSelectedClientId(id) }} selectionError={clientSelectionError} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
-        <div className="split"><Field label="Дата"><input name="date" type="date" max={completedMode ? todayLocalDate() : undefined} value={entryDate} onChange={(event) => setEntryDate(localDate(event.target.value))} required /></Field><Field label="Время"><input name="startTime" type="time" value={startTime} onChange={(event) => { setStartTime(event.target.value); (event.currentTarget.form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} /></Field></div>
+        <div className="split"><Field label="Дата"><input name="date" type="date" max={completedMode ? today : undefined} value={entryDate} onChange={(event) => setEntryDate(localDate(event.target.value))} required /></Field><Field label="Время"><input name="startTime" type="time" value={startTime} onChange={(event) => { setStartTime(event.target.value); (event.currentTarget.form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} /></Field></div>
         <Field label="Окончание"><input name="endTime" type="time" value={endTime} onChange={(event) => { setEndTime(event.target.value); event.currentTarget.setCustomValidity('') }} /></Field>
-        {!workoutId && <div className="workout-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={!recordCompleted ? 'active' : ''} aria-pressed={!recordCompleted} onClick={() => setRecordCompleted(false)}>План</button><button type="button" className={recordCompleted ? 'active' : ''} aria-pressed={recordCompleted} onClick={() => { setRecordCompleted(true); setEntryDate((date) => workoutDateForRecordMode('completed', date, todayLocalDate())) }}>Завершённая</button></div>}
+        {!workoutId && <div className="workout-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={!recordCompleted ? 'active' : ''} aria-pressed={!recordCompleted} onClick={() => setRecordCompleted(false)}>План</button><button type="button" className={recordCompleted ? 'active' : ''} aria-pressed={recordCompleted} onClick={() => { setRecordCompleted(true); setEntryDate((date) => workoutDateForRecordMode('completed', date, today)) }}>Завершённая</button></div>}
         {stages.length > 0 && <Field label="Этап цели">
           {/* key — чтобы defaultValue пересчитался при смене клиента/загрузке цели */}
           <select name="stageId" key={`${clientId}-${defaultStageId}`} value={stageId || defaultStageId} onChange={(event) => setStageId(event.target.value)}>
