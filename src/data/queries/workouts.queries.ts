@@ -1,8 +1,8 @@
-import type { ExerciseSnapshot, LiveSetDraft, WorkoutDraft, WorkoutFeedbackDraft } from '../../shared/domain'
+import type { ExerciseSnapshot, LiveSetDraft, WorkoutDraft, WorkoutFeedbackDraft, WorkoutTrainerResponseDraft } from '../../shared/domain'
 import { supabase } from './client'
 import { toJson } from './json'
 
-const rootColumns = 'id,client_id,created_by,workout_date,start_time,end_time,started_at,completed_at,status,notes,trainer_review,client_comment,session_rpe,wellbeing,discomfort,version,stage_id'
+const rootColumns = 'id,trainer_id,client_id,created_by,workout_date,start_time,end_time,started_at,completed_at,status,notes,trainer_review,trainer_reaction,trainer_review_author_id,trainer_reviewed_at,client_comment,session_rpe,wellbeing,discomfort,version,stage_id'
 
 export type { WorkoutListRow } from '../database.types'
 
@@ -52,8 +52,8 @@ export const workoutQueries = {
   setExerciseComment: (exerciseId: string, comment: string, version: number) => supabase.rpc('set_exercise_comment', {
     p_exercise_id: exerciseId, p_comment: comment, p_expected_version: version,
   }),
-  setWorkoutReview: (workoutId: string, review: string, version: number) => supabase.rpc('set_workout_review', {
-    p_workout_id: workoutId, p_review: review, p_expected_version: version,
+  setWorkoutReview: (workoutId: string, response: WorkoutTrainerResponseDraft, version: number) => supabase.rpc('set_workout_review', {
+    p_workout_id: workoutId, p_reaction: response.reaction, p_review: response.review, p_expected_version: version,
   }),
   setClientWorkoutComment: (workoutId: string, comment: string, version: number) => supabase.rpc('set_client_workout_comment', {
     p_workout_id: workoutId, p_comment: comment, p_expected_version: version,

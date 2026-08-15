@@ -58,6 +58,10 @@ route/page → feature UI/hooks → repository → query → Supabase Data API/R
   отдельным RPC и не входит в `finish_workout`. RPC блокирует корень, проверяет
   client ownership и `version`; точный повтор уже сохранённого payload возвращает
   текущую version без нового bump, а отличающийся stale payload получает conflict.
+- Реакция и короткий ответ тренера также живут в корне workout отдельно от
+  client feedback и private notes. Для назначения ответственен trainer-author,
+  для client-authored done workout — root trainer карточки. RPC хранит автора и
+  время, сериализуется блокировкой корня и дедуплицирует точный повтор payload.
 
 ## Роли и клиентский контур
 

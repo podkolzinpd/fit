@@ -145,9 +145,11 @@ test('client and trainer receive progress and workout changes without reload', a
       has: trainer.getByRole('heading', { name: 'Отзыв тренера' }),
     })
     await trainerReviewCard.getByRole('button', { name: 'Добавить', exact: true }).click()
+    await trainerReviewCard.getByRole('button', { name: '👍', exact: true }).click()
     await trainer.getByRole('textbox', { name: 'Отзыв тренера', exact: true }).fill(trainerReview)
-    await trainer.getByRole('button', { name: 'Сохранить отзыв', exact: true }).click()
+    await trainer.getByRole('button', { name: 'Отправить ответ', exact: true }).click()
     await expect(client.getByText(trainerReview, { exact: true })).toBeVisible({ timeout: 10_000 })
+    await expect(client.getByLabel('Реакция 👍', { exact: true })).toBeVisible({ timeout: 10_000 })
   } finally {
     // Не маскируем исходное падение шага вторичной ошибкой teardown, если
     // Playwright уже закрыл один из контекстов после общего timeout.

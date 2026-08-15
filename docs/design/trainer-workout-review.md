@@ -21,16 +21,17 @@
   тренировке. Тоже не то.
 
 ## Модель данных
-Новое nullable-поле на `workouts` (обратная совместимость, дефолт NULL):
+Итоговая модель на `workouts` (nullable для обратной совместимости):
 
 ```
 workouts.trainer_review text null   -- пост-отзыв тренера к тренировке
+workouts.trainer_reaction text null -- thumbs_up / fire / strong
+workouts.trainer_review_author_id uuid null
+workouts.trainer_reviewed_at timestamptz null
 ```
 
-Обоснование «поле, а не таблица»: один отзыв на тренировку, короткий текст,
-редактируется целиком. Отдельная таблица не нужна (в отличие от истории
-изменений — она не требуется). Если позже добавим оценку (звёзды/сложность) —
-доклеим `trainer_review_rating smallint null` тем же паттерном.
+Обоснование «поля, а не таблица»: один ответ на тренировку, реакция и короткий
+текст редактируются целиком. Это не чат, история сообщений не требуется.
 
 ### Обновление типов
 - `WorkoutRow` + `WorkoutListRow` в `database.types.ts` → добавить
@@ -44,14 +45,16 @@ workouts.trainer_review text null   -- пост-отзыв тренера к т�
 (`done`), а `save_workout` работает только со `status='planned'`.
 
 ```
-set_workout_review(p_workout_id uuid, p_review text, p_expected_version bigint)
+set_workout_review(p_workout_id uuid, p_reaction text, p_review text,
+  p_expected_version bigint)
   → bigint (новая версия)
 ```
 
 Логика:
 - `security definer`, `search_path = ''`.
-- Писать может только автор/тренер тренировки (`trainer_id = auth.uid()`),
-  статус `done` (или снять ограничение статуса, если решим разрешать раньше).
+- Для назначения пишет trainer-author; для client-authored done workout —
+  основной тренер карточки. Дополнительные тренеры не перезаписывают ответ.
+- Статус только `done`; сохраняются автор и время ответа.
 - `trainer_review = nullif(btrim(p_review), '')` (пустой → NULL).
 - Оптимистичная блокировка по `version`, конфликт → **PT409** (не 40001!),
   см. миграцию `non_retryable_conflicts`. Коды ошибок сразу в таксономии
@@ -81,8 +84,8 @@ set_workout_review(p_workout_id uuid, p_review text, p_expected_version bigint)
   иконкой (напр. 💬 или 📝). Пусто — блок не показываем.
 
 ## Тесты
-- **pgTAP**: `set_workout_review` — пишет отзыв, бампит версию; чужой тренер не
-  может (PT404/PT409); клиент читает, но не пишет; пустой текст → NULL.
+- **pgTAP**: назначение, client-authored workout, root/member/outsider/client,
+  reaction validation, author/time, idempotent retry и stale conflict.
 - **e2e**: провести тренировку → на завершённой написать отзыв → виден в деталях;
   (если есть клиентский flow) клиент видит отзыв, но поля ввода нет.
 - **unit**: маппинг `trainer_review` → `trainerReview` в repository.
@@ -93,7 +96,4 @@ S–M. Одна миграция (поле + RPC + правка `list_workouts`)
 не трогает live/планирование).
 
 ## Открытые вопросы на будущее (не в MVP)
-- Оценка тренировки (звёзды/сложность) — доклеить полем позже.
-- Отзыв **клиента** к тренировке (обратная связь спортсмена) — зеркальная фича,
-  отдельно.
-- Голосовой отзыв → авто-транскрипт (whisper уже есть в проекте).
+- Полноценный чат, push/email и история изменений остаются отдельными задачами.

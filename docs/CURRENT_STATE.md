@@ -5,112 +5,82 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-15
-Проверенный `main`: `5cd1b4f` (`YAFIT-259: стабилизировать live при конфликтах и медленной сети (#385)`)
+Проверенный `main`: `c370328` (`YAFIT-285: короткий post-workout feedback клиента (#386)`)
 
 ## Активная работа
 
-- Активная продуктовая задача: `YAFIT-285` — короткий необязательный
-  post-workout feedback клиента после завершения тренировки: session RPE,
-  wellbeing, дискомфорт и комментарий с отдельной идемпотентной отправкой.
-- Следующая задача roadmap: `YAFIT-256` — реакция и короткий ответ тренера,
-  включая client-authored workout.
+- Активная продуктовая задача: `YAFIT-256` — реакция 👍 / 🔥 / 💪 и короткий
+  ответ ответственного тренера на завершённое назначение или client-authored
+  workout; автор/время, realtime/refetch и запрет перезаписи другим тренером.
+- Следующая задача roadmap: `YAFIT-286` — weekly/monthly regularity.
 
 ## Последняя проверенная продуктовая точка
 
+- После `#386` клиент отдельно от завершения отправляет session RPE 1–10,
+  wellbeing и дискомфорт для назначенной или самостоятельной тренировки.
+  Точный повтор feedback идемпотентен, изменившийся stale payload конфликтует;
+  тренер видит сигнал, посторонний аккаунт — нет.
 - После `#385` корневые live-изменения сериализуются и используют последнюю
   подтверждённую version. Conflict и неоднозначный сетевой ответ не приводят
-  к blind overwrite: тренировка перечитывается, неподтверждённый факт
-  сохраняется локально и восстанавливается после обрыва сети или reload;
-  finish ждёт autosave, повторный confirm дедуплицируется.
-- После `#384` календарные границы Today, расписания, целей и
-  прогресса считаются по IANA timezone профиля. Новому профилю
-  сохраняется зона устройства, для legacy-значений используется
-  `Europe/Moscow`; уже сохранённые календарные даты не сдвигаются.
+  к blind overwrite; неподтверждённый факт сохраняется локально и переживает
+  обрыв сети или reload.
+- После `#384` календарные границы Today, расписания, целей и прогресса
+  считаются по IANA timezone профиля; legacy fallback — `Europe/Moscow`.
 - После `#383` открытое пространство клиента синхронизирует без reload
-  приглашения, цели и этапы, прогресс, назначения, live-статус и комментарии.
-  Изменение во время подключения realtime не теряется; после редактирования
-  тренировка получает свежую concurrency-version до запуска.
-- Тренер и подключённый клиент используют общую связку: клиент создаёт и
-  сохраняет собственные тренировки, тренер видит их в истории и копирует в
-  отправляемый план; назначенные планы и факт выполнения остаются видимы обеим
-  сторонам в разрешённых маршрутах.
-- В live-тренировке тренер и подключённый клиент одинаково могут добавлять и
-  удалять подходы, добавлять и заменять упражнения, менять порядок блоков.
-  Серверная проверка связи с карточкой клиента сохранена; внешние аккаунты не
-  получают доступ. После правки завершённое упражнение снова сворачивается.
-- Один активный live-workout на клиента защищён интерфейсом и БД.
-- Если пользователь открывает план при уже идущей тренировке этого клиента,
-  Fit не подменяет выбранный план: предлагает явно открыть незавершённую
-  запись или остаться. После явного перехода «Назад» ведёт в её карточку.
-- На карточке спортсмена верхняя safe-area не прокручивается под статус-бар,
-  а цель не дублируется в обзорном блоке.
+  приглашения, цели, этапы, прогресс, назначения, live-статус и комментарии.
+- Тренер и клиент используют общий workout domain: клиент создаёт и сохраняет
+  собственные тренировки, тренер видит завершённые client-authored записи и
+  копирует их в новый план; назначения и факт видимы обеим сторонам по ролям.
+- Live-workout поддерживает добавление/удаление подходов, добавление/замену
+  упражнений и порядок блоков обеими сторонами; один active workout на клиента
+  защищён UI и БД.
 - Voice-first главная, SpeechKit и LLM-разбор работают через прежние prompt,
-  matching, fallback и сохранение: в последних PR эти механики не менялись.
-- Тёмная тема voice-first и AI-поверхностей использует семантические токены и
-  сохраняет контраст на мобильном экране.
-- После `#369` в `services/api` существует изолированный Fastify foundation с
-  `/health` и Podman-совместимым OCI-образом. Frontend, Supabase и production
-  environment не переключены; платные ресурсы Yandex Cloud не создавались.
-- После `#370` stage-инфраструктура описана Terraform: private PostgreSQL,
-  Serverless Container, VPC, Registry, Lockbox и resource-level IAM. `apply`
-  не запускался, поэтому облачные ресурсы по-прежнему не создавались.
-- После `#371` Managed PostgreSQL baseline разделяет migration owner и runtime
-  user, а Fastify API умеет задавать внутренний UUID пользователя только на
-  время транзакции. К маршрутам и frontend новый pool пока не подключён.
-- После `#372` в отдельную PostgreSQL migration chain перенесены `profiles` и
-  `trainers`, минимальные grants и RLS собственного профиля. Production всё ещё
-  использует Supabase.
-- После `#375` добавлены `clients`, `client_trainers`, foreign keys и read-only
-  RLS для владельца, root trainer и подключённых тренеров. Fastify routes и
-  production к новому контуру не подключены.
+  matching, fallback и сохранение; в feedback/reaction задачах они не меняются.
+- Fastify/Yandex Cloud foundation и Terraform/PostgreSQL migration baseline
+  существуют отдельно; production frontend продолжает использовать Supabase,
+  облачные ресурсы не создавались.
 
 ## Последние проверки
 
-- `#369`: `npm run db:reset`; `npm run db:test` — 422 SQL/RLS-теста;
-  `npm run check` — 372 frontend-теста, Fastify API test/build, lint,
-  typecheck, DB types, iOS permissions и production build.
-- `#370`: Terraform `fmt -check` и `validate` на provider `0.215.0`;
-  `npm run check` — 372 frontend-теста, Fastify API test/build, lint,
-  typecheck, DB types, iOS permissions и production build.
-- `#371`: PostgreSQL integration test в одноразовом Podman-контейнере;
-  Terraform `fmt -check` и `validate`; `npm run check` — 372 frontend-теста,
-  5 API unit-тестов, lint, typecheck, DB types и production builds.
-- `#372`: PostgreSQL 17 integration — actor context и cross-tenant profiles;
-  локальный Supabase reset, 422 SQL/RLS-теста и `npm run check` прошли.
-- `#375`: PostgreSQL 17 integration — 4 теста clients/memberships и FK;
-  локальный Supabase reset, 422 SQL/RLS-теста и `npm run check` прошли. После
-  flaky WebKit-навигации повторный E2E job полностью прошёл.
-- `#383` / `YAFIT-223`: `npm run check` — 381 frontend-тест и 10 API-тестов;
-  локальный reset БД и 422 SQL/RLS-теста; полный двухролевой Chromium-сценарий
-  и WebKit 390 px прошли. LLM/SpeechKit не менялись.
-- `#384` / `YAFIT-242`: `npm run check` — 385 frontend-тестов и 10 API-тестов;
-  WebKit iPhone 390 px — 1/1; GitHub CI и Vercel прошли. LLM/SpeechKit не
+- `#383` / `YAFIT-223`: `npm run check` — 381 frontend и 10 API; reset БД,
+  422 SQL/RLS; Chromium и WebKit 390 px. LLM/SpeechKit не менялись.
+- `#384` / `YAFIT-242`: `npm run check` — 385 frontend и 10 API; WebKit 390 px,
+  GitHub CI и Vercel прошли. LLM/SpeechKit не менялись.
+- `#385` / `YAFIT-259`: GitHub CI app/database/e2e и Vercel прошли; локально
+  397 frontend, 10 API, Chromium и WebKit 390 px. После merge iOS bundle собран,
+  установлен и запущен на iPhone 17.
+- `#386` / `YAFIT-285`: GitHub CI app/database/e2e и Vercel прошли. Локально
+  reset БД, 440 SQL/RLS, 398 frontend, 10 API, WebKit 390 px и двухролевой
+  Chromium realtime. После merge `c370328` production web bundle синхронизирован
+  с iOS; свежий bundle собран, установлен и запущен на iPhone 17.
+- `YAFIT-256` в рабочей ветке: чистый reset БД, 465 SQL/RLS, `npm run check` —
+  398 frontend и 10 API; WebKit iPhone 390 px для назначения и client-authored
+  workout, а также двухролевой Chromium realtime прошли. LLM/SpeechKit не
   менялись.
-- `#385` / `YAFIT-259`: GitHub CI — app, database и e2e успешны; Vercel
-  успешен. Локально перед merge: 397 frontend-тестов и 10 API-тестов,
-  Chromium и WebKit iPhone 390 px. После merge production web bundle
-  синхронизирован с iOS, свежий iOS bundle собран, установлен и запущен на
-  открытом iPhone 17. LLM/SpeechKit не менялись.
+
+## Ближайший roadmap
+
+1. `YAFIT-256` — trainer reaction и короткий ответ.
+2. `YAFIT-286` — weekly/monthly regularity.
+3. `YAFIT-287` — прогресс упражнений и реальные PR.
+4. `YAFIT-288` — история как спортивная хроника.
+5. `YAFIT-289` — Client Home: следующее действие, неделя, один highlight.
 
 ## Отложенный backlog
 
 - `YAFIT-245` (P0, устойчивость AI-разбора) **не начинать без отдельного
   разрешения пользователя и предварительного описания механики и рисков**.
-- `YAFIT-234` (защита SpeechKit relay) отложен пользователем; текущий голосовой
-  разбор не менять.
-- `YAFIT-235` — принятое продуктовое решение сохранить Webvisor для
-  исследовательских метрик, это не баг.
-- Остальные открытые задачи аудита остаются в `YAFIT-25`: в том числе
-  `YAFIT-250` (постраничная история), `YAFIT-253` (demo membership), `YAFIT-260`
-  (mobile a11y и schedule density). Не брать без нового приоритета.
+- `YAFIT-234` (защита SpeechKit relay) отложен пользователем; голосовой путь
+  не менять.
+- `YAFIT-235` — Webvisor сознательно сохранён для исследовательских метрик.
+- Остальные задачи аудита остаются в `YAFIT-25`; не брать без нового приоритета.
 
 ## Постоянные ограничения
 
-- LLM-разбор — основная функция продукта; UI-правки не меняют prompt,
-  matching, fallback и сохранение без отдельного решения.
+- LLM-разбор и SpeechKit не менять без отдельного продуктового решения.
 - UI перед сдачей проверяется в WebKit на ширине 390 px.
 - После merge изменений приложения обновляется и заново запускается iOS bundle.
-- Локальные Supabase-проверки работают через установленный Podman; Docker не
-  требуется.
-- Текущий backlog и статусы задач подтверждаются через YAFIT; этот файл служит
-  индексом, а не заменой Tracker.
+- Локальные Supabase-проверки работают через Podman; production URL и секреты
+  не читаются и не используются.
+- Backlog и статусы подтверждаются через YAFIT; этот файл — индекс, не замена
+  Tracker.

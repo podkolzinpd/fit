@@ -631,6 +631,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-review .voice-note-field { gap:8px }
 .workout-review .voice-note-field textarea { min-height:108px; resize:vertical }
 .workout-review-actions { margin-top:0 }
+.workout-trainer-reactions .workout-feedback-options { max-width:260px }
+.workout-trainer-reactions .workout-feedback-option { font-size:22px }
+.workout-response-limit { margin:-8px 0 0; text-align:right; font-size:var(--text-caption) }
+.workout-response-body { display:flex; align-items:flex-start; gap:10px; min-width:0 }
+.workout-response-reaction { display:grid; flex:0 0 auto; place-items:center; width:42px; height:42px; border-radius:14px; background:var(--accent-surface); font-size:23px }
+.workout-response-body .workout-review-text { min-width:0; padding-top:9px; overflow-wrap:anywhere }
+.workout-response-meta { margin:-4px 0 0 52px; color:var(--muted); font-size:var(--text-caption) }
 .workout-feedback-fieldset { min-width:0; margin:0; padding:0; border:0 }
 .workout-feedback-fieldset legend { margin-bottom:5px; color:var(--fg-on-surface); font-weight:var(--weight-semibold) }
 .workout-feedback-fieldset > .muted { margin:0 0 9px; font-size:var(--text-caption) }
