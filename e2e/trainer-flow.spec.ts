@@ -494,6 +494,8 @@ test('замена упражнения: в форме плана и в live', a
   // После подтверждения меню остаётся для редких действий, но «Заменить»
   // пропадает: начатое упражнение нельзя подменить другим.
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
+  await page.locator('.live-exercise-collapsed').click()
   await page.getByRole('button', { name: 'Ещё действия' }).click()
   await expect(page.getByRole('menuitem', { name: 'Заменить' })).toHaveCount(0)
 })
