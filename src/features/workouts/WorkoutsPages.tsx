@@ -10,7 +10,7 @@ import { exercisesRepository } from '../../data/repositories/exercises.repositor
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
 import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
-import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
+import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutSet, WorkoutWellbeing } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
   addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayInTimeZone, weekdayShort,
@@ -472,7 +472,7 @@ export function WorkoutDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
     ])
   } })
-  const clientComment = useMutation({ mutationFn: (value: string) => workoutsRepository.setClientWorkoutComment(query.data!, value), onSuccess: async () => {
+  const feedback = useMutation({ mutationFn: (value: WorkoutFeedbackDraft) => workoutsRepository.submitFeedback(query.data!, value), onSuccess: async () => {
     await Promise.all([
       query.refetch(),
       queryClient.invalidateQueries({ queryKey: ['workouts'] }),
@@ -521,8 +521,9 @@ export function WorkoutDetailPage() {
         {tonnage > 0 && <p><span>Тоннаж</span><strong>{tonnageLabel(tonnage)}</strong></p>}
         {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
       </section>}
+      {done && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
       {done && <WorkoutTrainerReview workout={workout} canEdit={trainerOwned} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
-      {((clientMode && !clientOwned) || (!clientMode && workout.clientComment)) && <WorkoutClientComment workout={workout} canEdit={clientMode && !clientOwned} saving={clientComment.isPending} error={clientComment.error} onSave={(value) => clientComment.mutateAsync(value)} />}
+      {!clientMode && workout.clientComment && workout.sessionRpe === undefined && <WorkoutClientComment workout={workout} />}
       <div className={`cards ${done ? 'completed-exercise-list' : ''}`}>{groupIntoBlocks(workout.exercises).map((block) => {
         const articles = block.exercises.map((exercise) => {
           const compactPlan = workout.status === 'planned' ? compactPlannedSetSummary(exercise.sets, showRpe) : null
@@ -549,6 +550,95 @@ export function WorkoutDetailPage() {
       {confirmDialog}{activeWorkoutRecoveryDialog}
     </>}</AsyncView>
   </Page>
+}
+
+const wellbeingLabels: Record<WorkoutWellbeing, string> = {
+  good: 'Хорошо',
+  normal: 'Нормально',
+  hard: 'Тяжело',
+}
+
+function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave }: {
+  workout: Workout
+  canEdit: boolean
+  saving: boolean
+  error: Error | null
+  onSave: (value: WorkoutFeedbackDraft) => Promise<unknown>
+}) {
+  const hasFeedback = workout.sessionRpe !== undefined && workout.wellbeing !== undefined && workout.discomfort !== undefined
+  const [editing, setEditing] = useState(canEdit && !hasFeedback)
+  const [saved, setSaved] = useState(false)
+  const [sessionRpe, setSessionRpe] = useState<number | undefined>(workout.sessionRpe)
+  const [wellbeing, setWellbeing] = useState<WorkoutWellbeing | undefined>(workout.wellbeing)
+  const [discomfort, setDiscomfort] = useState<boolean | undefined>(workout.discomfort ?? (workout.clientComment ? true : undefined))
+  const [comment, setComment] = useState(workout.clientComment ?? '')
+
+  useEffect(() => {
+    if (editing) return
+    setSessionRpe(workout.sessionRpe)
+    setWellbeing(workout.wellbeing)
+    setDiscomfort(workout.discomfort ?? (workout.clientComment ? true : undefined))
+    setComment(workout.clientComment ?? '')
+  }, [editing, workout.clientComment, workout.discomfort, workout.id, workout.sessionRpe, workout.wellbeing])
+
+  if (!canEdit && !hasFeedback) return null
+  const valid = sessionRpe !== undefined && wellbeing !== undefined && discomfort !== undefined
+    && (!discomfort || comment.trim().length > 0)
+
+  if (!editing) return <section className="workout-review workout-feedback" aria-labelledby="workout-feedback-title">
+    <div className="workout-review-head">
+      <div><p className="eyebrow">ОБРАТНАЯ СВЯЗЬ</p><h2 id="workout-feedback-title">{canEdit ? 'Ваш итог' : 'Самочувствие клиента'}</h2></div>
+      {canEdit && <button type="button" className="secondary" onClick={() => { setSaved(false); setEditing(true) }}>Изменить</button>}
+    </div>
+    {saved && <p className="workout-feedback-confirmation" role="status">✓ Спасибо, тренер увидит ваш отзыв.</p>}
+    <div className="workout-feedback-summary">
+      <p><span>Общая тяжесть</span><strong>RPE {workout.sessionRpe}/10</strong></p>
+      <p><span>Самочувствие</span><strong>{workout.wellbeing ? wellbeingLabels[workout.wellbeing] : '—'}</strong></p>
+      <p><span>Дискомфорт</span><strong>{workout.discomfort ? 'Да' : 'Нет'}</strong></p>
+    </div>
+    {workout.discomfort && workout.clientComment && <p className="workout-review-text">{workout.clientComment}</p>}
+  </section>
+
+  return <form className="workout-review workout-feedback" aria-labelledby="workout-feedback-title" onSubmit={async (event) => {
+    event.preventDefault()
+    if (!valid || sessionRpe === undefined || wellbeing === undefined || discomfort === undefined) return
+    try {
+      await onSave({ sessionRpe, wellbeing, discomfort, comment: discomfort ? comment : '' })
+      setSaved(true)
+      setEditing(false)
+    } catch {
+      // Ошибка мутации остаётся рядом с формой; пользователь может повторить
+      // тот же submit, а RPC безопасно дедуплицирует потерянный ответ.
+    }
+  }}>
+    <div className="workout-review-head"><div><p className="eyebrow">ПОСЛЕ ТРЕНИРОВКИ</p><h2 id="workout-feedback-title">Как прошла тренировка?</h2></div></div>
+    <fieldset className="workout-feedback-fieldset">
+      <legend>Общая тяжесть</legend>
+      <p className="muted">1 — очень легко, 10 — максимум</p>
+      <div className="workout-feedback-options workout-feedback-rpe">
+        {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => <button key={value} type="button" className={`secondary workout-feedback-option ${sessionRpe === value ? 'selected' : ''}`} aria-pressed={sessionRpe === value} onClick={() => setSessionRpe(value)}>{value}</button>)}
+      </div>
+    </fieldset>
+    <fieldset className="workout-feedback-fieldset">
+      <legend>Самочувствие</legend>
+      <div className="workout-feedback-options">
+        {(Object.keys(wellbeingLabels) as WorkoutWellbeing[]).map((value) => <button key={value} type="button" className={`secondary workout-feedback-option ${wellbeing === value ? 'selected' : ''}`} aria-pressed={wellbeing === value} onClick={() => setWellbeing(value)}>{wellbeingLabels[value]}</button>)}
+      </div>
+    </fieldset>
+    <fieldset className="workout-feedback-fieldset">
+      <legend>Был дискомфорт?</legend>
+      <div className="workout-feedback-options">
+        <button type="button" className={`secondary workout-feedback-option ${discomfort === false ? 'selected' : ''}`} aria-pressed={discomfort === false} onClick={() => setDiscomfort(false)}>Нет</button>
+        <button type="button" className={`secondary workout-feedback-option ${discomfort === true ? 'selected' : ''}`} aria-pressed={discomfort === true} onClick={() => setDiscomfort(true)}>Да</button>
+      </div>
+    </fieldset>
+    {discomfort && <Field label="Что беспокоило?"><textarea aria-label="Пояснение о дискомфорте" rows={3} maxLength={500} placeholder="Где и на каком движении почувствовали дискомфорт" value={comment} onChange={(event) => setComment(event.target.value)} /></Field>}
+    {error && <p className="error">{error.message}</p>}
+    <div className="actions workout-review-actions">
+      {hasFeedback && <button type="button" className="secondary" disabled={saving} onClick={() => setEditing(false)}>Отмена</button>}
+      <button type="submit" disabled={saving || !valid}>{saving ? 'Сохраняем…' : hasFeedback ? 'Сохранить изменения' : 'Отправить отзыв'}</button>
+    </div>
+  </form>
 }
 
 function WorkoutTrainerReview({ workout, canEdit, saving, error, onSave }: {
@@ -591,32 +681,10 @@ function WorkoutTrainerReview({ workout, canEdit, saving, error, onSave }: {
   </section>
 }
 
-function WorkoutClientComment({ workout, canEdit, saving, error, onSave }: {
-  workout: Workout
-  canEdit: boolean
-  saving: boolean
-  error: Error | null
-  onSave: (value: string) => Promise<unknown>
-}) {
-  const [editing, setEditing] = useState(false)
-  const [value, setValue] = useState(workout.clientComment ?? '')
-  const hasComment = Boolean(workout.clientComment)
-
-  useEffect(() => {
-    if (!editing) setValue(workout.clientComment ?? '')
-  }, [editing, workout.id, workout.clientComment])
-
-  if (!canEdit && !hasComment) return null
-
+function WorkoutClientComment({ workout }: { workout: Workout }) {
   return <section className="workout-review" aria-labelledby="workout-client-comment-title">
-    <div className="workout-review-head"><div><p className="eyebrow">ОБРАТНАЯ СВЯЗЬ</p><h2 id="workout-client-comment-title">Комментарий клиента</h2></div>
-      {canEdit && !editing && <button type="button" className="secondary" onClick={() => setEditing(true)}>{hasComment ? 'Изменить' : 'Добавить'}</button>}
-    </div>
-    {editing ? <>
-      <Field label="Для тренера"><textarea aria-label="Комментарий для тренера" className="exercise-comment" rows={3} placeholder="Как прошла тренировка, что стоит обсудить" value={value} onChange={(event) => setValue(event.target.value)} /></Field>
-      {error && <p className="error">{error.message}</p>}
-      <div className="actions workout-review-actions"><button type="button" className="secondary" disabled={saving} onClick={() => { setValue(workout.clientComment ?? ''); setEditing(false) }}>Отмена</button><button type="button" disabled={saving} onClick={async () => { try { await onSave(value); setEditing(false) } catch { /* Ошибку показывает state мутации. */ } }}>{saving ? 'Сохраняем…' : 'Сохранить комментарий'}</button></div>
-    </> : <p className={hasComment ? 'workout-review-text' : 'muted'}>{hasComment ? workout.clientComment : 'Оставьте тренеру вопрос или короткий итог.'}</p>}
+    <div className="workout-review-head"><div><p className="eyebrow">ОБРАТНАЯ СВЯЗЬ</p><h2 id="workout-client-comment-title">Комментарий клиента</h2></div></div>
+    <p className="workout-review-text">{workout.clientComment}</p>
   </section>
 }
 

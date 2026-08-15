@@ -631,6 +631,18 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-review .voice-note-field { gap:8px }
 .workout-review .voice-note-field textarea { min-height:108px; resize:vertical }
 .workout-review-actions { margin-top:0 }
+.workout-feedback-fieldset { min-width:0; margin:0; padding:0; border:0 }
+.workout-feedback-fieldset legend { margin-bottom:5px; color:var(--fg-on-surface); font-weight:var(--weight-semibold) }
+.workout-feedback-fieldset > .muted { margin:0 0 9px; font-size:var(--text-caption) }
+.workout-feedback-options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px }
+.workout-feedback-rpe { grid-template-columns:repeat(5,minmax(0,1fr)) }
+.workout-feedback-option { min-width:0; min-height:42px; padding:8px 6px }
+.workout-feedback-option.selected { border-color:var(--accent-border); background:var(--accent-surface); color:var(--accent-strong); box-shadow:0 0 0 2px var(--accent-ring) }
+.workout-feedback-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px }
+.workout-feedback-summary p { display:grid; gap:3px; margin:0; padding:10px 8px; border-radius:12px; background:var(--surface-sunken); text-align:center }
+.workout-feedback-summary span { color:var(--muted); font-size:var(--text-caption) }
+.workout-feedback-summary strong { overflow-wrap:anywhere; font-size:var(--text-ui) }
+.workout-feedback-confirmation { margin:0; padding:10px 12px; border:1px solid var(--success-border); border-radius:12px; color:var(--success-fg); background:var(--success-surface); font-weight:var(--weight-semibold) }
 .workout-detail-page > .cards { gap: 8px }
 .workout-detail-page > .cards > .exercise { margin: 0; padding: 14px 16px; border-radius: 18px; box-shadow: var(--shadow-card) }
 .workout-detail-page > .completed-exercise-list { gap:0 }

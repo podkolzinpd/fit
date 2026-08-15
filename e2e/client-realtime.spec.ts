@@ -127,13 +127,17 @@ test('client and trainer receive progress and workout changes without reload', a
     ])
     await expect(trainer.getByRole('heading', { name: 'Отзыв тренера' })).toBeVisible({ timeout: 10_000 })
 
+    // Завершение уже видно тренеру до необязательного feedback: его ошибка или
+    // пропуск не может откатить сохранённый факт тренировки.
+    await expect(trainer.getByText('Готово', { exact: true })).toBeVisible()
     const clientComment = `Realtime комментарий ${suffix}`
-    const clientCommentCard = client.locator('.workout-review').filter({
-      has: client.getByRole('heading', { name: 'Комментарий клиента' }),
-    })
-    await clientCommentCard.getByRole('button', { name: 'Добавить', exact: true }).click()
-    await client.getByRole('textbox', { name: 'Комментарий для тренера', exact: true }).fill(clientComment)
-    await client.getByRole('button', { name: 'Сохранить комментарий', exact: true }).click()
+    const feedbackCard = client.locator('.workout-feedback')
+    await feedbackCard.getByRole('button', { name: '7', exact: true }).click()
+    await feedbackCard.getByRole('button', { name: 'Нормально', exact: true }).click()
+    await feedbackCard.getByRole('button', { name: 'Да', exact: true }).click()
+    await client.getByRole('textbox', { name: 'Пояснение о дискомфорте', exact: true }).fill(clientComment)
+    await feedbackCard.getByRole('button', { name: 'Отправить отзыв', exact: true }).click()
+    await expect(trainer.getByText('RPE 7/10', { exact: true })).toBeVisible({ timeout: 10_000 })
     await expect(trainer.getByText(clientComment, { exact: true })).toBeVisible({ timeout: 10_000 })
 
     const trainerReview = `Realtime отзыв ${suffix}`

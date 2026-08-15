@@ -229,6 +229,15 @@ export interface WorkoutExercise extends ExerciseSnapshot {
   sets: WorkoutSet[]
 }
 
+export type WorkoutWellbeing = 'good' | 'normal' | 'hard'
+
+export interface WorkoutFeedbackDraft {
+  sessionRpe: number
+  wellbeing: WorkoutWellbeing
+  discomfort: boolean
+  comment: string
+}
+
 export interface Workout {
   id: UUID
   clientId: UUID
@@ -243,6 +252,9 @@ export interface Workout {
   notes: string | null
   trainerReview?: string
   clientComment?: string
+  sessionRpe?: number
+  wellbeing?: WorkoutWellbeing
+  discomfort?: boolean
   stageId: UUID | null
   stageTitle: string | null
   version: number

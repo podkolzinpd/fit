@@ -105,10 +105,11 @@ describe('workoutQueries lists', () => {
     workoutQueries.setExerciseComment('exercise-id', 'Держи спину', 10)
     workoutQueries.setWorkoutReview('workout-id', 'Отличная работа', 11)
     workoutQueries.setClientWorkoutComment('workout-id', 'Нужна корректировка веса', 12)
-    workoutQueries.finish('workout-id', 13)
-    workoutQueries.remove('workout-id', 14)
+    workoutQueries.submitFeedback('workout-id', { sessionRpe: 8, wellbeing: 'normal', discomfort: true, comment: 'Тянет колено' }, 13)
+    workoutQueries.finish('workout-id', 14)
+    workoutQueries.remove('workout-id', 15)
 
-    expect(rpc).toHaveBeenCalledTimes(14)
+    expect(rpc).toHaveBeenCalledTimes(15)
     expect(rpc).toHaveBeenNthCalledWith(1, 'save_workout', { p_workout: draft, p_expected_version: 3 })
     expect(rpc).toHaveBeenNthCalledWith(2, 'save_completed_workout', { p_workout: draft, p_expected_version: 3 })
     expect(rpc).toHaveBeenNthCalledWith(3, 'start_workout', { p_workout_id: 'workout-id', p_expected_version: 3 })
@@ -129,7 +130,11 @@ describe('workoutQueries lists', () => {
     expect(rpc).toHaveBeenNthCalledWith(10, 'set_exercise_comment', { p_exercise_id: 'exercise-id', p_comment: 'Держи спину', p_expected_version: 10 })
     expect(rpc).toHaveBeenNthCalledWith(11, 'set_workout_review', { p_workout_id: 'workout-id', p_review: 'Отличная работа', p_expected_version: 11 })
     expect(rpc).toHaveBeenNthCalledWith(12, 'set_client_workout_comment', { p_workout_id: 'workout-id', p_comment: 'Нужна корректировка веса', p_expected_version: 12 })
-    expect(rpc).toHaveBeenNthCalledWith(13, 'finish_workout', { p_workout_id: 'workout-id', p_expected_version: 13 })
-    expect(rpc).toHaveBeenNthCalledWith(14, 'soft_delete_workout', { p_workout_id: 'workout-id', p_expected_version: 14 })
+    expect(rpc).toHaveBeenNthCalledWith(13, 'submit_workout_feedback', {
+      p_workout_id: 'workout-id', p_session_rpe: 8, p_wellbeing: 'normal',
+      p_discomfort: true, p_comment: 'Тянет колено', p_expected_version: 13,
+    })
+    expect(rpc).toHaveBeenNthCalledWith(14, 'finish_workout', { p_workout_id: 'workout-id', p_expected_version: 14 })
+    expect(rpc).toHaveBeenNthCalledWith(15, 'soft_delete_workout', { p_workout_id: 'workout-id', p_expected_version: 15 })
   })
 })

@@ -54,6 +54,10 @@ route/page → feature UI/hooks → repository → query → Supabase Data API/R
   дедуплицируется. После conflict или неоднозначного network result экран сначала
   перечитывает aggregate, а не повторяет mutation вслепую. Неподтверждённые
   live-set drafts хранятся локально в скоупе user/workout до подтверждения сервером.
+- Итоговый client feedback хранится в корне завершённого workout, но отправляется
+  отдельным RPC и не входит в `finish_workout`. RPC блокирует корень, проверяет
+  client ownership и `version`; точный повтор уже сохранённого payload возвращает
+  текущую version без нового bump, а отличающийся stale payload получает conflict.
 
 ## Роли и клиентский контур
 
