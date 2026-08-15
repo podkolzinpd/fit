@@ -1,4 +1,4 @@
-// schema-sha256: 513e4e98f1b943c232a9488af8c34ecc3bede18c88d3ea3f6ada5a7740f0ad73
+// schema-sha256: 24c55047e7c458a49055a35604d960229de17aeb3093f646793cd2b57aec91f9
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1170,6 +1170,38 @@ export type Database = {
           membership_version: number
           note: string
           version: number
+        }[]
+      }
+      list_exercise_progress: {
+        Args: {
+          p_before_completed_at?: string | null
+          p_before_workout_id?: string | null
+          p_client_id: string
+          p_exercise_ref: string
+          p_limit?: number
+        }
+        Returns: {
+          all_time_best_weight_kg: number | null
+          all_time_best_weight_reps: number | null
+          all_time_primary_value: number | null
+          best_weight_kg: number | null
+          best_weight_reps: number | null
+          completed_at: string
+          confirmed_set_count: number
+          exercise_name: string
+          input_kind: string
+          is_primary_pr: boolean
+          is_weight_pr: boolean
+          is_weight_reps_pr: boolean
+          previous_primary_value: number | null
+          primary_change: number | null
+          primary_value: number | null
+          reps_at_best_weight: number | null
+          sets: Json
+          total_count: number
+          trainer_comment: string | null
+          workout_date: string
+          workout_id: string
         }[]
       }
       list_latest_exercise_results: {

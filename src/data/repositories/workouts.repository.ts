@@ -1,10 +1,11 @@
-import type { BlockPreset, BlockType, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutSet, WorkoutSetDraft, WorkoutStatus, WorkoutSummary, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
+import type { BlockPreset, BlockType, ExerciseProgressCursor, ExerciseProgressPage, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutSet, WorkoutSetDraft, WorkoutStatus, WorkoutSummary, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import type { WorkoutListRow } from '../database.types'
 import { clientsRepository } from './clients.repository'
 import { collectPages, pageFromLookahead } from './collect-pages'
 import { repositoryError } from './error'
 import { workoutQueries } from '../queries/workouts.queries'
+import { EXERCISE_PROGRESS_PAGE_SIZE, exerciseProgressPageFromRows } from './exercise-progress-page'
 export { canTransition, copyWorkout, completedWorkoutDraft, computeClientStats, exerciseChartPoints, chartUnitFor, compactCompletedSetSummary, compactPlannedSetSummary, durationLabel, durationSeconds, formatFactVsPlan, factLine, enteredFactLine, previousResultLine, splitClientWorkouts, clientWorkoutStatusLabel, workoutStatusPresentation, workoutDurationLabel, muscleGroupLabels, exerciseSummary, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, BLOCK_PRESET_LABELS, PRESET_REST_DEFAULTS, DEFAULT_REST_BETWEEN_SETS, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockPreset, setBlockRest, syncBlockRounds, draftBlockRoundsView, moveBlock, replaceExercise } from './workout-rules'
 export type { ExerciseBlock, DraftBlock, DraftBlockRound, BlockRound, WorkoutStatusPresentation, WorkoutStatusTone } from './workout-rules'
 export type { ExerciseChartPoint } from './workout-rules'
@@ -181,6 +182,20 @@ export const workoutsRepository = {
       workoutDate: localDate(row.workout_date),
       sets: previousSets(row.sets),
     }]))
+  },
+  async exerciseProgressPage(
+    clientId: string,
+    exerciseRef: string,
+    cursor: ExerciseProgressCursor | null,
+  ): Promise<ExerciseProgressPage> {
+    const result = await workoutQueries.exerciseProgress(
+      clientId,
+      exerciseRef,
+      EXERCISE_PROGRESS_PAGE_SIZE + 1,
+      cursor,
+    )
+    if (result.error) throw repositoryError(result.error)
+    return exerciseProgressPageFromRows(result.data)
   },
   async save(draft: WorkoutDraft): Promise<string> {
     const result = await workoutQueries.save(draft)

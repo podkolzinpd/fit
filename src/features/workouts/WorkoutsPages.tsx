@@ -9,8 +9,8 @@ import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
-import type { ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
+import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
   addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayInTimeZone, weekdayShort,
@@ -38,6 +38,7 @@ import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writ
 import { workoutDateForRecordMode } from './workout-entry-rules'
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
+import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -1415,17 +1416,28 @@ export function ExerciseHistoryPage() {
   const [tab, setTab] = useState<ExerciseCardTab>('stats')
   const current = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   useClientRealtime(current.data?.clientId)
-  const history = useQuery({ queryKey: ['exercise-history', current.data?.clientId, exerciseRef], queryFn: async () => (await workoutsRepository.list(undefined, undefined, current.data!.clientId)).filter((workout) => workout.status === 'done' && workout.exercises.some((exercise) => exercise.ref === exerciseRef)), enabled: Boolean(current.data) })
+  const history = useInfiniteQuery({
+    queryKey: ['exercise-history', current.data?.clientId, exerciseRef],
+    initialPageParam: null as ExerciseProgressCursor | null,
+    queryFn: ({ pageParam }) => workoutsRepository.exerciseProgressPage(current.data!.clientId, exerciseRef, pageParam),
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    enabled: Boolean(current.data),
+  })
+  const items = useMemo(() => history.data?.pages.flatMap((page) => page.items) ?? [], [history.data])
+  const totalCount = history.data?.pages[0]?.totalCount ?? 0
   // Метаданные упражнения из каталога (картинка/оборудование/мышцы/инструкции).
   const meta = exercisesRepository.system.find((exercise) => exercise.ref === exerciseRef)
-  const inputKind = meta?.inputKind ?? history.data?.[0]?.exercises.find((item) => item.ref === exerciseRef)?.inputKind ?? 'strength'
-  const name = meta?.name ?? history.data?.[0]?.exercises.find((item) => item.ref === exerciseRef)?.name ?? 'Упражнение'
-  // Полная дата (YYYY-MM-DD) — нужна для AxisTick/тултипа как на вкладке замеров.
-  const chart = useMemo(() => exerciseChartPoints(history.data ?? [], exerciseRef), [history.data, exerciseRef])
+  const currentExercise = current.data?.exercises.find((exercise) => exercise.ref === exerciseRef)
+  const inputKind = meta?.inputKind ?? currentExercise?.inputKind ?? items[0]?.inputKind ?? 'strength'
+  const name = meta?.name ?? currentExercise?.name ?? items[0]?.exerciseName ?? 'Упражнение'
+  const chart = useMemo(() => items
+    .filter((item) => item.primaryValue !== null)
+    .map((item) => ({ date: item.workoutDate, completedAt: item.completedAt, value: item.primaryValue! }))
+    .sort((a, b) => a.completedAt.localeCompare(b.completedAt)), [items])
   const unit = chartUnitFor(inputKind)
   const instructions = meta?.instructions ?? []
   return <Page title="Упражнение" back={`/workouts/${workoutId}`}>
-    <AsyncView loading={current.isLoading || history.isLoading} error={current.error ?? history.error}>
+    <AsyncView loading={current.isLoading || history.isLoading} error={current.error ?? history.error} onRetry={() => { void current.refetch(); void history.refetch() }}>
       <section className="exercise-card-head card">
         {meta?.imageUrl && <img className="exercise-card-image" src={meta.imageUrl} alt={name} />}
         <div className="exercise-card-meta">
@@ -1442,8 +1454,10 @@ export function ExerciseHistoryPage() {
         <button type="button" role="tab" aria-selected={tab === 'how'} className={tab === 'how' ? 'tab active' : 'tab'} onClick={() => setTab('how')}>Техника</button>
       </div>
 
-      {tab === 'stats' && (chart.length > 1
-        ? (() => {
+      {tab === 'stats' && <>
+        <ExerciseProgressSummary latest={items[0]} totalCount={totalCount} />
+        {chart.length > 1
+          ? (() => {
             // Оформление как на вкладке замеров: пунктирная сетка, подписи дат
             // «01 / июль», подписи значений у мин/макс точек, форматированный тултип.
             const values = chart.map((point) => point.value)
@@ -1460,29 +1474,17 @@ export function ExerciseHistoryPage() {
                 activeDot={{ r: 7 }} isAnimationActive={false} />
             </LineChart></ResponsiveContainer></section>
           })()
-        : chart.length === 1
-        ? <section className="stat-single card"><span className="muted">Текущий результат</span><strong>{chart[0]!.value} {unit}</strong><p className="muted">График динамики появится после второй проведённой тренировки.</p></section>
-        : <p className="muted empty-hint">Пока нет данных. График появится после проведённых тренировок с фактом.</p>)}
+          : chart.length === 1
+            ? <p className="muted empty-hint">График динамики появится после второго подтверждённого результата.</p>
+            : null}
+      </>}
 
-      {tab === 'history' && (() => {
-        // История строго по факту: показываем только подтверждённые подходы.
-        // Тренировку показываем, если есть факт ИЛИ комментарий тренера.
-        const rows = [...(history.data ?? [])]
-          .sort((a, b) => (a.workoutDate < b.workoutDate ? 1 : -1))
-          .map((workout) => {
-            const exercise = workout.exercises.find((item) => item.ref === exerciseRef)
-            const facts = (exercise?.sets ?? []).map((set) => factLine(set, showRpe)).filter((line): line is string => line !== null)
-            return { workout, facts, comment: exercise?.trainerComment }
-          })
-          .filter((row) => row.facts.length > 0 || row.comment)
-        return rows.length
-          ? <div className="timeline">{rows.map(({ workout, facts, comment }) => <article key={workout.id} className="card"><div><strong>{formatLocalDate(workout.workoutDate)}</strong>{facts.length > 0 && <p>{facts.join(', ')}</p>}{comment && <p className="exercise-comment-note">💬 {comment}</p>}</div></article>)}</div>
-          : <p className="muted empty-hint">Ещё нет выполненных подходов по этому упражнению.</p>
-      })()}
+      {tab === 'history' && <ExerciseProgressHistory items={items} showRpe={showRpe} />}
 
       {tab === 'how' && (instructions.length
         ? <ol className="how-steps">{instructions.map((step, index) => <li key={index}>{step}</li>)}</ol>
         : <p className="muted empty-hint">Описание техники пока не добавлено.</p>)}
+      {tab !== 'how' && <LoadMoreButton hasMore={history.hasNextPage} loading={history.isFetchingNextPage} onLoadMore={() => void history.fetchNextPage()} />}
     </AsyncView>
   </Page>
 }
