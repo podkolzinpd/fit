@@ -274,7 +274,10 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.locator('.exercise-name-link').first().click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   // После одной проведённой тренировки статистика показывает текущий результат.
-  await expect(page.locator('.stat-single')).toContainText('Текущий результат')
+  const progressProof = page.getByLabel('Доказательство прогресса')
+  await expect(progressProof).toBeVisible()
+  await expect(progressProof).toContainText('Последний результат')
+  await expect(progressProof).toContainText('45 кг × 9 повт.')
   await page.locator('.page-back').click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await page.locator('.page-back').click()
