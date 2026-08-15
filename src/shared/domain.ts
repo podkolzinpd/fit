@@ -12,6 +12,7 @@ export type BlockType = 'single' | 'group'
 export type BlockPreset = 'set' | 'circuit'
 
 export type AccountRole = 'trainer' | 'client'
+export type TrainerReaction = 'thumbs_up' | 'fire' | 'strong'
 
 interface SessionActorBase {
   userId: UUID
@@ -241,6 +242,7 @@ export interface WorkoutFeedbackDraft {
 export interface Workout {
   id: UUID
   clientId: UUID
+  trainerId?: UUID
   clientName: string
   createdBy?: UUID | null
   workoutDate: LocalDate
@@ -251,6 +253,9 @@ export interface Workout {
   status: WorkoutStatus
   notes: string | null
   trainerReview?: string
+  trainerReaction?: TrainerReaction
+  trainerReviewAuthorId?: UUID
+  trainerReviewedAt?: string
   clientComment?: string
   sessionRpe?: number
   wellbeing?: WorkoutWellbeing
@@ -259,6 +264,11 @@ export interface Workout {
   stageTitle: string | null
   version: number
   exercises: WorkoutExercise[]
+}
+
+export interface WorkoutTrainerResponseDraft {
+  reaction: TrainerReaction
+  review: string
 }
 
 export interface WorkoutSummary {

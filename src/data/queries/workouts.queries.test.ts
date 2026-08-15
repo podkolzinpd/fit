@@ -103,7 +103,7 @@ describe('workoutQueries lists', () => {
     workoutQueries.reorderLiveBlock('workout-id', 'block-id', -1, 8)
     workoutQueries.replaceLiveExercise('workout-id', 'exercise-id', exercise, 9)
     workoutQueries.setExerciseComment('exercise-id', 'Держи спину', 10)
-    workoutQueries.setWorkoutReview('workout-id', 'Отличная работа', 11)
+    workoutQueries.setWorkoutReview('workout-id', { reaction: 'fire', review: 'Отличная работа' }, 11)
     workoutQueries.setClientWorkoutComment('workout-id', 'Нужна корректировка веса', 12)
     workoutQueries.submitFeedback('workout-id', { sessionRpe: 8, wellbeing: 'normal', discomfort: true, comment: 'Тянет колено' }, 13)
     workoutQueries.finish('workout-id', 14)
@@ -128,7 +128,7 @@ describe('workoutQueries lists', () => {
     expect(rpc).toHaveBeenNthCalledWith(8, 'reorder_live_block', { p_workout_id: 'workout-id', p_block_id: 'block-id', p_direction: -1, p_expected_version: 8 })
     expect(rpc).toHaveBeenNthCalledWith(9, 'replace_live_exercise', { p_workout_id: 'workout-id', p_exercise_id: 'exercise-id', p_exercise: exercise, p_expected_version: 9 })
     expect(rpc).toHaveBeenNthCalledWith(10, 'set_exercise_comment', { p_exercise_id: 'exercise-id', p_comment: 'Держи спину', p_expected_version: 10 })
-    expect(rpc).toHaveBeenNthCalledWith(11, 'set_workout_review', { p_workout_id: 'workout-id', p_review: 'Отличная работа', p_expected_version: 11 })
+    expect(rpc).toHaveBeenNthCalledWith(11, 'set_workout_review', { p_workout_id: 'workout-id', p_reaction: 'fire', p_review: 'Отличная работа', p_expected_version: 11 })
     expect(rpc).toHaveBeenNthCalledWith(12, 'set_client_workout_comment', { p_workout_id: 'workout-id', p_comment: 'Нужна корректировка веса', p_expected_version: 12 })
     expect(rpc).toHaveBeenNthCalledWith(13, 'submit_workout_feedback', {
       p_workout_id: 'workout-id', p_session_rpe: 8, p_wellbeing: 'normal',

@@ -1,4 +1,4 @@
-// schema-sha256: e8534d3e0c35e83a2e17613a6598ad8208e9eeee03e40f8488ca7c1fce70d86f
+// schema-sha256: 0b3a82a0923510f8f3ab7fab64fdc8c8fdce45bfcb278f86d7b35ef268fa929f
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -22,8 +22,8 @@ type WorkoutListExerciseRow = {
   sets: WorkoutListSetRow[]
 }
 export type WorkoutListRow = {
-  id: string; client_id: string; client_name: string; created_by: string | null; workout_date: string; start_time: string | null; end_time: string | null
-  started_at: string | null; completed_at: string | null; status: string; notes: string | null; trainer_review: string | null; client_comment: string | null; stage_id: string | null; stage_title: string | null
+  id: string; client_id: string; trainer_id: string; client_name: string; created_by: string | null; workout_date: string; start_time: string | null; end_time: string | null
+  started_at: string | null; completed_at: string | null; status: string; notes: string | null; trainer_review: string | null; trainer_reaction: string | null; trainer_review_author_id: string | null; trainer_reviewed_at: string | null; client_comment: string | null; stage_id: string | null; stage_title: string | null
   version: number; total_count: number; exercises: WorkoutListExerciseRow[]
 }
 
@@ -930,7 +930,10 @@ export type Database = {
           started_at: string | null
           status: string
           trainer_id: string
+          trainer_reaction: string | null
           trainer_review: string | null
+          trainer_review_author_id: string | null
+          trainer_reviewed_at: string | null
           updated_at: string
           version: number
           wellbeing: string | null
@@ -953,7 +956,10 @@ export type Database = {
           started_at?: string | null
           status?: string
           trainer_id: string
+          trainer_reaction?: string | null
           trainer_review?: string | null
+          trainer_review_author_id?: string | null
+          trainer_reviewed_at?: string | null
           updated_at?: string
           version?: number
           wellbeing?: string | null
@@ -976,7 +982,10 @@ export type Database = {
           started_at?: string | null
           status?: string
           trainer_id?: string
+          trainer_reaction?: string | null
           trainer_review?: string | null
+          trainer_review_author_id?: string | null
+          trainer_reviewed_at?: string | null
           updated_at?: string
           version?: number
           wellbeing?: string | null
@@ -1002,6 +1011,13 @@ export type Database = {
             columns: ["stage_id"]
             isOneToOne: false
             referencedRelation: "goal_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workouts_trainer_review_author_id_fkey"
+            columns: ["trainer_review_author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1252,6 +1268,7 @@ export type Database = {
       set_workout_review: {
         Args: {
           p_expected_version: number
+          p_reaction: string
           p_review: string
           p_workout_id: string
         }

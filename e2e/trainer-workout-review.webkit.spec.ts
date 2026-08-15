@@ -45,10 +45,12 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
 
   await page.getByRole('button', { name: 'Добавить', exact: true }).click()
   const review = 'Отличная работа над техникой. На следующей тренировке сохрани спокойный темп между подходами.'
+  await page.getByRole('button', { name: '🔥', exact: true }).click()
   await page.getByRole('textbox', { name: 'Отзыв тренера', exact: true }).fill(review)
-  await page.getByRole('button', { name: 'Сохранить отзыв', exact: true }).click()
+  await page.getByRole('button', { name: 'Отправить ответ', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Изменить', exact: true })).toBeVisible()
   await expect(page.getByText(review, { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Реакция 🔥', { exact: true })).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 
   const workoutUrl = page.url()
@@ -62,6 +64,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await page.goto(workoutUrl)
   await expect(page.getByText(review, { exact: true })).toBeVisible()
   const trainerReviewCard = page.locator('.workout-review').filter({ has: page.getByRole('heading', { name: 'Отзыв тренера' }) })
+  await expect(trainerReviewCard.getByLabel('Реакция 🔥', { exact: true })).toBeVisible()
   await expect(trainerReviewCard.getByRole('button')).toHaveCount(0)
   const clientComment = 'После второго подхода стало тяжело, обсудим вес на следующей тренировке.'
   const feedbackCard = page.locator('.workout-feedback')
@@ -112,4 +115,27 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await expect(page.getByText('Тяжело', { exact: true })).toBeVisible()
   await expect(page.getByText(clientComment, { exact: true })).toBeVisible()
   await expect(page.locator('.workout-feedback').getByRole('button')).toHaveCount(0)
+
+  // Для client-authored workout отвечает только основной тренер карточки.
+  // Сама тренировка остаётся read-only, но реакция и короткий ответ доступны.
+  await page.goto(ownWorkoutUrl)
+  await expect(page.getByText('Создано клиентом · только просмотр', { exact: true })).toBeVisible()
+  const ownTrainerReviewCard = page.locator('.workout-review').filter({ has: page.getByRole('heading', { name: 'Отзыв тренера' }) })
+  await ownTrainerReviewCard.getByRole('button', { name: 'Добавить', exact: true }).click()
+  await ownTrainerReviewCard.getByRole('button', { name: '💪', exact: true }).click()
+  const ownTrainerReview = 'Сильная самостоятельная работа — сохраняй этот темп.'
+  await ownTrainerReviewCard.getByRole('textbox', { name: 'Отзыв тренера', exact: true }).fill(ownTrainerReview)
+  await ownTrainerReviewCard.getByRole('button', { name: 'Отправить ответ', exact: true }).click()
+  await expect(ownTrainerReviewCard.getByLabel('Реакция 💪', { exact: true })).toBeVisible()
+  await expect(ownTrainerReviewCard.getByText(ownTrainerReview, { exact: true })).toBeVisible()
+
+  await page.goto('/profile')
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await login(page, 'client@fit.local')
+  await page.goto(ownWorkoutUrl)
+  const ownClientReviewCard = page.locator('.workout-review').filter({ has: page.getByRole('heading', { name: 'Отзыв тренера' }) })
+  await expect(ownClientReviewCard.getByLabel('Реакция 💪', { exact: true })).toBeVisible()
+  await expect(ownClientReviewCard.getByText(ownTrainerReview, { exact: true })).toBeVisible()
+  await expect(ownClientReviewCard.getByRole('button')).toHaveCount(0)
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })

@@ -10,7 +10,7 @@ import { exercisesRepository } from '../../data/repositories/exercises.repositor
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
 import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
-import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutSet, WorkoutWellbeing } from '../../shared/domain'
+import type { ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
   addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayInTimeZone, weekdayShort,
@@ -465,7 +465,7 @@ export function WorkoutDetailPage() {
     },
   })
   const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['workouts'] }), queryClient.invalidateQueries({ queryKey: ['clients'] })]); navigate(actor?.role === 'client' ? '/me/workouts' : '/schedule') } })
-  const review = useMutation({ mutationFn: (value: string) => workoutsRepository.setWorkoutReview(query.data!, value), onSuccess: async () => {
+  const review = useMutation({ mutationFn: (value: WorkoutTrainerResponseDraft) => workoutsRepository.setWorkoutReview(query.data!, value), onSuccess: async () => {
     await Promise.all([
       query.refetch(),
       queryClient.invalidateQueries({ queryKey: ['workouts'] }),
@@ -494,8 +494,13 @@ export function WorkoutDetailPage() {
   const canManage = clientMode ? clientOwned : trainerOwned
   const canExecute = clientMode || trainerOwned
   const clientAuthoredReadOnly = !clientMode && Boolean(workout && !trainerOwned)
+  const canReview = !clientMode && Boolean(done && workout && (
+    trainerOwned || (clientAuthoredReadOnly && workout.trainerId === actor?.userId)
+  ))
   const trainers = useQuery({ queryKey: ['client-trainers', workout?.clientId], queryFn: () => invitationsRepository.listTrainers(workout!.clientId), enabled: clientMode && Boolean(workout?.clientId) })
   const authorLabel = workout ? clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data) : null
+  const responseAuthor = trainers.data?.find((trainer) => trainer.trainerId === workout?.trainerReviewAuthorId)
+  const responseAuthorName = responseAuthor ? [responseAuthor.firstName, responseAuthor.lastName].filter(Boolean).join(' ') : null
   // Карточка не должна угадывать источник открытия. Быстрый сценарий «Сегодня»
   // передаёт returnTo, остальные пути сохраняют прежний безопасный fallback.
   const backTo = navigationState?.returnTo ?? (clientMode ? '/me/workouts' : '/schedule')
@@ -522,7 +527,7 @@ export function WorkoutDetailPage() {
         {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
       </section>}
       {done && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
-      {done && <WorkoutTrainerReview workout={workout} canEdit={trainerOwned} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
+      {done && <WorkoutTrainerReview workout={workout} canEdit={canReview} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
       {!clientMode && workout.clientComment && workout.sessionRpe === undefined && <WorkoutClientComment workout={workout} />}
       <div className={`cards ${done ? 'completed-exercise-list' : ''}`}>{groupIntoBlocks(workout.exercises).map((block) => {
         const articles = block.exercises.map((exercise) => {
@@ -556,6 +561,19 @@ const wellbeingLabels: Record<WorkoutWellbeing, string> = {
   good: 'Хорошо',
   normal: 'Нормально',
   hard: 'Тяжело',
+}
+
+const trainerReactionLabels: Record<TrainerReaction, string> = {
+  thumbs_up: '👍',
+  fire: '🔥',
+  strong: '💪',
+}
+
+function trainerResponseTime(value: string | undefined) {
+  if (!value) return null
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+  }).format(new Date(value))
 }
 
 function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave }: {
@@ -641,20 +659,26 @@ function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave }: {
   </form>
 }
 
-function WorkoutTrainerReview({ workout, canEdit, saving, error, onSave }: {
+function WorkoutTrainerReview({ workout, canEdit, authorName, saving, error, onSave }: {
   workout: Workout
   canEdit: boolean
+  authorName: string | null
   saving: boolean
   error: Error | null
-  onSave: (value: string) => Promise<unknown>
+  onSave: (value: WorkoutTrainerResponseDraft) => Promise<unknown>
 }) {
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(workout.trainerReview ?? '')
+  const [reaction, setReaction] = useState<TrainerReaction | undefined>(workout.trainerReaction)
   const hasReview = Boolean(workout.trainerReview)
+  const valid = Boolean(reaction && value.trim().length > 0 && value.trim().length <= 500)
 
   useEffect(() => {
-    if (!editing) setValue(workout.trainerReview ?? '')
-  }, [editing, workout.id, workout.trainerReview])
+    if (!editing) {
+      setValue(workout.trainerReview ?? '')
+      setReaction(workout.trainerReaction)
+    }
+  }, [editing, workout.id, workout.trainerReaction, workout.trainerReview])
 
   if (!canEdit && !hasReview) return null
 
@@ -664,20 +688,34 @@ function WorkoutTrainerReview({ workout, canEdit, saving, error, onSave }: {
       {canEdit && !editing && <button type="button" className="secondary" onClick={() => setEditing(true)}>{hasReview ? 'Изменить' : 'Добавить'}</button>}
     </div>
     {editing ? <>
-      <VoiceNoteField name="trainerReview" source="workout_review" label="Отзыв тренера" placeholder="Как прошла тренировка, что получается и на что обратить внимание" value={value} onValueChange={setValue} autoResize />
+      <fieldset className="workout-feedback-fieldset workout-trainer-reactions">
+        <legend>Реакция</legend>
+        <div className="workout-feedback-options">
+          {(Object.keys(trainerReactionLabels) as TrainerReaction[]).map((item) => <button key={item} type="button" className={`secondary workout-feedback-option ${reaction === item ? 'selected' : ''}`} aria-label={trainerReactionLabels[item]} aria-pressed={reaction === item} onClick={() => setReaction(item)}>{trainerReactionLabels[item]}</button>)}
+        </div>
+      </fieldset>
+      <VoiceNoteField name="trainerReview" source="workout_review" label="Отзыв тренера" placeholder="Что получилось и на что обратить внимание дальше" value={value} onValueChange={(next) => setValue(next.slice(0, 500))} autoResize />
+      <p className="workout-response-limit muted">{value.length}/500</p>
       {error && <p className="error">{error.message}</p>}
       <div className="actions workout-review-actions">
-        <button type="button" className="secondary" disabled={saving} onClick={() => { setValue(workout.trainerReview ?? ''); setEditing(false) }}>Отмена</button>
-        <button type="button" disabled={saving} onClick={async () => {
+        <button type="button" className="secondary" disabled={saving} onClick={() => { setValue(workout.trainerReview ?? ''); setReaction(workout.trainerReaction); setEditing(false) }}>Отмена</button>
+        <button type="button" disabled={saving || !valid} onClick={async () => {
+          if (!reaction) return
           try {
-            await onSave(value)
+            await onSave({ reaction, review: value })
             setEditing(false)
           } catch {
             // Ошибку мутации показывает общий экранный state ниже поля.
           }
-        }}>{saving ? 'Сохраняем…' : 'Сохранить отзыв'}</button>
+        }}>{saving ? 'Сохраняем…' : 'Отправить ответ'}</button>
       </div>
-    </> : <p className={hasReview ? 'workout-review-text' : 'muted'}>{hasReview ? workout.trainerReview : 'Добавьте короткий итог, пока впечатления свежие.'}</p>}
+    </> : hasReview ? <>
+      <div className="workout-response-body">
+        {workout.trainerReaction && <span className="workout-response-reaction" aria-label={`Реакция ${trainerReactionLabels[workout.trainerReaction]}`}>{trainerReactionLabels[workout.trainerReaction]}</span>}
+        <p className="workout-review-text">{workout.trainerReview}</p>
+      </div>
+      {(authorName || workout.trainerReviewedAt) && <p className="workout-response-meta">{[authorName || 'Тренер', trainerResponseTime(workout.trainerReviewedAt)].filter(Boolean).join(' · ')}</p>}
+    </> : <p className="muted">Добавьте реакцию и короткий ответ, пока впечатления свежие.</p>}
   </section>
 }
 

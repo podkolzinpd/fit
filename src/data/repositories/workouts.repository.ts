@@ -1,4 +1,4 @@
-import type { BlockPreset, BlockType, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutSet, WorkoutSetDraft, WorkoutStatus, WorkoutSummary, WorkoutWellbeing } from '../../shared/domain'
+import type { BlockPreset, BlockType, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutSet, WorkoutSetDraft, WorkoutStatus, WorkoutSummary, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import type { WorkoutListRow } from '../database.types'
 import { clientsRepository } from './clients.repository'
@@ -64,10 +64,15 @@ async function get(id: string): Promise<Workout> {
   }))
   const client = await clientsRepository.get(root.data.client_id)
   return {
-    id: root.data.id, clientId: root.data.client_id, clientName: client.fullName, createdBy: root.data.created_by,
+    id: root.data.id, trainerId: root.data.trainer_id, clientId: root.data.client_id, clientName: client.fullName, createdBy: root.data.created_by,
     workoutDate: localDate(root.data.workout_date), startTime: root.data.start_time,
     endTime: root.data.end_time, startedAt: root.data.started_at ?? null, completedAt: root.data.completed_at ?? null,
-    status: root.data.status as Workout['status'], notes: root.data.notes, trainerReview: root.data.trainer_review ?? undefined, clientComment: root.data.client_comment ?? undefined,
+    status: root.data.status as Workout['status'], notes: root.data.notes,
+    trainerReview: root.data.trainer_review ?? undefined,
+    trainerReaction: root.data.trainer_reaction ? root.data.trainer_reaction as TrainerReaction : undefined,
+    trainerReviewAuthorId: root.data.trainer_review_author_id ?? undefined,
+    trainerReviewedAt: root.data.trainer_reviewed_at ?? undefined,
+    clientComment: root.data.client_comment ?? undefined,
     sessionRpe: root.data.session_rpe ?? undefined,
     wellbeing: root.data.wellbeing ? root.data.wellbeing as WorkoutWellbeing : undefined,
     discomfort: root.data.discomfort ?? undefined,
@@ -79,6 +84,7 @@ async function get(id: string): Promise<Workout> {
 function mapWorkout(row: WorkoutListRow): Workout {
   return {
     id: row.id,
+    trainerId: row.trainer_id,
     clientId: row.client_id,
     clientName: row.client_name,
     createdBy: row.created_by,
@@ -89,7 +95,11 @@ function mapWorkout(row: WorkoutListRow): Workout {
     completedAt: row.completed_at ?? null,
     status: row.status as WorkoutStatus,
     notes: row.notes,
-    trainerReview: row.trainer_review ?? undefined, clientComment: row.client_comment ?? undefined,
+    trainerReview: row.trainer_review ?? undefined,
+    trainerReaction: row.trainer_reaction ? row.trainer_reaction as TrainerReaction : undefined,
+    trainerReviewAuthorId: row.trainer_review_author_id ?? undefined,
+    trainerReviewedAt: row.trainer_reviewed_at ?? undefined,
+    clientComment: row.client_comment ?? undefined,
     stageId: row.stage_id ?? null,
     stageTitle: row.stage_title ?? null,
     version: row.version,
@@ -222,8 +232,8 @@ export const workoutsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
-  async setWorkoutReview(workout: Workout, review: string): Promise<number> {
-    const result = await workoutQueries.setWorkoutReview(workout.id, review, workout.version)
+  async setWorkoutReview(workout: Workout, response: WorkoutTrainerResponseDraft): Promise<number> {
+    const result = await workoutQueries.setWorkoutReview(workout.id, response, workout.version)
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
