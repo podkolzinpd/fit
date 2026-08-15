@@ -12,7 +12,7 @@ async function login(page: import('@playwright/test').Page, email: string) {
   ])
 }
 
-test('iPhone: trainer review and client comment stay visible to the other side only', async ({ page }) => {
+test('iPhone: trainer review and client post-workout feedback stay visible to the other side only', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await login(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { name: 'Сегодня' })).toBeVisible()
@@ -37,8 +37,11 @@ test('iPhone: trainer review and client comment stay visible to the other side o
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /Планка \(Своё тело\)/ }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
-  await page.getByRole('button', { name: 'Записать тренировку' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await Promise.all([
+    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Записать тренировку' }).click(),
+  ])
+  await expect(page.getByRole('heading', { level: 1, name: 'Тренировка', exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Добавить', exact: true }).click()
   const review = 'Отличная работа над техникой. На следующей тренировке сохрани спокойный темп между подходами.'
@@ -61,19 +64,52 @@ test('iPhone: trainer review and client comment stay visible to the other side o
   const trainerReviewCard = page.locator('.workout-review').filter({ has: page.getByRole('heading', { name: 'Отзыв тренера' }) })
   await expect(trainerReviewCard.getByRole('button')).toHaveCount(0)
   const clientComment = 'После второго подхода стало тяжело, обсудим вес на следующей тренировке.'
-  const clientCommentCard = page.locator('.workout-review').filter({ has: page.getByRole('heading', { name: 'Комментарий клиента' }) })
-  await clientCommentCard.getByRole('button', { name: 'Добавить', exact: true }).click()
-  await page.getByRole('textbox', { name: 'Комментарий для тренера', exact: true }).fill(clientComment)
-  await page.getByRole('button', { name: 'Сохранить комментарий', exact: true }).click()
-  await expect(page.getByText(clientComment, { exact: true })).toBeVisible()
+  const feedbackCard = page.locator('.workout-feedback')
+  await expect(feedbackCard.getByRole('heading', { name: 'Как прошла тренировка?' })).toBeVisible()
+  await feedbackCard.getByRole('button', { name: '8', exact: true }).click()
+  await feedbackCard.getByRole('button', { name: 'Тяжело', exact: true }).click()
+  await feedbackCard.getByRole('button', { name: 'Да', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Пояснение о дискомфорте', exact: true }).fill(clientComment)
+  await feedbackCard.getByRole('button', { name: 'Отправить отзыв', exact: true }).click()
+  await expect(feedbackCard.getByText('Спасибо, тренер увидит ваш отзыв.', { exact: false })).toBeVisible()
+  await expect(feedbackCard.getByText('RPE 8/10', { exact: true })).toBeVisible()
+  await expect(feedbackCard.getByText(clientComment, { exact: true })).toBeVisible()
   await page.getByRole('link', { name: /Планка.*история/ }).click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+
+  // Та же форма доступна для завершённой тренировки, которую клиент записал
+  // сам. До feedback факт уже сохранён и переживает reload.
+  await page.goto('/workouts/new')
+  await page.getByRole('button', { name: 'Завершённая' }).click()
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /Планка \(Своё тело\)/ }).first().click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await Promise.all([
+    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Записать тренировку' }).click(),
+  ])
+  await expect(page.getByRole('heading', { level: 1, name: 'Тренировка', exact: true })).toBeVisible()
+  const ownWorkoutUrl = page.url()
+  expect(ownWorkoutUrl).toMatch(/\/workouts\/[0-9a-f-]+$/)
+  await page.goto(ownWorkoutUrl, { waitUntil: 'domcontentloaded' })
+  await expect(page.getByText('Готово', { exact: true })).toBeVisible()
+  const ownFeedbackCard = page.locator('.workout-feedback')
+  await ownFeedbackCard.getByRole('button', { name: '5', exact: true }).click()
+  await ownFeedbackCard.getByRole('button', { name: 'Хорошо', exact: true }).click()
+  await ownFeedbackCard.getByRole('button', { name: 'Нет', exact: true }).click()
+  await expect(page.getByRole('textbox', { name: 'Пояснение о дискомфорте' })).toHaveCount(0)
+  await ownFeedbackCard.getByRole('button', { name: 'Отправить отзыв', exact: true }).click()
+  await expect(ownFeedbackCard.getByText('RPE 5/10', { exact: true })).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 
   await page.goto('/me/profile')
   await page.getByRole('button', { name: 'Выйти' }).click()
   await login(page, 'trainer@fit.local')
   await page.goto(workoutUrl)
+  await expect(page.getByRole('heading', { name: 'Самочувствие клиента' })).toBeVisible()
+  await expect(page.getByText('RPE 8/10', { exact: true })).toBeVisible()
+  await expect(page.getByText('Тяжело', { exact: true })).toBeVisible()
   await expect(page.getByText(clientComment, { exact: true })).toBeVisible()
-  await expect(page.locator('.workout-review').filter({ has: page.getByRole('heading', { name: 'Комментарий клиента' }) }).getByRole('button')).toHaveCount(0)
+  await expect(page.locator('.workout-feedback').getByRole('button')).toHaveCount(0)
 })

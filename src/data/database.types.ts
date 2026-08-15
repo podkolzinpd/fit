@@ -1,4 +1,4 @@
-// schema-sha256: aaf539b025b3531114d6263137dae7b317ea1e1948d1324ed371d5e7d4efff7e
+// schema-sha256: e8534d3e0c35e83a2e17613a6598ad8208e9eeee03e40f8488ca7c1fce70d86f
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -920,9 +920,11 @@ export type Database = {
           created_at: string
           created_by: string | null
           deleted_at: string | null
+          discomfort: boolean | null
           end_time: string | null
           id: string
           notes: string | null
+          session_rpe: number | null
           stage_id: string | null
           start_time: string | null
           started_at: string | null
@@ -931,6 +933,7 @@ export type Database = {
           trainer_review: string | null
           updated_at: string
           version: number
+          wellbeing: string | null
           workout_date: string
         }
         Insert: {
@@ -940,9 +943,11 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
+          discomfort?: boolean | null
           end_time?: string | null
           id?: string
           notes?: string | null
+          session_rpe?: number | null
           stage_id?: string | null
           start_time?: string | null
           started_at?: string | null
@@ -951,6 +956,7 @@ export type Database = {
           trainer_review?: string | null
           updated_at?: string
           version?: number
+          wellbeing?: string | null
           workout_date: string
         }
         Update: {
@@ -960,9 +966,11 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
+          discomfort?: boolean | null
           end_time?: string | null
           id?: string
           notes?: string | null
+          session_rpe?: number | null
           stage_id?: string | null
           start_time?: string | null
           started_at?: string | null
@@ -971,6 +979,7 @@ export type Database = {
           trainer_review?: string | null
           updated_at?: string
           version?: number
+          wellbeing?: string | null
           workout_date?: string
         }
         Relationships: [
@@ -1258,6 +1267,17 @@ export type Database = {
       }
       start_workout: {
         Args: { p_expected_version: number; p_workout_id: string }
+        Returns: number
+      }
+      submit_workout_feedback: {
+        Args: {
+          p_comment: string
+          p_discomfort: boolean
+          p_expected_version: number
+          p_session_rpe: number
+          p_wellbeing: string
+          p_workout_id: string
+        }
         Returns: number
       }
       unpublish_training_summary: {

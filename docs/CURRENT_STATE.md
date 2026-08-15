@@ -5,17 +5,23 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-15
-Проверенный `main`: `7fb9f2a` (`YAFIT-242: внедрить timezone contract (#384)`)
+Проверенный `main`: `5cd1b4f` (`YAFIT-259: стабилизировать live при конфликтах и медленной сети (#385)`)
 
 ## Активная работа
 
-- Активная продуктовая задача: `YAFIT-259` — conflicts и slow network в live,
-  локальными стабилизирующими изменениями без redesign live.
-- Следующая задача roadmap: `YAFIT-285` — короткий post-workout feedback
-  клиента после завершения тренировки.
+- Активная продуктовая задача: `YAFIT-285` — короткий необязательный
+  post-workout feedback клиента после завершения тренировки: session RPE,
+  wellbeing, дискомфорт и комментарий с отдельной идемпотентной отправкой.
+- Следующая задача roadmap: `YAFIT-256` — реакция и короткий ответ тренера,
+  включая client-authored workout.
 
 ## Последняя проверенная продуктовая точка
 
+- После `#385` корневые live-изменения сериализуются и используют последнюю
+  подтверждённую version. Conflict и неоднозначный сетевой ответ не приводят
+  к blind overwrite: тренировка перечитывается, неподтверждённый факт
+  сохраняется локально и восстанавливается после обрыва сети или reload;
+  finish ждёт autosave, повторный confirm дедуплицируется.
 - После `#384` календарные границы Today, расписания, целей и
   прогресса считаются по IANA timezone профиля. Новому профилю
   сохраняется зона устройства, для legacy-значений используется
@@ -60,20 +66,6 @@
 
 ## Последние проверки
 
-- `#354` / `YAFIT-252`: `npm run check` — 369 тестов; WebKit 390 px для
-  voice-first и AI-карточек. LLM/SpeechKit не менялись.
-- `#355` / `YAFIT-268`: чистый локальный reset БД через Podman; `db:test` —
-  44 файла, 406 SQL/RLS-проверок; целевые Chromium e2e клиента и WebKit iPhone
-  390 px прошли; `npm run check` — 369 тестов, lint, typecheck, coverage, DB
-  types, iOS permissions и production build.
-- После merge `#355` production iOS bundle из `main` собран, синхронизирован,
-  установлен и запущен на уже открытом iPhone 17 без нового окна Xcode.
-- `#358` / `YAFIT-270`: `npm run check` — 369 тестов; WebKit mobile shell —
-  15 passed на 390, 375 и 360 px; локальная iOS-сборка и установка в iPhone 17.
-- `#359` / `YAFIT-272`: `npm run check` — 369 тестов; целевой WebKit iPhone
-  390 px проверяет отмену recovery-диалога, явное открытие active workout и
-  возврат назад. После merge локальный iOS bundle собран, установлен и запущен
-  на уже открытом iPhone 17 без нового окна Xcode.
 - `#369`: `npm run db:reset`; `npm run db:test` — 422 SQL/RLS-теста;
   `npm run check` — 372 frontend-теста, Fastify API test/build, lint,
   typecheck, DB types, iOS permissions и production build.
@@ -94,6 +86,11 @@
 - `#384` / `YAFIT-242`: `npm run check` — 385 frontend-тестов и 10 API-тестов;
   WebKit iPhone 390 px — 1/1; GitHub CI и Vercel прошли. LLM/SpeechKit не
   менялись.
+- `#385` / `YAFIT-259`: GitHub CI — app, database и e2e успешны; Vercel
+  успешен. Локально перед merge: 397 frontend-тестов и 10 API-тестов,
+  Chromium и WebKit iPhone 390 px. После merge production web bundle
+  синхронизирован с iOS, свежий iOS bundle собран, установлен и запущен на
+  открытом iPhone 17. LLM/SpeechKit не менялись.
 
 ## Отложенный backlog
 
@@ -104,8 +101,7 @@
 - `YAFIT-235` — принятое продуктовое решение сохранить Webvisor для
   исследовательских метрик, это не баг.
 - Остальные открытые задачи аудита остаются в `YAFIT-25`: в том числе
-  `YAFIT-250` (постраничная история), `YAFIT-253` (demo membership), `YAFIT-259`
-  (conflicts/slow network), `YAFIT-260`
+  `YAFIT-250` (постраничная история), `YAFIT-253` (demo membership), `YAFIT-260`
   (mobile a11y и schedule density). Не брать без нового приоритета.
 
 ## Постоянные ограничения

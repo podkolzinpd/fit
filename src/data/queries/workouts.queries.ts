@@ -1,8 +1,8 @@
-import type { ExerciseSnapshot, LiveSetDraft, WorkoutDraft } from '../../shared/domain'
+import type { ExerciseSnapshot, LiveSetDraft, WorkoutDraft, WorkoutFeedbackDraft } from '../../shared/domain'
 import { supabase } from './client'
 import { toJson } from './json'
 
-const rootColumns = 'id,client_id,created_by,workout_date,start_time,end_time,started_at,completed_at,status,notes,trainer_review,client_comment,version,stage_id'
+const rootColumns = 'id,client_id,created_by,workout_date,start_time,end_time,started_at,completed_at,status,notes,trainer_review,client_comment,session_rpe,wellbeing,discomfort,version,stage_id'
 
 export type { WorkoutListRow } from '../database.types'
 
@@ -57,6 +57,14 @@ export const workoutQueries = {
   }),
   setClientWorkoutComment: (workoutId: string, comment: string, version: number) => supabase.rpc('set_client_workout_comment', {
     p_workout_id: workoutId, p_comment: comment, p_expected_version: version,
+  }),
+  submitFeedback: (workoutId: string, feedback: WorkoutFeedbackDraft, version: number) => supabase.rpc('submit_workout_feedback', {
+    p_workout_id: workoutId,
+    p_session_rpe: feedback.sessionRpe,
+    p_wellbeing: feedback.wellbeing,
+    p_discomfort: feedback.discomfort,
+    p_comment: feedback.comment,
+    p_expected_version: version,
   }),
   replaceLiveExercise: (workoutId: string, exerciseId: string, exercise: ExerciseSnapshot, version: number) => supabase.rpc('replace_live_exercise', {
     p_workout_id: workoutId, p_exercise_id: exerciseId, p_exercise: toJson(exercise), p_expected_version: version,

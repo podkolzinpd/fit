@@ -15,6 +15,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Schedule | Week/month/local date, timed/untimed, open workout/back | Implemented: недельная лента дней + часовая сетка на день (timed по времени, untimed отдельно), закреплённая шапка с прокруткой только сетки, автоскролл к 07:00/первой тренировке, кнопка «Сегодня», выбор дня и недели в URL, календарь-переход к дате; covered unit + E2E |
 | Live | Start, autosave, confirm, rest, append, resume, partial finish | Implemented: rest, transactional append and non-retryable optimistic conflicts covered; wider resume acceptance pending |
 | History | Done workouts only, set list and max-value chart | Implemented: set list and max-value progression chart (по типу упражнения) covered unit; broader visual pending |
+| Post-workout feedback | Клиент после завершения фиксирует session RPE 1–10, самочувствие и дискомфорт; тренер видит сигнал без доступа посторонних аккаунтов | Implemented: assigned и client-authored workout, отдельный idempotent submit с version check, RLS/SQL и WebKit 390 px acceptance |
 | Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; duplicate-date create opens the existing entry without a failing DB request; broader visual/E2E matrix pending |
 | Wearables | Клиент подключает системное health-хранилище и видит локальные показатели активности и восстановления | Prototype: iOS HealthKit read-only PoC for sleep, steps, active energy, resting HR and HRV; server sync, trainer visibility and real-device acceptance pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; acceptance matrix pending |
@@ -39,6 +40,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - Клиент может редактировать и удалять только созданную им запланированную тренировку; назначенный тренером план остаётся защищённым.
 - Клиент может скопировать назначенный тренером план в новую собственную тренировку, но не может записывать trainer comments.
 - Клиент видит и выполняет назначения всех подключённых тренеров. Каждый тренер изменяет только тренировки с собственным `created_by`, видит завершённые самостоятельные тренировки клиента только для чтения и не видит назначения других тренеров; те же правила действуют при прямом UUID-доступе.
+- После завершения назначенной или самостоятельной тренировки клиент может отдельно отправить session RPE 1–10, wellbeing и дискомфорт с коротким пояснением. Feedback необязателен, не участвует в завершении workout, повтор того же submit идемпотентен; тренер читает результат, несвязанный аккаунт не видит строку.
 - Историю прогресса видят клиент и все memberships. Клиент изменяет любую запись, тренер — только созданную им; остальные записи доступны тренеру только для чтения.
 - Самостоятельная карточка принадлежит клиентскому профилю и не создаёт строку `trainers`; тренеры появляются только через явное приглашение.
 - Обязательные проверки: owner/trainer/cross-tenant SQL matrix и E2E client create → edit → perform → finish.

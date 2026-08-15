@@ -1,4 +1,4 @@
-import type { BlockPreset, BlockType, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet, WorkoutSetDraft, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
+import type { BlockPreset, BlockType, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutSet, WorkoutSetDraft, WorkoutStatus, WorkoutSummary, WorkoutWellbeing } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import type { WorkoutListRow } from '../database.types'
 import { clientsRepository } from './clients.repository'
@@ -68,6 +68,9 @@ async function get(id: string): Promise<Workout> {
     workoutDate: localDate(root.data.workout_date), startTime: root.data.start_time,
     endTime: root.data.end_time, startedAt: root.data.started_at ?? null, completedAt: root.data.completed_at ?? null,
     status: root.data.status as Workout['status'], notes: root.data.notes, trainerReview: root.data.trainer_review ?? undefined, clientComment: root.data.client_comment ?? undefined,
+    sessionRpe: root.data.session_rpe ?? undefined,
+    wellbeing: root.data.wellbeing ? root.data.wellbeing as WorkoutWellbeing : undefined,
+    discomfort: root.data.discomfort ?? undefined,
     stageId: root.data.stage_id ?? null, stageTitle: null,
     version: root.data.version, exercises: mappedExercises,
   }
@@ -226,6 +229,11 @@ export const workoutsRepository = {
   },
   async setClientWorkoutComment(workout: Workout, comment: string): Promise<number> {
     const result = await workoutQueries.setClientWorkoutComment(workout.id, comment, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
+  async submitFeedback(workout: Workout, feedback: WorkoutFeedbackDraft): Promise<number> {
+    const result = await workoutQueries.submitFeedback(workout.id, feedback, workout.version)
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
