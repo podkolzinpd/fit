@@ -277,6 +277,48 @@ export interface WorkoutSummary {
   status: WorkoutStatus
 }
 
+export interface ExerciseProgressSet {
+  weightKg?: number
+  reps?: number
+  durationSec?: number
+  distanceKm?: number
+  rpe?: number
+}
+
+export interface ExerciseProgressResult {
+  workoutId: UUID
+  workoutDate: LocalDate
+  completedAt: string
+  exerciseName: string
+  inputKind: InputKind
+  confirmedSetCount: number
+  primaryValue: number | null
+  previousPrimaryValue: number | null
+  primaryChange: number | null
+  allTimePrimaryValue: number | null
+  bestWeightKg: number | null
+  repsAtBestWeight: number | null
+  bestWeightReps: number | null
+  allTimeBestWeightKg: number | null
+  allTimeBestWeightReps: number | null
+  isPrimaryPr: boolean
+  isWeightPr: boolean
+  isWeightRepsPr: boolean
+  trainerComment: string | null
+  sets: ExerciseProgressSet[]
+}
+
+export interface ExerciseProgressCursor {
+  completedAt: string
+  workoutId: UUID
+}
+
+export interface ExerciseProgressPage {
+  items: ExerciseProgressResult[]
+  nextCursor: ExerciseProgressCursor | null
+  totalCount: number
+}
+
 export interface ClientStats {
   doneCount: number
   completionPercent: number | null

@@ -1125,6 +1125,24 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .tab { padding: 10px 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 600; cursor: pointer; box-shadow: none }
 .tab.active { color: var(--fg); border-bottom-color: var(--accent-label) }
 .exercise-card-tabs { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:3px; margin:14px 0; padding:3px; border:1px solid var(--border); border-radius:15px; background:var(--surface-sunken); }.exercise-card-tabs .tab { min-height:42px; padding:8px 6px; border:0; border-radius:11px; color:var(--muted); font-size:14px; font-weight:700; text-align:center; }.exercise-card-tabs .tab.active { color:var(--fg); background:var(--surface-raised); box-shadow:0 1px 5px #17191d14; }
+.exercise-progress-proof { display: block; padding: 16px; overflow: hidden }
+.exercise-progress-proof > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px }
+.exercise-progress-proof > header .eyebrow { margin: 0 0 2px }
+.exercise-progress-proof > header h2 { margin: 0; font-size: var(--text-section) }
+.exercise-progress-proof > header > span { max-width: 130px; color: var(--muted); font-size: var(--text-xs); font-weight: var(--weight-bold); line-height: 1.25; text-align: right }
+.exercise-progress-current { display: grid; grid-template-columns: 1.4fr 1fr .65fr; gap: 8px }
+.exercise-progress-current > div, .exercise-progress-records > div { min-width: 0; padding: 10px; border-radius: 12px; background: var(--surface-sunken) }
+.exercise-progress-current span, .exercise-progress-records span { display: block; margin-bottom: 4px; color: var(--muted); font-size: 10px; line-height: 1.2 }
+.exercise-progress-current strong, .exercise-progress-records strong { display: block; font-size: 16px; line-height: 1.15; overflow-wrap: anywhere }
+.exercise-progress-records { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px }
+.exercise-progress-records.single { grid-template-columns: 1fr }
+.exercise-progress-method { margin: 12px 0 0; color: var(--muted); font-size: var(--text-xs); line-height: 1.35 }
+.exercise-progress-timeline .card { display: block }
+.exercise-progress-row-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px }
+.exercise-progress-row-head > span { color: var(--muted); font-size: var(--text-xs); font-weight: var(--weight-bold) }
+.exercise-progress-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px }
+.exercise-progress-badges span { padding: 3px 7px; border: 1px solid var(--accent-surface-border); border-radius: 99px; color: var(--accent-weak); background: var(--accent-surface); font-size: 10px; font-weight: var(--weight-bold) }
+.exercise-progress-timeline .card > p { margin: 7px 0 0; line-height: 1.4 }
 .how-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px }
 .how-steps li { line-height: 1.5 }
 .empty-hint { padding: 24px 8px; text-align: center }

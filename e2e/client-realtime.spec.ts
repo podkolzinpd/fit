@@ -65,7 +65,7 @@ test('client and trainer receive progress and workout changes without reload', a
     await client.getByLabel('Код приглашения').fill(code!)
     await client.getByRole('button', { name: 'Присоединиться' }).click()
     await expect(client).toHaveURL(/\/me$/)
-    await expect(trainer.getByRole('button', { name: 'Пригласить клиента' })).toHaveCount(0)
+    await expect(trainer.getByRole('button', { name: 'Пригласить клиента' })).toHaveCount(0, { timeout: 10_000 })
 
     await trainer.goto(`/clients/${clientId}/goal`)
     await trainer.getByLabel('Цель').fill('Realtime цель')
@@ -150,6 +150,23 @@ test('client and trainer receive progress and workout changes without reload', a
     await trainer.getByRole('button', { name: 'Отправить ответ', exact: true }).click()
     await expect(client.getByText(trainerReview, { exact: true })).toBeVisible({ timeout: 10_000 })
     await expect(client.getByLabel('Реакция 👍', { exact: true })).toBeVisible({ timeout: 10_000 })
+
+    const exerciseHistoryUrl = await trainer.locator('.exercise-name-link').first().getAttribute('href')
+    expect(exerciseHistoryUrl).toBeTruthy()
+    await Promise.all([
+      trainer.goto(exerciseHistoryUrl!),
+      client.goto(exerciseHistoryUrl!),
+    ])
+    const trainerProof = trainer.getByLabel('Доказательство прогресса')
+    const clientProof = client.getByLabel('Доказательство прогресса')
+    await expect(trainerProof).toBeVisible()
+    await expect(clientProof).toBeVisible()
+    expect(await clientProof.textContent()).toBe(await trainerProof.textContent())
+    await expect(clientProof.locator('strong:visible').filter({ hasText: /^5 км$/ }).first()).toBeVisible()
+    await trainer.getByRole('tab', { name: 'История' }).click()
+    await client.getByRole('tab', { name: 'История' }).click()
+    expect(await client.locator('.exercise-progress-timeline').textContent())
+      .toBe(await trainer.locator('.exercise-progress-timeline').textContent())
 
     await Promise.all([
       trainer.goto(`/progress/${clientId}`),

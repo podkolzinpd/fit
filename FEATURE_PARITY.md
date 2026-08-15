@@ -14,7 +14,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Voice notes | Browser-only Russian transcription into editable workout and client trainer notes; manual input remains available | Prototype: local whisper.cpp WASM ready; real-device acceptance pending |
 | Schedule | Week/month/local date, timed/untimed, open workout/back | Implemented: недельная лента дней + часовая сетка на день (timed по времени, untimed отдельно), закреплённая шапка с прокруткой только сетки, автоскролл к 07:00/первой тренировке, кнопка «Сегодня», выбор дня и недели в URL, календарь-переход к дате; covered unit + E2E |
 | Live | Start, autosave, confirm, rest, append, resume, partial finish | Implemented: rest, transactional append and non-retryable optimistic conflicts covered; wider resume acceptance pending |
-| History | Done workouts only, set list and max-value chart | Implemented: set list and max-value progression chart (по типу упражнения) covered unit; broader visual pending |
+| History | Done workouts only, set list and max-value chart | Implemented: paginated confirmed-only exercise facts, transparent per-kind chart and computed strength PR; broader visual pending |
 | Post-workout feedback | Клиент после завершения фиксирует session RPE 1–10, самочувствие и дискомфорт; тренер видит сигнал без доступа посторонних аккаунтов | Implemented: assigned и client-authored workout, отдельный idempotent submit с version check, RLS/SQL и WebKit 390 px acceptance |
 | Trainer response | После завершения клиент видит реакцию 👍 / 🔥 / 💪 и короткий ответ ответственного тренера | Implemented: trainer-author для назначения, root trainer для client-authored workout, автор/время, idempotent versioned RPC, realtime/refetch и RLS matrix |
 | Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; duplicate-date create opens the existing entry without a failing DB request; weekly/monthly regularity uses one role-safe server aggregate; broader visual/E2E matrix pending |
@@ -66,6 +66,15 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - План поддерживает несколько подходов, удаление, сброс значений и изменение веса на ±5% с округлением до 2,5 кг.
 - Live поддерживает добавление подхода и упражнения отдельными транзакционными RPC, autosave факта, подтверждение, отдых 90 секунд и частичное завершение с предупреждением. Таймер отдыха считается от абсолютной метки времени и остаётся корректным при сворачивании вкладки.
 - Обязательные проверки: уникальность полного каталога, component search/filter/create, RPC rollback/cross-tenant, mobile visual snapshot и E2E plan → multi-set → live append → partial finish.
+
+## Exercise progress acceptance contract
+
+- Источник прогресса — только подтверждённые подходы завершённых неудалённых workouts. План, неподтверждённый ввод и удалённый факт не участвуют.
+- Для strength основная метрика — максимальный подтверждённый рабочий вес; отдельно показывается лучший результат `вес × повторы`. Для reps, duration и distance основная метрика — соответственно повторы, секунды и километры; estimated 1RM в v1 не используется.
+- PR текущей завершённой тренировки сравнивается только с более ранними завершёнными тренировками. Исправление или удаление факта пересчитывает все последующие флаги из исходных данных; отдельной mutable PR-таблицы нет.
+- Client, root trainer и connected trainer читают один RLS-защищённый результат. Несвязанный аккаунт получает access denied.
+- Первая страница ограничена 20 тренировками и использует серверный cursor/read contract с lookahead; старые результаты подгружаются явно, вся workout history в браузер не загружается.
+- Milestones 10/25/50/100 показываются только как вторичная отметка количества фактических тренировок и не создают отдельную игровую систему.
 
 ## AI progress acceptance contract
 

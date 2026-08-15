@@ -5,17 +5,19 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-16
-Проверенный `main`: `b180f9a` (`YAFIT-256: добавить реакцию и ответ тренера (#387)`)
+Проверенный `main`: `7a6b3d2` (`YAFIT-286: добавить регулярность тренировок (#388)`)
 
 ## Активная работа
 
-- Активная продуктовая задача: `YAFIT-286` — единый серверный week/month
-  aggregate план/факт для Client и Trainer; неделя понедельник–воскресенье,
-  client timezone, confirmed-only fact и RLS.
-- Следующая задача roadmap: `YAFIT-287` — прогресс упражнений и реальные PR.
+- Активная продуктовая задача: `YAFIT-287` — серверный confirmed-only прогресс
+  упражнения, реальные PR и постраничная история для Client и Trainer.
+- Следующая задача roadmap: `YAFIT-288` — история как спортивная хроника.
 
 ## Последняя проверенная продуктовая точка
 
+- После `#388` Client и Trainer видят одинаковый week/month plan/fact:
+  неделя понедельник–воскресенье, границы в timezone клиента, partial/skipped и
+  самостоятельные тренировки без искажения процента назначенного плана.
 - После `#387` ответственный тренер оставляет реакцию 👍 / 🔥 / 💪 и короткий
   ответ на завершённое назначение или client-authored workout. Автор/время,
   realtime/refetch, идемпотентный retry и запрет перезаписи другим тренером
@@ -61,16 +63,16 @@
   reset БД, 465 SQL/RLS, 398 frontend, 10 API, WebKit iPhone 390 px и
   двухролевой Chromium realtime. После merge `b180f9a` свежий iOS bundle
   собран, установлен и запущен на iPhone 17. LLM/SpeechKit не менялись.
-- `YAFIT-286` в рабочей ветке: чистый reset БД и 474 SQL/RLS, полный
-  `npm run check` (403 frontend и 10 API), двухролевой Chromium realtime и
-  WebKit iPhone 390 px прошли. LLM/SpeechKit не менялись.
+- `#388` / `YAFIT-286`: GitHub CI app/database/e2e и Vercel прошли. Локально
+  reset БД, 474 SQL/RLS, 403 frontend, 10 API, двухролевой Chromium и WebKit
+  iPhone 390 px. После merge `7a6b3d2` свежий iOS bundle собран, установлен и
+  запущен на iPhone 17. LLM/SpeechKit не менялись.
 
 ## Ближайший roadmap
 
-1. `YAFIT-286` — weekly/monthly regularity.
-2. `YAFIT-287` — прогресс упражнений и реальные PR.
-3. `YAFIT-288` — история как спортивная хроника.
-4. `YAFIT-289` — Client Home: следующее действие, неделя, один highlight.
+1. `YAFIT-287` — прогресс упражнений и реальные PR.
+2. `YAFIT-288` — история как спортивная хроника.
+3. `YAFIT-289` — Client Home: следующее действие, неделя, один highlight.
 
 ## Отложенный backlog
 

@@ -1,4 +1,4 @@
-import type { ExerciseSnapshot, LiveSetDraft, WorkoutDraft, WorkoutFeedbackDraft, WorkoutTrainerResponseDraft } from '../../shared/domain'
+import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, WorkoutDraft, WorkoutFeedbackDraft, WorkoutTrainerResponseDraft } from '../../shared/domain'
 import { supabase } from './client'
 import { toJson } from './json'
 
@@ -19,6 +19,14 @@ export const workoutQueries = {
   latestExerciseResults: (clientId: string, exerciseRefs: string[]) => supabase.rpc('list_latest_exercise_results', {
     p_client_id: clientId, p_exercise_refs: exerciseRefs,
   }),
+  exerciseProgress: (clientId: string, exerciseRef: string, limit: number, cursor: ExerciseProgressCursor | null) =>
+    supabase.rpc('list_exercise_progress', {
+      p_client_id: clientId,
+      p_exercise_ref: exerciseRef,
+      p_limit: limit,
+      p_before_completed_at: cursor?.completedAt ?? null,
+      p_before_workout_id: cursor?.workoutId ?? null,
+    }),
   getRoot: (id: string) => supabase.from('workouts').select(rootColumns).eq('id', id).is('deleted_at', null).single(),
   getExercises: (id: string) => supabase.from('workout_exercises')
     .select('id,position,exercise_source,exercise_ref,custom_exercise_id,exercise_name,muscle_group,input_kind,block_id,block_type,block_preset,block_rounds,rest_between_exercises_sec,rest_between_rounds_sec,rest_between_sets_sec,trainer_comment')
