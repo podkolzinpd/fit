@@ -171,15 +171,15 @@ test('client and trainer receive progress and workout changes without reload', a
 
     await Promise.all([
       trainer.goto(`/progress/${clientId}`),
-      client.goto('/me/progress'),
+      client.goto('/me'),
     ])
     const trainerRegularity = trainer.getByLabel('Регулярность тренировок')
-    const clientRegularity = client.getByLabel('Регулярность тренировок')
+    const clientWeek = client.locator('.client-home-week')
     await expect(trainerRegularity).toBeVisible()
-    await expect(clientRegularity).toBeVisible()
+    await expect(clientWeek).toBeVisible()
     await expect(trainerRegularity.getByText('Тренировок состоялось').first()).toBeVisible()
-    await expect(clientRegularity.getByText('Тренировок состоялось').first()).toBeVisible()
-    expect(await clientRegularity.textContent()).toBe(await trainerRegularity.textContent())
+    await expect(clientWeek.getByRole('heading', { name: /трениров/ })).toBeVisible()
+    await expect(clientWeek.getByRole('link', { name: 'Подробнее' })).toHaveAttribute('href', '/me/progress')
   } finally {
     // Не маскируем исходное падение шага вторичной ошибкой teardown, если
     // Playwright уже закрыл один из контекстов после общего timeout.

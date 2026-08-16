@@ -10,7 +10,7 @@ import { splitClientWorkouts, workoutsRepository } from '../../data/repositories
 import type { CustomMetric, ProgressEntry } from '../../shared/domain'
 import { formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, Field, Page, useConfirm } from '../../shared/ui'
-import { ClientTrainingSummaryCard, groupMetricRows, ProgressChart, WorkoutRegularityCard } from '../progress'
+import { ClientTrainingSummaryCard, groupMetricRows, ProgressChart } from '../progress'
 import { LoadMoreButton, WorkoutChronicleCard, WorkoutExercisesSummary, WorkoutStatusBadge, WORKOUT_HISTORY_PAGE_SIZE } from '../workouts'
 import { clientWorkoutAuthorLabel } from './workout-author'
 
@@ -89,7 +89,7 @@ export function MyProgressPage() {
     if (await confirm({ message: `Удалить замер за ${formatLocalDate(entry.recordedOn)}? Это действие нельзя отменить.`, confirmLabel: 'Удалить', danger: true })) remove.mutate(entry)
   }
   return <Page className="client-progress-page" title="Мой прогресс"><AsyncView loading={mine.isLoading || entries.isLoading || metrics.isLoading} error={mine.error ?? entries.error ?? metrics.error} onRetry={() => { void mine.refetch(); void entries.refetch(); void metrics.refetch() }}>
-    {entries.data && mine.data && <div className="client-progress-stack"><WorkoutRegularityCard clientId={mine.data.id} /><ClientTrainingSummaryCard clientId={mine.data.id} />
+    {entries.data && mine.data && <div className="client-progress-stack"><ClientTrainingSummaryCard clientId={mine.data.id} profileGoal={mine.data.goal} />
       <section className="client-progress-measurement">
         <div className="client-progress-measurement-head"><div><p className="eyebrow">ЗАМЕРЫ ТЕЛА</p><h2>{entries.data[0] ? 'Последний замер' : 'Замеров пока нет'}</h2></div><button type="button" className="secondary" aria-expanded={measurementFormOpen} onClick={() => setMeasurementFormOpen((open) => !open)}>{measurementFormOpen ? 'Скрыть' : 'Добавить замер'}</button></div>
         {entries.data[0] && <div className="client-progress-measurement-latest"><strong>{progressSummary(entries.data[0], metrics.data ?? []).join(' · ') || 'Показатели не указаны'}</strong><span>{formatLocalDate(entries.data[0].recordedOn)}</span></div>}

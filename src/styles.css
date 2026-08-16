@@ -1096,6 +1096,16 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .ai-progress-regularity div { display: flex; align-items: center; justify-content: space-between; gap: 10px }
 .ai-progress-regularity strong { font-size: 13px }
 .ai-progress-regularity p { margin: 4px 0 0; color: var(--muted); font-size: var(--text-xs); line-height: var(--leading-snug) }
+.ai-progress-goal { display: grid; gap: 6px; margin: 15px 17px 0; padding-top: 14px; border-top: 1px solid var(--ai-divider) }
+.ai-progress-goal h3 { margin: 0 0 2px; font-size: var(--text-sm) }
+.ai-progress-goal > strong { font-size: var(--text-caption); line-height: var(--leading-body) }
+.ai-progress-goal > small { color: var(--accent-weak); font-size: var(--text-xs); font-weight: var(--weight-semibold) }
+.ai-progress-goal > p, .ai-progress-goal-empty p, .ai-progress-goal-error p { margin: 0; color: var(--muted); font-size: var(--text-xs); line-height: var(--leading-body) }
+.ai-progress-goal-empty { display: grid; gap: 10px }
+.ai-progress-goal-empty .button { width: fit-content; min-height: 36px; padding: 8px 12px; font-size: var(--text-xs) }
+.ai-progress-goal-error { display: flex; align-items: center; justify-content: space-between; gap: 10px }
+.ai-progress-goal-error .link { min-height: 32px; padding: 4px 0 }
+.ai-progress-next-steps { padding-top: 15px }
 .ai-progress-attention { display: flex; align-items: flex-start; gap: 9px; margin: 10px 17px 0; padding: 10px 11px; border: 1px solid var(--ai-attention-border); border-radius: 12px; background: var(--ai-attention-surface) }
 .ai-progress-attention > span { width: 20px; height: 20px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; color: #1b140b; background: #eab65d; font-size: 12px; font-weight: 900 }
 .ai-progress-attention p { margin: 1px 0 0; color: var(--ai-attention-fg); font-size: var(--text-xs); line-height: var(--leading-body) }
@@ -1326,6 +1336,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-progress-card { margin: 0; border-radius: 20px; }
 .client-progress-card .ai-progress-header { padding: 15px 16px 10px; }
 .client-progress-card .ai-progress-periods { margin: 0 16px 12px; }
+.client-progress-card .ai-progress-regularity { display: grid; gap: 5px; margin: 0 16px; padding: 14px 0 0; border: 0; border-top: 1px solid var(--ai-divider); border-radius: 0; background: transparent; }
+.client-progress-card .ai-progress-regularity p { margin: 0; }
 .client-progress-card .ai-progress-empty { min-height: 116px; padding: 18px 16px; }
 .client-progress-card .ai-progress-footer { margin-top: 0; padding: 11px 16px; }
 .client-progress-card .ai-progress-footer button { min-height: 38px; padding: 8px 10px; }

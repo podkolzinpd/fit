@@ -249,23 +249,22 @@ test('iPhone: client edits shared progress, custom metrics and deletion safely',
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
 
-test('iPhone: client progress keeps the LLM summary below the compact training rhythm', async ({ page }) => {
+test('iPhone: client progress keeps one goal-aware LLM summary', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await login(page, 'client@fit.local')
   await page.goto('/me/progress')
 
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Тренировки' })).toBeVisible()
-  await expect(page.getByRole('tabpanel', { name: 'Неделя' })).toContainText('тренировок')
-  await page.getByRole('tab', { name: 'Месяц' }).click()
-  await expect(page.getByRole('tabpanel', { name: 'Месяц' })).toBeVisible()
-
+  await expect(page.getByLabel('Регулярность тренировок')).toHaveCount(0)
   await expect(page.getByText('Твой прогресс', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: '1 месяц' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '1 месяц' })).toHaveClass(/active/)
   await expect(page.getByRole('button', { name: '3 месяца' })).toBeVisible()
   await expect(page.getByRole('button', { name: '6 месяцев' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Твоя цель' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Что делать дальше' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Обновить мой прогресс' })).toBeVisible()
 
+  await page.getByText('ЗАМЕРЫ ТЕЛА', { exact: true }).scrollIntoViewIfNeeded()
   await page.getByRole('button', { name: 'Добавить замер' }).click()
   await expect(page.getByRole('heading', { name: 'Новый замер' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Сохранить замер' })).toBeVisible()
@@ -425,20 +424,17 @@ test('iPhone: voice-first и AI-поверхности сохраняют кон
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: week/month регулярность помещается на Progress при 390 px', async ({ page }) => {
+test('iPhone: LLM regularity stays inside the single Progress summary at 390 px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await login(page, 'client@fit.local')
   await page.goto('/me/progress')
 
-  const regularity = page.getByLabel('Регулярность тренировок')
-  await expect(regularity).toBeVisible()
-  await expect(regularity.getByRole('heading', { name: 'Тренировки' })).toBeVisible()
-  await expect(regularity.getByRole('tab', { name: 'Неделя' })).toHaveAttribute('aria-selected', 'true')
-  await expect(regularity.getByRole('tabpanel', { name: 'Неделя' })).toContainText('трениров')
-  await regularity.getByRole('tab', { name: 'Месяц' }).click()
-  await expect(regularity.getByRole('tabpanel', { name: 'Месяц' })).toBeVisible()
-  await expect(regularity.getByText('ТРЕНИРОВОЧНЫЙ РИТМ')).toBeVisible()
-  await expect(regularity.getByText('—', { exact: true })).toHaveCount(0)
+  await expect(page.getByLabel('Регулярность тренировок')).toHaveCount(0)
+  const summary = page.locator('.client-progress-card')
+  await expect(summary).toBeVisible()
+  await expect(summary.getByText('Твоя регулярность', { exact: true })).toBeVisible()
+  await expect(summary.getByText(/\/ нед\./)).toBeVisible()
+  await expect(summary.getByText('Твоя цель', { exact: true })).toBeVisible()
   await expectNoHorizontalOverflow(page)
 })
 

@@ -95,9 +95,10 @@ accessible names remain mandatory.
   workout, weekly rhythm, one relevant highlight, and wearable context.
 - Content uses a single-column stack, one dominant next action, warm raised
   cards, compact eyebrow labels, and explicit Russian copy.
-- Client Progress orders training regularity before the LLM summary, then body
-  measurements, chart, and history. A `done` workout counts as a workout even
-  if some planned work was not completed; plan completion is separate detail.
+- Client Progress uses one goal-aware LLM summary with 1/3/6 month periods,
+  followed by body measurements, chart, and history. Current-week rhythm stays
+  as a compact Home summary instead of a second large Progress card. A `done`
+  workout counts even when some planned work was not completed.
 - Personal records show exercise, exact confirmed result, record type, and link
   to that exercise's history.
 

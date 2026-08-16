@@ -27,8 +27,24 @@ export function summaryQualityIssues(
     ...clientAchievements,
     client.consistency,
     client.encouragement,
+    client.goalAlignment,
+    ...stringList(client.nextSteps),
+  ].filter((item): item is string => typeof item === "string").join(" ")
+  const allText = [
+    trainer.headline,
+    ...trainerProgress,
+    trainer.consistency,
+    ...trainerAttention,
+    clientText,
   ].filter((item): item is string => typeof item === "string").join(" ")
   const issues: string[] = []
+
+  if (/\d+[.,]\d+\s*%/.test(allText)) {
+    issues.push("Процентные изменения должны быть округлены до целых процентов.")
+  }
+  if (/\d+[.,]\d{2,}\s*(?:\/\s*нед\.?|в\s+недел(?:ю|и))/i.test(allText)) {
+    issues.push("Средняя частота должна содержать максимум один знак после запятой.")
+  }
 
   if (
     /(?:риск|проверить|уточнить|продолжай|поддерживай)|так держать|отличная работа/i
@@ -88,6 +104,21 @@ export function summaryQualityIssues(
     issues.push(
       "Регулярность нельзя называть хорошей или регулярной при частоте ниже 1 в неделю или перерыве от 21 дня.",
     )
+  }
+
+  const goal = isRecord(trainingData) ? trainingData.goal : null
+  const goalAlignment = typeof client.goalAlignment === "string"
+    ? client.goalAlignment.trim()
+    : ""
+  if (isRecord(goal) && !goalAlignment) {
+    issues.push("При заданной цели client.goalAlignment не должен быть пустым.")
+  }
+  if (!isRecord(goal) && goalAlignment) {
+    issues.push("Без заданной цели client.goalAlignment должен быть пустым.")
+  }
+  const nextSteps = stringList(client.nextSteps)
+  if (nextSteps.length < 1 || nextSteps.length > 3) {
+    issues.push("client.nextSteps должен содержать от одного до трёх ориентиров.")
   }
 
   const exercises = isRecord(trainingData) && Array.isArray(trainingData.exercises)

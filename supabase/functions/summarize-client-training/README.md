@@ -35,12 +35,13 @@ npx supabase secrets set --env-file ./supabase/functions/.env.local
 ```
 
 Never commit `supabase/functions/.env.local`. The function sends only completed
-workout frequency plus aggregated exercise metrics: first/last result, volume,
-pace, best result and a compact session series. Client names, contacts, trainer
-notes, private details, and body measurements are not included.
+workout frequency, aggregated exercise metrics and the active goal/current
+stage: first/last result, volume, pace, best result and a compact session series.
+Client names, contacts, trainer notes, private details and body measurements are
+not included.
 
 The Yandex Text Generation request uses `jsonSchema` and prompt version
-`training-progress-v4`. Generated rows are never client-readable directly.
+`training-progress-v5`. Generated rows are never client-readable directly.
 Publication copies only `client_summary` and deterministic display metrics into
 `client_published_training_summaries`.
 
