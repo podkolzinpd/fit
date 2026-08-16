@@ -51,6 +51,7 @@ export function MyProgressPage() {
   const mine = useMine()
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState<ProgressEntry | null>(null)
+  const [measurementFormOpen, setMeasurementFormOpen] = useState(false)
   const entries = useQuery({ queryKey: ['progress', mine.data?.id], queryFn: () => progressRepository.list(mine.data!.id), enabled: Boolean(mine.data) })
   const metrics = useQuery({ queryKey: ['metrics', mine.data?.id], queryFn: () => progressRepository.listMetrics(mine.data!.id), enabled: Boolean(mine.data) })
   const [confirm, confirmDialog] = useConfirm()
@@ -73,8 +74,9 @@ export function MyProgressPage() {
         return value === undefined ? [] : [{ metricId: metric.id, value }]
       }),
     })
-  }, onSuccess: async () => {
+  }, onSuccess: async (_savedEntry, variables) => {
     setEditing(null)
+    if (!variables.entry) setMeasurementFormOpen(false)
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['progress', mine.data?.id] }),
       queryClient.invalidateQueries({ queryKey: ['client', mine.data?.id] }),
@@ -88,7 +90,12 @@ export function MyProgressPage() {
   }
   return <Page className="client-progress-page" title="Мой прогресс"><AsyncView loading={mine.isLoading || entries.isLoading || metrics.isLoading} error={mine.error ?? entries.error ?? metrics.error} onRetry={() => { void mine.refetch(); void entries.refetch(); void metrics.refetch() }}>
     {entries.data && mine.data && <div className="client-progress-stack"><WorkoutRegularityCard clientId={mine.data.id} /><ClientTrainingSummaryCard clientId={mine.data.id} />
-      <ClientProgressForm entry={null} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, null)} />
+      <section className="client-progress-measurement">
+        <div className="client-progress-measurement-head"><div><p className="eyebrow">ЗАМЕРЫ ТЕЛА</p><h2>{entries.data[0] ? 'Последний замер' : 'Замеров пока нет'}</h2></div><button type="button" className="secondary" aria-expanded={measurementFormOpen} onClick={() => setMeasurementFormOpen((open) => !open)}>{measurementFormOpen ? 'Скрыть' : 'Добавить замер'}</button></div>
+        {entries.data[0] && <div className="client-progress-measurement-latest"><strong>{progressSummary(entries.data[0], metrics.data ?? []).join(' · ') || 'Показатели не указаны'}</strong><span>{formatLocalDate(entries.data[0].recordedOn)}</span></div>}
+        {!entries.data[0] && <p>Сохрани вес или объёмы — здесь появится последняя точка.</p>}
+        {measurementFormOpen && <ClientProgressForm entry={null} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, null)} onCancel={() => setMeasurementFormOpen(false)} />}
+      </section>
       {entries.data.length > 0 ? <><ProgressChart entries={entries.data} metric="weightKg" label="Вес" unit="кг" windowEnd={null} onWindowChange={() => undefined} /><section className="client-progress-history"><div className="client-progress-section-head"><p className="eyebrow">ДИНАМИКА</p><h2>История замеров</h2></div><div className="cards">{entries.data.map((entry) => editing?.id === entry.id
         ? <article className="card editing" key={entry.id}><ClientProgressForm entry={entry} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, entry)} onCancel={() => setEditing(null)} /></article>
         : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{progressSummary(entry, metrics.data ?? []).join(' · ') || 'Показатели не указаны'}</p>{entry.notes && <p className="muted">{entry.notes}</p>}</div><div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" disabled={remove.isPending} onClick={() => void confirmRemove(entry)}>Удалить</button></div></article>)}</div></section></> : <p className="client-section-empty">Замеров пока нет</p>}

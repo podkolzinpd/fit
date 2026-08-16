@@ -359,6 +359,16 @@ p { margin: 6px 0 }
 .today-assignment-self { margin: 0; padding: 13px 14px; border: 1px solid var(--accent-border); border-radius: 14px; background: var(--accent-soft); color: var(--accent-strong); font-weight: var(--weight-medium) }
 .client-onboarding { display:grid; gap:18px; max-width:640px; margin:0 auto; }.client-onboarding-hero { padding:8px 0 2px; }.client-onboarding-hero .eyebrow { margin:0 0 8px; }.client-onboarding-hero h2 { margin:0; font-size:clamp(30px, 8.2vw, 36px); line-height:1.08; letter-spacing:var(--tracking-tight); }.client-onboarding-hero > p:last-child { max-width:350px; margin:10px 0 0; color:var(--muted); font-size:16px; line-height:1.42; }
 .client-workouts-page .page-header, .client-progress-page .page-header { margin-bottom:18px; }.client-workouts-stack, .client-progress-stack { display:grid; gap:20px; }.client-workout-section, .client-progress-form, .client-progress-history { display:grid; gap:11px; }.client-workout-section-head, .client-progress-section-head { display:grid; gap:3px; }.client-workout-section-head .eyebrow, .client-progress-section-head .eyebrow { margin:0; }.client-workout-section-head h2, .client-progress-section-head h2 { margin:0; font-size:23px; letter-spacing:var(--tracking-tight); }.client-workout-cards { gap:9px; }.client-workout-card { min-height:78px; padding:14px 15px; border-radius:17px; box-shadow:var(--shadow-card); }.client-workout-card strong { font-size:16px; }.client-workout-card p { margin:4px 0 0; }.client-section-empty { margin:0; padding:16px; border:1px dashed var(--border); border-radius:16px; color:var(--muted); background:var(--surface-raised); font-size:14px; }.client-progress-form, .client-progress-history { padding:18px; border:1px solid var(--border); border-radius:20px; background:var(--surface-raised); box-shadow:var(--shadow-card); }.client-progress-form .compact { padding:0; border:0; background:transparent; }.client-progress-form .measure-grid input { background:var(--surface-sunken); }.client-progress-form .compact button { min-height:50px; border-radius:16px; font-size:16px; font-weight:800; }.client-progress-history .cards { gap:8px; }.client-progress-history .card { border-radius:14px; box-shadow:none; }
+.client-progress-measurement { display:grid; gap:13px; padding:17px; border:1px solid var(--border); border-radius:20px; background:var(--surface-raised); box-shadow:var(--shadow-card); }
+.client-progress-measurement-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.client-progress-measurement-head > div { display:grid; gap:3px; min-width:0; }
+.client-progress-measurement-head .eyebrow { margin:0; }
+.client-progress-measurement-head h2 { margin:0; font-size:var(--text-section); }
+.client-progress-measurement-head .secondary { min-height:40px; padding:8px 11px; border-radius:12px; font-size:12px; white-space:nowrap; }
+.client-progress-measurement-latest { display:grid; gap:3px; padding:12px 13px; border-radius:13px; background:var(--surface-sunken); }
+.client-progress-measurement-latest strong { overflow:hidden; font-size:15px; line-height:1.35; text-overflow:ellipsis; white-space:nowrap; }
+.client-progress-measurement-latest span, .client-progress-measurement > p { margin:0; color:var(--muted); font-size:12px; }
+.client-progress-measurement .client-progress-form { padding:15px 0 0; border:0; border-top:1px solid var(--border); border-radius:0; box-shadow:none; }
 /* Карточка спортсмена использует ту же типографику и компактную сетку, что
    клиентские корневые экраны. Имя занимает отдельную строку: редактирование и
    кнопка назад больше не сжимают длинный заголовок на 390 px. */
@@ -849,11 +859,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-home-section-head > a { flex:0 0 auto; color:var(--accent-strong); font-size:12px; font-weight:700; text-decoration:none; }
 .client-home-week { display:grid; gap:10px; }
 .client-home-week > p { margin:0; color:var(--voice-copy); font-size:13px; line-height:1.35; }
-.client-home-week-track { height:6px; overflow:hidden; border-radius:99px; background:var(--surface-sunken); }
-.client-home-week-track span { display:block; height:100%; border-radius:inherit; background:var(--accent); }
-.client-home-week-stats { display:flex; gap:20px; color:var(--voice-copy); font-size:12px; }
-.client-home-week-stats span { display:flex; align-items:baseline; gap:5px; }
-.client-home-week-stats strong { color:var(--voice-title); font-size:16px; font-variant-numeric:tabular-nums; }
+.client-home-week-alerts { color:var(--warning-fg); font-size:12px; line-height:1.35; }
 .client-home-highlight { display:grid; gap:7px; }
 .client-home-highlight > a { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; color:var(--voice-title); text-decoration:none; }
 .client-home-highlight > a > span { min-width:0; display:grid; gap:4px; }
@@ -1041,27 +1047,26 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .metrics-manager .metric:last-child { border-bottom: 0 }
 .theme-light .progress-form-card, .theme-light .progress-history, .theme-light .metrics-manager { background: #fffefc }
 .workout-regularity-card { margin: 0 -2px 18px; overflow: hidden; border: 1px solid var(--border); border-radius: 20px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
-.workout-regularity-header { padding: 17px 17px 14px }
+.workout-regularity-header { padding: 17px 17px 10px }
 .workout-regularity-header .eyebrow { margin: 0 0 2px }
 .workout-regularity-header h2 { margin: 0; font-size: var(--text-section) }
-.workout-regularity-periods { display: grid; border-top: 1px solid var(--border) }
-.workout-regularity-period { min-width: 0; padding: 15px 17px 16px; background: var(--surface-raised) }
-.workout-regularity-period + .workout-regularity-period { border-top: 1px solid var(--border) }
-.workout-regularity-period > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px }
-.workout-regularity-period h3 { margin: 0; font-size: 17px }
-.workout-regularity-period small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap }
-.workout-regularity-summary { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 13px }
-.workout-regularity-summary strong { color: var(--accent-strong); font-size: 23px; font-variant-numeric: tabular-nums; line-height: 1.1 }
-.workout-regularity-summary span { max-width: 165px; color: var(--muted); font-size: 12px; line-height: 1.3; text-align: right }
-.workout-regularity-track { height: 6px; margin: 12px 0; overflow: hidden; border-radius: 99px; background: var(--surface-sunken) }
-.workout-regularity-track span { display: block; height: 100%; border-radius: inherit; background: var(--accent) }
-.workout-regularity-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 12px }
-.workout-regularity-track + .workout-regularity-stats { margin-top: 0 }
-.workout-regularity-stats div { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 9px 10px; border-radius: 12px; background: var(--surface-sunken) }
-.workout-regularity-stats strong { font-size: 17px; font-variant-numeric: tabular-nums; order: 2 }
-.workout-regularity-stats span { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; order: 1 }
-.workout-regularity-period > p { margin: 11px 0 0; color: var(--muted); font-size: var(--text-xs); line-height: 1.35 }
-.workout-regularity-period > p.workout-regularity-empty-hint { color: var(--accent-strong); font-weight: var(--weight-semibold) }
+.workout-regularity-content { display: grid; gap: 4px }
+.workout-regularity-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin: 0 17px; padding: 4px; border-radius: 13px; background: var(--surface-sunken) }
+.workout-regularity-tabs button { min-height: 36px; padding: 7px 12px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); box-shadow: none; font-size: 13px; font-weight: var(--weight-semibold) }
+.workout-regularity-tabs button[aria-selected="true"] { background: var(--surface-raised); color: var(--fg-strong); box-shadow: var(--shadow-card) }
+.workout-regularity-period { min-width: 0; padding: 12px 17px 17px; background: var(--surface-raised) }
+.workout-regularity-period > small { display: block; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums }
+.workout-regularity-summary { display: grid; gap: 3px; margin-top: 10px }
+.workout-regularity-summary strong { color: var(--accent-strong); font-size: 25px; font-variant-numeric: tabular-nums; line-height: 1.1 }
+.workout-regularity-summary span { color: var(--muted); font-size: 12px; line-height: 1.3 }
+.workout-regularity-breakdown { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px }
+.workout-regularity-breakdown span { padding: 8px 10px; border-radius: 11px; background: var(--surface-sunken); color: var(--muted); font-size: 12px }
+.workout-regularity-breakdown strong { color: var(--fg-strong); font-size: 15px; font-variant-numeric: tabular-nums }
+.workout-regularity-period > p { margin: 12px 0 0; font-size: var(--text-xs); line-height: 1.35 }
+.workout-regularity-plan { padding-top: 11px; border-top: 1px solid var(--border); color: var(--muted) }
+.workout-regularity-plan strong { color: var(--fg-strong); font-variant-numeric: tabular-nums }
+.workout-regularity-alerts { color: var(--warning-fg) }
+.workout-regularity-empty-hint { margin: 0; padding: 16px 17px; color: var(--muted); font-size: var(--text-xs) }
 .client-progress-page .workout-regularity-card { margin: 0 }
 .ai-progress-card { margin: 0 -2px 24px; overflow: hidden; border: 1px solid var(--ai-card-border); border-radius: 20px; background: var(--ai-card-background); box-shadow: var(--ai-card-shadow) }
 .ai-progress-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 17px 17px 12px }

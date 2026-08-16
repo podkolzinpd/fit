@@ -83,6 +83,7 @@ test('client and trainer receive progress and workout changes without reload', a
     await trainer.getByRole('button', { name: 'Показать' }).click()
     await client.goto('/me/progress')
     await expect(client.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
+    await client.getByRole('button', { name: 'Добавить замер' }).click()
     await trainer.waitForTimeout(500)
 
     await client.getByLabel('Дата').fill(dateOffset(-1))
@@ -177,7 +178,7 @@ test('client and trainer receive progress and workout changes without reload', a
     await expect(trainerRegularity).toBeVisible()
     await expect(clientRegularity).toBeVisible()
     expect(await clientRegularity.textContent()).toBe(await trainerRegularity.textContent())
-    await expect(clientRegularity.getByText('100%').first()).toBeVisible()
+    await expect(clientRegularity.getByText('Полностью завершено').first()).toBeVisible()
   } finally {
     // Не маскируем исходное падение шага вторичной ошибкой teardown, если
     // Playwright уже закрыл один из контекстов после общего timeout.
