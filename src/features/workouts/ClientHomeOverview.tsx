@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import type { ClientGoal, TrainerReaction, Workout, WorkoutRegularity } from '../../shared/domain'
+import type { ClientGoal, TrainerReaction, Workout, WorkoutPersonalRecord, WorkoutRegularity } from '../../shared/domain'
 import { currentStage } from '../../shared/goal-rules'
 import { formatLocalDate, type LocalDate } from '../../shared/local-date'
+import { exerciseProgressValueLabel } from './ExerciseProgressSummary'
 
 type NextWorkout = { kind: 'active' | 'assigned'; workout: Workout }
 type HomeHighlight =
   | { kind: 'response'; workout: Workout }
-  | { kind: 'record'; workout: Workout }
+  | { kind: 'record'; workout: Workout; record: WorkoutPersonalRecord }
   | { kind: 'goal'; goal: ClientGoal }
 
 const reactionLabels: Record<TrainerReaction, string> = {
@@ -32,12 +33,20 @@ export function clientHomeNextWorkout(workouts: readonly Workout[], today: Local
   return assigned ? { kind: 'assigned', workout: assigned } : null
 }
 
-export function clientHomeHighlight(workouts: readonly Workout[], goal: ClientGoal | null | undefined): HomeHighlight | null {
-  const latest = workouts
+export function clientHomeLatestDoneWorkout(workouts: readonly Workout[]): Workout | undefined {
+  return workouts
     .filter((workout) => workout.status === 'done')
     .sort((a, b) => workoutOrder(b).localeCompare(workoutOrder(a)))[0]
+}
+
+export function clientHomeHighlight(
+  workouts: readonly Workout[],
+  goal: ClientGoal | null | undefined,
+  personalRecords: readonly WorkoutPersonalRecord[] = [],
+): HomeHighlight | null {
+  const latest = clientHomeLatestDoneWorkout(workouts)
   if (latest?.trainerReview?.trim() || latest?.trainerReaction) return { kind: 'response', workout: latest }
-  if (latest?.hasPr) return { kind: 'record', workout: latest }
+  if (latest?.hasPr && personalRecords[0]) return { kind: 'record', workout: latest, record: personalRecords[0] }
   return goal ? { kind: 'goal', goal } : null
 }
 
@@ -78,7 +87,7 @@ function WeekCard({ week, loading }: { week: WorkoutRegularity | undefined; load
       ? `План тренера: 0 из ${week.plannedCount} выполнено`
       : 'Здесь появится первая завершённая тренировка'
   const alerts = [
-    week?.partialCount ? `Частично выполнено: ${week.partialCount}` : null,
+    week?.partialCount ? `Часть плана выполнена не полностью: ${week.partialCount}` : null,
     week?.skippedCount ? `Пропущено: ${week.skippedCount}` : null,
   ].filter(Boolean).join(' · ')
   return <section className="client-home-week" aria-labelledby="client-home-week-title">
@@ -104,7 +113,17 @@ function HighlightCard({ highlight, today }: { highlight: HomeHighlight; today: 
   }
   const response = highlight.kind === 'response'
   const reaction = highlight.workout.trainerReaction ? reactionLabels[highlight.workout.trainerReaction] : ''
-  return <section className="client-home-highlight" aria-labelledby="client-home-highlight-title"><p className="eyebrow">{response ? 'ОТ ТРЕНЕРА' : 'ДОСТИЖЕНИЕ'}</p><Link to={`/workouts/${highlight.workout.id}`} state={{ returnTo: '/me' }}><span><h2 id="client-home-highlight-title">{response ? `${reaction} Новый ответ` : 'Новый личный рекорд'}</h2><small>{response ? highlight.workout.trainerReview?.trim() || 'Тренер отметил вашу тренировку' : `${workoutTiming(highlight.workout, today)} · ${exerciseSummary(highlight.workout)}`}</small></span><b>›</b></Link></section>
+  const record = highlight.kind === 'record' ? highlight.record : null
+  const recordValue = record
+    ? record.inputKind === 'strength' && record.weightKg !== null
+      ? `${exerciseProgressValueLabel(record.weightKg, 'strength')}${record.reps === null ? '' : ` × ${record.reps} повт.`}`
+      : exerciseProgressValueLabel(record.primaryValue, record.inputKind)
+    : ''
+  const recordType = record?.metric === 'weight' ? 'рекорд рабочего веса' : record?.metric === 'weight_reps' ? 'лучший подход' : 'лучший результат'
+  const link = response
+    ? `/workouts/${highlight.workout.id}`
+    : `/workouts/${highlight.workout.id}/history/${encodeURIComponent(record!.exerciseRef)}`
+  return <section className="client-home-highlight" aria-labelledby="client-home-highlight-title"><p className="eyebrow">{response ? 'ОТ ТРЕНЕРА' : 'ДОСТИЖЕНИЕ'}</p><Link to={link} state={{ returnTo: '/me' }}><span><h2 id="client-home-highlight-title">{response ? `${reaction} Новый ответ` : `${record!.exerciseName}: новый рекорд`}</h2><small>{response ? highlight.workout.trainerReview?.trim() || 'Тренер отметил вашу тренировку' : `${recordValue} · ${recordType}`}</small></span><b>›</b></Link></section>
 }
 
 interface ClientHomeOverviewProps {
@@ -112,6 +131,7 @@ interface ClientHomeOverviewProps {
   workouts: Workout[] | undefined
   regularity: WorkoutRegularity[] | undefined
   goal: ClientGoal | null | undefined
+  personalRecords?: WorkoutPersonalRecord[]
   workoutsLoading: boolean
   regularityLoading: boolean
   error: Error | null
@@ -120,9 +140,9 @@ interface ClientHomeOverviewProps {
   wearable?: ReactNode
 }
 
-export function ClientHomeOverview({ today, workouts, regularity, goal, workoutsLoading, regularityLoading, error, onRetry, selfTraining, wearable }: ClientHomeOverviewProps) {
+export function ClientHomeOverview({ today, workouts, regularity, goal, personalRecords = [], workoutsLoading, regularityLoading, error, onRetry, selfTraining, wearable }: ClientHomeOverviewProps) {
   const next = workouts ? clientHomeNextWorkout(workouts, today) : null
-  const highlight = workouts ? clientHomeHighlight(workouts, goal) : goal ? { kind: 'goal' as const, goal } : null
+  const highlight = workouts ? clientHomeHighlight(workouts, goal, personalRecords) : goal ? { kind: 'goal' as const, goal } : null
   const week = regularity?.find((period) => period.period === 'week')
   return <div className="client-home-overview">
     {selfTraining}

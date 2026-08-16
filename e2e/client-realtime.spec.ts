@@ -177,8 +177,9 @@ test('client and trainer receive progress and workout changes without reload', a
     const clientRegularity = client.getByLabel('Регулярность тренировок')
     await expect(trainerRegularity).toBeVisible()
     await expect(clientRegularity).toBeVisible()
+    await expect(trainerRegularity.getByText('Тренировок состоялось').first()).toBeVisible()
+    await expect(clientRegularity.getByText('Тренировок состоялось').first()).toBeVisible()
     expect(await clientRegularity.textContent()).toBe(await trainerRegularity.textContent())
-    await expect(clientRegularity.getByText('Полностью завершено').first()).toBeVisible()
   } finally {
     // Не маскируем исходное падение шага вторичной ошибкой teardown, если
     // Playwright уже закрыл один из контекстов после общего timeout.

@@ -18,7 +18,7 @@ function workoutCountLabel(count: number): string {
 
 function periodAlerts(item: WorkoutRegularity): string[] {
   return [
-    item.partialCount > 0 ? `Частично выполнено: ${item.partialCount}` : null,
+    item.partialCount > 0 ? `Часть плана выполнена не полностью: ${item.partialCount}` : null,
     item.skippedCount > 0 ? `Пропущено: ${item.skippedCount}` : null,
   ].filter((value): value is string => value !== null)
 }
@@ -51,14 +51,14 @@ export function WorkoutRegularityContent({ periods }: { periods: WorkoutRegulari
       <small>{formatLocalDateShort(item.periodStart)}–{formatLocalDateShort(item.periodEnd)}</small>
       <div className="workout-regularity-summary">
         <strong>{hasWorkouts ? `${item.completedCount} ${workoutCountLabel(item.completedCount)}` : 'Пока без тренировок'}</strong>
-        <span>{hasWorkouts ? 'Полностью завершено' : 'Здесь появится первая завершённая тренировка'}</span>
+        <span>{hasWorkouts ? 'Тренировок состоялось' : 'Здесь появится первая завершённая тренировка'}</span>
       </div>
       {hasWorkouts && <div className="workout-regularity-breakdown" aria-label="Состав завершённых тренировок">
         {item.completedPlannedCount > 0 && <span><strong>{item.completedPlannedCount}</strong> по плану</span>}
         {independent > 0 && <span><strong>{independent}</strong> самостоятельно</span>}
       </div>}
       <p className="workout-regularity-plan">{hasPlan
-        ? <>План тренера: <strong>{item.completedPlannedCount} из {item.plannedCount}</strong> выполнено</>
+        ? <>По плану тренера: <strong>{item.completedPlannedCount} из {item.plannedCount}</strong> тренировок состоялось</>
         : 'План тренера на этот период не назначен'}</p>
       {alerts.length > 0 && <p className="workout-regularity-alerts">{alerts.join(' · ')}</p>}
     </article>

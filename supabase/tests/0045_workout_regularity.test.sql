@@ -65,28 +65,28 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', '45000000-0000-4000-8000-000000000001', true);
 select results_eq(
   $$select * from public.get_workout_regularity('45000000-0000-4000-8000-000000000005', '2026-01-04 10:30+00') where period = 'week'$$,
-  $$values ('week'::text, '2026-01-05'::date, '2026-01-11'::date, 4, 2, 1, 1, 0, 25)$$,
-  'root trainer gets the client-timezone week and confirmed-only fact'
+  $$values ('week'::text, '2026-01-05'::date, '2026-01-11'::date, 4, 4, 3, 1, 0, 75)$$,
+  'root trainer gets the client-timezone week and counts every done workout'
 );
 select results_eq(
   $$select * from public.get_workout_regularity('45000000-0000-4000-8000-000000000005', '2026-01-04 10:30+00') where period = 'month'$$,
-  $$values ('month'::text, '2026-01-01'::date, '2026-01-31'::date, 7, 2, 1, 1, 2, 14)$$,
-  'month separates complete, partial and derived skipped plans'
+  $$values ('month'::text, '2026-01-01'::date, '2026-01-31'::date, 7, 4, 3, 1, 2, 43)$$,
+  'month counts attendance and keeps partial and skipped plan details separate'
 );
 
 select set_config('request.jwt.claim.sub', '45000000-0000-4000-8000-000000000003', true);
 select results_eq(
   $$select period, period_start, period_end, planned_count, completed_count, completion_percent from public.get_workout_regularity('45000000-0000-4000-8000-000000000005', '2026-01-04 10:30+00')$$,
   $$values
-    ('week'::text, '2026-01-05'::date, '2026-01-11'::date, 4, 2, 25),
-    ('month'::text, '2026-01-01'::date, '2026-01-31'::date, 7, 2, 14)$$,
+    ('week'::text, '2026-01-05'::date, '2026-01-11'::date, 4, 4, 75),
+    ('month'::text, '2026-01-01'::date, '2026-01-31'::date, 7, 4, 43)$$,
   'client gets the same week and month numbers as the trainer'
 );
 
 select set_config('request.jwt.claim.sub', '45000000-0000-4000-8000-000000000002', true);
 select results_eq(
   $$select period, completed_planned_count, partial_count, skipped_count from public.get_workout_regularity('45000000-0000-4000-8000-000000000005', '2026-01-04 10:30+00')$$,
-  $$values ('week'::text, 1, 1, 0), ('month'::text, 1, 1, 2)$$,
+  $$values ('week'::text, 3, 1, 0), ('month'::text, 3, 1, 2)$$,
   'connected trainer reads the shared aggregate'
 );
 

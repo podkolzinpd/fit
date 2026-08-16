@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
-import type { ClientGoal, Workout, WorkoutRegularity } from '../../shared/domain'
+import type { ClientGoal, Workout, WorkoutPersonalRecord, WorkoutRegularity } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { ClientHomeOverview, clientHomeHighlight, clientHomeNextWorkout } from './ClientHomeOverview'
 
@@ -23,7 +23,12 @@ const goal: ClientGoal = {
 const week: WorkoutRegularity = {
   period: 'week', periodStart: localDate('2026-08-10'), periodEnd: today,
   plannedCount: 1, completedCount: 3, completedPlannedCount: 1,
-  partialCount: 0, skippedCount: 0, completionPercent: 100,
+  partialCount: 2, skippedCount: 0, completionPercent: 100,
+}
+
+const squatRecord: WorkoutPersonalRecord = {
+  exerciseRef: 'squat', exerciseName: 'Присед', inputKind: 'strength',
+  metric: 'weight_reps', primaryValue: 480, weightKg: 40, reps: 12,
 }
 
 describe('ClientHomeOverview', () => {
@@ -46,6 +51,14 @@ describe('ClientHomeOverview', () => {
     expect(clientHomeHighlight([latest], goal)?.kind).toBe('response')
   })
 
+  it('explains the exact personal record and opens exercise progress', () => {
+    const latest = workout({ id: 'latest', status: 'done', hasPr: true })
+    render(<MemoryRouter><ClientHomeOverview today={today} workouts={[latest]} regularity={[week]} goal={goal} personalRecords={[squatRecord]} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Своя тренировка</button>} /></MemoryRouter>)
+    expect(screen.getByRole('heading', { name: 'Присед: новый рекорд' })).toBeVisible()
+    expect(screen.getByText('40 кг × 12 повт. · лучший подход')).toBeVisible()
+    expect(screen.getByRole('link', { name: /Присед: новый рекорд/ })).toHaveAttribute('href', '/workouts/latest/history/squat')
+  })
+
   it('renders the next action, week progress and one secondary highlight without dashes', () => {
     const assigned = workout({ id: 'assigned', trainerId: 'trainer-1', startTime: '18:30' })
     render(<MemoryRouter><ClientHomeOverview today={today} workouts={[assigned]} regularity={[week]} goal={goal} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Своя тренировка</button>} /></MemoryRouter>)
@@ -53,6 +66,7 @@ describe('ClientHomeOverview', () => {
     expect(screen.getByRole('link', { name: 'Открыть план' })).toBeVisible()
     expect(screen.getByRole('heading', { name: '3 тренировки' })).toBeVisible()
     expect(screen.getByText('1 по плану · 2 самостоятельно')).toBeVisible()
+    expect(screen.getByText('Часть плана выполнена не полностью: 2')).toBeVisible()
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Вернуться к бегу' })).toBeVisible()
     expect(screen.queryByText('—')).not.toBeInTheDocument()
