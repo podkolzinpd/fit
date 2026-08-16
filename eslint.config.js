@@ -10,7 +10,7 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        projectService: { allowDefaultProject: ['e2e/*.ts'] },
+        projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
     },
