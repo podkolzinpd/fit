@@ -4,8 +4,8 @@
 > После каждого подтверждённого merge заменяйте сведения ниже, не добавляйте
 > хронологию: полная история уже хранится в Git и Tracker.
 
-Обновлено: 2026-08-16
-Проверенный `main`: `3215dba` (`YAFIT-297: настроить UI/UX engineering rails (#396)`)
+Обновлено: 2026-08-17
+Проверенный `main`: `fdfec9b` (`YAFIT-299: переналожить updated_by-контракт (PR #363+#365) поверх main (#399)`)
 
 ## Активная работа
 
@@ -14,6 +14,17 @@
 
 ## Последняя проверенная продуктовая точка
 
+- После `#399` (`YAFIT-299`) `analytics.client_overview.last_client_activity_at`
+  снова считается по `updated_by` (кто реально последним редактировал запись), а
+  не по `created_by`; `workouts`/`workout_exercises`/`workout_sets`/`client_progress`
+  имеют колонку `updated_by`, live-workout и progress RPC явно прокидывают
+  `p_actor_id`. Это переналожение PR #363/#365 поверх main после коллатерального
+  отката YAFIT-279 (независимый параллельный PR сломал прод, откатили разом все
+  недавние PR). Пользовательского UI/UX это не меняет — только серверный контракт
+  и аналитику.
+- После `#398` Progress клиента собран вокруг goal-aware LLM-сводки: тренировочная
+  сводка учитывает активную цель клиента, `TrainingSummaryCard` показывает статус
+  цели и качество данных сводки.
 - После `#396` UI-задачи начинаются с существующей дизайн-системы Fit и
   проверяются на Client 390/430 px и Trainer 1440 px. Код интерфейса и
   продуктовая логика в этой служебной задаче не менялись.
@@ -53,8 +64,6 @@
   обрыв сети или reload.
 - После `#384` календарные границы Today, расписания, целей и прогресса
   считаются по IANA timezone профиля; legacy fallback — `Europe/Moscow`.
-- После `#383` открытое пространство клиента синхронизирует без reload
-  приглашения, цели, этапы, прогресс, назначения, live-статус и комментарии.
 - Тренер и клиент используют общий workout domain: клиент создаёт и сохраняет
   собственные тренировки, тренер видит завершённые client-authored записи и
   копирует их в новый план; назначения и факт видимы обеим сторонам по ролям.
@@ -69,6 +78,12 @@
 
 ## Последние проверки
 
+- `#399` / `YAFIT-299`: merge `fdfec9b` подтверждён; GitHub CI app/database/e2e
+  и Vercel прошли. Локально `npm run db:reset` + `db:test` — 503/503 SQL/RLS,
+  `db:types:check` зелёный, `npm run check` (lint/typecheck/build) чистый.
+  LLM/SpeechKit не менялись.
+- `#398` / `YAFIT-298`: merge `05fa5be` подтверждён; обязательные проверки
+  GitHub и Vercel прошли.
 - `#396` / `YAFIT-297`: merge `3215dba` подтверждён; GitHub CI app/database/e2e
   и Vercel прошли. Локально прошли полный `npm run check` и 3 визуальных профиля.
 - `#395` / `YAFIT-296`: merge `e265506` подтверждён; обязательные GitHub и
@@ -77,21 +92,6 @@
   `npm run check` — 409 frontend и 10 API; reset БД, 490 SQL/RLS, Chromium и
   WebKit iPhone 390 px. После merge `b14926b` свежий iOS bundle собран,
   установлен и запущен на iPhone 17. LLM/SpeechKit не менялись.
-- `#390` / `YAFIT-288`: merge `293a3bb` подтверждён. Локально проверены
-  frontend/API, SQL/RLS, Chromium и WebKit iPhone 390 px; app/database и Vercel
-  в GitHub прошли, required e2e check перед merge оставался красным. Свежий iOS
-  bundle после этого merge ещё не подтверждён. LLM/SpeechKit не менялись.
-- `#391` / `YAFIT-294`: merge `357c336` подтверждён. Локально `npm run check` —
-  410 frontend и 10 API, WebKit iPhone 390 px. После merge свежий iOS bundle
-  собран, установлен и запущен на iPhone 17 Simulator; чистый вход проверен.
-  LLM/SpeechKit не менялись.
-- `#392` / `YAFIT-289`: merge `986c05c` подтверждён; обязательные проверки
-  GitHub и Vercel прошли.
-- `#393` / `YAFIT-295`: merge `8642807` подтверждён. Локально `npm run check` —
-  417 frontend и 10 API, целевые Chromium и WebKit iPhone 390 px; GitHub
-  app/database/e2e и Vercel прошли. После merge production web bundle
-  синхронизирован с iOS; свежая сборка установлена и запущена на iPhone 17
-  Simulator. LLM/SpeechKit не менялись.
 
 ## Ближайший roadmap
 
