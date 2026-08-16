@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { goalsRepository } from '../../data/repositories/goals.repository'
+import { progressRepository } from '../../data/repositories/progress.repository'
 import { workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, Workout, WorkoutDraft, WorkoutSetDraft } from '../../shared/domain'
 import { localDate, todayInTimeZone } from '../../shared/local-date'
@@ -24,7 +25,7 @@ import { WorkoutParseErrorNotice, workoutParseErrorKind, type WorkoutParseErrorK
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { WearableHealthCard } from '../wearables'
 import { isWearablesPilotEnabled } from '../../app/feature-flags'
-import { currentStage } from '../../shared/goal-rules'
+import { ClientHomeOverview, clientHomeNextWorkout } from './ClientHomeOverview'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
@@ -89,9 +90,10 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const mine = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine(), enabled: clientMode })
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false), enabled: !clientMode })
   const today = todayInTimeZone(actor?.timezone)
-  const todayWorkouts = useQuery({ queryKey: ['today-workouts', today, mine.data?.id], queryFn: () => workoutsRepository.list(today, today, clientMode ? mine.data!.id : undefined), enabled: !clientMode || Boolean(mine.data) })
+  const todayWorkouts = useQuery({ queryKey: ['today-workouts', today], queryFn: () => workoutsRepository.list(today, today), enabled: !clientMode })
   const workouts = useQuery({ queryKey: ['workouts', mine.data?.id], queryFn: () => workoutsRepository.list(undefined, undefined, clientMode ? mine.data!.id : undefined), enabled: !clientMode || Boolean(mine.data) })
   const goal = useQuery({ queryKey: ['client-goal', mine.data?.id], queryFn: () => goalsRepository.get(mine.data!.id), enabled: clientMode && Boolean(mine.data) })
+  const regularity = useQuery({ queryKey: ['workout-regularity', mine.data?.id], queryFn: () => progressRepository.regularity(mine.data!.id), enabled: clientMode && Boolean(mine.data) })
   const catalog = useExerciseCatalog()
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
@@ -446,15 +448,41 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const latestWorkout = workouts.data?.filter((workout) => workout.status === 'done').sort((a, b) => `${b.workoutDate}${b.startTime ?? ''}`.localeCompare(`${a.workoutDate}${a.startTime ?? ''}`))[0]
   const contextWorkout = currentWorkout ?? plannedWorkouts[0] ?? latestWorkout
   const contextTitle = currentWorkout ? 'Текущая тренировка' : plannedWorkouts[0] ? 'Ближайшая тренировка' : latestWorkout ? 'Последняя тренировка' : null
-  const contextCard = contextWorkout && contextTitle && <section className="today-context"><p>{contextTitle}</p><Link to={currentWorkout ? `/workouts/${contextWorkout.id}/live` : `/workouts/${contextWorkout.id}`}><span><strong>{clientMode ? 'Ваша тренировка' : contextWorkout.clientName}</strong><small>{contextWorkout.workoutDate === today ? `Сегодня, ${workoutTime(contextWorkout)}` : contextWorkout.workoutDate}</small></span><span><strong>{contextWorkout.exercises.length ? contextWorkout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Тренировка'}</strong><small>{contextWorkout.exercises.length} упражнений</small></span><b>›</b></Link></section>
-  const activeGoalStage = goal.data ? currentStage(goal.data, today) : null
-  const goalCard = clientMode && goal.data && <section className="today-context today-goal-context"><p>ВАШ ФОКУС</p><Link to="/me/progress"><span><strong>{goal.data.title}</strong><small>{activeGoalStage ? `Текущий этап: ${activeGoalStage.title}` : 'Этап пока не задан'}</small></span><b>›</b></Link></section>
+  const contextCard = !clientMode && contextWorkout && contextTitle && <section className="today-context"><p>{contextTitle}</p><Link to={currentWorkout ? `/workouts/${contextWorkout.id}/live` : `/workouts/${contextWorkout.id}`}><span><strong>{contextWorkout.clientName}</strong><small>{contextWorkout.workoutDate === today ? `Сегодня, ${workoutTime(contextWorkout)}` : contextWorkout.workoutDate}</small></span><span><strong>{contextWorkout.exercises.length ? contextWorkout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Тренировка'}</strong><small>{contextWorkout.exercises.length} упражнений</small></span><b>›</b></Link></section>
+  const clientNextWorkout = clientMode && workouts.data ? clientHomeNextWorkout(workouts.data, today) : null
+  const clientPrimaryPending = clientMode && (mine.isLoading || workouts.isLoading || Boolean(clientNextWorkout))
+  const clientHomeError = clientMode ? mine.error ?? workouts.error ?? regularity.error ?? goal.error : null
   const greetingName = clientMode ? mine.data?.fullName || actor?.firstName || 'спортсмен' : actor?.firstName || 'тренер'
   const greeting = `${new Date().getHours() < 12 ? 'Доброе утро' : new Date().getHours() < 18 ? 'Добрый день' : 'Добрый вечер'}, ${greetingName}`
 
   return <Page title="Сегодня" className="today-page today-start-page" action={<Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}>
     {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase}`}>
       <p className="today-greeting">{greeting} 👋</p>
+      {clientMode && !textComposerOpen ? <ClientHomeOverview
+        today={today}
+        workouts={workouts.data}
+        regularity={regularity.data}
+        goal={goal.data}
+        workoutsLoading={mine.isLoading || workouts.isLoading}
+        regularityLoading={mine.isLoading || regularity.isLoading}
+        error={clientHomeError}
+        onRetry={() => {
+          void mine.refetch()
+          if (mine.data?.id) {
+            void workouts.refetch()
+            void regularity.refetch()
+            void goal.refetch()
+          }
+        }}
+        selfTraining={<section className={`client-home-self-training ${clientPrimaryPending ? 'compact' : 'primary'}`}>
+          {clientPrimaryPending && <div><p className="eyebrow">СВОЯ ТРЕНИРОВКА</p><h2>Потренироваться самостоятельно</h2></div>}
+          <VoiceInputButton variant={clientPrimaryPending ? 'inline' : 'hero'} source="today_workout" idleLabel="Надиктовать тренировку" onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }} onPhaseChange={setVoicePhase} onTranscript={handleHeroTranscript} />
+          {voicePhase === 'idle' && <button type="button" className="link today-text-toggle" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}>Ввести текстом</button>}
+          {restoredDraftScreen && voicePhase === 'idle' && <section className="today-resume"><span><strong>Есть незавершённая тренировка</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
+          {voiceRefinement?.state === 'error' && <div className="voice-action-error" role="alert"><strong>{voiceRefinement.message}</strong><button type="button" className="link" onClick={() => setTextComposerOpen(true)}>Редактировать текст</button></div>}
+        </section>}
+        wearable={actor && isWearablesPilotEnabled(actor.userId) ? <WearableHealthCard /> : undefined}
+      /> : <>
       {!textComposerOpen && <VoiceInputButton variant="hero" source="today_workout" idleLabel="Надиктовать тренировку" onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }} onPhaseChange={setVoicePhase} onTranscript={handleHeroTranscript} />}
       {!textComposerOpen && voicePhase === 'idle' && <button type="button" className="link today-text-toggle" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}>Ввести текстом</button>}
       {restoredDraftScreen && !textComposerOpen && voicePhase === 'idle' && <section className="today-resume"><span><strong>Есть незавершённая тренировка</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
@@ -475,8 +503,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </WorkoutComposer></div>}
       {voiceRefinement?.state === 'error' && !textComposerOpen && <div className="voice-action-error" role="alert"><strong>{voiceRefinement.message}</strong><button type="button" className="link" onClick={() => setTextComposerOpen(true)}>Редактировать текст</button></div>}
       {voicePhase === 'idle' && !restoredDraftScreen && contextCard}
-      {voicePhase === 'idle' && !restoredDraftScreen && goalCard}
-      {clientMode && actor && isWearablesPilotEnabled(actor.userId) && <WearableHealthCard />}
+      </>}
     </section> : <section className="today-review">
       <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><div><h1>{screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'}</h1>{screen === 'review' && items.length > 0 && <p className="today-review-summary">Распознано: {items.length}</p>}</div></div>
       {screen === 'review' && <>
@@ -502,7 +529,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         <button type="button" className="wide" disabled={!items.length || !clientId || save.isPending} onClick={() => save.mutate(recordMode)}>{recordMode === 'planned' ? 'Запланировать' : 'Записать как завершённую'}</button>
       </section></section>}
     </section>}
-    {(catalog.error ?? todayWorkouts.error ?? mine.error) && <p className="error">{(catalog.error ?? todayWorkouts.error ?? mine.error)?.message}</p>}
+    {(catalog.error ?? (!clientMode ? todayWorkouts.error : null)) && <p className="error">{(catalog.error ?? (!clientMode ? todayWorkouts.error : null))?.message}</p>}
     {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} onPick={(exercise) => pickExercises([exercise])} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
   </Page>
 }
