@@ -23,11 +23,14 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   // задерживается фоновым соединением, хотя экран уже доступен пользователю.
   await page.goto(`/clients/${demoClientId}/goal`, { waitUntil: 'domcontentloaded' })
   const goalInput = page.getByLabel('Цель')
+  const stagesHeading = page.getByRole('heading', { name: 'Этапы' })
+  await expect(goalInput.or(stagesHeading)).toBeVisible()
   if (await goalInput.count()) {
     await goalInput.fill('Вернуться к бегу')
     await page.getByLabel('Дата достижения').fill(targetDate)
     await page.getByRole('button', { name: 'Создать цель' }).click()
   }
+  await expect(stagesHeading).toBeVisible()
   if (!await page.getByText('Мягкий старт', { exact: true }).count()) {
     await page.getByRole('button', { name: '＋ Добавить' }).click()
     await page.getByLabel('Название этапа').fill('Мягкий старт')
@@ -35,7 +38,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
     await page.getByLabel('Конец').fill(targetDate)
     await page.getByRole('button', { name: 'Добавить этап' }).click()
   }
-  await expect(page.getByText('Мягкий старт', { exact: true })).toBeVisible()
+  await expect(page.getByText('Мягкий старт', { exact: true }).first()).toBeVisible()
 
   await page.goto(`/workouts/new?client=${demoClientId}`)
   await page.getByRole('button', { name: 'Завершённая' }).click()
