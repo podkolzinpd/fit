@@ -394,6 +394,8 @@ export interface ClientTrainingSummary {
   achievements: string[]
   consistency: string
   encouragement: string
+  goalAlignment?: string
+  nextSteps?: string[]
 }
 
 export interface TrainingSummaryMetrics {

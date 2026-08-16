@@ -7,6 +7,7 @@ import {
   SUMMARY_SYSTEM_PROMPT,
 } from "./summary-contract.ts"
 import { summaryQualityIssues } from "./summary-quality.ts"
+import { buildTrainingGoalContext } from "./summary-goal.ts"
 import {
   authorizeSummaryActor,
   parseYandexJson,
@@ -77,6 +78,8 @@ type ClientSummary = {
   achievements: string[]
   consistency: string
   encouragement: string
+  goalAlignment: string
+  nextSteps: string[]
 }
 
 type GeneratedSummary = {
@@ -124,7 +127,9 @@ function parseGeneratedSummary(value: string): GeneratedSummary {
     typeof client.headline !== "string" ||
     !isStringArray(client.achievements) ||
     typeof client.consistency !== "string" ||
-    typeof client.encouragement !== "string"
+    typeof client.encouragement !== "string" ||
+    typeof client.goalAlignment !== "string" ||
+    !isStringArray(client.nextSteps)
   ) {
     throw new HttpError(502, "yandex_cloud_invalid_summary")
   }
@@ -141,6 +146,8 @@ function parseGeneratedSummary(value: string): GeneratedSummary {
       achievements: client.achievements.map((item) => item.trim()),
       consistency: client.consistency.trim(),
       encouragement: client.encouragement.trim(),
+      goalAlignment: client.goalAlignment.trim(),
+      nextSteps: client.nextSteps.map((item) => item.trim()),
     },
   }
 }
@@ -252,12 +259,12 @@ type SessionMetrics = {
 }
 
 function rounded(value: number): number {
-  return Math.round(value * 100) / 100
+  return Math.round(value * 10) / 10
 }
 
 function percentChange(start?: number, end?: number): number | undefined {
   if (start === undefined || end === undefined || start <= 0) return undefined
-  return rounded(((end - start) / start) * 100)
+  return Math.round(((end - start) / start) * 100)
 }
 
 function isoWeekKey(date: string): string {
@@ -608,7 +615,7 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
 
       const { data: client, error: clientError } = await userClient
         .from("clients")
-        .select("id,trainer_id,auth_user_id")
+        .select("id,trainer_id,auth_user_id,goal")
         .eq("id", input.client_id)
         .is("archived_at", null)
         .maybeSingle()
@@ -648,6 +655,17 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
           return Response.json({ data: cached, cached: true })
         }
       }
+
+      const { data: structuredGoal, error: goalError } = await userClient
+        .rpc("get_client_goal", { p_client_id: input.client_id })
+      if (goalError) {
+        throw new HttpError(500, "client_goal_lookup_failed")
+      }
+      const goalContext = buildTrainingGoalContext(
+        client.goal,
+        structuredGoal,
+        input.period_end,
+      )
 
       const { data: workouts, error: workoutsError } = await userClient
         .from("workouts")
@@ -710,13 +728,16 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
         sets = data
       }
 
-      const trainingData = buildProgressData(
-        completedWorkouts,
-        exercises,
-        sets,
-        input.period_start,
-        input.period_end,
-      )
+      const trainingData = {
+        ...buildProgressData(
+          completedWorkouts,
+          exercises,
+          sets,
+          input.period_start,
+          input.period_end,
+        ),
+        goal: goalContext,
+      }
       const inputFingerprint = await fingerprint(trainingData)
 
       if (isTrainer && !input.force) {

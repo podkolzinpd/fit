@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useAuth } from '../../app/auth-context'
+import { goalsRepository } from '../../data/repositories/goals.repository'
 import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
 import type {
+  ClientGoal,
   ClientTrainingSummary,
   PublishedTrainingSummary,
   TrainingSummary,
@@ -11,6 +13,8 @@ import type {
 import { addDays, addMonths, daysBetween, formatLocalDate, normalizeTimeZone, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
+import { ClientProgressGoalSection } from './ClientProgressGoalSection'
+import { formatSummaryText, formatWorkoutsPerWeek } from './summary-format'
 
 type SummaryPeriod = '1m' | '3m' | '6m'
 
@@ -73,7 +77,7 @@ function Metrics({ metrics, audience }: {
 }) {
   return <div className="ai-progress-stats">
     <div><strong>{metrics.completedWorkouts}</strong><span>тренировки</span></div>
-    <div><strong>{metrics.workoutsPerWeek.toLocaleString('ru-RU')}</strong><span>в неделю</span></div>
+    <div><strong>{formatWorkoutsPerWeek(metrics.workoutsPerWeek)}</strong><span>в неделю</span></div>
     <div>
       <strong>{audience === 'trainer' ? (metrics.longestGapDays ?? '—') : metrics.activeWeeks}</strong>
       <span>{audience === 'trainer' ? 'макс. перерыв, дн.' : 'активных недель'}</span>
@@ -167,19 +171,19 @@ function TrainerSummaryContent({ summary, clientId, onChanged }: {
 }) {
   const [previewOpen, setPreviewOpen] = useState(!summary.published)
   return <>
-    <div className="ai-progress-hero"><span>Итог</span><strong>{summary.trainer.headline}</strong></div>
+    <div className="ai-progress-hero"><span>Итог</span><strong>{formatSummaryText(summary.trainer.headline)}</strong></div>
     <Metrics metrics={summary.metrics} audience="trainer" />
     <div className="ai-progress-section">
       <h3>Прогресс</h3>
-      <ul>{summary.trainer.progress.map((point) => <li key={point}>{point}</li>)}</ul>
+      <ul>{summary.trainer.progress.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
     </div>
     <div className="ai-progress-section ai-progress-regularity">
-      <div><span>Регулярность</span><strong>{summary.metrics.workoutsPerWeek.toLocaleString('ru-RU')} / нед.</strong></div>
-      <p>{summary.trainer.consistency}</p>
+      <div><span>Регулярность</span><strong>{formatWorkoutsPerWeek(summary.metrics.workoutsPerWeek)} / нед.</strong></div>
+      <p>{formatSummaryText(summary.trainer.consistency)}</p>
     </div>
     {summary.trainer.attention.length > 0 && <div className="ai-progress-attention">
       <span aria-hidden="true">!</span>
-      <div>{summary.trainer.attention.map((point) => <p key={point}>{point}</p>)}</div>
+      <div>{summary.trainer.attention.map((point) => <p key={point}>{formatSummaryText(point)}</p>)}</div>
     </div>}
     <div className="client-copy-toggle">
       <button type="button" className="link" onClick={() => setPreviewOpen((value) => !value)}>
@@ -220,6 +224,9 @@ function ClientCopyEditor({ summary, clientId, onChanged }: {
         .split('\n').map((item) => item.trim()).filter(Boolean).slice(0, 4),
       consistency: String(values.get('consistency') ?? '').trim(),
       encouragement: String(values.get('encouragement') ?? '').trim(),
+      goalAlignment: String(values.get('goalAlignment') ?? '').trim() || undefined,
+      nextSteps: String(values.get('nextSteps') ?? '')
+        .split('\n').map((item) => item.trim()).filter(Boolean).slice(0, 3),
     })
   }
 
@@ -228,10 +235,12 @@ function ClientCopyEditor({ summary, clientId, onChanged }: {
       <div><strong>Версия для клиента</strong><p>Внутренние замечания сюда не попадут</p></div>
       <span>{summary.published ? 'Клиент уже видит' : 'Клиент может запросить сам'}</span>
     </div>
-    <Field label="Главный результат"><textarea name="headline" defaultValue={summary.client.headline} required /></Field>
-    <Field label="Достижения — по одному в строке"><textarea name="achievements" defaultValue={summary.client.achievements.join('\n')} required /></Field>
-    <Field label="Регулярность"><textarea name="consistency" defaultValue={summary.client.consistency} required /></Field>
-    <Field label="Поддерживающий итог"><textarea name="encouragement" defaultValue={summary.client.encouragement} required /></Field>
+    <Field label="Главный результат"><textarea name="headline" defaultValue={formatSummaryText(summary.client.headline)} required /></Field>
+    <Field label="Достижения — по одному в строке"><textarea name="achievements" defaultValue={summary.client.achievements.map(formatSummaryText).join('\n')} required /></Field>
+    <Field label="Регулярность"><textarea name="consistency" defaultValue={formatSummaryText(summary.client.consistency)} required /></Field>
+    <Field label="Связь с целью"><textarea name="goalAlignment" defaultValue={summary.client.goalAlignment ? formatSummaryText(summary.client.goalAlignment) : ''} /></Field>
+    <Field label="Следующие ориентиры — по одному в строке"><textarea name="nextSteps" defaultValue={summary.client.nextSteps?.map(formatSummaryText).join('\n') ?? ''} /></Field>
+    <Field label="Поддерживающий итог"><textarea name="encouragement" defaultValue={formatSummaryText(summary.client.encouragement)} required /></Field>
     {(publish.error ?? unpublish.error) && <p className="error" role="alert">{(publish.error ?? unpublish.error)?.message}</p>}
     {saved && <p className="success">Версия опубликована для клиента</p>}
     <div className="actions">
@@ -249,12 +258,12 @@ function ClientCopyEditor({ summary, clientId, onChanged }: {
   </form>
 }
 
-export function ClientTrainingSummaryCard({ clientId }: { clientId: string }) {
+export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId: string; profileGoal?: string | null }) {
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
   const timeZone = normalizeTimeZone(actor?.timezone)
   const queryClient = useQueryClient()
-  const [period, setPeriod] = useState<SummaryPeriod>('6m')
+  const [period, setPeriod] = useState<SummaryPeriod>('1m')
   const query = useQuery({
     queryKey: ['training-summaries', 'client', clientId],
     queryFn: () => trainingSummariesRepository.listForClient(clientId),
@@ -263,6 +272,10 @@ export function ClientTrainingSummaryCard({ clientId }: { clientId: string }) {
     () => periodMatch(query.data ?? [], period, today),
     [query.data, period, today],
   )
+  const goal = useQuery({
+    queryKey: ['client-goal', clientId],
+    queryFn: () => goalsRepository.get(clientId),
+  })
   const generate = useMutation({
     mutationFn: () => {
       const range = periodRange(period, today)
@@ -277,13 +290,21 @@ export function ClientTrainingSummaryCard({ clientId }: { clientId: string }) {
     <SummaryHeader client />
     <PeriodTabs value={period} onChange={setPeriod} />
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
-      {summary ? <ClientSummaryContent summary={summary} timeZone={timeZone} /> : <div className="ai-progress-empty">
+      {summary ? <ClientSummaryContent
+        summary={summary}
+        goal={goal.data}
+        profileGoal={profileGoal}
+        today={today}
+        goalLoading={goal.isLoading}
+        goalError={goal.error}
+        onGoalRetry={() => void goal.refetch()}
+      /> : <div className="ai-progress-empty">
         <strong>За этот период сводка ещё не запрошена</strong>
         <p>Запроси анализ — Yandex Cloud соберёт прогресс по твоим тренировкам.</p>
       </div>}
     </AsyncView>
     <footer className="ai-progress-footer">
-      <span>{summary ? `Обновлено ${new Date(summary.generatedAt).toLocaleString('ru-RU', { timeZone })}` : 'Можно запросить первый анализ'}</span>
+      <span>{summary ? `Сводка сформирована ${new Date(summary.publishedAt).toLocaleDateString('ru-RU', { timeZone })}` : 'Можно запросить первый анализ'}</span>
       <button
         type="button"
         className="secondary"
@@ -297,21 +318,39 @@ export function ClientTrainingSummaryCard({ clientId }: { clientId: string }) {
   </section>
 }
 
-function ClientSummaryContent({ summary, timeZone }: { summary: PublishedTrainingSummary; timeZone: string }) {
+function ClientSummaryContent({ summary, goal, profileGoal, today, goalLoading, goalError, onGoalRetry }: {
+  summary: PublishedTrainingSummary
+  goal: ClientGoal | null | undefined
+  profileGoal?: string | null
+  today: LocalDate
+  goalLoading: boolean
+  goalError: Error | null
+  onGoalRetry: () => void
+}) {
   return <>
-    <div className="ai-progress-hero"><span>Главный результат</span><strong>{summary.summary.headline}</strong></div>
+    <div className="ai-progress-hero"><span>Главный результат</span><strong>{formatSummaryText(summary.summary.headline)}</strong></div>
     <Metrics metrics={summary.metrics} audience="client" />
     <div className="ai-progress-section">
       <h3>Что получилось</h3>
-      <ul>{summary.summary.achievements.map((point) => <li key={point}>{point}</li>)}</ul>
+      <ul>{summary.summary.achievements.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
     </div>
     <div className="ai-progress-section ai-progress-regularity">
-      <div><span>Твоя регулярность</span><strong>{summary.metrics.workoutsPerWeek.toLocaleString('ru-RU')} / нед.</strong></div>
-      <p>{summary.summary.consistency}</p>
+      <div><span>Твоя регулярность</span><strong>{formatWorkoutsPerWeek(summary.metrics.workoutsPerWeek)} / нед.</strong></div>
+      <p>{formatSummaryText(summary.summary.consistency)}</p>
     </div>
-    <div className="client-encouragement"><span aria-hidden="true">✦</span><p>{summary.summary.encouragement}</p></div>
-    <footer className="ai-progress-footer">
-      <span>Сводка сформирована {new Date(summary.publishedAt).toLocaleDateString('ru-RU', { timeZone })}</span>
-    </footer>
+    <ClientProgressGoalSection
+      goal={goal}
+      profileGoal={profileGoal}
+      today={today}
+      loading={goalLoading}
+      error={goalError}
+      alignment={summary.summary.goalAlignment}
+      onRetry={onGoalRetry}
+    />
+    {summary.summary.nextSteps && summary.summary.nextSteps.length > 0 && <div className="ai-progress-section ai-progress-next-steps">
+      <h3>Что делать дальше</h3>
+      <ul>{summary.summary.nextSteps.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
+    </div>}
+    <div className="client-encouragement"><span aria-hidden="true">✦</span><p>{formatSummaryText(summary.summary.encouragement)}</p></div>
   </>
 }

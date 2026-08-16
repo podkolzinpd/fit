@@ -87,7 +87,7 @@ function WeekCard({ week, loading }: { week: WorkoutRegularity | undefined; load
       ? `План тренера: 0 из ${week.plannedCount} выполнено`
       : 'Здесь появится первая завершённая тренировка'
   const alerts = [
-    week?.partialCount ? `Часть плана выполнена не полностью: ${week.partialCount}` : null,
+    week?.partialCount ? partialWorkoutLabel(week.partialCount) : null,
     week?.skippedCount ? `Пропущено: ${week.skippedCount}` : null,
   ].filter(Boolean).join(' · ')
   return <section className="client-home-week" aria-labelledby="client-home-week-title">
@@ -104,6 +104,10 @@ function workoutCountLabel(count: number): string {
   if (mod10 === 1) return 'тренировка'
   if (mod10 >= 2 && mod10 <= 4) return 'тренировки'
   return 'тренировок'
+}
+
+function partialWorkoutLabel(count: number): string {
+  return `В ${count} ${count === 1 ? 'тренировке' : 'тренировках'} часть упражнений не выполнена`
 }
 
 function HighlightCard({ highlight, today }: { highlight: HomeHighlight; today: LocalDate }) {

@@ -40,6 +40,8 @@ describe('summaryQualityIssues', () => {
         ],
         consistency: 'Выполнено 24 тренировки, перерыв — 21 день.',
         encouragement: 'Прогресс уже заметен в цифрах.',
+        goalAlignment: '',
+        nextSteps: ['Сравнить результат после следующих 4 тренировок.'],
       },
     }, trainingData)
 
@@ -59,6 +61,8 @@ describe('summaryQualityIssues', () => {
         achievements: ['В жиме лёжа вес вырос.', 'Бег изменился.'],
         consistency: 'Регулярность хорошая.',
         encouragement: 'Отличная работа, продолжай в том же духе!',
+        goalAlignment: '',
+        nextSteps: ['Увеличить вес.'],
       },
     }, trainingData)
 
@@ -68,6 +72,31 @@ describe('summaryQualityIssues', () => {
       expect.stringContaining('восклицательный'),
       expect.stringContaining('усталость'),
       expect.stringContaining('Регулярность нельзя'),
+    ]))
+  })
+
+  it('requires goal-aware copy and readable rounding', () => {
+    const issues = summaryQualityIssues({
+      trainer: {
+        headline: 'Вес вырос на 16,67%.',
+        progress: ['В жиме лёжа вес вырос на 16,67%.', 'В беге темп улучшился на 10%.'],
+        consistency: 'Средняя частота — 1,13 в неделю.',
+        attention: [],
+      },
+      client: {
+        headline: 'Вес вырос на 16,67%.',
+        achievements: ['В жиме лёжа вес вырос на 16,67%.', 'В беге темп улучшился на 10%.'],
+        consistency: 'Средняя частота — 1,13 в неделю.',
+        encouragement: 'Изменения уже видны.',
+        goalAlignment: '',
+        nextSteps: ['Сравнить ещё 4 тренировки.'],
+      },
+    }, { ...trainingData, goal: { title: 'Рост силы' } })
+
+    expect(issues).toEqual(expect.arrayContaining([
+      expect.stringContaining('целых процентов'),
+      expect.stringContaining('один знак'),
+      expect.stringContaining('goalAlignment'),
     ]))
   })
 })

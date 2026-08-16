@@ -66,7 +66,7 @@ describe('ClientHomeOverview', () => {
     expect(screen.getByRole('link', { name: 'Открыть план' })).toBeVisible()
     expect(screen.getByRole('heading', { name: '3 тренировки' })).toBeVisible()
     expect(screen.getByText('1 по плану · 2 самостоятельно')).toBeVisible()
-    expect(screen.getByText('Часть плана выполнена не полностью: 2')).toBeVisible()
+    expect(screen.getByText('В 2 тренировках часть упражнений не выполнена')).toBeVisible()
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Вернуться к бегу' })).toBeVisible()
     expect(screen.queryByText('—')).not.toBeInTheDocument()
