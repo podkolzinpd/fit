@@ -5,17 +5,24 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-16
-Проверенный `main`: `357c336` (`YAFIT-294: сделать мобильные Progress и редактор понятнее (#391)`)
+Проверенный `main`: `8642807` (`YAFIT-295: закрепить voice-first и упростить прогресс клиента (#393)`)
 
 ## Активная работа
 
-- Активная продуктовая задача: `YAFIT-289` — перестроить Client Home вокруг
-  следующего действия, прогресса недели и одного полезного акцента.
+- Активной продуктовой задачи нет: после `YAFIT-295` работа остановлена по
+  просьбе пользователя.
 - Следующая задача roadmap: `YAFIT-290` — actionable-список «Кому нужно
-  внимание» для тренера.
+  внимание» для тренера; не начинать без команды пользователя.
 
 ## Последняя проверенная продуктовая точка
 
+- После `#393` voice-first остаётся первым действием Client Home: микрофон и
+  ввод текстом сохранены над остальными блоками. Progress показывает главным
+  показателем все завершённые тренировки за неделю или месяц, а назначенный
+  план — отдельной расшифровкой. Форма замера свёрнута; LLM-сводка и периоды
+  1/3/6 месяцев не менялись.
+- После `#392` Client Home собран вокруг следующей тренировки, общего итога
+  завершённых тренировок недели и одного релевантного акцента.
 - После `#391` мобильный Progress использует понятное название «Персональные
   рекорды», регулярность явно объясняет план и факт без прочерков, а редактор
   больше не перекрывается серой нижней областью.
@@ -58,21 +65,6 @@
 
 ## Последние проверки
 
-- `#385` / `YAFIT-259`: GitHub CI app/database/e2e и Vercel прошли; локально
-  397 frontend, 10 API, Chromium и WebKit 390 px. После merge iOS bundle собран,
-  установлен и запущен на iPhone 17.
-- `#386` / `YAFIT-285`: GitHub CI app/database/e2e и Vercel прошли. Локально
-  reset БД, 440 SQL/RLS, 398 frontend, 10 API, WebKit 390 px и двухролевой
-  Chromium realtime. После merge `c370328` production web bundle синхронизирован
-  с iOS; свежий bundle собран, установлен и запущен на iPhone 17.
-- `#387` / `YAFIT-256`: GitHub CI app/database/e2e и Vercel прошли. Локально
-  reset БД, 465 SQL/RLS, 398 frontend, 10 API, WebKit iPhone 390 px и
-  двухролевой Chromium realtime. После merge `b180f9a` свежий iOS bundle
-  собран, установлен и запущен на iPhone 17. LLM/SpeechKit не менялись.
-- `#388` / `YAFIT-286`: GitHub CI app/database/e2e и Vercel прошли. Локально
-  reset БД, 474 SQL/RLS, 403 frontend, 10 API, двухролевой Chromium и WebKit
-  iPhone 390 px. После merge `7a6b3d2` свежий iOS bundle собран, установлен и
-  запущен на iPhone 17. LLM/SpeechKit не менялись.
 - `#389` / `YAFIT-287`: GitHub CI app/database/e2e и Vercel прошли. Локально
   `npm run check` — 409 frontend и 10 API; reset БД, 490 SQL/RLS, Chromium и
   WebKit iPhone 390 px. После merge `b14926b` свежий iOS bundle собран,
@@ -85,11 +77,17 @@
   410 frontend и 10 API, WebKit iPhone 390 px. После merge свежий iOS bundle
   собран, установлен и запущен на iPhone 17 Simulator; чистый вход проверен.
   LLM/SpeechKit не менялись.
+- `#392` / `YAFIT-289`: merge `986c05c` подтверждён; обязательные проверки
+  GitHub и Vercel прошли.
+- `#393` / `YAFIT-295`: merge `8642807` подтверждён. Локально `npm run check` —
+  417 frontend и 10 API, целевые Chromium и WebKit iPhone 390 px; GitHub
+  app/database/e2e и Vercel прошли. После merge production web bundle
+  синхронизирован с iOS; свежая сборка установлена и запущена на iPhone 17
+  Simulator. LLM/SpeechKit не менялись.
 
 ## Ближайший roadmap
 
-1. `YAFIT-289` — Client Home: следующее действие, неделя, один полезный акцент.
-2. `YAFIT-290` — actionable-список «Кому нужно внимание» для тренера.
+1. `YAFIT-290` — actionable-список «Кому нужно внимание» для тренера.
 
 ## Отложенный backlog
 
