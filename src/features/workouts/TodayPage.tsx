@@ -25,7 +25,7 @@ import { WorkoutParseErrorNotice, workoutParseErrorKind, type WorkoutParseErrorK
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { WearableHealthCard } from '../wearables'
 import { isWearablesPilotEnabled } from '../../app/feature-flags'
-import { ClientHomeOverview, clientHomeNextWorkout } from './ClientHomeOverview'
+import { ClientHomeOverview } from './ClientHomeOverview'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
@@ -449,8 +449,6 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const contextWorkout = currentWorkout ?? plannedWorkouts[0] ?? latestWorkout
   const contextTitle = currentWorkout ? 'Текущая тренировка' : plannedWorkouts[0] ? 'Ближайшая тренировка' : latestWorkout ? 'Последняя тренировка' : null
   const contextCard = !clientMode && contextWorkout && contextTitle && <section className="today-context"><p>{contextTitle}</p><Link to={currentWorkout ? `/workouts/${contextWorkout.id}/live` : `/workouts/${contextWorkout.id}`}><span><strong>{contextWorkout.clientName}</strong><small>{contextWorkout.workoutDate === today ? `Сегодня, ${workoutTime(contextWorkout)}` : contextWorkout.workoutDate}</small></span><span><strong>{contextWorkout.exercises.length ? contextWorkout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Тренировка'}</strong><small>{contextWorkout.exercises.length} упражнений</small></span><b>›</b></Link></section>
-  const clientNextWorkout = clientMode && workouts.data ? clientHomeNextWorkout(workouts.data, today) : null
-  const clientPrimaryPending = clientMode && (mine.isLoading || workouts.isLoading || Boolean(clientNextWorkout))
   const clientHomeError = clientMode ? mine.error ?? workouts.error ?? regularity.error ?? goal.error : null
   const greetingName = clientMode ? mine.data?.fullName || actor?.firstName || 'спортсмен' : actor?.firstName || 'тренер'
   const greeting = `${new Date().getHours() < 12 ? 'Доброе утро' : new Date().getHours() < 18 ? 'Добрый день' : 'Добрый вечер'}, ${greetingName}`
@@ -474,9 +472,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
             void goal.refetch()
           }
         }}
-        selfTraining={<section className={`client-home-self-training ${clientPrimaryPending ? 'compact' : 'primary'}`}>
-          {clientPrimaryPending && <div><p className="eyebrow">СВОЯ ТРЕНИРОВКА</p><h2>Потренироваться самостоятельно</h2></div>}
-          <VoiceInputButton variant={clientPrimaryPending ? 'inline' : 'hero'} source="today_workout" idleLabel="Надиктовать тренировку" onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }} onPhaseChange={setVoicePhase} onTranscript={handleHeroTranscript} />
+        selfTraining={<section className="client-home-self-training primary">
+          <VoiceInputButton variant="hero" source="today_workout" idleLabel="Надиктовать тренировку" onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }} onPhaseChange={setVoicePhase} onTranscript={handleHeroTranscript} />
           {voicePhase === 'idle' && <button type="button" className="link today-text-toggle" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}>Ввести текстом</button>}
           {restoredDraftScreen && voicePhase === 'idle' && <section className="today-resume"><span><strong>Есть незавершённая тренировка</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
           {voiceRefinement?.state === 'error' && <div className="voice-action-error" role="alert"><strong>{voiceRefinement.message}</strong><button type="button" className="link" onClick={() => setTextComposerOpen(true)}>Редактировать текст</button></div>}

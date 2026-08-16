@@ -67,19 +67,34 @@ function NextActionCard({ next, today }: { next: NextWorkout; today: LocalDate }
 
 function WeekCard({ week, loading }: { week: WorkoutRegularity | undefined; loading: boolean }) {
   if (loading) return <section className="client-home-week client-home-loading" role="status">Загружаем прогресс недели…</section>
-  const hasPlan = Boolean(week && week.plannedCount > 0)
-  const title = hasPlan ? `${week?.completionPercent ?? 0}%` : week?.completedCount ? `${week.completedCount} выполнено` : 'Пока без тренировок'
-  const description = hasPlan
-    ? `${week!.completedPlannedCount} из ${week!.plannedCount} выполнено по плану`
-    : week?.completedCount
-      ? 'Назначенного плана на неделю нет'
-      : 'План и тренировки ещё не добавлены'
+  const completed = week?.completedCount ?? 0
+  const completedPlanned = week?.completedPlannedCount ?? 0
+  const independent = Math.max(0, completed - completedPlanned)
+  const title = completed > 0 ? `${completed} ${workoutCountLabel(completed)}` : 'Пока без тренировок'
+  const description = completed > 0
+    ? [completedPlanned > 0 ? `${completedPlanned} по плану` : null, independent > 0 ? `${independent} самостоятельно` : null]
+      .filter(Boolean).join(' · ') || 'Все тренировки завершены'
+    : week?.plannedCount
+      ? `План тренера: 0 из ${week.plannedCount} выполнено`
+      : 'Здесь появится первая завершённая тренировка'
+  const alerts = [
+    week?.partialCount ? `Частично выполнено: ${week.partialCount}` : null,
+    week?.skippedCount ? `Пропущено: ${week.skippedCount}` : null,
+  ].filter(Boolean).join(' · ')
   return <section className="client-home-week" aria-labelledby="client-home-week-title">
-    <div className="client-home-section-head"><div><p className="eyebrow">ЭТА НЕДЕЛЯ</p><h2 id="client-home-week-title">{title}</h2></div><Link to="/me/progress">Весь прогресс</Link></div>
+    <div className="client-home-section-head"><div><p className="eyebrow">ЭТА НЕДЕЛЯ</p><h2 id="client-home-week-title">{title}</h2></div><Link to="/me/progress">Подробнее</Link></div>
     <p>{description}</p>
-    {hasPlan && <div className="client-home-week-track" role="progressbar" aria-label="Выполнено по плану на этой неделе" aria-valuemin={0} aria-valuemax={100} aria-valuenow={week?.completionPercent ?? 0}><span style={{ width: `${Math.min(100, Math.max(0, week?.completionPercent ?? 0))}%` }} /></div>}
-    <div className="client-home-week-stats"><span>План <strong>{week?.plannedCount ?? 0}</strong></span><span>Выполнено <strong>{week?.completedCount ?? 0}</strong></span></div>
+    {alerts && <small className="client-home-week-alerts">{alerts}</small>}
   </section>
+}
+
+function workoutCountLabel(count: number): string {
+  const mod100 = count % 100
+  const mod10 = count % 10
+  if (mod100 >= 11 && mod100 <= 14) return 'тренировок'
+  if (mod10 === 1) return 'тренировка'
+  if (mod10 >= 2 && mod10 <= 4) return 'тренировки'
+  return 'тренировок'
 }
 
 function HighlightCard({ highlight, today }: { highlight: HomeHighlight; today: LocalDate }) {
@@ -110,12 +125,11 @@ export function ClientHomeOverview({ today, workouts, regularity, goal, workouts
   const highlight = workouts ? clientHomeHighlight(workouts, goal) : goal ? { kind: 'goal' as const, goal } : null
   const week = regularity?.find((period) => period.period === 'week')
   return <div className="client-home-overview">
+    {selfTraining}
     {workoutsLoading && !workouts && <section className="client-home-next client-home-loading" role="status">Загружаем следующую тренировку…</section>}
     {next && <NextActionCard next={next} today={today} />}
-    {!workoutsLoading && !next && selfTraining}
     <WeekCard week={week} loading={regularityLoading} />
     {highlight && <HighlightCard highlight={highlight} today={today} />}
-    {(workoutsLoading || next) && selfTraining}
     {wearable}
     {error && <section className="client-home-error" role="alert"><p>{error.message}</p><button type="button" className="secondary" onClick={onRetry}>Повторить</button></section>}
   </div>

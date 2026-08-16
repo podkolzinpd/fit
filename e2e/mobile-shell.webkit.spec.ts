@@ -220,6 +220,7 @@ test('iPhone: client edits shared progress, custom metrics and deletion safely',
   await login(page, 'client@fit.local')
   await page.goto('/me/progress')
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
+  await page.getByRole('button', { name: 'Добавить замер' }).click()
   await expect(page.getByLabel(`${metricName}, балл`)).toBeVisible()
 
   const trainerEntry = page.locator('.client-progress-history article.card').first()
@@ -246,6 +247,29 @@ test('iPhone: client edits shared progress, custom metrics and deletion safely',
   await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click()
   await expect(ownEntry).toHaveCount(0)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+})
+
+test('iPhone: client progress keeps the LLM summary below the compact training rhythm', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await login(page, 'client@fit.local')
+  await page.goto('/me/progress')
+
+  await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировки' })).toBeVisible()
+  await expect(page.getByRole('tabpanel', { name: 'Неделя' })).toContainText('тренировок')
+  await page.getByRole('tab', { name: 'Месяц' }).click()
+  await expect(page.getByRole('tabpanel', { name: 'Месяц' })).toBeVisible()
+
+  await expect(page.getByText('Твой прогресс', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '1 месяц' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '3 месяца' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '6 месяцев' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Обновить мой прогресс' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Добавить замер' }).click()
+  await expect(page.getByRole('heading', { name: 'Новый замер' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Сохранить замер' })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
 })
 
 async function selectClient(page: Page, name = 'Анна Смирнова') {

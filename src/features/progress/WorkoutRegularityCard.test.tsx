@@ -14,8 +14,8 @@ vi.mock('../../data/repositories/progress.repository', () => ({
 
 const periods: WorkoutRegularity[] = [{
   period: 'week', periodStart: localDate('2026-08-10'), periodEnd: localDate('2026-08-16'),
-  plannedCount: 4, completedCount: 3, completedPlannedCount: 2,
-  partialCount: 1, skippedCount: 1, completionPercent: 50,
+  plannedCount: 1, completedCount: 3, completedPlannedCount: 1,
+  partialCount: 0, skippedCount: 0, completionPercent: 100,
 }, {
   period: 'month', periodStart: localDate('2026-08-01'), periodEnd: localDate('2026-08-31'),
   plannedCount: 0, completedCount: 0, completedPlannedCount: 0,
@@ -23,29 +23,39 @@ const periods: WorkoutRegularity[] = [{
 }]
 
 describe('WorkoutRegularityContent', () => {
-  it('shows the same deterministic plan/fact fields without turning partial sets into completed workouts', () => {
+  it('makes all completed workouts primary and keeps plan adherence secondary', async () => {
+    const user = userEvent.setup()
     render(<WorkoutRegularityContent periods={periods} />)
-    expect(screen.getByRole('heading', { name: 'Неделя' })).toBeVisible()
-    expect(screen.getByText('50%')).toBeVisible()
-    expect(screen.getByText('частично 1 · пропущено 1 · самостоятельно 1')).toBeVisible()
-    expect(screen.getAllByText('Выполнено')[0]?.parentElement).toHaveTextContent('3')
-    expect(screen.getByRole('progressbar', { name: /неделя/ })).toHaveAttribute('aria-valuenow', '50')
+    expect(screen.getByRole('tab', { name: 'Неделя' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('3 тренировки')).toBeVisible()
+    expect(screen.getByLabelText('Состав завершённых тренировок')).toHaveTextContent('1 по плану')
+    expect(screen.getByLabelText('Состав завершённых тренировок')).toHaveTextContent('2 самостоятельно')
+    expect(screen.getByText(/План тренера:/)).toHaveTextContent('1 из 1 выполнено')
+    expect(screen.queryByText('100%')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'Месяц' }))
+    expect(screen.getByText('Пока без тренировок')).toBeVisible()
+  })
+
+  it('keeps partial and skipped workouts explicit without adding them to completed', () => {
+    render(<WorkoutRegularityContent periods={[{ ...periods[0]!, partialCount: 1, skippedCount: 1 }]} />)
+    expect(screen.getByText('3 тренировки')).toBeVisible()
+    expect(screen.getByText('Частично выполнено: 1 · Пропущено: 1')).toBeVisible()
   })
 
   it('keeps an explicit empty state when there is no plan denominator', () => {
     render(<WorkoutRegularityContent periods={[periods[1]!]} />)
-    expect(screen.getByText('Пока пусто')).toBeVisible()
-    expect(screen.getByText('План и тренировки ещё не добавлены')).toBeVisible()
-    expect(screen.getByText('Добавьте тренировку — здесь появится прогресс.')).toBeVisible()
+    expect(screen.getByText('Пока без тренировок')).toBeVisible()
+    expect(screen.getByText('Здесь появится первая завершённая тренировка')).toBeVisible()
+    expect(screen.getByText('План тренера на этот период не назначен')).toBeVisible()
     expect(screen.queryByText('—')).not.toBeInTheDocument()
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
   })
 
   it('explains completed workouts when there is no assigned plan', () => {
     render(<WorkoutRegularityContent periods={[{ ...periods[1]!, completedCount: 2 }]} />)
-    expect(screen.getByText('2 выполнено')).toBeVisible()
-    expect(screen.getByText('Назначенного плана пока нет')).toBeVisible()
-    expect(screen.getByText('самостоятельно 2 · Добавьте план, чтобы видеть процент выполнения.')).toBeVisible()
+    expect(screen.getByText('2 тренировки')).toBeVisible()
+    expect(screen.getByLabelText('Состав завершённых тренировок')).toHaveTextContent('2 самостоятельно')
+    expect(screen.getByText('План тренера на этот период не назначен')).toBeVisible()
   })
 })
 
@@ -63,8 +73,8 @@ describe('WorkoutRegularityCard', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(<WorkoutRegularityCard clientId="client-1" />, { wrapper: wrapper(queryClient) })
 
-    expect(await screen.findByRole('heading', { name: 'Неделя и месяц' })).toBeVisible()
-    expect(await screen.findByText('50%')).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Тренировки' })).toBeVisible()
+    expect(await screen.findByText('3 тренировки')).toBeVisible()
     expect(repository.regularity).toHaveBeenCalledWith('client-1')
   })
 
@@ -76,7 +86,7 @@ describe('WorkoutRegularityCard', () => {
 
     expect(await screen.findByText('Сводка недоступна')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Повторить' }))
-    expect(await screen.findByText('50%')).toBeVisible()
+    expect(await screen.findByText('3 тренировки')).toBeVisible()
     expect(repository.regularity).toHaveBeenCalledTimes(2)
   })
 })

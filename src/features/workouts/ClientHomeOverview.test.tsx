@@ -22,8 +22,8 @@ const goal: ClientGoal = {
 
 const week: WorkoutRegularity = {
   period: 'week', periodStart: localDate('2026-08-10'), periodEnd: today,
-  plannedCount: 2, completedCount: 1, completedPlannedCount: 1,
-  partialCount: 0, skippedCount: 0, completionPercent: 50,
+  plannedCount: 1, completedCount: 3, completedPlannedCount: 1,
+  partialCount: 0, skippedCount: 0, completionPercent: 100,
 }
 
 describe('ClientHomeOverview', () => {
@@ -51,8 +51,9 @@ describe('ClientHomeOverview', () => {
     render(<MemoryRouter><ClientHomeOverview today={today} workouts={[assigned]} regularity={[week]} goal={goal} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Своя тренировка</button>} /></MemoryRouter>)
     expect(screen.getByRole('heading', { name: 'Тренировка на сегодня' })).toBeVisible()
     expect(screen.getByRole('link', { name: 'Открыть план' })).toBeVisible()
-    expect(screen.getByRole('heading', { name: '50%' })).toBeVisible()
-    expect(screen.getByText('1 из 2 выполнено по плану')).toBeVisible()
+    expect(screen.getByRole('heading', { name: '3 тренировки' })).toBeVisible()
+    expect(screen.getByText('1 по плану · 2 самостоятельно')).toBeVisible()
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Вернуться к бегу' })).toBeVisible()
     expect(screen.queryByText('—')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Своя тренировка' })).toBeVisible()
@@ -63,7 +64,7 @@ describe('ClientHomeOverview', () => {
     const selfAction = screen.getByRole('button', { name: 'Начать свою тренировку' })
     const weekTitle = screen.getByRole('heading', { name: 'Пока без тренировок' })
     expect(selfAction.compareDocumentPosition(weekTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(screen.getByText('План и тренировки ещё не добавлены')).toBeVisible()
+    expect(screen.getByText('Здесь появится первая завершённая тренировка')).toBeVisible()
     expect(screen.queryByText('—')).not.toBeInTheDocument()
   })
 
