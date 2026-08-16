@@ -833,6 +833,44 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .today-context strong { font-size:14px; }
 .today-context small { color:var(--voice-copy); font-size:12px; }
 .today-context b { grid-column:2; grid-row:1 / span 2; color:var(--voice-context-arrow); font-size:25px; font-weight:400; }
+.client-home-overview { min-width:0; display:grid; gap:13px; }
+.client-home-next, .client-home-week, .client-home-highlight, .client-home-self-training.compact, .client-home-error { padding:16px; border:1px solid var(--voice-context-border); border-radius:20px; background:var(--voice-surface); box-shadow:var(--voice-context-shadow); }
+.client-home-next, .client-home-week, .client-home-highlight, .client-home-self-training { min-width:0; }
+.client-home-next { display:grid; gap:7px; overflow:hidden; }
+.client-home-next.assigned { border-color:var(--accent-surface-border); background:linear-gradient(145deg, var(--accent-surface), var(--voice-surface) 72%); }
+.client-home-next.active { border-color:var(--success-border); background:linear-gradient(145deg, var(--success-surface), var(--voice-surface) 72%); }
+.client-home-next .eyebrow, .client-home-week .eyebrow, .client-home-highlight .eyebrow, .client-home-self-training .eyebrow { margin:0; }
+.client-home-next h2, .client-home-week h2, .client-home-highlight h2, .client-home-self-training h2 { margin:0; color:var(--voice-title); font-size:20px; line-height:1.18; letter-spacing:-.02em; }
+.client-home-next-time { margin:1px 0 0; color:var(--voice-copy); font-size:13px; }
+.client-home-next-exercises { overflow:hidden; color:var(--voice-title); font-size:15px; line-height:1.35; text-overflow:ellipsis; white-space:nowrap; }
+.client-home-next .button { min-height:50px; margin-top:7px; border-radius:15px; }
+.client-home-section-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.client-home-section-head > div { display:grid; gap:3px; }
+.client-home-section-head > a { flex:0 0 auto; color:var(--accent-strong); font-size:12px; font-weight:700; text-decoration:none; }
+.client-home-week { display:grid; gap:10px; }
+.client-home-week > p { margin:0; color:var(--voice-copy); font-size:13px; line-height:1.35; }
+.client-home-week-track { height:6px; overflow:hidden; border-radius:99px; background:var(--surface-sunken); }
+.client-home-week-track span { display:block; height:100%; border-radius:inherit; background:var(--accent); }
+.client-home-week-stats { display:flex; gap:20px; color:var(--voice-copy); font-size:12px; }
+.client-home-week-stats span { display:flex; align-items:baseline; gap:5px; }
+.client-home-week-stats strong { color:var(--voice-title); font-size:16px; font-variant-numeric:tabular-nums; }
+.client-home-highlight { display:grid; gap:7px; }
+.client-home-highlight > a { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; color:var(--voice-title); text-decoration:none; }
+.client-home-highlight > a > span { min-width:0; display:grid; gap:4px; }
+.client-home-highlight h2 { font-size:17px; }
+.client-home-highlight small { display:-webkit-box; overflow:hidden; color:var(--voice-copy); font-size:12px; line-height:1.35; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+.client-home-highlight b { color:var(--voice-context-arrow); font-size:25px; font-weight:400; }
+.client-home-self-training { display:grid; gap:9px; }
+.client-home-self-training.primary { padding-top:1px; }
+.client-home-self-training.compact > div { display:grid; gap:3px; }
+.client-home-self-training.compact h2 { font-size:17px; }
+.client-home-self-training.compact .voice-input { width:100%; }
+.client-home-self-training.compact .voice-input-button { width:100%; min-height:46px; justify-content:center; border-radius:14px; }
+.client-home-self-training.compact .today-text-toggle { min-height:36px; padding:4px; border:0; background:transparent; }
+.client-home-loading { min-height:84px; display:grid; place-items:center; color:var(--voice-copy); font-size:14px; text-align:center; }
+.client-home-error { display:flex; align-items:center; justify-content:space-between; gap:12px; border-color:var(--danger-border); background:var(--danger-surface); }
+.client-home-error p { margin:0; font-size:13px; line-height:1.35; }
+.client-home-error button { flex:0 0 auto; min-height:38px; }
 @keyframes voice-breathe { 50% { transform:scale(1.035); border-color:var(--voice-ring-active); } }
 @keyframes voice-spin { to { transform:rotate(360deg); } }
 @media (prefers-reduced-motion:reduce) { .voice-action-button, .voice-action-button::before, .voice-action-ring { animation:none !important; transition:none; } }
