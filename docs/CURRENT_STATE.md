@@ -5,16 +5,19 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-16
-Проверенный `main`: `7a6b3d2` (`YAFIT-286: добавить регулярность тренировок (#388)`)
+Проверенный `main`: `b14926b` (`YAFIT-287: показать реальный прогресс и PR по упражнениям (#389)`)
 
 ## Активная работа
 
-- Активная продуктовая задача: `YAFIT-287` — серверный confirmed-only прогресс
-  упражнения, реальные PR и постраничная история для Client и Trainer.
-- Следующая задача roadmap: `YAFIT-288` — история как спортивная хроника.
+- Активная продуктовая задача: `YAFIT-288` — история тренировок как спортивная
+  хроника с компактным фактом, feedback, PR и ответом тренера.
+- Следующая задача roadmap: `YAFIT-289` — Client Home.
 
 ## Последняя проверенная продуктовая точка
 
+- После `#389` Client и Trainer получают один RLS-защищённый confirmed-only
+  прогресс упражнения: прозрачную основную метрику, реальные силовые PR,
+  cursor-пагинацию по 20 результатов и пересчёт после правки/удаления факта.
 - После `#388` Client и Trainer видят одинаковый week/month plan/fact:
   неделя понедельник–воскресенье, границы в timezone клиента, partial/skipped и
   самостоятельные тренировки без искажения процента назначенного плана.
@@ -48,8 +51,6 @@
 
 ## Последние проверки
 
-- `#383` / `YAFIT-223`: `npm run check` — 381 frontend и 10 API; reset БД,
-  422 SQL/RLS; Chromium и WebKit 390 px. LLM/SpeechKit не менялись.
 - `#384` / `YAFIT-242`: `npm run check` — 385 frontend и 10 API; WebKit 390 px,
   GitHub CI и Vercel прошли. LLM/SpeechKit не менялись.
 - `#385` / `YAFIT-259`: GitHub CI app/database/e2e и Vercel прошли; локально
@@ -67,12 +68,15 @@
   reset БД, 474 SQL/RLS, 403 frontend, 10 API, двухролевой Chromium и WebKit
   iPhone 390 px. После merge `7a6b3d2` свежий iOS bundle собран, установлен и
   запущен на iPhone 17. LLM/SpeechKit не менялись.
+- `#389` / `YAFIT-287`: GitHub CI app/database/e2e и Vercel прошли. Локально
+  `npm run check` — 409 frontend и 10 API; reset БД, 490 SQL/RLS, Chromium и
+  WebKit iPhone 390 px. После merge `b14926b` свежий iOS bundle собран,
+  установлен и запущен на iPhone 17. LLM/SpeechKit не менялись.
 
 ## Ближайший roadmap
 
-1. `YAFIT-287` — прогресс упражнений и реальные PR.
-2. `YAFIT-288` — история как спортивная хроника.
-3. `YAFIT-289` — Client Home: следующее действие, неделя, один highlight.
+1. `YAFIT-288` — история как спортивная хроника.
+2. `YAFIT-289` — Client Home: следующее действие, неделя, один highlight.
 
 ## Отложенный backlog
 

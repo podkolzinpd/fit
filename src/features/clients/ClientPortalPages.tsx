@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
@@ -11,7 +11,7 @@ import type { CustomMetric, ProgressEntry } from '../../shared/domain'
 import { formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, Field, Page, useConfirm } from '../../shared/ui'
 import { ClientTrainingSummaryCard, groupMetricRows, ProgressChart, WorkoutRegularityCard } from '../progress'
-import { WorkoutExercisesSummary, WorkoutStatusBadge } from '../workouts'
+import { LoadMoreButton, WorkoutChronicleCard, WorkoutExercisesSummary, WorkoutStatusBadge, WORKOUT_HISTORY_PAGE_SIZE } from '../workouts'
 import { clientWorkoutAuthorLabel } from './workout-author'
 
 function useMine() {
@@ -23,16 +23,25 @@ function useMine() {
 export function MyWorkoutsPage() {
   const { actor } = useAuth()
   const mine = useMine()
+  const today = todayInTimeZone(actor?.timezone)
   const trainers = useQuery({ queryKey: ['client-trainers', mine.data?.id], queryFn: () => invitationsRepository.listTrainers(mine.data!.id), enabled: Boolean(mine.data) })
-  const workouts = useQuery({
-    queryKey: ['workouts', mine.data?.id],
-    queryFn: () => workoutsRepository.list(undefined, undefined, mine.data!.id),
+  const upcoming = useQuery({
+    queryKey: ['workouts', mine.data?.id, 'upcoming', today],
+    queryFn: () => workoutsRepository.list(today, undefined, mine.data!.id),
     enabled: Boolean(mine.data),
   })
-  const items = workouts.data ? splitClientWorkouts(workouts.data, todayInTimeZone(actor?.timezone)) : null
-  return <Page className="client-workouts-page" title="Мои тренировки" action={mine.data && <Link className="button" to="/workouts/new">Добавить</Link>}><AsyncView loading={mine.isLoading || workouts.isLoading || trainers.isLoading} error={mine.error ?? workouts.error ?? trainers.error} onRetry={() => { void mine.refetch(); void workouts.refetch(); void trainers.refetch() }}>
-    {items && <div className="client-workouts-stack"><section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div>{items.upcoming.length ? <div className="cards client-workout-cards">{items.upcoming.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p className="muted">{clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)}</p><WorkoutExercisesSummary workout={workout} maxItems={2} /></div><WorkoutStatusBadge workout={workout} /></Link>)}</div> : <p className="client-section-empty">Нет запланированных тренировок</p>}</section>
-    <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div>{items.history.length ? <div className="cards client-workout-cards">{items.history.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p className="muted">{clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)}</p><WorkoutExercisesSummary workout={workout} maxItems={2} /></div><WorkoutStatusBadge workout={workout} /></Link>)}</div> : <p className="client-section-empty">История пока пуста</p>}</section></div>}
+  const history = useInfiniteQuery({
+    queryKey: ['workouts', mine.data?.id, 'history', today],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => workoutsRepository.listPage(undefined, today, mine.data!.id, pageParam, WORKOUT_HISTORY_PAGE_SIZE),
+    getNextPageParam: (page) => page.nextOffset,
+    enabled: Boolean(mine.data),
+  })
+  const upcomingItems = upcoming.data ? splitClientWorkouts(upcoming.data, today).upcoming : []
+  const historyItems = splitClientWorkouts(history.data?.pages.flatMap((page) => page.items) ?? [], today).history
+  return <Page className="client-workouts-page" title="Мои тренировки" action={mine.data && <Link className="button" to="/workouts/new">Добавить</Link>}><AsyncView loading={mine.isLoading || upcoming.isLoading || history.isLoading || trainers.isLoading} error={mine.error ?? upcoming.error ?? history.error ?? trainers.error} onRetry={() => { void mine.refetch(); void upcoming.refetch(); void history.refetch(); void trainers.refetch() }}>
+    {mine.data && <div className="client-workouts-stack"><section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div>{upcomingItems.length ? <div className="cards client-workout-cards">{upcomingItems.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p className="muted">{clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)}</p><WorkoutExercisesSummary workout={workout} maxItems={2} /></div><WorkoutStatusBadge workout={workout} /></Link>)}</div> : <p className="client-section-empty">Нет запланированных тренировок</p>}</section>
+    <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div>{historyItems.length ? <div className="cards client-workout-cards workout-chronicle-list">{historyItems.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)} />)}</div> : <p className="client-section-empty">История пока пуста</p>}<LoadMoreButton hasMore={history.hasNextPage} loading={history.isFetchingNextPage} onLoadMore={() => void history.fetchNextPage()} /></section></div>}
   </AsyncView></Page>
 }
 

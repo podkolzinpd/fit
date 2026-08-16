@@ -1,4 +1,4 @@
-// schema-sha256: 24c55047e7c458a49055a35604d960229de17aeb3093f646793cd2b57aec91f9
+// schema-sha256: 5c20448fd698994dffee29cc7050d6492c2894565841c719b12202ad5c4e26cd
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -23,8 +23,9 @@ type WorkoutListExerciseRow = {
 }
 export type WorkoutListRow = {
   id: string; client_id: string; trainer_id: string; client_name: string; created_by: string | null; workout_date: string; start_time: string | null; end_time: string | null
-  started_at: string | null; completed_at: string | null; status: string; notes: string | null; trainer_review: string | null; trainer_reaction: string | null; trainer_review_author_id: string | null; trainer_reviewed_at: string | null; client_comment: string | null; stage_id: string | null; stage_title: string | null
-  version: number; total_count: number; exercises: WorkoutListExerciseRow[]
+  started_at: string | null; completed_at: string | null; status: string; notes: string | null; trainer_review: string | null; trainer_reaction: string | null; trainer_review_author_id: string | null; trainer_reviewed_at: string | null; client_comment: string | null
+  session_rpe: number | null; wellbeing: string | null; discomfort: boolean | null; has_pr: boolean
+  stage_id: string | null; stage_title: string | null; version: number; total_count: number; exercises: WorkoutListExerciseRow[]
 }
 
 export type Database = {
@@ -1363,6 +1364,10 @@ export type Database = {
       update_own_client: {
         Args: { p_client: Json; p_expected_version: number }
         Returns: number
+      }
+      workout_has_personal_record: {
+        Args: { p_workout_id: string }
+        Returns: boolean
       }
     }
     Enums: {

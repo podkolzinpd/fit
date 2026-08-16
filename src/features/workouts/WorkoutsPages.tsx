@@ -42,6 +42,7 @@ import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProg
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
+export const WORKOUT_HISTORY_PAGE_SIZE = 20
 
 function minutesOf(time: string): number {
   const [h, m] = time.split(':').map(Number)
@@ -176,27 +177,80 @@ export function WorkoutExercisesSummary({ workout, maxItems }: { workout: Workou
   </li>)}{maxItems !== undefined && items.length > maxItems && <li className="workout-exercise-more">Ещё {items.length - maxItems} {exerciseCountLabel(items.length - maxItems)}</li>}</ul>
 }
 
+const chronicleWellbeingLabels: Record<WorkoutWellbeing, string> = {
+  good: 'Хорошо',
+  normal: 'Нормально',
+  hard: 'Тяжело',
+}
+
+const chronicleReactionLabels: Record<TrainerReaction, string> = {
+  thumbs_up: '👍',
+  fire: '🔥',
+  strong: '💪',
+}
+
+export function WorkoutChronicleCard({ workout, contextLabel }: { workout: Workout; contextLabel?: string | null }) {
+  const done = workout.status === 'done'
+  const duration = workoutDurationLabel(workout.startedAt, workout.completedAt)
+  const tonnage = workoutTonnage(workout)
+  const meta = done ? [duration, tonnage > 0 ? tonnageLabel(tonnage) : null].filter(Boolean) : []
+  const hasFeedback = workout.sessionRpe !== undefined && workout.wellbeing !== undefined
+
+  return <Link className="card workout-chronicle-card" to={`/workouts/${workout.id}`}>
+    <div className="workout-chronicle-head">
+      <strong>{formatLocalDate(workout.workoutDate)}</strong>
+      <div className="workout-chronicle-head-badges">
+        {workout.hasPr && <span className="workout-pr-badge">PR</span>}
+        <WorkoutStatusBadge workout={workout} />
+      </div>
+    </div>
+    {contextLabel && <p className="card-author">{contextLabel}</p>}
+    <div className="workout-chronicle-exercises">
+      {workout.exercises.length > 0 ? workout.exercises.map((exercise) => {
+        const result = done
+          ? compactCompletedSetSummary(exercise.sets)
+          : compactPlannedSetSummary(exercise.sets) ?? 'План без числовых значений'
+        return <div className="workout-chronicle-exercise" key={exercise.id}>
+          <span className="workout-chronicle-exercise-name">{exercise.name}
+            {exercise.trainerComment && <small className="workout-exercise-comment">💬 {exercise.trainerComment}</small>}
+          </span>
+          <strong>{result}</strong>
+        </div>
+      }) : <p className="muted">Без упражнений</p>}
+    </div>
+    {(meta.length > 0 || hasFeedback || workout.discomfort) && <div className="card-meta workout-chronicle-facts">
+      {meta.map((item) => <span key={item}>{item}</span>)}
+      {hasFeedback && <span>RPE {workout.sessionRpe}/10</span>}
+      {workout.wellbeing && <span>{chronicleWellbeingLabels[workout.wellbeing]}</span>}
+      {workout.discomfort && <span className="attention">Дискомфорт</span>}
+    </div>}
+    {workout.clientComment && <p className="workout-chronicle-comment"><span>Клиент</span>{workout.clientComment}</p>}
+    {workout.trainerReview && <p className="workout-chronicle-response">
+      <span>{workout.trainerReaction ? chronicleReactionLabels[workout.trainerReaction] : 'Тренер'}</span>
+      {workout.trainerReview}
+    </p>}
+  </Link>
+}
+
 export function ClientWorkoutsPage() {
   const { clientId = '' } = useParams()
   const { actor } = useAuth()
+  const today = todayInTimeZone(actor?.timezone)
   useClientRealtime(clientId)
   const query = useInfiniteQuery({
-    queryKey: ['workouts', clientId],
+    queryKey: ['workouts', clientId, 'history', today],
     initialPageParam: 0,
-    queryFn: ({ pageParam }) => workoutsRepository.listPage(undefined, undefined, clientId, pageParam),
+    queryFn: ({ pageParam }) => workoutsRepository.listPage(undefined, today, clientId, pageParam, WORKOUT_HISTORY_PAGE_SIZE),
     getNextPageParam: (page) => page.nextOffset,
   })
   const items = query.data?.pages.flatMap((page) => page.items) ?? []
-  const history = splitClientWorkouts(items, todayInTimeZone(actor?.timezone)).history
+  const history = splitClientWorkouts(items, today).history
   return <Page title="История тренировок" back={`/clients/${clientId}`} action={<Link className="button" to={`/workouts/new?client=${clientId}`}>Добавить</Link>}><AsyncView loading={query.isLoading} error={query.error} empty={!history.length} onRetry={() => void query.refetch()}
     emptyTitle="История пока пуста"
     emptyDescription="Завершённые тренировки появятся здесь вместе с результатами."
-    emptyAction={<Link className="button" to={`/workouts/new?client=${clientId}`}>Запланировать тренировку</Link>}><div className="cards">{history.map((workout) => {
-    const duration = workoutDurationLabel(workout.startedAt, workout.completedAt)
-    const tonnage = workoutTonnage(workout)
-    const meta = workout.status === 'done' ? [duration, tonnage > 0 ? tonnageLabel(tonnage) : null].filter(Boolean).join(' · ') : ''
+    emptyAction={<Link className="button" to={`/workouts/new?client=${clientId}`}>Запланировать тренировку</Link>}><div className="cards workout-chronicle-list">{history.map((workout) => {
     const clientAuthored = Boolean(workout.createdBy && workout.createdBy !== actor?.userId)
-    return <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong>{clientAuthored && <p className="card-author">Создано клиентом</p>}<WorkoutExercisesSummary workout={workout} />{meta && <p className="card-meta">{meta}</p>}</div><WorkoutStatusBadge workout={workout} /></Link>
+    return <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientAuthored ? 'Создано клиентом' : null} />
   })}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
 }
 
