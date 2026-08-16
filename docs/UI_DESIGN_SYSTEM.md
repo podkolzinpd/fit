@@ -1,0 +1,161 @@
+# Fit UI design system
+
+This document records the system that exists in `main`; it is not a redesign
+brief. Runtime behavior, feature components, and `src/styles.css` remain the
+implementation source of truth. The purpose of this map is to make future UI
+work consistent and easier to verify.
+
+## Foundations
+
+- Stack: React 19, TypeScript, React Router, TanStack Query, React Hook Form,
+  Recharts, Vite, Capacitor, and plain global CSS. There is no Tailwind or
+  installed component framework.
+- Default product theme: `theme-light`, called **LIGHT PREMIUM PERFORMANCE** in
+  the CSS. A dark token set remains as a build-time fallback.
+- Client and Trainer render inside `.phone-frame`, currently capped at 440 px.
+  Client has four bottom tabs; Trainer has three in the current feature-flagged
+  navigation. Live workout hides the tab bar and uses an immersive bottom bar.
+- Semantic tokens are defined in `:root` and overridden by `.theme-light`.
+  Prefer tokens over literal colors in new rules.
+
+## Color and surfaces
+
+The light theme uses warm neutrals and one coral action accent:
+
+| Role | Current token/value |
+| --- | --- |
+| App background | `--bg: #f7f4ef` |
+| Main text | `--fg: #17191d` |
+| Muted text | `--muted: #6c717a` |
+| Raised surface | `--surface-raised: #fffefc` |
+| Sunken/input surface | `--surface-sunken`, `--input: #f2eee8` |
+| Border | `--border: #e5ded3` |
+| Primary fill | `--accent-grad`, based on `#f26b4a` / `#e85c3a` |
+| Accent text | `--accent-strong: #a83714` for readable text contrast |
+| Success | `--success`, `--success-surface`, `--success-border` |
+| Warning | `--warning-*` |
+| Destructive | `--danger`, `--danger-surface`, `--danger-border` |
+
+Generic cards use `--surface-raised`, `--card-grad`, `--border`, and
+`--shadow-card`. Voice-first, live-workout, AI summary, regularity, and client
+AI cards have semantic token groups because their meaning and hierarchy differ.
+These groups should not be used as arbitrary decoration on unrelated screens.
+
+## Typography
+
+- Font stack: `-apple-system`, BlinkMacSystemFont, `SF Pro Text`, Inter,
+  `system-ui`, sans-serif. No downloadable brand font is required.
+- Base: 16 px with 1.45 line height.
+- Token scale: 11, 12, 13, 14, 16, 18, 22, and 30 px from `--text-xs` through
+  `--text-display`.
+- Weights: 600, 700, and 800. Uppercase eyebrow labels use a small size,
+  semibold/bold weight, and `--tracking-label`; titles use tight tracking.
+- Large page/hero headings may use `clamp()` to fit the 390–440 px shell.
+
+## Spacing, geometry, and effects
+
+- Spacing tokens: 4, 8, 12, 16, 20, and 24 px (`--space-1`…`--space-6`).
+- Canonical radii: 9, 12, and 16 px plus a pill radius of 99 px. Product cards
+  also currently use 17–22 px and frame/sheets use 26–28 px.
+- Minimum interactive size is represented by `--tap: 44px`; primary mobile
+  actions are commonly 50–56 px tall.
+- Cards use a restrained warm shadow (`--shadow-card`). Overlays use
+  `--overlay` and blur; sheets rise from the bottom on mobile.
+- Motion is short (about 180–220 ms) and must respect
+  `prefers-reduced-motion`.
+
+## Shared UI primitives
+
+`src/shared/ui.tsx` owns the reusable application primitives:
+
+- `Page` and page header/back navigation;
+- `AsyncView`, `Skeleton`, and `EmptyState` for data states;
+- `Field`, `Switch`, `SaveStatus`, and `StatusBadge`;
+- in-app `ConfirmDialog` through `useConfirm`;
+- `OverflowMenu`, positioned inside the phone frame and above fixed bars.
+
+Global CSS also defines primary, secondary, tertiary/link, danger, wide, and
+icon button styles; card stacks; form stacks/actions; badges; bottom tabs;
+modal and bottom-sheet shells. New primitives should compose these contracts
+instead of reproducing their pixels feature by feature.
+
+## Icons
+
+The primary icon language is a small set of hand-authored, outline SVGs in
+`src/shared/icons.tsx` with `currentColor`, 24×24 viewBox, rounded line caps,
+and roughly 1.8 stroke width. Navigation uses Clients, Schedule, Analytics, and
+Profile icons. Voice and close/stop actions use the same file. Text labels and
+accessible names remain mandatory.
+
+## Client patterns
+
+- Mobile-first shell at 390 px, checked again at 430 px, with four fixed bottom
+  destinations: Cabinet, Workouts, Progress, Profile.
+- Client Home is voice-first: microphone and text entry precede the next
+  workout, weekly rhythm, one relevant highlight, and wearable context.
+- Content uses a single-column stack, one dominant next action, warm raised
+  cards, compact eyebrow labels, and explicit Russian copy.
+- Client Progress orders training regularity before the LLM summary, then body
+  measurements, chart, and history. A `done` workout counts as a workout even
+  if some planned work was not completed; plan completion is separate detail.
+- Personal records show exercise, exact confirmed result, record type, and link
+  to that exercise's history.
+
+## Trainer patterns
+
+- The trainer currently uses the same capped phone-frame shell even on desktop.
+- Today is the operational start: voice/text composition, client selection,
+  review, assignment, and resume context. Client lists and schedule optimize for
+  quick scanning rather than decorative analytics.
+- Forms use explicit labels, inline validation, a clear primary save action,
+  and secondary actions with lower emphasis.
+- Client detail composes goal, note, workout, progress, and invitation surfaces
+  while preserving role-based access and authorship.
+
+## Workout UI
+
+- `WorkoutComposer` is shared by Today and planning entry.
+- `WorkoutExerciseHeader` and `WorkoutSetTable` align exercise and set structure
+  across review, plan, live, and history without sharing their domain logic.
+- Live workout makes the current set dominant, keeps upcoming work compact,
+  collapses completed work, shows autosave, and reserves fixed bottom actions
+  for the active session.
+- Planned values, typed draft, confirmed fact, skipped work, partial completion,
+  and personal records are visually and semantically distinct. Confirmed sets
+  are the only source of fact and records.
+
+## Responsive behavior
+
+- Client acceptance widths are 390 and 430 px; legacy WebKit smoke also covers
+  375 and 360 px for overflow regressions.
+- The frame uses dynamic viewport units and iOS safe-area insets. Keyboard state
+  is derived from Visual Viewport so fixed navigation/actions do not cover
+  fields.
+- Horizontal overflow is forbidden at the document level. Intentional tab rows
+  may scroll horizontally and hide the scrollbar.
+- Trainer desktop is now captured at 1440×1000 as a visual baseline; it records
+  the current compact shell rather than implying a completed desktop redesign.
+
+# Current UI inconsistencies / design debt
+
+1. `src/styles.css` is a 1,300+ line global stylesheet containing foundations,
+   primitives, and feature rules; ownership and deletion safety are weak.
+2. The spacing and radius tokens exist, but many selectors still use one-off
+   values such as 7, 10, 13, 17, 18, 20, 22, 26, and 28 px.
+3. The light and dark token sets coexist, while several feature rules still
+   contain literal colors. Theme parity can drift even though light is default.
+4. Typography tokens coexist with many raw font sizes and local `clamp()`
+   formulas, so hierarchy is not fully systematic.
+5. Icons mix the shared SVG vocabulary with Unicode arrows, ellipses, plus
+   signs, checks, and occasional emoji; weight and alignment are inconsistent.
+6. Client and Trainer both remain in a 440 px phone frame at desktop widths.
+   The trainer has no true wide operational layout yet.
+7. Repeated feature cards and section headers often share visual structure but
+   do not consistently compose a named primitive; careless extraction could,
+   however, create an over-configurable mega-component.
+8. Visual snapshots cover selected mobile flows, but coverage was not organized
+   around Client 390/430 and Trainer 1440 profiles before YAFIT-297.
+9. Generic, voice, AI, client-AI, progress, and live token groups overlap in
+   surface and border responsibilities, making future token choice less clear.
+10. Desktop hover styles exist for cards, while keyboard focus visibility is
+    not documented or uniformly expressed for every custom control.

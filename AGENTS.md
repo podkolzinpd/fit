@@ -58,3 +58,137 @@
 - Generated DB types актуальны.
 - Unit/component/integration/E2E покрытие соответствует риску.
 - `npm run check` зелёный; DB/RLS тесты зелёные для изменений БД.
+
+# Fit UI / UX Engineering Rules
+
+These rules apply to every UI task in addition to the architectural and product
+rules above. The current product is the starting point; a generated component,
+Figma frame, screenshot, or external registry is reference material, not a new
+source of truth by itself.
+
+## EXISTING SYSTEM FIRST
+
+- Inspect the relevant route, feature component, `src/shared/ui.tsx`,
+  `src/shared/icons.tsx`, and the applicable tokens/selectors in
+  `src/styles.css` before proposing or implementing UI.
+- Reproduce the current information architecture, vocabulary, data states, and
+  interaction contract before changing presentation.
+- Do not replace working controls, layouts, or CSS merely because an external
+  library offers an alternative.
+
+## COMPONENT PRIORITY
+
+Use this order: an existing Fit component; a small extension of an existing Fit
+component; a focused new Fit primitive; a registry component only when the
+first three options are demonstrably unsuitable. Keep domain behavior in the
+feature layer. `shadcn`, 21st.dev, and Figma may inform a primitive, but imported
+code must be reduced to Fit tokens, accessibility conventions, and actual need.
+
+## DO NOT INVENT A NEW DESIGN LANGUAGE
+
+Use the current light-premium palette, system typography, semantic tokens,
+surface hierarchy, radii, shadows, and interaction patterns documented in
+`docs/UI_DESIGN_SYSTEM.md`. Do not introduce a second token system, Tailwind,
+new fonts, new brand colors, or a parallel component kit inside a feature task.
+
+## AVOID AI-GENERATED UI
+
+Do not ship generic dashboard grids, excessive gradients, floating glass
+panels, decorative metrics, fabricated charts, placeholder copy, or controls
+that are not backed by a real user action. Generated UI must be treated as a
+draft to inspect and simplify, never pasted as the finished Fit interface.
+
+## HIERARCHY BEFORE DECORATION
+
+First make the primary action, reading order, grouping, labels, feedback, and
+empty/error behavior unambiguous. Add visual emphasis only after hierarchy is
+correct. One screen should have one obvious primary action; secondary and rare
+actions must not compete with it.
+
+## MOBILE FIRST FOR CLIENT
+
+- Design and verify Client at 390 px first, then 430 px; preserve safe areas,
+  bottom navigation, readable wrapping, touch targets, and keyboard behavior.
+- Never rely on hover. Keep primary tasks reachable with one thumb and avoid
+  horizontal scrolling except for an explicitly scrollable control such as
+  metric tabs.
+- A completed workout remains completed even when its plan was only partially
+  performed; incomplete plan and confirmed fact are shown separately.
+
+## TRAINER DESKTOP
+
+Trainer changes must be checked at approximately 1440 px as well as in the
+existing compact shell. Do not assume a wider viewport automatically creates a
+useful desktop layout. Preserve dense operational scanning, keyboard access,
+and clear client/workout context; do not turn trainer tools into a marketing
+dashboard.
+
+## REUSE WITHOUT OVERENGINEERING
+
+Extract a shared primitive when two or more real consumers share semantics and
+interaction, not merely similar pixels. Prefer a small explicit API and local
+composition over a configurable mega-component. Do not refactor unrelated
+screens to justify reuse.
+
+## ICONS
+
+Reuse the stroke SVG vocabulary in `src/shared/icons.tsx`. Add an icon there
+only when it represents a repeated or important action. Do not mix icon packs,
+use emoji as navigation, or substitute ambiguous Unicode glyphs when an
+accessible labeled control is required. Icon-only buttons need an accessible
+name and at least the standard touch target.
+
+## STATES
+
+Every changed data surface must deliberately cover loading, empty, error,
+success, disabled, and retry states that can occur. Mutations need visible
+pending and outcome feedback. Never present planned data as confirmed fact, and
+never use color as the only status signal.
+
+## VISUAL VERIFICATION
+
+Visual verification is mandatory for UI changes. Run the relevant component or
+behavioral tests, then inspect the real route with Playwright. At minimum check
+Client 390 px and 430 px or Trainer 1440 px according to the affected role;
+cross-role/shared changes require all three. Check horizontal overflow, long
+Russian text, loading/empty/error/success where applicable, safe-area and fixed
+bars, and compare screenshots before and after. Update a committed screenshot
+baseline only when the visual change is intentional and explained in the PR.
+
+## FIGMA RULE
+
+When a Figma frame exists, inspect it through the Figma MCP and identify its
+component, token, layout, and state mapping before coding. Match product intent,
+not accidental coordinates. If Figma conflicts with current behavior,
+accessibility, or the established Fit system, document the conflict and do not
+silently choose either version. No Figma frame means existing Fit UI remains
+the design source of truth.
+
+## UI WORKFLOW
+
+### A. INSPECT
+
+Read the route and its real data states, reusable components, tokens, tests,
+and current screenshots. State the user goal and the one primary action.
+
+### B. REFERENCE
+
+Use Figma, shadcn, or 21st.dev only for the missing pattern. Record what is
+being borrowed and how it maps to the existing Fit system before adding code.
+
+### C. IMPLEMENT
+
+Make the smallest accessible change inside existing architecture. Reuse Fit
+tokens and primitives, preserve API/business logic, and add targeted tests for
+new behavior or state transitions.
+
+### D. VERIFY
+
+Run lint, typecheck, targeted tests, and the appropriate Playwright visual
+profiles. Inspect screenshots rather than relying only on green assertions.
+
+### E. POLISH
+
+Check copy, wrapping, spacing rhythm, focus/touch behavior, reduced motion,
+overflow, and all realistic states. Remove decorative or duplicated UI before
+requesting review.
