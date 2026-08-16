@@ -211,7 +211,9 @@ export function WorkoutChronicleCard({ workout, contextLabel }: { workout: Worko
           ? compactCompletedSetSummary(exercise.sets)
           : compactPlannedSetSummary(exercise.sets) ?? 'План без числовых значений'
         return <div className="workout-chronicle-exercise" key={exercise.id}>
-          <span>{exercise.name}{exercise.trainerComment && ' 💬'}</span>
+          <span className="workout-chronicle-exercise-name">{exercise.name}
+            {exercise.trainerComment && <small className="workout-exercise-comment">💬 {exercise.trainerComment}</small>}
+          </span>
           <strong>{result}</strong>
         </div>
       }) : <p className="muted">Без упражнений</p>}
