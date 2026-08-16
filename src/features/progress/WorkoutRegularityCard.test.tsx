@@ -28,15 +28,24 @@ describe('WorkoutRegularityContent', () => {
     expect(screen.getByRole('heading', { name: 'Неделя' })).toBeVisible()
     expect(screen.getByText('50%')).toBeVisible()
     expect(screen.getByText('частично 1 · пропущено 1 · самостоятельно 1')).toBeVisible()
-    expect(screen.getAllByText('выполнено')[0]?.previousSibling).toHaveTextContent('3')
+    expect(screen.getAllByText('Выполнено')[0]?.parentElement).toHaveTextContent('3')
     expect(screen.getByRole('progressbar', { name: /неделя/ })).toHaveAttribute('aria-valuenow', '50')
   })
 
   it('keeps an explicit empty state when there is no plan denominator', () => {
     render(<WorkoutRegularityContent periods={[periods[1]!]} />)
-    expect(screen.getByText('—')).toBeVisible()
-    expect(screen.getByText('Тренировок пока нет')).toBeVisible()
-    expect(screen.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow')
+    expect(screen.getByText('Пока пусто')).toBeVisible()
+    expect(screen.getByText('План и тренировки ещё не добавлены')).toBeVisible()
+    expect(screen.getByText('Добавьте тренировку — здесь появится прогресс.')).toBeVisible()
+    expect(screen.queryByText('—')).not.toBeInTheDocument()
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+  })
+
+  it('explains completed workouts when there is no assigned plan', () => {
+    render(<WorkoutRegularityContent periods={[{ ...periods[1]!, completedCount: 2 }]} />)
+    expect(screen.getByText('2 выполнено')).toBeVisible()
+    expect(screen.getByText('Назначенного плана пока нет')).toBeVisible()
+    expect(screen.getByText('самостоятельно 2 · Добавьте план, чтобы видеть процент выполнения.')).toBeVisible()
   })
 })
 
@@ -54,7 +63,7 @@ describe('WorkoutRegularityCard', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(<WorkoutRegularityCard clientId="client-1" />, { wrapper: wrapper(queryClient) })
 
-    expect(await screen.findByRole('heading', { name: 'Регулярность' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Неделя и месяц' })).toBeVisible()
     expect(await screen.findByText('50%')).toBeVisible()
     expect(repository.regularity).toHaveBeenCalledWith('client-1')
   })

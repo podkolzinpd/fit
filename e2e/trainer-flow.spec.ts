@@ -267,7 +267,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // На карточке истории — список упражнений (а не группы мышц) и тоннаж.
   await expect(page.locator('.cards .card').first()).toContainText('Болгарский присед')
   await expect(page.locator('.cards .card').first()).toContainText('45 кг × 9 повт.')
-  await expect(page.locator('.cards .card').first().locator('.workout-pr-badge')).toHaveText('PR')
+  await expect(page.locator('.cards .card').first().locator('.workout-pr-badge')).toHaveText('Новый рекорд')
   await expect(page.locator('.card-meta').first()).toContainText('1.2 т')
   await page.locator('.card').first().click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()

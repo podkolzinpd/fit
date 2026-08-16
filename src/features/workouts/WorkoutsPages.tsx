@@ -200,7 +200,7 @@ export function WorkoutChronicleCard({ workout, contextLabel }: { workout: Worko
     <div className="workout-chronicle-head">
       <strong>{formatLocalDate(workout.workoutDate)}</strong>
       <div className="workout-chronicle-head-badges">
-        {workout.hasPr && <span className="workout-pr-badge">PR</span>}
+        {workout.hasPr && <span className="workout-pr-badge">Новый рекорд</span>}
         <WorkoutStatusBadge workout={workout} />
       </div>
     </div>
@@ -462,7 +462,7 @@ export function WorkoutFormPage() {
         </details>
       </section>
       <section className="workout-form-section workout-form-exercises">
-        <div className="workout-form-section-head"><p className="eyebrow">УПРАЖНЕНИЯ</p><h2>План и факт</h2></div>
+        <div className="workout-form-section-head"><p className="eyebrow">УПРАЖНЕНИЯ</p><h2>{completedMode ? 'Что выполнено' : 'Что нужно выполнить'}</h2></div>
         <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} onAdd={(parsed) => void addQuickEntry(parsed)} onOpenCatalog={(search) => { setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) }} />
         <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} />
       </section>

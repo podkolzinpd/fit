@@ -36,14 +36,14 @@ describe('exercise progress presentation', () => {
     expect(screen.getByText('65 кг')).toBeVisible()
     expect(screen.getByText('520 кг·повт.')).toBeVisible()
     expect(screen.getByText('12 из 25 до следующей отметки')).toBeVisible()
-    expect(screen.getByText(/Estimated 1RM не используется/)).toBeVisible()
+    expect(screen.getByText(/без расчётных значений/)).toBeVisible()
   })
 
   it('marks only server-provided PRs and renders confirmed fact without a plan fallback', () => {
     render(<ExerciseProgressHistory items={[strength]} showRpe={false} />)
 
-    expect(screen.getByText('PR вес')).toBeVisible()
-    expect(screen.queryByText('PR вес × повторы')).not.toBeInTheDocument()
+    expect(screen.getByText('Рекорд веса')).toBeVisible()
+    expect(screen.queryByText('Рекорд: вес × повторы')).not.toBeInTheDocument()
     expect(screen.getByText('60 кг × 8 повт. · 55 кг × 10 повт.')).toBeVisible()
     expect(screen.getByText('💬 Чистая техника')).toBeVisible()
     expect(screen.queryByText(/RPE/)).not.toBeInTheDocument()
