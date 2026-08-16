@@ -260,6 +260,7 @@ export interface Workout {
   sessionRpe?: number
   wellbeing?: WorkoutWellbeing
   discomfort?: boolean
+  hasPr?: boolean
   stageId: UUID | null
   stageTitle: string | null
   version: number
