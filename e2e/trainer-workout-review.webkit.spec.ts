@@ -22,14 +22,19 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   // Для SPA достаточно готового DOM. В WebKit ожидание полного load иногда
   // задерживается фоновым соединением, хотя экран уже доступен пользователю.
   await page.goto(`/clients/${demoClientId}/goal`, { waitUntil: 'domcontentloaded' })
-  await page.getByLabel('Цель').fill('Вернуться к бегу')
-  await page.getByLabel('Дата достижения').fill(targetDate)
-  await page.getByRole('button', { name: 'Создать цель' }).click()
-  await page.getByRole('button', { name: '＋ Добавить' }).click()
-  await page.getByLabel('Название этапа').fill('Мягкий старт')
-  await page.getByLabel('Начало').fill(today)
-  await page.getByLabel('Конец').fill(targetDate)
-  await page.getByRole('button', { name: 'Добавить этап' }).click()
+  const goalInput = page.getByLabel('Цель')
+  if (await goalInput.count()) {
+    await goalInput.fill('Вернуться к бегу')
+    await page.getByLabel('Дата достижения').fill(targetDate)
+    await page.getByRole('button', { name: 'Создать цель' }).click()
+  }
+  if (!await page.getByText('Мягкий старт', { exact: true }).count()) {
+    await page.getByRole('button', { name: '＋ Добавить' }).click()
+    await page.getByLabel('Название этапа').fill('Мягкий старт')
+    await page.getByLabel('Начало').fill(today)
+    await page.getByLabel('Конец').fill(targetDate)
+    await page.getByRole('button', { name: 'Добавить этап' }).click()
+  }
   await expect(page.getByText('Мягкий старт', { exact: true })).toBeVisible()
 
   await page.goto(`/workouts/new?client=${demoClientId}`)
@@ -58,9 +63,12 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await page.getByRole('button', { name: 'Выйти' }).click()
   await login(page, 'client@fit.local')
   await page.goto('/me')
-  await expect(page.getByText('ВАШ ФОКУС', { exact: true })).toBeVisible()
-  await expect(page.getByText('Вернуться к бегу', { exact: true })).toBeVisible()
-  await expect(page.getByText('Текущий этап: Мягкий старт', { exact: true })).toBeVisible()
+  // Client Home показывает только один дополнительный акцент. Свежий ответ
+  // тренера приоритетнее цели, поэтому оба блока не конкурируют на главной.
+  await expect(page.getByText('ОТ ТРЕНЕРА', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '🔥 Новый ответ' })).toBeVisible()
+  await expect(page.getByText(review, { exact: true })).toBeVisible()
+  await expect(page.getByText('ВАШ ФОКУС', { exact: true })).toHaveCount(0)
   await page.goto(workoutUrl)
   await expect(page.getByText(review, { exact: true })).toBeVisible()
   const trainerReviewCard = page.locator('.workout-review').filter({ has: page.getByRole('heading', { name: 'Отзыв тренера' }) })
