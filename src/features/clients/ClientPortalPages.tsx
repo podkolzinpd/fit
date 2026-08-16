@@ -74,9 +74,9 @@ export function MyProgressPage() {
         return value === undefined ? [] : [{ metricId: metric.id, value }]
       }),
     })
-  }, onSuccess: async () => {
+  }, onSuccess: async (_savedEntry, variables) => {
     setEditing(null)
-    setMeasurementFormOpen(false)
+    if (!variables.entry) setMeasurementFormOpen(false)
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['progress', mine.data?.id] }),
       queryClient.invalidateQueries({ queryKey: ['client', mine.data?.id] }),

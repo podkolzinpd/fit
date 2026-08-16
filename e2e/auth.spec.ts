@@ -404,6 +404,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // которую окно графика прячет в отдельные календарные дни (дата-зависимый
   // флейк YAFIT-80). Прошлая дата и реалистична, и уникальна.
   await page.goto('/me/progress')
+  await page.getByRole('button', { name: 'Добавить замер' }).click()
   const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10)
   await page.getByLabel('Дата').fill(weekAgo)
   await page.getByLabel('Вес, кг').fill('59.5')
