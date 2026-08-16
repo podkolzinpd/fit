@@ -20,19 +20,33 @@ export function WorkoutRegularityContent({ periods }: { periods: WorkoutRegulari
     {periods.map((item) => {
       const details = periodDetails(item)
       const percent = item.completionPercent ?? 0
+      const hasPlan = item.plannedCount > 0
+      const hasWorkouts = item.completedCount > 0
+      const summary = hasPlan
+        ? { value: `${item.completionPercent ?? 0}%`, label: `${item.completedPlannedCount} из ${item.plannedCount} выполнено по плану` }
+        : hasWorkouts
+          ? { value: `${item.completedCount} выполнено`, label: 'Назначенного плана пока нет' }
+          : { value: 'Пока пусто', label: 'План и тренировки ещё не добавлены' }
+      const actionHint = !hasWorkouts && !hasPlan
+        ? 'Добавьте тренировку — здесь появится прогресс.'
+        : !hasPlan
+          ? 'Добавьте план, чтобы видеть процент выполнения.'
+          : null
+      const hint = [details.join(' · '), actionHint].filter(Boolean).join(' · ')
+        || 'Без пропусков и частичных тренировок'
       return <article className="workout-regularity-period" key={item.period}>
-        <header><div><h3>{PERIOD_LABELS[item.period]}</h3><small>{formatLocalDateShort(item.periodStart)}–{formatLocalDateShort(item.periodEnd)}</small></div>
-          <strong>{item.completionPercent === null ? '—' : `${item.completionPercent}%`}</strong></header>
-        <div className="workout-regularity-track" role="progressbar" aria-label={`План закрыт за период: ${PERIOD_LABELS[item.period].toLowerCase()}`}
+        <header><div><h3>{PERIOD_LABELS[item.period]}</h3><small>{formatLocalDateShort(item.periodStart)}–{formatLocalDateShort(item.periodEnd)}</small></div></header>
+        <div className="workout-regularity-summary"><strong>{summary.value}</strong><span>{summary.label}</span></div>
+        {hasPlan && <div className="workout-regularity-track" role="progressbar" aria-label={`Выполнено по плану за период: ${PERIOD_LABELS[item.period].toLowerCase()}`}
           aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.completionPercent ?? undefined}>
           <span style={{ width: `${Math.min(100, Math.max(0, percent))}%` }} />
-        </div>
+        </div>}
         <div className="workout-regularity-stats">
-          <div><strong>{item.plannedCount}</strong><span>запланировано</span></div>
-          <div><strong>{item.completedCount}</strong><span>выполнено</span></div>
-          <div><strong>{item.completedPlannedCount}</strong><span>по плану</span></div>
+          <div><span>План</span><strong>{item.plannedCount}</strong></div>
+          <div><span>Выполнено</span><strong>{item.completedCount}</strong></div>
+          <div><span>По плану</span><strong>{item.completedPlannedCount}</strong></div>
         </div>
-        <p>{details.length > 0 ? details.join(' · ') : item.plannedCount + item.completedCount === 0 ? 'Тренировок пока нет' : 'Без пропусков и частичных тренировок'}</p>
+        <p className={!hasWorkouts && !hasPlan ? 'workout-regularity-empty-hint' : undefined}>{hint}</p>
       </article>
     })}
   </div>
@@ -44,7 +58,7 @@ export function WorkoutRegularityCard({ clientId }: { clientId: string }) {
     queryFn: () => progressRepository.regularity(clientId),
   })
   return <section className="workout-regularity-card" aria-label="Регулярность тренировок">
-    <header className="workout-regularity-header"><div><p className="eyebrow">ПЛАН И ФАКТ</p><h2>Регулярность</h2></div><span>Без AI</span></header>
+    <header className="workout-regularity-header"><div><p className="eyebrow">ТРЕНИРОВОЧНЫЙ РИТМ</p><h2>Неделя и месяц</h2></div></header>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {query.data && <WorkoutRegularityContent periods={query.data} />}
     </AsyncView>

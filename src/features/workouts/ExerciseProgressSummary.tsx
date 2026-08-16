@@ -71,7 +71,7 @@ export function ExerciseProgressSummary({
       : <div className="exercise-progress-records single">
           <div><span>Лучший результат</span><strong>{exerciseProgressValueLabel(latest.allTimePrimaryValue, latest.inputKind)}</strong></div>
         </div>}
-    <p className="exercise-progress-method">Только подтверждённые подходы завершённых тренировок. План и черновой ввод не учитываются.{strength ? ' Estimated 1RM не используется.' : ''}</p>
+    <p className="exercise-progress-method">Только подтверждённые подходы завершённых тренировок. План и черновой ввод не учитываются.{strength ? ' Рекорды основаны на выполненных подходах, без расчётных значений.' : ''}</p>
   </section>
 }
 
@@ -85,8 +85,8 @@ export function ExerciseProgressHistory({
   if (!items.length) return <p className="muted empty-hint">Ещё нет выполненных подходов по этому упражнению.</p>
   return <div className="timeline exercise-progress-timeline">{items.map((item) => {
     const badges = item.inputKind === 'strength'
-      ? [item.isWeightPr ? 'PR вес' : null, item.isWeightRepsPr ? 'PR вес × повторы' : null]
-      : [item.isPrimaryPr ? 'PR' : null]
+      ? [item.isWeightPr ? 'Рекорд веса' : null, item.isWeightRepsPr ? 'Рекорд: вес × повторы' : null]
+      : [item.isPrimaryPr ? 'Новый рекорд' : null]
     const visibleBadges = badges.filter((value): value is string => value !== null)
     return <article key={item.workoutId} className="card">
       <div className="exercise-progress-row-head"><strong>{formatLocalDate(item.workoutDate)}</strong><span>{item.confirmedSetCount} подх.</span></div>

@@ -410,7 +410,9 @@ test('iPhone: week/month регулярность помещается на Prog
   await expect(regularity).toBeVisible()
   await expect(regularity.getByRole('heading', { name: 'Неделя' })).toBeVisible()
   await expect(regularity.getByRole('heading', { name: 'Месяц' })).toBeVisible()
-  await expect(regularity.getByText('ПЛАН И ФАКТ')).toBeVisible()
+  await expect(regularity.getByText('ТРЕНИРОВОЧНЫЙ РИТМ')).toBeVisible()
+  await expect(regularity.getByText(/100%|Пока пусто/).first()).toBeVisible()
+  await expect(regularity.getByText('—', { exact: true })).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
 })
 
@@ -442,6 +444,20 @@ test('iPhone: меню упражнения плана не перекрывае
   await actions.last().click()
   await expect(page.getByRole('menuitem', { name: 'Удалить' })).toBeVisible()
   await expectOverflowMenuAboveBars(page)
+  await page.keyboard.press('Escape')
+  const save = page.getByRole('button', { name: 'Сохранить', exact: true })
+  await save.scrollIntoViewIfNeeded()
+  const mobileLayout = await page.evaluate(() => {
+    const content = document.querySelector('.content')!.getBoundingClientRect()
+    const tabBar = document.querySelector('.tab-bar')!
+    const bar = tabBar.getBoundingClientRect()
+    return { contentBottom: content.bottom, barTop: bar.top, barPosition: getComputedStyle(tabBar).position }
+  })
+  expect(mobileLayout.barPosition).toBe('static')
+  expect(Math.abs(mobileLayout.contentBottom - mobileLayout.barTop)).toBeLessThanOrEqual(1)
+  const saveBox = await save.boundingBox()
+  expect(saveBox).not.toBeNull()
+  expect(saveBox!.y + saveBox!.height).toBeLessThan(mobileLayout.barTop)
   await expectNoHorizontalOverflow(page)
 })
 
