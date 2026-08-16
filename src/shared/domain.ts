@@ -278,6 +278,18 @@ export interface WorkoutSummary {
   status: WorkoutStatus
 }
 
+export type WorkoutPersonalRecordMetric = 'primary' | 'weight' | 'weight_reps'
+
+export interface WorkoutPersonalRecord {
+  exerciseRef: string
+  exerciseName: string
+  inputKind: InputKind
+  metric: WorkoutPersonalRecordMetric
+  primaryValue: number
+  weightKg: number | null
+  reps: number | null
+}
+
 export interface ExerciseProgressSet {
   weightKg?: number
   reps?: number

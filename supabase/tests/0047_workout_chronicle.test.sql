@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(8);
+select plan(13);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('47000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'chronicle-trainer@example.test', ''),
@@ -51,6 +51,10 @@ select has_function(
   'public', 'workout_has_personal_record', array['uuid'],
   'chronicle PR helper exists'
 );
+select has_function(
+  'public', 'list_workout_personal_records', array['uuid'],
+  'workout PR details RPC exists'
+);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '47000000-0000-4000-8000-000000000001', true);
@@ -80,6 +84,16 @@ select results_eq(
     'fire'::text, 'Снизим вес в следующий раз'::text)$$,
   'trainer receives feedback and response in the paginated chronicle row'
 );
+select results_eq(
+  $$select exercise_ref, exercise_name, input_kind, metric, primary_value,
+      weight_kg, reps
+    from public.list_workout_personal_records(
+      '47000000-0000-4000-8000-000000000011'
+    )$$,
+  $$values ('squat'::text, 'Присед'::text, 'strength'::text,
+    'weight_reps'::text, 480::numeric, 40::numeric, 12)$$,
+  'trainer gets the exact exercise and achieved result behind a PR'
+);
 
 select set_config('request.jwt.claim.sub', '47000000-0000-4000-8000-000000000002', true);
 select results_eq(
@@ -97,6 +111,15 @@ select is(
     null, null, '47000000-0000-4000-8000-000000000004', 1, 0
   )), 1::bigint, 'requested page size remains bounded'
 );
+select results_eq(
+  $$select exercise_ref, exercise_name, metric, weight_kg, reps
+    from public.list_workout_personal_records(
+      '47000000-0000-4000-8000-000000000011'
+    )$$,
+  $$values ('squat'::text, 'Присед'::text, 'weight_reps'::text,
+    40::numeric, 12)$$,
+  'client gets the same permitted PR details as trainer'
+);
 
 select set_config('request.jwt.claim.sub', '47000000-0000-4000-8000-000000000003', true);
 select is(
@@ -107,6 +130,19 @@ select is(
 select throws_ok(
   $$select public.workout_has_personal_record('47000000-0000-4000-8000-000000000012')$$,
   '42501', null, 'internal PR helper is not directly callable by authenticated users'
+);
+select throws_ok(
+  $$select * from public.list_workout_personal_records(
+    '47000000-0000-4000-8000-000000000011'
+  )$$,
+  'PT403', 'workout_access_denied',
+  'unrelated trainer cannot read PR details'
+);
+select ok(
+  not has_function_privilege(
+    'anon', 'public.list_workout_personal_records(uuid)', 'EXECUTE'
+  ),
+  'anon has no execute grant for PR details'
 );
 
 select * from finish();

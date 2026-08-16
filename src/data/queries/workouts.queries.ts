@@ -27,6 +27,9 @@ export const workoutQueries = {
       p_before_completed_at: cursor?.completedAt ?? null,
       p_before_workout_id: cursor?.workoutId ?? null,
     }),
+  personalRecords: (workoutId: string) => supabase.rpc('list_workout_personal_records', {
+    p_workout_id: workoutId,
+  }),
   getRoot: (id: string) => supabase.from('workouts').select(rootColumns).eq('id', id).is('deleted_at', null).single(),
   getExercises: (id: string) => supabase.from('workout_exercises')
     .select('id,position,exercise_source,exercise_ref,custom_exercise_id,exercise_name,muscle_group,input_kind,block_id,block_type,block_preset,block_rounds,rest_between_exercises_sec,rest_between_rounds_sec,rest_between_sets_sec,trainer_comment')

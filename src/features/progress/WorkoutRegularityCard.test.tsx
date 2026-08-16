@@ -30,16 +30,16 @@ describe('WorkoutRegularityContent', () => {
     expect(screen.getByText('3 тренировки')).toBeVisible()
     expect(screen.getByLabelText('Состав завершённых тренировок')).toHaveTextContent('1 по плану')
     expect(screen.getByLabelText('Состав завершённых тренировок')).toHaveTextContent('2 самостоятельно')
-    expect(screen.getByText(/План тренера:/)).toHaveTextContent('1 из 1 выполнено')
+    expect(screen.getByText(/По плану тренера:/)).toHaveTextContent('1 из 1 тренировок состоялось')
     expect(screen.queryByText('100%')).not.toBeInTheDocument()
     await user.click(screen.getByRole('tab', { name: 'Месяц' }))
     expect(screen.getByText('Пока без тренировок')).toBeVisible()
   })
 
-  it('keeps partial and skipped workouts explicit without adding them to completed', () => {
+  it('counts partial sessions as workouts and explains plan completion separately', () => {
     render(<WorkoutRegularityContent periods={[{ ...periods[0]!, partialCount: 1, skippedCount: 1 }]} />)
     expect(screen.getByText('3 тренировки')).toBeVisible()
-    expect(screen.getByText('Частично выполнено: 1 · Пропущено: 1')).toBeVisible()
+    expect(screen.getByText('Часть плана выполнена не полностью: 1 · Пропущено: 1')).toBeVisible()
   })
 
   it('keeps an explicit empty state when there is no plan denominator', () => {

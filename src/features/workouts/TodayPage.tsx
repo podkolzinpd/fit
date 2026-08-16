@@ -25,7 +25,7 @@ import { WorkoutParseErrorNotice, workoutParseErrorKind, type WorkoutParseErrorK
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { WearableHealthCard } from '../wearables'
 import { isWearablesPilotEnabled } from '../../app/feature-flags'
-import { ClientHomeOverview } from './ClientHomeOverview'
+import { ClientHomeOverview, clientHomeLatestDoneWorkout } from './ClientHomeOverview'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
@@ -94,6 +94,12 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const workouts = useQuery({ queryKey: ['workouts', mine.data?.id], queryFn: () => workoutsRepository.list(undefined, undefined, clientMode ? mine.data!.id : undefined), enabled: !clientMode || Boolean(mine.data) })
   const goal = useQuery({ queryKey: ['client-goal', mine.data?.id], queryFn: () => goalsRepository.get(mine.data!.id), enabled: clientMode && Boolean(mine.data) })
   const regularity = useQuery({ queryKey: ['workout-regularity', mine.data?.id], queryFn: () => progressRepository.regularity(mine.data!.id), enabled: clientMode && Boolean(mine.data) })
+  const latestClientWorkout = workouts.data ? clientHomeLatestDoneWorkout(workouts.data) : undefined
+  const personalRecords = useQuery({
+    queryKey: ['workout-personal-records', latestClientWorkout?.id],
+    queryFn: () => workoutsRepository.personalRecords(latestClientWorkout!.id),
+    enabled: clientMode && Boolean(latestClientWorkout?.hasPr),
+  })
   const catalog = useExerciseCatalog()
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
@@ -449,7 +455,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const contextWorkout = currentWorkout ?? plannedWorkouts[0] ?? latestWorkout
   const contextTitle = currentWorkout ? 'Текущая тренировка' : plannedWorkouts[0] ? 'Ближайшая тренировка' : latestWorkout ? 'Последняя тренировка' : null
   const contextCard = !clientMode && contextWorkout && contextTitle && <section className="today-context"><p>{contextTitle}</p><Link to={currentWorkout ? `/workouts/${contextWorkout.id}/live` : `/workouts/${contextWorkout.id}`}><span><strong>{contextWorkout.clientName}</strong><small>{contextWorkout.workoutDate === today ? `Сегодня, ${workoutTime(contextWorkout)}` : contextWorkout.workoutDate}</small></span><span><strong>{contextWorkout.exercises.length ? contextWorkout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Тренировка'}</strong><small>{contextWorkout.exercises.length} упражнений</small></span><b>›</b></Link></section>
-  const clientHomeError = clientMode ? mine.error ?? workouts.error ?? regularity.error ?? goal.error : null
+  const clientHomeError = clientMode ? mine.error ?? workouts.error ?? regularity.error ?? goal.error ?? personalRecords.error : null
   const greetingName = clientMode ? mine.data?.fullName || actor?.firstName || 'спортсмен' : actor?.firstName || 'тренер'
   const greeting = `${new Date().getHours() < 12 ? 'Доброе утро' : new Date().getHours() < 18 ? 'Добрый день' : 'Добрый вечер'}, ${greetingName}`
 
@@ -461,6 +467,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         workouts={workouts.data}
         regularity={regularity.data}
         goal={goal.data}
+        personalRecords={personalRecords.data}
         workoutsLoading={mine.isLoading || workouts.isLoading}
         regularityLoading={mine.isLoading || regularity.isLoading}
         error={clientHomeError}
@@ -470,6 +477,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
             void workouts.refetch()
             void regularity.refetch()
             void goal.refetch()
+            if (latestClientWorkout?.hasPr) void personalRecords.refetch()
           }
         }}
         selfTraining={<section className="client-home-self-training primary">

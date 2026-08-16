@@ -1,4 +1,4 @@
-// schema-sha256: 5c20448fd698994dffee29cc7050d6492c2894565841c719b12202ad5c4e26cd
+// schema-sha256: 0aa214db27cad8f8dd0972242ea6e3cf157c4fc691227ce917404d7025f04a4f
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1211,6 +1211,18 @@ export type Database = {
           exercise_ref: string
           sets: Json
           workout_date: string
+        }[]
+      }
+      list_workout_personal_records: {
+        Args: { p_workout_id: string }
+        Returns: {
+          exercise_name: string
+          exercise_ref: string
+          input_kind: string
+          metric: string
+          primary_value: number
+          reps: number | null
+          weight_kg: number | null
         }[]
       }
       list_workout_summaries: {

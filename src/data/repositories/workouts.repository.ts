@@ -1,4 +1,4 @@
-import type { BlockPreset, BlockType, ExerciseProgressCursor, ExerciseProgressPage, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutSet, WorkoutSetDraft, WorkoutStatus, WorkoutSummary, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
+import type { BlockPreset, BlockType, ExerciseProgressCursor, ExerciseProgressPage, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutPersonalRecord, WorkoutPersonalRecordMetric, WorkoutSet, WorkoutSetDraft, WorkoutStatus, WorkoutSummary, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import type { WorkoutListRow } from '../database.types'
 import { clientsRepository } from './clients.repository'
@@ -178,6 +178,19 @@ export const workoutsRepository = {
   },
   listSummaries,
   findActive,
+  async personalRecords(workoutId: string): Promise<WorkoutPersonalRecord[]> {
+    const result = await workoutQueries.personalRecords(workoutId)
+    if (result.error) throw repositoryError(result.error)
+    return result.data.map((row) => ({
+      exerciseRef: row.exercise_ref,
+      exerciseName: row.exercise_name,
+      inputKind: row.input_kind as InputKind,
+      metric: row.metric as WorkoutPersonalRecordMetric,
+      primaryValue: Number(row.primary_value),
+      weightKg: row.weight_kg === null ? null : Number(row.weight_kg),
+      reps: row.reps,
+    }))
+  },
   async latestExerciseResults(clientId: string, exerciseRefs: string[]): Promise<Map<string, PreviousExerciseResult>> {
     if (!exerciseRefs.length) return new Map()
     const result = await workoutQueries.latestExerciseResults(clientId, exerciseRefs)

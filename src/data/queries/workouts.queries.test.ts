@@ -65,6 +65,14 @@ describe('workoutQueries lists', () => {
     })
   })
 
+  it('loads all personal-record details for one workout in one request', () => {
+    workoutQueries.personalRecords('workout-id')
+
+    expect(rpc).toHaveBeenCalledWith('list_workout_personal_records', {
+      p_workout_id: 'workout-id',
+    })
+  })
+
   it('builds detail reads through the explicit table contracts', () => {
     workoutQueries.getRoot('workout-id')
     workoutQueries.getExercises('workout-id')
