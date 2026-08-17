@@ -1,4 +1,4 @@
-import type { ExerciseSnapshot, WorkoutSetDraft } from '../../shared/domain'
+import type { BlockPreset, BlockType, ExerciseSnapshot, WorkoutSetDraft } from '../../shared/domain'
 import { isValidRpe } from '../../shared/rpe'
 import { isExerciseSearchAlias, rankExerciseSearch, SEARCH_ALIASES } from '../exercises/exercise-search'
 
@@ -7,6 +7,15 @@ export interface ParsedWorkoutExercise {
   exercise: ExerciseSnapshot
   sets: WorkoutSetDraft[]
   hasValues: boolean
+  structure?: {
+    blockId?: string
+    blockType?: BlockType
+    blockPreset?: BlockPreset
+    blockRounds?: number
+    restBetweenExercisesSec?: number
+    restBetweenRoundsSec?: number
+    restBetweenSetsSec?: number
+  }
 }
 
 export interface UnparsedWorkoutLine {
@@ -93,7 +102,33 @@ function number(value: string | undefined): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined
 }
 
+function distanceKilometers(line: string): number | undefined {
+  const match = /(\d+(?:[.,]\d+)?)\s*(км|km|километр(?:а|ов|ы)?|м\b|метр(?:а|ов|ы)?)/iu.exec(line)
+  const value = number(match?.[1])
+  if (value === undefined) return undefined
+  return match?.[2]?.toLocaleLowerCase('ru').startsWith('к') ? value : value / 1000
+}
+
+function clockDurationSeconds(line: string): number | undefined {
+  const match = /\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b/u.exec(line)
+  if (!match) return undefined
+  const first = Number(match[1])
+  const second = Number(match[2])
+  const third = match[3] === undefined ? undefined : Number(match[3])
+  if (second > 59 || (third !== undefined && third > 59)) return undefined
+  return third === undefined ? first * 60 + second : first * 3600 + second * 60 + third
+}
+
+function isImplicitRunningLine(line: string): boolean {
+  const value = normalize(line)
+  return /^(?:\d+\s*(?:x|х|по)\s*)?\d+(?:[.,]\d+)?\s*(?:км|km|километр|м\b|метр)/u.test(value)
+    || /^(?:между\s+)?интервал/u.test(value) && /\d+(?:[.,]\d+)?\s*(?:км|километр|м\b|метр)/u.test(value)
+}
+
 export function quickWorkoutExerciseName(line: string): string {
+  if (isImplicitRunningLine(line)) return 'Бег'
+  const leadingCount = /^\s*\d+\s+([\p{L}][\p{L}\s-]*)$/u.exec(line)
+  if (leadingCount?.[1]) return leadingCount[1].trim()
   const metric = /\d+\s*(?:[xх×]|кг|kg|килограмм(?:а|ов)?|сек|мин|км|km|повт|раз\b|на\s*\d|(?:(?:подход(?:а|ов)?|сет(?:а|ов)?)(?:\s+по)?|по)\s*\d)/iu.exec(line)
   return (metric ? line.slice(0, metric.index) : line).trim()
 }
@@ -152,7 +187,12 @@ function needsTrainerChoice(name: string, catalog: readonly ExerciseSnapshot[]):
 export function splitWorkoutText(text: string, catalog: readonly ExerciseSnapshot[]): string[] {
   // Whisper обычно сохраняет слова-связки, а не переносы. Разделяем только
   // явные «затем/потом» и найденные по каталогу начала упражнений.
-  return formatWorkoutText(text, catalog).split(/[\n;]+/).flatMap((line) => line.split(/\s+(?:затем|потом|далее|после\s+этого)\s+/iu)).map((line) => line.trim()).filter(Boolean)
+  return formatWorkoutText(text, catalog)
+    .split(/[\n;]+/)
+    .flatMap((line) => line.split(/\s+(?:затем|потом|далее|после\s+этого)\s+/iu))
+    .flatMap((line) => line.split(/\s*\+\s*/u))
+    .map((line) => line.trim())
+    .filter(Boolean)
 }
 
 /** Кандидаты из каталога для одного фрагмента диктовки, в порядке релевантности. */
@@ -163,6 +203,31 @@ export function workoutCandidates(line: string, catalog: readonly ExerciseSnapsh
 function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { sets: WorkoutSetDraft[]; hasValues: boolean } {
   const rpe = number(/\brpe\s*(\d+(?:[.,]\d+)?)/iu.exec(line)?.[1])
   const validRpe = isValidRpe(rpe) ? rpe : undefined
+  if (inputKind === 'distance') {
+    const interval = /(\d+)\s*(?:[xх×]|по)\s*(\d+(?:[.,]\d+)?)\s*(км|km|километр(?:а|ов|ы)?|м\b|метр(?:а|ов|ы)?)/iu.exec(line)
+    const count = interval ? Math.min(Math.max(Number(interval[1]), 1), 20) : 1
+    const intervalDistance = interval
+      ? number(interval[2])! * (interval[3]?.toLocaleLowerCase('ru').startsWith('к') ? 1 : 0.001)
+      : undefined
+    const distanceKm = intervalDistance ?? distanceKilometers(line)
+    const clockDuration = clockDurationSeconds(line)
+    const durationMatch = /(\d+(?:[.,]\d+)?)\s*(секунд(?:а|ы)?|сек|минут(?:а|ы)?|мин|час(?:а|ов)?|ч\b)/iu.exec(line)
+    const durationValue = number(durationMatch?.[1])
+    const durationUnit = durationMatch?.[2]?.toLocaleLowerCase('ru')
+    const durationSec = clockDuration ?? (durationValue === undefined ? undefined
+      : durationUnit?.startsWith('ч') ? durationValue * 3600
+        : durationUnit?.startsWith('м') ? durationValue * 60 : durationValue)
+    const hasValues = distanceKm !== undefined || durationSec !== undefined || validRpe !== undefined
+    return {
+      hasValues,
+      sets: Array.from({ length: count }, (_, position) => ({
+        position,
+        ...(durationSec !== undefined ? { durationSec } : {}),
+        ...(distanceKm !== undefined ? { distanceKm } : {}),
+        ...(validRpe !== undefined ? { rpe: validRpe } : {}),
+      })),
+    }
+  }
   // Отдельные пары веса и повторов — естественная запись факта после зала:
   // «80×8, 85×6, 90×5». Берём её только при двух и более парах, чтобы
   // обычное «3×8 80 кг» по-прежнему означало три одинаковых подхода.
@@ -192,10 +257,10 @@ function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { se
   const durationSec = repeatedUnit
     ? repeatedValue! * (repeatedUnit.startsWith('м') ? 60 : 1)
     : durationValue === undefined ? undefined : durationValue * (durationUnit?.startsWith('м') ? 60 : 1)
-  const distanceKm = number(/(\d+(?:[.,]\d+)?)\s*(?:км|km)/iu.exec(line)?.[1])
   const explicitReps = number(/(\d+)\s*(?:повт|повтор|раз\b)/iu.exec(line)?.[1])
-  const reps = repeatedUnit ? explicitReps : repeatedValue
-  const hasValues = weight !== undefined || reps !== undefined || durationSec !== undefined || distanceKm !== undefined || validRpe !== undefined
+    ?? (inputKind === 'reps' ? number(/^\s*(\d+)\s+[\p{L}]/u.exec(line)?.[1]) : undefined)
+  const reps = repeatedUnit ? explicitReps : (repeatedValue ?? explicitReps)
+  const hasValues = weight !== undefined || reps !== undefined || durationSec !== undefined || validRpe !== undefined
   return {
     hasValues,
     sets: Array.from({ length: Math.min(Math.max(count, 1), 20) }, (_, position) => ({
@@ -205,15 +270,67 @@ function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { se
       ...(inputKind === 'reps' && durationSec !== undefined ? { durationSec } : {}),
       ...(inputKind === 'reps' && reps !== undefined ? { reps } : {}),
       ...(inputKind === 'duration' && durationSec !== undefined ? { durationSec } : {}),
-      ...(inputKind === 'distance' && durationSec !== undefined ? { durationSec } : {}),
-      ...(inputKind === 'distance' && distanceKm !== undefined ? { distanceKm } : {}),
       ...(validRpe !== undefined ? { rpe: validRpe } : {}),
     })),
   }
 }
 
+function activeRunningIntervalDrafts(line: string, catalog: readonly ExerciseSnapshot[]): ParsedWorkoutExercise[] | undefined {
+  const divider = /,?\s*(?:между\s+интервалами|восстановление)/iu.exec(line)
+  if (!divider || divider.index <= 0) return undefined
+  const count = Number(/(\d+)\s*(?:[xх×]|по)\s*\d+(?:[.,]\d+)?\s*(?:км|km|километр|м\b|метр)/iu.exec(line.slice(0, divider.index))?.[1])
+  if (!Number.isFinite(count) || count < 1 || count > 20) return undefined
+  const running = catalog.find((exercise) => exercise.ref === 'running' && exercise.inputKind === 'distance')
+  if (!running) return undefined
+  const workValues = setDrafts(line.slice(0, divider.index), 'distance')
+  const recoveryValues = setDrafts(line.slice(divider.index), 'distance')
+  const recoverySet = recoveryValues.sets[0]
+  if (!workValues.hasValues || !recoverySet?.distanceKm) return undefined
+  const blockId = crypto.randomUUID()
+  const structure = {
+    blockId,
+    blockType: 'group' as const,
+    blockPreset: 'interval' as const,
+    blockRounds: count,
+    restBetweenExercisesSec: 0,
+    restBetweenRoundsSec: 0,
+  }
+  return [
+    {
+      line: line.slice(0, divider.index).trim(),
+      exercise: { ...running, name: 'Бег — быстрый отрезок' },
+      ...workValues,
+      structure,
+    },
+    {
+      line: line.slice(divider.index).trim(),
+      exercise: { ...running, name: 'Бег — восстановление' },
+      sets: Array.from({ length: count }, (_, position) => ({ ...recoverySet, position })),
+      hasValues: true,
+      structure,
+    },
+  ]
+}
+
 export function resolveQuickWorkoutLine(line: string, exercise: ExerciseSnapshot): ParsedWorkoutExercise {
   const values = setDrafts(line, exercise.inputKind)
+  if (exercise.ref !== 'running') return { line, exercise, ...values }
+  if (/\d+\s*(?:[xх×]|по)\s*\d+(?:[.,]\d+)?\s*(?:км|km|километр|м\b|метр)/iu.test(line)) {
+    return {
+      line,
+      exercise: { ...exercise, name: 'Бег — интервалы' },
+      ...values,
+      structure: { blockType: 'single', blockPreset: 'interval', blockRounds: 1, restBetweenSetsSec: 90 },
+    }
+  }
+  if (/между\s+интервал|трусц/iu.test(line)) {
+    return {
+      line,
+      exercise: { ...exercise, name: 'Бег — восстановление' },
+      ...values,
+      structure: { blockType: 'single', blockPreset: 'interval', blockRounds: 1 },
+    }
+  }
   return { line, exercise, ...values }
 }
 
@@ -227,6 +344,11 @@ export function parseQuickWorkoutEntry(text: string, catalog: readonly ExerciseS
   for (const rawLine of splitWorkoutText(text, catalog)) {
     const line = rawLine.trim()
     if (!line) continue
+    const activeRunningIntervals = activeRunningIntervalDrafts(line, catalog)
+    if (activeRunningIntervals) {
+      parsed.push(...activeRunningIntervals)
+      continue
+    }
     const name = quickWorkoutExerciseName(line)
     const matches = matchingExercises(name, catalog, options.preferredExerciseRefs ?? [])
     if (needsTrainerChoice(name, catalog) || !canResolveSafely(name, matches, catalog)) {

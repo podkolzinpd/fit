@@ -151,6 +151,26 @@ export interface ExerciseSnapshot {
   instructions?: string[]
 }
 
+export type RunningProgressFormat =
+  | 'free'
+  | 'easy'
+  | 'long'
+  | 'tempo'
+  | 'recovery'
+  | 'interval'
+  | 'interval_active'
+  | 'mixed'
+
+export interface RunningProgressSession {
+  workoutId: UUID
+  workoutDate: LocalDate
+  format: RunningProgressFormat
+  distanceKm?: number
+  durationSec?: number
+  paceSecPerKm?: number
+  rpe?: number
+}
+
 export interface WorkoutSetDraft {
   /** Идентификатор строки исходной тренировки при правке завершённой записи. */
   sourceSetId?: UUID

@@ -39,7 +39,7 @@ export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], 
   }
 
   return <WorkoutComposer name="quick-workout-entry" source="workout_quick_entry" label="Запись тренировки" voiceLabel="Надиктовать тренировку" value={text} onValueChange={setText} onClear={() => { setText(''); setChoices({}) }} primaryAction={<button type="button" className="wide" disabled={!resolved.length} onClick={add}>Добавить распознанные{resolved.length ? ` (${resolved.length})` : ''}</button>} secondaryAction={onOpenCatalog ? <button type="button" className="secondary wide quick-workout-catalog" onClick={() => { trackGoal('exercise_picker_opened'); onOpenCatalog('') }}>Выбрать упражнения</button> : undefined}>
-      <p className="workout-composer-hint">Например: присед 3×8 80 кг. В диктовке говорите «затем» между упражнениями.</p>
+      <p className="workout-composer-hint">Например: присед 3×8 80 кг, бег 30 минут 5 км или 6 по 400 метров. Между упражнениями скажите «затем» или поставьте «+».</p>
       {text.trim() && <div className="quick-workout-preview" aria-live="polite">
         {resolved.length > 0 && <><p><strong>Распознано: {resolved.length}</strong></p><ul>{resolved.map((item, index) => <li key={`${item.exercise.ref}-${index}`}>{item.exercise.name} · {item.sets.length} {item.sets.length === 1 ? 'подход' : item.sets.length < 5 ? 'подхода' : 'подходов'}</li>)}</ul></>}
         {clarification && <section className="quick-workout-clarification" aria-label={clarification.title}><strong>{clarification.title}</strong><p>{clarification.text}</p></section>}

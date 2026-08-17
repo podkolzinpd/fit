@@ -1173,6 +1173,37 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-kind-tabs { flex:0 0 auto; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:3px; padding:3px; border:1px solid var(--border); border-radius:15px; background:var(--surface-sunken) }
 .workout-kind-tabs button { min-width:0; min-height:40px; padding:7px 5px; border:0; border-radius:11px; background:transparent; color:var(--muted); font-size:14px; font-weight:700; box-shadow:none }
 .workout-kind-tabs button.active { background:var(--surface-raised); color:var(--fg); box-shadow:0 1px 5px #17191d14 }
+.running-format-picker { flex:1 1 auto; min-height:76px; overflow-y:auto; overscroll-behavior:contain; display:flex; flex-direction:column; gap:12px; padding:1px 1px 4px; scroll-padding-bottom:76px }
+.running-format-heading { display:grid; gap:4px }
+.running-format-heading > span, .running-drills > span { color:var(--muted); font-size:12px; line-height:1.4 }
+.running-format-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px }
+.running-format-list.interval-list { grid-template-columns:1fr }
+.running-format-option { position:relative; display:grid; align-content:start; gap:4px; min-width:0; min-height:82px; padding:13px; border:1px solid var(--border); border-radius:15px; background:var(--surface-raised); color:var(--fg); text-align:left; box-shadow:none }
+.running-format-option:hover, .running-format-option:focus-visible { border-color:var(--accent-surface-border); background:var(--accent-surface) }
+.running-format-option strong { font-size:15px; line-height:1.2 }
+.running-format-option span { color:var(--muted); font-size:11px; line-height:1.35 }
+.running-format-option.featured { grid-column:1 / -1; min-height:72px; padding-right:40px; border-color:var(--accent-surface-border); background:var(--accent-surface) }
+.running-format-option.featured b { position:absolute; right:15px; top:50%; translate:0 -50%; color:var(--accent-label); font-size:27px; line-height:1 }
+.running-format-back { align-self:flex-start; min-height:36px; padding:2px 0 }
+.running-drills { display:grid; gap:8px; margin-top:4px; padding-top:11px; border-top:1px solid var(--border) }
+.running-progress-card { display:grid; gap:15px; margin-top:16px; padding:20px; border:1px solid var(--border); border-radius:24px; background:var(--surface-raised); box-shadow:var(--shadow-soft) }
+.running-progress-card.error-state { grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px }
+.running-progress-card h2 { margin:2px 0 0; font-size:22px; line-height:1.15 }
+.running-progress-header { display:grid; gap:13px }
+.running-progress-periods { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:3px; padding:3px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken) }
+.running-progress-periods button { min-width:0; min-height:36px; padding:6px 4px; border:0; border-radius:10px; background:transparent; color:var(--muted); font-size:13px; font-weight:750; box-shadow:none }
+.running-progress-periods button.active { background:var(--surface-raised); color:var(--accent-strong); box-shadow:0 1px 5px #17191d14 }
+.running-progress-total { display:grid; gap:4px }
+.running-progress-total strong { font-size:26px; line-height:1.1 }
+.running-progress-total span { color:var(--muted); font-size:16px; font-weight:650 }
+.running-progress-metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border:1px solid var(--border); border-radius:16px; overflow:hidden }
+.running-progress-metrics > div { display:grid; gap:3px; min-width:0; padding:14px }
+.running-progress-metrics > div + div { border-left:1px solid var(--border) }
+.running-progress-metrics strong { font-size:22px; line-height:1 }
+.running-progress-metrics span { color:var(--muted); font-size:11px; line-height:1.3 }
+.running-progress-insight { display:grid; gap:6px; padding:13px 14px; border-radius:15px; background:var(--accent-surface); color:var(--fg-on-surface) }
+.running-progress-insight p { margin:0; font-size:14px; line-height:1.45 }
+.running-progress-insight span { color:var(--muted); font-size:12px }
 .picker-search { flex: 0 0 auto; width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: 13px; color: var(--fg-on-surface); background: var(--input); font-size: 18px; outline: none }
 .picker-search-row { flex: 0 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px }
 .picker-filter-toggle { padding: 0 13px; border: 1px solid var(--border); background: var(--surface-sunken); color: var(--muted); box-shadow: none }.picker-filter-toggle.active { border-color: var(--accent-surface-border); color: var(--accent-strong); background: var(--accent-surface) }

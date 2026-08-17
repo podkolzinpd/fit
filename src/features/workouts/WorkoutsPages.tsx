@@ -9,7 +9,7 @@ import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -23,6 +23,7 @@ import { VoiceNoteField } from '../voice-input'
 import { QuickWorkoutEntry } from './QuickWorkoutEntry'
 import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
 import { RPE_OPTIONS } from '../../shared/rpe'
+import type { RunningFormat } from '../../shared/running-formats'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
 import { applyLiveSetDraft, sameLiveSetDraft, setWithLocalDraft } from './live-set-cache'
@@ -380,7 +381,22 @@ export function WorkoutFormPage() {
       sets: result?.sets.length ? result.sets : [{ position: 0 }],
     }
   }
-  async function pickExercise(selected: ExerciseSnapshot) {
+  async function pickExercise(selected: ExerciseSnapshot, runningFormat?: RunningFormat) {
+    if (runningFormat) {
+      const selectedDrafts = createRunningFormatDrafts(selected, runningFormat, replaceIndex ?? exercises.length)
+      if (selectedDrafts.length) {
+        const next = replaceIndex === null
+          ? [...exercises, ...selectedDrafts]
+          : [
+              ...exercises.slice(0, replaceIndex),
+              ...selectedDrafts.map((draft) => source.data?.status === 'done' ? { ...draft, clearFact: true } : draft),
+              ...exercises.slice(replaceIndex + 1),
+            ]
+        setDraftExercises(next.map((exercise, position) => ({ ...exercise, position })))
+      }
+      closePicker()
+      return
+    }
     const results = await previousResults([selected])
     rememberPreviousResults(results)
     const previous = results.get(selected.ref)
@@ -412,7 +428,11 @@ export function WorkoutFormPage() {
       ...exercises,
       ...parsed.map((item, index) => {
         const fallback = exerciseDraft(item.exercise, exercises.length + index, results.get(item.exercise.ref))
-        return { ...fallback, sets: item.hasValues ? item.sets : fallback.sets }
+        return {
+          ...fallback,
+          ...item.structure,
+          sets: item.hasValues ? item.sets : fallback.sets,
+        }
       }),
     ])
   }

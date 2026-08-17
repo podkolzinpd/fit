@@ -1,4 +1,4 @@
-// schema-sha256: f3e160754a6bcd0f87ad2090cf0c3de4497afc0c951c0fc2d325d3d5a037f45e
+// schema-sha256: f58ac461b31cc4a156b9e85e40311f4102f02218a5d1131817f35a7abe2ca5ae
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1251,6 +1251,22 @@ export type Database = {
           exercise_ref: string
           sets: Json
           workout_date: string
+        }[]
+      }
+      list_running_progress: {
+        Args: {
+          p_client_id: string
+          p_period_end: string
+          p_period_start: string
+        }
+        Returns: {
+          distance_km: number | null
+          duration_sec: number | null
+          pace_sec_per_km: number | null
+          rpe: number | null
+          running_format: string
+          workout_date: string
+          workout_id: string
         }[]
       }
       list_workout_personal_records: {

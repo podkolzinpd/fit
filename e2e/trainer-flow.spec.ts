@@ -66,6 +66,28 @@ test('форма: быстрый ввод разбирает текст в уп�
   await page.getByRole('button', { name: 'Отмена' }).click()
 })
 
+test('форма: короткая беговая фраза создаёт редактируемые интервалы в метрах', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+
+  await page.goto('/workouts/new')
+  await page.getByLabel('Запись тренировки').fill('6 по 400 метров')
+  await expect(page.getByText('Распознано: 1')).toBeVisible()
+  await expect(page.getByText('Бег — интервалы · 6 подходов')).toBeVisible()
+  await page.getByRole('button', { name: 'Добавить распознанные (1)' }).click()
+
+  await expect(page.getByText('Бег — интервалы', { exact: true }).last()).toBeVisible()
+  await expect(page.getByLabel(/Расстояние, подход/)).toHaveCount(6)
+  await expect(page.getByLabel('Расстояние, подход 1')).toHaveValue('400')
+  await expect(page.getByLabel('Единица расстояния, подход 1')).toHaveValue('m')
+  await page.locator('.planned-exercise').getByText('Дополнительно').click()
+  await expect(page.getByLabel('Отдых между подходами, с')).toHaveValue('90')
+  await page.getByRole('button', { name: 'Отмена' }).click()
+})
+
 test('стартовый экран показывает точный результат автоматического распознавания до сохранения', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')

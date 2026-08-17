@@ -163,11 +163,19 @@ test('iPhone: тренер назначает интервалы, спортсм
     await trainer.screenshot({ path: testInfo.outputPath('workout-kind-trainer-430.png'), fullPage: true })
     await trainer.setViewportSize({ width: 390, height: 844 })
     await trainer.getByRole('button', { name: /^Бег/ }).click()
+    await expect(trainer.getByRole('button', { name: /Свободный бег/ })).toBeVisible()
+    await expect(trainer.getByRole('button', { name: /Лёгкий бег/ })).toBeVisible()
+    await expect(trainer.getByRole('button', { name: /Длительный бег/ })).toBeVisible()
+    await expect(trainer.getByRole('button', { name: /Темповый бег/ })).toBeVisible()
+    await expect(trainer.getByRole('button', { name: /Восстановительный бег/ })).toBeVisible()
+    await expect(trainer.getByRole('button', { name: /^Интервалы/ })).toBeVisible()
     await expect(trainer.getByRole('button', { name: /Семенящий бег/ })).toBeVisible()
-    await trainer.locator('[data-exercise-ref="running"]').click()
-    await trainer.getByRole('button', { name: 'Добавить 1' }).click()
-    await trainer.getByText('Дополнительно', { exact: true }).click()
-    await trainer.getByRole('button', { name: '6 × 400 м + 90 с лёгкого бега' }).click()
+    await expectNoHorizontalOverflow(trainer)
+    await trainer.screenshot({ path: testInfo.outputPath('running-formats-390.png'), fullPage: true })
+    await trainer.getByRole('button', { name: /^Интервалы/ }).click()
+    await expect(trainer.locator('[data-running-format="interval-passive"]')).toBeVisible()
+    await expect(trainer.getByRole('button', { name: /Своя схема/ })).toBeVisible()
+    await trainer.locator('[data-running-format="interval-active"]').click()
     await expect(trainer.getByLabel('Тип блока')).toHaveValue('interval')
     await expect(trainer.locator('.planned-round')).toHaveCount(6)
     await expect(trainer.getByLabel('Расстояние, подход 1').first()).toHaveValue('400')
@@ -420,9 +428,34 @@ test('iPhone: client edits shared progress, custom metrics and deletion safely',
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
 
-test('iPhone: client progress keeps one goal-aware LLM summary', async ({ page }) => {
+test('iPhone: client progress keeps one goal-aware LLM summary and compact running facts', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await login(page, 'client@fit.local')
+  await page.route('**/rest/v1/rpc/list_running_progress', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          workout_id: '71111111-1111-4111-8111-111111111111',
+          workout_date: '2026-08-03',
+          running_format: 'easy',
+          distance_km: 5,
+          duration_sec: 1800,
+          pace_sec_per_km: 360,
+          rpe: 6,
+        },
+        {
+          workout_id: '72222222-2222-4222-8222-222222222222',
+          workout_date: '2026-08-10',
+          running_format: 'easy',
+          distance_km: 5,
+          duration_sec: 1650,
+          pace_sec_per_km: 330,
+          rpe: 7,
+        },
+      ]),
+    })
+  })
   await page.goto('/me/progress')
 
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
@@ -434,6 +467,13 @@ test('iPhone: client progress keeps one goal-aware LLM summary', async ({ page }
   await expect(page.getByRole('heading', { name: 'Твоя цель' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Что делать дальше' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Обновить мой прогресс' })).toBeVisible()
+  const runningProgress = page.getByLabel('Беговой прогресс')
+  await expect(runningProgress).toContainText('2 пробежки')
+  await expect(runningProgress).toContainText('10 км · 58 мин')
+  await expect(runningProgress).toContainText('5:45')
+  await expect(runningProgress).toContainText('6,5')
+  await expect(runningProgress).toContainText('быстрее на 8%')
+  await expect(runningProgress).toContainText('Последняя нагрузка: RPE 7')
 
   await page.getByText('ЗАМЕРЫ ТЕЛА', { exact: true }).scrollIntoViewIfNeeded()
   await page.getByRole('button', { name: 'Добавить замер' }).click()

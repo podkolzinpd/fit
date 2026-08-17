@@ -4,6 +4,9 @@ import { toJson } from './json'
 
 export const progressQueries = {
   regularity: (clientId: string) => supabase.rpc('get_workout_regularity', { p_client_id: clientId }),
+  running: (clientId: string, periodStart: string, periodEnd: string) => supabase.rpc('list_running_progress', {
+    p_client_id: clientId, p_period_start: periodStart, p_period_end: periodEnd,
+  }),
   list: (clientId: string) => supabase.from('client_progress')
     .select('id,client_id,created_by,recorded_on,weight_kg,chest_cm,waist_cm,hip_cm,notes,version')
     .eq('client_id', clientId).is('deleted_at', null).order('recorded_on', { ascending: false }),
