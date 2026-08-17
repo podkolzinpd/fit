@@ -3,7 +3,7 @@ import type { BlockPreset, WorkoutExerciseDraft, WorkoutSetDraft } from '../../s
 import { formatLocalDate } from '../../shared/local-date'
 import { RPE_OPTIONS } from '../../shared/rpe'
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
-import { groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, previousResultLine, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
+import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, previousResultLine, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
 import { OverflowMenu } from '../../shared/ui'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { WorkoutSetTable } from './WorkoutSetTable'
@@ -160,6 +160,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
     </>
     return <>
       <RunMetricsFields
+        key={`${exercise.name}-${set.position}`}
         idPrefix={`plan-run-${exerciseIndex}-${setIndex}`}
         durationSec={durationSec}
         distanceKm={set.distanceKm}
@@ -185,6 +186,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   // Одиночное упражнение (вне блока): подходы + «＋ Подход» + «Объединить».
   function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode, canReorder = false) {
     const showRpe = isRpeVisible(exerciseIndex)
+    const showRunningPresets = entryMode === 'plan' && exercise.ref === 'running' && exercise.inputKind === 'distance' && exercise.blockType !== 'group'
     const hasCustomRest = exercise.restBetweenSetsSec !== undefined && exercise.restBetweenSetsSec !== 90
     const hasComment = Boolean(exercise.trainerComment)
     const detailsHint = hasComment || hasCustomRest
@@ -214,6 +216,11 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       </div>
       <OptionalDetails summary={<><span>Дополнительно</span>{detailsHint}</>}>
         <div className="exercise-options-fields">
+          {showRunningPresets && <div className="running-preset-actions">
+            <span>Быстрые схемы</span>
+            <button type="button" className="secondary" onClick={() => onChange(applyRunningIntervalPreset([...exercises], exerciseIndex))}>6 × 400 м · отдых 90 с</button>
+            <button type="button" className="secondary" onClick={() => onChange(applyRunningActiveRecoveryPreset([...exercises], exerciseIndex))}>6 × 400 м + 90 с лёгкого бега</button>
+          </div>}
           <label className="block-rest-field"><ClampedNumberInput label="Отдых между подходами, с" value={exercise.restBetweenSetsSec ?? 90} min={0} max={600} onCommit={(next) => { if (exercise.blockId) onChange(setBlockRest([...exercises], exercise.blockId, { betweenSets: next })) }} /><span>Отдых, с</span></label>
           {commentField(exercise, exerciseIndex)}
         </div>
@@ -245,6 +252,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
           <select aria-label="Тип блока" value={block.blockPreset} onChange={(event) => onChange(setBlockPreset([...exercises], block.blockId, event.target.value as BlockPreset))}>
             <option value="set">Сет</option>
             <option value="circuit">Круговая</option>
+            <option value="interval">Интервалы</option>
           </select>
           <label className="block-rounds">Кругов<ClampedNumberInput label="Кругов" value={block.blockRounds} min={1} max={20} onCommit={(next) => onChange(syncBlockRounds([...exercises], block.blockId, next))} /></label>
           {blocks.length > 1 && reorderButtons(block.blockId, isFirst, isLast)}

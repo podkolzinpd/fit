@@ -9,7 +9,7 @@ import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -1155,17 +1155,7 @@ export function LiveWorkoutPage() {
       const workout = query.data
       const exercise = workout?.exercises.find((item) => item.sets.some((s) => s.id === set.id))
       if (workout && exercise) {
-        const block = groupIntoBlocks(workout.exercises).find((b) => b.blockId === exercise.blockId)
-        const multi = Boolean(block && block.exercises.length > 1)
-        const lastExerciseOfRound = block && block.exercises[block.exercises.length - 1]?.id === exercise.id
-        // Отдых нужен и после последнего подхода упражнения, если тренировка
-        // ещё продолжается: это переход к следующему упражнению. Отключаем его
-        // только после действительно последнего подхода всей тренировки.
-        const workoutFinished = workout.exercises.every((item) => item.sets.every((itemSet) => itemSet.id === set.id || itemSet.confirmedAt))
-        const sec = workoutFinished ? 0
-          : !multi ? exercise.restBetweenSetsSec ?? DEFAULT_REST_BETWEEN_SETS
-          : lastExerciseOfRound ? block!.restBetweenRoundsSec
-          : block?.restBetweenExercisesSec ?? 0
+        const sec = restSecondsAfterSet(workout, exercise, set)
         startRestUntil(restDeadline(sec), sec)
       }
       void query.refetch()
@@ -1326,7 +1316,12 @@ export function LiveWorkoutPage() {
     const stateClass = set.confirmedAt && !isEditing ? 'confirmed' : current && !isEditing ? 'current' : ''
     const saveStatus = savingSetId === set.id ? 'saving' : saveErrorSetId === set.id ? 'error' : savedSetId === set.id ? 'saved' : 'idle'
     const setNumber = label?.match(/\d+/)?.[0]
-    const confirmLabel = set.confirmedAt ? 'Подтверждено' : 'Готово, отдых'
+    const restSeconds = query.data ? restSecondsAfterSet(query.data, exercise, set) : 0
+    const confirmLabel = set.confirmedAt
+      ? 'Подтверждено'
+      : exercise.blockPreset === 'interval' && restSeconds === 0
+        ? 'Готово'
+        : 'Готово, отдых'
     if (!isExpanded) {
       const plan = planLine(exercise.inputKind, set)
       const fact = set.confirmedAt ? factLine(displayedSet) : enteredFactLine(displayedSet)

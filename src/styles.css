@@ -575,6 +575,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-options-fields .block-rest-field { flex-direction: row; align-items: center; gap: 8px }
 .exercise-options-fields .block-rest-field input { min-height: 40px }
 .exercise-options-fields .exercise-comment { margin-top: 0 }
+.running-preset-actions { width: 100%; display: grid; gap: 7px }
+.running-preset-actions > span { color: var(--muted); font-size: 12px; font-weight: 700 }
+.running-preset-actions .secondary { width: 100%; min-height: 42px; padding: 9px 12px; text-align: left; box-shadow: none }
 .block-options { margin-top: 0; border-top: 0; padding-top: 0 }
 .block-options .block-rest { margin-top: 0 }
 /* «＋ Подход» и короткое поле «Отдых, с [90]» в один ряд (подпись и поле —
