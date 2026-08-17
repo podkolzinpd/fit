@@ -13,7 +13,7 @@ function columnLabels(inputKind: InputKind, layout: SetTableLayout): string[] {
   if (inputKind === 'strength') return ['Кг', 'Повт.']
   if (inputKind === 'reps') return ['Сек.', 'Повт.']
   if (inputKind === 'duration') return ['Сек.']
-  return ['Сек.', 'Км']
+  return ['Время', 'Дистанц.']
 }
 
 interface WorkoutSetTableProps {

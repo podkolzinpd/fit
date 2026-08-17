@@ -37,6 +37,8 @@ import { useClientRealtime } from '../../app/use-client-realtime'
 import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft } from './workout-form-draft'
 import { workoutDateForRecordMode } from './workout-entry-rules'
 import { WorkoutSetTable } from './WorkoutSetTable'
+import { RunMetricsFields } from './RunMetricsFields'
+import { parseRunDurationInput, runDistanceKmFromInput, runDistanceLabel, runPaceLabel, type RunDistanceUnit } from '../../shared/run-metrics'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
 
@@ -781,7 +783,13 @@ function WorkoutClientComment({ workout }: { workout: Workout }) {
   </section>
 }
 
-function formatSet(set: WorkoutSet, showRpe: boolean) { const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, set.distanceKm && `${set.distanceKm} км`, durationLabel(set.durationSec, set.durationMin), showRpe && set.rpe !== undefined && `RPE ${set.rpe}`].filter(Boolean).join(' × '); return plan || 'Подход без плана' }
+function formatSet(set: WorkoutSet, showRpe: boolean) {
+  const duration = durationLabel(set.durationSec, set.durationMin)
+  const distance = runDistanceLabel(set.distanceKm)
+  const pace = runPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm)
+  const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, distance, duration, showRpe && set.rpe !== undefined && `RPE ${set.rpe}`].filter(Boolean).join(' × ')
+  return pace && plan ? `${plan} · темп ${pace}` : plan || 'Подход без плана'
+}
 
 function WorkoutHistorySet({ set, index, done, showRpe }: { set: WorkoutSet; index: number; done: boolean; showRpe: boolean }) {
   const confirmed = Boolean(set.confirmedAt)
@@ -816,10 +824,13 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet): st
   } else {
     const duration = durationLabel(set.durationSec, set.durationMin)
     if (duration) parts.push(duration)
-    if (set.distanceKm !== undefined) parts.push(`${set.distanceKm} км`)
+    const distance = runDistanceLabel(set.distanceKm)
+    if (distance) parts.push(distance)
   }
   if (set.rpe !== undefined) parts.push(`RPE ${set.rpe}`)
-  return parts.length ? parts.join(' × ') : null
+  const plan = parts.length ? parts.join(' × ') : null
+  const pace = inputKind === 'distance' ? runPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm) : null
+  return pace && plan ? `${plan} · темп ${pace}` : plan
 }
 
 // Одна ячейка факта в таблице подходов. В live основной сценарий — прямой
@@ -882,8 +893,21 @@ function LiveSetFields({ inputKind, set, editing = false, showRpe = false }: { i
     {rpeField}
   </>
   return <>
-    <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
-    <LiveSetInput name="distanceKm" label="Фактическая дистанция" placeholder="км" defaultValue={value(set.fact.distanceKm, set.distanceKm)} planHint={isPlanHint(set.fact.distanceKm, set.distanceKm)} step={0.1} disabled={locked} inputKey={`dist-${k}`} decimal />
+    <RunMetricsFields
+      idPrefix={`live-run-${set.id}-${k}`}
+      durationSec={value(factDuration, planDuration)}
+      distanceKm={value(set.fact.distanceKm, set.distanceKm)}
+      inputClassName="live-set-input"
+      disabled={locked}
+      planDurationHint={isPlanHint(factDuration, planDuration)}
+      planDistanceHint={isPlanHint(set.fact.distanceKm, set.distanceKm)}
+      durationName="runDuration"
+      distanceName="runDistance"
+      distanceUnitName="runDistanceUnit"
+      durationLabel="Фактическое время"
+      distanceLabel="Фактическая дистанция"
+      distanceUnitLabel="Единица фактической дистанции"
+    />
     {rpeField}
   </>
 }
@@ -1217,7 +1241,19 @@ export function LiveWorkoutPage() {
   } })
   const rootMutationPending = appendSet.isPending || removeSet.isPending || appendExercise.isPending
     || reorderBlock.isPending || replaceLive.isPending || commentLive.isPending || finish.isPending
-  function draftFrom(form: HTMLFormElement): LiveSetDraft { const values = new FormData(form); return { weightKg: numberValue(values.get('weightKg')), reps: numberValue(values.get('reps')), distanceKm: numberValue(values.get('distanceKm')), durationSec: numberValue(values.get('durationSec')), rpe: numberValue(values.get('rpe')) } }
+  function draftFrom(form: HTMLFormElement): LiveSetDraft {
+    const values = new FormData(form)
+    const runDuration = values.get('runDuration')
+    const runDistance = values.get('runDistance')
+    const runUnit: RunDistanceUnit = values.get('runDistanceUnit') === 'm' ? 'm' : 'km'
+    return {
+      weightKg: numberValue(values.get('weightKg')),
+      reps: numberValue(values.get('reps')),
+      distanceKm: runDistance === null ? numberValue(values.get('distanceKm')) : runDistanceKmFromInput(String(runDistance), runUnit),
+      durationSec: runDuration === null ? numberValue(values.get('durationSec')) : parseRunDurationInput(String(runDuration)),
+      rpe: numberValue(values.get('rpe')),
+    }
+  }
   // Derive the countdown from a wall-clock deadline so it stays correct even
   // when the tab is backgrounded and timers are throttled by the browser.
   const restActive = restRemaining !== null
