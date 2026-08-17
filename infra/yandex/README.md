@@ -69,5 +69,7 @@ separate approval because Managed PostgreSQL and other resources are billable.
 - a single PostgreSQL host is the MVP cost choice, not a high-availability
   production topology;
 - the first compatibility migration provides transaction-local actor context;
-- Yandex ID, public invocation and frontend switching are not implemented;
+- Yandex ID verification and the read-only profile endpoint are implemented in
+  the API, but the OAuth application, real allowlist, public invocation,
+  frontend routing and stage revision deployment remain separate operations;
 - Terraform state backend and CI identity are selected before the first apply.

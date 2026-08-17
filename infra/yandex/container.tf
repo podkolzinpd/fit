@@ -20,10 +20,15 @@ resource "yandex_serverless_container" "api" {
 
   image {
     url = "cr.yandex/${yandex_container_repository.api.name}:${var.api_image_tag}"
-    environment = {
-      APP_ENV   = var.environment
-      LOG_LEVEL = "info"
-    }
+    environment = merge(
+      {
+        APP_ENV   = var.environment
+        LOG_LEVEL = "info"
+      },
+      var.yandex_oauth_client_id == null ? {} : {
+        YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id
+      },
+    )
   }
 
   dynamic "secrets" {

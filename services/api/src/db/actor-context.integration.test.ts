@@ -7,12 +7,18 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { withActorTransaction } from './actor-transaction.js'
 import { PgDatabasePool } from './pg-pool.js'
 import type { DatabasePool } from './types.js'
+import {
+  PilotAccessDeniedError,
+  withYandexPilotActorTransaction,
+} from './yandex-pilot-transaction.js'
 
 const ACTOR_ID = 'c9f75482-117d-4532-8f67-6c3d9b9f4a5e'
 const OTHER_ACTOR_ID = '974f21af-f304-421f-81bd-050dbfabdd46'
 const MEMBER_TRAINER_ID = '8ffdb87b-078c-42d4-b6db-af8bc60f80f2'
 const OUTSIDE_TRAINER_ID = '3f520f21-0be4-4a38-bb2a-e25225e1e608'
 const CLIENT_ID = 'b3942b20-52a2-4d5d-9895-b3b63cf61442'
+const PILOT_SUBJECT_HASH = 'b'.repeat(64)
+const OUTSIDE_SUBJECT_HASH = 'c'.repeat(64)
 const RUNTIME_PASSWORD = 'fit-api-test-only'
 const migrationsDirectory = fileURLToPath(
   new URL('../../db/migrations', import.meta.url),
@@ -142,6 +148,28 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         `,
         [CLIENT_ID, ACTOR_ID, MEMBER_TRAINER_ID],
       )
+      await ownerPool.query(
+        `
+          insert into app_private.auth_identities (
+            provider, provider_subject_sha256, profile_id
+          ) values ('yandex', $1, $2)
+          on conflict (provider, provider_subject_sha256) do update set
+            profile_id = excluded.profile_id
+        `,
+        [PILOT_SUBJECT_HASH, ACTOR_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into app_private.profile_rollout_assignments (
+            profile_id, target_backend, access_mode, enabled
+          ) values ($1, 'yandex', 'read_only', true)
+          on conflict (profile_id) do update set
+            target_backend = excluded.target_backend,
+            access_mode = excluded.access_mode,
+            enabled = excluded.enabled
+        `,
+        [ACTOR_ID],
+      )
 
       const runtimeUrl = new URL(ownerUrl)
       runtimeUrl.username = 'fit_api'
@@ -174,6 +202,30 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       )
 
       expect(actorInsideTransaction).toBe(ACTOR_ID)
+      expect(await readActor(runtimePool)).toBeNull()
+    })
+
+    it('maps only an allowlisted Yandex identity to the internal actor', async () => {
+      if (runtimePool === undefined) throw new Error('Runtime pool is not ready')
+
+      const profiles = await withYandexPilotActorTransaction(
+        runtimePool,
+        PILOT_SUBJECT_HASH,
+        async (client) =>
+          client.query<ProfileRow>(
+            'select first_name from public.profiles order by id',
+          ),
+      )
+      expect(profiles).toEqual([{ first_name: 'Primary actor' }])
+      expect(await readActor(runtimePool)).toBeNull()
+
+      await expect(
+        withYandexPilotActorTransaction(
+          runtimePool,
+          OUTSIDE_SUBJECT_HASH,
+          () => Promise.resolve(undefined),
+        ),
+      ).rejects.toBeInstanceOf(PilotAccessDeniedError)
       expect(await readActor(runtimePool)).toBeNull()
     })
 
