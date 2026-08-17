@@ -617,6 +617,7 @@ test('iPhone: ручной выбор начинает с недавних, а �
   await page.goto('/workouts/new')
   await selectClient(page)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
 
   await expect(page.getByText('Недавние')).toBeVisible()
   await expect(page.getByText('Все упражнения')).toBeVisible()
