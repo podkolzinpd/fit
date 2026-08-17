@@ -100,7 +100,7 @@ export function RunMetricsFields({
           inputMode="decimal"
           min="0"
           step={unit === 'm' ? 1 : 0.01}
-          placeholder={unit}
+          placeholder="0"
           value={distanceText}
           disabled={disabled}
           onChange={(event) => setDistanceText(event.target.value)}
