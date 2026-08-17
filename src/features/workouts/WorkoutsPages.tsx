@@ -428,7 +428,11 @@ export function WorkoutFormPage() {
       ...exercises,
       ...parsed.map((item, index) => {
         const fallback = exerciseDraft(item.exercise, exercises.length + index, results.get(item.exercise.ref))
-        return { ...fallback, sets: item.hasValues ? item.sets : fallback.sets }
+        return {
+          ...fallback,
+          ...item.structure,
+          sets: item.hasValues ? item.sets : fallback.sets,
+        }
       }),
     ])
   }
