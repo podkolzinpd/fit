@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type MouseEvent } from 'react'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
+import { CONTINUOUS_RUNNING_FORMATS, INTERVAL_RUNNING_FORMATS, type RunningFormat } from '../../shared/running-formats'
 import { MUSCLE_GROUP_LABELS, MUSCLE_GROUPS, RUNNING_EXERCISE_REFS } from '../../shared/system-exercises'
 import type { ExerciseCatalogState } from './exercise-catalog'
 import { matchesExerciseSearch, rankExerciseSearch } from './exercise-search'
@@ -55,7 +56,7 @@ export function equipmentForSelection(
 interface ExercisePickerProps {
   catalog: ExerciseCatalogState
   clientRecent?: readonly ExerciseSnapshot[]
-  onPick: (exercise: ExerciseSnapshot) => void
+  onPick: (exercise: ExerciseSnapshot, runningFormat?: RunningFormat) => void
   onPickMany?: (exercises: ExerciseSnapshot[]) => void
   multiple?: boolean
   initialSearch?: string
@@ -104,6 +105,7 @@ function useVisualViewportStyle() {
 
 export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, multiple = false, initialSearch = '', initialMode = 'all', onClose }: ExercisePickerProps) {
   const [mode, setMode] = useState<ExercisePickerMode>(initialSearch.trim() ? 'all' : initialMode)
+  const [runningStep, setRunningStep] = useState<'formats' | 'intervals'>('formats')
   const [category, setCategory] = useState<'all' | MuscleGroup>('all')
   const [muscle, setMuscle] = useState<string | null>(null)
   const [equipment, setEquipment] = useState<string | null>(null)
@@ -133,6 +135,12 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     [catalog.exercises, category, muscle],
   )
   const hasFilters = category !== 'all' || muscle !== null || equipment !== null || customOnly
+  const runningExercise = useMemo(() => catalog.exercises.find((exercise) => exercise.ref === 'running'), [catalog.exercises])
+  const runningDrills = useMemo(
+    () => catalog.exercises.filter((exercise) => exercise.ref !== 'running' && RUNNING_EXERCISE_REFS.has(exercise.ref)),
+    [catalog.exercises],
+  )
+  const showRunningFormats = activeMode === 'running' && !search.trim() && !hasFilters
   const promotedClient = useMemo(
     () => (!hasFilters && !search.trim() ? clientRecent.filter((exercise) => matchesPickerMode(exercise, activeMode)) : []),
     [activeMode, clientRecent, hasFilters, search],
@@ -171,6 +179,11 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     exercises.forEach(recordRecent)
     onPickMany?.(exercises)
   }
+  function pickRunningFormat(format: RunningFormat) {
+    if (!runningExercise) return
+    recordRecent(runningExercise)
+    onPick(runningExercise, format)
+  }
   function resetFilters() {
     setCategory('all')
     setMuscle(null)
@@ -179,6 +192,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   }
   function selectMode(next: Exclude<ExercisePickerMode, 'choose'>) {
     setMode(next)
+    setRunningStep('formats')
     setCategory('all')
     setMuscle(null)
     setEquipment(null)
@@ -234,16 +248,35 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
           <label className="picker-custom-filter"><input type="checkbox" checked={customOnly} onChange={(event) => setCustomOnly(event.target.checked)} />Только мои упражнения</label>
           {hasFilters && <button type="button" className="link" onClick={resetFilters}>Сбросить фильтры</button>}
         </div>}
-        <div className="picker-list-meta"><span>{filtered.length ? `Найдено: ${filtered.length}` : 'Совпадений нет'}</span><button type="button" className="link" onClick={() => { setName(search.trim()); setCreating(true) }}>＋ Создать своё</button></div>
-        {catalog.loading && <p className="state">Загрузка…</p>}
-        {catalog.error && <div className="state"><p className="error">{catalog.error.message}</p><button type="button" className="secondary" onClick={catalog.retry}>Повторить</button></div>}
-        {!catalog.loading && <div className="picker-list">
-          {promotedClient.length > 0 && <><p className="picker-section-label">Последние у клиента</p>{promotedClient.map((exercise) => item(exercise, 'client-recent'))}</>}
-          {recent.length > 0 && <><p className="picker-section-label">Недавние</p>{recent.map((exercise) => item(exercise, 'recent'))}</>}
-          {(promotedClient.length > 0 || recent.length > 0) && listExercises.length > 0 && <p className="picker-section-label">Все упражнения</p>}
-          {listExercises.length ? listExercises.map((exercise) => item(exercise, 'all')) : <p className="state">Ничего не найдено</p>}
-        </div>}
-        {multiple && selected.size > 0 && <div className="picker-selection-bar"><span>Выбрано: {selected.size}</span><button type="button" onClick={addSelected}>Добавить {selected.size}</button></div>}
+        {showRunningFormats ? <div className="running-format-picker">
+          {catalog.loading && <p className="state">Загрузка…</p>}
+          {catalog.error && <div className="state"><p className="error">{catalog.error.message}</p><button type="button" className="secondary" onClick={catalog.retry}>Повторить</button></div>}
+          {runningStep === 'formats' ? <>
+            <div className="running-format-heading"><p className="picker-section-label">Формат бега</p><span>Выберите основу тренировки. Значения можно изменить после добавления.</span></div>
+            <div className="running-format-list">
+              {CONTINUOUS_RUNNING_FORMATS.map((option) => <button type="button" className="running-format-option" data-running-format={option.format} data-exercise-ref={option.format === 'free' ? 'running' : undefined} disabled={!runningExercise} key={option.format} onClick={() => pickRunningFormat(option.format)}><strong>{option.title}</strong><span>{option.description}</span></button>)}
+              <button type="button" className="running-format-option featured" disabled={!runningExercise} onClick={() => setRunningStep('intervals')}><strong>Интервалы</strong><span>Повторяющиеся рабочие отрезки и восстановление</span><b aria-hidden="true">›</b></button>
+            </div>
+            <div className="running-drills"><p className="picker-section-label">СБУ</p><span>Специальные беговые упражнения</span>{runningDrills.map((exercise) => item(exercise, 'running-drill'))}</div>
+          </> : <>
+            <button type="button" className="link running-format-back" onClick={() => setRunningStep('formats')}>← Все форматы бега</button>
+            <div className="running-format-heading"><p className="picker-section-label">Интервальная тренировка</p><span>Готовую схему можно полностью изменить после добавления.</span></div>
+            <div className="running-format-list interval-list">{INTERVAL_RUNNING_FORMATS.map((option) => <button type="button" className="running-format-option" data-running-format={option.format} disabled={!runningExercise} key={option.format} onClick={() => pickRunningFormat(option.format)}><strong>{option.title}</strong><span>{option.description}</span></button>)}</div>
+          </>}
+          {!runningExercise && !catalog.loading && <p className="state">Базовое упражнение «Бег» не найдено</p>}
+          {multiple && selected.size > 0 && <div className="picker-selection-bar"><span>Выбрано: {selected.size}</span><button type="button" onClick={addSelected}>Добавить {selected.size}</button></div>}
+        </div> : <>
+          <div className="picker-list-meta"><span>{filtered.length ? `Найдено: ${filtered.length}` : 'Совпадений нет'}</span><button type="button" className="link" onClick={() => { setName(search.trim()); setCreating(true) }}>＋ Создать своё</button></div>
+          {catalog.loading && <p className="state">Загрузка…</p>}
+          {catalog.error && <div className="state"><p className="error">{catalog.error.message}</p><button type="button" className="secondary" onClick={catalog.retry}>Повторить</button></div>}
+          {!catalog.loading && <div className="picker-list">
+            {promotedClient.length > 0 && <><p className="picker-section-label">Последние у клиента</p>{promotedClient.map((exercise) => item(exercise, 'client-recent'))}</>}
+            {recent.length > 0 && <><p className="picker-section-label">Недавние</p>{recent.map((exercise) => item(exercise, 'recent'))}</>}
+            {(promotedClient.length > 0 || recent.length > 0) && listExercises.length > 0 && <p className="picker-section-label">Все упражнения</p>}
+            {listExercises.length ? listExercises.map((exercise) => item(exercise, 'all')) : <p className="state">Ничего не найдено</p>}
+          </div>}
+          {multiple && selected.size > 0 && <div className="picker-selection-bar"><span>Выбрано: {selected.size}</span><button type="button" onClick={addSelected}>Добавить {selected.size}</button></div>}
+        </>}
       </>}
     </section>
   </div>

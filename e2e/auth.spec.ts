@@ -217,8 +217,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await selectClient(page, 'Связанный клиент')
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Бег/ }).click()
-  await page.getByRole('button', { name: 'Бег (Кардио) Кардио' }).first().click()
-  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.locator('[data-running-format="free"]').click()
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
     page.getByRole('button', { name: 'Сохранить' }).click(),
@@ -254,8 +253,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.getByLabel('Клиент')).toHaveCount(0)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Бег/ }).click()
-  await page.getByRole('button', { name: 'Бег (Кардио) Кардио' }).first().click()
-  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.locator('[data-running-format="free"]').click()
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
     page.getByRole('button', { name: 'Сохранить' }).click(),

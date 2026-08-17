@@ -162,19 +162,45 @@ describe('ExercisePicker', () => {
 
   it('отделяет ручной вход в силовую и беговую тренировку', async () => {
     const user = userEvent.setup()
-    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} initialMode="choose" onPick={vi.fn()} onClose={vi.fn()} />)
+    const onPick = vi.fn()
+    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} initialMode="choose" onPick={onPick} onClose={vi.fn()} />)
     expect(screen.getByRole('heading', { name: 'Тип тренировки' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Поиск упражнения')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /^Бег/ }))
     expect(screen.getByRole('heading', { name: 'Беговая тренировка' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Бег \(Кардио\)/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Свободный бег/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Лёгкий бег/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Длительный бег/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Темповый бег/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Восстановительный бег/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Интервалы/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Бег с высоким подниманием бедра/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Семенящий бег/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Жим лёжа/ })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Темповый бег/ }))
+    expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ ref: 'running' }), 'tempo')
+  }, 10_000)
+
+  it('показывает интервальные схемы до добавления упражнения', async () => {
+    const user = userEvent.setup()
+    const onPick = vi.fn()
+    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} initialMode="running" onPick={onPick} onClose={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: /^Интервалы/ }))
+    expect(screen.getByText('6 × 400 м', { exact: true })).toBeInTheDocument()
+    expect(screen.getByText('6 × 400 м + лёгкий бег', { exact: true })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Своя схема/ })).toBeInTheDocument()
+    await user.click(document.querySelector<HTMLButtonElement>('[data-running-format="interval-active"]')!)
+    expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ ref: 'running' }), 'interval-active')
+  })
+
+  it('переключает беговую ветку обратно на силовую', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} initialMode="running" onPick={vi.fn()} onClose={vi.fn()} />)
     await user.click(screen.getByRole('button', { name: 'Силовая', pressed: false }))
     expect(screen.getByRole('heading', { name: 'Силовая тренировка' })).toBeInTheDocument()
     expect(document.querySelector('[data-exercise-ref="bench-press"]')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Бег \(Кардио\)/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Свободный бег/ })).not.toBeInTheDocument()
   }, 10_000)
 
   it('shows loading, error with retry, and empty states', async () => {

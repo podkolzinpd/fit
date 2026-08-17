@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, createRunningFormatDrafts, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -509,6 +509,16 @@ describe('draft blocks', () => {
     expect(result[0]?.sets[0]).toMatchObject({ durationSec: 100, distanceKm: 0.4 })
     expect(result[1]?.sets[0]).toMatchObject({ durationSec: 90 })
     expect(result[1]?.sets[0]?.distanceKm).toBeUndefined()
+  })
+
+  it('создаёт видимые форматы бега без дробления единого ref', () => {
+    const running: ExerciseSnapshot = { source: 'system', ref: 'running', name: 'Бег', muscleGroup: 'cardio', inputKind: 'distance' }
+    expect(createRunningFormatDrafts(running, 'tempo', 3)[0]).toMatchObject({ ref: 'running', name: 'Темповый бег', position: 3, blockType: 'single', sets: [{ position: 0 }] })
+    expect(createRunningFormatDrafts(running, 'interval-custom')[0]).toMatchObject({ ref: 'running', name: 'Бег — интервалы', blockPreset: 'interval', restBetweenSetsSec: 90, sets: [{ position: 0 }] })
+    const active = createRunningFormatDrafts(running, 'interval-active', 2)
+    expect(active.map((item) => item.position)).toEqual([2, 3])
+    expect(active.every((item) => item.ref === 'running')).toBe(true)
+    expect(new Set(active.map((item) => item.blockId)).size).toBe(1)
   })
 
   it('groupDraftsIntoBlocks группирует по blockId, сохраняя индексы', () => {
