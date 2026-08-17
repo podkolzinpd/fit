@@ -26,6 +26,86 @@ async function expectNoHorizontalOverflow(page: import('@playwright/test').Page)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 }
 
+async function expectOverflowMenuAboveBars(page: Page) {
+  const menu = page.getByRole('menu')
+  await expect(menu).toBeVisible()
+  const menuBox = await menu.boundingBox()
+  const frameBox = await page.locator('.phone-frame').boundingBox()
+  const barBoxes = await page.locator('.tab-bar, .live-bottom-bar').evaluateAll((bars) => bars
+    .filter((bar) => {
+      const style = window.getComputedStyle(bar)
+      return style.display !== 'none' && style.visibility !== 'hidden'
+    })
+    .map((bar) => {
+      const rect = bar.getBoundingClientRect()
+      return { top: rect.top, bottom: rect.bottom }
+    }))
+  expect(menuBox).not.toBeNull()
+  expect(frameBox).not.toBeNull()
+  expect(menuBox!.y).toBeGreaterThanOrEqual(frameBox!.y)
+  expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(Math.min(frameBox!.y + frameBox!.height, ...barBoxes.map((bar) => bar.top)))
+  expect(await menu.evaluate((element) => window.getComputedStyle(element).opacity)).toBe('1')
+}
+
+test('iPhone: поля бега не перекрываются в быстрой проверке тренера на 390 px', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+  await page.route('**/functions/v1/parse-workout', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        items: [{
+          sourceText: 'Бег',
+          exerciseRef: 'running',
+          confidence: 1,
+          sets: [],
+        }],
+        unmatched: [],
+      }),
+    })
+  })
+
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await page.getByLabel('Тренировка').fill('Бег')
+  await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+  await page.getByText('Добавить значения', { exact: true }).click()
+
+  const row = page.locator('.today-set-editor').first()
+  const durationLabel = row.locator('label').filter({ hasText: 'Бег (Кардио): время, подход 1' })
+  const duration = page.getByLabel('Бег (Кардио): время, подход 1')
+  const distance = page.getByLabel('Бег (Кардио): расстояние, подход 1')
+  const unit = page.getByLabel('Бег (Кардио): единица расстояния, подход 1')
+  await expect(durationLabel).toHaveCSS('position', 'absolute')
+  await expect(duration).toHaveAttribute('placeholder', 'мм:сс')
+  await expect(distance).toHaveAttribute('placeholder', '0')
+  await expect(unit).toHaveValue('km')
+  await expect(unit.locator('option:checked')).toHaveText('км')
+  await expect(unit).toHaveCSS('appearance', 'none')
+
+  const rowBox = await row.boundingBox()
+  const durationBox = await duration.boundingBox()
+  const distanceBox = await distance.boundingBox()
+  const unitBox = await unit.boundingBox()
+  expect(rowBox).not.toBeNull()
+  expect(durationBox).not.toBeNull()
+  expect(distanceBox).not.toBeNull()
+  expect(unitBox).not.toBeNull()
+  expect(unitBox!.width).toBeGreaterThanOrEqual(60)
+  for (const box of [durationBox!, distanceBox!, unitBox!]) {
+    expect(box.x).toBeGreaterThanOrEqual(rowBox!.x)
+    expect(box.x + box.width).toBeLessThanOrEqual(rowBox!.x + rowBox!.width)
+  }
+  expect(distanceBox!.x).toBeGreaterThanOrEqual(durationBox!.x + durationBox!.width)
+  expect(unitBox!.x).toBeGreaterThanOrEqual(distanceBox!.x + distanceBox!.width)
+  await unit.selectOption('m')
+  await expect(unit.locator('option:checked')).toHaveText('м')
+  await unit.selectOption('km')
+  await expect(unit.locator('option:checked')).toHaveText('км')
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('running-review.png'), fullPage: true })
+})
+
 test('iPhone: новое имя профиля сохраняется после reload на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
@@ -38,10 +118,12 @@ test('iPhone: новое имя профиля сохраняется после
 
   await page.goto('/profile')
   await page.getByLabel('Имя').fill('Новое имя')
+  await page.getByLabel('Часовой пояс').fill('Europe/Berlin')
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('status')).toContainText('Сохранено')
   await page.reload()
   await expect(page.getByLabel('Имя')).toHaveValue('Новое имя')
+  await expect(page.getByLabel('Часовой пояс')).toHaveValue('Europe/Berlin')
   await expectNoHorizontalOverflow(page)
 })
 
@@ -145,6 +227,7 @@ test('iPhone: в live клиент видит те же действия с тр
   await expect(page.getByRole('button', { name: '＋ Ещё упражнение' })).toBeInViewport()
   await page.getByRole('button', { name: 'Ещё действия' }).click()
   await expect(page.getByRole('menuitem', { name: 'Заменить' })).toBeVisible()
+  await expectOverflowMenuAboveBars(page)
 
   // Второй план не должен молча заменить первую незавершённую тренировку.
   // Пользователь остаётся на выбранном плане, пока явно не согласится открыть
@@ -196,6 +279,7 @@ test('iPhone: client edits shared progress, custom metrics and deletion safely',
   await login(page, 'client@fit.local')
   await page.goto('/me/progress')
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
+  await page.getByRole('button', { name: 'Добавить замер' }).click()
   await expect(page.getByLabel(`${metricName}, балл`)).toBeVisible()
 
   const trainerEntry = page.locator('.client-progress-history article.card').first()
@@ -222,6 +306,28 @@ test('iPhone: client edits shared progress, custom metrics and deletion safely',
   await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click()
   await expect(ownEntry).toHaveCount(0)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+})
+
+test('iPhone: client progress keeps one goal-aware LLM summary', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await login(page, 'client@fit.local')
+  await page.goto('/me/progress')
+
+  await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
+  await expect(page.getByLabel('Регулярность тренировок')).toHaveCount(0)
+  await expect(page.getByText('Твой прогресс', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '1 месяц' })).toHaveClass(/active/)
+  await expect(page.getByRole('button', { name: '3 месяца' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '6 месяцев' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Твоя цель' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Что делать дальше' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Обновить мой прогресс' })).toBeVisible()
+
+  await page.getByText('ЗАМЕРЫ ТЕЛА', { exact: true }).scrollIntoViewIfNeeded()
+  await page.getByRole('button', { name: 'Добавить замер' }).click()
+  await expect(page.getByRole('heading', { name: 'Новый замер' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Сохранить замер' })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
 })
 
 async function selectClient(page: Page, name = 'Анна Смирнова') {
@@ -377,6 +483,20 @@ test('iPhone: voice-first и AI-поверхности сохраняют кон
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: LLM regularity stays inside the single Progress summary at 390 px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await login(page, 'client@fit.local')
+  await page.goto('/me/progress')
+
+  await expect(page.getByLabel('Регулярность тренировок')).toHaveCount(0)
+  const summary = page.locator('.client-progress-card')
+  await expect(summary).toBeVisible()
+  await expect(summary.getByText('Твоя регулярность', { exact: true })).toBeVisible()
+  await expect(summary.getByText(/\/ нед\./)).toBeVisible()
+  await expect(summary.getByText('Твоя цель', { exact: true })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+})
+
 test('iPhone: ручной выбор начинает с недавних, а не с разминки на 390 px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
@@ -389,6 +509,36 @@ test('iPhone: ручной выбор начинает с недавних, а �
   await expect(page.getByText('Все упражнения')).toBeVisible()
   await expect(page.getByText('Разминка и мобилити')).toHaveCount(0)
   await expect(page.locator('.picker-item[data-exercise-ref="bench-press"]')).toHaveCount(1)
+  await expectNoHorizontalOverflow(page)
+})
+
+test('iPhone: меню упражнения плана не перекрывает нижнюю панель на 390 px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+  await page.goto('/workouts/new')
+  await selectClient(page)
+  await addExercise(page, 'Присед со штангой', true)
+  await addExercise(page, 'Планка')
+
+  const actions = page.getByRole('button', { name: 'Ещё действия' })
+  await actions.last().scrollIntoViewIfNeeded()
+  await actions.last().click()
+  await expect(page.getByRole('menuitem', { name: 'Удалить' })).toBeVisible()
+  await expectOverflowMenuAboveBars(page)
+  await page.keyboard.press('Escape')
+  const save = page.getByRole('button', { name: 'Сохранить', exact: true })
+  await save.scrollIntoViewIfNeeded()
+  const mobileLayout = await page.evaluate(() => {
+    const content = document.querySelector('.content')!.getBoundingClientRect()
+    const tabBar = document.querySelector('.tab-bar')!
+    const bar = tabBar.getBoundingClientRect()
+    return { contentBottom: content.bottom, barTop: bar.top, barPosition: getComputedStyle(tabBar).position }
+  })
+  expect(mobileLayout.barPosition).toBe('static')
+  expect(Math.abs(mobileLayout.contentBottom - mobileLayout.barTop)).toBeLessThanOrEqual(1)
+  const saveBox = await save.boundingBox()
+  expect(saveBox).not.toBeNull()
+  expect(saveBox!.y + saveBox!.height).toBeLessThan(mobileLayout.barTop)
   await expectNoHorizontalOverflow(page)
 })
 
@@ -415,6 +565,29 @@ test('iPhone: одиночный отдых переживает reload, сдв�
   await expect(page.getByText(/Отдых 1:4\d/)).toBeVisible()
   await page.getByRole('button', { name: 'Пропустить' }).click()
   await expect(page.locator('.rest-timer')).toHaveCount(0)
+  await expectNoHorizontalOverflow(page)
+})
+
+test('iPhone: введённый live-факт переживает обрыв сети и reload на 390 px', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const clientName = await createIsolatedClient(page, testInfo)
+  await page.goto('/workouts/new')
+  await selectClient(page, clientName)
+  await addExercise(page, 'Присед со штангой', true)
+  await page.getByLabel('Вес, подход 1').fill('40')
+  await page.getByLabel('Повторы, подход 1').fill('10')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await page.getByRole('button', { name: 'Начать' }).click()
+
+  await page.route('**/rest/v1/rpc/save_live_set_draft', (route) => route.abort('failed'))
+  await page.getByLabel('Фактический вес').fill('55')
+  await page.locator('.live-timer').click()
+  await expect(page.locator('.error').filter({ hasText: 'Ответ сервера не получен' })).toBeVisible()
+  await page.unroute('**/rest/v1/rpc/save_live_set_draft')
+
+  await page.reload()
+  await expect(page.getByText(/Восстановили несохранённые данные/)).toBeVisible()
+  await expect(page.getByLabel('Фактический вес')).toHaveValue('55')
   await expectNoHorizontalOverflow(page)
 })
 

@@ -1,0 +1,16 @@
+import { describe, expect, it } from 'vitest'
+import { formatSummaryText, formatWorkoutsPerWeek } from './summary-format'
+
+describe('progress summary number formatting', () => {
+  it('shows percentages as whole numbers', () => {
+    expect(formatSummaryText('Вес вырос на 16,67%, объём — на 2.86%.'))
+      .toBe('Вес вырос на 17%, объём — на 3%.')
+  })
+
+  it('shows weekly rates with at most one decimal place', () => {
+    expect(formatSummaryText('Средняя частота — 1,13 в неделю и 0.08 / нед.'))
+      .toBe('Средняя частота — 1,1 в неделю и 0,1 / нед.')
+    expect(formatWorkoutsPerWeek(1.13)).toBe('1,1')
+    expect(formatWorkoutsPerWeek(2)).toBe('2')
+  })
+})

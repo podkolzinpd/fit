@@ -19,8 +19,8 @@ export const authQueries = {
   resetPassword: (email: string, redirectTo: string) => supabase.auth.resetPasswordForEmail(email, { redirectTo }),
   updatePassword: (password: string) => supabase.auth.updateUser({ password }),
   signOut: () => supabase.auth.signOut(),
-  initializeAccount: (role: 'trainer' | 'client', firstName?: string, lastName?: string) => supabase.rpc('initialize_account', {
-    p_role: role, p_first_name: firstName ?? null, p_last_name: lastName ?? null,
+  initializeAccount: (role: 'trainer' | 'client', firstName?: string, lastName?: string, timezone?: string) => supabase.rpc('initialize_account', {
+    p_role: role, p_first_name: firstName ?? null, p_last_name: lastName ?? null, p_timezone: timezone,
   }),
   getLinkedClient: (userId: string) => supabase.from('clients')
     .select('id,trainer_id,full_name')

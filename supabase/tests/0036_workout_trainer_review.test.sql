@@ -15,12 +15,12 @@ insert into public.workouts (id, trainer_id, client_id, created_by, workout_date
   ('36000000-0000-4000-8000-000000000004', '36000000-0000-4000-8000-000000000001', '36000000-0000-4000-8000-000000000003', '36000000-0000-4000-8000-000000000001', current_date, 'done', now() - interval '1 hour', now(), 1),
   ('36000000-0000-4000-8000-000000000005', '36000000-0000-4000-8000-000000000001', '36000000-0000-4000-8000-000000000003', '36000000-0000-4000-8000-000000000001', current_date + 1, 'planned', null, null, 1);
 
-select has_function('public', 'set_workout_review', array['uuid', 'text', 'bigint'], 'trainer review RPC exists');
+select has_function('public', 'set_workout_review', array['uuid', 'text', 'text', 'bigint'], 'trainer response RPC exists');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '36000000-0000-4000-8000-000000000001', true);
 select is(
-  public.set_workout_review('36000000-0000-4000-8000-000000000004', '  Хорошая техника, добавь отдых  ', 1),
+  public.set_workout_review('36000000-0000-4000-8000-000000000004', 'thumbs_up', '  Хорошая техника, добавь отдых  ', 1),
   2::bigint,
   'trainer saves a review and bumps the version'
 );
@@ -30,11 +30,11 @@ select is(
   'review is trimmed before storage'
 );
 select throws_ok(
-  $$select public.set_workout_review('36000000-0000-4000-8000-000000000005', 'рано', 1)$$,
-  'PT404', 'workout_not_found', 'planned workout cannot receive a review'
+  $$select public.set_workout_review('36000000-0000-4000-8000-000000000005', 'thumbs_up', 'рано', 1)$$,
+  'PT422', 'workout_not_completed', 'planned workout cannot receive a review'
 );
 select throws_ok(
-  $$select public.set_workout_review('36000000-0000-4000-8000-000000000004', 'устаревшая версия', 1)$$,
+  $$select public.set_workout_review('36000000-0000-4000-8000-000000000004', 'strong', 'устаревшая версия', 1)$$,
   'PT409', 'workout_conflict', 'stale review update is a business conflict'
 );
 reset role;
@@ -48,7 +48,7 @@ select is(
   'client can read the trainer review in own workout list'
 );
 select throws_ok(
-  $$select public.set_workout_review('36000000-0000-4000-8000-000000000004', 'подмена', 2)$$,
+  $$select public.set_workout_review('36000000-0000-4000-8000-000000000004', 'fire', 'подмена', 2)$$,
   'PT403', 'workout_access_denied', 'client cannot write the trainer review'
 );
 reset role;
@@ -56,7 +56,7 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '36000000-0000-4000-8000-000000000001', true);
 select is(
-  public.set_workout_review('36000000-0000-4000-8000-000000000004', '   ', 2),
+  public.set_workout_review('36000000-0000-4000-8000-000000000004', null, '   ', 2),
   3::bigint,
   'blank review clears the field and bumps the version'
 );

@@ -15,10 +15,16 @@ select is(
         'workout_sets',
         'client_progress',
         'client_progress_custom',
-        'client_custom_metrics'
+        'client_custom_metrics',
+        'client_goals',
+        'goal_stages',
+        'client_trainers',
+        'client_invitations',
+        'client_training_summaries',
+        'client_published_training_summaries'
       ])
   ),
-  7,
+  13,
   'all client portal tables are published for realtime'
 );
 

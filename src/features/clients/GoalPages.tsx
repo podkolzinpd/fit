@@ -2,16 +2,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useAuth } from '../../app/auth-context'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { goalsRepository } from '../../data/repositories/goals.repository'
 import type { ClientGoal, GoalStage } from '../../shared/domain'
 import { orderedStages, stageStatus } from '../../shared/goal-rules'
-import { formatLocalDateShort, localDate, todayLocalDate } from '../../shared/local-date'
+import { formatLocalDateShort, localDate, todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Field, Page, useConfirm } from '../../shared/ui'
 
 const STATUS_LABEL: Record<string, string> = { done: 'завершён', current: 'идёт', upcoming: 'впереди' }
 
 export function GoalPage() {
+  const { actor } = useAuth()
   const { clientId = '' } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -21,7 +23,7 @@ export function GoalPage() {
     await queryClient.invalidateQueries({ queryKey: ['client-goal', clientId] })
     await queryClient.invalidateQueries({ queryKey: ['clients'] })
   }
-  const today = todayLocalDate()
+  const today = todayInTimeZone(actor?.timezone)
   return <Page title={client.data?.fullName ?? 'Цель'} back={`/clients/${clientId}`} center>
     <AsyncView loading={goalQuery.isLoading || client.isLoading} error={goalQuery.error} onRetry={() => void goalQuery.refetch()}>
       {goalQuery.data

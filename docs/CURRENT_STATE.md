@@ -4,109 +4,96 @@
 > После каждого подтверждённого merge заменяйте сведения ниже, не добавляйте
 > хронологию: полная история уже хранится в Git и Tracker.
 
-Обновлено: 2026-08-13
-Проверенный `main`: `b5122e0` (`feat infra: prepare Yandex Cloud stage (#379)`)
+Обновлено: 2026-08-17
+Проверенный `main`: `6382ab2` (`docs: record YAFIT-305 merge (#406)`)
 
 ## Активная работа
 
 - Активная задача миграции: выполнить первый отдельно одобренный stage deploy
   по `docs/STAGE_DEPLOYMENT.md`, проверить private API, PostgreSQL и миграции.
 - Следующий этап после успешного stage smoke: Yandex ID/profile vertical slice
-  и серверная tenant-allowlist для пилота; invitations и membership mutations
-  остаются после auth.
+  и серверная tenant-allowlist для read-only пилота.
 
 ## Последняя проверенная продуктовая точка
 
-- Тренер и подключённый клиент используют общую связку: клиент создаёт и
-  сохраняет собственные тренировки, тренер видит их в истории и копирует в
-  отправляемый план; назначенные планы и факт выполнения остаются видимы обеим
-  сторонам в разрешённых маршрутах.
-- В live-тренировке тренер и подключённый клиент одинаково могут добавлять и
-  удалять подходы, добавлять и заменять упражнения, менять порядок блоков.
-  Серверная проверка связи с карточкой клиента сохранена; внешние аккаунты не
-  получают доступ. После правки завершённое упражнение снова сворачивается.
-- Один активный live-workout на клиента защищён интерфейсом и БД.
-- Если пользователь открывает план при уже идущей тренировке этого клиента,
-  Fit не подменяет выбранный план: предлагает явно открыть незавершённую
-  запись или остаться. После явного перехода «Назад» ведёт в её карточку.
-- На карточке спортсмена верхняя safe-area не прокручивается под статус-бар,
-  а цель не дублируется в обзорном блоке.
-- Voice-first главная, SpeechKit и LLM-разбор работают через прежние prompt,
-  matching, fallback и сохранение: в последних PR эти механики не менялись.
-- Тёмная тема voice-first и AI-поверхностей использует семантические токены и
-  сохраняет контраст на мобильном экране.
-- После `#369` в `services/api` существует изолированный Fastify foundation с
-  `/health` и Podman-совместимым OCI-образом. Frontend, Supabase и production
-  environment не переключены; платные ресурсы Yandex Cloud не создавались.
-- После `#370` stage-инфраструктура описана Terraform: private PostgreSQL,
-  Serverless Container, VPC, Registry, Lockbox и resource-level IAM. `apply`
-  не запускался, поэтому облачные ресурсы по-прежнему не создавались.
-- После `#371` Managed PostgreSQL baseline разделяет migration owner и runtime
-  user, а Fastify API умеет задавать внутренний UUID пользователя только на
-  время транзакции. К маршрутам и frontend новый pool пока не подключён.
-- После `#372` в отдельную PostgreSQL migration chain перенесены `profiles` и
-  `trainers`, минимальные grants и RLS собственного профиля. Production всё ещё
-  использует Supabase.
-- После `#375` добавлены `clients`, `client_trainers`, foreign keys и read-only
-  RLS для владельца, root trainer и подключённых тренеров. Fastify routes и
-  production к новому контуру не подключены.
-- После `#379` подготовлены remote state, private network access, TLS/readiness,
-  временный private migration runner и stage runbook. `terraform apply` ещё не
-  выполнялся; текущий Supabase production path не изменён.
+- После `#405` переключатель `км`/`м` читается на iPhone; после `#403` служебные
+  подписи quick review не перекрывают беговые поля.
+- После `#401` непрерывный бег хранит длительность и дистанцию, рассчитывает
+  темп и одинаково отображается в плане, live, истории и копировании. GPS,
+  интервалы и голосовой ввод бега ещё не реализованы.
+- После `#399` workout-domain снова использует `updated_by`, а live/progress
+  RPC явно передают actor ID. Аналитика последней активности учитывает того,
+  кто действительно изменил запись.
+- Progress использует goal-aware LLM-сводку, confirmed-only прогресс упражнений,
+  реальные PR, cursor-пагинацию и план/факт за неделю или месяц в timezone
+  клиента.
+- Client Home сохраняет voice-first первым действием, показывает следующую
+  тренировку, завершённые тренировки и один релевантный акцент.
+- История тренировок показывает спортивную хронику: упражнения, подтверждённый
+  факт, длительность или тоннаж, RPE, wellbeing, PR, комментарий клиента и
+  ответ тренера.
+- Клиент может идемпотентно отправить session RPE, wellbeing и дискомфорт;
+  ответственный тренер — реакцию и короткий ответ. Cross-tenant доступ закрыт.
+- Live-workout сериализует корневые изменения, использует последнюю version и
+  сохраняет неподтверждённый факт при конфликте или сетевой неопределённости.
+- Календарные границы Today, расписания, целей и прогресса считаются по IANA
+  timezone профиля; legacy fallback — `Europe/Moscow`.
+- Тренер и клиент используют общий workout domain; один active workout на
+  клиента защищён UI и БД, назначения и факт видимы обеим сторонам по ролям.
+- Fastify/Yandex Cloud foundation, Terraform и отдельная PostgreSQL migration
+  chain существуют изолированно. Production frontend использует Supabase;
+  `terraform apply` не запускался, платные ресурсы не создавались.
+
+## Влияние нового main на миграцию
+
+- План первого private stage deploy не меняется: он проверяет инфраструктуру,
+  TLS/readiness и уже подготовленные migrations `000001`–`000003`.
+- После auth/profile необходимо отдельно перенести новые контракты из `main`:
+  timezone, `updated_by`/version, feedback, trainer response/reactions,
+  regularity, exercise progress/PR, workout chronicle, run metrics, realtime и
+  goal-aware summary.
+- Supabase migrations не копируются напрямую. Каждый контракт переносится
+  отдельным dependency-ordered PostgreSQL-срезом с RLS/cross-tenant тестами.
+- Безопасная единица production rollout — связанная tenant-когорта. Dual-write
+  запрещён; переключение выполняется только после полной миграции её mutable
+  данных.
 
 ## Последние проверки
 
-- `#354` / `YAFIT-252`: `npm run check` — 369 тестов; WebKit 390 px для
-  voice-first и AI-карточек. LLM/SpeechKit не менялись.
-- `#355` / `YAFIT-268`: чистый локальный reset БД через Podman; `db:test` —
-  44 файла, 406 SQL/RLS-проверок; целевые Chromium e2e клиента и WebKit iPhone
-  390 px прошли; `npm run check` — 369 тестов, lint, typecheck, coverage, DB
-  types, iOS permissions и production build.
-- После merge `#355` production iOS bundle из `main` собран, синхронизирован,
-  установлен и запущен на уже открытом iPhone 17 без нового окна Xcode.
-- `#358` / `YAFIT-270`: `npm run check` — 369 тестов; WebKit mobile shell —
-  15 passed на 390, 375 и 360 px; локальная iOS-сборка и установка в iPhone 17.
-- `#359` / `YAFIT-272`: `npm run check` — 369 тестов; целевой WebKit iPhone
-  390 px проверяет отмену recovery-диалога, явное открытие active workout и
-  возврат назад. После merge локальный iOS bundle собран, установлен и запущен
-  на уже открытом iPhone 17 без нового окна Xcode.
-- `#369`: `npm run db:reset`; `npm run db:test` — 422 SQL/RLS-теста;
-  `npm run check` — 372 frontend-теста, Fastify API test/build, lint,
-  typecheck, DB types, iOS permissions и production build.
-- `#370`: Terraform `fmt -check` и `validate` на provider `0.215.0`;
-  `npm run check` — 372 frontend-теста, Fastify API test/build, lint,
-  typecheck, DB types, iOS permissions и production build.
-- `#371`: PostgreSQL integration test в одноразовом Podman-контейнере;
-  Terraform `fmt -check` и `validate`; `npm run check` — 372 frontend-теста,
-  5 API unit-тестов, lint, typecheck, DB types и production builds.
-- `#372`: PostgreSQL 17 integration — actor context и cross-tenant profiles;
-  локальный Supabase reset, 422 SQL/RLS-теста и `npm run check` прошли.
-- `#375`: PostgreSQL 17 integration — 4 теста clients/memberships и FK;
-  локальный Supabase reset, 422 SQL/RLS-теста и `npm run check` прошли. После
-  flaky WebKit-навигации повторный E2E job полностью прошёл.
-- `#379`: `npm run check` — 377 frontend- и 10 API-тестов; Terraform
-  `fmt`/`validate`; Podman image smoke и PostgreSQL 17 migration E2E прошли.
+- `#405` / `YAFIT-305`: GitHub CI app/database/e2e и Vercel прошли; локально
+  полный `npm run check`, WebKit 390 px и visual profiles зелёные.
+- `#403` / `YAFIT-304`: `npm run check` — 432 теста приложения и 10 API-тестов;
+  quick review и клиентский сценарий бега проверены на WebKit 390 px.
+- `#401` / `YAFIT-300`: `npm run check` — 432 теста приложения и 10 API-тестов;
+  полный пользовательский сценарий и visual profiles прошли.
+- `#399` / `YAFIT-299`: `npm run db:reset` + `db:test` — 503/503 SQL/RLS;
+  DB types, lint, typecheck и build зелёные.
+- `#379`: 377 frontend- и 10 API-тестов; Terraform `fmt`/`validate`, Podman
+  image smoke и PostgreSQL 17 migration E2E прошли.
 
-## Отложенный backlog
+## Ближайший migration roadmap
 
-- `YAFIT-245` (P0, устойчивость AI-разбора) **не начинать без отдельного
-  разрешения пользователя и предварительного описания механики и рисков**.
-- `YAFIT-234` (защита SpeechKit relay) отложен пользователем; текущий голосовой
-  разбор не менять.
-- `YAFIT-235` — принятое продуктовое решение сохранить Webvisor для
-  исследовательских метрик, это не баг.
-- Остальные открытые задачи аудита остаются в `YAFIT-25`: в том числе
-  `YAFIT-242` (timezone), `YAFIT-250` (постраничная история), `YAFIT-253`
-  (demo membership), `YAFIT-259` (conflicts/slow network), `YAFIT-260`
-  (mobile a11y и schedule density). Не брать без нового приоритета.
+1. Первый private stage deploy и smoke.
+2. Yandex ID, profile slice и серверная tenant-allowlist.
+3. Read-only пилот на внутренних/синтетических аккаунтах.
+4. Dependency-ordered перенос актуального workout-domain.
+5. Две полные tenant migration rehearsal и постепенный cohort rollout.
+
+## Отложенный продуктовый backlog
+
+- `YAFIT-301` — интервалы, восстановление и СБУ.
+- `YAFIT-302` — беговой прогресс: километраж, длительность, темп и RPE.
+- `YAFIT-303` — текстовые и голосовые сценарии бегового ввода.
+- `YAFIT-290` — список «Кому нужно внимание» для тренера.
+- `YAFIT-245` не начинать без отдельного разрешения пользователя.
+- `YAFIT-234` отложен; SpeechKit relay не менять. Webvisor сохранён осознанно.
 
 ## Постоянные ограничения
 
-- LLM-разбор — основная функция продукта; UI-правки не меняют prompt,
-  matching, fallback и сохранение без отдельного решения.
-- UI перед сдачей проверяется в WebKit на ширине 390 px.
-- После merge изменений приложения обновляется и заново запускается iOS bundle.
-- Локальные Supabase-проверки работают через установленный Podman; Docker не
-  требуется.
-- Текущий backlog и статусы задач подтверждаются через YAFIT; этот файл служит
-  индексом, а не заменой Tracker.
+- LLM-разбор и SpeechKit не менять без отдельного продуктового решения.
+- UI проверяется на Client 390/430 px и Trainer 1440 px; для мобильных
+  сценариев обязателен WebKit.
+- Локальные Supabase-проверки работают через Podman; production URL и секреты
+  не читаются и не используются.
+- Backlog и статусы подтверждаются через YAFIT; этот файл — индекс, не замена
+  Tracker.

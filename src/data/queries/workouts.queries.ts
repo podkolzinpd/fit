@@ -1,8 +1,8 @@
-import type { ExerciseSnapshot, LiveSetDraft, WorkoutDraft } from '../../shared/domain'
+import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, WorkoutDraft, WorkoutFeedbackDraft, WorkoutTrainerResponseDraft } from '../../shared/domain'
 import { supabase } from './client'
 import { toJson } from './json'
 
-const rootColumns = 'id,client_id,created_by,workout_date,start_time,end_time,started_at,completed_at,status,notes,trainer_review,client_comment,version,stage_id'
+const rootColumns = 'id,trainer_id,client_id,created_by,workout_date,start_time,end_time,started_at,completed_at,status,notes,trainer_review,trainer_reaction,trainer_review_author_id,trainer_reviewed_at,client_comment,session_rpe,wellbeing,discomfort,version,stage_id'
 
 export type { WorkoutListRow } from '../database.types'
 
@@ -18,6 +18,17 @@ export const workoutQueries = {
   listSummaries: (clientId: string) => supabase.rpc('list_workout_summaries', { p_client_id: clientId }),
   latestExerciseResults: (clientId: string, exerciseRefs: string[]) => supabase.rpc('list_latest_exercise_results', {
     p_client_id: clientId, p_exercise_refs: exerciseRefs,
+  }),
+  exerciseProgress: (clientId: string, exerciseRef: string, limit: number, cursor: ExerciseProgressCursor | null) =>
+    supabase.rpc('list_exercise_progress', {
+      p_client_id: clientId,
+      p_exercise_ref: exerciseRef,
+      p_limit: limit,
+      p_before_completed_at: cursor?.completedAt ?? null,
+      p_before_workout_id: cursor?.workoutId ?? null,
+    }),
+  personalRecords: (workoutId: string) => supabase.rpc('list_workout_personal_records', {
+    p_workout_id: workoutId,
   }),
   getRoot: (id: string) => supabase.from('workouts').select(rootColumns).eq('id', id).is('deleted_at', null).single(),
   getExercises: (id: string) => supabase.from('workout_exercises')
@@ -52,11 +63,19 @@ export const workoutQueries = {
   setExerciseComment: (exerciseId: string, comment: string, version: number) => supabase.rpc('set_exercise_comment', {
     p_exercise_id: exerciseId, p_comment: comment, p_expected_version: version,
   }),
-  setWorkoutReview: (workoutId: string, review: string, version: number) => supabase.rpc('set_workout_review', {
-    p_workout_id: workoutId, p_review: review, p_expected_version: version,
+  setWorkoutReview: (workoutId: string, response: WorkoutTrainerResponseDraft, version: number) => supabase.rpc('set_workout_review', {
+    p_workout_id: workoutId, p_reaction: response.reaction, p_review: response.review, p_expected_version: version,
   }),
   setClientWorkoutComment: (workoutId: string, comment: string, version: number) => supabase.rpc('set_client_workout_comment', {
     p_workout_id: workoutId, p_comment: comment, p_expected_version: version,
+  }),
+  submitFeedback: (workoutId: string, feedback: WorkoutFeedbackDraft, version: number) => supabase.rpc('submit_workout_feedback', {
+    p_workout_id: workoutId,
+    p_session_rpe: feedback.sessionRpe,
+    p_wellbeing: feedback.wellbeing,
+    p_discomfort: feedback.discomfort,
+    p_comment: feedback.comment,
+    p_expected_version: version,
   }),
   replaceLiveExercise: (workoutId: string, exerciseId: string, exercise: ExerciseSnapshot, version: number) => supabase.rpc('replace_live_exercise', {
     p_workout_id: workoutId, p_exercise_id: exerciseId, p_exercise: toJson(exercise), p_expected_version: version,

@@ -36,6 +36,16 @@ function stringArray(value: Json | undefined, field: string): string[] {
   return value as string[]
 }
 
+function optionalString(value: Json | undefined): string | undefined {
+  return typeof value === 'string' && value.trim() ? value : undefined
+}
+
+function optionalStringArray(value: Json | undefined): string[] | undefined {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+    ? value as string[]
+    : undefined
+}
+
 function trainerSummary(value: Json): TrainerTrainingSummary {
   const item = record(value)
   return {
@@ -53,6 +63,8 @@ function clientSummary(value: Json): ClientTrainingSummary {
     achievements: stringArray(item.achievements, 'achievements'),
     consistency: stringValue(item.consistency, 'consistency'),
     encouragement: stringValue(item.encouragement, 'encouragement'),
+    goalAlignment: optionalString(item.goalAlignment),
+    nextSteps: optionalStringArray(item.nextSteps),
   }
 }
 

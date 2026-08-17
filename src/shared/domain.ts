@@ -12,6 +12,7 @@ export type BlockType = 'single' | 'group'
 export type BlockPreset = 'set' | 'circuit'
 
 export type AccountRole = 'trainer' | 'client'
+export type TrainerReaction = 'thumbs_up' | 'fire' | 'strong'
 
 interface SessionActorBase {
   userId: UUID
@@ -229,9 +230,19 @@ export interface WorkoutExercise extends ExerciseSnapshot {
   sets: WorkoutSet[]
 }
 
+export type WorkoutWellbeing = 'good' | 'normal' | 'hard'
+
+export interface WorkoutFeedbackDraft {
+  sessionRpe: number
+  wellbeing: WorkoutWellbeing
+  discomfort: boolean
+  comment: string
+}
+
 export interface Workout {
   id: UUID
   clientId: UUID
+  trainerId?: UUID
   clientName: string
   createdBy?: UUID | null
   workoutDate: LocalDate
@@ -242,11 +253,23 @@ export interface Workout {
   status: WorkoutStatus
   notes: string | null
   trainerReview?: string
+  trainerReaction?: TrainerReaction
+  trainerReviewAuthorId?: UUID
+  trainerReviewedAt?: string
   clientComment?: string
+  sessionRpe?: number
+  wellbeing?: WorkoutWellbeing
+  discomfort?: boolean
+  hasPr?: boolean
   stageId: UUID | null
   stageTitle: string | null
   version: number
   exercises: WorkoutExercise[]
+}
+
+export interface WorkoutTrainerResponseDraft {
+  reaction: TrainerReaction
+  review: string
 }
 
 export interface WorkoutSummary {
@@ -255,12 +278,80 @@ export interface WorkoutSummary {
   status: WorkoutStatus
 }
 
+export type WorkoutPersonalRecordMetric = 'primary' | 'weight' | 'weight_reps'
+
+export interface WorkoutPersonalRecord {
+  exerciseRef: string
+  exerciseName: string
+  inputKind: InputKind
+  metric: WorkoutPersonalRecordMetric
+  primaryValue: number
+  weightKg: number | null
+  reps: number | null
+}
+
+export interface ExerciseProgressSet {
+  weightKg?: number
+  reps?: number
+  durationSec?: number
+  distanceKm?: number
+  rpe?: number
+}
+
+export interface ExerciseProgressResult {
+  workoutId: UUID
+  workoutDate: LocalDate
+  completedAt: string
+  exerciseName: string
+  inputKind: InputKind
+  confirmedSetCount: number
+  primaryValue: number | null
+  previousPrimaryValue: number | null
+  primaryChange: number | null
+  allTimePrimaryValue: number | null
+  bestWeightKg: number | null
+  repsAtBestWeight: number | null
+  bestWeightReps: number | null
+  allTimeBestWeightKg: number | null
+  allTimeBestWeightReps: number | null
+  isPrimaryPr: boolean
+  isWeightPr: boolean
+  isWeightRepsPr: boolean
+  trainerComment: string | null
+  sets: ExerciseProgressSet[]
+}
+
+export interface ExerciseProgressCursor {
+  completedAt: string
+  workoutId: UUID
+}
+
+export interface ExerciseProgressPage {
+  items: ExerciseProgressResult[]
+  nextCursor: ExerciseProgressCursor | null
+  totalCount: number
+}
+
 export interface ClientStats {
   doneCount: number
   completionPercent: number | null
   lastWorkoutDate: LocalDate | null
   daysInWork: number | null
   needsAttention: boolean
+}
+
+export type WorkoutRegularityPeriod = 'week' | 'month'
+
+export interface WorkoutRegularity {
+  period: WorkoutRegularityPeriod
+  periodStart: LocalDate
+  periodEnd: LocalDate
+  plannedCount: number
+  completedCount: number
+  completedPlannedCount: number
+  partialCount: number
+  skippedCount: number
+  completionPercent: number | null
 }
 
 export interface CustomMetric {
@@ -303,6 +394,8 @@ export interface ClientTrainingSummary {
   achievements: string[]
   consistency: string
   encouragement: string
+  goalAlignment?: string
+  nextSteps?: string[]
 }
 
 export interface TrainingSummaryMetrics {

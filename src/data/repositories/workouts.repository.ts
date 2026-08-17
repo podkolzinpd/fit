@@ -1,10 +1,11 @@
-import type { BlockPreset, BlockType, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet, WorkoutSetDraft, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
+import type { BlockPreset, BlockType, ExerciseProgressCursor, ExerciseProgressPage, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutPersonalRecord, WorkoutPersonalRecordMetric, WorkoutSet, WorkoutSetDraft, WorkoutStatus, WorkoutSummary, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import type { WorkoutListRow } from '../database.types'
 import { clientsRepository } from './clients.repository'
 import { collectPages, pageFromLookahead } from './collect-pages'
 import { repositoryError } from './error'
 import { workoutQueries } from '../queries/workouts.queries'
+import { EXERCISE_PROGRESS_PAGE_SIZE, exerciseProgressPageFromRows } from './exercise-progress-page'
 export { canTransition, copyWorkout, completedWorkoutDraft, computeClientStats, exerciseChartPoints, chartUnitFor, compactCompletedSetSummary, compactPlannedSetSummary, durationLabel, durationSeconds, formatFactVsPlan, factLine, enteredFactLine, previousResultLine, splitClientWorkouts, clientWorkoutStatusLabel, workoutStatusPresentation, workoutDurationLabel, muscleGroupLabels, exerciseSummary, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, BLOCK_PRESET_LABELS, PRESET_REST_DEFAULTS, DEFAULT_REST_BETWEEN_SETS, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockPreset, setBlockRest, syncBlockRounds, draftBlockRoundsView, moveBlock, replaceExercise } from './workout-rules'
 export type { ExerciseBlock, DraftBlock, DraftBlockRound, BlockRound, WorkoutStatusPresentation, WorkoutStatusTone } from './workout-rules'
 export type { ExerciseChartPoint } from './workout-rules'
@@ -64,10 +65,18 @@ async function get(id: string): Promise<Workout> {
   }))
   const client = await clientsRepository.get(root.data.client_id)
   return {
-    id: root.data.id, clientId: root.data.client_id, clientName: client.fullName, createdBy: root.data.created_by,
+    id: root.data.id, trainerId: root.data.trainer_id, clientId: root.data.client_id, clientName: client.fullName, createdBy: root.data.created_by,
     workoutDate: localDate(root.data.workout_date), startTime: root.data.start_time,
     endTime: root.data.end_time, startedAt: root.data.started_at ?? null, completedAt: root.data.completed_at ?? null,
-    status: root.data.status as Workout['status'], notes: root.data.notes, trainerReview: root.data.trainer_review ?? undefined, clientComment: root.data.client_comment ?? undefined,
+    status: root.data.status as Workout['status'], notes: root.data.notes,
+    trainerReview: root.data.trainer_review ?? undefined,
+    trainerReaction: root.data.trainer_reaction ? root.data.trainer_reaction as TrainerReaction : undefined,
+    trainerReviewAuthorId: root.data.trainer_review_author_id ?? undefined,
+    trainerReviewedAt: root.data.trainer_reviewed_at ?? undefined,
+    clientComment: root.data.client_comment ?? undefined,
+    sessionRpe: root.data.session_rpe ?? undefined,
+    wellbeing: root.data.wellbeing ? root.data.wellbeing as WorkoutWellbeing : undefined,
+    discomfort: root.data.discomfort ?? undefined,
     stageId: root.data.stage_id ?? null, stageTitle: null,
     version: root.data.version, exercises: mappedExercises,
   }
@@ -76,6 +85,7 @@ async function get(id: string): Promise<Workout> {
 function mapWorkout(row: WorkoutListRow): Workout {
   return {
     id: row.id,
+    trainerId: row.trainer_id,
     clientId: row.client_id,
     clientName: row.client_name,
     createdBy: row.created_by,
@@ -86,7 +96,15 @@ function mapWorkout(row: WorkoutListRow): Workout {
     completedAt: row.completed_at ?? null,
     status: row.status as WorkoutStatus,
     notes: row.notes,
-    trainerReview: row.trainer_review ?? undefined, clientComment: row.client_comment ?? undefined,
+    trainerReview: row.trainer_review ?? undefined,
+    trainerReaction: row.trainer_reaction ? row.trainer_reaction as TrainerReaction : undefined,
+    trainerReviewAuthorId: row.trainer_review_author_id ?? undefined,
+    trainerReviewedAt: row.trainer_reviewed_at ?? undefined,
+    clientComment: row.client_comment ?? undefined,
+    sessionRpe: row.session_rpe ?? undefined,
+    wellbeing: row.wellbeing ? row.wellbeing as WorkoutWellbeing : undefined,
+    discomfort: row.discomfort ?? undefined,
+    hasPr: row.has_pr,
     stageId: row.stage_id ?? null,
     stageTitle: row.stage_title ?? null,
     version: row.version,
@@ -160,6 +178,19 @@ export const workoutsRepository = {
   },
   listSummaries,
   findActive,
+  async personalRecords(workoutId: string): Promise<WorkoutPersonalRecord[]> {
+    const result = await workoutQueries.personalRecords(workoutId)
+    if (result.error) throw repositoryError(result.error)
+    return result.data.map((row) => ({
+      exerciseRef: row.exercise_ref,
+      exerciseName: row.exercise_name,
+      inputKind: row.input_kind as InputKind,
+      metric: row.metric as WorkoutPersonalRecordMetric,
+      primaryValue: Number(row.primary_value),
+      weightKg: row.weight_kg === null ? null : Number(row.weight_kg),
+      reps: row.reps,
+    }))
+  },
   async latestExerciseResults(clientId: string, exerciseRefs: string[]): Promise<Map<string, PreviousExerciseResult>> {
     if (!exerciseRefs.length) return new Map()
     const result = await workoutQueries.latestExerciseResults(clientId, exerciseRefs)
@@ -168,6 +199,20 @@ export const workoutsRepository = {
       workoutDate: localDate(row.workout_date),
       sets: previousSets(row.sets),
     }]))
+  },
+  async exerciseProgressPage(
+    clientId: string,
+    exerciseRef: string,
+    cursor: ExerciseProgressCursor | null,
+  ): Promise<ExerciseProgressPage> {
+    const result = await workoutQueries.exerciseProgress(
+      clientId,
+      exerciseRef,
+      EXERCISE_PROGRESS_PAGE_SIZE + 1,
+      cursor,
+    )
+    if (result.error) throw repositoryError(result.error)
+    return exerciseProgressPageFromRows(result.data)
   },
   async save(draft: WorkoutDraft): Promise<string> {
     const result = await workoutQueries.save(draft)
@@ -219,13 +264,18 @@ export const workoutsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
-  async setWorkoutReview(workout: Workout, review: string): Promise<number> {
-    const result = await workoutQueries.setWorkoutReview(workout.id, review, workout.version)
+  async setWorkoutReview(workout: Workout, response: WorkoutTrainerResponseDraft): Promise<number> {
+    const result = await workoutQueries.setWorkoutReview(workout.id, response, workout.version)
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
   async setClientWorkoutComment(workout: Workout, comment: string): Promise<number> {
     const result = await workoutQueries.setClientWorkoutComment(workout.id, comment, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
+  async submitFeedback(workout: Workout, feedback: WorkoutFeedbackDraft): Promise<number> {
+    const result = await workoutQueries.submitFeedback(workout.id, feedback, workout.version)
     if (result.error) throw repositoryError(result.error)
     return result.data
   },

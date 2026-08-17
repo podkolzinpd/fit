@@ -7,6 +7,7 @@ import { groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, pre
 import { OverflowMenu } from '../../shared/ui'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { WorkoutSetTable } from './WorkoutSetTable'
+import { RunMetricsFields } from './RunMetricsFields'
 
 // Числовое поле, которое МОЖНО очистить курсором. Контролируемый input с value
 // снаружи «возвращал» старое число при пустом вводе (стереть можно было только
@@ -158,8 +159,16 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       {rpeField}
     </>
     return <>
-      <input className={inputClass} aria-label={`Время, сек, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" step="1" placeholder="сек" value={durationSec ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationSec: inputNumber(event.target.value), durationMin: undefined })} />
-      <input className={inputClass} aria-label={`Расстояние, подход ${setIndex + 1}`} type="number" inputMode="decimal" min="0" step="0.1" placeholder="км" value={set.distanceKm ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { distanceKm: inputNumber(event.target.value) })} />
+      <RunMetricsFields
+        idPrefix={`plan-run-${exerciseIndex}-${setIndex}`}
+        durationSec={durationSec}
+        distanceKm={set.distanceKm}
+        inputClassName={inputClass}
+        durationLabel={`Время, подход ${setIndex + 1}`}
+        distanceLabel={`Расстояние, подход ${setIndex + 1}`}
+        distanceUnitLabel={`Единица расстояния, подход ${setIndex + 1}`}
+        onCommit={(patch) => updateSet(exerciseIndex, setIndex, patch)}
+      />
       {rpeField}
     </>
   }

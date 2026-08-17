@@ -1,12 +1,31 @@
 import { describe, expect, it } from 'vitest'
 import {
-  addDays, addMonths, endOfMonth, endOfWeek, formatLocalDate, formatLocalDateShort, formatMonth,
-  localDate, startOfMonth, startOfWeek, todayLocalDate,
+  addDays, addMonths, DEFAULT_TIME_ZONE, endOfMonth, endOfWeek, formatLocalDate, formatLocalDateShort,
+  formatMonth, isValidTimeZone, localDate, normalizeTimeZone, startOfMonth, startOfWeek, todayInTimeZone,
 } from './local-date'
 
 describe('LocalDate', () => {
   it('не сдвигает календарный день через UTC', () => {
-    expect(todayLocalDate(new Date(2026, 6, 21, 0, 5))).toBe('2026-07-21')
+    expect(todayInTimeZone('Europe/Moscow', new Date('2026-07-20T21:05:00.000Z'))).toBe('2026-07-21')
+  })
+
+  it('берёт границу дня из профиля, а не timezone устройства', () => {
+    const now = new Date('2026-08-14T22:30:00.000Z')
+    expect(todayInTimeZone('Europe/Berlin', now)).toBe('2026-08-15')
+    expect(todayInTimeZone('America/New_York', now)).toBe('2026-08-14')
+  })
+
+  it('корректно переживает оба перехода DST', () => {
+    expect(todayInTimeZone('Europe/Berlin', new Date('2026-03-29T00:30:00.000Z'))).toBe('2026-03-29')
+    expect(todayInTimeZone('Europe/Berlin', new Date('2026-03-29T22:30:00.000Z'))).toBe('2026-03-30')
+    expect(todayInTimeZone('Europe/Berlin', new Date('2026-10-25T00:30:00.000Z'))).toBe('2026-10-25')
+    expect(todayInTimeZone('Europe/Berlin', new Date('2026-10-25T23:30:00.000Z'))).toBe('2026-10-26')
+  })
+
+  it('предсказуемо нормализует timezone старого профиля', () => {
+    expect(isValidTimeZone('Europe/Berlin')).toBe(true)
+    expect(isValidTimeZone('Berlin')).toBe(false)
+    expect(normalizeTimeZone('Berlin')).toBe(DEFAULT_TIME_ZONE)
   })
 
   it('отклоняет невозможную дату', () => {

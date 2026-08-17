@@ -1,0 +1,14 @@
+[mcp_servers.shadcn]
+command = "npx"
+args = ["-y", "shadcn@latest", "mcp"]
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["-y", "@playwright/mcp@latest", "--isolated", "--headless", "--browser", "chromium"]
+
+[mcp_servers.figma]
+url = "https://mcp.figma.com/mcp"
+
+[mcp_servers."21st"]
+url = "https://21st.dev/api/mcp"
+bearer_token_env_var = "API_KEY_21ST"

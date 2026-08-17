@@ -4,6 +4,26 @@ export type LocalDate = string & { readonly [localDateBrand]: true }
 
 const pattern = /^\d{4}-\d{2}-\d{2}$/
 
+export const DEFAULT_TIME_ZONE = 'Europe/Moscow'
+
+export function isValidTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value }).format(0)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function systemTimeZone(): string {
+  const value = Intl.DateTimeFormat().resolvedOptions().timeZone
+  return value && isValidTimeZone(value) ? value : DEFAULT_TIME_ZONE
+}
+
+export function normalizeTimeZone(value?: string | null): string {
+  return value && isValidTimeZone(value) ? value : DEFAULT_TIME_ZONE
+}
+
 export function localDate(value: string): LocalDate {
   if (!pattern.test(value)) throw new Error('Дата должна иметь формат YYYY-MM-DD')
   const [year, month, day] = value.split('-').map(Number)
@@ -14,11 +34,19 @@ export function localDate(value: string): LocalDate {
   return value as LocalDate
 }
 
+export function todayInTimeZone(timeZone?: string | null, now = new Date()): LocalDate {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: normalizeTimeZone(timeZone),
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now)
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  return localDate(`${value.year}-${value.month}-${value.day}`)
+}
+
 export function todayLocalDate(now = new Date()): LocalDate {
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  return localDate(`${year}-${month}-${day}`)
+  return todayInTimeZone(systemTimeZone(), now)
 }
 
 export function formatLocalDate(value: LocalDate, locale = 'ru-RU'): string {

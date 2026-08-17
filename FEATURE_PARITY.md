@@ -14,8 +14,10 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Voice notes | Browser-only Russian transcription into editable workout and client trainer notes; manual input remains available | Prototype: local whisper.cpp WASM ready; real-device acceptance pending |
 | Schedule | Week/month/local date, timed/untimed, open workout/back | Implemented: недельная лента дней + часовая сетка на день (timed по времени, untimed отдельно), закреплённая шапка с прокруткой только сетки, автоскролл к 07:00/первой тренировке, кнопка «Сегодня», выбор дня и недели в URL, календарь-переход к дате; covered unit + E2E |
 | Live | Start, autosave, confirm, rest, append, resume, partial finish | Implemented: rest, transactional append and non-retryable optimistic conflicts covered; wider resume acceptance pending |
-| History | Done workouts only, set list and max-value chart | Implemented: set list and max-value progression chart (по типу упражнения) covered unit; broader visual pending |
-| Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; duplicate-date create opens the existing entry without a failing DB request; broader visual/E2E matrix pending |
+| History | Done workouts only, set list and max-value chart | Implemented: paginated confirmed-only exercise facts, transparent per-kind chart and computed strength PR; broader visual pending |
+| Post-workout feedback | Клиент после завершения фиксирует session RPE 1–10, самочувствие и дискомфорт; тренер видит сигнал без доступа посторонних аккаунтов | Implemented: assigned и client-authored workout, отдельный idempotent submit с version check, RLS/SQL и WebKit 390 px acceptance |
+| Trainer response | После завершения клиент видит реакцию 👍 / 🔥 / 💪 и короткий ответ ответственного тренера | Implemented: trainer-author для назначения, root trainer для client-authored workout, автор/время, idempotent versioned RPC, realtime/refetch и RLS matrix |
+| Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; duplicate-date create opens the existing entry without a failing DB request; weekly/monthly regularity uses one role-safe server aggregate; broader visual/E2E matrix pending |
 | Wearables | Клиент подключает системное health-хранилище и видит локальные показатели активности и восстановления | Prototype: iOS HealthKit read-only PoC for sleep, steps, active energy, resting HR and HRV; server sync, trainer visibility and real-device acceptance pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; acceptance matrix pending |
 
@@ -39,10 +41,21 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - Клиент может редактировать и удалять только созданную им запланированную тренировку; назначенный тренером план остаётся защищённым.
 - Клиент может скопировать назначенный тренером план в новую собственную тренировку, но не может записывать trainer comments.
 - Клиент видит и выполняет назначения всех подключённых тренеров. Каждый тренер изменяет только тренировки с собственным `created_by`, видит завершённые самостоятельные тренировки клиента только для чтения и не видит назначения других тренеров; те же правила действуют при прямом UUID-доступе.
+- После завершения назначенной или самостоятельной тренировки клиент может отдельно отправить session RPE 1–10, wellbeing и дискомфорт с коротким пояснением. Feedback необязателен, не участвует в завершении workout, повтор того же submit идемпотентен; тренер читает результат, несвязанный аккаунт не видит строку.
 - Историю прогресса видят клиент и все memberships. Клиент изменяет любую запись, тренер — только созданную им; остальные записи доступны тренеру только для чтения.
 - Самостоятельная карточка принадлежит клиентскому профилю и не создаёт строку `trainers`; тренеры появляются только через явное приглашение.
 - Обязательные проверки: owner/trainer/cross-tenant SQL matrix и E2E client create → edit → perform → finish.
 - Открытая карточка, история, тренировка и прогресс используют один realtime-канал конкретного `client_id`. Серия событий одной транзакции объединяется; скрытая вкладка отписывается и перечитывает активные данные после возвращения.
+
+## Workout regularity acceptance contract
+
+- Неделя длится с понедельника по воскресенье; текущие week/month границы сервер считает в timezone клиента. Если клиентский профиль ещё не связан, используется timezone root trainer, затем `Europe/Moscow`.
+- Запланировано — все trainer-authored назначения периода, включая будущие, выполненные и незавершённые. Самостоятельные планы клиента не раздувают denominator.
+- Выполнено — trainer- и client-authored workout со статусом `done`, где подтверждены все подходы; тренировка без строк подходов считается завершённой по корневому статусу.
+- Процент плана — полностью выполненные назначения тренера / все назначения тренера периода. Самостоятельные завершённые тренировки остаются в факте, но не могут поднять процент выше 100%.
+- Partial — `done` с частью подтверждённых подходов: подтверждённые строки остаются фактом, но вся тренировка не входит в completed. Неподтверждённый ввод фактом не считается.
+- Skipped — производное представление trainer-authored `planned` в прошлом. Новый статус БД не вводится; прошлый `in_progress` остаётся незавершённым, а не пропущенным.
+- Client, root trainer и connected trainer читают одни строки RPC; несвязанный аккаунт получает access denied. UI не загружает историю тренировок для пересчёта.
 
 ## Exercise acceptance contract
 
@@ -53,6 +66,31 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - План поддерживает несколько подходов, удаление, сброс значений и изменение веса на ±5% с округлением до 2,5 кг.
 - Live поддерживает добавление подхода и упражнения отдельными транзакционными RPC, autosave факта, подтверждение, отдых 90 секунд и частичное завершение с предупреждением. Таймер отдыха считается от абсолютной метки времени и остаётся корректным при сворачивании вкладки.
 - Обязательные проверки: уникальность полного каталога, component search/filter/create, RPC rollback/cross-tenant, mobile visual snapshot и E2E plan → multi-set → live append → partial finish.
+
+## Exercise progress acceptance contract
+
+- Источник прогресса — только подтверждённые подходы завершённых неудалённых workouts. План, неподтверждённый ввод и удалённый факт не участвуют.
+- Для strength основная метрика — максимальный подтверждённый рабочий вес; отдельно показывается лучший результат `вес × повторы`. Для reps, duration и distance основная метрика — соответственно повторы, секунды и километры; estimated 1RM в v1 не используется.
+- PR текущей завершённой тренировки сравнивается только с более ранними завершёнными тренировками. Исправление или удаление факта пересчитывает все последующие флаги из исходных данных; отдельной mutable PR-таблицы нет.
+- Client, root trainer и connected trainer читают один RLS-защищённый результат. Несвязанный аккаунт получает access denied.
+- Первая страница ограничена 20 тренировками и использует серверный cursor/read contract с lookahead; старые результаты подгружаются явно, вся workout history в браузер не загружается.
+- Milestones 10/25/50/100 показываются только как вторичная отметка количества фактических тренировок и не создают отдельную игровую систему.
+
+## Workout chronicle acceptance contract
+
+- История использует одну компактную карточку для Trainer и Client: дата,
+  упражнения и свёрнутый подтверждённый факт, длительность/тоннаж, итоговые RPE
+  и самочувствие, PR, комментарий клиента и реакция/ответ тренера.
+- Одинаковые выполненные подходы объединяются; подробный plan/fact остаётся в
+  существующей карточке тренировки и не дублируется в списке.
+- Feedback, PR и ответ отсутствуют целиком, если данных нет: пустые блоки и
+  технические placeholders не показываются.
+- PR вычисляется из confirmed-only факта относительно более ранних завершённых
+  тренировок и приходит вместе с RLS-защищённой страницей истории.
+- История отдаётся newest-first страницами по 20 записей с lookahead; старые
+  страницы загружаются явно, весь архив в браузер не вычитывается.
+- Обязательная UI-проверка — одинаковые разрешённые факты у Trainer и Client в
+  WebKit на ширине 390 px.
 
 ## AI progress acceptance contract
 

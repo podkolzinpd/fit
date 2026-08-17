@@ -44,8 +44,10 @@ The following remain unchanged during the foundation phase:
    UUID; a frontend flag is not an authorization or routing boundary.
 6. Run the first allowlisted pilot with synthetic/internal accounts and
    read-only behavior. Supabase remains the only write source during this gate.
-7. Port clients, memberships, exercises, workouts, progress, goals and
-   summaries in parity-tested vertical slices.
+7. Port the current domain contract in the dependency order below. The scope
+   now includes timezone, optimistic concurrency, actor attribution, running
+   metrics, feedback/reactions and the derived progress/chronicle reads added
+   after the foundation migrations.
 8. Rehearse full tenant migration at least twice. Cut over one isolated tenant
    cohort only after all data it can mutate is migrated and writes are frozen
    for the cutover window.
@@ -96,6 +98,39 @@ Rollout gates:
 4. one small production tenant cohort;
 5. gradual cohort expansion;
 6. final read-only window and global cutover.
+
+## Current main parity impact
+
+The private stage readiness gate still applies only the reviewed foundation
+migrations `000001` through `000003`. Product work merged after them does not
+block the infrastructure smoke, but it expands the contract required before a
+production tenant can be switched.
+
+Port the current `main` behavior in this order:
+
+1. identity/profile mapping, roles and IANA timezone;
+2. clients, trainer memberships and invitation lifecycle;
+3. exercises, workouts, workout exercises and sets, including running
+   duration/distance fields;
+4. versioned aggregate mutations, transaction-local actor context and
+   `updated_by` attribution;
+5. live-workout conflict, retry and ambiguous-network-result semantics;
+6. client progress and goals;
+7. post-workout feedback plus trainer reaction/response ownership;
+8. role-safe regularity, confirmed-only exercise progress/PR and paginated
+   workout chronicle;
+9. client-overview activity analytics and realtime invalidation/refetch;
+10. goal-aware training summary and the remaining Edge Function behavior.
+
+Each item is a separate vertical slice: PostgreSQL migration, grants/RLS and
+cross-tenant tests, API transaction/DTO, repository adapter and observable
+parity acceptance. Supabase migration files are evidence for the current
+contract, not scripts to copy into the replacement chain.
+
+A production pilot cannot start after only profiles and memberships have been
+ported. Every mutable and shared domain reachable by that tenant cohort must
+either be fully served by Yandex Cloud or remain unavailable during a declared
+read-only pilot.
 
 ## Actor context decision
 

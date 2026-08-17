@@ -49,4 +49,38 @@ describe('live set coordinator', () => {
     await expect(coordinator.save(set, draft)).resolves.toBe(2)
     expect(saveLiveSet).toHaveBeenNthCalledWith(2, 'set-1', draft, 1)
   })
+
+  it('prevents finish from passing a failed pending autosave', async () => {
+    let failSave: ((error: Error) => void) | undefined
+    const coordinator = createLiveSetCoordinator(
+      vi.fn(() => new Promise<number>((_resolve, reject) => { failSave = reject })),
+      vi.fn(),
+    )
+
+    const saving = coordinator.save(set, draft)
+    const idle = coordinator.waitForIdle()
+    await vi.waitFor(() => expect(failSave).toBeTypeOf('function'))
+    failSave?.(new Error('network'))
+
+    await expect(saving).rejects.toThrow('network')
+    await expect(idle).rejects.toThrow('network')
+  })
+
+  it('deduplicates a double confirm while the first request is pending', async () => {
+    let finishConfirm: ((version: number) => void) | undefined
+    const confirmLiveSet = vi.fn(() => new Promise<number>((resolve) => { finishConfirm = resolve }))
+    const coordinator = createLiveSetCoordinator(
+      vi.fn(() => Promise.resolve(2)),
+      confirmLiveSet,
+    )
+
+    const first = coordinator.confirm(set, draft)
+    const duplicate = coordinator.confirm(set, draft)
+    expect(duplicate).toBe(first)
+    await vi.waitFor(() => expect(confirmLiveSet).toHaveBeenCalledOnce())
+    finishConfirm?.(3)
+
+    await expect(Promise.all([first, duplicate])).resolves.toEqual([3, 3])
+    expect(confirmLiveSet).toHaveBeenCalledOnce()
+  })
 })

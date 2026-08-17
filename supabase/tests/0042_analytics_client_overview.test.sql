@@ -46,21 +46,24 @@ insert into public.clients (id, trainer_id, auth_user_id, full_name, created_at)
   -- Клиент E: self-registered со своим тестовым email (смешанный регистр)
   ('71000000-0000-4000-8000-000000000005', '70000000-0000-4000-8000-000000000005', '70000000-0000-4000-8000-000000000005', 'Overview Client E', '2026-08-05');
 
--- Активность самого клиента: только записи, созданные им самим
--- (created_by = clients.auth_user_id). У клиента A нет auth_user_id —
--- собственной активности быть не может, даже если тренер что-то заводит.
--- У клиента B — своя тренировка (created_by = он сам) плюс отдельная
--- тренировка, заведённая тренером с более поздним updated_at — проверяет,
--- что тренерская запись НЕ попадает в подсчёт. У клиента C — своя
--- тренировка и свой замер, greatest() берёт более позднюю из двух дат.
-insert into public.workouts (id, trainer_id, client_id, created_by, workout_date, status, updated_at) values
-  ('72000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '2026-08-06', 'planned', '2026-08-06 09:00:00+00'),
-  ('72000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000002', '2026-08-07', 'planned', '2026-08-07 10:00:00+00'),
-  ('72000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000001', '2026-08-08', 'planned', '2026-08-08 12:00:00+00'),
-  ('72000000-0000-4000-8000-000000000004', '70000000-0000-4000-8000-000000000003', '71000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000003', '2026-08-05', 'planned', '2026-08-05 09:00:00+00');
+-- Активность самого клиента: только записи, которые клиент САМ последний
+-- раз редактировал (updated_by = clients.auth_user_id), независимо от
+-- того, кто их создал. У клиента A нет auth_user_id — собственной
+-- активности быть не может, даже если тренер что-то заводит.
+-- У клиента B — ровно наоборот тому, что было бы по created_by: запись,
+-- которую он создал сам, но последним отредактировал тренер (НЕ
+-- засчитывается), и запись, которую завёл тренер, но последним
+-- отредактировал сам клиент (засчитывается, с более поздним updated_at) —
+-- проверяет, что именно updated_by, а не created_by, решает. У клиента C —
+-- своя тренировка и свой замер, greatest() берёт более позднюю из двух дат.
+insert into public.workouts (id, trainer_id, client_id, created_by, updated_by, workout_date, status, updated_at) values
+  ('72000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '2026-08-06', 'planned', '2026-08-06 09:00:00+00'),
+  ('72000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000001', '2026-08-07', 'planned', '2026-08-07 10:00:00+00'),
+  ('72000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000002', '2026-08-08', 'planned', '2026-08-08 12:00:00+00'),
+  ('72000000-0000-4000-8000-000000000004', '70000000-0000-4000-8000-000000000003', '71000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000003', '2026-08-05', 'planned', '2026-08-05 09:00:00+00');
 
-insert into public.client_progress (id, trainer_id, client_id, created_by, recorded_on, updated_at) values
-  ('73000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000003', '71000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000003', '2026-08-09', '2026-08-09 09:00:00+00');
+insert into public.client_progress (id, trainer_id, client_id, created_by, updated_by, recorded_on, updated_at) values
+  ('73000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000003', '71000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000003', '2026-08-09', '2026-08-09 09:00:00+00');
 
 refresh materialized view analytics.client_overview;
 
@@ -104,17 +107,17 @@ select is(
 
 select is(
   (select last_client_activity_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000001'),
-  null, 'client without auth_user_id has no self-authored records: last_client_activity_at is null even though a trainer-authored workout exists'
+  null, 'client without auth_user_id has no self-edited records: last_client_activity_at is null even though a trainer-authored workout exists'
 );
 select is(
   (select last_client_activity_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000002'),
-  '2026-08-07 10:00:00+00'::timestamptz,
-  'last_client_activity_at reflects only the client-authored workout, ignoring the later trainer-authored one for the same client'
+  '2026-08-08 12:00:00+00'::timestamptz,
+  'last_client_activity_at follows updated_by: the trainer-created workout the client last edited counts, the client-created one the trainer edited later does not'
 );
 select is(
   (select last_client_activity_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
   '2026-08-09 09:00:00+00'::timestamptz,
-  'last_client_activity_at is greatest() of self-authored workout and progress entry'
+  'last_client_activity_at is greatest() of self-edited workout and progress entry'
 );
 
 select * from finish();

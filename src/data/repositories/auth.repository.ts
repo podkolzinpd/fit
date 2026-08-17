@@ -1,14 +1,35 @@
 import type { AccountRole, SessionActor, TrainerActor } from '../../shared/domain'
+import { isValidTimeZone, normalizeTimeZone, systemTimeZone } from '../../shared/local-date'
 import { authQueries } from '../queries/auth.queries'
 import { repositoryError } from './error'
 
 const signupFailedMessage = 'Не удалось создать аккаунт. Попробуйте войти или используйте другой email.'
+const NETWORK_ERROR = /failed to fetch|fetch failed|networkerror|network request failed|load failed/i
+
+function isTransientNetworkError(error: unknown): boolean {
+  return error instanceof TypeError
+    || (error instanceof Error && NETWORK_ERROR.test(error.message))
+    || (typeof error === 'object' && error !== null && 'message' in error
+      && typeof error.message === 'string' && NETWORK_ERROR.test(error.message))
+}
+
+async function retrySignInAfterNetworkBlip(email: string, password: string) {
+  let result = await authQueries.signIn(email, password)
+  // В WKWebView короткий переход между Wi-Fi/сотовой сетью или включение VPN
+  // иногда обрывает первый HTTPS-запрос. Повторяем ровно один раз и только
+  // сетевую ошибку: неверный пароль и любые ответы Auth не маскируются.
+  if (result.error && isTransientNetworkError(result.error)) {
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 500))
+    result = await authQueries.signIn(email, password)
+  }
+  return result
+}
 
 export const authRepository = {
   getSession: authQueries.getSession,
   onAuthStateChange: authQueries.onAuthStateChange,
   async signIn(email: string, password: string) {
-    const { error } = await authQueries.signIn(email, password)
+    const { error } = await retrySignInAfterNetworkBlip(email, password)
     if (error) throw repositoryError(error)
   },
   async signUp(email: string, password: string, firstName: string, role: AccountRole) {
@@ -38,8 +59,12 @@ export const authRepository = {
     if (error) throw repositoryError(error)
   },
   async initialize(user: { id: string; email?: string; user_metadata: Record<string, unknown> }): Promise<SessionActor> {
-    const linkedClient = await authQueries.getLinkedClient(user.id)
+    const [linkedClient, existing] = await Promise.all([
+      authQueries.getLinkedClient(user.id),
+      authQueries.getProfile(user.id),
+    ])
     if (linkedClient.error) throw repositoryError(linkedClient.error)
+    if (existing.error) throw repositoryError(existing.error)
     if (linkedClient.data) {
       const [firstName, ...lastNameParts] = linkedClient.data.full_name.trim().split(/\s+/)
       return {
@@ -49,7 +74,7 @@ export const authRepository = {
         email: user.email ?? null,
         firstName: firstName || null,
         lastName: lastNameParts.join(' ') || null,
-        timezone: 'Europe/Moscow',
+        timezone: normalizeTimeZone(existing.data?.timezone),
         clientId: linkedClient.data.id,
         trainerId: linkedClient.data.trainer_id,
         fullName: linkedClient.data.full_name,
@@ -60,8 +85,6 @@ export const authRepository = {
     if (trainer.error) throw repositoryError(trainer.error)
     const firstName = typeof user.user_metadata.first_name === 'string' ? user.user_metadata.first_name : undefined
     const lastName = typeof user.user_metadata.last_name === 'string' ? user.user_metadata.last_name : undefined
-    const existing = await authQueries.getProfile(user.id)
-    if (existing.error) throw repositoryError(existing.error)
     const metadataRole = user.user_metadata.account_role
     const pendingRole = sessionStorage.getItem('fit.pendingAccountRole')
     const role: AccountRole = existing.data?.account_role === 'client' || existing.data?.account_role === 'trainer'
@@ -71,7 +94,7 @@ export const authRepository = {
         : pendingRole === 'client' ? 'client' : 'trainer'
     let profileData = existing.data
     if (!profileData) {
-      const initialized = await authQueries.initializeAccount(role, firstName, lastName)
+      const initialized = await authQueries.initializeAccount(role, firstName, lastName, systemTimeZone())
       if (initialized.error) throw repositoryError(initialized.error)
       const profile = await authQueries.getProfile(user.id)
       if (profile.error) throw repositoryError(profile.error)
@@ -86,10 +109,13 @@ export const authRepository = {
       email: user.email ?? null,
       firstName: profileData.first_name,
       lastName: profileData.last_name,
-      timezone: profileData.timezone,
+      timezone: normalizeTimeZone(profileData.timezone),
     }
   },
   async updateProfile(actor: TrainerActor): Promise<TrainerActor> {
+    if (!isValidTimeZone(actor.timezone)) {
+      throw new Error('Укажите часовой пояс в формате Europe/Moscow')
+    }
     const result = await authQueries.updateProfile(actor.userId, {
       first_name: actor.firstName, last_name: actor.lastName, timezone: actor.timezone,
     })

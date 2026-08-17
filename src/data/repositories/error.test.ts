@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { repositoryError } from './error'
+import { isRepositoryConflict, isRepositoryNetworkError, repositoryError } from './error'
 
 describe('repositoryError', () => {
   it.each([
@@ -57,5 +57,16 @@ describe('repositoryError', () => {
     const error = repositoryError({ code: 'XX000', message: 'internal database detail' })
 
     expect(error.message).toBe('Не удалось выполнить действие. Попробуйте ещё раз.')
+  })
+
+  it('classifies conflicts and network failures for explicit recovery flows', () => {
+    const conflict = repositoryError({ code: 'PT409', message: 'workout_conflict' })
+    const network = repositoryError({ code: 'TypeError', message: 'Failed to fetch' })
+    const webkitNetwork = repositoryError({ code: 'TypeError', message: 'Load failed' })
+
+    expect(isRepositoryConflict(conflict)).toBe(true)
+    expect(isRepositoryNetworkError(network)).toBe(true)
+    expect(isRepositoryNetworkError(webkitNetwork)).toBe(true)
+    expect(network.code).toBe('network_unavailable')
   })
 })

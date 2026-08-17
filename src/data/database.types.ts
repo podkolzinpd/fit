@@ -1,4 +1,4 @@
-// schema-sha256: 440d9d992956ad6248d745dfdd1f50972978178ae11c33a37984683e5ad83c6e
+// schema-sha256: d970a2e9f8ba27af205b8c8b15fdfde27015b8faa8e8f6eb84cb56dba016ed26
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -22,9 +22,10 @@ type WorkoutListExerciseRow = {
   sets: WorkoutListSetRow[]
 }
 export type WorkoutListRow = {
-  id: string; client_id: string; client_name: string; created_by: string | null; workout_date: string; start_time: string | null; end_time: string | null
-  started_at: string | null; completed_at: string | null; status: string; notes: string | null; trainer_review: string | null; client_comment: string | null; stage_id: string | null; stage_title: string | null
-  version: number; total_count: number; exercises: WorkoutListExerciseRow[]
+  id: string; client_id: string; trainer_id: string; client_name: string; created_by: string | null; workout_date: string; start_time: string | null; end_time: string | null
+  started_at: string | null; completed_at: string | null; status: string; notes: string | null; trainer_review: string | null; trainer_reaction: string | null; trainer_review_author_id: string | null; trainer_reviewed_at: string | null; client_comment: string | null
+  session_rpe: number | null; wellbeing: string | null; discomfort: boolean | null; has_pr: boolean
+  stage_id: string | null; stage_title: string | null; version: number; total_count: number; exercises: WorkoutListExerciseRow[]
 }
 
 export type Database = {
@@ -255,6 +256,7 @@ export type Database = {
           recorded_on: string
           trainer_id: string
           updated_at: string
+          updated_by: string | null
           version: number
           waist_cm: number | null
           weight_kg: number | null
@@ -271,6 +273,7 @@ export type Database = {
           recorded_on: string
           trainer_id: string
           updated_at?: string
+          updated_by?: string | null
           version?: number
           waist_cm?: number | null
           weight_kg?: number | null
@@ -287,6 +290,7 @@ export type Database = {
           recorded_on?: string
           trainer_id?: string
           updated_at?: string
+          updated_by?: string | null
           version?: number
           waist_cm?: number | null
           weight_kg?: number | null
@@ -302,6 +306,13 @@ export type Database = {
           {
             foreignKeyName: "client_progress_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_progress_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -767,6 +778,7 @@ export type Database = {
           trainer_comment: string | null
           trainer_id: string
           updated_at: string
+          updated_by: string | null
           workout_id: string
         }
         Insert: {
@@ -790,6 +802,7 @@ export type Database = {
           trainer_comment?: string | null
           trainer_id: string
           updated_at?: string
+          updated_by?: string | null
           workout_id: string
         }
         Update: {
@@ -813,6 +826,7 @@ export type Database = {
           trainer_comment?: string | null
           trainer_id?: string
           updated_at?: string
+          updated_by?: string | null
           workout_id?: string
         }
         Relationships: [
@@ -822,6 +836,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "custom_exercises"
             referencedColumns: ["id", "trainer_id"]
+          },
+          {
+            foreignKeyName: "workout_exercises_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "workout_exercises_workout_fk"
@@ -853,6 +874,7 @@ export type Database = {
           position: number
           trainer_id: string
           updated_at: string
+          updated_by: string | null
           version: number
           workout_exercise_id: string
         }
@@ -876,6 +898,7 @@ export type Database = {
           position: number
           trainer_id: string
           updated_at?: string
+          updated_by?: string | null
           version?: number
           workout_exercise_id: string
         }
@@ -899,6 +922,7 @@ export type Database = {
           position?: number
           trainer_id?: string
           updated_at?: string
+          updated_by?: string | null
           version?: number
           workout_exercise_id?: string
         }
@@ -910,6 +934,13 @@ export type Database = {
             referencedRelation: "workout_exercises"
             referencedColumns: ["id", "trainer_id", "client_id"]
           },
+          {
+            foreignKeyName: "workout_sets_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       workouts: {
@@ -920,17 +951,24 @@ export type Database = {
           created_at: string
           created_by: string | null
           deleted_at: string | null
+          discomfort: boolean | null
           end_time: string | null
           id: string
           notes: string | null
+          session_rpe: number | null
           stage_id: string | null
           start_time: string | null
           started_at: string | null
           status: string
           trainer_id: string
+          trainer_reaction: string | null
           trainer_review: string | null
+          trainer_review_author_id: string | null
+          trainer_reviewed_at: string | null
           updated_at: string
+          updated_by: string | null
           version: number
+          wellbeing: string | null
           workout_date: string
         }
         Insert: {
@@ -940,17 +978,24 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
+          discomfort?: boolean | null
           end_time?: string | null
           id?: string
           notes?: string | null
+          session_rpe?: number | null
           stage_id?: string | null
           start_time?: string | null
           started_at?: string | null
           status?: string
           trainer_id: string
+          trainer_reaction?: string | null
           trainer_review?: string | null
+          trainer_review_author_id?: string | null
+          trainer_reviewed_at?: string | null
           updated_at?: string
+          updated_by?: string | null
           version?: number
+          wellbeing?: string | null
           workout_date: string
         }
         Update: {
@@ -960,17 +1005,24 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
+          discomfort?: boolean | null
           end_time?: string | null
           id?: string
           notes?: string | null
+          session_rpe?: number | null
           stage_id?: string | null
           start_time?: string | null
           started_at?: string | null
           status?: string
           trainer_id?: string
+          trainer_reaction?: string | null
           trainer_review?: string | null
+          trainer_review_author_id?: string | null
+          trainer_reviewed_at?: string | null
           updated_at?: string
+          updated_by?: string | null
           version?: number
+          wellbeing?: string | null
           workout_date?: string
         }
         Relationships: [
@@ -993,6 +1045,20 @@ export type Database = {
             columns: ["stage_id"]
             isOneToOne: false
             referencedRelation: "goal_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workouts_trainer_review_author_id_fkey"
+            columns: ["trainer_review_author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workouts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1059,6 +1125,20 @@ export type Database = {
           height_cm: number
           id: string
           version: number
+        }[]
+      }
+      get_workout_regularity: {
+        Args: { p_client_id: string; p_reference_time?: string }
+        Returns: {
+          completed_count: number
+          completed_planned_count: number
+          completion_percent: number | null
+          partial_count: number
+          period: string
+          period_end: string
+          period_start: string
+          planned_count: number
+          skipped_count: number
         }[]
       }
       initialize_account: {
@@ -1133,12 +1213,56 @@ export type Database = {
           version: number
         }[]
       }
+      list_exercise_progress: {
+        Args: {
+          p_before_completed_at?: string | null
+          p_before_workout_id?: string | null
+          p_client_id: string
+          p_exercise_ref: string
+          p_limit?: number
+        }
+        Returns: {
+          all_time_best_weight_kg: number | null
+          all_time_best_weight_reps: number | null
+          all_time_primary_value: number | null
+          best_weight_kg: number | null
+          best_weight_reps: number | null
+          completed_at: string
+          confirmed_set_count: number
+          exercise_name: string
+          input_kind: string
+          is_primary_pr: boolean
+          is_weight_pr: boolean
+          is_weight_reps_pr: boolean
+          previous_primary_value: number | null
+          primary_change: number | null
+          primary_value: number | null
+          reps_at_best_weight: number | null
+          sets: Json
+          total_count: number
+          trainer_comment: string | null
+          workout_date: string
+          workout_id: string
+        }[]
+      }
       list_latest_exercise_results: {
         Args: { p_client_id: string; p_exercise_refs: string[] }
         Returns: {
           exercise_ref: string
           sets: Json
           workout_date: string
+        }[]
+      }
+      list_workout_personal_records: {
+        Args: { p_workout_id: string }
+        Returns: {
+          exercise_name: string
+          exercise_ref: string
+          input_kind: string
+          metric: string
+          primary_value: number
+          reps: number | null
+          weight_kg: number | null
         }[]
       }
       list_workout_summaries: {
@@ -1243,6 +1367,7 @@ export type Database = {
       set_workout_review: {
         Args: {
           p_expected_version: number
+          p_reaction: string
           p_review: string
           p_workout_id: string
         }
@@ -1258,6 +1383,17 @@ export type Database = {
       }
       start_workout: {
         Args: { p_expected_version: number; p_workout_id: string }
+        Returns: number
+      }
+      submit_workout_feedback: {
+        Args: {
+          p_comment: string
+          p_discomfort: boolean
+          p_expected_version: number
+          p_session_rpe: number
+          p_wellbeing: string
+          p_workout_id: string
+        }
         Returns: number
       }
       unpublish_training_summary: {
@@ -1280,6 +1416,10 @@ export type Database = {
       update_own_client: {
         Args: { p_client: Json; p_expected_version: number }
         Returns: number
+      }
+      workout_has_personal_record: {
+        Args: { p_workout_id: string }
+        Returns: boolean
       }
     }
     Enums: {

@@ -113,6 +113,82 @@ test('client registers, creates a standalone card and own workout without traine
   await expect(page).toHaveURL(/\/me$/)
 })
 
+test('invitation links reject the wrong role and revoked code without consuming a valid client code', async ({ page }, testInfo) => {
+  testInfo.setTimeout(90_000)
+  const suffix = `${testInfo.workerIndex}-${Date.now()}`
+  const trainerEmail = `invite-guard-trainer-${suffix}@fit.local`
+  const wrongRoleEmail = `invite-guard-wrong-${suffix}@fit.local`
+  const clientEmail = `invite-guard-client-${suffix}@fit.local`
+
+  await page.goto('/auth')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Имя').fill('Тренер приглашения')
+  await page.getByLabel('Email').fill(trainerEmail)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByLabel('Имя').fill('Клиент приглашения')
+  await fillClientProfileDetails(page)
+  await page.getByLabel('Начальный вес, кг').fill('60')
+  await Promise.all([
+    page.waitForURL(/\/clients\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Сохранить' }).click(),
+  ])
+  await page.getByRole('button', { name: 'Пригласить клиента' }).click()
+  const clientCode = (await page.getByText(/Код клиента:/).textContent())?.match(/[A-F0-9]{12}/)?.[0]
+  expect(clientCode).toBeTruthy()
+
+  // Тренер не может использовать код клиента; код остаётся действующим для
+  // правильного аккаунта и следующий переход по ссылке обрабатывается сам.
+  await page.goto('/profile')
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Имя').fill('Неверная роль')
+  await page.getByLabel('Email').fill(wrongRoleEmail)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page).toHaveURL(/\/(today|profile)$/)
+  await page.goto('/join')
+  await page.getByLabel('Код приглашения').fill(clientCode!)
+  await page.getByRole('button', { name: 'Присоединиться' }).click()
+  await expect(page.getByRole('alert')).toHaveText('Этот код приглашения предназначен для другого типа аккаунта.')
+
+  await page.goto('/profile')
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Тип аккаунта').selectOption('client')
+  await page.getByLabel('Имя').fill('Клиент приглашения')
+  await page.getByLabel('Email').fill(clientEmail)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page.getByRole('heading', { name: 'Создайте личную карточку' })).toBeVisible()
+  await page.goto(`/join?code=${clientCode}`)
+  await expect(page).toHaveURL(/\/me$/, { timeout: 15_000 })
+  await expect(page.getByText(/Клиент приглашения/)).toBeVisible()
+
+  await page.goto('/me/profile')
+  await page.getByRole('button', { name: 'Пригласить тренера' }).click()
+  const trainerCode = (await page.getByText(/Код для тренера:/).textContent())?.match(/[A-F0-9]{12}/)?.[0]
+  expect(trainerCode).toBeTruthy()
+  await page.getByRole('button', { name: 'Отозвать' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отозвать' }).click()
+  await expect(page.getByRole('heading', { name: 'Активные приглашения' })).toHaveCount(0)
+
+  await page.goto('/me/profile')
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
+  await page.getByLabel('Email').fill(wrongRoleEmail)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/(today|profile)$/)
+  await page.goto('/join')
+  await page.getByLabel('Код приглашения').fill(trainerCode!)
+  await page.getByRole('button', { name: 'Присоединиться' }).click()
+  await expect(page.getByRole('alert')).toHaveText('Приглашение недействительно или срок его действия истёк. Попросите новый код.')
+})
+
 test('trainer invitation links a client account', async ({ page }, testInfo) => {
   testInfo.setTimeout(120_000)
   const suffix = `${testInfo.workerIndex}-${Date.now()}`
@@ -217,8 +293,8 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // Берём именно активную, чтобы проверка не зависела от двух одинаковых
   // aria-label в режиме перестановки.
   await expect(page.getByRole('button', { name: 'Вверх' }).last()).toBeEnabled()
-  await page.getByLabel('Фактическое время, сек').fill('25')
-  await page.getByLabel('Фактическая дистанция').fill('4')
+  await page.getByLabel('Фактическое время').fill('29:40')
+  await page.getByLabel('Фактическая дистанция').fill('5.2')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
   // В тренировке остались добавленные подход и упражнение, поэтому завершение
   // подтверждаем как частичное. Это сохраняет проверку структурных мутаций.
@@ -227,6 +303,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
     page.waitForURL(ownWorkoutUrl),
     page.getByRole('button', { name: 'Завершить', exact: true }).click(),
   ])
+  await expect(page.getByText(/5,2 км × 29:40 · темп 5:42\/км/)).toBeVisible()
   // Собственную завершённую тренировку клиент может исправить: перестановка
   // не должна сталкиваться с промежуточным дубликатом позиции в БД.
   await page.getByRole('link', { name: 'Изменить результат' }).click()
@@ -267,8 +344,8 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.getByText('Бег (Кардио)', { exact: true })).toHaveCount(2)
   // Клиент поменял упражнения местами: факт остаётся у того же упражнения,
   // поэтому заполненный «Бег» теперь второй, а не теряется или не переносится.
-  await expect(page.getByLabel('Время, сек, подход 1').last()).toHaveValue('25')
-  await expect(page.getByLabel('Расстояние, подход 1').last()).toHaveValue('4')
+  await expect(page.getByLabel('Время, подход 1').last()).toHaveValue('29:40')
+  await expect(page.getByLabel('Расстояние, подход 1').last()).toHaveValue('5.2')
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
     page.getByRole('button', { name: 'Сохранить' }).click(),
@@ -308,7 +385,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.goto(workoutUrl)
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
   await expect(page).toHaveURL(/\/live$/)
-  await page.getByLabel('Фактическое время, сек').fill('30')
+  await page.getByLabel('Фактическое время').fill('30:00')
   await page.getByLabel('Фактическая дистанция').fill('5')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
   await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
@@ -328,6 +405,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // которую окно графика прячет в отдельные календарные дни (дата-зависимый
   // флейк YAFIT-80). Прошлая дата и реалистична, и уникальна.
   await page.goto('/me/progress')
+  await page.getByRole('button', { name: 'Добавить замер' }).click()
   const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10)
   await page.getByLabel('Дата').fill(weekAgo)
   await page.getByLabel('Вес, кг').fill('59.5')

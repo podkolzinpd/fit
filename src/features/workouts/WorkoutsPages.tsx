@@ -9,11 +9,11 @@ import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseChartPoints, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
-import type { ExerciseSnapshot, LiveSetDraft, Workout, WorkoutDraft, WorkoutExercise, WorkoutSet } from '../../shared/domain'
+import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, DEFAULT_REST_BETWEEN_SETS, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
-  addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayLocalDate, weekdayShort,
+  addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayInTimeZone, weekdayShort,
   type LocalDate,
 } from '../../shared/local-date'
 import { AsyncView, Field, OverflowMenu, Page, SaveStatus, StatusBadge, useConfirm } from '../../shared/ui'
@@ -25,7 +25,9 @@ import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
 import { RPE_OPTIONS } from '../../shared/rpe'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
-import { applyLiveSetDraft, setWithLocalDraft } from './live-set-cache'
+import { applyLiveSetDraft, sameLiveSetDraft, setWithLocalDraft } from './live-set-cache'
+import { clearPendingLiveSetDrafts, readPendingLiveSetDrafts, removePendingLiveSetDraft, writePendingLiveSetDraft } from './live-set-draft-storage'
+import { createLiveWorkoutCoordinator, liveWorkoutRecoveryError } from './live-workout-coordinator'
 import { setLiveScreenAwake } from './live-keep-awake'
 import { LoadMoreButton } from './LoadMoreButton'
 import { workoutCountLabel } from './workout-count-label'
@@ -35,10 +37,14 @@ import { useClientRealtime } from '../../app/use-client-realtime'
 import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft } from './workout-form-draft'
 import { workoutDateForRecordMode } from './workout-entry-rules'
 import { WorkoutSetTable } from './WorkoutSetTable'
+import { RunMetricsFields } from './RunMetricsFields'
+import { parseRunDurationInput, runDistanceKmFromInput, runDistanceLabel, runPaceLabel, type RunDistanceUnit } from '../../shared/run-metrics'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
+import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
+export const WORKOUT_HISTORY_PAGE_SIZE = 20
 
 function minutesOf(time: string): number {
   const [h, m] = time.split(':').map(Number)
@@ -53,8 +59,9 @@ function eventTime(workout: Workout): string {
 
 export function SchedulePage() {
   const [params, setParams] = useSearchParams()
-  const selected = params.get('date') ? localDate(params.get('date')!) : todayLocalDate()
-  const today = todayLocalDate()
+  const { actor } = useAuth()
+  const today = todayInTimeZone(actor?.timezone)
+  const selected = params.get('date') ? localDate(params.get('date')!) : today
   const weekStart = startOfWeek(selected)
   const weekDays = useMemo(() => HOURS.slice(0, 7).map((offset) => addDays(weekStart, offset)), [weekStart])
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -145,7 +152,8 @@ export function SchedulePage() {
 }
 
 export function WorkoutStatusBadge({ workout }: { workout: Workout }) {
-  const status = workoutStatusPresentation(workout, todayLocalDate())
+  const { actor } = useAuth()
+  const status = workoutStatusPresentation(workout, todayInTimeZone(actor?.timezone))
   return <span className={`badge ${status.tone}`}>{status.label}</span>
 }
 
@@ -171,33 +179,87 @@ export function WorkoutExercisesSummary({ workout, maxItems }: { workout: Workou
   </li>)}{maxItems !== undefined && items.length > maxItems && <li className="workout-exercise-more">Ещё {items.length - maxItems} {exerciseCountLabel(items.length - maxItems)}</li>}</ul>
 }
 
+const chronicleWellbeingLabels: Record<WorkoutWellbeing, string> = {
+  good: 'Хорошо',
+  normal: 'Нормально',
+  hard: 'Тяжело',
+}
+
+const chronicleReactionLabels: Record<TrainerReaction, string> = {
+  thumbs_up: '👍',
+  fire: '🔥',
+  strong: '💪',
+}
+
+export function WorkoutChronicleCard({ workout, contextLabel }: { workout: Workout; contextLabel?: string | null }) {
+  const done = workout.status === 'done'
+  const duration = workoutDurationLabel(workout.startedAt, workout.completedAt)
+  const tonnage = workoutTonnage(workout)
+  const meta = done ? [duration, tonnage > 0 ? tonnageLabel(tonnage) : null].filter(Boolean) : []
+  const hasFeedback = workout.sessionRpe !== undefined && workout.wellbeing !== undefined
+
+  return <Link className="card workout-chronicle-card" to={`/workouts/${workout.id}`}>
+    <div className="workout-chronicle-head">
+      <strong>{formatLocalDate(workout.workoutDate)}</strong>
+      <div className="workout-chronicle-head-badges">
+        {workout.hasPr && <span className="workout-pr-badge">Новый рекорд</span>}
+        <WorkoutStatusBadge workout={workout} />
+      </div>
+    </div>
+    {contextLabel && <p className="card-author">{contextLabel}</p>}
+    <div className="workout-chronicle-exercises">
+      {workout.exercises.length > 0 ? workout.exercises.map((exercise) => {
+        const result = done
+          ? compactCompletedSetSummary(exercise.sets)
+          : compactPlannedSetSummary(exercise.sets) ?? 'План без числовых значений'
+        return <div className="workout-chronicle-exercise" key={exercise.id}>
+          <span className="workout-chronicle-exercise-name">{exercise.name}
+            {exercise.trainerComment && <small className="workout-exercise-comment">💬 {exercise.trainerComment}</small>}
+          </span>
+          <strong>{result}</strong>
+        </div>
+      }) : <p className="muted">Без упражнений</p>}
+    </div>
+    {(meta.length > 0 || hasFeedback || workout.discomfort) && <div className="card-meta workout-chronicle-facts">
+      {meta.map((item) => <span key={item}>{item}</span>)}
+      {hasFeedback && <span>RPE {workout.sessionRpe}/10</span>}
+      {workout.wellbeing && <span>{chronicleWellbeingLabels[workout.wellbeing]}</span>}
+      {workout.discomfort && <span className="attention">Дискомфорт</span>}
+    </div>}
+    {workout.clientComment && <p className="workout-chronicle-comment"><span>Клиент</span>{workout.clientComment}</p>}
+    {workout.trainerReview && <p className="workout-chronicle-response">
+      <span>{workout.trainerReaction ? chronicleReactionLabels[workout.trainerReaction] : 'Тренер'}</span>
+      {workout.trainerReview}
+    </p>}
+  </Link>
+}
+
 export function ClientWorkoutsPage() {
   const { clientId = '' } = useParams()
   const { actor } = useAuth()
+  const today = todayInTimeZone(actor?.timezone)
   useClientRealtime(clientId)
   const query = useInfiniteQuery({
-    queryKey: ['workouts', clientId],
+    queryKey: ['workouts', clientId, 'history', today],
     initialPageParam: 0,
-    queryFn: ({ pageParam }) => workoutsRepository.listPage(undefined, undefined, clientId, pageParam),
+    queryFn: ({ pageParam }) => workoutsRepository.listPage(undefined, today, clientId, pageParam, WORKOUT_HISTORY_PAGE_SIZE),
     getNextPageParam: (page) => page.nextOffset,
   })
   const items = query.data?.pages.flatMap((page) => page.items) ?? []
-  const history = splitClientWorkouts(items, todayLocalDate()).history
+  const history = splitClientWorkouts(items, today).history
   return <Page title="История тренировок" back={`/clients/${clientId}`} action={<Link className="button" to={`/workouts/new?client=${clientId}`}>Добавить</Link>}><AsyncView loading={query.isLoading} error={query.error} empty={!history.length} onRetry={() => void query.refetch()}
     emptyTitle="История пока пуста"
     emptyDescription="Завершённые тренировки появятся здесь вместе с результатами."
-    emptyAction={<Link className="button" to={`/workouts/new?client=${clientId}`}>Запланировать тренировку</Link>}><div className="cards">{history.map((workout) => {
-    const duration = workoutDurationLabel(workout.startedAt, workout.completedAt)
-    const tonnage = workoutTonnage(workout)
-    const meta = workout.status === 'done' ? [duration, tonnage > 0 ? tonnageLabel(tonnage) : null].filter(Boolean).join(' · ') : ''
+    emptyAction={<Link className="button" to={`/workouts/new?client=${clientId}`}>Запланировать тренировку</Link>}><div className="cards workout-chronicle-list">{history.map((workout) => {
     const clientAuthored = Boolean(workout.createdBy && workout.createdBy !== actor?.userId)
-    return <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong>{clientAuthored && <p className="card-author">Создано клиентом</p>}<WorkoutExercisesSummary workout={workout} />{meta && <p className="card-meta">{meta}</p>}</div><WorkoutStatusBadge workout={workout} /></Link>
+    return <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientAuthored ? 'Создано клиентом' : null} />
   })}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
 }
 
 export function WorkoutFormPage() {
   const { workoutId } = useParams()
   const { actor } = useAuth()
+  const today = todayInTimeZone(actor?.timezone)
   const showRpeByDefault = useRpeDisplay(actor?.userId)
   const [params] = useSearchParams()
   const navigate = useNavigate()
@@ -213,7 +275,7 @@ export function WorkoutFormPage() {
   const [previousResultReferences, setPreviousResultReferences] = useState<ReadonlyMap<string, PreviousExerciseResult>>(() => new Map())
   const createRequestId = useRef(crypto.randomUUID())
   const [recordCompleted, setRecordCompleted] = useState(false)
-  const [entryDate, setEntryDate] = useState<LocalDate>(() => localDate(params.get('date') ?? todayLocalDate()))
+  const [entryDate, setEntryDate] = useState<LocalDate>(() => localDate(params.get('date') ?? today))
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [notes, setNotes] = useState('')
@@ -225,7 +287,7 @@ export function WorkoutFormPage() {
   const [pickerSearch, setPickerSearch] = useState('')
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
-  const initial = source.data ? (workoutId ? { ...(source.data.status === 'done' ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, todayLocalDate())) : undefined
+  const initial = source.data ? (workoutId ? { ...(source.data.status === 'done' ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today)) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
   const draftKey = workoutFormDraftKey(actor?.userId ?? 'anonymous', sourceId ?? `new-${params.get('client') ?? ''}-${params.get('date') ?? ''}`)
   // Клиент, для которого выбираем этап (реактивно — при смене в селекте).
@@ -237,7 +299,7 @@ export function WorkoutFormPage() {
   const goal = useQuery({ queryKey: ['client-goal', clientId], queryFn: () => goalsRepository.get(clientId), enabled: Boolean(clientId) })
   const stages = goal.data ? orderedStages(goal.data) : []
   // Этап по умолчанию: сохранённый у тренировки, иначе текущий по дате.
-  const defaultStageId = source.data?.stageId ?? (goal.data ? currentStage(goal.data, todayLocalDate())?.id ?? '' : '')
+  const defaultStageId = source.data?.stageId ?? (goal.data ? currentStage(goal.data, today)?.id ?? '' : '')
   // Завершённой остаётся только редактируемая запись. Копия завершённой
   // тренировки — это новый план, который тренер при необходимости может
   // переключить в «Завершённую».
@@ -255,7 +317,7 @@ export function WorkoutFormPage() {
       setRecordCompleted(saved.recordCompleted)
       setDraftExercises(saved.exercises)
     } else if (initial) {
-      setEntryDate(workoutDateForRecordMode(source.data?.status === 'done' ? 'completed' : 'planned', initial.workoutDate, todayLocalDate()))
+      setEntryDate(workoutDateForRecordMode(source.data?.status === 'done' ? 'completed' : 'planned', initial.workoutDate, today))
       // PostgreSQL возвращает time как HH:MM:SS, а нативный input[type=time]
       // без шага секунд принимает HH:MM. Иначе браузер молча блокирует submit.
       setStartTime(initial.startTime?.slice(0, 5) ?? '')
@@ -273,15 +335,16 @@ export function WorkoutFormPage() {
 
   useEffect(() => {
     if (!initial || formDraftReady) return
-    setEntryDate(workoutDateForRecordMode(source.data?.status === 'done' ? 'completed' : 'planned', initial.workoutDate, todayLocalDate()))
+    setEntryDate(workoutDateForRecordMode(source.data?.status === 'done' ? 'completed' : 'planned', initial.workoutDate, today))
   }, [formDraftReady, initial, source.data?.status])
-  const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => completedMode ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: (id) => {
+  const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => completedMode ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: async (id) => {
     if (!workoutId) removeWorkoutFormDraft(draftKey)
-    // Сохранение уже подтверждено сервером: сразу открываем результат, а
-    // списки обновляем фоном. Медленный refetch не должен удерживать форму.
+    // Перед переходом карточка должна получить новую optimistic-concurrency
+    // version. Иначе пользователь успевает запустить только что изменённую
+    // тренировку из устаревшего cache и получает ложный conflict.
+    await queryClient.invalidateQueries({ queryKey: ['workout', id] })
     navigate(`/workouts/${id}`)
     void Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['workout', id] }),
       queryClient.invalidateQueries({ queryKey: ['workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['today-workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['today-recent-workouts'] }),
@@ -358,7 +421,7 @@ export function WorkoutFormPage() {
     event.preventDefault(); const form = new FormData(event.currentTarget)
     const submitClientId = String(form.get('clientId'))
     if (!submitClientId) { setClientSelectionError('Выберите клиента для тренировки'); return }
-    const date = workoutDateForRecordMode(completedMode ? 'completed' : 'planned', entryDate, todayLocalDate())
+    const date = workoutDateForRecordMode(completedMode ? 'completed' : 'planned', entryDate, today)
     const submittedStartTime = startTime
     const submittedEndTime = endTime
     const endTimeInput = event.currentTarget.elements.namedItem('endTime') as HTMLInputElement
@@ -385,9 +448,9 @@ export function WorkoutFormPage() {
         {clientMode
           ? <input type="hidden" name="clientId" value={mine.data?.id ?? ''} />
           : <ClientPicker userId={actor?.userId} clients={availableClients ?? []} selectedId={clientId} onChange={(id) => { setClientSelectionError(null); setSelectedClientId(id) }} selectionError={clientSelectionError} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
-        <div className="split"><Field label="Дата"><input name="date" type="date" max={completedMode ? todayLocalDate() : undefined} value={entryDate} onChange={(event) => setEntryDate(localDate(event.target.value))} required /></Field><Field label="Время"><input name="startTime" type="time" value={startTime} onChange={(event) => { setStartTime(event.target.value); (event.currentTarget.form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} /></Field></div>
+        <div className="split"><Field label="Дата"><input name="date" type="date" max={completedMode ? today : undefined} value={entryDate} onChange={(event) => setEntryDate(localDate(event.target.value))} required /></Field><Field label="Время"><input name="startTime" type="time" value={startTime} onChange={(event) => { setStartTime(event.target.value); (event.currentTarget.form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} /></Field></div>
         <Field label="Окончание"><input name="endTime" type="time" value={endTime} onChange={(event) => { setEndTime(event.target.value); event.currentTarget.setCustomValidity('') }} /></Field>
-        {!workoutId && <div className="workout-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={!recordCompleted ? 'active' : ''} aria-pressed={!recordCompleted} onClick={() => setRecordCompleted(false)}>План</button><button type="button" className={recordCompleted ? 'active' : ''} aria-pressed={recordCompleted} onClick={() => { setRecordCompleted(true); setEntryDate((date) => workoutDateForRecordMode('completed', date, todayLocalDate())) }}>Завершённая</button></div>}
+        {!workoutId && <div className="workout-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={!recordCompleted ? 'active' : ''} aria-pressed={!recordCompleted} onClick={() => setRecordCompleted(false)}>План</button><button type="button" className={recordCompleted ? 'active' : ''} aria-pressed={recordCompleted} onClick={() => { setRecordCompleted(true); setEntryDate((date) => workoutDateForRecordMode('completed', date, today)) }}>Завершённая</button></div>}
         {stages.length > 0 && <Field label="Этап цели">
           {/* key — чтобы defaultValue пересчитался при смене клиента/загрузке цели */}
           <select name="stageId" key={`${clientId}-${defaultStageId}`} value={stageId || defaultStageId} onChange={(event) => setStageId(event.target.value)}>
@@ -401,7 +464,7 @@ export function WorkoutFormPage() {
         </details>
       </section>
       <section className="workout-form-section workout-form-exercises">
-        <div className="workout-form-section-head"><p className="eyebrow">УПРАЖНЕНИЯ</p><h2>План и факт</h2></div>
+        <div className="workout-form-section-head"><p className="eyebrow">УПРАЖНЕНИЯ</p><h2>{completedMode ? 'Что выполнено' : 'Что нужно выполнить'}</h2></div>
         <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} onAdd={(parsed) => void addQuickEntry(parsed)} onOpenCatalog={(search) => { setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) }} />
         <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} />
       </section>
@@ -459,14 +522,14 @@ export function WorkoutDetailPage() {
     },
   })
   const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['workouts'] }), queryClient.invalidateQueries({ queryKey: ['clients'] })]); navigate(actor?.role === 'client' ? '/me/workouts' : '/schedule') } })
-  const review = useMutation({ mutationFn: (value: string) => workoutsRepository.setWorkoutReview(query.data!, value), onSuccess: async () => {
+  const review = useMutation({ mutationFn: (value: WorkoutTrainerResponseDraft) => workoutsRepository.setWorkoutReview(query.data!, value), onSuccess: async () => {
     await Promise.all([
       query.refetch(),
       queryClient.invalidateQueries({ queryKey: ['workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
     ])
   } })
-  const clientComment = useMutation({ mutationFn: (value: string) => workoutsRepository.setClientWorkoutComment(query.data!, value), onSuccess: async () => {
+  const feedback = useMutation({ mutationFn: (value: WorkoutFeedbackDraft) => workoutsRepository.submitFeedback(query.data!, value), onSuccess: async () => {
     await Promise.all([
       query.refetch(),
       queryClient.invalidateQueries({ queryKey: ['workouts'] }),
@@ -488,8 +551,13 @@ export function WorkoutDetailPage() {
   const canManage = clientMode ? clientOwned : trainerOwned
   const canExecute = clientMode || trainerOwned
   const clientAuthoredReadOnly = !clientMode && Boolean(workout && !trainerOwned)
+  const canReview = !clientMode && Boolean(done && workout && (
+    trainerOwned || (clientAuthoredReadOnly && workout.trainerId === actor?.userId)
+  ))
   const trainers = useQuery({ queryKey: ['client-trainers', workout?.clientId], queryFn: () => invitationsRepository.listTrainers(workout!.clientId), enabled: clientMode && Boolean(workout?.clientId) })
   const authorLabel = workout ? clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data) : null
+  const responseAuthor = trainers.data?.find((trainer) => trainer.trainerId === workout?.trainerReviewAuthorId)
+  const responseAuthorName = responseAuthor ? [responseAuthor.firstName, responseAuthor.lastName].filter(Boolean).join(' ') : null
   // Карточка не должна угадывать источник открытия. Быстрый сценарий «Сегодня»
   // передаёт returnTo, остальные пути сохраняют прежний безопасный fallback.
   const backTo = navigationState?.returnTo ?? (clientMode ? '/me/workouts' : '/schedule')
@@ -515,8 +583,9 @@ export function WorkoutDetailPage() {
         {tonnage > 0 && <p><span>Тоннаж</span><strong>{tonnageLabel(tonnage)}</strong></p>}
         {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
       </section>}
-      {done && <WorkoutTrainerReview workout={workout} canEdit={trainerOwned} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
-      {((clientMode && !clientOwned) || (!clientMode && workout.clientComment)) && <WorkoutClientComment workout={workout} canEdit={clientMode && !clientOwned} saving={clientComment.isPending} error={clientComment.error} onSave={(value) => clientComment.mutateAsync(value)} />}
+      {done && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
+      {done && <WorkoutTrainerReview workout={workout} canEdit={canReview} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
+      {!clientMode && workout.clientComment && workout.sessionRpe === undefined && <WorkoutClientComment workout={workout} />}
       <div className={`cards ${done ? 'completed-exercise-list' : ''}`}>{groupIntoBlocks(workout.exercises).map((block) => {
         const articles = block.exercises.map((exercise) => {
           const compactPlan = workout.status === 'planned' ? compactPlannedSetSummary(exercise.sets, showRpe) : null
@@ -545,20 +614,128 @@ export function WorkoutDetailPage() {
   </Page>
 }
 
-function WorkoutTrainerReview({ workout, canEdit, saving, error, onSave }: {
+const wellbeingLabels: Record<WorkoutWellbeing, string> = {
+  good: 'Хорошо',
+  normal: 'Нормально',
+  hard: 'Тяжело',
+}
+
+const trainerReactionLabels: Record<TrainerReaction, string> = {
+  thumbs_up: '👍',
+  fire: '🔥',
+  strong: '💪',
+}
+
+function trainerResponseTime(value: string | undefined) {
+  if (!value) return null
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+  }).format(new Date(value))
+}
+
+function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave }: {
   workout: Workout
   canEdit: boolean
   saving: boolean
   error: Error | null
-  onSave: (value: string) => Promise<unknown>
+  onSave: (value: WorkoutFeedbackDraft) => Promise<unknown>
+}) {
+  const hasFeedback = workout.sessionRpe !== undefined && workout.wellbeing !== undefined && workout.discomfort !== undefined
+  const [editing, setEditing] = useState(canEdit && !hasFeedback)
+  const [saved, setSaved] = useState(false)
+  const [sessionRpe, setSessionRpe] = useState<number | undefined>(workout.sessionRpe)
+  const [wellbeing, setWellbeing] = useState<WorkoutWellbeing | undefined>(workout.wellbeing)
+  const [discomfort, setDiscomfort] = useState<boolean | undefined>(workout.discomfort ?? (workout.clientComment ? true : undefined))
+  const [comment, setComment] = useState(workout.clientComment ?? '')
+
+  useEffect(() => {
+    if (editing) return
+    setSessionRpe(workout.sessionRpe)
+    setWellbeing(workout.wellbeing)
+    setDiscomfort(workout.discomfort ?? (workout.clientComment ? true : undefined))
+    setComment(workout.clientComment ?? '')
+  }, [editing, workout.clientComment, workout.discomfort, workout.id, workout.sessionRpe, workout.wellbeing])
+
+  if (!canEdit && !hasFeedback) return null
+  const valid = sessionRpe !== undefined && wellbeing !== undefined && discomfort !== undefined
+    && (!discomfort || comment.trim().length > 0)
+
+  if (!editing) return <section className="workout-review workout-feedback" aria-labelledby="workout-feedback-title">
+    <div className="workout-review-head">
+      <div><p className="eyebrow">ОБРАТНАЯ СВЯЗЬ</p><h2 id="workout-feedback-title">{canEdit ? 'Ваш итог' : 'Самочувствие клиента'}</h2></div>
+      {canEdit && <button type="button" className="secondary" onClick={() => { setSaved(false); setEditing(true) }}>Изменить</button>}
+    </div>
+    {saved && <p className="workout-feedback-confirmation" role="status">✓ Спасибо, тренер увидит ваш отзыв.</p>}
+    <div className="workout-feedback-summary">
+      <p><span>Общая тяжесть</span><strong>RPE {workout.sessionRpe}/10</strong></p>
+      <p><span>Самочувствие</span><strong>{workout.wellbeing ? wellbeingLabels[workout.wellbeing] : '—'}</strong></p>
+      <p><span>Дискомфорт</span><strong>{workout.discomfort ? 'Да' : 'Нет'}</strong></p>
+    </div>
+    {workout.discomfort && workout.clientComment && <p className="workout-review-text">{workout.clientComment}</p>}
+  </section>
+
+  return <form className="workout-review workout-feedback" aria-labelledby="workout-feedback-title" onSubmit={async (event) => {
+    event.preventDefault()
+    if (!valid || sessionRpe === undefined || wellbeing === undefined || discomfort === undefined) return
+    try {
+      await onSave({ sessionRpe, wellbeing, discomfort, comment: discomfort ? comment : '' })
+      setSaved(true)
+      setEditing(false)
+    } catch {
+      // Ошибка мутации остаётся рядом с формой; пользователь может повторить
+      // тот же submit, а RPC безопасно дедуплицирует потерянный ответ.
+    }
+  }}>
+    <div className="workout-review-head"><div><p className="eyebrow">ПОСЛЕ ТРЕНИРОВКИ</p><h2 id="workout-feedback-title">Как прошла тренировка?</h2></div></div>
+    <fieldset className="workout-feedback-fieldset">
+      <legend>Общая тяжесть</legend>
+      <p className="muted">1 — очень легко, 10 — максимум</p>
+      <div className="workout-feedback-options workout-feedback-rpe">
+        {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => <button key={value} type="button" className={`secondary workout-feedback-option ${sessionRpe === value ? 'selected' : ''}`} aria-pressed={sessionRpe === value} onClick={() => setSessionRpe(value)}>{value}</button>)}
+      </div>
+    </fieldset>
+    <fieldset className="workout-feedback-fieldset">
+      <legend>Самочувствие</legend>
+      <div className="workout-feedback-options">
+        {(Object.keys(wellbeingLabels) as WorkoutWellbeing[]).map((value) => <button key={value} type="button" className={`secondary workout-feedback-option ${wellbeing === value ? 'selected' : ''}`} aria-pressed={wellbeing === value} onClick={() => setWellbeing(value)}>{wellbeingLabels[value]}</button>)}
+      </div>
+    </fieldset>
+    <fieldset className="workout-feedback-fieldset">
+      <legend>Был дискомфорт?</legend>
+      <div className="workout-feedback-options">
+        <button type="button" className={`secondary workout-feedback-option ${discomfort === false ? 'selected' : ''}`} aria-pressed={discomfort === false} onClick={() => setDiscomfort(false)}>Нет</button>
+        <button type="button" className={`secondary workout-feedback-option ${discomfort === true ? 'selected' : ''}`} aria-pressed={discomfort === true} onClick={() => setDiscomfort(true)}>Да</button>
+      </div>
+    </fieldset>
+    {discomfort && <Field label="Что беспокоило?"><textarea aria-label="Пояснение о дискомфорте" rows={3} maxLength={500} placeholder="Где и на каком движении почувствовали дискомфорт" value={comment} onChange={(event) => setComment(event.target.value)} /></Field>}
+    {error && <p className="error">{error.message}</p>}
+    <div className="actions workout-review-actions">
+      {hasFeedback && <button type="button" className="secondary" disabled={saving} onClick={() => setEditing(false)}>Отмена</button>}
+      <button type="submit" disabled={saving || !valid}>{saving ? 'Сохраняем…' : hasFeedback ? 'Сохранить изменения' : 'Отправить отзыв'}</button>
+    </div>
+  </form>
+}
+
+function WorkoutTrainerReview({ workout, canEdit, authorName, saving, error, onSave }: {
+  workout: Workout
+  canEdit: boolean
+  authorName: string | null
+  saving: boolean
+  error: Error | null
+  onSave: (value: WorkoutTrainerResponseDraft) => Promise<unknown>
 }) {
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(workout.trainerReview ?? '')
+  const [reaction, setReaction] = useState<TrainerReaction | undefined>(workout.trainerReaction)
   const hasReview = Boolean(workout.trainerReview)
+  const valid = Boolean(reaction && value.trim().length > 0 && value.trim().length <= 500)
 
   useEffect(() => {
-    if (!editing) setValue(workout.trainerReview ?? '')
-  }, [editing, workout.id, workout.trainerReview])
+    if (!editing) {
+      setValue(workout.trainerReview ?? '')
+      setReaction(workout.trainerReaction)
+    }
+  }, [editing, workout.id, workout.trainerReaction, workout.trainerReview])
 
   if (!canEdit && !hasReview) return null
 
@@ -568,53 +745,51 @@ function WorkoutTrainerReview({ workout, canEdit, saving, error, onSave }: {
       {canEdit && !editing && <button type="button" className="secondary" onClick={() => setEditing(true)}>{hasReview ? 'Изменить' : 'Добавить'}</button>}
     </div>
     {editing ? <>
-      <VoiceNoteField name="trainerReview" source="workout_review" label="Отзыв тренера" placeholder="Как прошла тренировка, что получается и на что обратить внимание" value={value} onValueChange={setValue} autoResize />
+      <fieldset className="workout-feedback-fieldset workout-trainer-reactions">
+        <legend>Реакция</legend>
+        <div className="workout-feedback-options">
+          {(Object.keys(trainerReactionLabels) as TrainerReaction[]).map((item) => <button key={item} type="button" className={`secondary workout-feedback-option ${reaction === item ? 'selected' : ''}`} aria-label={trainerReactionLabels[item]} aria-pressed={reaction === item} onClick={() => setReaction(item)}>{trainerReactionLabels[item]}</button>)}
+        </div>
+      </fieldset>
+      <VoiceNoteField name="trainerReview" source="workout_review" label="Отзыв тренера" placeholder="Что получилось и на что обратить внимание дальше" value={value} onValueChange={(next) => setValue(next.slice(0, 500))} autoResize />
+      <p className="workout-response-limit muted">{value.length}/500</p>
       {error && <p className="error">{error.message}</p>}
       <div className="actions workout-review-actions">
-        <button type="button" className="secondary" disabled={saving} onClick={() => { setValue(workout.trainerReview ?? ''); setEditing(false) }}>Отмена</button>
-        <button type="button" disabled={saving} onClick={async () => {
+        <button type="button" className="secondary" disabled={saving} onClick={() => { setValue(workout.trainerReview ?? ''); setReaction(workout.trainerReaction); setEditing(false) }}>Отмена</button>
+        <button type="button" disabled={saving || !valid} onClick={async () => {
+          if (!reaction) return
           try {
-            await onSave(value)
+            await onSave({ reaction, review: value })
             setEditing(false)
           } catch {
             // Ошибку мутации показывает общий экранный state ниже поля.
           }
-        }}>{saving ? 'Сохраняем…' : 'Сохранить отзыв'}</button>
+        }}>{saving ? 'Сохраняем…' : 'Отправить ответ'}</button>
       </div>
-    </> : <p className={hasReview ? 'workout-review-text' : 'muted'}>{hasReview ? workout.trainerReview : 'Добавьте короткий итог, пока впечатления свежие.'}</p>}
+    </> : hasReview ? <>
+      <div className="workout-response-body">
+        {workout.trainerReaction && <span className="workout-response-reaction" aria-label={`Реакция ${trainerReactionLabels[workout.trainerReaction]}`}>{trainerReactionLabels[workout.trainerReaction]}</span>}
+        <p className="workout-review-text">{workout.trainerReview}</p>
+      </div>
+      {(authorName || workout.trainerReviewedAt) && <p className="workout-response-meta">{[authorName || 'Тренер', trainerResponseTime(workout.trainerReviewedAt)].filter(Boolean).join(' · ')}</p>}
+    </> : <p className="muted">Добавьте реакцию и короткий ответ, пока впечатления свежие.</p>}
   </section>
 }
 
-function WorkoutClientComment({ workout, canEdit, saving, error, onSave }: {
-  workout: Workout
-  canEdit: boolean
-  saving: boolean
-  error: Error | null
-  onSave: (value: string) => Promise<unknown>
-}) {
-  const [editing, setEditing] = useState(false)
-  const [value, setValue] = useState(workout.clientComment ?? '')
-  const hasComment = Boolean(workout.clientComment)
-
-  useEffect(() => {
-    if (!editing) setValue(workout.clientComment ?? '')
-  }, [editing, workout.id, workout.clientComment])
-
-  if (!canEdit && !hasComment) return null
-
+function WorkoutClientComment({ workout }: { workout: Workout }) {
   return <section className="workout-review" aria-labelledby="workout-client-comment-title">
-    <div className="workout-review-head"><div><p className="eyebrow">ОБРАТНАЯ СВЯЗЬ</p><h2 id="workout-client-comment-title">Комментарий клиента</h2></div>
-      {canEdit && !editing && <button type="button" className="secondary" onClick={() => setEditing(true)}>{hasComment ? 'Изменить' : 'Добавить'}</button>}
-    </div>
-    {editing ? <>
-      <Field label="Для тренера"><textarea aria-label="Комментарий для тренера" className="exercise-comment" rows={3} placeholder="Как прошла тренировка, что стоит обсудить" value={value} onChange={(event) => setValue(event.target.value)} /></Field>
-      {error && <p className="error">{error.message}</p>}
-      <div className="actions workout-review-actions"><button type="button" className="secondary" disabled={saving} onClick={() => { setValue(workout.clientComment ?? ''); setEditing(false) }}>Отмена</button><button type="button" disabled={saving} onClick={async () => { try { await onSave(value); setEditing(false) } catch { /* Ошибку показывает state мутации. */ } }}>{saving ? 'Сохраняем…' : 'Сохранить комментарий'}</button></div>
-    </> : <p className={hasComment ? 'workout-review-text' : 'muted'}>{hasComment ? workout.clientComment : 'Оставьте тренеру вопрос или короткий итог.'}</p>}
+    <div className="workout-review-head"><div><p className="eyebrow">ОБРАТНАЯ СВЯЗЬ</p><h2 id="workout-client-comment-title">Комментарий клиента</h2></div></div>
+    <p className="workout-review-text">{workout.clientComment}</p>
   </section>
 }
 
-function formatSet(set: WorkoutSet, showRpe: boolean) { const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, set.distanceKm && `${set.distanceKm} км`, durationLabel(set.durationSec, set.durationMin), showRpe && set.rpe !== undefined && `RPE ${set.rpe}`].filter(Boolean).join(' × '); return plan || 'Подход без плана' }
+function formatSet(set: WorkoutSet, showRpe: boolean) {
+  const duration = durationLabel(set.durationSec, set.durationMin)
+  const distance = runDistanceLabel(set.distanceKm)
+  const pace = runPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm)
+  const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, distance, duration, showRpe && set.rpe !== undefined && `RPE ${set.rpe}`].filter(Boolean).join(' × ')
+  return pace && plan ? `${plan} · темп ${pace}` : plan || 'Подход без плана'
+}
 
 function WorkoutHistorySet({ set, index, done, showRpe }: { set: WorkoutSet; index: number; done: boolean; showRpe: boolean }) {
   const confirmed = Boolean(set.confirmedAt)
@@ -649,10 +824,13 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet): st
   } else {
     const duration = durationLabel(set.durationSec, set.durationMin)
     if (duration) parts.push(duration)
-    if (set.distanceKm !== undefined) parts.push(`${set.distanceKm} км`)
+    const distance = runDistanceLabel(set.distanceKm)
+    if (distance) parts.push(distance)
   }
   if (set.rpe !== undefined) parts.push(`RPE ${set.rpe}`)
-  return parts.length ? parts.join(' × ') : null
+  const plan = parts.length ? parts.join(' × ') : null
+  const pace = inputKind === 'distance' ? runPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm) : null
+  return pace && plan ? `${plan} · темп ${pace}` : plan
 }
 
 // Одна ячейка факта в таблице подходов. В live основной сценарий — прямой
@@ -715,8 +893,21 @@ function LiveSetFields({ inputKind, set, editing = false, showRpe = false }: { i
     {rpeField}
   </>
   return <>
-    <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
-    <LiveSetInput name="distanceKm" label="Фактическая дистанция" placeholder="км" defaultValue={value(set.fact.distanceKm, set.distanceKm)} planHint={isPlanHint(set.fact.distanceKm, set.distanceKm)} step={0.1} disabled={locked} inputKey={`dist-${k}`} decimal />
+    <RunMetricsFields
+      idPrefix={`live-run-${set.id}-${k}`}
+      durationSec={value(factDuration, planDuration)}
+      distanceKm={value(set.fact.distanceKm, set.distanceKm)}
+      inputClassName="live-set-input"
+      disabled={locked}
+      planDurationHint={isPlanHint(factDuration, planDuration)}
+      planDistanceHint={isPlanHint(set.fact.distanceKm, set.distanceKm)}
+      durationName="runDuration"
+      distanceName="runDistance"
+      distanceUnitName="runDistanceUnit"
+      durationLabel="Фактическое время"
+      distanceLabel="Фактическая дистанция"
+      distanceUnitLabel="Единица фактической дистанции"
+    />
     {rpeField}
   </>
 }
@@ -779,6 +970,8 @@ export function LiveWorkoutPage() {
     (id, draft, version) => workoutsRepository.saveLiveSet(id, draft, version),
     (id, version) => workoutsRepository.confirmLiveSet(id, version),
   ))
+  const [liveWorkout] = useState(() => createLiveWorkoutCoordinator())
+  const completedLocally = useRef(false)
   const skipBlurForSet = useRef<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   // В обычной тренировке перестановка не нужна постоянно: включается из меню
@@ -795,10 +988,61 @@ export function LiveWorkoutPage() {
   // Держим конкретный введённый факт до тех пор, пока серверная копия не станет
   // такой же — иначе при переходе к следующему подходу строка мигнёт пустой.
   const [localSetDrafts, setLocalSetDrafts] = useState<Map<string, LiveSetDraft>>(() => new Map())
+  const [recoveredSetIds, setRecoveredSetIds] = useState<Set<string>>(() => new Set())
   const liveSetForms = useRef<Map<string, HTMLFormElement>>(new Map())
   const [savingSetId, setSavingSetId] = useState<string | null>(null)
   const [savedSetId, setSavedSetId] = useState<string | null>(null)
   const [saveErrorSetId, setSaveErrorSetId] = useState<string | null>(null)
+  useEffect(() => {
+    if (!actor?.userId || !query.data) return
+    const serverSets = new Map(query.data.exercises.flatMap((exercise) => exercise.sets).map((set) => [set.id, set]))
+    const pending = readPendingLiveSetDrafts(actor.userId, workoutId)
+    for (const [setId, draft] of pending) {
+      const serverSet = serverSets.get(setId)
+      if (!serverSet || sameLiveSetDraft(serverSet.fact, draft)) {
+        removePendingLiveSetDraft(actor.userId, workoutId, setId)
+        pending.delete(setId)
+      }
+    }
+    setRecoveredSetIds(new Set(pending.keys()))
+    setLocalSetDrafts((current) => {
+      const next = new Map(current)
+      for (const [setId, draft] of pending) next.set(setId, draft)
+      for (const [setId, draft] of next) {
+        const serverSet = serverSets.get(setId)
+        if (!serverSet || sameLiveSetDraft(serverSet.fact, draft)) next.delete(setId)
+      }
+      return next
+    })
+  }, [actor?.userId, query.data, workoutId])
+  useEffect(() => {
+    if (query.data?.status !== 'done') return
+    if (actor?.userId) clearPendingLiveSetDrafts(actor.userId, workoutId)
+    // При обычном успешном finish итоговый экран открывает onSuccess ниже с
+    // justCompleted. Этот fallback нужен только когда ответ потерялся, но
+    // refetch уже увидел завершённую тренировку, либо после reload live URL.
+    if (completedLocally.current) return
+    navigate(`/workouts/${workoutId}`, { replace: true })
+  }, [actor?.userId, navigate, query.data?.status, workoutId])
+  function rememberLiveDraft(setId: string, draft: LiveSetDraft) {
+    setLocalSetDrafts((current) => new Map(current).set(setId, draft))
+    if (actor?.userId) writePendingLiveSetDraft(actor.userId, workoutId, setId, draft)
+  }
+  function acknowledgeLiveDraft(setId: string) {
+    if (actor?.userId) removePendingLiveSetDraft(actor.userId, workoutId, setId)
+    setLocalSetDrafts((current) => {
+      if (!current.has(setId)) return current
+      const next = new Map(current)
+      next.delete(setId)
+      return next
+    })
+    setRecoveredSetIds((current) => {
+      if (!current.has(setId)) return current
+      const next = new Set(current)
+      next.delete(setId)
+      return next
+    })
+  }
   // Завершённые упражнения по умолчанию свёрнуты; id здесь — принудительно раскрытые
   // тренером (тап по свёрнутой карточке), чтобы поправить факт.
   const [expandedExercises, setExpandedExercises] = useState<Set<string>>(() => new Set())
@@ -826,8 +1070,16 @@ export function LiveWorkoutPage() {
   // в БД, но без refetch локальный set остаётся старым и поле возвращает прежнее
   // число. Освежаем только для подтверждённых (в обычном вводе по blur refetch не
   // нужен и мешал бы: ремоунт полей по key сбросил бы текущий ввод).
+  async function runLiveSetMutation(operation: () => Promise<number>) {
+    try {
+      return await operation()
+    } catch (error) {
+      const refreshed = await query.refetch()
+      throw liveWorkoutRecoveryError(error, !refreshed.error)
+    }
+  }
   const save = useMutation({
-    mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.save(set, draft),
+    mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => runLiveSetMutation(() => liveSets.save(set, draft)),
     onMutate: ({ set }) => { setSavingSetId(set.id); setSavedSetId(null); setSaveErrorSetId(null) },
     onSuccess: async (version, { set, draft }) => {
       setSavingSetId(null)
@@ -840,6 +1092,7 @@ export function LiveWorkoutPage() {
         ['workout', workoutId],
         (workout) => workout ? applyLiveSetDraft(workout, set.id, draft, version) : workout,
       )
+      acknowledgeLiveDraft(set.id)
       if (set.confirmedAt) {
         const exercise = query.data?.exercises.find((item) => item.sets.some((itemSet) => itemSet.id === set.id))
         if (exercise) setExpandedExercises((previous) => {
@@ -854,13 +1107,9 @@ export function LiveWorkoutPage() {
     onError: (_error, { set }) => { setSavingSetId(null); setSaveErrorSetId(set.id) },
   })
   function persistLiveDraft(set: WorkoutSet, draft: LiveSetDraft) {
-    // Запоминаем ввод до RPC. Это не меняет факт на сервере, но не даёт
-    // realtime-снимку с прежними данными скрыть его при переходе к другой строке.
-    setLocalSetDrafts((current) => {
-      const next = new Map(current)
-      next.set(set.id, draft)
-      return next
-    })
+    // Запоминаем ввод до RPC и на устройстве. Это не меняет факт на сервере,
+    // но не даёт realtime-снимку или reload скрыть его при медленной сети.
+    rememberLiveDraft(set.id, draft)
     save.mutate({ set, draft })
   }
   function liveFormChanged(form: HTMLFormElement) {
@@ -894,8 +1143,10 @@ export function LiveWorkoutPage() {
     return () => window.clearTimeout(timer)
   }, [savedSetId])
   const confirm = useMutation({
-    mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => liveSets.confirm(set, draft),
+    mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => runLiveSetMutation(() => liveSets.confirm(set, draft)),
+    onMutate: ({ set, draft }) => { rememberLiveDraft(set.id, draft) },
     onSuccess: (_data, { set }) => {
+      acknowledgeLiveDraft(set.id)
       setExpandedSetId(null)
       // Отдых берётся из настроек блока (Этап A), не хардкод:
       // - одиночное упражнение → отдых между подходами;
@@ -945,20 +1196,38 @@ export function LiveWorkoutPage() {
     storeRestDeadline(workoutId, nextEnd)
     setRestRemaining(Math.max(0, Math.round((nextEnd - Date.now()) / 1000)))
   }
-  const appendSet = useMutation({ mutationFn: (exerciseId: string) => workoutsRepository.appendLiveSet(query.data!, exerciseId), onSuccess: async () => { await query.refetch() } })
-  const removeSet = useMutation({ mutationFn: (setId: string) => workoutsRepository.removeLiveSet(query.data!, setId), onSuccess: async () => { await query.refetch() } })
-  const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => workoutsRepository.appendLiveExercise(query.data!, exercise), onSuccess: async () => { await query.refetch() } })
-  const reorderBlock = useMutation({ mutationFn: ({ blockId, direction }: { blockId: string; direction: -1 | 1 }) => workoutsRepository.reorderLiveBlock(query.data!, blockId, direction), onSuccess: async () => { await query.refetch() } })
-  const replaceLive = useMutation({ mutationFn: ({ exerciseId, exercise }: { exerciseId: string; exercise: ExerciseSnapshot }) => workoutsRepository.replaceLiveExercise(query.data!, exerciseId, exercise), onSuccess: async () => { await query.refetch() } })
-  const commentLive = useMutation({ mutationFn: ({ exerciseId, comment }: { exerciseId: string; comment: string }) => workoutsRepository.setExerciseComment(query.data!, exerciseId, comment), onSuccess: async () => { await query.refetch() } })
+  function runLiveWorkoutMutation(operationKey: string, operation: (workout: Workout) => Promise<number>) {
+    const snapshot = query.data!
+    return liveWorkout.run(snapshot, operationKey, async (expectedVersion) => {
+      try {
+        return await operation({ ...snapshot, version: expectedVersion })
+      } catch (error) {
+        const refreshed = await query.refetch()
+        if (refreshed.data) liveWorkout.sync(refreshed.data)
+        throw liveWorkoutRecoveryError(error, !refreshed.error)
+      }
+    })
+  }
+  const appendSet = useMutation({ mutationFn: (exerciseId: string) => runLiveWorkoutMutation(`append-set:${exerciseId}`, (workout) => workoutsRepository.appendLiveSet(workout, exerciseId)), onSuccess: async () => { await query.refetch() } })
+  const removeSet = useMutation({ mutationFn: (setId: string) => runLiveWorkoutMutation(`remove-set:${setId}`, (workout) => workoutsRepository.removeLiveSet(workout, setId)), onSuccess: async () => { await query.refetch() } })
+  const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => runLiveWorkoutMutation(`append-exercise:${exercise.ref}`, (workout) => workoutsRepository.appendLiveExercise(workout, exercise)), onSuccess: async () => { await query.refetch() } })
+  const reorderBlock = useMutation({ mutationFn: ({ blockId, direction }: { blockId: string; direction: -1 | 1 }) => runLiveWorkoutMutation(`reorder:${blockId}:${direction}`, (workout) => workoutsRepository.reorderLiveBlock(workout, blockId, direction)), onSuccess: async () => { await query.refetch() } })
+  const replaceLive = useMutation({ mutationFn: ({ exerciseId, exercise }: { exerciseId: string; exercise: ExerciseSnapshot }) => runLiveWorkoutMutation(`replace:${exerciseId}`, (workout) => workoutsRepository.replaceLiveExercise(workout, exerciseId, exercise)), onSuccess: async () => { await query.refetch() } })
+  const commentLive = useMutation({ mutationFn: ({ exerciseId, comment }: { exerciseId: string; comment: string }) => runLiveWorkoutMutation(`comment:${exerciseId}`, (workout) => workoutsRepository.setExerciseComment(workout, exerciseId, comment)), onSuccess: async () => { await query.refetch() } })
   function closePicker() { setPickerOpen(false); setReplaceExerciseId(null) }
   function pickLiveExercise(exercise: ExerciseSnapshot) {
     if (replaceExerciseId) replaceLive.mutate({ exerciseId: replaceExerciseId, exercise })
     else appendExercise.mutate(exercise)
     closePicker()
   }
-  const finish = useMutation({ mutationFn: () => workoutsRepository.finish(query.data!), onSuccess: async () => {
+  const finish = useMutation({ mutationFn: async () => {
+    await liveSets.waitForIdle()
+    const version = await runLiveWorkoutMutation('finish', (workout) => workoutsRepository.finish(workout))
+    completedLocally.current = true
+    return version
+  }, onSuccess: async () => {
     const clientId = query.data?.clientId
+    if (actor?.userId) clearPendingLiveSetDrafts(actor.userId, workoutId)
     // Освежаем не только саму тренировку, но и статистику клиента и списки
     // тренировок (карточка, история, расписание), иначе кол-во/% выполнения
     // на карточке клиента обновляются только после перезагрузки.
@@ -970,7 +1239,21 @@ export function LiveWorkoutPage() {
     ])
     navigate(`/workouts/${workoutId}`, { state: { justCompleted: true } })
   } })
-  function draftFrom(form: HTMLFormElement): LiveSetDraft { const values = new FormData(form); return { weightKg: numberValue(values.get('weightKg')), reps: numberValue(values.get('reps')), distanceKm: numberValue(values.get('distanceKm')), durationSec: numberValue(values.get('durationSec')), rpe: numberValue(values.get('rpe')) } }
+  const rootMutationPending = appendSet.isPending || removeSet.isPending || appendExercise.isPending
+    || reorderBlock.isPending || replaceLive.isPending || commentLive.isPending || finish.isPending
+  function draftFrom(form: HTMLFormElement): LiveSetDraft {
+    const values = new FormData(form)
+    const runDuration = values.get('runDuration')
+    const runDistance = values.get('runDistance')
+    const runUnit: RunDistanceUnit = values.get('runDistanceUnit') === 'm' ? 'm' : 'km'
+    return {
+      weightKg: numberValue(values.get('weightKg')),
+      reps: numberValue(values.get('reps')),
+      distanceKm: runDistance === null ? numberValue(values.get('distanceKm')) : runDistanceKmFromInput(String(runDistance), runUnit),
+      durationSec: runDuration === null ? numberValue(values.get('durationSec')) : parseRunDurationInput(String(runDuration)),
+      rpe: numberValue(values.get('rpe')),
+    }
+  }
   // Derive the countdown from a wall-clock deadline so it stays correct even
   // when the tab is backgrounded and timers are throttled by the browser.
   const restActive = restRemaining !== null
@@ -1008,7 +1291,7 @@ export function LiveWorkoutPage() {
     if (clientMode) return null
     return <details className="live-exercise-note">
       <summary>Заметка тренера{exercise.trainerComment ? <span> · есть текст</span> : null}</summary>
-      <textarea className="exercise-comment" aria-label={`Комментарий: ${exercise.name}`} placeholder="Комментарий к упражнению…" rows={1} defaultValue={exercise.trainerComment ?? ''} disabled={commentLive.isPending}
+      <textarea className="exercise-comment" aria-label={`Комментарий: ${exercise.name}`} placeholder="Комментарий к упражнению…" rows={1} defaultValue={exercise.trainerComment ?? ''} disabled={rootMutationPending}
         onBlur={(event) => { const next = event.target.value.trim(); if (next !== (exercise.trainerComment ?? '')) commentLive.mutate({ exerciseId: exercise.id, comment: next }) }} />
     </details>
   }
@@ -1022,16 +1305,16 @@ export function LiveWorkoutPage() {
     return <OverflowMenu items={[
       ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
       { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exercise.id) },
-      ...(canReplace ? [{ label: 'Заменить', disabled: replaceLive.isPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } }] : []),
-      ...(removableSet ? [{ label: 'Удалить подход', danger: true, disabled: removeSet.isPending, onClick: async () => { if (await askConfirm({ message: 'Удалить этот подход?', confirmLabel: 'Удалить', danger: true })) removeSet.mutate(removableSet.id) } }] : []),
+      ...(canReplace ? [{ label: 'Заменить', disabled: rootMutationPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } }] : []),
+      ...(removableSet ? [{ label: 'Удалить подход', danger: true, disabled: rootMutationPending, onClick: async () => { if (await askConfirm({ message: 'Удалить этот подход?', confirmLabel: 'Удалить', danger: true })) removeSet.mutate(removableSet.id) } }] : []),
     ]} />
   }
   // Стрелки ↑/↓ видны только во временном режиме перестановки.
   function liveReorder(blockId: string, isFirst: boolean, isLast: boolean) {
     if (!canManageLiveStructure || !reordering) return null
     return <span className="block-reorder">
-      <button type="button" className="reorder-btn" aria-label="Вверх" disabled={isFirst || reorderBlock.isPending} onClick={() => reorderBlock.mutate({ blockId, direction: -1 })}>↑</button>
-      <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast || reorderBlock.isPending} onClick={() => reorderBlock.mutate({ blockId, direction: 1 })}>↓</button>
+      <button type="button" className="reorder-btn" aria-label="Вверх" disabled={isFirst || rootMutationPending} onClick={() => reorderBlock.mutate({ blockId, direction: -1 })}>↑</button>
+      <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast || rootMutationPending} onClick={() => reorderBlock.mutate({ blockId, direction: 1 })}>↓</button>
     </span>
   }
   // Форма одного подхода в live: подтверждение / правка / удаление / автосейв по blur.
@@ -1056,7 +1339,7 @@ export function LiveWorkoutPage() {
       </div>
     }
     const showRpe = isRpeVisible(exercise.id)
-    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={set.id} onBlur={(event) => {
+    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={`${set.id}:${JSON.stringify(localSetDrafts.get(set.id) ?? null)}`} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
       persistLiveDraft(set, draftFrom(event.currentTarget))
@@ -1159,7 +1442,7 @@ export function LiveWorkoutPage() {
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </WorkoutSetTable>
-              {canManageLiveStructure && <button type="button" className="secondary live-add-set" disabled={appendSet.isPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
+              {canManageLiveStructure && <button type="button" className="secondary live-add-set" disabled={rootMutationPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
               {liveCommentField(exercise)}
             </section>
           })
@@ -1188,7 +1471,8 @@ export function LiveWorkoutPage() {
           </div> })}
         </div>
       }) })()}
-      {canManageLiveStructure && <button type="button" className="secondary wide" onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
+      {canManageLiveStructure && <button type="button" className="secondary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
+      {recoveredSetIds.size > 0 && <p className="state" role="status">Восстановили несохранённые данные. Проверьте подходы и сохраните их повторно.</p>}
       {error && <p className="error">{error.message}</p>}
       {/* Закреплённая нижняя панель: «Завершить» — вторичная, чтобы не
           конкурировать с primary-подтверждением подхода в карточке.
@@ -1200,10 +1484,10 @@ export function LiveWorkoutPage() {
               <p>Есть незавершённые подходы. Завершить частично?</p>
               <div className="actions">
                 <button type="button" className="secondary" onClick={() => setConfirmFinish(false)}>Отмена</button>
-                <button type="button" disabled={finish.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>Завершить</button>
+                <button type="button" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>Завершить</button>
               </div>
             </div>
-          : <button type="button" className="secondary wide" disabled={finish.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => exercise.sets.some((set) => !set.confirmedAt)); if (incomplete) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</button>}
+          : <button type="button" className="secondary wide" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => !exercise.sets.every((set) => set.confirmedAt)); if (incomplete) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</button>}
       </div>
     </>}</AsyncView>
     {canManageLiveStructure && pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} onPick={pickLiveExercise} onClose={closePicker} />}
@@ -1222,17 +1506,28 @@ export function ExerciseHistoryPage() {
   const [tab, setTab] = useState<ExerciseCardTab>('stats')
   const current = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   useClientRealtime(current.data?.clientId)
-  const history = useQuery({ queryKey: ['exercise-history', current.data?.clientId, exerciseRef], queryFn: async () => (await workoutsRepository.list(undefined, undefined, current.data!.clientId)).filter((workout) => workout.status === 'done' && workout.exercises.some((exercise) => exercise.ref === exerciseRef)), enabled: Boolean(current.data) })
+  const history = useInfiniteQuery({
+    queryKey: ['exercise-history', current.data?.clientId, exerciseRef],
+    initialPageParam: null as ExerciseProgressCursor | null,
+    queryFn: ({ pageParam }) => workoutsRepository.exerciseProgressPage(current.data!.clientId, exerciseRef, pageParam),
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    enabled: Boolean(current.data),
+  })
+  const items = useMemo(() => history.data?.pages.flatMap((page) => page.items) ?? [], [history.data])
+  const totalCount = history.data?.pages[0]?.totalCount ?? 0
   // Метаданные упражнения из каталога (картинка/оборудование/мышцы/инструкции).
   const meta = exercisesRepository.system.find((exercise) => exercise.ref === exerciseRef)
-  const inputKind = meta?.inputKind ?? history.data?.[0]?.exercises.find((item) => item.ref === exerciseRef)?.inputKind ?? 'strength'
-  const name = meta?.name ?? history.data?.[0]?.exercises.find((item) => item.ref === exerciseRef)?.name ?? 'Упражнение'
-  // Полная дата (YYYY-MM-DD) — нужна для AxisTick/тултипа как на вкладке замеров.
-  const chart = useMemo(() => exerciseChartPoints(history.data ?? [], exerciseRef), [history.data, exerciseRef])
+  const currentExercise = current.data?.exercises.find((exercise) => exercise.ref === exerciseRef)
+  const inputKind = meta?.inputKind ?? currentExercise?.inputKind ?? items[0]?.inputKind ?? 'strength'
+  const name = meta?.name ?? currentExercise?.name ?? items[0]?.exerciseName ?? 'Упражнение'
+  const chart = useMemo(() => items
+    .filter((item) => item.primaryValue !== null)
+    .map((item) => ({ date: item.workoutDate, completedAt: item.completedAt, value: item.primaryValue! }))
+    .sort((a, b) => a.completedAt.localeCompare(b.completedAt)), [items])
   const unit = chartUnitFor(inputKind)
   const instructions = meta?.instructions ?? []
   return <Page title="Упражнение" back={`/workouts/${workoutId}`}>
-    <AsyncView loading={current.isLoading || history.isLoading} error={current.error ?? history.error}>
+    <AsyncView loading={current.isLoading || history.isLoading} error={current.error ?? history.error} onRetry={() => { void current.refetch(); void history.refetch() }}>
       <section className="exercise-card-head card">
         {meta?.imageUrl && <img className="exercise-card-image" src={meta.imageUrl} alt={name} />}
         <div className="exercise-card-meta">
@@ -1249,8 +1544,10 @@ export function ExerciseHistoryPage() {
         <button type="button" role="tab" aria-selected={tab === 'how'} className={tab === 'how' ? 'tab active' : 'tab'} onClick={() => setTab('how')}>Техника</button>
       </div>
 
-      {tab === 'stats' && (chart.length > 1
-        ? (() => {
+      {tab === 'stats' && <>
+        <ExerciseProgressSummary latest={items[0]} totalCount={totalCount} />
+        {chart.length > 1
+          ? (() => {
             // Оформление как на вкладке замеров: пунктирная сетка, подписи дат
             // «01 / июль», подписи значений у мин/макс точек, форматированный тултип.
             const values = chart.map((point) => point.value)
@@ -1267,29 +1564,17 @@ export function ExerciseHistoryPage() {
                 activeDot={{ r: 7 }} isAnimationActive={false} />
             </LineChart></ResponsiveContainer></section>
           })()
-        : chart.length === 1
-        ? <section className="stat-single card"><span className="muted">Текущий результат</span><strong>{chart[0]!.value} {unit}</strong><p className="muted">График динамики появится после второй проведённой тренировки.</p></section>
-        : <p className="muted empty-hint">Пока нет данных. График появится после проведённых тренировок с фактом.</p>)}
+          : chart.length === 1
+            ? <p className="muted empty-hint">График динамики появится после второго подтверждённого результата.</p>
+            : null}
+      </>}
 
-      {tab === 'history' && (() => {
-        // История строго по факту: показываем только подтверждённые подходы.
-        // Тренировку показываем, если есть факт ИЛИ комментарий тренера.
-        const rows = [...(history.data ?? [])]
-          .sort((a, b) => (a.workoutDate < b.workoutDate ? 1 : -1))
-          .map((workout) => {
-            const exercise = workout.exercises.find((item) => item.ref === exerciseRef)
-            const facts = (exercise?.sets ?? []).map((set) => factLine(set, showRpe)).filter((line): line is string => line !== null)
-            return { workout, facts, comment: exercise?.trainerComment }
-          })
-          .filter((row) => row.facts.length > 0 || row.comment)
-        return rows.length
-          ? <div className="timeline">{rows.map(({ workout, facts, comment }) => <article key={workout.id} className="card"><div><strong>{formatLocalDate(workout.workoutDate)}</strong>{facts.length > 0 && <p>{facts.join(', ')}</p>}{comment && <p className="exercise-comment-note">💬 {comment}</p>}</div></article>)}</div>
-          : <p className="muted empty-hint">Ещё нет выполненных подходов по этому упражнению.</p>
-      })()}
+      {tab === 'history' && <ExerciseProgressHistory items={items} showRpe={showRpe} />}
 
       {tab === 'how' && (instructions.length
         ? <ol className="how-steps">{instructions.map((step, index) => <li key={index}>{step}</li>)}</ol>
         : <p className="muted empty-hint">Описание техники пока не добавлено.</p>)}
+      {tab !== 'how' && <LoadMoreButton hasMore={history.hasNextPage} loading={history.isFetchingNextPage} onLoadMore={() => void history.fetchNextPage()} />}
     </AsyncView>
   </Page>
 }

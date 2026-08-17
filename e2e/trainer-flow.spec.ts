@@ -266,6 +266,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.card').first()).toBeVisible()
   // На карточке истории — список упражнений (а не группы мышц) и тоннаж.
   await expect(page.locator('.cards .card').first()).toContainText('Болгарский присед')
+  await expect(page.locator('.cards .card').first()).toContainText('45 кг × 9 повт.')
+  await expect(page.locator('.cards .card').first().locator('.workout-pr-badge')).toHaveText('Новый рекорд')
   await expect(page.locator('.card-meta').first()).toContainText('1.2 т')
   await page.locator('.card').first().click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
@@ -274,7 +276,10 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.locator('.exercise-name-link').first().click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   // После одной проведённой тренировки статистика показывает текущий результат.
-  await expect(page.locator('.stat-single')).toContainText('Текущий результат')
+  const progressProof = page.getByLabel('Доказательство прогресса')
+  await expect(progressProof).toBeVisible()
+  await expect(progressProof).toContainText('Последний результат')
+  await expect(progressProof).toContainText('45 кг × 9 повт.')
   await page.locator('.page-back').click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await page.locator('.page-back').click()
@@ -494,6 +499,8 @@ test('замена упражнения: в форме плана и в live', a
   // После подтверждения меню остаётся для редких действий, но «Заменить»
   // пропадает: начатое упражнение нельзя подменить другим.
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
+  await page.locator('.live-exercise-collapsed').click()
   await page.getByRole('button', { name: 'Ещё действия' }).click()
   await expect(page.getByRole('menuitem', { name: 'Заменить' })).toHaveCount(0)
 })
@@ -869,7 +876,8 @@ test('комментарий тренера к упражнению: план �
   await expect(page.locator('.workout-exercise-comment').first()).toContainText('Держи спину прямо')
 })
 
-test('live: удаление подхода и наследование факта при добавлении', async ({ page }) => {
+test('live: удаление подхода и наследование факта при добавлении', async ({ page }, testInfo) => {
+  const clientName = `Сет Клиент ${testInfo.workerIndex}-${Date.now()}`
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -878,14 +886,15 @@ test('live: удаление подхода и наследование факт
   await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Добавить' }).click()
-  await page.getByLabel('Имя').fill('Сет Клиент')
+  await page.getByLabel('Имя').fill(clientName)
   await fillNewClientProfile(page)
   await page.getByLabel('Начальный вес, кг').fill('80')
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Сет Клиент' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: clientName })).toBeVisible()
+  const clientId = page.url().split('/').at(-1)!
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
-  await selectClient(page, 'Сет Клиент')
+  await selectClient(page, clientName, clientId)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
   await page.locator('.picker-item').first().click()
@@ -916,9 +925,37 @@ test('live: удаление подхода и наследование факт
   await page.locator('.live-exercise-collapsed').click()
   await expect(page.locator('.live-set-compact.confirmed')).toContainText('100 кг × 10 повт.')
 
-  // Добавляем подход — наследует факт (100), а не план (90).
+  // Параллельная правка возвращает бизнес-конфликт: live перечитывает сервер,
+  // объясняет результат и не делает blind overwrite. Повтор уже с новой
+  // версией проходит штатно.
+  let rejectAppendAsStale = true
+  await page.route('**/rest/v1/rpc/append_live_set', async (route) => {
+    if (!rejectAppendAsStale) { await route.continue(); return }
+    rejectAppendAsStale = false
+    await route.fulfill({
+      status: 409,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 'PT409', details: null, hint: null, message: 'workout_conflict' }),
+    })
+  })
   await page.getByRole('button', { name: '＋ Подход' }).first().click()
+  await expect(page.getByText(/Тренировка изменилась в другом окне/)).toBeVisible()
+  await page.getByRole('button', { name: '＋ Подход' }).first().click()
+  await page.unroute('**/rest/v1/rpc/append_live_set')
+
+  // Добавленный подход наследует факт (100), а не план (90).
   await expect(page.getByLabel('Фактический вес').first()).toHaveValue('100')
+
+  // Если ответ autosave потерялся из-за сети, введённый факт остаётся на
+  // устройстве и восстанавливается после reload для безопасного повтора.
+  await page.route('**/rest/v1/rpc/save_live_set_draft', (route) => route.abort('failed'))
+  await page.getByLabel('Фактический вес').first().fill('105')
+  await page.locator('.live-timer').click()
+  await expect(page.locator('.error').filter({ hasText: 'Ответ сервера не получен' })).toBeVisible()
+  await page.unroute('**/rest/v1/rpc/save_live_set_draft')
+  await page.reload()
+  await expect(page.getByText(/Восстановили несохранённые данные/)).toBeVisible()
+  await expect(page.getByLabel('Фактический вес').first()).toHaveValue('105')
 
   // Удаляем добавленный подход — остаётся один. Подтверждаем через in-app
   // confirm (useConfirm), а не нативный window.confirm.
