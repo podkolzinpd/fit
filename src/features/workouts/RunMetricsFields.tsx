@@ -106,17 +106,19 @@ export function RunMetricsFields({
           onChange={(event) => setDistanceText(event.target.value)}
           onBlur={commitDistance}
         />
-        <select
-          className="run-distance-unit"
-          name={distanceUnitName}
-          aria-label={distanceUnitLabel}
-          value={unit}
-          disabled={disabled}
-          onChange={(event) => changeUnit(event.target.value as RunDistanceUnit)}
-        >
-          <option value="m">м</option>
-          <option value="km">км</option>
-        </select>
+        <span className={`run-distance-unit-control${disabled ? ' disabled' : ''}`}>
+          <select
+            className="run-distance-unit"
+            name={distanceUnitName}
+            aria-label={distanceUnitLabel}
+            value={unit}
+            disabled={disabled}
+            onChange={(event) => changeUnit(event.target.value as RunDistanceUnit)}
+          >
+            <option value="m">м</option>
+            <option value="km">км</option>
+          </select>
+        </span>
       </div>
       <small>{pace ? `Темп ${pace}` : 'Темп —'}</small>
     </div>
