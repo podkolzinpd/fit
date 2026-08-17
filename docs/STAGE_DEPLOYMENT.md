@@ -1,41 +1,39 @@
-# Развёртывание stage в Yandex Cloud
+# Yandex Cloud stage deployment
 
-Эта инструкция описывает создание изолированного stage-контура Fit. Она не
-разрешает переключение production, публичный доступ к API или изменение
-текущего production-контура на Supabase.
+This runbook prepares the isolated Fit stage. It does not authorize a
+production cutover, public API invocation or changes to the current Supabase
+production path.
 
-## 1. Однократная подготовка
+## 1. One-time prerequisites
 
-- Используйте отдельный каталог Yandex Cloud с подключённым платёжным аккаунтом.
-- Создайте приватный Object Storage bucket с включённым версионированием для
-  хранения Terraform state.
-- Вне этого Terraform-стека создайте service account с минимально необходимыми
-  правами. Для управления VPC и интеграцией Managed PostgreSQL с Connection
-  Manager ему, помимо ролей на создаваемые ресурсы, нужны `vpc.user` и
-  `connection-manager.editor`. В каталоге должен быть активирован сервис
-  Connection Manager.
-- Создайте отдельный временный статический S3-ключ для доступа только к
-  Terraform state. После завершения ручного deploy отзовите ключ; постоянный
-  авторизованный JSON-ключ для работы из Cloud Shell не требуется.
-- Скопируйте `infra/yandex/backend.hcl.example` в игнорируемый Git файл
-  `backend.hcl` и замените пример имени bucket и ключа state.
-- Скопируйте `terraform.tfvars.example` в игнорируемый stage tfvars-файл.
-- Не запускайте несколько `terraform apply` одновременно. Механизм блокировки
-  через Yandex YDB/DynamoDB устарел в актуальном Terraform, поэтому для MVP
-  операции выполняются строго последовательно.
+- Use a dedicated Yandex Cloud folder with an active billing account.
+- Create a private, versioned Object Storage bucket for Terraform state.
+- Create a least-privilege infrastructure service account outside this stack.
+  It needs `vpc.user` and `connection-manager.editor` in addition to the roles
+  required to manage this stack's resources. Enable Connection Manager in the
+  folder.
+- Create a dedicated temporary static S3 access key for Terraform state. Revoke
+  it after the manual deployment. Cloud Shell does not require a permanent
+  authorized-key JSON file.
+- Copy `infra/yandex/backend.hcl.example` to ignored `backend.hcl` and replace
+  the example bucket and key.
+- Copy `terraform.tfvars.example` to an ignored stage tfvars file.
+- Keep all Terraform apply operations serialized. The Yandex YDB/DynamoDB
+  locking mechanism is deprecated by current Terraform, so this MVP does not
+  claim a lock implementation that may be removed.
 
-Никогда не коммитьте ключи backend, tfvars, сохранённые планы, Terraform state,
-URL базы данных, OAuth-секреты или выгрузки пользовательских данных.
+Never commit backend credentials, tfvars, plans, state, database URLs, OAuth
+secrets or exported data.
 
-## 2. Инициализация и проверка Terraform
+## 2. Initialize and validate
 
-Перейдите в каталог `infra/yandex` и задайте значения только в текущей shell-сессии:
+From `infra/yandex`:
 
 ```sh
-export AWS_ACCESS_KEY_ID="<идентификатор S3-ключа для state>"
-export AWS_SECRET_ACCESS_KEY="<секретная часть S3-ключа>"
-export TF_VAR_cloud_id="<идентификатор облака>"
-export TF_VAR_folder_id="<идентификатор stage-каталога>"
+export AWS_ACCESS_KEY_ID="<state access key id>"
+export AWS_SECRET_ACCESS_KEY="<state secret key>"
+export TF_VAR_cloud_id="<cloud id>"
+export TF_VAR_folder_id="<stage folder id>"
 
 TF_CLI_CONFIG_FILE=terraform.rc.example terraform init \
   -backend-config=backend.hcl
@@ -44,23 +42,19 @@ terraform validate
 terraform plan -out=stage.tfplan
 ```
 
-В Cloud Shell предустановленная версия Terraform может быть ниже требуемой
-проектом (`>= 1.8`). В этом случае скачайте подходящий бинарник из официального
-зеркала HashiCorp в Yandex Cloud и вызывайте именно его. Провайдер Yandex также
-должен загружаться через `terraform.rc.example`.
+Cloud Shell may provide a Terraform version older than the project requirement
+(`>= 1.8`). If so, download a compatible binary from the official HashiCorp
+mirror in Yandex Cloud and invoke that binary explicitly. The Yandex provider
+must still be loaded through `terraform.rc.example`.
 
-Перед любым применением внимательно изучите сохранённый plan. Он может
-содержать чувствительные метаданные и должен оставаться вне Git.
+Review the saved plan before applying anything. A plan may contain sensitive
+metadata and must remain untracked.
 
-На этом этапе основная инфраструктура приложения ещё не создаётся. Запуск
-`terraform apply` требует отдельного подтверждения, поскольку создаёт
-оплачиваемые облачные ресурсы.
+## 3. Bootstrap the image repository
 
-## 3. Первичное создание Container Registry
-
-Serverless Container нельзя создать, пока его образ не загружен. При этом имя
-репозитория образов формирует Terraform. Поэтому только при первом развёртывании
-сначала создайте Registry и repository отдельным проверенным apply:
+The Serverless Container cannot be created before its image exists, while the
+repository name is produced by Terraform. For the first deployment only,
+create the registry and repository with a targeted, reviewed apply:
 
 ```sh
 terraform apply \
@@ -68,121 +62,112 @@ terraform apply \
   -target=yandex_container_repository.api
 ```
 
-Из корня репозитория соберите API с помощью Podman. Затем присвойте образу имя
-из Terraform output `api_repository_name` и загрузите его в Yandex Container
-Registry через аутентифицированную сессию. В качестве тега используйте
-неизменяемый SHA коммита, а не `latest`.
+Build the API from the repository root with Podman, tag it with the Terraform
+repository output and push it using an authenticated Yandex Container Registry
+session. Use an immutable commit SHA as the image tag, not `latest`.
 
-После загрузки образа установите `api_image_tag` равным этому SHA и сформируйте
-новый полный plan. Не используйте bootstrap-plan для полного apply.
+After the image exists, set `api_image_tag` to that SHA and generate a fresh
+full plan. Do not reuse the bootstrap plan for the complete apply.
 
-## 4. Создание stage-инфраструктуры
+## 4. Create stage infrastructure
 
-Первый полный apply создаёт оплачиваемые ресурсы и выполняется только после
-отдельного подтверждения:
+The first full apply creates billable resources and requires explicit approval:
 
-- приватный кластер Managed PostgreSQL 17;
-- Serverless Container без постоянно прогретых экземпляров;
-- VPC, subnet и security group для PostgreSQL;
-- runtime service account, доступ к Registry и метаданные Lockbox.
+- private Managed PostgreSQL 17;
+- Serverless Container with no provisioned instances;
+- VPC, subnet and PostgreSQL security group;
+- runtime service account, Registry access and Lockbox metadata.
 
-У базы данных нет публичного IP. Порт PostgreSQL `6432` принимает соединения
-только из пользовательской subnet и служебной сети Yandex Serverless Containers
-`198.19.0.0/16`. Контейнер остаётся приватным, пока API не проверяет Yandex ID.
+The database has no public IP. PostgreSQL port `6432` accepts traffic from the
+user subnet and Yandex Serverless Containers service CIDR `198.19.0.0/16` only.
+The container remains private while Yandex ID validation is absent.
 
-Сформируйте новый полный plan, проверьте перечень и параметры ресурсов и только
-после этого примените его. Не включайте `allow_unauthenticated_api`.
+Generate and review a fresh full plan before applying it. Do not enable
+`allow_unauthenticated_api`.
 
-## 5. Создание секретов и применение миграций
+## 5. Populate secrets and migrate
 
-Получите сгенерированные учётные данные `fit_owner` и `fit_api` из управляемых
-Connection Manager/Lockbox-секретов, не выводя их в логи, историю shell или
-чат. Текущий API Managed PostgreSQL сам назначает служебные каталоги для этих
-секретов; явные `user_connection_manager.connection_folder_id` и
-`secret_folder_id` не задаются. Вне Terraform создайте две отдельные версии
-прикладных секретов Lockbox. Ключи payload должны в точности совпадать со
-следующими именами:
+Obtain the generated `fit_owner` and `fit_api` credentials from the managed
+Connection Manager/Lockbox secrets without printing them to logs, shell history
+or chat. The current Managed PostgreSQL API assigns the managed Connection
+Manager and Lockbox folders itself; do not set explicit
+`user_connection_manager.connection_folder_id` or `secret_folder_id` values.
 
-- `DATABASE_URL` использует пользователя `fit_api` и подключается только к API;
-- `MIGRATION_DATABASE_URL` использует `fit_owner` и подключается только к
-  временному migration container.
+Create two separate application Lockbox versions outside Terraform. The
+payload entry keys must match these names exactly:
 
-Значение `DATABASE_URL` должно включать:
+- `DATABASE_URL` uses `fit_api` and is attached only to the API container;
+- `MIGRATION_DATABASE_URL` uses `fit_owner` and is attached only to the
+  temporary migration container.
 
-- пользователя `fit_api`;
-- приватный FQDN primary-хоста PostgreSQL;
-- порт `6432` и базу `fit`;
+`DATABASE_URL` must use:
+
+- user `fit_api`;
+- the private primary PostgreSQL FQDN;
+- port `6432` and database `fit`;
 - session pooling;
 - `target_session_attrs=read-write`;
-- небольшой connection timeout;
+- a short connection timeout;
 - `sslmode=verify-full`;
 - `sslrootcert=/app/certs/yandex-cloud-ca.pem`.
 
-Runtime-образ содержит публичный набор сертификатов Yandex Cloud из
-`https://storage.yandexcloud.net/cloud-certs/CA.pem`. Проверенный SHA-256:
+The runtime image contains the public Yandex Cloud CA bundle from
+`https://storage.yandexcloud.net/cloud-certs/CA.pem`. Its reviewed SHA-256 is
 `6d148f85b5213445b23ad22ff45e47e1aa2be968f183f9bd6ff39de54d47a8ef`.
-Перед истечением сертификатов или после публикации замены со стороны Yandex
-необходимо проверить и обновить файл в репозитории.
+Review and rotate the committed bundle before its certificates expire or when
+Yandex publishes a replacement.
 
-Для применения миграций временно задайте:
+First set `database_owner_url_secret_version_id` and
+`migration_invoker_member` to one explicitly approved operator identity.
+Review and apply the plan. Terraform then creates a private migration container
+with concurrency one and no public invoker.
 
-- `database_owner_url_secret_version_id` — ID версии секрета владельца;
-- `migration_invoker_member` — единственную заранее одобренную учётную запись
-  оператора.
+Invoke `POST /migrate` once using that Yandex Cloud identity. The runner uses a
+PostgreSQL advisory lock, applies the reviewed files from `db/migrations` and
+returns only their names. A failure returns a generic response without secret
+details. Verify `app_private.fit_migrations`, then set both temporary variables
+back to `null` and apply again. This removes the migration container, revokes
+its Lockbox access and removes the invoker binding. Deactivate the owner secret
+version after verification.
 
-Проверьте и примените plan. Terraform создаст приватный migration container с
-concurrency `1`, без публичного invoker.
+Finally set `database_url_secret_version_id`, review a new plan and deploy the
+API revision. Never run migrations from every API startup and never attach
+`fit_owner` credentials to the API container.
 
-От имени указанной учётной записи один раз вызовите `POST /migrate`. Runner
-использует PostgreSQL advisory lock, применяет проверенные файлы из
-`db/migrations` и возвращает только их имена. При ошибке API отдаёт общий ответ
-без деталей подключения.
+## 6. Smoke checks
 
-Проверьте таблицу `app_private.fit_migrations`. Затем верните
-`database_owner_url_secret_version_id` и `migration_invoker_member` в `null`,
-сформируйте новый plan и примените его. Это удалит migration container, отзовёт
-его доступ к Lockbox и удалит invoker binding. После проверки деактивируйте
-версию owner-secret.
+Invoke the private container using an authorized Yandex Cloud identity:
 
-В конце задайте `database_url_secret_version_id`, снова проверьте plan и
-разверните revision основного API. Никогда не запускайте миграции при каждом
-старте API и не подключайте учётные данные `fit_owner` к основному контейнеру.
-
-## 6. Smoke-проверки
-
-Вызывайте приватный контейнер от имени авторизованной учётной записи Yandex
-Cloud:
-
-1. `GET /health` возвращает `200 {"status":"ok"}` — это проверка процесса без БД.
-2. `GET /ready` возвращает `200 {"status":"ready"}` и выполняет `select 1`
-   через runtime pool.
-3. При отсутствующем или заведомо неверном database secret `/ready` возвращает
-   только `503 {"status":"not_ready"}`, без деталей подключения.
-4. Убедитесь, что у PostgreSQL по-прежнему нет публичного IP.
-5. Убедитесь, что контейнер нельзя вызвать от имени `system:allUsers`.
-6. Проверьте наличие миграций `000001`–`000003` в
+1. `GET /health` returns `200 {"status":"ok"}`. This checks only the process.
+2. `GET /ready` returns `200 {"status":"ready"}`. This performs `select 1`
+   through the runtime pool.
+3. Temporarily using a wrong or missing database secret makes `/ready` return
+   generic `503 {"status":"not_ready"}` without exposing connection details.
+4. Confirm the PostgreSQL host still has no public IP and the container is not
+   invokable by `system:allUsers`.
+5. Confirm migrations `000001` through `000003` exist in
    `app_private.fit_migrations`.
-7. Убедитесь, что временный migration container удалён, а версия owner-secret
-   деактивирована.
-8. Убедитесь, что временный S3-ключ для Terraform state отозван, а временные
-   диагностические объекты и локальные файлы с ключами удалены.
+6. Confirm the migration container no longer exists and its owner secret
+   version is inactive.
+7. Confirm the temporary Terraform state S3 access key is revoked and remove
+   temporary diagnostic objects and local key files.
 
-Зафиксируйте ID ресурсов, digest образа, версию миграций и результаты smoke.
-Не сохраняйте значения секретов.
+Record resource IDs, image digest, migration version and smoke results. Do not
+record secret payloads.
 
-## 7. Условие завершения stage readiness
+## 7. Stop condition
 
-Stage считается готовым только после успешной приватной авторизации вызова,
-DB-readiness и проверки миграций. До реализации и ревью Yandex ID и
-пользовательских сессий запрещено:
+Stage readiness is complete only when private invocation, database readiness
+and migration verification pass. Until Yandex ID validation and application
+sessions are implemented and reviewed, do not:
 
-- включать публичный invoker;
-- менять frontend API URL;
-- переключать production-переменные;
-- отключать или изменять текущий Supabase-контур.
+- enable public invocation;
+- change the frontend API URL;
+- switch production environment variables;
+- disable or modify the current Supabase path.
 
-После успешного stage smoke следующий этап — Yandex ID, вертикальный срез
-профиля и серверная tenant-allowlist. Первый пилот использует только внутренние
-или синтетические аккаунты и остаётся read-only. Перенос остальных доменных
-функций продолжается только после проверки этого auth-среза. Полная схема
-когортного переключения описана в `docs/design/yandex-cloud-migration.md`.
+The next step after a successful stage smoke is the Yandex ID/profile vertical
+slice with a server-side tenant allowlist. The first pilot uses only internal or
+synthetic accounts and remains read-only. Continue migrating domain features
+only after that auth slice is verified. The complete cohort rollout is
+documented in `docs/design/yandex-cloud-migration.md`.
