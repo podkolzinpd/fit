@@ -160,14 +160,21 @@ describe('ExercisePicker', () => {
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ ref: 'running' }))
   })
 
-  it('показывает одним быстрым фильтром обычный бег и СБУ', async () => {
+  it('отделяет ручной вход в силовую и беговую тренировку', async () => {
     const user = userEvent.setup()
-    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={vi.fn()} onClose={vi.fn()} />)
-    await user.click(screen.getByRole('button', { name: 'Бег и СБУ' }))
+    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} initialMode="choose" onPick={vi.fn()} onClose={vi.fn()} />)
+    expect(screen.getByRole('heading', { name: 'Тип тренировки' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Поиск упражнения')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /^Бег/ }))
+    expect(screen.getByRole('heading', { name: 'Беговая тренировка' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Бег \(Кардио\)/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Бег с высоким подниманием бедра/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Семенящий бег/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Жим лёжа/ })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Силовая', pressed: false }))
+    expect(screen.getByRole('heading', { name: 'Силовая тренировка' })).toBeInTheDocument()
+    expect(document.querySelector('[data-exercise-ref="bench-press"]')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Бег \(Кардио\)/ })).not.toBeInTheDocument()
   }, 10_000)
 
   it('shows loading, error with retry, and empty states', async () => {
