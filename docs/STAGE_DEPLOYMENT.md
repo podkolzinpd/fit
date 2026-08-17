@@ -8,8 +8,13 @@ production path.
 
 - Use a dedicated Yandex Cloud folder with an active billing account.
 - Create a private, versioned Object Storage bucket for Terraform state.
-- Create a least-privilege infrastructure service account and static S3 access
-  key outside this stack.
+- Create a least-privilege infrastructure service account outside this stack.
+  It needs `vpc.user` and `connection-manager.editor` in addition to the roles
+  required to manage this stack's resources. Enable Connection Manager in the
+  folder.
+- Create a dedicated temporary static S3 access key for Terraform state. Revoke
+  it after the manual deployment. Cloud Shell does not require a permanent
+  authorized-key JSON file.
 - Copy `infra/yandex/backend.hcl.example` to ignored `backend.hcl` and replace
   the example bucket and key.
 - Copy `terraform.tfvars.example` to an ignored stage tfvars file.
@@ -36,6 +41,11 @@ terraform fmt -check
 terraform validate
 terraform plan -out=stage.tfplan
 ```
+
+Cloud Shell may provide a Terraform version older than the project requirement
+(`>= 1.8`). If so, download a compatible binary from the official HashiCorp
+mirror in Yandex Cloud and invoke that binary explicitly. The Yandex provider
+must still be loaded through `terraform.rc.example`.
 
 Review the saved plan before applying anything. A plan may contain sensitive
 metadata and must remain untracked.
@@ -72,18 +82,25 @@ The database has no public IP. PostgreSQL port `6432` accepts traffic from the
 user subnet and Yandex Serverless Containers service CIDR `198.19.0.0/16` only.
 The container remains private while Yandex ID validation is absent.
 
+Generate and review a fresh full plan before applying it. Do not enable
+`allow_unauthenticated_api`.
+
 ## 5. Populate secrets and migrate
 
-Obtain the generated `fit_owner` and `fit_api` credentials through Yandex
-Connection Manager without printing them to logs or shell history. Create two
-separate Lockbox versions outside Terraform. The payload entry keys must match
-the names below exactly:
+Obtain the generated `fit_owner` and `fit_api` credentials from the managed
+Connection Manager/Lockbox secrets without printing them to logs, shell history
+or chat. The current Managed PostgreSQL API assigns the managed Connection
+Manager and Lockbox folders itself; do not set explicit
+`user_connection_manager.connection_folder_id` or `secret_folder_id` values.
+
+Create two separate application Lockbox versions outside Terraform. The
+payload entry keys must match these names exactly:
 
 - `DATABASE_URL` uses `fit_api` and is attached only to the API container;
 - `MIGRATION_DATABASE_URL` uses `fit_owner` and is attached only to the
   temporary migration container.
 
-Create a Lockbox version for `DATABASE_URL` outside Terraform. It must use:
+`DATABASE_URL` must use:
 
 - user `fit_api`;
 - the private primary PostgreSQL FQDN;
@@ -128,9 +145,12 @@ Invoke the private container using an authorized Yandex Cloud identity:
    generic `503 {"status":"not_ready"}` without exposing connection details.
 4. Confirm the PostgreSQL host still has no public IP and the container is not
    invokable by `system:allUsers`.
-5. Confirm migrations `000001` through `000003` exist in `app_private.fit_migrations`.
+5. Confirm migrations `000001` through `000003` exist in
+   `app_private.fit_migrations`.
 6. Confirm the migration container no longer exists and its owner secret
    version is inactive.
+7. Confirm the temporary Terraform state S3 access key is revoked and remove
+   temporary diagnostic objects and local key files.
 
 Record resource IDs, image digest, migration version and smoke results. Do not
 record secret payloads.
@@ -138,6 +158,16 @@ record secret payloads.
 ## 7. Stop condition
 
 Stage readiness is complete only when private invocation, database readiness
-and migration verification pass. Do not enable public invocation or switch any
-frontend environment until Yandex ID validation and application sessions are
-implemented and reviewed.
+and migration verification pass. Until Yandex ID validation and application
+sessions are implemented and reviewed, do not:
+
+- enable public invocation;
+- change the frontend API URL;
+- switch production environment variables;
+- disable or modify the current Supabase path.
+
+The next step after a successful stage smoke is the Yandex ID/profile vertical
+slice with a server-side tenant allowlist. The first pilot uses only internal or
+synthetic accounts and remains read-only. Continue migrating domain features
+only after that auth slice is verified. The complete cohort rollout is
+documented in `docs/design/yandex-cloud-migration.md`.

@@ -39,12 +39,98 @@ The following remain unchanged during the foundation phase:
    remaining domain: remote state, service-network access to private
    PostgreSQL, reviewed migrations and database readiness checks. Profiles,
    trainers, clients and read-only trainer memberships are already ported.
-5. Implement Yandex ID and the profile vertical slice on stage, then resume
-   invitation, mutation and domain slices in dependency order.
-6. Port clients, memberships, exercises, workouts, progress, goals and
-   summaries in parity-tested vertical slices.
-7. Rehearse the data migration at least twice before the production cutover.
-8. Remove Supabase only after the rollback window closes.
+5. Implement Yandex ID, identity mapping and the profile vertical slice on
+   stage. Add a server-side rollout assignment keyed by the internal profile
+   UUID; a frontend flag is not an authorization or routing boundary.
+6. Run the first allowlisted pilot with synthetic/internal accounts and
+   read-only behavior. Supabase remains the only write source during this gate.
+7. Port the current domain contract in the dependency order below. The scope
+   now includes timezone, optimistic concurrency, actor attribution, running
+   metrics, feedback/reactions and the derived progress/chronicle reads added
+   after the foundation migrations.
+8. Rehearse full tenant migration at least twice. Cut over one isolated tenant
+   cohort only after all data it can mutate is migrated and writes are frozen
+   for the cutover window.
+9. Expand sticky tenant cohorts gradually after monitoring data integrity,
+   authorization failures, latency and error rates.
+10. Remove Supabase only after all cohorts are migrated and the rollback window
+    closes.
+
+## Rollout decision
+
+Yandex Cloud rollout is controlled by the application after Yandex ID has been
+validated and mapped to an internal profile UUID. Client-provided headers,
+query parameters, email addresses and raw Yandex ID subjects never select a
+backend.
+
+```text
+validated Yandex ID -> internal profile UUID -> tenant rollout assignment
+                                            -> Supabase or Yandex API
+```
+
+The assignment is evaluated server-side and is sticky. Serverless Container
+revision activation applies to all requests, while API Gateway percentage
+canaries are random request routing; neither is the source of truth for a
+specific-user pilot.
+
+The safe migration unit is a tenant cohort, not always one account. A trainer,
+linked client profiles and their shared memberships/workouts must not be split
+between writable backends. An individual account can be moved alone only when
+its mutable data has no cross-account ownership or relationship dependency.
+
+No domain entity is dual-written. Before a cohort cutover, Supabase remains its
+only write source. During cutover, writes for the cohort are paused, its full
+required dataset is copied and verified, and then the assignment changes once
+to Yandex Cloud. After that point Yandex Cloud is the only write source for the
+cohort.
+
+A flag is an instant rollback only before the first Yandex Cloud write or for a
+read-only pilot. After writes begin, switching a cohort back to Supabase would
+lose or fork new data; rollback then requires a maintenance window and a
+reviewed reverse migration. Every cohort expansion therefore records a data
+checkpoint and an explicit forward-fix or reverse-migration decision.
+
+Rollout gates:
+
+1. synthetic and internal accounts on isolated stage;
+2. allowlisted read-only auth/profile pilot;
+3. complete tenant migration rehearsal with production-like data;
+4. one small production tenant cohort;
+5. gradual cohort expansion;
+6. final read-only window and global cutover.
+
+## Current main parity impact
+
+The private stage readiness gate still applies only the reviewed foundation
+migrations `000001` through `000003`. Product work merged after them does not
+block the infrastructure smoke, but it expands the contract required before a
+production tenant can be switched.
+
+Port the current `main` behavior in this order:
+
+1. identity/profile mapping, roles and IANA timezone;
+2. clients, trainer memberships and invitation lifecycle;
+3. exercises, workouts, workout exercises and sets, including running
+   duration/distance fields;
+4. versioned aggregate mutations, transaction-local actor context and
+   `updated_by` attribution;
+5. live-workout conflict, retry and ambiguous-network-result semantics;
+6. client progress and goals;
+7. post-workout feedback plus trainer reaction/response ownership;
+8. role-safe regularity, confirmed-only exercise progress/PR and paginated
+   workout chronicle;
+9. client-overview activity analytics and realtime invalidation/refetch;
+10. goal-aware training summary and the remaining Edge Function behavior.
+
+Each item is a separate vertical slice: PostgreSQL migration, grants/RLS and
+cross-tenant tests, API transaction/DTO, repository adapter and observable
+parity acceptance. Supabase migration files are evidence for the current
+contract, not scripts to copy into the replacement chain.
+
+A production pilot cannot start after only profiles and memberships have been
+ported. Every mutable and shared domain reachable by that tenant cohort must
+either be fully served by Yandex Cloud or remain unavailable during a declared
+read-only pilot.
 
 ## Actor context decision
 

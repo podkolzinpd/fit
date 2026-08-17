@@ -58,11 +58,6 @@ resource "yandex_mdb_postgresql_user" "owner" {
     idle_in_transaction_session_timeout = 30000
     statement_timeout                   = 60000
   }
-
-  user_connection_manager {
-    connection_folder_id = var.folder_id
-    secret_folder_id     = var.folder_id
-  }
 }
 
 resource "yandex_mdb_postgresql_database" "fit" {
@@ -90,11 +85,6 @@ resource "yandex_mdb_postgresql_user" "api" {
     default_transaction_isolation       = "read committed"
     idle_in_transaction_session_timeout = 15000
     statement_timeout                   = 30000
-  }
-
-  user_connection_manager {
-    connection_folder_id = var.folder_id
-    secret_folder_id     = var.folder_id
   }
 }
 
