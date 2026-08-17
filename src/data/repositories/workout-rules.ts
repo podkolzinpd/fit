@@ -80,6 +80,7 @@ export function currentRoundIndex(rounds: BlockRound[]): number {
 export const BLOCK_PRESET_LABELS: Record<BlockPreset, string> = {
   set: 'Сет',
   circuit: 'Круговая',
+  interval: 'Интервалы',
 }
 export function blockLabel(blockType: BlockType, blockPreset: BlockPreset): string {
   return blockType === 'single' ? 'Обычный' : BLOCK_PRESET_LABELS[blockPreset]
@@ -89,8 +90,80 @@ export function blockLabel(blockType: BlockType, blockPreset: BlockPreset): stri
 export const PRESET_REST_DEFAULTS: Record<BlockPreset, { betweenExercises: number; betweenRounds: number }> = {
   set: { betweenExercises: 0, betweenRounds: 90 },
   circuit: { betweenExercises: 15, betweenRounds: 60 },
+  interval: { betweenExercises: 0, betweenRounds: 0 },
 }
 export const DEFAULT_REST_BETWEEN_SETS = 90
+
+export function restSecondsAfterSet(workout: Workout, exercise: WorkoutExercise, set: WorkoutSet): number {
+  const block = groupIntoBlocks(workout.exercises).find((item) => item.blockId === exercise.blockId)
+  const multi = Boolean(block && block.exercises.length > 1)
+  const lastExerciseOfRound = block?.exercises.at(-1)?.id === exercise.id
+  const workoutFinished = workout.exercises.every((item) => item.sets.every((itemSet) => itemSet.id === set.id || itemSet.confirmedAt))
+  if (workoutFinished) return 0
+  if (!multi) return exercise.restBetweenSetsSec ?? DEFAULT_REST_BETWEEN_SETS
+  return lastExerciseOfRound ? block!.restBetweenRoundsSec : block?.restBetweenExercisesSec ?? 0
+}
+
+const RUNNING_INTERVAL_ROUNDS = 6
+const RUNNING_INTERVAL_DISTANCE_KM = 0.4
+const RUNNING_INTERVAL_DURATION_SEC = 100
+const RUNNING_RECOVERY_DURATION_SEC = 90
+
+function runningIntervalSets(durationSec: number, distanceKm?: number): WorkoutSetDraft[] {
+  return Array.from({ length: RUNNING_INTERVAL_ROUNDS }, (_, position) => ({
+    position,
+    durationSec,
+    ...(distanceKm === undefined ? {} : { distanceKm }),
+  }))
+}
+
+export function applyRunningIntervalPreset(exercises: WorkoutExerciseDraft[], index: number): WorkoutExerciseDraft[] {
+  const list = ensureBlockIds(exercises)
+  const exercise = list[index]
+  if (!exercise || exercise.ref !== 'running' || exercise.inputKind !== 'distance' || exercise.blockType !== 'single') return list
+  return list.map((item, current) => current === index ? {
+    ...item,
+    name: 'Бег — интервалы',
+    blockPreset: 'interval',
+    blockRounds: 1,
+    restBetweenSetsSec: RUNNING_RECOVERY_DURATION_SEC,
+    sets: runningIntervalSets(RUNNING_INTERVAL_DURATION_SEC, RUNNING_INTERVAL_DISTANCE_KM),
+  } : item)
+}
+
+export function applyRunningActiveRecoveryPreset(exercises: WorkoutExerciseDraft[], index: number): WorkoutExerciseDraft[] {
+  const list = ensureBlockIds(exercises)
+  const exercise = list[index]
+  if (!exercise || exercise.ref !== 'running' || exercise.inputKind !== 'distance' || exercise.blockType !== 'single') return list
+  const blockId = crypto.randomUUID()
+  const shared = {
+    blockId,
+    blockType: 'group' as const,
+    blockPreset: 'interval' as const,
+    blockRounds: RUNNING_INTERVAL_ROUNDS,
+    restBetweenExercisesSec: 0,
+    restBetweenRoundsSec: 0,
+  }
+  const work: WorkoutExerciseDraft = {
+    ...exercise,
+    ...shared,
+    name: 'Бег — быстрый отрезок',
+    restBetweenSetsSec: undefined,
+    sets: runningIntervalSets(RUNNING_INTERVAL_DURATION_SEC, RUNNING_INTERVAL_DISTANCE_KM),
+  }
+  const recovery: WorkoutExerciseDraft = {
+    source: 'system',
+    ref: 'running',
+    name: 'Бег — восстановление',
+    muscleGroup: 'cardio',
+    inputKind: 'distance',
+    position: exercise.position + 1,
+    ...shared,
+    sets: runningIntervalSets(RUNNING_RECOVERY_DURATION_SEC),
+  }
+  return list.flatMap((item, current) => current === index ? [work, recovery] : [item])
+    .map((item, position) => ({ ...item, position }))
+}
 
 // --- Блоки на черновике (форма плана) -------------------------------------
 // Черновик упражнений может не иметь blockId/blockType; хелперы ниже работают

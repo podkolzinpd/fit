@@ -94,7 +94,6 @@ export const SYSTEM_EXERCISES = [
 // условным весом. Это даёт тренеру корректные поля ввода для функциональной
 // работы и позволяет сохранить факт без отдельных заметок.
 const FUNCTIONAL_PROTOCOLS = [
-  { source: 'system', ref: 'interval-running', name: 'Интервальный бег', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-running.jpg', equipment: 'Беговая дорожка', primaryMuscleDetail: 'Кардио', instructions: ['Укажите время и дистанцию одного интервала. Количество интервалов — числом подходов.'] },
   { source: 'system', ref: 'interval-bike', name: 'Интервалы на велотренажёре', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-stationary-bike.jpg', equipment: 'Велотренажёр', primaryMuscleDetail: 'Кардио', instructions: ['Укажите время и дистанцию одного интервала.'] },
   { source: 'system', ref: 'interval-rowing', name: 'Интервалы на гребном тренажёре', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-rowing-machine.jpg', equipment: 'Гребной тренажёр', primaryMuscleDetail: 'Кардио', instructions: ['Укажите время и дистанцию одного интервала.'] },
   { source: 'system', ref: 'interval-walking', name: 'Интервальная ходьба', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-walking.jpg', equipment: 'Беговая дорожка', primaryMuscleDetail: 'Кардио', instructions: ['Укажите время и дистанцию одного интервала.'] },
@@ -105,6 +104,21 @@ const FUNCTIONAL_PROTOCOLS = [
   { source: 'system', ref: 'farmer-carry', name: 'Фермерская прогулка', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-walking.jpg', equipment: 'Гантели или гири', primaryMuscleDetail: 'Кардио', instructions: ['Укажите длительность и дистанцию проходки.'] },
   { source: 'system', ref: 'sled-push', name: 'Толкание саней', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-walking.jpg', equipment: 'Сани', primaryMuscleDetail: 'Кардио', instructions: ['Укажите длительность и дистанцию проходки.'] },
 ] as const satisfies readonly ExerciseSnapshot[]
+
+// Специальные беговые упражнения остаются отдельными движениями, а варианты
+// обычного бега (лёгкий/длительный/темповый/интервальный) используют один ref
+// `running`. Так история и прогресс бега не распадаются на искусственные виды.
+const RUNNING_DRILLS = [
+  { source: 'system', ref: 'running-high-knees', name: 'Бег с высоким подниманием бедра', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-running.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Беговые упражнения', instructions: ['Держите корпус ровно и поднимайте бедро до комфортной высоты. Укажите время и дистанцию отрезка.'] },
+  { source: 'system', ref: 'running-butt-kicks', name: 'Бег с захлёстом голени', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-running.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Беговые упражнения', instructions: ['Бегите легко, направляя пятку к ягодице без запрокидывания корпуса. Укажите время и дистанцию.'] },
+  { source: 'system', ref: 'running-ankling', name: 'Семенящий бег', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-running.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Беговые упражнения', instructions: ['Делайте короткие частые шаги с активной работой стопы. Укажите время и дистанцию.'] },
+  { source: 'system', ref: 'running-bounds', name: 'Беговые прыжки', muscleGroup: 'cardio', inputKind: 'distance', imageUrl: '/exercises/base-running.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Беговые упражнения', instructions: ['Продвигайтесь вперёд упругими прыжками с контролируемым приземлением. Укажите время и дистанцию.'] },
+] as const satisfies readonly ExerciseSnapshot[]
+
+export const RUNNING_EXERCISE_REFS: ReadonlySet<string> = new Set([
+  'running',
+  ...RUNNING_DRILLS.map((exercise) => exercise.ref),
+])
 
 // Короткий базовый набор, который тренер может быстро добавить перед основной
 // частью тренировки. Мобилити фиксируем временем, а не выдуманными повторами.
@@ -134,5 +148,6 @@ export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = [
   ...BASE_EXERCISES,
   ...IMPORTED_EXERCISES.filter((exercise) => !SEEN_REFS.has(exercise.ref)),
   ...FUNCTIONAL_PROTOCOLS,
+  ...RUNNING_DRILLS,
   ...WARMUP_AND_MOBILITY,
 ]

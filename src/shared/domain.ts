@@ -6,10 +6,10 @@ export type Gender = 'male' | 'female'
 export type MuscleGroup = 'legs' | 'glutes' | 'chest' | 'back' | 'shoulders' | 'arms' | 'core' | 'cardio' | 'other'
 export type InputKind = 'strength' | 'distance' | 'reps' | 'duration'
 // Тип блока: одиночное упражнение или объединённая группа. Механика группы одна
-// (упражнения по кругу); «Сет» и «Круговая» — пресеты (блок различаются только
-// названием и дефолтами отдыха).
+// (упражнения по кругу); «Сет», «Круговая» и «Интервалы» — пресеты (блоки
+// различаются названием и дефолтами отдыха).
 export type BlockType = 'single' | 'group'
-export type BlockPreset = 'set' | 'circuit'
+export type BlockPreset = 'set' | 'circuit' | 'interval'
 
 export type AccountRole = 'trainer' | 'client'
 export type TrainerReaction = 'thumbs_up' | 'fire' | 'strong'

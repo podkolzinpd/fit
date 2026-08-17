@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, previousResultLine, replaceExercise, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -409,6 +409,24 @@ describe('isLastSetOfBlock', () => {
   })
 })
 
+describe('restSecondsAfterSet', () => {
+  const s = (id: string, position: number, confirmed = false): WorkoutSet => ({ id, position, fact: {}, confirmedAt: confirmed ? 'now' : null, version: 1 })
+
+  it('оставляет обычный отдых между беговыми интервалами', () => {
+    const run = { ...exercise('running', 0, 'run', 'single', [s('run-1', 0), s('run-2', 1)]), restBetweenSetsSec: 90 }
+    const workout = workoutWithExercises([run])
+    expect(restSecondsAfterSet(workout, run, run.sets[0]!)).toBe(90)
+  })
+
+  it('не запускает пассивный отдых между быстрым и восстановительным отрезком', () => {
+    const work = { ...exercise('work', 0, 'interval', 'group', [s('work-1', 0)]), blockPreset: 'interval' as const, restBetweenExercisesSec: 0, restBetweenRoundsSec: 0 }
+    const recovery = { ...exercise('recovery', 1, 'interval', 'group', [s('recovery-1', 0)]), blockPreset: 'interval' as const, restBetweenExercisesSec: 0, restBetweenRoundsSec: 0 }
+    const workout = workoutWithExercises([work, recovery])
+    expect(restSecondsAfterSet(workout, work, work.sets[0]!)).toBe(0)
+    expect(restSecondsAfterSet(workout, recovery, recovery.sets[0]!)).toBe(0)
+  })
+})
+
 describe('copyWorkout blocks', () => {
   it('сохраняет тип блока и объединяет упражнения одного блока новым общим id', () => {
     const source = workoutWithExercises([
@@ -469,6 +487,28 @@ describe('draft blocks', () => {
     expect(blockLabel('single', 'set')).toBe('Обычный')
     expect(blockLabel('group', 'set')).toBe('Сет')
     expect(blockLabel('group', 'circuit')).toBe('Круговая')
+    expect(blockLabel('group', 'interval')).toBe('Интервалы')
+  })
+
+  it('создаёт 6 × 400 м с точным временем и отдыхом, не меняя ref бега', () => {
+    const running: WorkoutExerciseDraft = { source: 'system', ref: 'running', name: 'Бег', muscleGroup: 'cardio', inputKind: 'distance', position: 0, blockId: 'run', blockType: 'single', sets: [{ position: 0 }] }
+    const [result] = applyRunningIntervalPreset([running], 0)
+    expect(result).toMatchObject({ ref: 'running', name: 'Бег — интервалы', blockPreset: 'interval', restBetweenSetsSec: 90 })
+    expect(result?.sets).toHaveLength(6)
+    expect(result?.sets.every((set) => set.durationSec === 100 && set.distanceKm === 0.4)).toBe(true)
+  })
+
+  it('создаёт шесть кругов быстрого и восстановительного бега с единым ref', () => {
+    const running: WorkoutExerciseDraft = { source: 'system', ref: 'running', name: 'Бег', muscleGroup: 'cardio', inputKind: 'distance', position: 0, blockId: 'run', blockType: 'single', sets: [{ position: 0 }] }
+    const result = applyRunningActiveRecoveryPreset([running], 0)
+    expect(result).toHaveLength(2)
+    expect(result.map((item) => item.name)).toEqual(['Бег — быстрый отрезок', 'Бег — восстановление'])
+    expect(result.every((item) => item.ref === 'running' && item.blockPreset === 'interval' && item.blockRounds === 6)).toBe(true)
+    expect(new Set(result.map((item) => item.blockId)).size).toBe(1)
+    expect(result[0]?.sets).toHaveLength(6)
+    expect(result[0]?.sets[0]).toMatchObject({ durationSec: 100, distanceKm: 0.4 })
+    expect(result[1]?.sets[0]).toMatchObject({ durationSec: 90 })
+    expect(result[1]?.sets[0]?.distanceKm).toBeUndefined()
   })
 
   it('groupDraftsIntoBlocks группирует по blockId, сохраняя индексы', () => {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type MouseEvent } from 'react'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
-import { MUSCLE_GROUP_LABELS, MUSCLE_GROUPS } from '../../shared/system-exercises'
+import { MUSCLE_GROUP_LABELS, MUSCLE_GROUPS, RUNNING_EXERCISE_REFS } from '../../shared/system-exercises'
 import type { ExerciseCatalogState } from './exercise-catalog'
 import { matchesExerciseSearch, rankExerciseSearch } from './exercise-search'
 import { readRecentKeys, recordRecent, resolveRecent } from './recent-exercises'
@@ -94,6 +94,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const [search, setSearch] = useState(initialSearch)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [customOnly, setCustomOnly] = useState(false)
+  const [runningOnly, setRunningOnly] = useState(false)
   const [selected, setSelected] = useState<Map<string, ExerciseSnapshot>>(() => new Map())
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
@@ -102,8 +103,9 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const { style: viewportStyle, keyboardOpen } = useVisualViewportStyle()
   const filtered = useMemo(
     () => filterExercises(catalog.exercises, category, search, muscle, equipment)
+      .filter((exercise) => !runningOnly || RUNNING_EXERCISE_REFS.has(exercise.ref))
       .filter((exercise) => !customOnly || exercise.source === 'custom'),
-    [catalog.exercises, category, search, muscle, equipment, customOnly],
+    [catalog.exercises, category, search, muscle, equipment, runningOnly, customOnly],
   )
   // Детальные мышцы выбранной группы (2-й уровень). Показываем, если их >1.
   const muscles = useMemo(
@@ -114,7 +116,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     () => (category === 'all' ? [] : equipmentForSelection(catalog.exercises, category, muscle)),
     [catalog.exercises, category, muscle],
   )
-  const hasFilters = category !== 'all' || muscle !== null || equipment !== null || customOnly
+  const hasFilters = category !== 'all' || muscle !== null || equipment !== null || customOnly || runningOnly
   const promotedClient = useMemo(
     () => (!hasFilters && !search.trim() ? clientRecent : []),
     [clientRecent, hasFilters, search],
@@ -156,6 +158,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     setMuscle(null)
     setEquipment(null)
     setCustomOnly(false)
+    setRunningOnly(false)
   }
   // Одна строка списка (используется и для недавних, и для основного списка).
   function item(exercise: ExerciseSnapshot, keyPrefix: string) {
@@ -194,6 +197,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
         <button type="button" disabled={catalog.saving || !name.trim() || !group} onClick={() => void createExercise()}>{catalog.saving ? 'Сохранение…' : 'Сохранить упражнение'}</button>
       </div> : <>
         <div className="picker-search-row"><input className="picker-search" aria-label="Поиск упражнения" placeholder="Название упражнения" value={search} onChange={(event) => setSearch(event.target.value)} /><button type="button" className={`picker-filter-toggle${hasFilters ? ' active' : ''}`} aria-expanded={filtersOpen} onClick={() => setFiltersOpen((value) => !value)}>Фильтры{hasFilters ? ' ·' : ''}</button></div>
+        <div className="picker-categories" aria-label="Быстрые фильтры"><button type="button" aria-pressed={runningOnly} className={runningOnly ? 'picker-category active' : 'picker-category'} onClick={() => setRunningOnly((value) => !value)}>Бег и СБУ</button></div>
         {filtersOpen && <div className="picker-filter-panel">
           <label>Группа<select aria-label="Группа мышц" value={category} onChange={(event) => selectGroup(event.target.value as 'all' | MuscleGroup)}><option value="all">Все группы</option>{MUSCLE_GROUPS.map((item) => <option key={item} value={item}>{MUSCLE_GROUP_LABELS[item]}</option>)}</select></label>
           {category !== 'all' && muscles.length > 1 && <label>Мышца<select aria-label="Мышца" value={muscle ?? ''} onChange={(event) => selectMuscle(event.target.value || null)}><option value="">Все мышцы</option>{muscles.map((item) => <option key={item}>{item}</option>)}</select></label>}
