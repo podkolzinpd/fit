@@ -575,6 +575,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-options-fields .block-rest-field { flex-direction: row; align-items: center; gap: 8px }
 .exercise-options-fields .block-rest-field input { min-height: 40px }
 .exercise-options-fields .exercise-comment { margin-top: 0 }
+.running-preset-actions { width: 100%; display: grid; gap: 7px }
+.running-preset-actions > span { color: var(--muted); font-size: 12px; font-weight: 700 }
+.running-preset-actions .secondary { width: 100%; min-height: 42px; padding: 9px 12px; text-align: left; box-shadow: none }
 .block-options { margin-top: 0; border-top: 0; padding-top: 0 }
 .block-options .block-rest { margin-top: 0 }
 /* «＋ Подход» и короткое поле «Отдых, с [90]» в один ряд (подпись и поле —
@@ -1160,6 +1163,16 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .picker-header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px }.picker-header h1 { font-size: var(--text-title) }
 .picker-close { flex: 0 0 auto; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: transparent; color: var(--muted); box-shadow: none }
 .picker-close svg { width: 22px; height: 22px; display: block; stroke-width: 2.2 }
+.workout-kind-entry { display:grid; gap:10px; min-height:310px; align-content:start }
+.workout-kind-entry > p { margin:0 0 4px; color:var(--muted); font-size:14px; line-height:1.45 }
+.workout-kind-option { display:grid; gap:4px; width:100%; min-height:88px; padding:16px; border:1px solid var(--border); border-radius:17px; background:var(--surface-raised); color:var(--fg); text-align:left; box-shadow:none }
+.workout-kind-option:hover, .workout-kind-option:focus-visible { border-color:var(--accent-surface-border); background:var(--accent-surface) }
+.workout-kind-option strong { font-size:19px; line-height:1.2 }
+.workout-kind-option span { color:var(--muted); font-size:13px; line-height:1.35 }
+.workout-kind-all { justify-self:center; min-height:44px; margin-top:2px }
+.workout-kind-tabs { flex:0 0 auto; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:3px; padding:3px; border:1px solid var(--border); border-radius:15px; background:var(--surface-sunken) }
+.workout-kind-tabs button { min-width:0; min-height:40px; padding:7px 5px; border:0; border-radius:11px; background:transparent; color:var(--muted); font-size:14px; font-weight:700; box-shadow:none }
+.workout-kind-tabs button.active { background:var(--surface-raised); color:var(--fg); box-shadow:0 1px 5px #17191d14 }
 .picker-search { flex: 0 0 auto; width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: 13px; color: var(--fg-on-surface); background: var(--input); font-size: 18px; outline: none }
 .picker-search-row { flex: 0 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px }
 .picker-filter-toggle { padding: 0 13px; border: 1px solid var(--border); background: var(--surface-sunken); color: var(--muted); box-shadow: none }.picker-filter-toggle.active { border-color: var(--accent-surface-border); color: var(--accent-strong); background: var(--accent-surface) }

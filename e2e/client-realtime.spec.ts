@@ -101,8 +101,9 @@ test('client and trainer receive progress and workout changes without reload', a
     await client.waitForTimeout(500)
     await trainer.goto(`/workouts/new?client=${clientId}`)
     await trainer.getByRole('button', { name: 'Выбрать упражнения' }).click()
+    await trainer.getByRole('button', { name: /^Бег/ }).click()
     await trainer.getByLabel('Поиск упражнения').fill('Бег')
-    await trainer.getByRole('button', { name: /^Бег / }).first().click()
+    await trainer.locator('[data-exercise-ref="running"]').click()
     await trainer.getByRole('button', { name: 'Добавить 1' }).click()
     await Promise.all([
       trainer.waitForURL(/\/workouts\/[0-9a-f-]+$/),

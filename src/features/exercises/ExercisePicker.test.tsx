@@ -93,6 +93,13 @@ describe('ExercisePicker', () => {
     expect(filterExercises(SYSTEM_EXERCISES, 'all', 'присд штангой').map((exercise) => exercise.ref)).toContain('barbell-squat')
   })
 
+  it('сводит варианты обычного бега к одному упражнению', () => {
+    for (const query of ['интервальный бег', 'лёгкий бег', 'длительный бег', 'темповый бег', 'восстановительный бег']) {
+      expect(filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', query)[0]?.ref, query).toBe('running')
+    }
+    expect(filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', 'интервальный бег').some((exercise) => exercise.ref === 'interval-running')).toBe(false)
+  })
+
   it('понимает распространённый английский ввод и сокращения тренера', () => {
     expect(filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', 'face pull').map((exercise) => exercise.ref)).toContain('fedb-face-pull')
     expect(filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', 'db incline press').map((exercise) => exercise.ref)).toContain('fedb-incline-dumbbell-press')
@@ -147,11 +154,28 @@ describe('ExercisePicker', () => {
     render(<ExercisePicker catalog={catalog()} onPick={onPick} onClose={vi.fn()} />)
     await user.click(screen.getByRole('button', { name: 'Фильтры' }))
     await user.selectOptions(screen.getByLabelText('Группа мышц'), 'cardio')
-    expect(screen.getByRole('button', { name: /Бег/ })).toBeInTheDocument()
+    expect(document.querySelector('[data-exercise-ref="running"]')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Присед со штангой/ })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Бег/ }))
+    await user.click(document.querySelector<HTMLButtonElement>('[data-exercise-ref="running"]')!)
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ ref: 'running' }))
   })
+
+  it('отделяет ручной вход в силовую и беговую тренировку', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} initialMode="choose" onPick={vi.fn()} onClose={vi.fn()} />)
+    expect(screen.getByRole('heading', { name: 'Тип тренировки' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Поиск упражнения')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /^Бег/ }))
+    expect(screen.getByRole('heading', { name: 'Беговая тренировка' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Бег \(Кардио\)/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Бег с высоким подниманием бедра/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Семенящий бег/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Жим лёжа/ })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Силовая', pressed: false }))
+    expect(screen.getByRole('heading', { name: 'Силовая тренировка' })).toBeInTheDocument()
+    expect(document.querySelector('[data-exercise-ref="bench-press"]')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Бег \(Кардио\)/ })).not.toBeInTheDocument()
+  }, 10_000)
 
   it('shows loading, error with retry, and empty states', async () => {
     const user = userEvent.setup()

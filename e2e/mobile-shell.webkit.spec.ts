@@ -106,6 +106,112 @@ test('iPhone: поля бега не перекрываются в быстро�
   await page.screenshot({ path: testInfo.outputPath('running-review.png'), fullPage: true })
 })
 
+test('iPhone: тренер назначает интервалы, спортсмен подтверждает работу и восстановление', async ({ browser }, testInfo) => {
+  testInfo.setTimeout(180_000)
+  const suffix = `${testInfo.workerIndex}-${Date.now()}`
+  const trainerContext = await browser.newContext({ viewport: { width: 390, height: 844 } })
+  const clientContext = await browser.newContext({ viewport: { width: 390, height: 844 } })
+  const trainer = await trainerContext.newPage()
+  const client = await clientContext.newPage()
+
+  async function register(page: Page, name: string, email: string, role?: 'client') {
+    await page.goto('/auth')
+    await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+    if (role) await page.getByLabel('Тип аккаунта').selectOption(role)
+    await page.getByLabel('Имя').fill(name)
+    await page.getByLabel('Email').fill(email)
+    await page.getByLabel('Пароль').fill('FitLocal123!')
+    await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  }
+
+  try {
+    await register(trainer, 'Интервальный тренер', `interval-trainer-${suffix}@fit.local`)
+    await expect(trainer.getByRole('heading', { name: 'Сегодня' })).toBeVisible()
+    await trainer.goto('/clients')
+    await trainer.getByRole('link', { name: 'Добавить' }).click()
+    await trainer.getByLabel('Имя').fill('Интервальный спортсмен')
+    await trainer.getByLabel('Пол').selectOption('female')
+    await trainer.getByLabel('Возраст').fill('30')
+    await trainer.getByLabel('Рост, см').fill('170')
+    await trainer.getByLabel('Начальный вес, кг').fill('60')
+    await Promise.all([
+      trainer.waitForURL(/\/clients\/[0-9a-f-]+$/),
+      trainer.getByRole('button', { name: 'Сохранить' }).click(),
+    ])
+    const clientId = trainer.url().match(/\/clients\/([0-9a-f-]+)$/)?.[1]
+    expect(clientId).toBeTruthy()
+    await trainer.getByRole('button', { name: 'Пригласить клиента' }).click()
+    const codeText = await trainer.getByText(/Код клиента:/).textContent()
+    const code = codeText?.match(/[A-F0-9]{12}/)?.[0]
+    expect(code).toBeTruthy()
+
+    await register(client, 'Интервальный спортсмен', `interval-client-${suffix}@fit.local`, 'client')
+    await expect(client.getByRole('heading', { name: 'Создайте личную карточку' })).toBeVisible()
+    await client.goto('/join')
+    await client.getByLabel('Код приглашения').fill(code!)
+    await client.getByRole('button', { name: 'Присоединиться' }).click()
+    await expect(client).toHaveURL(/\/me$/)
+
+    await trainer.goto(`/workouts/new?client=${clientId}`)
+    await trainer.getByRole('button', { name: 'Выбрать упражнения' }).click()
+    await expect(trainer.getByRole('heading', { name: 'Тип тренировки' })).toBeVisible()
+    await expect(trainer.getByRole('button', { name: /^Силовая/ })).toBeVisible()
+    await expectNoHorizontalOverflow(trainer)
+    await trainer.screenshot({ path: testInfo.outputPath('workout-kind-trainer-390.png'), fullPage: true })
+    await trainer.setViewportSize({ width: 430, height: 932 })
+    await expectNoHorizontalOverflow(trainer)
+    await trainer.screenshot({ path: testInfo.outputPath('workout-kind-trainer-430.png'), fullPage: true })
+    await trainer.setViewportSize({ width: 390, height: 844 })
+    await trainer.getByRole('button', { name: /^Бег/ }).click()
+    await expect(trainer.getByRole('button', { name: /Семенящий бег/ })).toBeVisible()
+    await trainer.locator('[data-exercise-ref="running"]').click()
+    await trainer.getByRole('button', { name: 'Добавить 1' }).click()
+    await trainer.getByText('Дополнительно', { exact: true }).click()
+    await trainer.getByRole('button', { name: '6 × 400 м + 90 с лёгкого бега' }).click()
+    await expect(trainer.getByLabel('Тип блока')).toHaveValue('interval')
+    await expect(trainer.locator('.planned-round')).toHaveCount(6)
+    await expect(trainer.getByLabel('Расстояние, подход 1').first()).toHaveValue('400')
+    await expect(trainer.getByLabel('Единица расстояния, подход 1').first()).toHaveValue('m')
+    await expectNoHorizontalOverflow(trainer)
+    await trainer.screenshot({ path: testInfo.outputPath('running-interval-plan.png'), fullPage: true })
+
+    await Promise.all([
+      trainer.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+      trainer.getByRole('button', { name: 'Сохранить' }).click(),
+    ])
+    const workoutUrl = trainer.url()
+    await expect(trainer.locator('.block-badge')).toContainText('Интервалы · 6 кр.')
+
+    await client.goto(workoutUrl)
+    await expect(client.locator('.block-badge')).toContainText('Интервалы · 6 кр.')
+    await client.getByRole('button', { name: 'Начать тренировку' }).click()
+    await expect(client.locator('.live-pinned .circuit-counter')).toHaveText('Круг 1 из 6')
+    await expectNoHorizontalOverflow(client)
+    await client.screenshot({ path: testInfo.outputPath('running-interval-live.png'), fullPage: true })
+
+    for (let round = 1; round <= 6; round += 1) {
+      await expect(client.locator('.live-pinned .circuit-counter')).toHaveText(`Круг ${round} из 6`)
+      for (let segment = 0; segment < 2; segment += 1) {
+        const nextConfirm = client.locator('.circuit-round.current button.live-set-check:not(:disabled)').first()
+        await expect(nextConfirm).toBeVisible()
+        await nextConfirm.click()
+        await expect(client.getByText(/^Отдых/)).toHaveCount(0)
+      }
+    }
+    await expect(client.getByRole('button', { name: 'Готово', exact: true })).toHaveCount(0)
+    await client.getByRole('button', { name: 'Завершить тренировку' }).click()
+    await expect(client).toHaveURL(workoutUrl)
+    await expect(client.getByText('Готово', { exact: true }).first()).toBeVisible()
+
+    await trainer.goto(workoutUrl)
+    await expect(trainer.getByText('Готово', { exact: true }).first()).toBeVisible()
+    await expect(trainer.locator('.block-badge')).toContainText('Интервалы · 6 кр.')
+  } finally {
+    await trainerContext.close()
+    await clientContext.close()
+  }
+})
+
 test('iPhone: новое имя профиля сохраняется после reload на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
@@ -216,8 +322,13 @@ test('iPhone: в live клиент видит те же действия с тр
   await page.goto('/me/workouts')
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await expect(page.getByRole('heading', { name: 'Тип тренировки' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Силовая/ })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('workout-kind-client-390.png'), fullPage: true })
+  await page.getByRole('button', { name: /^Бег/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Бег')
-  await page.getByRole('button', { name: /^Бег/ }).first().click()
+  await page.locator('[data-exercise-ref="running"]').click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
@@ -238,6 +349,7 @@ test('iPhone: в live клиент видит те же действия с тр
   await page.goto('/me/workouts')
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Планка')
   await page.getByRole('button', { name: /^Планка/ }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -360,6 +472,7 @@ async function createIsolatedClient(page: Page, testInfo: import('@playwright/te
 
 async function addExercise(page: Page, name: string, first = false) {
   await page.getByRole('button', { name: first ? 'Выбрать упражнения' : '＋ Упражнение' }).click()
+  if (first) await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill(name)
   await page.getByRole('button', { name: new RegExp(name) }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -504,6 +617,7 @@ test('iPhone: ручной выбор начинает с недавних, а �
   await page.goto('/workouts/new')
   await selectClient(page)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
 
   await expect(page.getByText('Недавние')).toBeVisible()
   await expect(page.getByText('Все упражнения')).toBeVisible()

@@ -83,6 +83,14 @@ describe('parseQuickWorkoutEntry', () => {
     expect(result.parsed[1]?.sets).toEqual([{ position: 0, durationSec: 1800, distanceKm: 5 }])
   })
 
+  it('записывает темповый и длительный бег под единым ref running', () => {
+    for (const text of ['Темповый бег 30 мин 5 км', 'Длительный бег 60 мин 10 км']) {
+      const result = parseQuickWorkoutEntry(text, SYSTEM_EXERCISE_CATALOG)
+      expect(result.unparsed, text).toEqual([])
+      expect(result.parsed[0]?.exercise.ref, text).toBe('running')
+    }
+  })
+
   it('понимает привычные форматы веса, подходов и RPE', () => {
     const result = parseQuickWorkoutEntry('Присед со штангой 80×8×3 RPE 8\nЖим лёжа 3 подхода по 10 60 кг RPE 7.5', catalog)
     expect(result.unparsed).toEqual([])

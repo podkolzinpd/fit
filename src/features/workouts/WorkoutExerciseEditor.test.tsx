@@ -25,6 +25,14 @@ function ReorderEditorHarness() {
   return <WorkoutExerciseEditor exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />
 }
 
+function RunningEditorHarness() {
+  const [draft, setDraft] = useState<WorkoutExerciseDraft[]>([{
+    source: 'system', ref: 'running', name: 'Бег', muscleGroup: 'cardio', inputKind: 'distance', position: 0,
+    blockId: 'running-block', blockType: 'single', sets: [{ position: 0 }],
+  }])
+  return <WorkoutExerciseEditor exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />
+}
+
 describe('workout exercise editor rules', () => {
   it('rounds adjusted weights to 2.5 kg', () => {
     expect(roundToStep(52.5 * 1.05, 2.5)).toBe(55)
@@ -90,6 +98,23 @@ describe('workout exercise editor rules', () => {
     render(<WorkoutExerciseEditor exercises={copied} onChange={vi.fn()} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />)
 
     expect(screen.getByLabelText('Время, подход 1')).toHaveValue('0:25')
+  })
+
+  it('быстро собирает интервалы с пассивным или активным восстановлением', async () => {
+    const user = userEvent.setup()
+    render(<RunningEditorHarness />)
+
+    await user.click(screen.getByText('Дополнительно'))
+    await user.click(screen.getByRole('button', { name: '6 × 400 м · отдых 90 с' }))
+    expect(screen.getByText('Подход 6')).toBeInTheDocument()
+    expect(screen.getByLabelText('Время, подход 1')).toHaveValue('1:40')
+    expect(screen.getByLabelText('Расстояние, подход 1')).toHaveValue(400)
+
+    await user.click(screen.getByRole('button', { name: '6 × 400 м + 90 с лёгкого бега' }))
+    expect(screen.getByLabelText('Тип блока')).toHaveValue('interval')
+    expect(screen.getAllByText(/Круг \d/)).toHaveLength(6)
+    expect(screen.getAllByText('Бег — быстрый отрезок').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Бег — восстановление').length).toBeGreaterThan(0)
   })
 
   it('hides optional rest and comment fields until requested', async () => {

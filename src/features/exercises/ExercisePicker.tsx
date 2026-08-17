@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type MouseEvent } from 'react'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
-import { MUSCLE_GROUP_LABELS, MUSCLE_GROUPS } from '../../shared/system-exercises'
+import { MUSCLE_GROUP_LABELS, MUSCLE_GROUPS, RUNNING_EXERCISE_REFS } from '../../shared/system-exercises'
 import type { ExerciseCatalogState } from './exercise-catalog'
 import { matchesExerciseSearch, rankExerciseSearch } from './exercise-search'
 import { readRecentKeys, recordRecent, resolveRecent } from './recent-exercises'
@@ -59,7 +59,22 @@ interface ExercisePickerProps {
   onPickMany?: (exercises: ExerciseSnapshot[]) => void
   multiple?: boolean
   initialSearch?: string
+  initialMode?: ExercisePickerMode
   onClose: () => void
+}
+
+export type ExercisePickerMode = 'choose' | 'strength' | 'running' | 'all'
+
+function matchesPickerMode(exercise: ExerciseSnapshot, mode: Exclude<ExercisePickerMode, 'choose'>) {
+  if (mode === 'all') return true
+  const running = RUNNING_EXERCISE_REFS.has(exercise.ref)
+  return mode === 'running' ? running : !running
+}
+
+function pickerTitle(mode: Exclude<ExercisePickerMode, 'choose'>) {
+  if (mode === 'running') return 'Беговая тренировка'
+  if (mode === 'strength') return 'Силовая тренировка'
+  return 'Каталог упражнений'
 }
 
 function exerciseKey(exercise: ExerciseSnapshot) {
@@ -87,7 +102,8 @@ function useVisualViewportStyle() {
   return { style, keyboardOpen }
 }
 
-export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, multiple = false, initialSearch = '', onClose }: ExercisePickerProps) {
+export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, multiple = false, initialSearch = '', initialMode = 'all', onClose }: ExercisePickerProps) {
+  const [mode, setMode] = useState<ExercisePickerMode>(initialSearch.trim() ? 'all' : initialMode)
   const [category, setCategory] = useState<'all' | MuscleGroup>('all')
   const [muscle, setMuscle] = useState<string | null>(null)
   const [equipment, setEquipment] = useState<string | null>(null)
@@ -100,10 +116,12 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const [group, setGroup] = useState<MuscleGroup | null>(null)
   const [inputKind, setInputKind] = useState<InputKind>('distance')
   const { style: viewportStyle, keyboardOpen } = useVisualViewportStyle()
+  const activeMode = mode === 'choose' ? 'all' : mode
   const filtered = useMemo(
     () => filterExercises(catalog.exercises, category, search, muscle, equipment)
+      .filter((exercise) => matchesPickerMode(exercise, activeMode))
       .filter((exercise) => !customOnly || exercise.source === 'custom'),
-    [catalog.exercises, category, search, muscle, equipment, customOnly],
+    [activeMode, catalog.exercises, category, search, muscle, equipment, customOnly],
   )
   // Детальные мышцы выбранной группы (2-й уровень). Показываем, если их >1.
   const muscles = useMemo(
@@ -116,14 +134,16 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   )
   const hasFilters = category !== 'all' || muscle !== null || equipment !== null || customOnly
   const promotedClient = useMemo(
-    () => (!hasFilters && !search.trim() ? clientRecent : []),
-    [clientRecent, hasFilters, search],
+    () => (!hasFilters && !search.trim() ? clientRecent.filter((exercise) => matchesPickerMode(exercise, activeMode)) : []),
+    [activeMode, clientRecent, hasFilters, search],
   )
   const recent = useMemo(() => {
     if (hasFilters || search.trim()) return []
     const clientKeys = new Set(promotedClient.map(exerciseKey))
-    return resolveRecent(readRecentKeys(), catalog.exercises).filter((exercise) => !clientKeys.has(exerciseKey(exercise)))
-  }, [catalog.exercises, hasFilters, promotedClient, search])
+    return resolveRecent(readRecentKeys(), catalog.exercises)
+      .filter((exercise) => matchesPickerMode(exercise, activeMode))
+      .filter((exercise) => !clientKeys.has(exerciseKey(exercise)))
+  }, [activeMode, catalog.exercises, hasFilters, promotedClient, search])
   const listExercises = useMemo(
     () => {
       if (hasFilters || search.trim()) return filtered
@@ -157,6 +177,13 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     setEquipment(null)
     setCustomOnly(false)
   }
+  function selectMode(next: Exclude<ExercisePickerMode, 'choose'>) {
+    setMode(next)
+    setCategory('all')
+    setMuscle(null)
+    setEquipment(null)
+    setCustomOnly(false)
+  }
   // Одна строка списка (используется и для недавних, и для основного списка).
   function item(exercise: ExerciseSnapshot, keyPrefix: string) {
     const checked = selected.has(exerciseKey(exercise))
@@ -185,15 +212,21 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
 
   return <div className={`sheet-overlay${keyboardOpen ? ' keyboard-open' : ''}`} style={viewportStyle} onClick={onClose}>
     <section className={`exercise-picker${selected.size ? ' has-selection' : ''}`} role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
-      <header className="picker-header"><h1>{creating ? 'Своё упражнение' : 'Добавить упражнение'}</h1><button type="button" className="picker-close" aria-label="Закрыть" onClick={creating ? () => setCreating(false) : onClose}><CloseIcon /></button></header>
-      {creating ? <div className="stack">
+      <header className="picker-header"><h1>{creating ? 'Своё упражнение' : mode === 'choose' ? 'Тип тренировки' : pickerTitle(activeMode)}</h1><button type="button" className="picker-close" aria-label="Закрыть" onClick={creating ? () => setCreating(false) : onClose}><CloseIcon /></button></header>
+      {mode === 'choose' && !creating ? <div className="workout-kind-entry">
+        <p>С чего начнём? Направление можно переключить позже и собрать смешанную тренировку.</p>
+        <button type="button" className="workout-kind-option" onClick={() => selectMode('strength')}><strong>Силовая</strong><span>Силовые, функциональные и упражнения в зале</span></button>
+        <button type="button" className="workout-kind-option" onClick={() => selectMode('running')}><strong>Бег</strong><span>Пробежка, интервалы, активное восстановление и СБУ</span></button>
+        <button type="button" className="link workout-kind-all" onClick={() => selectMode('all')}>Открыть все упражнения</button>
+      </div> : creating ? <div className="stack">
         <label className="field">Название<input value={name} onChange={(event) => setName(event.target.value)} placeholder="Например: Болгарский присед" /></label>
         <div className="picker-categories" aria-label="Группа мышц">{MUSCLE_GROUPS.map((item) => <button type="button" key={item} className={group === item ? 'picker-category active' : 'picker-category'} onClick={() => setGroup(item)}>{MUSCLE_GROUP_LABELS[item]}</button>)}</div>
         {group === 'cardio' && <div className="picker-categories"><button type="button" className={inputKind === 'distance' ? 'picker-category active' : 'picker-category'} onClick={() => setInputKind('distance')}>Время + дистанция</button><button type="button" className={inputKind === 'reps' ? 'picker-category active' : 'picker-category'} onClick={() => setInputKind('reps')}>Время + повторы</button></div>}
         {catalog.error && <p className="error">{catalog.error.message}</p>}
         <button type="button" disabled={catalog.saving || !name.trim() || !group} onClick={() => void createExercise()}>{catalog.saving ? 'Сохранение…' : 'Сохранить упражнение'}</button>
       </div> : <>
-        <div className="picker-search-row"><input className="picker-search" aria-label="Поиск упражнения" placeholder="Название упражнения" value={search} onChange={(event) => setSearch(event.target.value)} /><button type="button" className={`picker-filter-toggle${hasFilters ? ' active' : ''}`} aria-expanded={filtersOpen} onClick={() => setFiltersOpen((value) => !value)}>Фильтры{hasFilters ? ' ·' : ''}</button></div>
+        <div className="workout-kind-tabs" role="group" aria-label="Направление тренировки"><button type="button" aria-pressed={activeMode === 'strength'} className={activeMode === 'strength' ? 'active' : ''} onClick={() => selectMode('strength')}>Силовая</button><button type="button" aria-pressed={activeMode === 'running'} className={activeMode === 'running' ? 'active' : ''} onClick={() => selectMode('running')}>Бег</button><button type="button" aria-pressed={activeMode === 'all'} className={activeMode === 'all' ? 'active' : ''} onClick={() => selectMode('all')}>Все</button></div>
+        <div className="picker-search-row"><input className="picker-search" aria-label="Поиск упражнения" placeholder={activeMode === 'running' ? 'Бег или СБУ' : 'Название упражнения'} value={search} onChange={(event) => setSearch(event.target.value)} /><button type="button" className={`picker-filter-toggle${hasFilters ? ' active' : ''}`} aria-expanded={filtersOpen} onClick={() => setFiltersOpen((value) => !value)}>Фильтры{hasFilters ? ' ·' : ''}</button></div>
         {filtersOpen && <div className="picker-filter-panel">
           <label>Группа<select aria-label="Группа мышц" value={category} onChange={(event) => selectGroup(event.target.value as 'all' | MuscleGroup)}><option value="all">Все группы</option>{MUSCLE_GROUPS.map((item) => <option key={item} value={item}>{MUSCLE_GROUP_LABELS[item]}</option>)}</select></label>
           {category !== 'all' && muscles.length > 1 && <label>Мышца<select aria-label="Мышца" value={muscle ?? ''} onChange={(event) => selectMuscle(event.target.value || null)}><option value="">Все мышцы</option>{muscles.map((item) => <option key={item}>{item}</option>)}</select></label>}
