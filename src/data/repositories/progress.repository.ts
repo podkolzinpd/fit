@@ -1,4 +1,4 @@
-import type { CustomMetric, ProgressDraft, ProgressEntry, WorkoutRegularity, WorkoutRegularityPeriod } from '../../shared/domain'
+import type { CustomMetric, ProgressDraft, ProgressEntry, RunningProgressFormat, RunningProgressSession, WorkoutRegularity, WorkoutRegularityPeriod } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { progressQueries } from '../queries/progress.queries'
 import { RepositoryError, repositoryError } from './error'
@@ -19,6 +19,19 @@ export const progressRepository = {
       partialCount: row.partial_count,
       skippedCount: row.skipped_count,
       completionPercent: row.completion_percent ?? null,
+    }))
+  },
+  async running(clientId: string, periodStart: string, periodEnd: string): Promise<RunningProgressSession[]> {
+    const result = await progressQueries.running(clientId, periodStart, periodEnd)
+    if (result.error) throw repositoryError(result.error)
+    return result.data.map((row) => ({
+      workoutId: row.workout_id,
+      workoutDate: localDate(row.workout_date),
+      format: row.running_format as RunningProgressFormat,
+      distanceKm: row.distance_km ?? undefined,
+      durationSec: row.duration_sec ?? undefined,
+      paceSecPerKm: row.pace_sec_per_km ?? undefined,
+      rpe: row.rpe ?? undefined,
     }))
   },
   async list(clientId: string): Promise<ProgressEntry[]> {
