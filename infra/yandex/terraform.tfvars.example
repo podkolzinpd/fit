@@ -12,6 +12,11 @@ serverless_service_cidr = "198.19.0.0/16"
 # The tagged image must be pushed before apply.
 api_image_tag = "foundation"
 
+# Public identifier of the Yandex OAuth application. Do not put its client
+# secret here. Keep public invocation disabled until the reviewed auth image is
+# deployed and the read-only allowlist is populated.
+# yandex_oauth_client_id = "00000000000000000000000000000000"
+
 # Add only after creating a DATABASE_URL payload outside Terraform.
 # database_url_secret_version_id = "e6q00000000000000000"
 

@@ -115,6 +115,24 @@ variable "allow_unauthenticated_api" {
   default     = false
 }
 
+variable "yandex_oauth_client_id" {
+  description = "Optional public OAuth client ID used to validate Yandex ID tokens. This is not the client secret."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = (
+      var.yandex_oauth_client_id == null
+      || (
+        length(trimspace(var.yandex_oauth_client_id)) > 0
+        && length(var.yandex_oauth_client_id) <= 200
+      )
+    )
+    error_message = "yandex_oauth_client_id must be a non-empty value up to 200 characters or null."
+  }
+}
+
 variable "database_url_secret_version_id" {
   description = "Optional existing Lockbox version containing DATABASE_URL. Create it outside Terraform to keep credentials out of state."
   type        = string

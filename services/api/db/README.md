@@ -17,6 +17,13 @@ trainers can read the card, while an unrelated actor cannot. Invitations and
 membership commands are intentionally deferred until their API boundary is
 ported.
 
+The fourth migration adds the Yandex ID identity map and the server-side
+read-only pilot assignment. It stores only a SHA-256 digest of the app-specific
+Yandex `psuid`; raw provider IDs, login, email and OAuth tokens are not stored.
+The runtime can resolve an internal profile UUID only when both the identity
+mapping and an enabled `yandex`/`read_only` assignment exist. The resulting UUID
+is then installed as transaction-local actor context before profile RLS runs.
+
 ## Roles
 
 - `fit_owner` owns the `fit` database and runs migrations only;
