@@ -81,6 +81,7 @@ test('iPhone: поля бега не перекрываются в быстро�
   await expect(distance).toHaveAttribute('placeholder', '0')
   await expect(unit).toHaveValue('km')
   await expect(unit.locator('option:checked')).toHaveText('км')
+  await expect(unit).toHaveCSS('appearance', 'none')
 
   const rowBox = await row.boundingBox()
   const durationBox = await duration.boundingBox()
@@ -90,12 +91,17 @@ test('iPhone: поля бега не перекрываются в быстро�
   expect(durationBox).not.toBeNull()
   expect(distanceBox).not.toBeNull()
   expect(unitBox).not.toBeNull()
+  expect(unitBox!.width).toBeGreaterThanOrEqual(60)
   for (const box of [durationBox!, distanceBox!, unitBox!]) {
     expect(box.x).toBeGreaterThanOrEqual(rowBox!.x)
     expect(box.x + box.width).toBeLessThanOrEqual(rowBox!.x + rowBox!.width)
   }
   expect(distanceBox!.x).toBeGreaterThanOrEqual(durationBox!.x + durationBox!.width)
   expect(unitBox!.x).toBeGreaterThanOrEqual(distanceBox!.x + distanceBox!.width)
+  await unit.selectOption('m')
+  await expect(unit.locator('option:checked')).toHaveText('м')
+  await unit.selectOption('km')
+  await expect(unit.locator('option:checked')).toHaveText('км')
   await expectNoHorizontalOverflow(page)
   await page.screenshot({ path: testInfo.outputPath('running-review.png'), fullPage: true })
 })
