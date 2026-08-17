@@ -1,6 +1,7 @@
 import type { BlockPreset, BlockType, ClientStats, ExerciseSnapshot, InputKind, Workout, WorkoutDraft, WorkoutExercise, WorkoutExerciseDraft, WorkoutSet, WorkoutSetDraft, WorkoutSummary } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
+import { runDistanceLabel, runPaceLabel } from '../../shared/run-metrics'
 
 export interface ExerciseBlock {
   blockId: string
@@ -408,7 +409,11 @@ export function durationLabel(durationSec?: number, durationMin?: number): strin
 }
 
 function setLine(weightKg?: number, reps?: number, distanceKm?: number, durationSec?: number, durationMin?: number, rpe?: number, showRpe = true): string {
-  return [weightKg && `${weightKg} кг`, reps && `${reps} повт.`, distanceKm && `${distanceKm} км`, durationLabel(durationSec, durationMin), showRpe && rpe !== undefined && `RPE ${rpe}`].filter(Boolean).join(' × ')
+  const duration = durationLabel(durationSec, durationMin)
+  const distance = runDistanceLabel(distanceKm)
+  const pace = runPaceLabel(durationSeconds(durationSec, durationMin), distanceKm)
+  const result = [weightKg && `${weightKg} кг`, reps && `${reps} повт.`, distance, duration, showRpe && rpe !== undefined && `RPE ${rpe}`].filter(Boolean).join(' × ')
+  return pace && result ? `${result} · темп ${pace}` : result
 }
 
 // Короткий план допустим только когда каждая строка будет выглядеть одинаково.

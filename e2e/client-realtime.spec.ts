@@ -118,7 +118,7 @@ test('client and trainer receive progress and workout changes without reload', a
     // Обе стороны остаются на одном workout detail: старт и завершение должны
     // появиться у тренера через realtime, без reload или повторной навигации.
     await expect(trainer.getByRole('link', { name: 'Продолжить тренировку' })).toBeVisible({ timeout: 10_000 })
-    await client.getByLabel('Фактическое время, сек').fill('30')
+    await client.getByLabel('Фактическое время').fill('30:00')
     await client.getByLabel('Фактическая дистанция').fill('5')
     await client.getByRole('button', { name: 'Готово, отдых' }).click()
     await expect(client.locator('.live-exercise-collapsed')).toBeVisible()

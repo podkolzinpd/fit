@@ -23,8 +23,8 @@ describe('WorkoutSetTable', () => {
       </WorkoutSetTable>,
     )
 
-    expect(screen.getByText('Сек.')).toBeInTheDocument()
-    expect(screen.getByText('Км')).toBeInTheDocument()
+    expect(screen.getByText('Время')).toBeInTheDocument()
+    expect(screen.getByText('Дистанц.')).toBeInTheDocument()
     expect(screen.queryByText('RPE')).not.toBeInTheDocument()
   })
 

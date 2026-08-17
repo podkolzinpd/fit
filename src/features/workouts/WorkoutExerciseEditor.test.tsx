@@ -70,7 +70,8 @@ describe('workout exercise editor rules', () => {
       { source: 'system', ref: 'running', name: 'Бег', muscleGroup: 'cardio', inputKind: 'distance', position: 2, sets: [{ position: 0 }] },
     ]
     render(<WorkoutExerciseEditor exercises={mixed} onChange={onChange} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />)
-    expect(screen.getAllByLabelText('Время, сек, подход 1')).toHaveLength(2)
+    expect(screen.getByLabelText('Время, сек, подход 1')).toBeInTheDocument()
+    expect(screen.getByLabelText('Время, подход 1')).toBeInTheDocument()
     expect(screen.getByLabelText('Расстояние, подход 1')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Сбросить значения' }))
@@ -88,7 +89,7 @@ describe('workout exercise editor rules', () => {
     }]
     render(<WorkoutExerciseEditor exercises={copied} onChange={vi.fn()} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />)
 
-    expect(screen.getByLabelText('Время, сек, подход 1')).toBeValid()
+    expect(screen.getByLabelText('Время, подход 1')).toHaveValue('0:25')
   })
 
   it('hides optional rest and comment fields until requested', async () => {

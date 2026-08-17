@@ -22,6 +22,7 @@ describe('workouts repository rules', () => {
     expect(compactPlannedSetSummary([base(0), base(1), base(2)])).toBe('3 × 150 кг × 10 повт.')
     expect(compactPlannedSetSummary([base(0), base(1, 8)])).toBeNull()
     expect(compactPlannedSetSummary([{ id: 'duration', position: 0, durationSec: 300, fact: {}, confirmedAt: null, version: 1 }])).toBe('5:00')
+    expect(compactPlannedSetSummary([{ id: 'run', position: 0, durationSec: 1800, distanceKm: 5, fact: {}, confirmedAt: null, version: 1 }])).toBe('5 км × 30:00 · темп 6:00/км')
   })
 
   it('сворачивает одинаковый факт и кратко отмечает невыполненные подходы', () => {
@@ -29,6 +30,10 @@ describe('workouts repository rules', () => {
     expect(compactCompletedSetSummary([base(0), base(1), base(2)])).toBe('3 × 150 кг × 10 повт.')
     expect(compactCompletedSetSummary([base(0), base(1, 140, 8)])).toBe('150 кг × 10 повт. · 140 кг × 8 повт.')
     expect(compactCompletedSetSummary([base(0), base(1, 150, 10, false)])).toBe('150 кг × 10 повт. · не выполнено: 1')
+    expect(compactCompletedSetSummary([{
+      id: 'run', position: 0, durationSec: 1800, distanceKm: 5,
+      fact: { durationSec: 1780, distanceKm: 5.2 }, confirmedAt: 'now', version: 1,
+    }])).toBe('5,2 км × 29:40 · темп 5:42/км')
   })
 
   it('показывает последний заполненный результат без RPE', () => {
