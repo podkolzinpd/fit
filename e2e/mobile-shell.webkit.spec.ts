@@ -315,7 +315,7 @@ test('iPhone: в live клиент видит те же действия с тр
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByLabel('Поиск упражнения').fill('Бег')
-  await page.getByRole('button', { name: /^Бег/ }).first().click()
+  await page.locator('[data-exercise-ref="running"]').click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()

@@ -1317,7 +1317,11 @@ export function LiveWorkoutPage() {
     const saveStatus = savingSetId === set.id ? 'saving' : saveErrorSetId === set.id ? 'error' : savedSetId === set.id ? 'saved' : 'idle'
     const setNumber = label?.match(/\d+/)?.[0]
     const restSeconds = query.data ? restSecondsAfterSet(query.data, exercise, set) : 0
-    const confirmLabel = set.confirmedAt ? 'Подтверждено' : restSeconds > 0 ? 'Готово, отдых' : 'Готово'
+    const confirmLabel = set.confirmedAt
+      ? 'Подтверждено'
+      : exercise.blockPreset === 'interval' && restSeconds === 0
+        ? 'Готово'
+        : 'Готово, отдых'
     if (!isExpanded) {
       const plan = planLine(exercise.inputKind, set)
       const fact = set.confirmedAt ? factLine(displayedSet) : enteredFactLine(displayedSet)
