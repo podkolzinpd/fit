@@ -5,13 +5,14 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-17
-Проверенный `main`: `52dde8e` (`fix infra: align Yandex stage deployment (#411)`)
+Проверенный `main`: `60a2482` (`feat auth: add Yandex ID profile pilot (#413)`)
 
 ## Активная работа
 
-- Первый private stage в Yandex Cloud развёрнут и проверен. Следующий этап
-  миграции — Yandex ID/profile vertical slice и серверная tenant-allowlist для
-  read-only пилота на внутренних или синтетических аккаунтах.
+- Yandex ID/profile vertical slice и серверная tenant-allowlist реализованы в
+  коде. Следующий этап — зарегистрировать OAuth-приложение, отдельно одобрить
+  deploy миграции `000004` и auth-revision, затем включить внутренний read-only
+  pilot без переключения production frontend.
 
 ## Последняя проверенная продуктовая точка
 
@@ -70,11 +71,17 @@
   matching, fallback и сохранение; в feedback/reaction задачах они не меняются.
 - Изолированный Yandex Cloud stage содержит приватные Managed PostgreSQL 17 и
   Serverless Container без прогретых экземпляров. Миграции `000001`–`000003`
-  применены; API readiness подтверждён. Production frontend продолжает
+  применены; API readiness подтверждён. Код `#413` добавил проверку Yandex ID,
+  hashed identity mapping, allowlist и read-only `/v1/profile`, но миграция
+  `000004` и новая revision ещё не развёрнуты. Production frontend продолжает
   использовать Supabase, публичный invoker и frontend cutover не включены.
 
 ## Последние проверки
 
+- `#413`: merge `60a2482` подтверждён; GitHub CI app/database/e2e и Vercel
+  прошли. Локально `npm run check`, 20 API-тестов и 5 PostgreSQL 17 integration
+  tests зелёные; проверены wrong OAuth app, hashed `psuid`, allowlist, RLS и
+  очистка actor context. Terraform 1.13.5 `fmt-check`/`validate` прошли.
 - `#411`: merge `52dde8e` подтверждён; GitHub CI app/database/e2e и Vercel
   прошли. Реальный private stage deploy проверил `/health` и `/ready` с `200`,
   unauthenticated `403`, идемпотентные миграции `000001`–`000003` и чистый
@@ -85,15 +92,10 @@
   app/database/e2e прошёл. Локально `npm run check` — 441 тест приложения,
   10 тестов API, lint/typecheck/DB types/iOS permissions/build; WebKit проверил
   выбор силовой и беговой тренировки, а полный e2e-прогон — 57 сценариев.
-- `#407` / `YAFIT-301`: merge `ad4d6ca` подтверждён; GitHub CI
-  app/database/e2e и Vercel прошли. Локально `npm run check` — 441 тест
-  приложения, 10 тестов API, сборка; БД — 506 тестов. WebKit подтвердил
-  Trainer↔Client интервалы и читаемые `км/м`, визуальные профили 390/430/1440
-  зелёные.
 ## Ближайший roadmap
 
-1. Yandex ID, profile vertical slice и серверная tenant-allowlist.
-2. Read-only пилот на внутренних или синтетических аккаунтах.
+1. OAuth-приложение Yandex ID и отдельно одобренный auth stage deploy.
+2. Identity mapping/allowlist и read-only пилот на внутренних аккаунтах.
 3. `YAFIT-302` — беговой прогресс: километраж, длительность, темп и RPE.
 
 ## Отложенный backlog
