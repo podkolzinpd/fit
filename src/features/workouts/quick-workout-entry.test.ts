@@ -83,6 +83,57 @@ describe('parseQuickWorkoutEntry', () => {
     expect(result.parsed[1]?.sets).toEqual([{ position: 0, durationSec: 1800, distanceKm: 5 }])
   })
 
+  it('покрывает обязательные короткие фразы бегового ввода', () => {
+    const continuous = parseQuickWorkoutEntry('бег 30 минут 5 км', catalog)
+    expect(continuous.unparsed).toEqual([])
+    expect(continuous.parsed[0]).toMatchObject({
+      exercise: { ref: 'running' },
+      sets: [{ position: 0, durationSec: 1800, distanceKm: 5 }],
+    })
+
+    const intervals = parseQuickWorkoutEntry('6 по 400 метров', catalog)
+    expect(intervals.unparsed).toEqual([])
+    expect(intervals.parsed[0]).toMatchObject({
+      exercise: { ref: 'running', name: 'Бег — интервалы' },
+      structure: { blockPreset: 'interval', restBetweenSetsSec: 90 },
+    })
+    expect(intervals.parsed[0]?.sets).toEqual(Array.from({ length: 6 }, (_, position) => ({ position, distanceKm: 0.4 })))
+
+    const timedSegment = parseQuickWorkoutEntry('400 метров за 1:40', catalog)
+    expect(timedSegment.unparsed).toEqual([])
+    expect(timedSegment.parsed[0]).toMatchObject({
+      exercise: { ref: 'running' },
+      sets: [{ position: 0, durationSec: 100, distanceKm: 0.4 }],
+    })
+
+    const recovery = parseQuickWorkoutEntry('между интервалами 200 метров трусцой', catalog)
+    expect(recovery.unparsed).toEqual([])
+    expect(recovery.parsed[0]).toMatchObject({
+      exercise: { ref: 'running', name: 'Бег — восстановление' },
+      sets: [{ position: 0, distanceKm: 0.2 }],
+    })
+
+    const mixed = parseQuickWorkoutEntry('400 метров + 10 берпи', SYSTEM_EXERCISE_CATALOG)
+    expect(mixed.unparsed).toEqual([])
+    expect(mixed.parsed.map((item) => item.exercise.ref)).toEqual(['running', 'burpees'])
+    expect(mixed.parsed[0]?.sets).toEqual([{ position: 0, distanceKm: 0.4 }])
+    expect(mixed.parsed[1]?.sets).toEqual([{ position: 0, reps: 10 }])
+
+    const activeRecovery = parseQuickWorkoutEntry(
+      '6 по 400 метров за 1:40, между интервалами 200 метров трусцой',
+      catalog,
+    )
+    expect(activeRecovery.unparsed).toEqual([])
+    expect(activeRecovery.parsed.map((item) => item.exercise.name)).toEqual([
+      'Бег — быстрый отрезок',
+      'Бег — восстановление',
+    ])
+    expect(activeRecovery.parsed[0]?.sets).toEqual(Array.from({ length: 6 }, (_, position) => ({ position, durationSec: 100, distanceKm: 0.4 })))
+    expect(activeRecovery.parsed[1]?.sets).toEqual(Array.from({ length: 6 }, (_, position) => ({ position, distanceKm: 0.2 })))
+    expect(activeRecovery.parsed[0]?.structure).toMatchObject({ blockType: 'group', blockPreset: 'interval', blockRounds: 6 })
+    expect(activeRecovery.parsed[1]?.structure).toEqual(activeRecovery.parsed[0]?.structure)
+  })
+
   it('записывает темповый и длительный бег под единым ref running', () => {
     for (const text of ['Темповый бег 30 мин 5 км', 'Длительный бег 60 мин 10 км']) {
       const result = parseQuickWorkoutEntry(text, SYSTEM_EXERCISE_CATALOG)
