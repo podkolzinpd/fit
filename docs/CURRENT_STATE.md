@@ -5,12 +5,13 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-17
-Проверенный `main`: `3c2907c` (`YAFIT-306: выбор силовой или беговой тренировки (#409)`)
+Проверенный `main`: `52dde8e` (`fix infra: align Yandex stage deployment (#411)`)
 
 ## Активная работа
 
-- Активной задачи нет. Следующая задача бегового блока по согласованному плану:
-  `YAFIT-302` — беговой прогресс: километраж, длительность, темп и RPE.
+- Первый private stage в Yandex Cloud развёрнут и проверен. Следующий этап
+  миграции — Yandex ID/profile vertical slice и серверная tenant-allowlist для
+  read-only пилота на внутренних или синтетических аккаунтах.
 
 ## Последняя проверенная продуктовая точка
 
@@ -67,12 +68,19 @@
   защищён UI и БД.
 - Voice-first главная, SpeechKit и LLM-разбор работают через прежние prompt,
   matching, fallback и сохранение; в feedback/reaction задачах они не меняются.
-- Fastify/Yandex Cloud foundation и Terraform/PostgreSQL migration baseline
-  существуют отдельно; production frontend продолжает использовать Supabase,
-  облачные ресурсы не создавались.
+- Изолированный Yandex Cloud stage содержит приватные Managed PostgreSQL 17 и
+  Serverless Container без прогретых экземпляров. Миграции `000001`–`000003`
+  применены; API readiness подтверждён. Production frontend продолжает
+  использовать Supabase, публичный invoker и frontend cutover не включены.
 
 ## Последние проверки
 
+- `#411`: merge `52dde8e` подтверждён; GitHub CI app/database/e2e и Vercel
+  прошли. Реальный private stage deploy проверил `/health` и `/ready` с `200`,
+  unauthenticated `403`, идемпотентные миграции `000001`–`000003` и чистый
+  Terraform plan. Временный migration container, S3-ключи и диагностические
+  объекты удалены; owner-secret деактивирован. Локально `npm run check` — 441
+  тест приложения; Terraform 1.13.5 `fmt -check` и `validate` зелёные.
 - `#409` / `YAFIT-306`: merge `3c2907c` подтверждён; GitHub CI
   app/database/e2e прошёл. Локально `npm run check` — 441 тест приложения,
   10 тестов API, lint/typecheck/DB types/iOS permissions/build; WebKit проверил
@@ -82,19 +90,11 @@
   приложения, 10 тестов API, сборка; БД — 506 тестов. WebKit подтвердил
   Trainer↔Client интервалы и читаемые `км/м`, визуальные профили 390/430/1440
   зелёные.
-- `#405` / `YAFIT-305`: merge `7fa7a36` подтверждён; GitHub CI app/database/e2e
-  и Vercel прошли. Локально полный `npm run check`, WebKit quick review на
-  390 px и визуальные профили Client 390/430 + Trainer 1440 зелёные.
-- `#401` / `YAFIT-300`: merge `3b3a1ba` подтверждён; GitHub CI app/database/e2e
-  и Vercel прошли. Локально `npm run check` — 432 теста приложения, 10 тестов
-  API, lint/typecheck/DB types/iOS permissions/build; полный пользовательский
-  сценарий и Client 390/430 + Trainer 1440 проверены. LLM/SpeechKit не менялись.
-
 ## Ближайший roadmap
 
-1. `YAFIT-302` — беговой прогресс: километраж, длительность, темп и RPE.
-2. `YAFIT-303` — текстовые и голосовые сценарии бегового ввода.
-3. `YAFIT-290` — actionable-список «Кому нужно внимание» для тренера.
+1. Yandex ID, profile vertical slice и серверная tenant-allowlist.
+2. Read-only пилот на внутренних или синтетических аккаунтах.
+3. `YAFIT-302` — беговой прогресс: километраж, длительность, темп и RPE.
 
 ## Отложенный backlog
 
