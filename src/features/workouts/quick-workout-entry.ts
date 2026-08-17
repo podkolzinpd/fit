@@ -1,4 +1,4 @@
-import type { ExerciseSnapshot, WorkoutSetDraft } from '../../shared/domain'
+import type { BlockPreset, BlockType, ExerciseSnapshot, WorkoutSetDraft } from '../../shared/domain'
 import { isValidRpe } from '../../shared/rpe'
 import { isExerciseSearchAlias, rankExerciseSearch, SEARCH_ALIASES } from '../exercises/exercise-search'
 
@@ -7,6 +7,15 @@ export interface ParsedWorkoutExercise {
   exercise: ExerciseSnapshot
   sets: WorkoutSetDraft[]
   hasValues: boolean
+  structure?: {
+    blockId?: string
+    blockType?: BlockType
+    blockPreset?: BlockPreset
+    blockRounds?: number
+    restBetweenExercisesSec?: number
+    restBetweenRoundsSec?: number
+    restBetweenSetsSec?: number
+  }
 }
 
 export interface UnparsedWorkoutLine {

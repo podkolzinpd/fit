@@ -4,10 +4,11 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { goalsRepository } from '../../data/repositories/goals.repository'
 import { progressRepository } from '../../data/repositories/progress.repository'
-import { workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { createRunningFormatDrafts, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, Workout, WorkoutDraft, WorkoutSetDraft } from '../../shared/domain'
 import { localDate, todayInTimeZone } from '../../shared/local-date'
 import { isValidRpe } from '../../shared/rpe'
+import type { RunningFormat } from '../../shared/running-formats'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { Page } from '../../shared/ui'
 import { ExercisePicker, recentExercisesForClient, useExerciseCatalog } from '../exercises'
@@ -79,9 +80,13 @@ function draftExercise(item: ParsedWorkoutExercise, position: number): WorkoutDr
   return {
     ...item.exercise,
     position,
-    blockId: crypto.randomUUID(),
-    blockType: 'single',
-    blockRounds: 1,
+    blockId: item.structure?.blockId ?? crypto.randomUUID(),
+    blockType: item.structure?.blockType ?? 'single',
+    blockPreset: item.structure?.blockPreset,
+    blockRounds: item.structure?.blockRounds ?? 1,
+    restBetweenExercisesSec: item.structure?.restBetweenExercisesSec,
+    restBetweenRoundsSec: item.structure?.restBetweenRoundsSec,
+    restBetweenSetsSec: item.structure?.restBetweenSetsSec,
     // Черновик мог быть создан до появления строгого ограничения RPE в БД.
     // Не даём старому значению сорвать сохранение всей тренировки.
     sets: (item.sets.length ? item.sets : [{ position: 0 }]).map((set) => ({
@@ -89,6 +94,24 @@ function draftExercise(item: ParsedWorkoutExercise, position: number): WorkoutDr
       ...(isValidRpe(set.rpe) ? {} : { rpe: undefined }),
     })),
   }
+}
+
+function runningFormatItems(exercise: ExerciseSnapshot, format: RunningFormat): ParsedWorkoutExercise[] {
+  return createRunningFormatDrafts(exercise, format).map((draft) => ({
+    line: draft.name,
+    exercise: { ...exercise, name: draft.name },
+    sets: draft.sets,
+    hasValues: draft.sets.some((set) => Object.keys(set).some((key) => key !== 'position' && set[key as keyof typeof set] !== undefined)),
+    structure: {
+      blockId: draft.blockId,
+      blockType: draft.blockType,
+      blockPreset: draft.blockPreset,
+      blockRounds: draft.blockRounds,
+      restBetweenExercisesSec: draft.restBetweenExercisesSec,
+      restBetweenRoundsSec: draft.restBetweenRoundsSec,
+      restBetweenSetsSec: draft.restBetweenSetsSec,
+    },
+  }))
 }
 
 export function TodayPage({ clientMode = false }: TodayPageProps) {
@@ -364,7 +387,20 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     setPickerOpen(false)
   }
 
-  async function pickExercises(exercises: ExerciseSnapshot[]) {
+  async function pickExercises(exercises: ExerciseSnapshot[], runningFormat?: RunningFormat) {
+    if (runningFormat && exercises[0]) {
+      const selectedItems = runningFormatItems(exercises[0], runningFormat)
+      setItems((current) => {
+        if (replaceIndex === null) return [...current, ...selectedItems]
+        const next = [...current]
+        next.splice(replaceIndex, 1, ...selectedItems)
+        return next
+      })
+      setManualRefs((current) => [...new Set([...current, 'running'])])
+      setReplaceIndex(null)
+      setPickerOpen(false)
+      return
+    }
     if (replaceIndex === null) { await addExercises(exercises); return }
     const exercise = exercises[0]
     if (!exercise) return
@@ -544,6 +580,6 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </section></section>}
     </section>}
     {(catalog.error ?? (!clientMode ? todayWorkouts.error : null)) && <p className="error">{(catalog.error ?? (!clientMode ? todayWorkouts.error : null))?.message}</p>}
-    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} onPick={(exercise) => pickExercises([exercise])} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
   </Page>
 }

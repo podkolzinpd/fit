@@ -1,5 +1,7 @@
 import type { BlockPreset, BlockType, ClientStats, ExerciseSnapshot, InputKind, Workout, WorkoutDraft, WorkoutExercise, WorkoutExerciseDraft, WorkoutSet, WorkoutSetDraft, WorkoutSummary } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
+import type { RunningFormat } from '../../shared/running-formats'
+import { runningFormatExerciseName } from '../../shared/running-formats'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 import { runDistanceLabel, runPaceLabel } from '../../shared/run-metrics'
 
@@ -115,6 +117,31 @@ function runningIntervalSets(durationSec: number, distanceKm?: number): WorkoutS
     durationSec,
     ...(distanceKm === undefined ? {} : { distanceKm }),
   }))
+}
+
+export function createRunningFormatDrafts(
+  exercise: ExerciseSnapshot,
+  format: RunningFormat,
+  startPosition = 0,
+): WorkoutExerciseDraft[] {
+  if (exercise.ref !== 'running' || exercise.inputKind !== 'distance') return []
+  const base: WorkoutExerciseDraft = {
+    ...exercise,
+    name: runningFormatExerciseName(format),
+    position: 0,
+    blockId: crypto.randomUUID(),
+    blockType: 'single',
+    blockRounds: 1,
+    sets: [{ position: 0 }],
+  }
+  const drafts = format === 'interval-passive'
+    ? applyRunningIntervalPreset([base], 0)
+    : format === 'interval-active'
+      ? applyRunningActiveRecoveryPreset([base], 0)
+      : format === 'interval-custom'
+        ? [{ ...base, blockPreset: 'interval' as const, restBetweenSetsSec: RUNNING_RECOVERY_DURATION_SEC }]
+        : [base]
+  return drafts.map((draft, index) => ({ ...draft, position: startPosition + index }))
 }
 
 export function applyRunningIntervalPreset(exercises: WorkoutExerciseDraft[], index: number): WorkoutExerciseDraft[] {

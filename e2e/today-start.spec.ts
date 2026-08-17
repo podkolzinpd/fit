@@ -152,6 +152,42 @@ test('today: быстрый старт ведёт к единому выбору
   await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
 })
 
+test('today: беговая ветка сразу добавляет интервалы с активным восстановлением', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/(today|clients)$/)
+  await page.evaluate(() => Object.keys(localStorage)
+    .filter((key) => key.startsWith('fit.today-draft.'))
+    .forEach((key) => localStorage.removeItem(key)))
+  await page.goto('/today')
+
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await page.getByRole('button', { name: 'Выбрать упражнения вручную' }).click()
+  await page.getByRole('button', { name: 'Добавить упражнение' }).click()
+  await page.getByRole('button', { name: /^Бег/ }).click()
+  await expect(page.getByRole('button', { name: /Темповый бег/ })).toBeVisible()
+  await page.getByRole('button', { name: /^Интервалы/ }).click()
+  await page.locator('[data-running-format="interval-active"]').click()
+
+  await expect(page.locator('.today-exercise')).toHaveCount(2)
+  await expect(page.getByText('Бег — быстрый отрезок', { exact: true })).toBeVisible()
+  await expect(page.getByText('Бег — восстановление', { exact: true })).toBeVisible()
+  await page.locator('.today-exercise').first().locator('summary').click()
+  await expect(page.getByLabel('Бег — быстрый отрезок: время, подход 6')).toHaveValue('1:40')
+  await expect(page.getByLabel('Бег — быстрый отрезок: расстояние, подход 6')).toHaveValue('400')
+
+  await page.getByRole('button', { name: 'Далее' }).click()
+  await page.locator('.client-picker-trigger').click()
+  await page.locator('.client-picker-item').first().click()
+  await Promise.all([
+    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Запланировать' }).click(),
+  ])
+  await expect(page.locator('.block-badge')).toContainText('Интервалы · 6 кр.')
+})
+
 test('создание из календаря: завершённая тренировка не остаётся в будущем', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
