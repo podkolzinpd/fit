@@ -122,9 +122,18 @@ Endpoint outcomes are deliberately distinct:
 - `200` with the own profile and explicit `read_only` access mode after every
   gate passes.
 
-This slice does not register an OAuth application, populate real identity
-mappings, enable public container invocation, add frontend routing or deploy a
-new revision. Those are reviewed stage operations after the code is merged.
+The default-off browser pilot uses Authorization Code with PKCE. It sends the
+one-time code and verifier to `POST /v1/auth/yandex/pilot`; the API exchanges the
+code without a client secret and never returns or persists the Yandex token.
+The existing bearer-protected `GET /v1/profile` remains available for reviewed
+native or trusted clients.
+
+The OAuth application and auth API revision are deployed on isolated stage.
+The default-off frontend pilot can request a Yandex token and display only the
+allowlisted read-only profile; it does not create a Supabase session or unlock
+the main application. Populating real identity mappings, adding an exact CORS
+origin and enabling public container invocation remain separately reviewed
+stage operations.
 
 ## Current main parity impact
 

@@ -1,20 +1,24 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { authRepository } from '../../data/repositories/auth.repository'
+import { yandexPilotRepository, type YandexPilotProfile } from '../../data/repositories/yandex-pilot.repository'
 import { useAuth } from '../../app/auth-context'
-import { trainerHomePath } from '../../app/feature-flags'
+import { getYandexIdPilotConfig, trainerHomePath } from '../../app/feature-flags'
 import { Field } from '../../shared/ui'
 import type { AccountRole } from '../../shared/domain'
+import { consumeYandexAuthorizationCallback, createYandexAuthorizationUrl } from './yandex-pilot-oauth'
 
 type Mode = 'login' | 'register'
 
 export function AuthPage() {
   const [mode, setMode] = useState<Mode>('login')
   const [busy, setBusy] = useState(false)
+  const [yandexBusy, setYandexBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [role, setRole] = useState<AccountRole>('trainer')
   const { actor } = useAuth()
   const location = useLocation()
+  const yandexPilotConfig = getYandexIdPilotConfig()
   if (actor) return <Navigate to={(location.state as { from?: string } | null)?.from ?? (actor.role === 'client' ? '/me' : trainerHomePath())} replace />
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -49,7 +53,65 @@ export function AuthPage() {
       <button disabled={busy}>{busy ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}</button>
     </form>
     <button className="secondary auth-google" onClick={() => void authRepository.signInWithGoogle(mode === 'register' ? role : 'trainer')}>Продолжить с Google</button>
+    {yandexPilotConfig && <button className="secondary auth-yandex" disabled={yandexBusy} onClick={() => {
+      setError(null); setYandexBusy(true)
+      const redirectUri = `${window.location.origin}/auth/yandex/callback`
+      void createYandexAuthorizationUrl(yandexPilotConfig.clientId, redirectUri)
+        .then((url) => window.location.assign(url))
+        .catch(() => { setError('Не удалось начать вход через Yandex ID.'); setYandexBusy(false) })
+    }}>{yandexBusy ? 'Переходим в Yandex ID…' : 'Проверить Yandex ID'}</button>}
     <div className="auth-links"><button className="link" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>{mode === 'login' ? 'Создать аккаунт' : 'У меня есть аккаунт'}</button>{mode === 'login' && <Link to="/auth/forgot">Забыли пароль?</Link>}</div>
+  </main>
+}
+
+export function YandexPilotCallbackPage() {
+  const config = getYandexIdPilotConfig()
+  const apiBaseUrl = config?.apiBaseUrl ?? null
+  const [profile, setProfile] = useState<YandexPilotProfile | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (apiBaseUrl === null) return
+    const targetApiBaseUrl = apiBaseUrl
+    const search = window.location.search
+    window.history.replaceState(null, '', window.location.pathname)
+    let cancelled = false
+    async function verify() {
+      try {
+        const authorization = consumeYandexAuthorizationCallback(search)
+        const result = await yandexPilotRepository.exchangeCodeForProfile(
+          targetApiBaseUrl,
+          authorization.code,
+          authorization.codeVerifier,
+        )
+        if (!cancelled) setProfile(result)
+      } catch (caught) {
+        if (!cancelled) setError(caught instanceof Error ? caught.message : 'Не удалось проверить Yandex ID.')
+      }
+    }
+    void verify()
+    return () => { cancelled = true }
+  }, [apiBaseUrl])
+
+  if (config === null) return <Navigate to="/auth" replace />
+  const fullName = profile === null
+    ? ''
+    : [profile.profile.firstName, profile.profile.lastName].filter(Boolean).join(' ') || 'Пользователь FIT'
+  return <main className="auth-screen auth-entry">
+    <header className="auth-entry-head">
+      <div className="brand" aria-hidden="true">FIT</div>
+      <p className="eyebrow">YANDEX ID · ПИЛОТ</p>
+      <h1>{profile ? 'Доступ подтверждён' : error ? 'Не удалось войти' : 'Проверяем доступ'}</h1>
+      <p className="muted">{profile
+        ? 'Yandex ID связан с тестовым профилем. Данные открыты только для чтения.'
+        : error ?? 'Проверяем Yandex ID и доступ к изолированному stage…'}</p>
+    </header>
+    {profile && <section className="compact stack yandex-pilot-profile" aria-label="Профиль пилота">
+      <div><span>Профиль</span><strong>{fullName}</strong></div>
+      <div><span>Роль</span><strong>{profile.profile.accountRole === 'trainer' ? 'Тренер' : 'Клиент'}</strong></div>
+      <div><span>Режим</span><strong>Только чтение</strong></div>
+    </section>}
+    <Link className="auth-back-link" to="/auth">Вернуться ко входу</Link>
   </main>
 }
 

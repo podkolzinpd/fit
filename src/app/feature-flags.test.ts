@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { isTodayStartRedesignEnabled, isWearablesPilotEnabled, trainerHomePath } from './feature-flags'
+import {
+  getYandexIdPilotConfig,
+  isTodayStartRedesignEnabled,
+  isWearablesPilotEnabled,
+  trainerHomePath,
+} from './feature-flags'
 
 afterEach(() => vi.unstubAllEnvs())
 
@@ -35,5 +40,41 @@ describe('wearables pilot flag', () => {
     vi.stubEnv('VITE_WEARABLES_ENABLED', 'true')
     vi.stubEnv('VITE_WEARABLES_PILOT_USER_IDS', '')
     expect(isWearablesPilotEnabled('client-1')).toBe(false)
+  })
+})
+
+describe('Yandex ID pilot config', () => {
+  it('is disabled by default even when public settings exist', () => {
+    vi.stubEnv('VITE_YANDEX_ID_PILOT_ENABLED', '')
+    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
+    expect(getYandexIdPilotConfig()).toBeNull()
+  })
+
+  it('requires both public settings when explicitly enabled', () => {
+    vi.stubEnv('VITE_YANDEX_ID_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', '')
+    expect(getYandexIdPilotConfig()).toBeNull()
+  })
+
+  it('accepts HTTPS stage and localhost API URLs', () => {
+    vi.stubEnv('VITE_YANDEX_ID_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', ' public-client-id ')
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test/')
+    expect(getYandexIdPilotConfig()).toEqual({
+      apiBaseUrl: 'https://stage.example.test',
+      clientId: 'public-client-id',
+    })
+
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'http://localhost:8080')
+    expect(getYandexIdPilotConfig()?.apiBaseUrl).toBe('http://localhost:8080')
+  })
+
+  it('rejects an insecure remote API URL', () => {
+    vi.stubEnv('VITE_YANDEX_ID_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'http://stage.example.test')
+    expect(getYandexIdPilotConfig()).toBeNull()
   })
 })

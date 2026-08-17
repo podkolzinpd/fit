@@ -171,3 +171,26 @@ slice with a server-side tenant allowlist. The first pilot uses only internal or
 synthetic accounts and remains read-only. Continue migrating domain features
 only after that auth slice is verified. The complete cohort rollout is
 documented in `docs/design/yandex-cloud-migration.md`.
+
+## 8. Local Yandex ID read-only pilot
+
+The browser pilot is default-off and does not replace Supabase authentication.
+Before enabling it:
+
+1. Add the exact local callback
+   `http://localhost:5173/auth/yandex/callback` to the Yandex OAuth application.
+2. Add only the reviewed browser origin to Terraform, for example
+   `api_cors_allowed_origins = ["http://localhost:5173"]`.
+3. Review a Terraform plan before enabling public invocation. Application-level
+   Yandex token validation and the database allowlist remain mandatory; the
+   platform IAM binding is not the pilot allowlist.
+4. Add the internal test identity mapping and an enabled `yandex`/`read_only`
+   rollout assignment without storing raw Yandex identifiers.
+5. Start the frontend with `VITE_YANDEX_ID_PILOT_ENABLED=true`, the public OAuth
+   client ID and the reviewed stage API URL. Never expose the client secret.
+
+The callback validates `state`, removes the one-time authorization code from the
+URL and sends the code plus its PKCE verifier to `/v1/auth/yandex/pilot`. The API
+exchanges it without a client secret, keeps the Yandex token only in server
+memory and returns only the read-only profile. A successful pilot does not
+create a Supabase session and does not unlock the rest of the application.
