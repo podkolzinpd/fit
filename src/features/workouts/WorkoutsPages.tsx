@@ -472,7 +472,7 @@ export function WorkoutFormPage() {
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>{recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить'}</button></div>
     </form>}</AsyncView>
-    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
   </Page>
 }
 

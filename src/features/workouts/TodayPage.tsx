@@ -544,6 +544,6 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </section></section>}
     </section>}
     {(catalog.error ?? (!clientMode ? todayWorkouts.error : null)) && <p className="error">{(catalog.error ?? (!clientMode ? todayWorkouts.error : null))?.message}</p>}
-    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} onPick={(exercise) => pickExercises([exercise])} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} onPick={(exercise) => pickExercises([exercise])} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
   </Page>
 }
