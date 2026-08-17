@@ -47,6 +47,59 @@ async function expectOverflowMenuAboveBars(page: Page) {
   expect(await menu.evaluate((element) => window.getComputedStyle(element).opacity)).toBe('1')
 }
 
+test('iPhone: поля бега не перекрываются в быстрой проверке тренера на 390 px', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+  await page.route('**/functions/v1/parse-workout', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        items: [{
+          sourceText: 'Бег',
+          exerciseRef: 'running',
+          confidence: 1,
+          sets: [],
+        }],
+        unmatched: [],
+      }),
+    })
+  })
+
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await page.getByLabel('Тренировка').fill('Бег')
+  await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+  await page.getByText('Добавить значения', { exact: true }).click()
+
+  const row = page.locator('.today-set-editor').first()
+  const durationLabel = row.locator('label').filter({ hasText: 'Бег (Кардио): время, подход 1' })
+  const duration = page.getByLabel('Бег (Кардио): время, подход 1')
+  const distance = page.getByLabel('Бег (Кардио): расстояние, подход 1')
+  const unit = page.getByLabel('Бег (Кардио): единица расстояния, подход 1')
+  await expect(durationLabel).toHaveCSS('position', 'absolute')
+  await expect(duration).toHaveAttribute('placeholder', 'мм:сс')
+  await expect(distance).toHaveAttribute('placeholder', '0')
+  await expect(unit).toHaveValue('km')
+  await expect(unit.locator('option:checked')).toHaveText('км')
+
+  const rowBox = await row.boundingBox()
+  const durationBox = await duration.boundingBox()
+  const distanceBox = await distance.boundingBox()
+  const unitBox = await unit.boundingBox()
+  expect(rowBox).not.toBeNull()
+  expect(durationBox).not.toBeNull()
+  expect(distanceBox).not.toBeNull()
+  expect(unitBox).not.toBeNull()
+  for (const box of [durationBox!, distanceBox!, unitBox!]) {
+    expect(box.x).toBeGreaterThanOrEqual(rowBox!.x)
+    expect(box.x + box.width).toBeLessThanOrEqual(rowBox!.x + rowBox!.width)
+  }
+  expect(distanceBox!.x).toBeGreaterThanOrEqual(durationBox!.x + durationBox!.width)
+  expect(unitBox!.x).toBeGreaterThanOrEqual(distanceBox!.x + distanceBox!.width)
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('running-review.png'), fullPage: true })
+})
+
 test('iPhone: новое имя профиля сохраняется после reload на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')

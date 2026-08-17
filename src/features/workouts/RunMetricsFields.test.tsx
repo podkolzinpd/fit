@@ -22,7 +22,9 @@ describe('RunMetricsFields', () => {
     renderFields()
     expect(screen.getByLabelText('Время')).toHaveValue('29:40')
     expect(screen.getByLabelText('Дистанция')).toHaveValue(5.2)
+    expect(screen.getByLabelText('Дистанция')).toHaveAttribute('placeholder', '0')
     expect(screen.getByLabelText('Единица дистанции')).toHaveValue('km')
+    expect(screen.getByRole('option', { name: 'км' })).toHaveProperty('selected', true)
     expect(screen.getByText('Темп 5:42/км')).toBeInTheDocument()
   })
 
@@ -31,6 +33,8 @@ describe('RunMetricsFields', () => {
     const onCommit = renderFields()
     await user.selectOptions(screen.getByLabelText('Единица дистанции'), 'm')
     const distance = screen.getByLabelText('Дистанция')
+    expect(distance).toHaveAttribute('placeholder', '0')
+    expect(screen.getByRole('option', { name: 'м' })).toHaveProperty('selected', true)
     await user.clear(distance)
     await user.type(distance, '400')
     await user.tab()
