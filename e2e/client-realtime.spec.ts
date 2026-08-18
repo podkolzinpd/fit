@@ -176,6 +176,7 @@ test('client and trainer receive progress and workout changes without reload', a
       trainer.goto(`/progress/${clientId}`),
       client.goto('/me'),
     ])
+    await trainer.locator('.trainer-progress-details > summary').click()
     const trainerRegularity = trainer.getByLabel('Регулярность тренировок')
     const clientWeek = client.locator('.client-home-week')
     await expect(trainerRegularity).toBeVisible()
