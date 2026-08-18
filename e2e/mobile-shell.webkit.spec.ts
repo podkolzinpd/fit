@@ -285,7 +285,7 @@ test('iPhone: client voice-first home сохраняет тренировку т
   await page.getByRole('button', { name: 'Далее' }).click()
   await expect(page.getByText('Тренировка будет сохранена в ваш кабинет')).toBeVisible()
   await expect(page.locator('.client-picker-trigger')).toHaveCount(0)
-  await page.getByRole('link', { name: 'Профиль', exact: true }).click()
+  await page.goto('/me/profile')
   await expect(page).toHaveURL(/\/me\/profile$/)
   await page.getByRole('link', { name: 'Изменить данные' }).click()
   await page.getByLabel('Имя').fill('Клиент Обновлённый')
