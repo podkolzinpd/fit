@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PropsWithChildren, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
+import { isCoachmarkSeen, markCoachmarkSeen } from './coachmarks'
 import { AddIcon, AlertIcon, BackIcon, CheckIcon, InfoIcon, MoreIcon, PendingIcon } from './icons'
 
 export function Page({ title, action, back, onBack, center, hideTitle, className, children }: PropsWithChildren<{
@@ -223,5 +224,78 @@ export function OverflowMenu({ items, label = 'Ещё действия', trigger
         className={item.danger ? 'overflow-item danger' : 'overflow-item'}
         onClick={() => { setOpen(false); item.onClick() }}>{item.label}</button>)}
     </div>, host)}
+  </div>
+}
+
+// Одноразовая контекстная подсказка про изменившийся/новый участок интерфейса.
+// Обёртывает конкретный элемент, «видел ли» хранится в localStorage per-userId
+// (см. coachmarks.ts) — без сихронизации между устройствами, как и у других
+// некритичных клиентских флагов в проекте (тема, недавние клиенты и т.п.).
+// Закрывается явно (кнопка/Escape), не по клику мимо — чтобы не пропадала
+// раньше, чем прочитана.
+export function Coachmark({ id, userId, title, description, children }: PropsWithChildren<{
+  id: string; userId: string | undefined; title: string; description: string
+}>) {
+  const [dismissed, setDismissed] = useState(false)
+  const [position, setPosition] = useState<CSSProperties | null>(null)
+  const anchorRef = useRef<HTMLDivElement>(null)
+  const bubbleRef = useRef<HTMLDivElement>(null)
+  const visible = !dismissed && !isCoachmarkSeen(userId, id)
+
+  const updatePosition = useCallback(() => {
+    const anchor = anchorRef.current
+    const bubble = bubbleRef.current
+    const frame = document.querySelector<HTMLElement>('.phone-frame')
+    if (!anchor || !bubble) return
+    const anchorRect = anchor.getBoundingClientRect()
+    const bubbleRect = bubble.getBoundingClientRect()
+    const frameRect = frame?.getBoundingClientRect() ?? {
+      top: 0,
+      right: window.innerWidth,
+      bottom: window.innerHeight,
+      left: 0,
+    }
+    const gap = 10
+    const minLeft = frameRect.left + 8
+    const maxLeft = Math.max(minLeft, frameRect.right - bubbleRect.width - 8)
+    const left = Math.min(Math.max(anchorRect.left, minLeft), maxLeft)
+    const top = anchorRect.bottom + gap
+    setPosition({ top, left })
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!visible) { setPosition(null); return }
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
+  }, [visible, updatePosition])
+
+  const dismiss = useCallback(() => {
+    markCoachmarkSeen(userId, id)
+    setDismissed(true)
+  }, [userId, id])
+
+  useEffect(() => {
+    if (!visible) return
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') dismiss() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [visible, dismiss])
+
+  const host = document.querySelector('.phone-frame') ?? document.body
+  return <div className="coachmark-anchor" ref={anchorRef}>
+    {children}
+    {visible && createPortal(
+      <div ref={bubbleRef} className="coachmark-bubble" role="status" style={position ?? { visibility: 'hidden' }}>
+        <strong>{title}</strong>
+        <p>{description}</p>
+        <button type="button" onClick={dismiss}>Понятно</button>
+      </div>,
+      host,
+    )}
   </div>
 }
