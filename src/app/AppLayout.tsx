@@ -36,10 +36,11 @@ export function AppLayout() {
     }
   }, [])
 
-  // В live-режиме прячем нижнюю навигацию: во время тренировки приоритет —
-  // текущий подход, таймер и завершение; таб-бар не должен конкурировать с
-  // закреплённой панелью действий (BottomActionBar). Контент занимает всю высоту.
-  const immersive = /\/live$/.test(pathname)
+  // Создание, проверка, редактирование и live — один сфокусированный путь
+  // тренировки. Нижняя навигация возвращается на списках и после выхода из
+  // сценария, но внутри не конкурирует с текущим действием.
+  const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
+  const immersive = /\/live$/.test(pathname) || pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname) || todayStep
   const contentClass = immersive ? 'content content-immersive' : 'content'
 
   const frameClass = `${theme === 'light' ? 'phone-frame theme-light' : 'phone-frame'}${redesignedStart && pathname === '/today' ? ' today-start-shell' : ''}${keyboardOpen ? ' keyboard-open' : ''}`
