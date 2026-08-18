@@ -10,13 +10,13 @@ import { exercisesRepository } from '../../data/repositories/exercises.repositor
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
 import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
-import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
+import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
   addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayInTimeZone, weekdayShort,
   type LocalDate,
 } from '../../shared/local-date'
-import { AsyncView, Field, OverflowMenu, Page, SaveStatus, StatePanel, StatusBadge, useConfirm } from '../../shared/ui'
+import { AsyncView, Field, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
 import { ExercisePicker, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { clientWorkoutAuthorLabel, ClientPicker, type ClientPickerSelection } from '../clients'
 import { VoiceNoteField } from '../voice-input'
@@ -43,6 +43,7 @@ import { parseRunDurationInput, runDistanceKmFromInput, runDistanceLabel, runPac
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
 import { AddIcon } from '../../shared/icons'
+import { WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -156,7 +157,12 @@ export function SchedulePage() {
 export function WorkoutStatusBadge({ workout }: { workout: Workout }) {
   const { actor } = useAuth()
   const status = workoutStatusPresentation(workout, todayInTimeZone(actor?.timezone))
-  return <span className={`badge ${status.tone}`}>{status.label}</span>
+  const state: WorkoutUiState = status.tone === 'done' ? 'completed'
+    : status.tone === 'in_progress' ? 'current'
+      : status.tone === 'partial' ? 'partial'
+        : status.tone === 'skipped' ? 'skipped'
+          : 'planned'
+  return <WorkoutStatus state={state} label={status.label} />
 }
 
 // Список упражнений тренировки для карточки (история/предстоящие): каждое
@@ -462,7 +468,11 @@ export function WorkoutFormPage() {
   const editingDenied = Boolean(clientMode && workoutId && source.data && source.data.createdBy !== actor?.userId)
   const loading = source.isLoading || mine.isLoading
   const error = source.error ?? mine.error
-  return <Page title={workoutId ? 'Редактировать тренировку' : params.has('copy') ? 'Копия тренировки' : 'Новая тренировка'} back={-1}>
+  const pageTitle = workoutId ? 'Редактировать тренировку' : params.has('copy') ? 'Копия тренировки' : 'Новая тренировка'
+  const documentTitle = workoutId ? 'Редактирование тренировки' : params.has('copy') ? 'Копирование тренировки' : 'Создание тренировки'
+  return <Page title={documentTitle} hideTitle className="workout-form-page workout-focused-page" back={-1}>
+    <WorkoutHeader eyebrow={completedMode ? 'РЕЗУЛЬТАТ' : 'ПЛАН ТРЕНИРОВКИ'} title={pageTitle} state={completedMode ? 'history' : 'planned'}
+      meta={exercises.length > 0 ? `${exercises.length} ${exerciseCountLabel(exercises.length)}` : 'Сначала добавьте упражнения'} />
     <AsyncView loading={loading} error={error} onRetry={() => { void source.refetch(); void mine.refetch() }}>{editingDenied ? <StatePanel tone="info" title="Редактирование недоступно" description="Назначенную тренером тренировку может менять только тренер." action={<button type="button" className="secondary" onClick={() => navigate(-1)}>Вернуться</button>} /> : clientMode && !mine.data ? <StatePanel tone="info" title="Карточка ещё не подключена" description="Создайте личную карточку в кабинете — после этого можно будет добавлять самостоятельные тренировки." action={<Link className="button" to="/me">Создать карточку</Link>} /> : <form className="stack workout-form" onSubmit={(event) => void submit(event)}>
       <section className="workout-form-section">
         <div className="workout-form-section-head"><p className="eyebrow">ОСНОВНЫЕ ДАННЫЕ</p><h2>Тренировка</h2></div>
@@ -491,7 +501,7 @@ export function WorkoutFormPage() {
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions"><button type="button" className="secondary" disabled={mutation.isPending} onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending} aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить'}</button></div>
+      <div className="actions"><button type="button" className="secondary" disabled={mutation.isPending} onClick={() => navigate(-1)}>Отмена</button><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…">{recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить'}</WorkoutCta></div>
     </form>}</AsyncView>
     {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
   </Page>
@@ -582,7 +592,8 @@ export function WorkoutDetailPage() {
   // Карточка не должна угадывать источник открытия. Быстрый сценарий «Сегодня»
   // передаёт returnTo, остальные пути сохраняют прежний безопасный fallback.
   const backTo = navigationState?.returnTo ?? (clientMode ? '/me/workouts' : '/schedule')
-  return <Page title="Тренировка" className="workout-detail-page" back={backTo}>
+  const detailState: WorkoutUiState = workout?.status === 'done' ? (completedSets < sets.length ? 'partial' : 'completed') : workout?.status === 'in_progress' ? 'current' : 'planned'
+  return <Page title="Тренировка" hideTitle className="workout-detail-page" back={backTo}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       {justCompleted && <section className="workout-completion" aria-labelledby="workout-completion-title">
         <span className="workout-completion-mark" aria-hidden="true">✓</span>
@@ -592,11 +603,10 @@ export function WorkoutDetailPage() {
           <p>{sets.length > 0 ? `Выполнено ${completedSets} из ${sets.length} подходов` : 'Результаты сохранены'}</p>
         </div>
       </section>}
-      <section className="workout-title">
-        <div><h2>{clientMode ? 'Ваша тренировка' : workout.clientName}</h2><p>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</p>{clientMode && authorLabel && <p className="muted">{authorLabel}</p>}{clientAuthoredReadOnly && <p className="card-author">Создано клиентом · только просмотр</p>}{stageTitle && <p className="stage-tag">🎯 {stageTitle}</p>}</div>
-        <WorkoutStatusBadge workout={workout} />
-      </section>
-      {workout.status === 'planned' && canExecute && <button className="wide" disabled={start.isPending} aria-busy={start.isPending} onClick={() => start.mutate()}>{start.isPending ? 'Начинаем…' : 'Начать тренировку'}</button>}
+      <WorkoutHeader eyebrow={clientMode ? 'ВАША ТРЕНИРОВКА' : 'ТРЕНИРОВКА КЛИЕНТА'} title={clientMode ? 'Ваша тренировка' : workout.clientName} state={detailState}
+        statusLabel={workoutStatusPresentation(workout, todayInTimeZone(actor?.timezone)).label}
+        meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span>{clientMode && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · только просмотр</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />
+      {workout.status === 'planned' && canExecute && <WorkoutCta className="wide" pending={start.isPending} pendingLabel="Начинаем…" onClick={() => start.mutate()}>Начать тренировку</WorkoutCta>}
       {start.error && !(start.error instanceof Error && 'code' in start.error && start.error.code === 'active_workout_exists') && <p className="error">{start.error.message}</p>}
       {workout.status === 'in_progress' && canExecute && <Link className="button wide" to={`/workouts/${workoutId}/live`}>Продолжить тренировку</Link>}
       {done && <section className="workout-fact-summary" aria-label="Сводка тренировки">
@@ -610,13 +620,13 @@ export function WorkoutDetailPage() {
       <div className={`cards ${done ? 'completed-exercise-list' : ''}`}>{groupIntoBlocks(workout.exercises).map((block) => {
         const articles = block.exercises.map((exercise) => {
           const compactPlan = workout.status === 'planned' ? compactPlannedSetSummary(exercise.sets, showRpe) : null
-          return <article className={`exercise ${done ? 'completed-exercise' : ''}`} key={exercise.id}>
+          return <WorkoutExercise state={done ? 'history' : 'planned'} className={`exercise ${done ? 'completed-exercise' : ''}`} key={exercise.id}>
           <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
           {done ? <p className="completed-set-summary">{compactCompletedSetSummary(exercise.sets, showRpe)}</p> : compactPlan ? <p className="planned-set-summary"><span>План</span><strong>{compactPlan}</strong></p> : <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={['Результат']} className="workout-history-sets">
             {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} />)}
           </WorkoutSetTable>}
           {exercise.trainerComment && <p className="exercise-comment-note">💬 {exercise.trainerComment}</p>}
-        </article>
+        </WorkoutExercise>
         })
         if (block.blockType === 'single' || block.exercises.length === 1) return articles
         return <div className={`exercise-block view${done ? ' completed-exercise-block' : ''}`} key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
@@ -816,14 +826,14 @@ function WorkoutHistorySet({ set, index, done, showRpe }: { set: WorkoutSet; ind
   const confirmed = Boolean(set.confirmedAt)
   const { fact, planNote } = formatFactVsPlan(set, showRpe)
   const result = done ? fact : formatSet(set, showRpe)
-  return <div className={`workout-set-row workout-history-set ${confirmed ? 'confirmed' : 'missed'}`}>
+  return <WorkoutSetRow state={done ? (confirmed ? 'completed' : 'skipped') : 'planned'} className={`workout-history-set ${confirmed ? 'confirmed' : 'missed'}`}>
     <span className="workout-set-number workout-history-set-number" aria-label={`Подход ${index + 1}`}>{index + 1}</span>
     <span className="workout-history-set-result"><strong>{result}</strong>
       {done && !confirmed && <span className="plan-note">не выполнено</span>}
       {done && confirmed && planNote && <span className="plan-note">{planNote}</span>}
     </span>
     {done && <span className="workout-history-set-status" aria-label={confirmed ? 'Выполнен' : 'Не выполнен'}>{confirmed ? '✓' : '—'}</span>}
-  </div>
+  </WorkoutSetRow>
 }
 
 
@@ -1139,7 +1149,7 @@ export function LiveWorkoutPage() {
         ? field.defaultValue
         : field.options[field.selectedIndex]?.defaultSelected ? field.value : ''))
   }
-  function saveOpenLiveSet(exercise: WorkoutExercise, targetSetId: string) {
+  function saveOpenLiveSet(exercise: WorkoutExerciseModel, targetSetId: string) {
     // PointerDown происходит до blur: это единственный надёжный момент на iOS
     // для чтения числа из строки, когда тренер тапаeт «Ввести» у следующей.
     // При клавиатурной активации fallback берёт единственную открытую форму.
@@ -1154,7 +1164,7 @@ export function LiveWorkoutPage() {
       persistLiveDraft(currentSet, draftFrom(form))
     }
   }
-  function openLiveSet(exercise: WorkoutExercise, targetSetId: string) {
+  function openLiveSet(exercise: WorkoutExerciseModel, targetSetId: string) {
     saveOpenLiveSet(exercise, targetSetId)
     setExpandedSetId(targetSetId)
   }
@@ -1298,7 +1308,7 @@ export function LiveWorkoutPage() {
   }, [restActive])
   const error = save.error ?? confirm.error ?? appendSet.error ?? removeSet.error ?? appendExercise.error ?? reorderBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
-  function liveCommentField(exercise: WorkoutExercise) {
+  function liveCommentField(exercise: WorkoutExerciseModel) {
     if (clientMode) return null
     return <details className="live-exercise-note">
       <summary>Заметка тренера{exercise.trainerComment ? <span> · есть текст</span> : null}</summary>
@@ -1309,7 +1319,7 @@ export function LiveWorkoutPage() {
   // Меню упражнения в live (⋯): «Заменить» доступно, пока нет подтверждённых
   // подходов (начатое заменять нельзя — факт относился к старому упражнению).
   // В меню, чтобы редкое действие не конкурировало с подтверждением подхода.
-  function exerciseMenu(exercise: WorkoutExercise, canReorder = false, removableSet?: WorkoutSet) {
+  function exerciseMenu(exercise: WorkoutExerciseModel, canReorder = false, removableSet?: WorkoutSet) {
     if (!canManageLiveStructure) return null
     const canReplace = !exercise.sets.some((set) => set.confirmedAt)
     const showRpe = isRpeVisible(exercise.id)
@@ -1329,7 +1339,7 @@ export function LiveWorkoutPage() {
     </span>
   }
   // Форма одного подхода в live: подтверждение / правка / удаление / автосейв по blur.
-  function renderLiveSet(exercise: WorkoutExercise, set: WorkoutSet, label?: string, current = false) {
+  function renderLiveSet(exercise: WorkoutExerciseModel, set: WorkoutSet, label?: string, current = false) {
     const displayedSet = setWithLocalDraft(set, localSetDrafts.get(set.id))
     const isEditing = editingSets.has(set.id)
     const isExpanded = current || isEditing || expandedSetId === set.id
@@ -1360,7 +1370,7 @@ export function LiveWorkoutPage() {
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
       persistLiveDraft(set, draftFrom(event.currentTarget))
     }}>
-      <div className="workout-set-row live-set-grid">
+      <WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
         <LiveSetFields inputKind={exercise.inputKind} set={displayedSet} editing={isEditing} showRpe={showRpe} />
         <div className="live-set-confirm">
@@ -1373,14 +1383,14 @@ export function LiveWorkoutPage() {
                 onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>✓</button>}
           <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} /></div>
         </div>
-      </div>
+      </WorkoutSetRow>
     </form>
   }
   // «Назад» ведёт в карточку тренировки: таб-бар в live скрыт, поэтому нужен
   // явный выход наружу без завершения тренировки (тренер может вернуться позже).
-  return <Page title="Live-тренировка" className="live-workout-page" back={`/workouts/${workoutId}`}>
+  return <Page title="Live-тренировка" hideTitle className="live-workout-page workout-focused-page" back={`/workouts/${workoutId}`}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
-      <p className="live-client-name"><span>Тренируется</span>{query.data.clientName}</p>
+      <WorkoutHeader eyebrow="LIVE" title={query.data.clientName} state="current" meta="Тренировка идёт" />
       {(() => {
         // Активная круговая (многоэлементный блок с незавершёнными подходами) —
         // её счётчик «Круг N из M» + точки закрепляем вместе с таймером, чтобы при
@@ -1437,30 +1447,27 @@ export function LiveWorkoutPage() {
             if (collapsed) {
               const doneCount = exercise.sets.length
               const best = exercise.sets.map((set) => factLine(set)).filter(Boolean).slice(-1)[0] ?? null
-              return <button type="button" key={exercise.id} className="live-exercise-collapsed"
-                onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))}>
-                <span className="live-collapsed-check" aria-hidden="true">✓</span>
-                <span className="live-collapsed-body"><strong>{exercise.name}</strong><span className="muted">{doneCount} {doneCount === 1 ? 'подход' : doneCount < 5 ? 'подхода' : 'подходов'}{best ? ` · ${best}` : ''}</span></span>
-                <StatusBadge status="done" />
-              </button>
+              return <WorkoutExerciseCompact key={exercise.id} state="completed" className="live-exercise-collapsed" title={exercise.name}
+                meta={`${doneCount} ${doneCount === 1 ? 'подход' : doneCount < 5 ? 'подхода' : 'подходов'}${best ? ` · ${best}` : ''}`}
+                onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))} />
             }
             if (blockStatus === 'upcoming') {
               const firstPlan = exercise.sets.map((set) => planLine(exercise.inputKind, set)).find(Boolean)
               const countLabel = exercise.sets.length === 1 ? 'подход' : exercise.sets.length < 5 ? 'подхода' : 'подходов'
-              return <section key={exercise.id} className="live-exercise-upcoming">
-                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<><StatusBadge status="upcoming" />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
+              return <WorkoutExercise key={exercise.id} state="upcoming" className="live-exercise-upcoming">
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<><WorkoutStatus state="upcoming" />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
                 <p className="live-upcoming-summary"><span>{exercise.sets.length} {countLabel}</span>{firstPlan && <span>План: {firstPlan}</span>}</p>
-              </section>
+              </WorkoutExercise>
             }
-            return <section key={exercise.id} className={`live-exercise ${blockStatus}`}>
-              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<><StatusBadge status={blockStatus} />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
+            return <WorkoutExercise key={exercise.id} state={blockStatus === 'done' ? 'completed' : blockStatus} className={`live-exercise ${blockStatus}`}>
+              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<><WorkoutStatus state={blockStatus === 'done' ? 'completed' : blockStatus} />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
               {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </WorkoutSetTable>
               {canManageLiveStructure && <button type="button" className="secondary live-add-set" disabled={rootMutationPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
               {liveCommentField(exercise)}
-            </section>
+            </WorkoutExercise>
           })
         }
         // Многоэлементный блок — по кругам, со счётчиком «Круг R из N».
@@ -1500,10 +1507,10 @@ export function LiveWorkoutPage() {
               <p>Есть незавершённые подходы. Завершить частично?</p>
               <div className="actions">
                 <button type="button" className="secondary" onClick={() => setConfirmFinish(false)}>Отмена</button>
-                <button type="button" disabled={rootMutationPending || save.isPending || confirm.isPending || finish.isPending} aria-busy={finish.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>{finish.isPending ? 'Завершаем…' : 'Завершить'}</button>
+                <WorkoutCta pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>Завершить</WorkoutCta>
               </div>
             </div>
-          : <button type="button" className="secondary wide" disabled={rootMutationPending || save.isPending || confirm.isPending || finish.isPending} aria-busy={finish.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => !exercise.sets.every((set) => set.confirmedAt)); if (incomplete) setConfirmFinish(true); else finish.mutate() }}>{finish.isPending ? 'Завершаем…' : 'Завершить тренировку'}</button>}
+          : <WorkoutCta className="secondary wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => !exercise.sets.every((set) => set.confirmedAt)); if (incomplete) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>}
       </div>
     </>}</AsyncView>
     {canManageLiveStructure && pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} onPick={pickLiveExercise} onClose={closePicker} />}
