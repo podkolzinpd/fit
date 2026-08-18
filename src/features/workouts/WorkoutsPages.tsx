@@ -897,7 +897,10 @@ function LiveSetFields({ inputKind, set, editing = false, showRpe = false }: { i
   // В key добавлена version: после правки подтверждённого подхода факт меняется
   // и версия бампится — иначе стабильный key оставил бы старое значение в поле.
   const mode = locked ? 'locked' : editing ? 'editing' : 'edit'
-  const k = `${mode}-${set.version}`
+  // В обычном вводе ответ автосохранения меняет version, но не должен
+  // пересоздавать активный input: на iOS это закрывает клавиатуру и сдвигает
+  // текущий подход. Версия нужна в key только для уже зафиксированного факта.
+  const k = locked || editing ? `${mode}-${set.version}` : mode
   // Факт при первом открытии начинается с плана: тренер видит готовые значения
   // и меняет только нужное. После выполнения приоритет остаётся у факта.
   const value = (fact: number | undefined, plan: number | undefined) => fact ?? plan
@@ -1365,7 +1368,12 @@ export function LiveWorkoutPage() {
       </div>
     }
     const showRpe = isRpeVisible(exercise.id)
-    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={`${set.id}:${JSON.stringify(localSetDrafts.get(set.id) ?? null)}`} onBlur={(event) => {
+    // Локальный draft меняется на каждом autosave. Он не должен быть частью
+    // key активной формы: remount закрывал клавиатуру и менял scrollTop.
+    // Однократный recovery-key нужен только после reload, чтобы применить
+    // восстановленные defaultValue.
+    const recoveryKey = recoveredSetIds.has(set.id) ? 'recovered' : 'stable'
+    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={`${set.id}:${recoveryKey}`} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
       persistLiveDraft(set, draftFrom(event.currentTarget))

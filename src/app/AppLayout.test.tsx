@@ -54,4 +54,10 @@ describe('AppLayout navigation', () => {
       expect(document.querySelector('.content')).toHaveClass('content-immersive')
     },
   )
+
+  it('помечает live как отдельный мобильный сценарий', () => {
+    renderLayout('/workouts/workout-1/live')
+    expect(screen.queryByRole('navigation', { name: 'Основная навигация' })).not.toBeInTheDocument()
+    expect(document.querySelector('.phone-frame')).toHaveClass('live-session-shell')
+  })
 })
