@@ -48,6 +48,21 @@ VITE_WEARABLES_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
 нового deployment. UUID попадают во frontend bundle, поэтому этот механизм
 служит только для rollout интерфейса и не является границей авторизации.
 
+Закрытый пилот верхней навигации тренера («Ассистент», YAFIT-317) управляется
+build-time переменными Vercel:
+
+```text
+VITE_ASSISTANT_NAV_ENABLED=true
+VITE_ASSISTANT_NAV_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
+```
+
+Механизм default-off: по умолчанию, при пустом allowlist или любом значении
+флага кроме точного `true` навигация тренера остаётся прежней (нижний таб-бар,
+экран «Сегодня»). Изменение списка требует нового deployment. UUID попадают во
+frontend bundle, поэтому этот механизм служит только для rollout интерфейса и
+не является границей авторизации: данные и мутации защищаются существующими
+RLS/ownership-проверками.
+
 - Site URL: `https://<production-domain>`;
 - Redirect URLs: `https://<production-domain>/auth/callback` и `https://<production-domain>/auth/reset`;
 - локальные `http://localhost:5173/auth/callback` и `http://localhost:5173/auth/reset` остаются разрешёнными для разработки.
