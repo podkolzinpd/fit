@@ -74,10 +74,17 @@ These groups should not be used as arbitrary decoration on unrelated screens.
 ## Spacing, geometry, and effects
 
 - Spacing tokens: 4, 8, 12, 16, 20, and 24 px (`--space-1`…`--space-6`).
-- Canonical radii: 9, 12, and 16 px plus a pill radius of 99 px. Product cards
-  also currently use 17–22 px and frame/sheets use 26–28 px.
-- Minimum interactive size is represented by `--tap: 44px`; primary mobile
-  actions are commonly 50–56 px tall.
+- Canonical radii are semantic: `--radius-sm` (9 px) for compact segments,
+  `--radius-md` (12 px) for controls and inset surfaces, `--radius-lg` (16 px)
+  for cards, and `--radius-pill` (99 px) for chips. Frame and bottom-sheet
+  shells may keep their separate 26–28 px geometry.
+- Control heights are `--control-height-compact` (36 px),
+  `--control-height-standard` (44 px), and `--control-height-primary` (50 px).
+  Chips use `--chip-height` (32 px); ordinary cards use `--card-padding`
+  (16 px), and major single-column sections use `--section-gap` (20 px).
+- Client Progress/Workouts/Live and Trainer Clients/Schedule/Progress are the
+  first protected geometry set. Role Home for both users deliberately keeps
+  its existing cards, voice/text actions, and primary buttons.
 - Cards use a restrained warm shadow (`--shadow-card`). Overlays use
   `--overlay` and blur; sheets rise from the bottom on mobile.
 - Motion is short (about 180–220 ms) and must respect
