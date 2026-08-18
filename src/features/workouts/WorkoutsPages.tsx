@@ -16,7 +16,7 @@ import {
   addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayInTimeZone, weekdayShort,
   type LocalDate,
 } from '../../shared/local-date'
-import { AsyncView, Field, OverflowMenu, Page, SaveStatus, StatusBadge, useConfirm } from '../../shared/ui'
+import { AsyncView, Field, OverflowMenu, Page, SaveStatus, StatePanel, StatusBadge, useConfirm } from '../../shared/ui'
 import { ExercisePicker, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { clientWorkoutAuthorLabel, ClientPicker, type ClientPickerSelection } from '../clients'
 import { VoiceNoteField } from '../voice-input'
@@ -463,7 +463,7 @@ export function WorkoutFormPage() {
   const loading = source.isLoading || mine.isLoading
   const error = source.error ?? mine.error
   return <Page title={workoutId ? 'Редактировать тренировку' : params.has('copy') ? 'Копия тренировки' : 'Новая тренировка'} back={-1}>
-    <AsyncView loading={loading} error={error}>{editingDenied ? <div className="state"><h2>Редактирование недоступно</h2><p>Назначенную тренером тренировку может менять только тренер.</p></div> : clientMode && !mine.data ? <div className="state"><h2>Карточка ещё не подключена</h2><p>Создать тренировку можно после подключения клиентской карточки.</p></div> : <form className="stack workout-form" onSubmit={(event) => void submit(event)}>
+    <AsyncView loading={loading} error={error} onRetry={() => { void source.refetch(); void mine.refetch() }}>{editingDenied ? <StatePanel tone="info" title="Редактирование недоступно" description="Назначенную тренером тренировку может менять только тренер." action={<button type="button" className="secondary" onClick={() => navigate(-1)}>Вернуться</button>} /> : clientMode && !mine.data ? <StatePanel tone="info" title="Карточка ещё не подключена" description="Создайте личную карточку в кабинете — после этого можно будет добавлять самостоятельные тренировки." action={<Link className="button" to="/me">Создать карточку</Link>} /> : <form className="stack workout-form" onSubmit={(event) => void submit(event)}>
       <section className="workout-form-section">
         <div className="workout-form-section-head"><p className="eyebrow">ОСНОВНЫЕ ДАННЫЕ</p><h2>Тренировка</h2></div>
         {clientMode
@@ -491,7 +491,7 @@ export function WorkoutFormPage() {
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions"><button type="button" className="secondary" onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending}>{recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить'}</button></div>
+      <div className="actions"><button type="button" className="secondary" disabled={mutation.isPending} onClick={() => navigate(-1)}>Отмена</button><button disabled={mutation.isPending} aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить'}</button></div>
     </form>}</AsyncView>
     {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
   </Page>
@@ -596,7 +596,7 @@ export function WorkoutDetailPage() {
         <div><h2>{clientMode ? 'Ваша тренировка' : workout.clientName}</h2><p>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</p>{clientMode && authorLabel && <p className="muted">{authorLabel}</p>}{clientAuthoredReadOnly && <p className="card-author">Создано клиентом · только просмотр</p>}{stageTitle && <p className="stage-tag">🎯 {stageTitle}</p>}</div>
         <WorkoutStatusBadge workout={workout} />
       </section>
-      {workout.status === 'planned' && canExecute && <button className="wide" disabled={start.isPending} onClick={() => start.mutate()}>Начать тренировку</button>}
+      {workout.status === 'planned' && canExecute && <button className="wide" disabled={start.isPending} aria-busy={start.isPending} onClick={() => start.mutate()}>{start.isPending ? 'Начинаем…' : 'Начать тренировку'}</button>}
       {start.error && !(start.error instanceof Error && 'code' in start.error && start.error.code === 'active_workout_exists') && <p className="error">{start.error.message}</p>}
       {workout.status === 'in_progress' && canExecute && <Link className="button wide" to={`/workouts/${workoutId}/live`}>Продолжить тренировку</Link>}
       {done && <section className="workout-fact-summary" aria-label="Сводка тренировки">
@@ -626,7 +626,7 @@ export function WorkoutDetailPage() {
         {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
         <Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link>
       </div>
-      <button className="danger secondary wide" disabled={remove.isPending} onClick={async () => { if (await confirm({ message: 'Удалить тренировку?', confirmLabel: 'Удалить', danger: true })) remove.mutate() }}>Удалить тренировку</button></>}
+      <button className="danger secondary wide" disabled={remove.isPending} aria-busy={remove.isPending} onClick={async () => { if (await confirm({ message: 'Удалить тренировку?', confirmLabel: 'Удалить', danger: true })) remove.mutate() }}>{remove.isPending ? 'Удаляем…' : 'Удалить тренировку'}</button></>}
       {clientAuthoredReadOnly && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Скопировать и отправить план</Link></div>}
       {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Создать свою копию</Link></div>}
       {remove.error && <p className="error">{remove.error.message}</p>}
@@ -1379,7 +1379,7 @@ export function LiveWorkoutPage() {
   // «Назад» ведёт в карточку тренировки: таб-бар в live скрыт, поэтому нужен
   // явный выход наружу без завершения тренировки (тренер может вернуться позже).
   return <Page title="Live-тренировка" className="live-workout-page" back={`/workouts/${workoutId}`}>
-    <AsyncView loading={query.isLoading} error={query.error}>{query.data && <>
+    <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
       <p className="live-client-name"><span>Тренируется</span>{query.data.clientName}</p>
       {(() => {
         // Активная круговая (многоэлементный блок с незавершёнными подходами) —
@@ -1500,10 +1500,10 @@ export function LiveWorkoutPage() {
               <p>Есть незавершённые подходы. Завершить частично?</p>
               <div className="actions">
                 <button type="button" className="secondary" onClick={() => setConfirmFinish(false)}>Отмена</button>
-                <button type="button" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>Завершить</button>
+                <button type="button" disabled={rootMutationPending || save.isPending || confirm.isPending || finish.isPending} aria-busy={finish.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>{finish.isPending ? 'Завершаем…' : 'Завершить'}</button>
               </div>
             </div>
-          : <button type="button" className="secondary wide" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => !exercise.sets.every((set) => set.confirmedAt)); if (incomplete) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</button>}
+          : <button type="button" className="secondary wide" disabled={rootMutationPending || save.isPending || confirm.isPending || finish.isPending} aria-busy={finish.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => !exercise.sets.every((set) => set.confirmedAt)); if (incomplete) setConfirmFinish(true); else finish.mutate() }}>{finish.isPending ? 'Завершаем…' : 'Завершить тренировку'}</button>}
       </div>
     </>}</AsyncView>
     {canManageLiveStructure && pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} onPick={pickLiveExercise} onClose={closePicker} />}

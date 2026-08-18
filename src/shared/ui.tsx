@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PropsWithChildren, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { AddIcon, AlertIcon, BackIcon, CheckIcon, MoreIcon, PendingIcon } from './icons'
+import { AddIcon, AlertIcon, BackIcon, CheckIcon, InfoIcon, MoreIcon, PendingIcon } from './icons'
 
 export function Page({ title, action, back, center, hideTitle, className, children }: PropsWithChildren<{
   title: string; action?: ReactNode; back?: string | number; center?: boolean; hideTitle?: boolean; className?: string
@@ -30,15 +30,26 @@ export function Skeleton({ rows = 3 }: { rows?: number }) {
   </div>
 }
 
-export function EmptyState({ title = 'Пока ничего нет', description = 'Здесь появятся новые данные.', action }: {
-  title?: string; description?: string; action?: ReactNode
+type StatePanelTone = 'empty' | 'error' | 'info'
+
+export function StatePanel({ tone, title, description, action, compact = false }: {
+  tone: StatePanelTone; title: string; description: string; action?: ReactNode; compact?: boolean
 }) {
-  return <div className="empty-state">
-    <span className="empty-state-mark" aria-hidden="true"><AddIcon /></span>
-    <h2>{title}</h2>
+  const role = tone === 'error' ? 'alert' : 'status'
+  const icon = tone === 'empty' ? <AddIcon /> : tone === 'error' ? <AlertIcon /> : <InfoIcon />
+  const Heading = compact ? 'h3' : 'h2'
+  return <section className={`state-panel state-panel-${tone}${compact ? ' state-panel-compact' : ''}`} role={role}>
+    <span className="state-panel-mark" aria-hidden="true">{icon}</span>
+    <Heading>{title}</Heading>
     <p>{description}</p>
-    {action}
-  </div>
+    {action && <div className="state-panel-action">{action}</div>}
+  </section>
+}
+
+export function EmptyState({ title = 'Пока ничего нет', description = 'Здесь появятся новые данные.', action, compact }: {
+  title?: string; description?: string; action?: ReactNode; compact?: boolean
+}) {
+  return <StatePanel tone="empty" title={title} description={description} action={action} compact={compact} />
 }
 
 export function SaveStatus({ status, error }: {
@@ -57,11 +68,8 @@ export function AsyncView({ loading, error, empty, onRetry, emptyTitle, emptyDes
   emptyTitle?: string; emptyDescription?: string; emptyAction?: ReactNode
 }>) {
   if (loading) return <Skeleton />
-  if (error) return <div className="state async-error error" role="alert">
-    <span className="async-state-mark" aria-hidden="true"><AlertIcon /></span>
-    <div><h2>Не удалось загрузить</h2><p>{error.message}</p></div>
-    {onRetry && <button onClick={onRetry}>Повторить</button>}
-  </div>
+  if (error) return <StatePanel tone="error" title="Не удалось загрузить данные" description={error.message}
+    action={onRetry && <button type="button" onClick={onRetry}>Повторить</button>} />
   if (empty) return <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
   return children
 }
