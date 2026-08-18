@@ -1157,6 +1157,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .ai-progress-stats strong { font-size: var(--type-numeric-size); font-variant-numeric: tabular-nums; line-height: var(--leading-tight) }
 .ai-progress-stats strong.positive { color: var(--success-fg) }
 .ai-progress-stats span { overflow: hidden; color: var(--muted); font-size: var(--type-caption-size); line-height: 1.2; text-overflow: ellipsis; white-space: nowrap }
+@media (max-width: 400px) {
+  .ai-progress-stats span { text-overflow: clip; white-space: normal }
+}
 .ai-progress-section { padding: 14px 17px 0 }
 .ai-progress-section h3 { margin: 0 0 8px; font-size: var(--type-body-size) }
 .ai-progress-section ul { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none }
