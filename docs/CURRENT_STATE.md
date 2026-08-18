@@ -5,7 +5,7 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-18
-Проверенный `main`: `e88d286` (`feat: reorganize trainer progress overview (#423)`)
+Проверенный `main`: `103d326` (`test: protect key route visuals (#425)`)
 
 ## Активная работа
 
@@ -16,11 +16,17 @@
   pilot открыт отдельно и не относится к продуктовой UI-фазе.
 - Функциональный MVP признан достаточным для системной фазы удобства. Аудит
   `#420` зафиксировал P0/P1/P2; навигационная ясность завершена в `#421`,
-  информационная архитектура Trainer Progress — в `#423`. Следующая одна
-  продуктовая задача — visual regression ключевых маршрутов.
+  информационная архитектура Trainer Progress — в `#423`, visual regression
+  ключевых маршрутов — в `#425`. Следующая одна продуктовая задача — единый
+  типографический контракт.
 
 ## Последняя проверенная продуктовая точка
 
+- После `#425` visual regression защищает Client Progress/Workouts/Live на
+  390/430 px и Trainer Clients/Schedule/Progress на 1440 px, включая контроль
+  горизонтального переполнения. Для различающихся системных шрифтов сохранены
+  macOS/Linux-эталоны; CI прикладывает actual/diff/trace при сбое. Продуктовый
+  UI, главные страницы, LLM и SpeechKit не менялись.
 - После `#423` первый экран Trainer Progress отвечает на три вопроса: какова
   регулярность клиента, где есть измеримый прогресс и что требует внимания.
   Подробный AI-анализ и замеры доступны отдельными уровнями; расчёты, LLM,
@@ -64,6 +70,11 @@
 
 ## Последние проверки
 
+- `#425` / `YAFIT-311`: merge `103d326` подтверждён; GitHub app/database/e2e,
+  Vercel и iPhone WebKit прошли. Локально полный `npm run check` — 463 теста
+  приложения и 20 API-тестов; visual regression — 8 passed. Production iOS
+  bundle синхронизирован, собран, установлен и запущен на iPhone 17 Simulator;
+  экран входа проверен контрольным снимком.
 - `#423` / `YAFIT-310`: merge `e88d286` подтверждён; GitHub app/database/e2e,
   Vercel и iPhone WebKit прошли. Локально `npm run check` — 463 теста приложения
   и 20 API-тестов, lint/typecheck/build зелёные. Production iOS bundle
@@ -74,20 +85,11 @@
   — 457 тестов приложения и 20 API-тестов, lint/typecheck/build зелёные.
   Production iOS bundle синхронизирован, собран, установлен и запущен на iPhone
   17 Simulator; экран входа проверен контрольным снимком.
-- `#420` / `YAFIT-308`: merge `29ad204` подтверждён; аудит и приоритеты
-  P0/P1/P2 сохранены в `docs/design/PRODUCT_USABILITY_AUDIT_2026-08-18.md`, CI
-  полностью зелёный.
-- `#413`: merge `60a2482` подтверждён; GitHub CI app/database/e2e и Vercel
-  прошли. Локально `npm run check`, 20 API-тестов и 5 PostgreSQL 17 integration
-  tests зелёные; проверены wrong OAuth app, hashed `psuid`, allowlist, RLS и
-  очистка actor context. Terraform 1.13.5 `fmt-check`/`validate` прошли.
 ## Ближайший roadmap
 
 1. В auth-потоке отдельно завершить `#419`, OAuth-приложение Yandex ID и
    одобренный stage deploy; production frontend не переключать.
-2. Расширить visual regression на Client Progress/Workouts/Live и Trainer
-   Clients/Schedule/Progress.
-3. Затем унифицировать типографику и геометрию; desktop shell тренера делать
+2. Унифицировать типографику и геометрию; desktop shell тренера делать
    отдельным этапом, не растягиванием мобильных карточек.
 
 Ручной беговой MVP `YAFIT-300/301/307/302/303` завершён. Актуальный UX/UI-план
