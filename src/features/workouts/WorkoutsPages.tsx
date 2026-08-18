@@ -44,6 +44,7 @@ import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
 import { AddIcon } from '../../shared/icons'
 import { WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
+import { liveSessionProgress } from './live-session-progress'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -1394,11 +1395,15 @@ export function LiveWorkoutPage() {
       </WorkoutSetRow>
     </form>
   }
+  const sessionProgress = liveSessionProgress(query.data?.exercises ?? [])
   // «Назад» ведёт в карточку тренировки: таб-бар в live скрыт, поэтому нужен
   // явный выход наружу без завершения тренировки (тренер может вернуться позже).
   return <Page title="Live-тренировка" hideTitle className="live-workout-page workout-focused-page" back={`/workouts/${workoutId}`}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
-      <WorkoutHeader eyebrow="LIVE" title={query.data.clientName} state="current" meta="Тренировка идёт" />
+      <WorkoutHeader eyebrow="LIVE" title={query.data.clientName} state="current" className="live-session-header" meta={<div className="live-session-progress">
+        <span className="live-session-progress-copy"><span>{sessionProgress.complete ? 'Все упражнения выполнены' : `Упражнение ${sessionProgress.activeExerciseNumber} из ${sessionProgress.exerciseCount} · подход ${sessionProgress.activeSetNumber} из ${sessionProgress.activeExerciseSetCount}`}</span><strong>Готово {sessionProgress.completedSetCount} из {sessionProgress.setCount}</strong></span>
+        <span className="live-session-progress-track" role="progressbar" aria-label="Выполненные подходы" aria-valuemin={0} aria-valuemax={sessionProgress.setCount} aria-valuenow={sessionProgress.completedSetCount}><span style={{ width: `${sessionProgress.percent}%` }} /></span>
+      </div>} />
       {(() => {
         // Активная круговая (многоэлементный блок с незавершёнными подходами) —
         // её счётчик «Круг N из M» + точки закрепляем вместе с таймером, чтобы при

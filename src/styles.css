@@ -1618,3 +1618,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .live-set-check, .live-set-save,
   .live-set-expanded .live-set-check, .live-set-expanded .live-set-save { width:44px }
 }
+
+/* Компактный прогресс live: один взгляд перед текущим подходом, без отдельной
+   карточки и без дублирования названия упражнения из рабочего блока. */
+.live-session-header { margin-bottom:var(--space-3) }
+.live-session-header .workout-header-copy { flex:1 1 auto }
+.live-session-progress { width:100%; display:grid; gap:5px }
+.live-session-progress-copy { display:flex; flex-wrap:wrap; justify-content:space-between; gap:2px var(--space-3); font-variant-numeric:tabular-nums }
+.live-session-progress-copy strong { color:var(--fg); white-space:nowrap }
+.live-session-progress-track { width:100%; height:4px; overflow:hidden; border-radius:var(--radius-pill); background:var(--surface-sunken) }
+.live-session-progress-track > span { display:block; height:100%; border-radius:inherit; background:var(--accent); transition:width .2s ease }
