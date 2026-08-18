@@ -389,6 +389,7 @@ test('iPhone: client edits shared progress, custom metrics and deletion safely',
 
   await loginAsTrainer(page)
   await page.goto(`/progress/${clientId}`)
+  await page.locator('.trainer-measurements > summary').click()
   await page.getByPlaceholder('Название').fill(metricName)
   await page.getByPlaceholder('Единица').fill('балл')
   await page.getByRole('button', { name: 'Добавить', exact: true }).last().click()
@@ -630,6 +631,7 @@ test('iPhone: voice-first и AI-поверхности сохраняют кон
   await expect(page.locator('.phone-frame')).toHaveScreenshot('today-voice-dark-390.png', { animations: 'disabled', maxDiffPixelRatio: 0.03 })
 
   await page.goto('/progress/11111111-1111-4111-8111-111111111111')
+  await page.locator('.trainer-progress-details > summary').click()
   const aiCard = page.locator('.ai-progress-card')
   await expect(aiCard).toBeVisible()
   expect(await aiCard.evaluate((element) => getComputedStyle(element).borderTopColor)).toBe('rgb(107, 68, 54)')
