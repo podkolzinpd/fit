@@ -120,6 +120,8 @@ test('today: быстрый старт ведёт к единому выбору
   await page.getByRole('button', { name: 'Далее' }).click()
   await expect(page.getByRole('heading', { name: 'Сохраните тренировку' })).toBeVisible()
   await expect(page).toHaveURL(/\/today\?view=save$/)
+  await expect(page.getByText('Как сохранить?', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Запланировать', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await page.locator('.client-picker-trigger').click()
   await page.getByRole('button', { name: '＋ Новый клиент' }).click()
   await expect(page.getByLabel('Имя нового клиента')).toBeVisible()
@@ -130,17 +132,17 @@ test('today: быстрый старт ведёт к единому выбору
   await page.locator('.client-picker-trigger').click()
   await page.locator('.client-picker-item').filter({ hasText: 'Анна Смирнова' }).first().click()
   await expect(page.getByText('Нет клиента?', { exact: true })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Запланировать' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Запланировать тренировку' })).toBeEnabled()
   await expect(page.getByLabel('Дата тренировки')).toBeVisible()
   await expect(page.getByLabel('Время тренировки')).toBeVisible()
-  const planButton = page.getByRole('button', { name: 'Запланировать' })
+  const planButton = page.getByRole('button', { name: 'Запланировать тренировку' })
   await planButton.scrollIntoViewIfNeeded()
   const [planBox, viewportHeight] = await Promise.all([planButton.boundingBox(), page.evaluate(() => window.visualViewport?.height ?? window.innerHeight)])
   if (!planBox) throw new Error('Не удалось измерить кнопку сохранения')
   expect(planBox.y + planBox.height).toBeLessThanOrEqual(viewportHeight)
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Завершённая' }).click()
-  await expect(page.getByRole('button', { name: 'Записать как завершённую' })).toBeEnabled()
+  await page.getByRole('button', { name: 'Записать выполненную' }).click()
+  await expect(page.getByRole('button', { name: 'Записать тренировку' })).toBeEnabled()
   await expect(page.getByLabel('Время тренировки')).toHaveCount(0)
   await page.getByRole('button', { name: '← К проверке' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
@@ -166,6 +168,7 @@ test('today: беговая ветка сразу добавляет интер�
 
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения вручную' }).click()
+  await expect(page.getByText('Выберите вариант и дату', { exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: 'Добавить упражнение' }).click()
   await page.getByRole('button', { name: /^Бег/ }).click()
   await expect(page.getByRole('button', { name: /Темповый бег/ })).toBeVisible()
@@ -184,7 +187,7 @@ test('today: беговая ветка сразу добавляет интер�
   await page.locator('.client-picker-item').first().click()
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
-    page.getByRole('button', { name: 'Запланировать' }).click(),
+    page.getByRole('button', { name: 'Запланировать тренировку' }).click(),
   ])
   await expect(page.locator('.block-badge')).toContainText('Интервалы · 6 кр.')
 })
