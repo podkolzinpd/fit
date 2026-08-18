@@ -42,6 +42,7 @@ import { RunMetricsFields } from './RunMetricsFields'
 import { parseRunDurationInput, runDistanceKmFromInput, runDistanceLabel, runPaceLabel, type RunDistanceUnit } from '../../shared/run-metrics'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
+import { AddIcon } from '../../shared/icons'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -96,7 +97,7 @@ export function SchedulePage() {
             под 📅 раздувает свою tap-зону за CSS-границы и перехватывает соседний
             тап — из-за этого по ＋ открывался календарь. Разводим и убираем
             inset:0 у инпута (см. .schedule-jump input в styles.css). */}
-        <Link className="schedule-add" to={`/workouts/new?date=${selected}`} aria-label="Новая тренировка">＋</Link>
+        <Link className="schedule-add" to={`/workouts/new?date=${selected}`} aria-label="Новая тренировка"><AddIcon /></Link>
         <label className="schedule-jump" aria-label="Выбрать дату">📅<input type="date" value={selected} onChange={(event) => event.target.value && selectDate(localDate(event.target.value))} /></label>
        </div>
     </div>
