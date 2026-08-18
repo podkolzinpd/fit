@@ -80,6 +80,7 @@ test('client and trainer receive progress and workout changes without reload', a
     await expect(client.getByText('Текущий этап: Realtime этап', { exact: true })).toBeVisible({ timeout: 10_000 })
 
     await trainer.goto(`/progress/${clientId}`)
+    await trainer.locator('.trainer-progress-details > summary').click()
     await trainer.locator('.trainer-measurements > summary').click()
     await trainer.getByRole('button', { name: 'Показать' }).click()
     await client.goto('/me/progress')
