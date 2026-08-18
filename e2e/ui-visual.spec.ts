@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { randomUUID } from 'node:crypto'
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
@@ -32,7 +33,7 @@ async function createStandaloneLiveWorkout(page: import('@playwright/test').Page
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Тип аккаунта').selectOption('client')
   await page.getByLabel('Имя').fill('Live клиент')
-  await page.getByLabel('Email').fill(`visual-live-${projectName}@fit.local`)
+  await page.getByLabel('Email').fill(`visual-live-${projectName}-${randomUUID()}@fit.local`)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await expect(page).toHaveURL(/\/me$/)
@@ -86,7 +87,7 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   await expect(page.getByRole('heading', { name: 'Твоя цель' })).toBeVisible()
   await expect(page.getByText('Проверяем цель…')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Обновить мой прогресс' })).toBeVisible()
-  await expectVisualBaseline(page, 'client-progress.png')
+  await expectVisualBaseline(page, `client-progress-${process.platform}.png`)
 
   await page.goto('/me/workouts')
   await expect(page.getByRole('heading', { name: 'Мои тренировки' })).toBeVisible()
