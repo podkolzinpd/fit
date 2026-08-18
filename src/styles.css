@@ -1552,3 +1552,37 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .today-start-shell .tab-bar { left:50%; bottom:0; width:min(100%, 440px); transform:translateX(-50%); border:0; border-top:1px solid var(--border); border-radius:0; box-shadow:none; }.today-start-shell .content { padding-bottom:calc(86px + env(safe-area-inset-bottom)); }.today-start-shell.keyboard-open .tab-bar { display:none; }.today-start-shell.keyboard-open .content { padding-bottom:20px; }
 @media (max-width: 480px) { .phone-frame { width: 100%; height: 100dvh; margin: 0; border: 0; border-radius: 0 }.auth-screen { width: 100%; min-height: 100dvh; margin: 0; border: 0; border-radius: 0 }.content:not(.content-immersive) { padding-bottom:0 }.tab-bar { position:static; flex:0 0 auto; bottom:auto; width:100%; border-width:1px 0 0; border-radius:0; box-shadow:none; backdrop-filter:none }.today-start-shell .tab-bar { left:auto; width:100%; transform:none }.today-start-shell .content { padding-bottom:0 } }
 @media (max-width: 360px) { .measure-grid { grid-template-columns: 1fr }.inline-form { grid-template-columns: 1fr }.inline-form button { grid-column: 1 }.tab-bar a { font-size: 11px } }
+
+/* Единый component contract тренировки (YAFIT-315): создание, live и
+   история используют одинаковые Header / Exercise / SetRow / Status / CTA. */
+.workout-header-contract { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-3); min-width:0; margin:0 0 var(--section-gap); padding:0 0 var(--space-4); border-bottom:1px solid var(--border) }
+.workout-header-copy { min-width:0; display:grid; gap:var(--space-1) }
+.workout-header-eyebrow { margin:0; color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label); text-transform:uppercase }
+.workout-header-contract h2 { min-width:0; margin:0; overflow-wrap:anywhere; color:var(--fg-strong); font-size:var(--type-title-size); line-height:var(--leading-tight); letter-spacing:var(--tracking-tight) }
+.workout-header-meta { display:flex; flex-wrap:wrap; gap:2px var(--space-3); min-width:0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
+.workout-header-meta > span { min-width:0; overflow-wrap:anywhere }
+.workout-header-side { flex:0 0 auto; display:flex; align-items:center; gap:var(--space-2) }
+.workout-status { min-height:var(--chip-height); display:inline-flex; align-items:center; padding:0 var(--space-3); border:1px solid var(--border); border-radius:var(--radius-pill); background:var(--surface-sunken); color:var(--muted); font-size:var(--type-caption-size); font-weight:var(--weight-bold); line-height:1; white-space:nowrap }
+.workout-status-planned, .workout-status-current { border-color:var(--accent-surface-border); background:var(--accent-surface); color:var(--accent-strong) }
+.workout-status-completed { border-color:var(--success-border); background:var(--success-surface); color:var(--success-fg) }
+.workout-status-partial { border-color:var(--warning-border); background:var(--warning-surface); color:var(--warning-fg) }
+.workout-status-skipped { border-color:var(--border); background:var(--surface-sunken); color:var(--muted) }
+.workout-status-history, .workout-status-upcoming { background:var(--surface-sunken); color:var(--muted) }
+.workout-exercise-contract, .workout-set-contract { min-width:0 }
+.workout-exercise-current { border-color:var(--accent-surface-border) }
+.workout-exercise-upcoming, .workout-set-skipped { color:var(--muted) }
+.workout-exercise-history, .workout-exercise-planned { background:transparent }
+.workout-set-completed { border-color:var(--success-border) }
+.workout-cta { min-height:var(--control-height-primary); border-radius:var(--radius-lg); font-size:var(--type-body-size); font-weight:var(--weight-bold) }
+.workout-cta:disabled { cursor:not-allowed; opacity:.5; box-shadow:none }
+.workout-exercise-compact { width:100%; min-height:64px; display:flex; align-items:center; gap:var(--space-3); margin:var(--space-3) 0; padding:var(--space-3) 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; color:var(--fg); text-align:left; box-shadow:none }
+.workout-exercise-compact-mark { flex:0 0 auto; width:28px; height:28px; display:grid; place-items:center; border-radius:50%; background:var(--surface-sunken); color:var(--muted); font-weight:var(--weight-bold) }
+.workout-exercise-compact.workout-exercise-completed .workout-exercise-compact-mark { background:var(--success-mark-surface); color:var(--success-fg) }
+.workout-exercise-compact-copy { flex:1 1 auto; min-width:0; display:grid; gap:2px }
+.workout-exercise-compact-copy strong { overflow-wrap:anywhere; font-size:var(--type-body-size); line-height:var(--leading-snug) }
+.workout-exercise-compact-copy span { color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
+@media (max-width: 360px) {
+  .workout-header-contract { align-items:flex-start }
+  .workout-header-side { max-width:42% }
+  .workout-status { min-height:28px; padding:0 var(--space-2); white-space:normal; text-align:center }
+}
