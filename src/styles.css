@@ -190,10 +190,11 @@ p { margin: 6px 0 }
 @media (min-width: 481px) { .page { padding-top: 30px } }
 .page-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; container-type: inline-size }
 .page-header .button { padding: 9px 13px; border-radius: 11px; font-size: var(--text-ui); flex-shrink: 0 }
-.page-back { flex: 0 0 auto; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 12px; background: #241f33; color: var(--fg); font-size: 20px; line-height: 1; cursor: pointer }
+.page-back { flex: 0 0 auto; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 12px; background: #241f33; color: var(--fg); line-height: 1; cursor: pointer }
+.page-back svg { width: 22px; height: 22px }
 .page-back:hover { border-color: var(--accent-surface-border) }
 /* Centered header: back on the left, title centered, action mirrored on the right (action sized to its own content, not forced into 40px). */
-.page-center .page-header { display: grid; grid-template-columns: 40px 1fr auto; align-items: center }
+.page-center .page-header { display: grid; grid-template-columns: 44px 1fr auto; align-items: center }
 .page-center .page-header h1 { grid-column: 2; text-align: center; margin: 0 }
 .page-center .page-header .page-back { grid-column: 1 }
 .page-center .page-header > :not(h1):not(.page-back) { grid-column: 3; justify-self: end }
@@ -263,16 +264,20 @@ p { margin: 6px 0 }
 .skeleton-title { width: 48%; height: 18px; margin-bottom: 13px }
 .skeleton-line { width: 76%; height: 13px }
 .empty-state { min-height: 230px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 28px 24px; border: 1px dashed var(--accent-surface-border); border-radius: 22px; text-align: center; background: linear-gradient(145deg, var(--surface-raised), var(--accent-surface)) }
-.empty-state-mark { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 16px; color: var(--accent-strong); background: var(--accent-surface); font-size: 25px; font-weight: 700 }
+.empty-state-mark { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 16px; color: var(--accent-strong); background: var(--accent-surface) }
+.empty-state-mark svg { width: 24px; height: 24px }
 .empty-state h2 { margin: 6px 0 0 }
 .empty-state p { max-width: 280px; color: var(--muted) }
 .empty-state .button, .empty-state button { margin-top: 8px }
 .async-error { min-height: 220px; padding: 28px 24px; border: 1px solid var(--danger-border); border-radius: 22px; background: var(--danger-surface); box-shadow: var(--shadow-card); color: var(--fg) }
-.async-error .async-state-mark { width: 46px; height: 46px; display: grid; place-items: center; justify-self: center; border-radius: 15px; color: var(--danger); background: var(--surface-raised); font-size: 25px; font-weight: var(--weight-bold) }
+.async-error .async-state-mark { width: 46px; height: 46px; display: grid; place-items: center; justify-self: center; border-radius: 15px; color: var(--danger); background: var(--surface-raised) }
+.async-error .async-state-mark svg { width: 25px; height: 25px }
 .async-error h2 { margin: 0 0 5px; font-size: 20px; color: var(--fg-strong) }
 .async-error p { max-width: 300px; margin: 0; color: var(--muted); line-height: 1.42 }
 .async-error button { justify-self: center; min-width: 132px; margin-top: 4px }
 .save-status { display: flex; align-items: center; gap: 7px; min-height: 24px; margin: 0; color: var(--muted); font-size: 13px; font-weight: 700 }
+.save-status-mark { width: 16px; height: 16px; display: inline-grid; place-items: center; flex: 0 0 auto }
+.save-status-mark svg { width: 16px; height: 16px }
 .save-status-saving span { color: var(--warning); animation: save-pulse 1s ease-in-out infinite }
 .save-status-saved { color: var(--success-fg) }
 .save-status-error { color: var(--danger) }
@@ -463,7 +468,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Инпут не на всю плашку (inset больше 0) и с pointer-events только на самом
    поле — чтобы нативная tap-зона iOS не выходила к соседней кнопке ＋. */
 .schedule-jump input { position: absolute; inset: 2px; width: calc(100% - 4px); opacity: 0; cursor: pointer }
-.schedule-add { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: 0 0 auto; border-radius: 12px; background: var(--accent); color: var(--on-accent); font-size: 24px; line-height: 1; text-decoration: none }
+.schedule-add { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: 0 0 auto; border-radius: 12px; background: var(--accent); color: var(--on-accent); line-height: 1; text-decoration: none }
+.schedule-add svg { width: 23px; height: 23px }
 .week-nav { display: flex; align-items: center; gap: 6px; margin-bottom: 14px }
 .week-arrow { flex: 0 0 auto; width: 36px; height: 36px; padding: 0; font-size: 20px; line-height: 1 }
 .week-strip { flex: 1; display: flex; gap: 6px }
@@ -532,7 +538,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 
 /* Меню «три точки»: редкие действия (заменить/удалить) вне постоянной видимости. */
 .overflow-menu { position: relative; display: inline-flex }
-.overflow-trigger { min-width: 44px; min-height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-raised); color: var(--fg); font-size: 20px; line-height: 1; cursor: pointer; box-shadow: none }
+.overflow-trigger { width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-raised); color: var(--fg); line-height: 1; cursor: pointer; box-shadow: none }
+.overflow-trigger svg { width: 21px; height: 21px }
 .overflow-trigger:hover { border-color: var(--accent-surface-border) }
 .overflow-list { position: fixed; z-index: 20; min-width: 160px; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-elevated); box-shadow: 0 14px 40px #00000033 }
 .overflow-item { min-height: 44px; padding: 10px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--fg); font-weight: 600; text-align: left; box-shadow: none; cursor: pointer }

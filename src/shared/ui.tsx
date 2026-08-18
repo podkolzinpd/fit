@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PropsWithChildren, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
+import { AddIcon, AlertIcon, BackIcon, CheckIcon, MoreIcon, PendingIcon } from './icons'
 
 export function Page({ title, action, back, center, hideTitle, className, children }: PropsWithChildren<{
   title: string; action?: ReactNode; back?: string | number; center?: boolean; hideTitle?: boolean; className?: string
@@ -9,7 +10,7 @@ export function Page({ title, action, back, center, hideTitle, className, childr
   const classes = ['page', center ? 'page-center' : '', className].filter(Boolean).join(' ')
   return <main className={classes}>
     <header className="page-header">
-      {back !== undefined && <button type="button" className="page-back" aria-label="Назад" onClick={() => navigate(back as never)}>←</button>}
+      {back !== undefined && <button type="button" className="page-back" aria-label="Назад" onClick={() => navigate(back as never)}><BackIcon /></button>}
       {/* hideTitle — заголовок дублируется таб-баром (напр. «Расписание»);
           прячем визуально, но оставляем для скринридеров. */}
       <h1 className={hideTitle ? 'sr-only' : undefined}>{title}</h1>
@@ -33,7 +34,7 @@ export function EmptyState({ title = 'Пока ничего нет', description
   title?: string; description?: string; action?: ReactNode
 }) {
   return <div className="empty-state">
-    <span className="empty-state-mark" aria-hidden="true">＋</span>
+    <span className="empty-state-mark" aria-hidden="true"><AddIcon /></span>
     <h2>{title}</h2>
     <p>{description}</p>
     {action}
@@ -46,7 +47,7 @@ export function SaveStatus({ status, error }: {
   if (status === 'idle') return null
   const text = status === 'saving' ? 'Сохраняем…' : status === 'saved' ? 'Сохранено' : error ?? 'Не удалось сохранить'
   return <p className={`save-status save-status-${status}`} role={status === 'error' ? 'alert' : 'status'}>
-    <span aria-hidden="true">{status === 'saving' ? '●' : status === 'saved' ? '✓' : '!'}</span>
+    <span className="save-status-mark" aria-hidden="true">{status === 'saving' ? <PendingIcon /> : status === 'saved' ? <CheckIcon /> : <AlertIcon />}</span>
     {text}
   </p>
 }
@@ -57,7 +58,7 @@ export function AsyncView({ loading, error, empty, onRetry, emptyTitle, emptyDes
 }>) {
   if (loading) return <Skeleton />
   if (error) return <div className="state async-error error" role="alert">
-    <span className="async-state-mark" aria-hidden="true">!</span>
+    <span className="async-state-mark" aria-hidden="true"><AlertIcon /></span>
     <div><h2>Не удалось загрузить</h2><p>{error.message}</p></div>
     {onRetry && <button onClick={onRetry}>Повторить</button>}
   </div>
@@ -208,7 +209,7 @@ export function OverflowMenu({ items, label = 'Ещё действия' }: { ite
   if (items.length === 0) return null
   const host = document.querySelector('.phone-frame') ?? document.body
   return <div className="overflow-menu" ref={triggerRef}>
-    <button type="button" className="overflow-trigger" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}>⋯</button>
+    <button type="button" className="overflow-trigger" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}><MoreIcon /></button>
     {open && createPortal(<div ref={menuRef} className="overflow-list" role="menu" style={position ?? { visibility: 'hidden' }}>
       {items.map((item) => <button key={item.label} type="button" role="menuitem" disabled={item.disabled}
         className={item.danger ? 'overflow-item danger' : 'overflow-item'}
