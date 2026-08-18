@@ -1048,6 +1048,50 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-page .page-header { margin-bottom: 18px }
 .progress-page .metric-tabs { margin-top: 0; margin-bottom: 12px }
 .progress-page .chart { margin: 0 -2px 20px; overflow: hidden; border-radius: 20px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
+.trainer-progress-overview-card { overflow: hidden; border: 1px solid var(--border); border-radius: 20px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
+.trainer-progress-overview-card > header { display: grid; gap: 3px; padding: 17px }
+.trainer-progress-overview-card > header .eyebrow { margin: 0 }
+.trainer-progress-overview-card > header h2 { margin: 0; font-size: var(--text-title); letter-spacing: var(--tracking-tight); line-height: 1.15 }
+.trainer-progress-overview-card > header > p:last-child { margin: 2px 0 0; color: var(--muted); font-size: var(--text-xs); line-height: var(--leading-body) }
+.trainer-progress-decisions { display: grid }
+.trainer-progress-decisions article { display: grid; gap: 4px; padding: 13px 17px; border-top: 1px solid var(--border) }
+.trainer-progress-decisions article > span { color: var(--accent-strong); font-size: var(--text-xs); font-weight: var(--weight-bold); letter-spacing: var(--tracking-label); text-transform: uppercase }
+.trainer-progress-decisions article > strong { font-size: var(--text-sm); line-height: var(--leading-snug) }
+.trainer-progress-decisions article > p { margin: 0; color: var(--muted); font-size: var(--text-xs); line-height: var(--leading-snug) }
+.trainer-progress-decisions article.needs-attention { background: var(--ai-attention-surface) }
+.trainer-progress-decisions article.needs-attention > strong { color: var(--ai-attention-fg) }
+.trainer-progress-decisions article.is-clear { background: var(--success-surface) }
+.trainer-progress-decisions article.is-clear > span { color: var(--success-fg) }
+.trainer-progress-details, .trainer-measurements { margin-top: 14px; overflow: hidden; border: 1px solid var(--border); border-radius: 20px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
+.trainer-progress-details > summary, .trainer-measurements > summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; min-height: 104px; padding: 17px; list-style: none; cursor: pointer }
+.trainer-progress-details > summary::-webkit-details-marker, .trainer-measurements > summary::-webkit-details-marker { display: none }
+.trainer-progress-details > summary:focus-visible, .trainer-measurements > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px }
+.trainer-progress-details > summary > div { display: grid; gap: 3px; min-width: 0 }
+.trainer-progress-details > summary .eyebrow { margin: 0 }
+.trainer-progress-details > summary h2 { margin: 0; font-size: var(--text-section); line-height: 1.2 }
+.trainer-progress-details > summary > div > span { color: var(--muted); font-size: var(--text-xs); line-height: var(--leading-snug) }
+.trainer-details-open, .trainer-details-close { min-height: 44px; color: var(--accent-strong); font-size: var(--text-xs); font-weight: var(--weight-bold); line-height: 44px }
+.trainer-details-close, .trainer-progress-details[open] .trainer-details-open { display: none }
+.trainer-progress-details[open] .trainer-details-close { display: inline }
+.trainer-progress-details[open] > summary, .trainer-measurements[open] > summary { border-bottom: 1px solid var(--border); background: var(--surface-sunken) }
+.trainer-progress-details-content { display: grid; gap: 14px; padding: 16px }
+.trainer-progress-details-content > .workout-regularity-card,
+.trainer-progress-details-content > .ai-progress-card,
+.trainer-progress-details-content > .running-progress-card { margin: 0 }
+.trainer-measurements-summary-copy { display: grid; align-content: center; gap: 3px; min-width: 0 }
+.trainer-measurements-summary-copy .eyebrow { margin: 0 }
+.trainer-measurements-summary-copy h2 { margin: 0; font-size: var(--text-section); line-height: 1.2 }
+.trainer-measurements-summary-copy > span { overflow: hidden; color: var(--muted); font-size: var(--text-xs); line-height: var(--leading-snug); text-overflow: ellipsis; white-space: nowrap }
+.trainer-measurements-summary-meta { display: grid; align-content: center; justify-items: end; gap: 1px; color: var(--muted); font-size: var(--text-xs); white-space: nowrap }
+.trainer-measurements-summary-meta strong { color: var(--fg-strong); font-size: 20px; font-variant-numeric: tabular-nums; line-height: 1 }
+.trainer-measurements-open, .trainer-measurements-close { min-height: 32px; margin-top: 7px; color: var(--accent-strong); font-weight: var(--weight-bold); line-height: 32px }
+.trainer-measurements-close, .trainer-measurements[open] .trainer-measurements-open { display: none }
+.trainer-measurements[open] .trainer-measurements-close { display: inline }
+.trainer-measurements-content { padding: 18px }
+.trainer-measurements-content > .progress-form-card,
+.trainer-measurements-content > .progress-history,
+.trainer-measurements-content > .metrics-manager { margin-inline: 0 }
+.trainer-measurements-content > .progress-form-card:first-of-type { margin-top: 0 }
 .progress-form-card, .progress-history, .metrics-manager { margin-top: 16px; padding: 18px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
 .progress-form-card h2, .progress-history h2, .metrics-manager h2 { margin-top: 0 }
 .progress-form-card .actions { margin-bottom: 0 }
@@ -1120,6 +1164,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .ai-progress-attention > span { width: 20px; height: 20px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; color: #1b140b; background: #eab65d; font-size: 12px; font-weight: 900 }
 .ai-progress-attention p { margin: 1px 0 0; color: var(--ai-attention-fg); font-size: var(--text-xs); line-height: var(--leading-body) }
 .ai-progress-attention > div { display: flex; flex-direction: column; gap: 5px }
+.ai-progress-attention strong { color: var(--ai-attention-fg); font-size: var(--text-xs); letter-spacing: var(--tracking-label); text-transform: uppercase }
+.ai-progress-attention.is-clear { border-color: var(--success-border); background: var(--success-surface) }
+.ai-progress-attention.is-clear strong { color: var(--success-fg) }
+.ai-progress-attention.is-clear p { color: var(--muted) }
+.ai-progress-details-toggle { display: flex; justify-content: center; padding: 7px 17px 0 }
+.ai-progress-details-toggle .link { min-height: 44px }
+.ai-progress-details { display: grid }
 .ai-progress-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 15px; padding: 12px 17px; border-top: 1px solid var(--ai-divider); background: var(--ai-subtle-surface) }
 .ai-progress-footer > span { color: var(--muted); font-size: var(--text-xs); line-height: var(--leading-snug) }
 .ai-progress-footer button { flex: 0 0 auto; padding: 7px 10px; border-radius: 9px; font-size: var(--text-xs) }
