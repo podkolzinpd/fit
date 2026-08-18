@@ -285,7 +285,7 @@ test('iPhone: client voice-first home сохраняет тренировку т
   await page.getByRole('button', { name: 'Далее' }).click()
   await expect(page.getByText('Тренировка будет сохранена в ваш кабинет')).toBeVisible()
   await expect(page.locator('.client-picker-trigger')).toHaveCount(0)
-  await page.getByRole('link', { name: 'Профиль', exact: true }).click()
+  await page.goto('/me/profile')
   await expect(page).toHaveURL(/\/me\/profile$/)
   await page.getByRole('link', { name: 'Изменить данные' }).click()
   await page.getByLabel('Имя').fill('Клиент Обновлённый')
@@ -668,7 +668,7 @@ test('iPhone: ручной выбор начинает с недавних, а �
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: меню упражнения плана не перекрывает нижнюю панель на 390 px', async ({ page }) => {
+test('iPhone: создание тренировки сфокусировано и меню не перекрывает действия на 390 px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
   await page.goto('/workouts/new')
@@ -684,17 +684,11 @@ test('iPhone: меню упражнения плана не перекрывае
   await page.keyboard.press('Escape')
   const save = page.getByRole('button', { name: 'Сохранить', exact: true })
   await save.scrollIntoViewIfNeeded()
-  const mobileLayout = await page.evaluate(() => {
-    const content = document.querySelector('.content')!.getBoundingClientRect()
-    const tabBar = document.querySelector('.tab-bar')!
-    const bar = tabBar.getBoundingClientRect()
-    return { contentBottom: content.bottom, barTop: bar.top, barPosition: getComputedStyle(tabBar).position }
-  })
-  expect(mobileLayout.barPosition).toBe('static')
-  expect(Math.abs(mobileLayout.contentBottom - mobileLayout.barTop)).toBeLessThanOrEqual(1)
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toHaveCount(0)
+  const viewportHeight = await page.evaluate(() => window.visualViewport?.height ?? window.innerHeight)
   const saveBox = await save.boundingBox()
   expect(saveBox).not.toBeNull()
-  expect(saveBox!.y + saveBox!.height).toBeLessThan(mobileLayout.barTop)
+  expect(saveBox!.y + saveBox!.height).toBeLessThanOrEqual(viewportHeight)
   await expectNoHorizontalOverflow(page)
 })
 

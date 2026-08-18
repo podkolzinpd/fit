@@ -1046,6 +1046,15 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .live-set-expanded .live-set-check,
   .live-set-expanded .live-set-save { width:40px }
 }
+
+/* Создание и проверка тренировки — сфокусированный мобильный сценарий, а не
+   ещё одна главная страница с конкурирующей навигацией и карточкой в карточке. */
+.workout-focused-page > .page-header { min-height:var(--control-height-standard); margin-bottom:var(--space-2) }
+.workout-focused-page > .page-header .page-back { min-width:var(--tap); min-height:var(--tap) }
+.workout-form-page .workout-form-section:first-child { padding:0 0 var(--space-5); border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
+.today-review-head { gap:var(--space-2) }
+.today-review-head .workout-header-contract { margin-bottom:0 }
+.today-review-head .today-review-back { min-height:var(--tap) }
 /* Верх live-экрана остаётся вторичным: главные фокусы — таймер и текущий
    подход. Имя спортсмена даёт контекст, но не конкурирует с ними. */
 .live-workout-page .page-header { margin-bottom: 8px }

@@ -45,4 +45,13 @@ describe('AppLayout navigation', () => {
     expect(scheduleIcon).toBe('schedule')
     expect(todayIcon).not.toBe(scheduleIcon)
   })
+
+  it.each(['/workouts/new', '/workouts/workout-1/edit', '/today?view=review', '/me?view=save'])(
+    'скрывает нижнюю навигацию внутри сфокусированного сценария %s',
+    (path) => {
+      renderLayout(path)
+      expect(screen.queryByRole('navigation', { name: 'Основная навигация' })).not.toBeInTheDocument()
+      expect(document.querySelector('.content')).toHaveClass('content-immersive')
+    },
+  )
 })

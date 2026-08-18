@@ -556,7 +556,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       {voiceRefinement?.state === 'error' && !textComposerOpen && <div className="voice-action-error" role="alert"><strong>{voiceRefinement.message}</strong><button type="button" className="link" onClick={() => setTextComposerOpen(true)}>Редактировать текст</button></div>}
       {voicePhase === 'idle' && !restoredDraftScreen && contextCard}
       </>}
-    </section> : <section className="today-review">
+    </section> : <section className="today-review workout-focused-page">
       <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><WorkoutHeader eyebrow={screen === 'review' ? 'ПЛАН ТРЕНИРОВКИ' : 'ПОСЛЕДНИЙ ШАГ'} title={screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'} state="planned" meta={screen === 'review' && items.length > 0 ? `Распознано: ${items.length}` : undefined} /></div>
       {screen === 'review' && <>
       {items.length > 0 ? <div className="today-exercise-list">{items.map((item, index) => {

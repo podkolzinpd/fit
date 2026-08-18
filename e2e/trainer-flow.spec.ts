@@ -32,9 +32,9 @@ test('форма: быстрый ввод разбирает текст в уп�
   await page.goto('/clients')
 
   await page.goto('/workouts/new')
-  // Таббар остаётся доступен, заметка не занимает экран до явного раскрытия,
-  // а быстрый ввод упражнений открыт сразу.
-  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible()
+  // Внутри создания нет конкурирующего таббара; заметка не занимает экран до
+  // явного раскрытия, а быстрый ввод упражнений открыт сразу.
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toHaveCount(0)
   await expect(page.getByRole('textbox', { name: 'Заметка' })).toBeHidden()
   await page.locator('.workout-notes summary').click()
   await expect(page.getByRole('textbox', { name: 'Заметка' })).toBeVisible()
