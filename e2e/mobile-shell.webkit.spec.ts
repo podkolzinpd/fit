@@ -344,6 +344,25 @@ test('iPhone: в live клиент видит те же действия с тр
 
   await expect(page.getByRole('button', { name: '＋ Подход' })).toBeInViewport()
   await expect(page.getByRole('button', { name: '＋ Ещё упражнение' })).toBeInViewport()
+  const liveControls = page.locator('.live-set-input, .live-set-check')
+  for (let index = 0; index < await liveControls.count(); index += 1) {
+    const box = await liveControls.nth(index).boundingBox()
+    expect(box).not.toBeNull()
+    expect(box!.height).toBeGreaterThanOrEqual(44)
+  }
+  const liveInput = page.getByLabel('Фактическое время')
+  await liveInput.evaluate((element) => { element.setAttribute('data-mount-check', 'stable') })
+  await liveInput.fill('12:30')
+  const scrollBeforeBlur = await page.locator('.content').evaluate((element) => element.scrollTop)
+  await page.locator('.live-timer').click()
+  await expect(liveInput).toHaveValue('12:30')
+  await expect(liveInput).toHaveAttribute('data-mount-check', 'stable')
+  const scrollAfterInput = await page.locator('.content').evaluate((element) => element.scrollTop)
+  expect(Math.abs(scrollAfterInput - scrollBeforeBlur)).toBeLessThan(24)
+  await page.locator('.phone-frame').evaluate((element) => element.classList.add('keyboard-open'))
+  await expect(page.locator('.live-bottom-bar')).toBeHidden()
+  await expect(page.getByRole('button', { name: 'Готово, отдых' }).first()).toBeInViewport()
+  await page.locator('.phone-frame').evaluate((element) => element.classList.remove('keyboard-open'))
   await page.getByRole('button', { name: 'Ещё действия' }).click()
   await expect(page.getByRole('menuitem', { name: 'Заменить' })).toBeVisible()
   await expectOverflowMenuAboveBars(page)
@@ -709,6 +728,12 @@ test('iPhone: одиночный отдых переживает reload, сдв�
   await page.getByRole('button', { name: 'Начать' }).click()
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByText(/Отдых 1:(2[7-9]|30)/)).toBeVisible()
+  const restControls = page.locator('.rest-controls button')
+  for (let index = 0; index < await restControls.count(); index += 1) {
+    const box = await restControls.nth(index).boundingBox()
+    expect(box).not.toBeNull()
+    expect(box!.height).toBeGreaterThanOrEqual(44)
+  }
   await page.getByRole('button', { name: 'Плюс 15 секунд' }).click()
   await expect(page.getByText(/Отдых 1:4\d/)).toBeVisible()
   await page.reload()

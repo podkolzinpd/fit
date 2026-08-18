@@ -40,10 +40,11 @@ export function AppLayout() {
   // тренировки. Нижняя навигация возвращается на списках и после выхода из
   // сценария, но внутри не конкурирует с текущим действием.
   const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
-  const immersive = /\/live$/.test(pathname) || pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname) || todayStep
+  const liveSession = /\/live$/.test(pathname)
+  const immersive = liveSession || pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname) || todayStep
   const contentClass = immersive ? 'content content-immersive' : 'content'
 
-  const frameClass = `${theme === 'light' ? 'phone-frame theme-light' : 'phone-frame'}${redesignedStart && pathname === '/today' ? ' today-start-shell' : ''}${keyboardOpen ? ' keyboard-open' : ''}`
+  const frameClass = `${theme === 'light' ? 'phone-frame theme-light' : 'phone-frame'}${redesignedStart && pathname === '/today' ? ' today-start-shell' : ''}${liveSession ? ' live-session-shell' : ''}${keyboardOpen ? ' keyboard-open' : ''}`
 
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
     <NavLink to="/me" end><HomeIcon />Кабинет</NavLink>

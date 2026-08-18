@@ -1602,3 +1602,19 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .workout-header-side { max-width:42% }
   .workout-status { min-height:28px; padding:0 var(--space-2); white-space:normal; text-align:center }
 }
+
+/* Live на телефоне: финальный слой мобильной эргономики должен иметь
+   приоритет над прежними компактными правилами строк подходов. */
+.live-set-expanded { scroll-margin-top:150px; scroll-margin-bottom:32px }
+.live-set-input, .live-set-rpe { min-height:48px }
+.live-set-check, .live-set-save,
+.live-set-expanded .live-set-check, .live-set-expanded .live-set-save { width:48px; min-height:48px }
+.rest-controls button { min-width:48px; min-height:48px }
+.live-exercise-head ~ .live-add-set { min-height:44px }
+.live-session-shell.keyboard-open .live-bottom-bar { display:none }
+.live-session-shell.keyboard-open .content-immersive { padding-bottom:var(--space-5); scroll-padding-top:150px; scroll-padding-bottom:var(--space-4) }
+
+@media (max-width:360px) {
+  .live-set-check, .live-set-save,
+  .live-set-expanded .live-set-check, .live-set-expanded .live-set-save { width:44px }
+}
