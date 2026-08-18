@@ -10,59 +10,19 @@ import type {
   TrainingSummary,
   TrainingSummaryMetrics,
 } from '../../shared/domain'
-import { addDays, addMonths, daysBetween, formatLocalDate, normalizeTimeZone, todayInTimeZone, type LocalDate } from '../../shared/local-date'
+import { formatLocalDate, normalizeTimeZone, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { ClientProgressGoalSection } from './ClientProgressGoalSection'
 import { formatSummaryText, formatWorkoutsPerWeek } from './summary-format'
-
-type SummaryPeriod = '1m' | '3m' | '6m'
-
-const PERIODS: Array<{ key: SummaryPeriod; label: string; months: number }> = [
-  { key: '1m', label: '1 месяц', months: 1 },
-  { key: '3m', label: '3 месяца', months: 3 },
-  { key: '6m', label: '6 месяцев', months: 6 },
-]
-
-function periodRange(key: SummaryPeriod, end: LocalDate): {
-  start: LocalDate
-  end: LocalDate
-} {
-  const months = PERIODS.find((period) => period.key === key)?.months ?? 6
-  return { start: addDays(addMonths(end, -months), 1), end }
-}
-
-// Сводку сопоставляем с выбранным периодом по ДЛИНЕ окна (в днях), а не по
-// точному совпадению дат. Точное равенство было хрупким: сводка генерируется по
-// current_date БД, а окно считается по дате из профиля приложения — при сдвиге
-// на день (таймзона/смена суток/клэмп конца месяца) match терял запись и экран
-// показывал «сводка не запрошена». Берём запись, чья длина ближе всего к целевой
-// (с допуском), и среди подходящих — самую свежую по periodEnd.
-function periodMatch<T extends { periodStart: LocalDate; periodEnd: LocalDate }>(
-  values: T[],
-  key: SummaryPeriod,
-  today: LocalDate,
-): T | undefined {
-  const months = PERIODS.find((period) => period.key === key)?.months ?? 6
-  const target = daysBetween(addMonths(today, -months), today)
-  // Допуск: половина месяца — уверенно отделяет 1m от 3m от 6m, но переживает
-  // сдвиг границ на несколько дней.
-  const tolerance = 15
-  return values
-    .map((item) => ({ item, span: daysBetween(item.periodStart, item.periodEnd) }))
-    .filter(({ span }) => Math.abs(span - target) <= tolerance)
-    .sort((a, b) =>
-      Math.abs(a.span - target) - Math.abs(b.span - target)
-      || (a.item.periodEnd < b.item.periodEnd ? 1 : -1))
-    .at(0)?.item
-}
+import { SUMMARY_PERIODS, summaryPeriodMatch, summaryPeriodRange, type SummaryPeriod } from './summary-period'
 
 function PeriodTabs({ value, onChange }: {
   value: SummaryPeriod
   onChange: (period: SummaryPeriod) => void
 }) {
   return <div className="ai-progress-periods" aria-label="Период анализа">
-    {PERIODS.map((period) => <button
+    {SUMMARY_PERIODS.map((period) => <button
       type="button"
       key={period.key}
       className={period.key === value ? 'active' : ''}
@@ -110,8 +70,8 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
     queryKey: ['training-summaries', 'trainer', clientId],
     queryFn: () => trainingSummariesRepository.listForTrainer(clientId),
   })
-  const summary = periodMatch(query.data ?? [], period, today)
-  const range = periodRange(period, today)
+  const summary = summaryPeriodMatch(query.data ?? [], period, today)
+  const range = summaryPeriodRange(period, today)
   const generate = useMutation({
     mutationFn: () => trainingSummariesRepository.generate(
       clientId,
@@ -169,32 +129,45 @@ function TrainerSummaryContent({ summary, clientId, onChanged }: {
   clientId: string
   onChanged: () => Promise<unknown>
 }) {
-  const [previewOpen, setPreviewOpen] = useState(!summary.published)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
   return <>
     <div className="ai-progress-hero"><span>Итог</span><strong>{formatSummaryText(summary.trainer.headline)}</strong></div>
-    <Metrics metrics={summary.metrics} audience="trainer" />
-    <div className="ai-progress-section">
-      <h3>Прогресс</h3>
-      <ul>{summary.trainer.progress.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
+    <div className={`ai-progress-attention${summary.trainer.attention.length === 0 ? ' is-clear' : ''}`}>
+      {summary.trainer.attention.length > 0 && <span aria-hidden="true">!</span>}
+      <div>
+        <strong>{summary.trainer.attention.length > 0 ? 'Обратить внимание' : 'Отдельных предупреждений нет'}</strong>
+        {summary.trainer.attention.length > 0
+          ? summary.trainer.attention.map((point) => <p key={point}>{formatSummaryText(point)}</p>)
+          : <p>По текущему анализу нет сигнала, требующего отдельного действия.</p>}
+      </div>
     </div>
-    <div className="ai-progress-section ai-progress-regularity">
-      <div><span>Регулярность</span><strong>{formatWorkoutsPerWeek(summary.metrics.workoutsPerWeek)} / нед.</strong></div>
-      <p>{formatSummaryText(summary.trainer.consistency)}</p>
-    </div>
-    {summary.trainer.attention.length > 0 && <div className="ai-progress-attention">
-      <span aria-hidden="true">!</span>
-      <div>{summary.trainer.attention.map((point) => <p key={point}>{formatSummaryText(point)}</p>)}</div>
-    </div>}
-    <div className="client-copy-toggle">
-      <button type="button" className="link" onClick={() => setPreviewOpen((value) => !value)}>
-        {previewOpen ? 'Скрыть версию для клиента' : 'Проверить версию для клиента'}
+    <div className="ai-progress-details-toggle">
+      <button type="button" className="link" aria-expanded={detailsOpen} onClick={() => setDetailsOpen((value) => !value)}>
+        {detailsOpen ? 'Скрыть подробный анализ' : 'Подробнее об анализе'}
       </button>
     </div>
-    {previewOpen && <ClientCopyEditor
-      summary={summary}
-      clientId={clientId}
-      onChanged={onChanged}
-    />}
+    {detailsOpen && <div className="ai-progress-details">
+      <Metrics metrics={summary.metrics} audience="trainer" />
+      <div className="ai-progress-section">
+        <h3>Измеримый прогресс</h3>
+        <ul>{summary.trainer.progress.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
+      </div>
+      <div className="ai-progress-section ai-progress-regularity">
+        <div><span>Регулярность за период</span><strong>{formatWorkoutsPerWeek(summary.metrics.workoutsPerWeek)} / нед.</strong></div>
+        <p>{formatSummaryText(summary.trainer.consistency)}</p>
+      </div>
+      <div className="client-copy-toggle">
+        <button type="button" className="link" onClick={() => setPreviewOpen((value) => !value)}>
+          {previewOpen ? 'Скрыть версию для клиента' : 'Проверить версию для клиента'}
+        </button>
+      </div>
+      {previewOpen && <ClientCopyEditor
+        summary={summary}
+        clientId={clientId}
+        onChanged={onChanged}
+      />}
+    </div>}
   </>
 }
 
@@ -269,7 +242,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
     queryFn: () => trainingSummariesRepository.listForClient(clientId),
   })
   const summary = useMemo(
-    () => periodMatch(query.data ?? [], period, today),
+    () => summaryPeriodMatch(query.data ?? [], period, today),
     [query.data, period, today],
   )
   const goal = useQuery({
@@ -278,7 +251,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
   })
   const generate = useMutation({
     mutationFn: () => {
-      const range = periodRange(period, today)
+      const range = summaryPeriodRange(period, today)
       return trainingSummariesRepository.generate(clientId, range.start, range.end, true)
     },
     onSuccess: async () => queryClient.invalidateQueries({

@@ -314,6 +314,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.goto(clientUrl)
   await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
   await page.getByRole('link', { name: 'Замеры и прогресс' }).click()
+  await page.locator('.trainer-measurements > summary').click()
   await page.getByLabel('Дата').fill('2026-07-20')
   await page.getByLabel('Вес, кг').fill('61')
   await page.getByRole('button', { name: 'Сохранить замер' }).click()
