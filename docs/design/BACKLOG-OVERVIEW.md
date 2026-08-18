@@ -6,8 +6,9 @@
 расширении функций.
 
 Обновлено 2026-08-18 после системного аудита `YAFIT-308` / PR `#420`,
-навигационной полировки `YAFIT-309` / PR `#421` и Trainer Progress
-`YAFIT-310` / PR `#423`, visual regression `YAFIT-311` / PR `#425`.
+навигационной полировки `YAFIT-309` / PR `#421`, Trainer Progress
+`YAFIT-310` / PR `#423`, visual regression `YAFIT-311` / PR `#425` и
+типографического контракта `YAFIT-312` / PR `#427`.
 
 ## Актуальный порядок
 
@@ -24,7 +25,8 @@ Progress вокруг регулярности, измеримого прогр�
 
 ### P1 — цельная визуальная система
 
-1. Типографический контракт: display/title/section/body/caption/numeric.
+1. ✅ Типографический контракт display/title/section/body/caption/numeric
+   завершён в `#427`.
 2. Общие радиусы, высоты и отступы для карточек, полей, buttons и chips.
 3. Единые loading/empty/error/success/disabled состояния с понятным следующим
    действием.
