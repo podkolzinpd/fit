@@ -46,7 +46,7 @@ async function createStandaloneLiveWorkout(page: import('@playwright/test').Page
   await page.getByRole('button', { name: 'Создать карточку' }).click()
 
   await page.goto('/me/workouts')
-  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByRole('link', { name: 'Добавить тренировку' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')

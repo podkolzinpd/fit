@@ -95,7 +95,7 @@ These groups should not be used as arbitrary decoration on unrelated screens.
 `src/shared/ui.tsx` owns the reusable application primitives:
 
 - `Page` and page header/back navigation;
-- `AsyncView`, `Skeleton`, and `EmptyState` for data states;
+- `AsyncView`, `Skeleton`, `StatePanel`, and `EmptyState` for data states;
 - `Field`, `Switch`, `SaveStatus`, and `StatusBadge`;
 - in-app `ConfirmDialog` through `useConfirm`;
 - `OverflowMenu`, positioned inside the phone frame and above fixed bars.
@@ -104,6 +104,19 @@ Global CSS also defines primary, secondary, tertiary/link, danger, wide, and
 icon button styles; card stacks; form stacks/actions; badges; bottom tabs;
 modal and bottom-sheet shells. New primitives should compose these contracts
 instead of reproducing their pixels feature by feature.
+
+Data-state behavior follows one contract on the protected screens:
+
+- root loading, empty, error, and unavailable states explain what is happening
+  in one panel; section-level empty states use the compact variant;
+- recoverable loading errors expose one visible `Повторить` action;
+- an empty state names the missing data and the next useful action instead of
+  leaving an empty page or a bare dash;
+- a pending primary action is disabled against duplicate submission, sets
+  `aria-busy`, and changes its label (`Сохраняем…`, `Завершаем…`, and so on);
+- when the user remains on the same screen, save success or failure uses
+  `SaveStatus`; successful actions that navigate use the destination screen as
+  their confirmation.
 
 ## Icons
 

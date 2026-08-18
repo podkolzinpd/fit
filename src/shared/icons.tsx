@@ -54,6 +54,10 @@ export function AlertIcon(props: IconProps) {
   return <Icon data-icon="alert" {...props}><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5M12 16.5h.01" /></Icon>
 }
 
+export function InfoIcon(props: IconProps) {
+  return <Icon data-icon="info" {...props}><circle cx="12" cy="12" r="9" /><path d="M12 10.5v6M12 7.5h.01" /></Icon>
+}
+
 export function PendingIcon(props: IconProps) {
   return <Icon data-icon="pending" {...props}><circle cx="12" cy="12" r="4.5" fill="currentColor" stroke="none" /></Icon>
 }
