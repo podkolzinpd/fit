@@ -45,12 +45,31 @@ These groups should not be used as arbitrary decoration on unrelated screens.
 
 - Font stack: `-apple-system`, BlinkMacSystemFont, `SF Pro Text`, Inter,
   `system-ui`, sans-serif. No downloadable brand font is required.
-- Base: 16 px with 1.45 line height.
-- Token scale: 11, 12, 13, 14, 16, 18, 22, and 30 px from `--text-xs` through
-  `--text-display`.
-- Weights: 600, 700, and 800. Uppercase eyebrow labels use a small size,
-  semibold/bold weight, and `--tracking-label`; titles use tight tracking.
-- Large page/hero headings may use `clamp()` to fit the 390–440 px shell.
+- Base: 16 px with 1.45 line height. Product content uses six semantic roles;
+  feature CSS must not invent an intermediate role from a local pixel value.
+
+| Content role | Size | Default treatment | Use |
+| --- | --- | --- | --- |
+| `display` | 30 px, fluid in page headers | 800, tight | page and hero heading |
+| `title` | 22 px | 800, tight | card or major block title |
+| `section` | 18 px | 700 | section heading |
+| `body` | 16 px | 400; 700 for emphasis | primary reading text |
+| `caption` | 12 px | 600 | metadata, supporting copy, eyebrow variant |
+| `numeric` | 22 px | 800, tabular | primary measured value or count |
+
+- CSS variables are `--type-<role>-size`; reusable classes are
+  `.type-display`, `.type-title`, `.type-section`, `.type-body`,
+  `.type-caption`, and `.type-numeric`.
+- Uppercase eyebrow labels are a bold caption variant with
+  `--tracking-label`. Control labels may keep `--text-ui` (14 px); icon marks
+  may inherit their own size because they are not content typography.
+- Weights are only 600, 700, and 800. Do not introduce intermediate 650/750
+  weights. Large page headings use `--type-display-fluid` inside the
+  390–440 px shell.
+- The contract is migrated by real screens rather than a blind global rewrite.
+  Client Progress/Workouts/Live and Trainer Clients/Schedule/Progress are the
+  first protected set. Role Home for both users deliberately keeps its existing
+  hierarchy and primary actions.
 
 ## Spacing, geometry, and effects
 
