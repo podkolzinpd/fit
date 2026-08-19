@@ -5,16 +5,21 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-19
-Проверенный базовый `main`: `6f1a946` (`Прототип: контекстная coachmark-подсказка на Trainer Progress (#456)`)
+Проверенный базовый `main`: `5729b33` (`YAFIT-315: сделать историю упражнения спокойным действием (#462)`)
 
 ## Активная работа
 
-- Yandex ID/profile vertical slice и серверная tenant-allowlist находятся в
-  `main`; OAuth-приложение создано. Готовится постоянный stage delivery:
-  GitHub OIDC без JSON-ключа, один SHA-образ, автоматические forward-only
-  миграции перед API revision, private smoke и rollback. Production frontend и
-  Supabase не переключаются. После `#454` локальный запуск автоматически
-  готовит Supabase и PostgreSQL 17, а CI проверяет обе цепочки миграций.
+- Yandex ID/profile vertical slice, серверная tenant-allowlist и постоянный
+  stage delivery находятся в `main`: GitHub OIDC без JSON-ключа, один SHA-образ,
+  автоматические forward-only миграции перед API revision, private smoke и
+  rollback. После `#459` созданы GitHub repository variables, approval
+  Environment `yandex-stage`, OIDC-федерация и две subject-привязки к
+  `fit-stage-terraform`; оба state-секрета сохранены в GitHub. Первый новый
+  plan-run остановился до Terraform на OIDC exchange с HTTP 401; готовится
+  безопасная диагностика claims и ответа, без вывода токенов. Production
+  frontend и Supabase не переключаются. После `#454` локальный запуск
+  автоматически готовит Supabase и PostgreSQL 17, а CI проверяет обе цепочки
+  миграций.
 - Функциональный MVP признан достаточным для системной фазы удобства. Аудит
   `#420` зафиксировал P0/P1/P2; навигационная ясность завершена в `#421`,
   информационная архитектура Trainer Progress — в `#423`, visual regression
@@ -91,6 +96,10 @@
 
 ## Последние проверки
 
+- `#459`: полный `npm run check` прошёл после подливания `main`; GitHub CI и
+  Vercel прошли перед merge. Первый Yandex stage workflow не применял Terraform,
+  не загружал образ и не запускал миграции. После OIDC/bootstrap-настройки
+  повторный run также остановился до Terraform на token exchange HTTP 401.
 - `#454`: GitHub migration-safety/app/database/yandex-database/e2e и Vercel
   прошли. Локально прошли `npm run check`, `npm run local:verify`, повторный
   запуск pending-миграций и smoke `/health`, `/ready`, frontend. Обычный dev не
@@ -98,8 +107,9 @@
 
 ## Ближайший roadmap
 
-1. Завершить и одобрить постоянный Yandex stage pipeline, развернуть миграцию
-   `000004` и private auth revision; production frontend не переключать.
+1. Исправить OIDC exchange по безопасной диагностике, получить и проверить
+   Terraform plan, затем отдельно одобрить миграцию `000004` и private auth
+   revision; production frontend не переключать.
 2. Продолжать UI-полировку только с экрана, который явно выберет пользователь;
    не собирать несколько экранов в один PR. Desktop shell тренера и P2
    отложены и без нового прямого решения не начинаются.
