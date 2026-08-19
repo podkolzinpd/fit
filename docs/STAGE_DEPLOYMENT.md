@@ -16,28 +16,35 @@ After the one-time bootstrap, a release is performed only by
    reviewer approval.
 3. GitHub exchanges its OIDC token for a short-lived Yandex Cloud IAM token.
    No authorized-key JSON is used by CI.
-4. Terraform applies the two scoped runtime-service-account attachment grants
+4. Terraform applies the scoped runtime identity and secret access grants
    before any revision is created and gives Yandex IAM time to propagate them.
-   The workflow then checks for the immutable commit image in Container Registry.
-   A retry of the same SHA reuses the existing image; otherwise the image is
-   built once on the GitHub runner and pushed.
-5. Terraform deploys the candidate image only to the private migration runner.
-   `POST /migrate` applies all pending forward migrations under an advisory
-   lock. A failure stops the release before the API changes.
-6. Terraform generates a fresh plan and deploys the API revision. Private
-   `/health` and `/ready` checks must pass. A readiness failure restores the
-   previous API image automatically.
+   The workflow derives an immutable image tag from the `services/api` Git tree
+   hash and checks it in Container Registry. Changes outside the API and retries
+   reuse the existing image; an API content change builds it once on the GitHub
+   runner and pushes it.
+5. The workflow converts the reviewed Terraform planned values into a
+   Serverless Containers REST `DeployRevision` request and deploys the
+   candidate image only to the private migration runner. `POST /migrate`
+   applies all pending forward migrations under an advisory lock. A failure
+   stops the release before the API changes.
+6. Terraform generates a fresh plan and the workflow deploys the API revision
+   through the same REST API. Terraform refreshes state immediately after each
+   direct deployment and refuses to continue if either container still differs
+   from the reviewed configuration. Private `/health` and `/ready` checks must
+   pass. A readiness failure rolls back to the exact previous revision. If the
+   plan contains no container change, the active revision is reused.
 
 The migration runner has no provisioned instances and costs nothing while
 idle. It stays private, has concurrency one and can be invoked only by the
 OIDC-backed deployment service account. The runtime API service account cannot
 read the migration owner's password.
 
-The Yandex Terraform provider can report a failed revision deployment as a
-warning while returning a successful process status. The workflow treats that
-specific warning as a hard failure for the migration candidate, API deployment
-and rollback. This prevents Terraform state from being mistaken for a live
-revision.
+Serverless Container revision deployment deliberately uses the documented REST
+API instead of the Terraform provider. Provider `DeployRevision` can return a
+successful Terraform process status while the cloud API reports a permission
+warning for service-account authentication. Terraform still owns the reviewed
+configuration and remote state: direct revisions are built only from plan JSON,
+then state is refreshed and a second plan must contain no container drift.
 
 ## 2. One-time Yandex Cloud bootstrap
 
@@ -54,12 +61,13 @@ Identity Federation configured as follows:
   `repo:podkolzinpd@3878475/fit@1307853602:environment:yandex-stage`.
 
 The service account needs the existing Terraform resource-management roles,
-`container-registry.images.pusher`, Connection Manager metadata read access and
-permission to update Serverless Container IAM bindings. Terraform grants this
-same account `serverless.containers.invoker` on the private migration and API
-containers and `iam.serviceAccounts.user` directly on their two runtime
-service accounts. The latter is required to attach those identities to a
-revision and is deliberately not granted folder-wide.
+`container-registry.images.pusher`, `logging.editor`, Connection Manager
+metadata read access and permission to update Serverless Container IAM
+bindings. Terraform grants this same account `serverless.containers.invoker`
+on the private migration and API containers and `iam.serviceAccounts.user`
+directly on their two runtime service accounts. The latter is required to
+attach those identities to a revision and is deliberately not granted
+folder-wide.
 
 Keep one dedicated static S3 key for the Terraform state backend. This is not a
 Yandex API authorized-key JSON and is not used for provider authentication.
@@ -124,9 +132,11 @@ image can run after an automatic application rollback.
 
 ## 6. Image lifecycle
 
-Images use the full Git commit SHA, never `latest`. Container Registry retains
-the ten newest commit images and expires older commit or untagged layers after
-seven days. This keeps enough versions for rollback without unbounded storage.
+Images use the full `services/api` Git tree hash, never `latest`. Container
+Registry retains the ten newest immutable API images and expires older
+content-addressed or untagged layers after seven days. This keeps enough
+versions for rollback without rebuilding the API for documentation or
+infrastructure-only changes.
 
 For an exceptional local build, use Podman with the API directory as the build
 context:
