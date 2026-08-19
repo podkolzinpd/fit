@@ -1,6 +1,7 @@
 import type { ButtonHTMLAttributes, PropsWithChildren, ReactNode } from 'react'
 
 export type WorkoutUiState = 'planned' | 'current' | 'upcoming' | 'completed' | 'partial' | 'skipped' | 'history'
+export type WorkoutUiTone = 'accent' | 'success' | 'warning' | 'neutral'
 
 const STATUS_LABELS: Record<WorkoutUiState, string> = {
   planned: 'Планируется',
@@ -12,9 +13,19 @@ const STATUS_LABELS: Record<WorkoutUiState, string> = {
   history: 'Результат',
 }
 
+const STATUS_TONES: Record<WorkoutUiState, WorkoutUiTone> = {
+  planned: 'neutral',
+  current: 'accent',
+  upcoming: 'neutral',
+  completed: 'success',
+  partial: 'warning',
+  skipped: 'neutral',
+  history: 'neutral',
+}
+
 export function WorkoutStatus({ state, label }: { state: WorkoutUiState; label?: string }) {
   const legacyTone = state === 'completed' ? 'done' : state === 'current' ? 'in_progress' : state
-  return <span className={`workout-status workout-status-${state} badge ${legacyTone}`} data-state={state}>{label ?? STATUS_LABELS[state]}</span>
+  return <span className={`workout-status workout-status-${state} badge ${legacyTone}`} data-state={state} data-tone={STATUS_TONES[state]}>{label ?? STATUS_LABELS[state]}</span>
 }
 
 export function WorkoutHeader({ eyebrow, title, meta, state, statusLabel, action, className = '' }: {

@@ -15,6 +15,19 @@ describe('workout surface contract', () => {
     expect(container.querySelector('.workout-set-contract')).toHaveAttribute('data-state', 'current')
   })
 
+  it.each([
+    ['planned', 'neutral'],
+    ['current', 'accent'],
+    ['upcoming', 'neutral'],
+    ['completed', 'success'],
+    ['partial', 'warning'],
+    ['skipped', 'neutral'],
+    ['history', 'neutral'],
+  ] as const)('maps %s to the %s color tone', (state, tone) => {
+    render(<WorkoutStatus state={state} />)
+    expect(screen.getByText(/Планируется|Выполняется|Далее|Завершена|Пропущена|Результат/)).toHaveAttribute('data-tone', tone)
+  })
+
   it('keeps pending CTA disabled and exposes a compact completed exercise', () => {
     const onClick = vi.fn()
     render(<>

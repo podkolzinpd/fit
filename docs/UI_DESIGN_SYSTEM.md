@@ -41,6 +41,21 @@ Generic cards use `--surface-raised`, `--card-grad`, `--border`, and
 AI cards have semantic token groups because their meaning and hierarchy differ.
 These groups should not be used as arbitrary decoration on unrelated screens.
 
+Workout states use the following fixed color contract. A text label or icon
+always accompanies color, so meaning never depends on color alone:
+
+| Meaning | Tone | Examples |
+| --- | --- | --- |
+| Primary action, current work, selected control | Coral accent | Current workout/set, submit CTA, selected RPE |
+| Confirmed success or positive result | Green success | Saved set, completed workout, personal record |
+| Temporary attention | Amber warning | Partial completion, saving, rest timer |
+| Error, destructive action, or health concern | Red danger | Failed save, delete, discomfort |
+| Context without urgency | Neutral | Planned/upcoming work, history, skipped set |
+
+The red Live indicator is the one explicit realtime convention and uses its own
+`--live-indicator` token; it must not reuse destructive surfaces or replace the
+visible `LIVE` label.
+
 ## Typography
 
 - Font stack: `-apple-system`, BlinkMacSystemFont, `SF Pro Text`, Inter,
