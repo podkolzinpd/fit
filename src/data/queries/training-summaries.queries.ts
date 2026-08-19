@@ -7,6 +7,14 @@ const internalColumns = 'id,client_id,period_start,period_end,trainer_summary,cl
 const publishedColumns = 'id,source_summary_id,client_id,period_start,period_end,summary,display_metrics,generated_at,published_at'
 
 export const trainingSummaryQueries = {
+  firstCompletedWorkoutDate: (clientId: string) => supabase.from('workouts')
+    .select('workout_date')
+    .eq('client_id', clientId)
+    .eq('status', 'done')
+    .is('deleted_at', null)
+    .order('workout_date', { ascending: true })
+    .limit(1)
+    .maybeSingle(),
   listInternal: (clientId: string) => supabase.from('client_training_summaries')
     .select(internalColumns)
     .eq('client_id', clientId)
