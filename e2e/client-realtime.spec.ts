@@ -28,6 +28,14 @@ function dateOffset(days: number) {
   ].join('-')
 }
 
+async function setRpe(page: Page, value: number) {
+  const scale = page.getByRole('slider', { name: 'Общая тяжесть по шкале RPE' })
+  await scale.focus()
+  await scale.press('Home')
+  for (let current = 1; current < value; current += 1) await scale.press('ArrowRight')
+  await expect(scale).toHaveValue(String(value))
+}
+
 test('client and trainer receive progress and workout changes without reload', async ({ browser }, testInfo) => {
   testInfo.setTimeout(120_000)
   const suffix = `${testInfo.workerIndex}-${Date.now()}`
@@ -136,7 +144,7 @@ test('client and trainer receive progress and workout changes without reload', a
     await expect(trainer.getByText('Готово', { exact: true })).toBeVisible()
     const clientComment = `Realtime комментарий ${suffix}`
     const feedbackCard = client.locator('.workout-feedback')
-    await feedbackCard.getByRole('button', { name: '7', exact: true }).click()
+    await setRpe(client, 7)
     await feedbackCard.getByRole('button', { name: 'Нормально', exact: true }).click()
     await feedbackCard.getByRole('button', { name: 'Да', exact: true }).click()
     await client.getByRole('textbox', { name: 'Пояснение о дискомфорте', exact: true }).fill(clientComment)

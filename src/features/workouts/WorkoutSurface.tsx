@@ -1,8 +1,9 @@
-import type { ButtonHTMLAttributes, PropsWithChildren, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, CSSProperties, InputHTMLAttributes, PropsWithChildren, ReactNode } from 'react'
 
 export type WorkoutUiState = 'planned' | 'current' | 'upcoming' | 'completed' | 'partial' | 'skipped' | 'history'
 export type WorkoutUiTone = 'accent' | 'success' | 'warning' | 'neutral'
 export type WorkoutActionVariant = 'primary' | 'secondary' | 'tertiary' | 'destructive'
+export type WorkoutChoiceTone = 'neutral' | 'destructive'
 
 const STATUS_LABELS: Record<WorkoutUiState, string> = {
   planned: 'Планируется',
@@ -93,7 +94,47 @@ export function WorkoutCta({ pending, pendingLabel, variant = 'primary', classNa
   variant?: WorkoutActionVariant
   className?: string
 } & ButtonHTMLAttributes<HTMLButtonElement>>) {
-  return <button {...props} className={`workout-cta ${ACTION_VARIANT_CLASSES[variant]} ${className}`.trim()} data-variant={variant} disabled={props.disabled || pending} aria-busy={pending || undefined}>
+  const disabled = props.disabled || pending
+  const controlState = pending ? 'loading' : disabled ? 'disabled' : variant === 'destructive' ? 'destructive' : 'idle'
+  return <button {...props} className={`workout-cta ${ACTION_VARIANT_CLASSES[variant]} ${className}`.trim()} data-variant={variant} data-control-state={controlState} disabled={disabled} aria-busy={pending || undefined}>
     {pending ? pendingLabel ?? 'Сохраняем…' : children}
   </button>
+}
+
+export function WorkoutChoice({ selected, tone = 'neutral', pending = false, className = '', children, ...props }: PropsWithChildren<{
+  selected: boolean
+  tone?: WorkoutChoiceTone
+  pending?: boolean
+  className?: string
+} & ButtonHTMLAttributes<HTMLButtonElement>>) {
+  const disabled = props.disabled || pending
+  const controlState = pending ? 'loading' : disabled ? 'disabled' : selected ? 'selected' : tone === 'destructive' ? 'destructive' : 'idle'
+  return <button {...props} type={props.type ?? 'button'} className={`secondary workout-choice ${className}`.trim()}
+    data-control-state={controlState} data-tone={tone} disabled={disabled} aria-busy={pending || undefined} aria-pressed={selected}>
+    {children}
+  </button>
+}
+
+const RPE_LABELS: Record<number, string> = {
+  1: 'Очень легко', 2: 'Легко', 3: 'Легко', 4: 'Умеренно', 5: 'Умеренно',
+  6: 'Ощутимо', 7: 'Тяжело', 8: 'Очень тяжело', 9: 'Почти максимум', 10: 'Максимум',
+}
+
+export function WorkoutRpeScale({ value, onChange, disabled = false, ...props }: {
+  value?: number
+  onChange: (value: number) => void
+} & Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'min' | 'max' | 'step' | 'onChange'>) {
+  const displayValue = value ?? 5
+  const progress = value === undefined ? 0 : ((value - 1) / 9) * 100
+  return <div className="workout-rpe-scale" data-control-state={disabled ? 'disabled' : value === undefined ? 'idle' : 'selected'}
+    style={{ '--rpe-progress': `${progress}%` } as CSSProperties}>
+    <div className="workout-rpe-scale-value" aria-live="polite">
+      {value === undefined ? <><strong>Выберите нагрузку</strong><span>Проведите по шкале</span></> : <><strong>RPE {value}</strong><span>{RPE_LABELS[value]}</span></>}
+    </div>
+    <input {...props} className={`workout-rpe-range ${props.className ?? ''}`.trim()} type="range" min={1} max={10} step={1}
+      value={displayValue} disabled={disabled} aria-valuetext={value === undefined ? 'Не выбрано' : `RPE ${value}, ${RPE_LABELS[value]}`}
+      onChange={(event) => onChange(Number(event.target.value))} />
+    <div className="workout-rpe-scale-ticks" aria-hidden="true"><span>1</span><span>5</span><span>10</span></div>
+    <div className="workout-rpe-scale-ends" aria-hidden="true"><span>Очень легко</span><span>Максимум</span></div>
+  </div>
 }

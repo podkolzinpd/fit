@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
-async function login(page: import('@playwright/test').Page, email: string) {
+async function login(page: Page, email: string) {
   await page.goto('/auth')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -10,6 +10,14 @@ async function login(page: import('@playwright/test').Page, email: string) {
     page.waitForURL(/\/(?:today|me)$/),
     page.getByRole('button', { name: 'Войти' }).click(),
   ])
+}
+
+async function setRpe(page: Page, value: number) {
+  const scale = page.getByRole('slider', { name: 'Общая тяжесть по шкале RPE' })
+  await scale.focus()
+  await scale.press('Home')
+  for (let current = 1; current < value; current += 1) await scale.press('ArrowRight')
+  await expect(scale).toHaveValue(String(value))
 }
 
 test('iPhone: trainer review and client post-workout feedback stay visible to the other side only', async ({ page }) => {
@@ -82,11 +90,24 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   const clientComment = 'После второго подхода стало тяжело, обсудим вес на следующей тренировке.'
   const feedbackCard = page.locator('.workout-feedback')
   await expect(feedbackCard.getByRole('heading', { name: 'Как прошла тренировка?' })).toBeVisible()
-  await feedbackCard.getByRole('button', { name: '8', exact: true }).click()
-  await feedbackCard.getByRole('button', { name: 'Тяжело', exact: true }).click()
-  await feedbackCard.getByRole('button', { name: 'Да', exact: true }).click()
+  const submitFeedback = feedbackCard.getByRole('button', { name: 'Отправить отзыв', exact: true })
+  await expect(submitFeedback).toHaveAttribute('data-control-state', 'disabled')
+  const rpeScale = feedbackCard.getByRole('slider', { name: 'Общая тяжесть по шкале RPE' })
+  const rpeScaleBox = await rpeScale.boundingBox()
+  expect(rpeScaleBox?.height).toBeGreaterThanOrEqual(44)
+  await expect(feedbackCard.locator('.workout-feedback-rpe')).toHaveCount(0)
+  await setRpe(page, 8)
+  await expect(rpeScale).toHaveAttribute('aria-valuetext', 'RPE 8, Очень тяжело')
+  const hardWellbeing = feedbackCard.getByRole('button', { name: 'Тяжело', exact: true })
+  await hardWellbeing.click()
+  await expect(hardWellbeing).toHaveAttribute('data-control-state', 'selected')
+  const discomfortChoice = feedbackCard.getByRole('button', { name: 'Да', exact: true })
+  await discomfortChoice.click()
+  await expect(discomfortChoice).toHaveAttribute('data-tone', 'destructive')
+  await expect(discomfortChoice).toHaveAttribute('data-control-state', 'selected')
   await page.getByRole('textbox', { name: 'Пояснение о дискомфорте', exact: true }).fill(clientComment)
-  await feedbackCard.getByRole('button', { name: 'Отправить отзыв', exact: true }).click()
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+  await submitFeedback.click()
   await expect(feedbackCard).toHaveClass(/workout-review-readonly/)
   await expect(feedbackCard.getByText('Спасибо, тренер увидит ваш отзыв.', { exact: false })).toBeVisible()
   await expect(feedbackCard.getByText('RPE 8/10', { exact: true })).toBeVisible()
@@ -127,7 +148,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await page.goto(ownWorkoutUrl, { waitUntil: 'domcontentloaded' })
   await expect(page.getByText('Готово', { exact: true })).toBeVisible()
   const ownFeedbackCard = page.locator('.workout-feedback')
-  await ownFeedbackCard.getByRole('button', { name: '5', exact: true }).click()
+  await setRpe(page, 5)
   await ownFeedbackCard.getByRole('button', { name: 'Хорошо', exact: true }).click()
   await ownFeedbackCard.getByRole('button', { name: 'Нет', exact: true }).click()
   await expect(page.getByRole('textbox', { name: 'Пояснение о дискомфорте' })).toHaveCount(0)

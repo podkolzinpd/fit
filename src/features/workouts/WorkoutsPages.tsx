@@ -43,7 +43,7 @@ import { parseRunDurationInput, runDistanceKmFromInput, runDistanceLabel, runPac
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
 import { AddIcon } from '../../shared/icons'
-import { WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
+import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
 import { chronicleExercisePreview } from './workout-chronicle'
 
@@ -729,22 +729,19 @@ function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave }: {
     <div className="workout-review-head"><div><p className="eyebrow">ПОСЛЕ ТРЕНИРОВКИ</p><h2 id="workout-feedback-title">Как прошла тренировка?</h2></div></div>
     <fieldset className="workout-feedback-fieldset">
       <legend>Общая тяжесть</legend>
-      <p className="muted">1 — очень легко, 10 — максимум</p>
-      <div className="workout-feedback-options workout-feedback-rpe">
-        {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => <button key={value} type="button" className={`secondary workout-feedback-option ${sessionRpe === value ? 'selected' : ''}`} aria-pressed={sessionRpe === value} onClick={() => setSessionRpe(value)}>{value}</button>)}
-      </div>
+      <WorkoutRpeScale aria-label="Общая тяжесть по шкале RPE" value={sessionRpe} disabled={saving} onChange={setSessionRpe} />
     </fieldset>
     <fieldset className="workout-feedback-fieldset">
       <legend>Самочувствие</legend>
       <div className="workout-feedback-options">
-        {(Object.keys(wellbeingLabels) as WorkoutWellbeing[]).map((value) => <button key={value} type="button" className={`secondary workout-feedback-option ${wellbeing === value ? 'selected' : ''}`} aria-pressed={wellbeing === value} onClick={() => setWellbeing(value)}>{wellbeingLabels[value]}</button>)}
+        {(Object.keys(wellbeingLabels) as WorkoutWellbeing[]).map((value) => <WorkoutChoice key={value} className="workout-feedback-option" selected={wellbeing === value} disabled={saving} onClick={() => setWellbeing(value)}>{wellbeingLabels[value]}</WorkoutChoice>)}
       </div>
     </fieldset>
     <fieldset className="workout-feedback-fieldset">
       <legend>Был дискомфорт?</legend>
       <div className="workout-feedback-options">
-        <button type="button" className={`secondary workout-feedback-option ${discomfort === false ? 'selected' : ''}`} aria-pressed={discomfort === false} onClick={() => setDiscomfort(false)}>Нет</button>
-        <button type="button" className={`secondary workout-feedback-option ${discomfort === true ? 'selected' : ''}`} aria-pressed={discomfort === true} onClick={() => setDiscomfort(true)}>Да</button>
+        <WorkoutChoice className="workout-feedback-option" selected={discomfort === false} disabled={saving} onClick={() => setDiscomfort(false)}>Нет</WorkoutChoice>
+        <WorkoutChoice className="workout-feedback-option" selected={discomfort === true} tone="destructive" disabled={saving} onClick={() => setDiscomfort(true)}>Да</WorkoutChoice>
       </div>
     </fieldset>
     {discomfort && <Field label="Что беспокоило?"><textarea aria-label="Пояснение о дискомфорте" rows={3} maxLength={500} placeholder="Где и на каком движении почувствовали дискомфорт" value={comment} onChange={(event) => setComment(event.target.value)} /></Field>}
@@ -788,7 +785,7 @@ function WorkoutTrainerReview({ workout, canEdit, authorName, saving, error, onS
       <fieldset className="workout-feedback-fieldset workout-trainer-reactions">
         <legend>Реакция</legend>
         <div className="workout-feedback-options">
-          {(Object.keys(trainerReactionLabels) as TrainerReaction[]).map((item) => <button key={item} type="button" className={`secondary workout-feedback-option ${reaction === item ? 'selected' : ''}`} aria-label={trainerReactionLabels[item]} aria-pressed={reaction === item} onClick={() => setReaction(item)}>{trainerReactionLabels[item]}</button>)}
+          {(Object.keys(trainerReactionLabels) as TrainerReaction[]).map((item) => <WorkoutChoice key={item} className="workout-feedback-option" selected={reaction === item} disabled={saving} aria-label={trainerReactionLabels[item]} onClick={() => setReaction(item)}>{trainerReactionLabels[item]}</WorkoutChoice>)}
         </div>
       </fieldset>
       <VoiceNoteField name="trainerReview" source="workout_review" label="Отзыв тренера" placeholder="Что получилось и на что обратить внимание дальше" value={value} onValueChange={(next) => setValue(next.slice(0, 500))} autoResize />

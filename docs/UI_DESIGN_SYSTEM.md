@@ -132,6 +132,19 @@ Workout actions use the shared `WorkoutCta` hierarchy contract:
 - `tertiary` is an optional, dismissive, or rare text action;
 - `destructive` is reserved for deletion and always requires confirmation.
 
+Interactive workout controls expose the same state contract instead of styling
+feature-local classes independently:
+
+- `WorkoutCta` owns `loading`, `disabled`, and `destructive` action states;
+- `WorkoutChoice` owns neutral/destructive choices and the `selected` state;
+- `WorkoutStatus` and completed workout surfaces own the `completed` state;
+- pending controls retain their visual hierarchy, set `aria-busy`, and cannot
+  be activated twice; selected choices set `aria-pressed`.
+
+Post-workout RPE uses one continuous 1–10 slider with a large touch target,
+the selected number, and a plain-language effort label. It must not return to
+a two-row number grid that resembles a numeric keypad.
+
 On Live, confirming the current set is the primary repeated action. Finishing
 the whole workout remains secondary until the explicit completion confirmation
 is open. A pending action preserves its hierarchy, changes its label, exposes
