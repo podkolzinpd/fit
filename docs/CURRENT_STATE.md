@@ -5,16 +5,20 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-19
-Проверенный `main`: `805f922` (`fix: label planned workout sets correctly (#460)`)
+Проверенный `main`: `73cd87d` (`automate safe Yandex stage delivery (#459)`)
 
 ## Активная работа
 
-- Yandex ID/profile vertical slice и серверная tenant-allowlist находятся в
-  `main`; OAuth-приложение создано. Готовится постоянный stage delivery:
-  GitHub OIDC без JSON-ключа, один SHA-образ, автоматические forward-only
-  миграции перед API revision, private smoke и rollback. Production frontend и
-  Supabase не переключаются. После `#454` локальный запуск автоматически
-  готовит Supabase и PostgreSQL 17, а CI проверяет обе цепочки миграций.
+- Yandex ID/profile vertical slice, серверная tenant-allowlist и постоянный
+  stage delivery находятся в `main`: GitHub OIDC без JSON-ключа, один SHA-образ,
+  автоматические forward-only миграции перед API revision, private smoke и
+  rollback. После `#459` созданы GitHub repository variables, approval
+  Environment `yandex-stage`, OIDC-федерация и две subject-привязки к
+  `fit-stage-terraform`. Access Key ID для state сохранён; перед первым новым
+  plan-run остаётся добавить зашифрованный Secret Access Key. Production
+  frontend и Supabase не переключаются. После `#454` локальный запуск
+  автоматически готовит Supabase и PostgreSQL 17, а CI проверяет обе цепочки
+  миграций.
 - Функциональный MVP признан достаточным для системной фазы удобства. Аудит
   `#420` зафиксировал P0/P1/P2; навигационная ясность завершена в `#421`,
   информационная архитектура Trainer Progress — в `#423`, visual regression
@@ -84,6 +88,10 @@
 
 ## Последние проверки
 
+- `#459`: полный `npm run check` прошёл после подливания `main`; GitHub CI и
+  Vercel прошли перед merge. Первый Yandex stage workflow не применял Terraform,
+  не загружал образ и не запускал миграции: он остановился на обязательной
+  проверке отсутствующего `YC_DEPLOY_SA_ID`.
 - `#454`: GitHub migration-safety/app/database/yandex-database/e2e и Vercel
   прошли. Локально прошли `npm run check`, `npm run local:verify`, повторный
   запуск pending-миграций и smoke `/health`, `/ready`, frontend. Обычный dev не
@@ -91,8 +99,9 @@
 
 ## Ближайший roadmap
 
-1. Завершить и одобрить постоянный Yandex stage pipeline, развернуть миграцию
-   `000004` и private auth revision; production frontend не переключать.
+1. Добавить оставшийся Terraform state secret, получить и проверить Terraform
+   plan, затем отдельно одобрить миграцию `000004` и private auth revision;
+   production frontend не переключать.
 2. Продолжать UI-полировку только с экрана, который явно выберет пользователь;
    не собирать несколько экранов в один PR. Desktop shell тренера и P2
    отложены и без нового прямого решения не начинаются.
