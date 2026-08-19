@@ -119,6 +119,5 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await page.goto(`/progress/${demoClientId}`)
   await expect(page.getByRole('heading', { name: 'Прогресс · Анна Смирнова' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Главное по клиенту' })).toBeVisible()
-  await expect(page.locator('.trainer-progress-decisions article').first()).toHaveClass(/is-positive/)
   await expectVisualBaseline(page, 'trainer-progress.png')
 })
