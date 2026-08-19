@@ -1,10 +1,5 @@
 import { expect, test } from '@playwright/test'
 
-async function selectClient(page: import('@playwright/test').Page, name: string) {
-  await page.locator('.client-picker-trigger').click()
-  await page.locator('.client-picker-item').filter({ hasText: name }).first().click()
-}
-
 async function fillClientProfileDetails(page: import('@playwright/test').Page) {
   await page.getByLabel('Пол').selectOption('female')
   await page.getByLabel('Возраст').fill('30')
