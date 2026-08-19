@@ -41,7 +41,11 @@ required for RLS to remain effective.
   `TEST_DATABASE_URL` points to local `fit_actor_test`.
 
 The integration test deliberately refuses remote hosts and any other database
-name. A disposable PostgreSQL 17 instance can be started with Podman:
+name. The repository-level `npm run dev` and `npm run local:prepare` commands
+start a persistent local PostgreSQL 17 container through Podman and apply only
+pending migrations automatically. No Yandex Cloud database is contacted.
+
+For an isolated disposable test instance, use:
 
 ```sh
 podman run --rm --detach --name fit-actor-postgres \

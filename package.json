@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "npm run db:start && npm run dev:frontend",
+    "dev": "node scripts/run-local-stack.mjs --dev",
+    "local:prepare": "node scripts/run-local-stack.mjs",
+    "local:verify": "node scripts/run-local-stack.mjs --verify",
     "dev:frontend": "vite --port 5173",
     "build": "tsc -b && vite build",
     "lint": "eslint . --max-warnings=0",
@@ -18,6 +20,7 @@
     "db:test": "supabase test db --local",
     "db:types": "supabase gen types typescript --local > src/data/database.types.ts",
     "db:types:check": "node scripts/check-db-types.mjs",
+    "migrations:check": "node scripts/check-migrations.mjs",
     "ios:permissions:check": "node scripts/check-ios-permissions.mjs",
     "api:check": "npm --prefix services/api run check",
     "ai:smoke": "node scripts/run-yandex-summary-live.mjs",
