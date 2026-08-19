@@ -252,10 +252,10 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.completed-exercise-block')).toHaveCount(0)
   // Завершённая тренировка показывает фактический результат (вес × повторы)
   // только по подтверждённым подходам, а не только название упражнения.
-  await expect(page.locator('.completed-set-summary').filter({ hasText: /42\.5 кг × 9 повт\./ })).toBeVisible()
-  // Неподтверждённые подходы (план без факта) помечены «не выполнено», план
-  // за факт не выдаётся.
-  await expect(page.locator('.completed-set-summary').filter({ hasText: 'не выполнено:' }).first()).toBeVisible()
+  await expect(page.locator('.completed-set-summary').filter({ hasText: /42\.5 кг × 9/ })).toBeVisible()
+  // Неподтверждённые подходы показаны прочерками в их позиции: план за факт
+  // не выдаётся, а порядок остаётся читаемым до раскрытия.
+  await expect(page.locator('.completed-set-summary').filter({ hasText: '—' }).first()).toBeVisible()
   // Сводка завершённой тренировки: время, тоннаж, группы мышц.
   // Тоннаж считает только подтверждённый факт: 42.5×9 = 383 кг.
   await expect(page.locator('.workout-fact-summary')).toContainText('Тоннаж')
@@ -269,7 +269,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByLabel('Фактический вес, подход 1').fill('45')
   await page.getByRole('button', { name: 'Сохранить изменения' }).click()
   await expect(page.locator('.workout-detail-page .badge.done')).toHaveText('Готово')
-  await expect(page.locator('.completed-set-summary').filter({ hasText: /45 кг × 9 повт\./ }).first()).toBeVisible()
+  await expect(page.locator('.completed-set-summary').filter({ hasText: /45 кг × 9/ }).first()).toBeVisible()
 
   // «Назад» с завершённой тренировки ведёт в расписание (все запланированные).
   await page.locator('.page-back').click()

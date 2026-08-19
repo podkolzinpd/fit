@@ -695,17 +695,17 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-exercise-note .exercise-comment { margin:0 }
 .exercise-comment { width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--fg); font: inherit; font-size: 13px; resize: vertical; box-sizing: border-box }
 .exercise-comment::placeholder { color: var(--muted) }
-.exercise-comment-note { color: var(--muted); font-size: 13px; margin-top: 4px }
+.exercise-comment-note { margin:var(--space-1) 44px 0 0; color:var(--secondary-label-fg); font-size:var(--text-sm); line-height:var(--leading-snug) }
 .planned-round { border: 0; border-top: 1px solid var(--hairline); border-radius: 0; padding: 6px 0 0; background: transparent }
 .planned-round-label { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 4px }
 .planned-round-exercise { margin-bottom: 6px }
 .planned-round-exercise:last-child { margin-bottom: 0 }
 .planned-round-exercise-name { display: block; font-size: 13px; font-weight: 600; margin-bottom: 3px }
-.workout-detail-exercise-title { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:var(--space-2) }
-.workout-detail-exercise-title > strong { min-width:0; overflow-wrap:anywhere; font-size:17px; line-height:1.25 }
-.exercise-history-link { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:44px; margin:-10px -4px -8px 0; padding:0 4px; color:var(--secondary-label-fg); font-size:var(--text-sm); font-weight:var(--weight-semibold); line-height:1; text-decoration:none; white-space:nowrap }
-.exercise-history-link svg { width:16px; height:16px; flex:0 0 auto }
+.workout-detail-exercise-row { display:grid; grid-template-columns:minmax(0,1fr) 44px; align-items:start; gap:var(--space-2); min-width:0 }
+.exercise-history-link { width:44px; min-height:44px; display:grid; place-items:center; align-self:start; margin:0; padding:0; border:0; border-radius:var(--radius-sm); color:var(--secondary-label-fg); background:transparent; line-height:1; text-decoration:none }
+.exercise-history-link svg { width:20px; height:20px }
 .exercise-history-link:hover { color:var(--accent-strong) }
+.exercise-history-link:active { color:var(--accent-strong); background:var(--accent-surface) }
 .exercise-history-link:focus-visible { outline:3px solid var(--accent-ring); outline-offset:1px; border-radius:var(--radius-sm) }
 /* Приписка плана рядом с фактом (при расхождении) — тусклая. */
 .plan-note { color: var(--muted); font-size: 12px }
@@ -786,35 +786,29 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-exercise-overview p { margin:0; color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label) }
 .workout-detail-exercise-overview span { color:var(--secondary-label-fg); font-size:var(--text-sm); font-weight:var(--weight-semibold); text-align:right }
 .workout-detail-page > .planned-exercise-list { gap:0 }
-.workout-detail-page > .planned-exercise-list > .planned-detail-exercise { margin:0; padding:var(--space-3) 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
+.workout-detail-page > .planned-exercise-list > .planned-detail-exercise { margin:0; padding:var(--space-3) 0; border:0; border-radius:0; background:transparent; box-shadow:none }
 .workout-detail-page > .planned-exercise-list > .planned-detail-exercise:first-child { padding-top:var(--space-2) }
 .workout-detail-page > .planned-exercise-list > .exercise-block.view { margin:0; padding:var(--space-3) 0 var(--space-1) var(--space-2); border:0; border-left:2px solid var(--neutral-current-border); border-radius:0; background:transparent; box-shadow:none; gap:0 }
-.workout-detail-page > .planned-exercise-list > .exercise-block.view .planned-detail-exercise { margin:0; padding:var(--space-2) 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
+.workout-detail-page > .planned-exercise-list > .exercise-block.view .planned-detail-exercise { margin:0; padding:var(--space-2) 0; border:0; border-radius:0; background:transparent; box-shadow:none }
 .workout-detail-page > .planned-exercise-list > .exercise-block.view .planned-detail-exercise:last-child { border-bottom:0 }
 .workout-detail-page > .completed-exercise-list { gap:0 }
-.workout-detail-page > .completed-exercise-list > .completed-exercise { margin:0; padding:10px 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
+.workout-detail-page > .completed-exercise-list > .completed-exercise { margin:0; padding:var(--space-3) 0; border:0; border-radius:0; background:transparent; box-shadow:none }
 .workout-detail-page > .completed-exercise-list > .completed-exercise:first-child { padding-top:4px }
 .workout-detail-page > .completed-exercise-list > .completed-exercise-block { margin:0; padding:8px 0 0 8px; border:0; border-left:2px solid var(--border); border-radius:0; background:transparent; box-shadow:none; gap:0 }
 .workout-detail-page > .completed-exercise-list > .completed-exercise-block .block-badge { margin-bottom:2px }
-.workout-detail-page > .completed-exercise-list > .completed-exercise-block .completed-exercise { margin:0; padding:8px 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
+.workout-detail-page > .completed-exercise-list > .completed-exercise-block .completed-exercise { margin:0; padding:var(--space-2) 0; border:0; border-radius:0; background:transparent; box-shadow:none }
 .workout-detail-page > .completed-exercise-list > .completed-exercise-block .completed-exercise:last-child { border-bottom:0 }
 .workout-history-sets { display:grid; margin-top:8px; border-top:1px solid var(--hairline) }
-.planned-exercise-details { margin-top:var(--space-1) }
-.planned-exercise-details > summary { min-height:var(--control-height-compact); display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:var(--space-2); color:var(--muted); cursor:pointer; list-style:none }
-.planned-exercise-details > summary::-webkit-details-marker { display:none }
-.planned-exercise-details > summary::after { content:'Подходы'; color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold) }
-.planned-exercise-details[open] > summary::after { content:'Скрыть' }
-.planned-exercise-details > summary:focus-visible { outline:3px solid var(--accent-ring); outline-offset:3px; border-radius:var(--radius-sm) }
-.planned-set-summary { margin:0; color:var(--muted); font-size:14px }
-.planned-set-summary span { font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase }
-.planned-set-summary strong { color:var(--fg); font-size:16px; line-height:1.25 }
-.completed-set-summary { margin:4px 0 0; color:var(--fg); font-size:16px; font-weight:700; line-height:1.35; overflow-wrap:anywhere }
-.completed-exercise-details { margin-top:var(--space-1) }
-.completed-exercise-details > summary { min-height:var(--control-height-compact); display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); color:var(--fg); cursor:pointer; list-style:none }
-.completed-exercise-details > summary::-webkit-details-marker { display:none }
-.completed-exercise-details > summary::after { content:'Показать'; flex:0 0 auto; color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold) }
-.completed-exercise-details[open] > summary::after { content:'Скрыть' }
-.completed-exercise-details > summary:focus-visible { outline:3px solid var(--accent-ring); outline-offset:3px; border-radius:var(--radius-sm) }
+.planned-exercise-details, .completed-exercise-details { min-width:0; margin:0 }
+.planned-exercise-details > summary, .completed-exercise-details > summary { min-height:44px; display:grid; align-content:center; gap:var(--space-1); margin:0; color:var(--fg); cursor:pointer; list-style:none }
+.planned-exercise-details > summary::-webkit-details-marker, .completed-exercise-details > summary::-webkit-details-marker { display:none }
+.planned-exercise-details > summary:focus-visible, .completed-exercise-details > summary:focus-visible { outline:3px solid var(--accent-ring); outline-offset:3px; border-radius:var(--radius-sm) }
+.workout-detail-exercise-heading { min-width:0; display:flex; align-items:center; gap:var(--space-2) }
+.workout-detail-exercise-heading strong { min-width:0; overflow-wrap:anywhere; color:var(--fg-strong); font-size:var(--type-body-size); font-weight:var(--weight-medium); line-height:var(--leading-snug) }
+.exercise-details-chevron { width:8px; height:8px; display:block; flex:0 0 auto; margin:-3px 2px 0 0; border-right:1.8px solid currentColor; border-bottom:1.8px solid currentColor; color:var(--secondary-label-fg); transform:rotate(45deg); transition:transform var(--motion-fast) var(--ease) }
+.planned-exercise-details[open] .exercise-details-chevron, .completed-exercise-details[open] .exercise-details-chevron { margin-top:3px; transform:rotate(225deg) }
+.planned-set-summary, .completed-set-summary { overflow-wrap:anywhere }
+.workout-detail-exercise-result { display:block; color:var(--fg); font-size:var(--type-body-size); font-weight:var(--weight-semibold); font-variant-numeric:tabular-nums; line-height:var(--leading-snug) }
 .workout-history-set { display:grid; grid-template-columns:24px minmax(0, 1fr) 24px; align-items:center; gap:8px; min-height:48px; padding:8px 0; border-bottom:1px solid var(--hairline) }
 .completed-exercise .workout-history-sets { margin-top:6px }
 .completed-exercise .workout-history-set { min-height:42px; padding:4px 0 }
