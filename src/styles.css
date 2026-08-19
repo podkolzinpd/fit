@@ -72,6 +72,7 @@
   --client-ai-note-border: #386d4b; --client-ai-note-surface: #193022; --client-ai-note-fg: #d2ead9; --client-ai-note-icon: #75dc96;
   --success-surface: #15271a; --success-border: #367b4b; /* зафиксированный подход */
   --success-mark-surface: #1d3b28;
+  --live-indicator: #ff5c5c; --live-indicator-ring: #ff5c5c66;
   --neutral-current: #24222c; --neutral-current-border: #6f6a80; /* текущий подход */
   --progress-dot: #3a363f; --progress-dot-current: #8a8490; --progress-dot-current-border: #a29ca8;
   --warning-surface: #3a2f1d; --warning-border: #ffc06b66; --warning-fg: #ffd9a0; /* отдых/таймер */
@@ -178,6 +179,7 @@
   --frame-border: #e5ded3;
   --success-surface: #eafaf0; --success-border: #a6e2bd;
   --success-mark-surface: #d7efdf;
+  --live-indicator: #c83f3f; --live-indicator-ring: #c83f3f52;
   --neutral-current: #f1eef4; --neutral-current-border: #cfc9d6;
   --progress-dot: #d8d2cb; --progress-dot-current: #8b8580; --progress-dot-current-border: #6f6964;
   --warning-surface: #fdf3dc; --warning-border: #f5cf8b; --warning-fg: #8a5e12;
@@ -551,7 +553,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .planned-exercise .set-add-row > .secondary { width:auto; min-height:30px; padding:2px 0; border:0; background:transparent; color:var(--accent-strong); box-shadow:none; font-size:15px }
 .planned-exercise .set-add-row > .secondary:hover { background:transparent; color:var(--accent-label) }
 /* Блок упражнений (суперсет/трисет/круговая): одна лёгкая группа, без вложенных карточек. */
-.exercise-block { border: 1px solid var(--accent-surface-border); border-left: 2px solid var(--accent-label); border-radius: 12px; padding: 8px; margin: 8px 0; background: var(--accent-surface); display: flex; flex-direction: column; gap: 6px }
+.exercise-block { border: 1px solid var(--border); border-left: 2px solid var(--neutral-current-border); border-radius: 12px; padding: 8px; margin: 8px 0; background: var(--surface-sunken); display: flex; flex-direction: column; gap: 6px }
 .exercise-block .exercise { margin: 0 }
 .exercise-block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px }
 .exercise-block-head select { min-height: 34px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700 }
@@ -580,7 +582,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-exercise-head h2, .live-exercise-head h3 { margin: 0; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere }
 .live-previous-result { margin:2px 0 0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
 .live-exercise-head .exercise-head-actions { flex: 0 0 auto }
-.block-badge { align-self: flex-start; padding: 3px 10px; border-radius: 99px; background: var(--accent-surface); border: 1px solid var(--accent-surface-border); color: var(--accent-label); font-size: 12px; font-weight: 700 }
+.block-badge { align-self: flex-start; padding: 3px 10px; border-radius: 99px; background: var(--surface-raised); border: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 700 }
 .block-rounds { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 600 }
 /* Live «по кругам»: шапка со счётчиком и точками прогресса. */
 .circuit-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
@@ -597,7 +599,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Текущий круг (в работе) — серая подсветка; пройденный — зелёная. */
 .circuit-round.current { opacity: 1; border-color: var(--neutral-current-border); background: transparent }
 .circuit-round.done { opacity: 1; border-color: var(--success-border); background: transparent }
-.circuit-round-label { font-size: 12px; font-weight: 700; color: var(--accent-label); margin-bottom: 2px }
+.circuit-round-label { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 2px }
 .circuit-round h3 { margin: 6px 0 3px; font-size: 15px }
 .circuit-round .exercise { margin: 0 }
 .block-rounds input { width: 56px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700; text-align: center }
@@ -647,7 +649,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-comment::placeholder { color: var(--muted) }
 .exercise-comment-note { color: var(--muted); font-size: 13px; margin-top: 4px }
 .planned-round { border: 0; border-top: 1px solid var(--hairline); border-radius: 0; padding: 6px 0 0; background: transparent }
-.planned-round-label { font-size: 12px; font-weight: 700; color: var(--accent-label); margin-bottom: 4px }
+.planned-round-label { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 4px }
 .planned-round-exercise { margin-bottom: 6px }
 .planned-round-exercise:last-child { margin-bottom: 0 }
 .planned-round-exercise-name { display: block; font-size: 13px; font-weight: 600; margin-bottom: 3px }
@@ -686,7 +688,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-trainer-reactions .workout-feedback-option { font-size:22px }
 .workout-response-limit { margin:-8px 0 0; text-align:right; font-size:var(--text-caption) }
 .workout-response-body { display:flex; align-items:flex-start; gap:10px; min-width:0 }
-.workout-response-reaction { display:grid; flex:0 0 auto; place-items:center; width:42px; height:42px; border-radius:14px; background:var(--accent-surface); font-size:23px }
+.workout-response-reaction { display:grid; flex:0 0 auto; place-items:center; width:42px; height:42px; border-radius:14px; background:var(--surface-sunken); font-size:23px }
 .workout-response-body .workout-review-text { min-width:0; padding-top:9px; overflow-wrap:anywhere }
 .workout-response-meta { margin:-4px 0 0 52px; color:var(--muted); font-size:var(--text-caption) }
 .workout-feedback-fieldset { min-width:0; margin:0; padding:0; border:0 }
@@ -706,7 +708,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-page > .completed-exercise-list { gap:0 }
 .workout-detail-page > .completed-exercise-list > .completed-exercise { margin:0; padding:10px 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
 .workout-detail-page > .completed-exercise-list > .completed-exercise:first-child { padding-top:4px }
-.workout-detail-page > .completed-exercise-list > .completed-exercise-block { margin:0; padding:8px 0 0 8px; border:0; border-left:2px solid var(--accent-label); border-radius:0; background:transparent; box-shadow:none; gap:0 }
+.workout-detail-page > .completed-exercise-list > .completed-exercise-block { margin:0; padding:8px 0 0 8px; border:0; border-left:2px solid var(--border); border-radius:0; background:transparent; box-shadow:none; gap:0 }
 .workout-detail-page > .completed-exercise-list > .completed-exercise-block .block-badge { margin-bottom:2px }
 .workout-detail-page > .completed-exercise-list > .completed-exercise-block .completed-exercise { margin:0; padding:8px 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
 .workout-detail-page > .completed-exercise-list > .completed-exercise-block .completed-exercise:last-child { border-bottom:0 }
@@ -741,7 +743,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-chronicle-head { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0 }
 .workout-chronicle-head > strong { min-width:0; font-size:18px }
 .workout-chronicle-head-badges { display:flex; flex:0 0 auto; align-items:center; gap:7px }
-.workout-pr-badge { display:inline-flex; align-items:center; min-height:26px; padding:4px 9px; border:1px solid var(--accent-surface-border); border-radius:999px; color:var(--accent-strong); background:var(--accent-surface); font-size:12px; font-weight:900; letter-spacing:.06em }
+.workout-pr-badge { display:inline-flex; align-items:center; min-height:26px; padding:4px 9px; border:1px solid var(--success-border); border-radius:999px; color:var(--success-fg); background:var(--success-surface); font-size:12px; font-weight:900; letter-spacing:.06em }
 .workout-chronicle-card .card-author { margin:-5px 0 0 }
 .workout-chronicle-exercises { display:grid; gap:8px; min-width:0; padding:10px 0; border-top:1px solid var(--hairline); border-bottom:1px solid var(--hairline) }
 .workout-chronicle-exercise { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.25fr); align-items:baseline; gap:12px; min-width:0 }
@@ -755,7 +757,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-chronicle-comment, .workout-chronicle-response { display:grid; grid-template-columns:auto minmax(0,1fr); gap:8px; min-width:0; margin:0; padding:9px 10px; border-radius:12px; background:var(--surface-sunken); overflow-wrap:anywhere; font-size:13px; line-height:1.4 }
 .workout-chronicle-note-label { color:var(--muted); font-size:12px; font-weight:800 }
 .workout-chronicle-note-text { min-width:0; display:-webkit-box; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:2 }
-.workout-chronicle-response { background:var(--accent-surface) }
+.workout-chronicle-response { background:var(--surface-sunken) }
 .workout-detail-page > .actions { margin-top: 18px }
 .workout-detail-page > .actions .button { min-height: 48px; border-radius: 15px }
 .workout-detail-page > .danger.wide { margin-top: 10px; min-height: 46px; border-radius: 15px }
@@ -941,12 +943,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Текущий подход (в работе) — серая подсветка. */
 .exercise.current { border-color: var(--neutral-current-border); background: var(--neutral-current) }
 .circuit-round.done .exercise, .circuit-round.done .exercise.confirmed { border-color: var(--success-border); background: transparent }
-.live-dot { color: #d33030; font-weight: 800; font-size: 13px }
+.live-dot { color: var(--live-indicator); font-weight: 800; font-size: 13px }
 .live-timer { min-height: var(--control-height-compact); display: inline-flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3); border: 1px solid var(--accent-surface-border); border-radius: var(--radius-pill); background: var(--live-warm); color: var(--fg); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; font-size: var(--text-ui) }
 /* Закреплённый блок live: таймер + отдых под ним, оба прилипают вверху вместе. */
 .live-pinned { position: sticky; top: 0; z-index: 3; margin: 0 0 14px; display: flex; flex-direction: column; gap: 8px; padding: 4px 0; background: var(--surface); }
-.live-dot-mark { width: 8px; height: 8px; border-radius: 50%; background: #d33030; box-shadow: 0 0 0 0 #d3303066; animation: live-pulse 1.6s ease-out infinite }
-@keyframes live-pulse { 0% { box-shadow: 0 0 0 0 #d3303066 } 70% { box-shadow: 0 0 0 6px #d3303000 } 100% { box-shadow: 0 0 0 0 #d3303000 } }
+.live-dot-mark { width: 8px; height: 8px; border-radius: 50%; background: var(--live-indicator); box-shadow: 0 0 0 0 var(--live-indicator-ring); animation: live-pulse 1.6s ease-out infinite }
+@keyframes live-pulse { 0% { box-shadow: 0 0 0 0 var(--live-indicator-ring) } 70%, 100% { box-shadow: 0 0 0 6px transparent } }
 .rest-controls { display: flex; align-items: center; gap: 8px }
 .rest-step { min-height: 44px; padding: 8px 12px; border: 1px solid var(--accent-surface-border); border-radius: 10px; background: var(--accent-surface); color: var(--fg); font-weight: 700; font-size: 14px; cursor: pointer }
 .rest-step:hover { border-color: var(--accent-border) }
@@ -1481,7 +1483,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .theme-light .client-access-card.connected > div > span { color: #1f7a44; background: #d7efdf }
 .theme-light .page-back { background: var(--surface-raised) }
 .theme-light .badge { color: #6d6673; background: #efeae6 }
-.theme-light .exercise-block { background: var(--accent-surface) }
+.theme-light .exercise-block { background: var(--surface-sunken) }
 .theme-light .goal-stages-hint { background: #fbf4f0 }
 
 /* Клиентские корневые вкладки используют одну компактную сетку. Это не меняет
@@ -1589,11 +1591,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-header-meta > span { min-width:0; overflow-wrap:anywhere }
 .workout-header-side { flex:0 0 auto; display:flex; align-items:center; gap:var(--space-2) }
 .workout-status { min-height:var(--chip-height); display:inline-flex; align-items:center; padding:0 var(--space-3); border:1px solid var(--border); border-radius:var(--radius-pill); background:var(--surface-sunken); color:var(--muted); font-size:var(--type-caption-size); font-weight:var(--weight-bold); line-height:1; white-space:nowrap }
-.workout-status-planned, .workout-status-current { border-color:var(--accent-surface-border); background:var(--accent-surface); color:var(--accent-strong) }
-.workout-status-completed { border-color:var(--success-border); background:var(--success-surface); color:var(--success-fg) }
-.workout-status-partial { border-color:var(--warning-border); background:var(--warning-surface); color:var(--warning-fg) }
-.workout-status-skipped { border-color:var(--border); background:var(--surface-sunken); color:var(--muted) }
-.workout-status-history, .workout-status-upcoming { background:var(--surface-sunken); color:var(--muted) }
+.workout-status[data-tone='accent'] { border-color:var(--accent-surface-border); background:var(--accent-surface); color:var(--accent-strong) }
+.workout-status[data-tone='success'] { border-color:var(--success-border); background:var(--success-surface); color:var(--success-fg) }
+.workout-status[data-tone='warning'] { border-color:var(--warning-border); background:var(--warning-surface); color:var(--warning-fg) }
+.workout-status[data-tone='neutral'] { border-color:var(--border); background:var(--surface-sunken); color:var(--muted) }
 .workout-exercise-contract, .workout-set-contract { min-width:0 }
 .workout-exercise-current { border-color:var(--accent-surface-border) }
 .workout-exercise-upcoming, .workout-set-skipped { color:var(--muted) }
