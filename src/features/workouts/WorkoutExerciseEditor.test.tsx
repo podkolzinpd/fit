@@ -83,14 +83,15 @@ describe('workout exercise editor rules', () => {
     expect(screen.getByLabelText('Расстояние, подход 1')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Действия с планом' }))
-    await user.click(screen.getByRole('menuitem', { name: 'Сбросить значения' }))
-    await user.click(screen.getByRole('button', { name: 'Очистить' }))
-    expect(onChange.mock.calls.at(-1)?.[0]?.[0]?.sets[0]).toEqual({ position: 0 })
-    await user.click(screen.getByRole('button', { name: 'Действия с планом' }))
     await user.click(screen.getByRole('menuitem', { name: 'Рабочие веса +5%' }))
     expect(onChange.mock.calls.at(-1)?.[0]?.[0]?.sets[0]?.weightKg).toBe(55)
     await user.click(screen.getByRole('button', { name: 'Действия с планом' }))
     await user.click(screen.getByRole('menuitem', { name: 'Рабочие веса −5%' }))
+    expect(onChange.mock.calls.at(-1)?.[0]?.[0]?.sets[0]?.weightKg).toBe(52.5)
+    await user.click(screen.getByRole('button', { name: 'Действия с планом' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Сбросить значения' }))
+    await user.click(screen.getByRole('button', { name: 'Очистить' }))
+    expect(onChange.mock.calls.at(-1)?.[0]?.[0]?.sets[0]).toEqual({ position: 0 })
     expect(onChange).toHaveBeenCalledTimes(3)
   })
 
@@ -117,12 +118,15 @@ describe('workout exercise editor rules', () => {
     const user = userEvent.setup()
     render(<RunningEditorHarness />)
 
-    await user.click(screen.getByText('Дополнительно'))
+    await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Настройки упражнения' }))
     await user.click(screen.getByRole('button', { name: '6 × 400 м · отдых 90 с' }))
     expect(screen.getByText('Подход 6')).toBeInTheDocument()
     expect(screen.getByLabelText('Время, подход 1')).toHaveValue('1:40')
     expect(screen.getByLabelText('Расстояние, подход 1')).toHaveValue(400)
 
+    await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Настройки упражнения' }))
     await user.click(screen.getByRole('button', { name: '6 × 400 м + 90 с лёгкого бега' }))
     expect(screen.getByLabelText('Тип блока')).toHaveValue('interval')
     expect(screen.getAllByText(/Круг \d/)).toHaveLength(6)
@@ -130,21 +134,20 @@ describe('workout exercise editor rules', () => {
     expect(screen.getAllByText('Бег — восстановление').length).toBeGreaterThan(0)
   })
 
-  it('hides optional rest and comment fields until requested', async () => {
+  it('keeps rest and comment fields in the exercise settings sheet', async () => {
     const user = userEvent.setup()
     render(<EditorHarness onOpenPicker={vi.fn()} />)
 
-    const summary = screen.getByText('Дополнительно')
-    const details = summary.closest('details')
-    expect(details).not.toHaveAttribute('open')
-
-    await user.click(summary)
-    expect(details).toHaveAttribute('open')
+    expect(screen.queryByText('Дополнительно')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Настройки упражнения' }))
+    expect(screen.getByRole('dialog', { name: 'Настройки упражнения «Присед»' })).toBeInTheDocument()
     expect(screen.getByLabelText('Отдых между подходами, с')).toBeInTheDocument()
     expect(screen.getByLabelText('Комментарий к упражнению')).toBeInTheDocument()
   })
 
-  it('keeps saved optional details collapsed and shows their compact summary', () => {
+  it('shows saved optional details as a compact hint', async () => {
+    const user = userEvent.setup()
     const withDetails: WorkoutExerciseDraft[] = [{
       ...exercises[0]!,
       trainerComment: 'Контролировать технику',
@@ -152,9 +155,25 @@ describe('workout exercise editor rules', () => {
     }]
     render(<WorkoutExerciseEditor exercises={withDetails} onChange={vi.fn()} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />)
 
-    const details = screen.getByText('Дополнительно').closest('details')
-    expect(details).not.toHaveAttribute('open')
-    expect(screen.getByText('заметка · отдых 120 с')).toBeInTheDocument()
+    expect(screen.getByText('Отдых 120 с · Есть заметка')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Настройки упражнения' }))
+    expect(screen.getByLabelText('Отдых между подходами, с')).toHaveValue(120)
+    expect(screen.getByLabelText('Комментарий к упражнению')).toHaveValue('Контролировать технику')
+  })
+
+  it('opens a copied exercise from a compact summary', async () => {
+    const user = userEvent.setup()
+    render(<WorkoutExerciseEditor exercises={exercises} onChange={vi.fn()} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} collapseInitialExercises initialExercisesReady />)
+
+    const toggle = screen.getByRole('button', { name: /Присед/ })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByText('52.5 кг × 10 / 8')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Вес, подход 1')).not.toBeInTheDocument()
+
+    await user.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByLabelText('Вес, подход 1')).toHaveValue(52.5)
   })
 
   it('shows the latest completed result as a compact reference', () => {

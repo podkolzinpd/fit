@@ -30,13 +30,14 @@ export function WorkoutStatus({ state, label }: { state: WorkoutUiState; label?:
   return <span className={`workout-status workout-status-${state} badge ${legacyTone}`} data-state={state} data-tone={STATUS_TONES[state]}>{label ?? STATUS_LABELS[state]}</span>
 }
 
-export function WorkoutHeader({ eyebrow, title, meta, state, statusLabel, action, className = '' }: {
+export function WorkoutHeader({ eyebrow, title, meta, state, statusLabel, action, showStatus = true, className = '' }: {
   eyebrow?: string
   title: string
   meta?: ReactNode
   state: WorkoutUiState
   statusLabel?: string
   action?: ReactNode
+  showStatus?: boolean
   className?: string
 }) {
   return <section className={`workout-header-contract workout-state-${state} ${className}`.trim()} data-state={state}>
@@ -45,7 +46,7 @@ export function WorkoutHeader({ eyebrow, title, meta, state, statusLabel, action
       <h2>{title}</h2>
       {meta && <div className="workout-header-meta">{meta}</div>}
     </div>
-    <div className="workout-header-side"><WorkoutStatus state={state} label={statusLabel} />{action}</div>
+    {(showStatus || action) && <div className="workout-header-side">{showStatus && <WorkoutStatus state={state} label={statusLabel} />}{action}</div>}
   </section>
 }
 
