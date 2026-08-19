@@ -4,7 +4,7 @@ import { formatLocalDate } from '../../shared/local-date'
 import { RPE_OPTIONS } from '../../shared/rpe'
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, previousResultLine, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
-import { OverflowMenu } from '../../shared/ui'
+import { OverflowMenu, useConfirm } from '../../shared/ui'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
@@ -95,6 +95,7 @@ function inputNumber(value: string): number | undefined {
 
 export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false }: WorkoutExerciseEditorProps) {
   const [reordering, setReordering] = useState(false)
+  const [confirm, confirmDialog] = useConfirm()
   // Точечный выбор из меню имеет приоритет над общей настройкой тренера.
   const [rpeOverrides, setRpeOverrides] = useState<Map<number, boolean>>(() => new Map())
   function isRpeVisible(exerciseIndex: number) {
@@ -202,8 +203,10 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         { label: 'Удалить', danger: true, onClick: () => removeExercise(exerciseIndex) },
       ]} /></>} />
       {(() => { const previous = previousResults.get(exercise.ref); const line = previous && previousResultLine(previous.sets); return line ? <p className="exercise-prefill-note">В прошлый раз: {line}</p> : exercise.prefilledFromDate ? <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p> : null })()}
-      <WorkoutSetTable variant="planned" inputKind={exercise.inputKind} showRpe={showRpe}>
-        {exercise.sets.map((_set, setIndex) => <WorkoutSetRow state="planned" className={`planned-set ${showRpe ? 'rpe-visible' : ''}`} key={setIndex}>
+      <WorkoutSetTable variant="planned" inputKind={exercise.inputKind} showRpe={showRpe}
+        columnLabels={exercise.inputKind === 'distance' && showRpe ? ['Параметры', ''] : undefined}
+        className={exercise.inputKind === 'distance' && showRpe ? 'planned-run-rpe-table' : ''}>
+        {exercise.sets.map((_set, setIndex) => <WorkoutSetRow state="planned" className={`planned-set ${exercise.inputKind === 'distance' ? 'planned-set-running' : ''} ${showRpe ? 'rpe-visible' : ''}`} key={setIndex}>
           <span className="workout-set-number planned-set-number" aria-hidden="true">{setIndex + 1}</span>
           <span className="sr-only">Подход {setIndex + 1}</span>
           {setFields(exercise, exerciseIndex, setIndex, showRpe)}
@@ -231,9 +234,19 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
 
   const hasExercises = exercises.length > 0
   const showEmptyAddAction = !hideEmptyAddAction
+  const hasAdjustableWeight = exercises.some((exercise) => exercise.sets.some((set) => set.weightKg !== undefined))
+  const planActions = [
+    ...(hasAdjustableWeight ? [
+      { label: 'Рабочие веса −5%', onClick: () => onChange(adjustWorkoutLoad(exercises, .95)) },
+      { label: 'Рабочие веса +5%', onClick: () => onChange(adjustWorkoutLoad(exercises, 1.05)) },
+    ] : []),
+    { label: 'Сбросить значения', danger: true, onClick: async () => {
+      if (await confirm({ message: 'Очистить все значения подходов? Количество упражнений и подходов сохранится.', confirmLabel: 'Очистить', danger: true })) onChange(clearWorkoutLoad(exercises))
+    } },
+  ]
 
   return <section className="workout-exercise-editor">
-    {hasExercises && <div className="workout-editor-heading"><h2>Упражнения</h2>{reordering ? <div className="reorder-mode"><span>Изменение порядка</span><button type="button" className="link" onClick={() => setReordering(false)}>Готово</button></div> : <div className="workout-tools"><button type="button" className="link" onClick={() => onChange(clearWorkoutLoad(exercises))}>Сбросить значения</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, .95))}>−5%</button><button type="button" className="link" onClick={() => onChange(adjustWorkoutLoad(exercises, 1.05))}>+5%</button></div>}</div>}
+    {reordering && <div className="workout-editor-toolbar"><div className="reorder-mode"><span>Изменение порядка</span><button type="button" className="link" onClick={() => setReordering(false)}>Готово</button></div></div>}
     {blocks.map((block, blockIndex) => {
       const lastIndex = exercises.length - 1
       const isFirst = blockIndex === 0
@@ -285,6 +298,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         {blockMergeIndex >= 0 && <button type="button" className="link block-merge" onClick={() => onChange(mergeBlockWithNext([...exercises], blockMergeIndex))}>⛓ Объединить со следующим в блок</button>}
       </div>
     })}
-    {(hasExercises || showEmptyAddAction) && <button type="button" className="secondary wide" onClick={onOpenPicker}>＋ Упражнение</button>}
+    {(hasExercises || showEmptyAddAction) && <div className="workout-editor-footer"><button type="button" className="secondary" onClick={onOpenPicker}>＋ Упражнение</button>{hasExercises && <OverflowMenu label="Действия с планом" trigger="Значения" items={planActions} />}</div>}
+    {confirmDialog}
   </section>
 }

@@ -61,6 +61,13 @@ describe('system actions', () => {
     expect(back.querySelector('svg')).toHaveAttribute('data-icon', 'back')
   })
 
+  it('передаёт экрану управление выходом, когда нужен безопасный confirm', () => {
+    const onBack = vi.fn()
+    render(<MemoryRouter><Page title="Экран" back={-1} onBack={onBack}>Содержимое</Page></MemoryRouter>)
+    fireEvent.click(screen.getByRole('button', { name: 'Назад' }))
+    expect(onBack).toHaveBeenCalledOnce()
+  })
+
   it('использует общие SVG для empty и error состояний', () => {
     const { rerender } = render(<EmptyState />)
     expect(document.querySelector('.state-panel-mark svg')).toHaveAttribute('data-icon', 'add')
