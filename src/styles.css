@@ -554,8 +554,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
    остаётся для live и просмотра: этот модификатор применяется только в редакторе. */
 .planned-exercise { margin:0; padding:10px 0 12px; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
 .planned-exercise:first-of-type { padding-top:4px }
-.planned-exercise header { min-height:36px; align-items:center }
-.planned-exercise header > strong { font-size:18px; line-height:1.25 }
+.planned-exercise header { min-height:44px; align-items:center }
 .planned-exercise .overflow-trigger { min-width:var(--control-height-standard); min-height:var(--control-height-standard) }
 .planned-exercise .planned-set-table { margin-top:4px }
 .planned-exercise .planned-set { min-height:46px; padding:3px 0 }
@@ -564,6 +563,19 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .planned-exercise .set-add-row { grid-template-columns:auto; justify-content:start; margin-top:4px }
 .planned-exercise .set-add-row > .secondary { width:auto; min-height:var(--control-height-standard); padding:6px 0; border:0; background:transparent; color:var(--accent-strong); box-shadow:none; font-size:15px }
 .planned-exercise .set-add-row > .secondary:hover { background:transparent; color:var(--accent-label) }
+.compact-editor-exercise-head { display:flex; align-items:center; gap:var(--space-2) }
+.compact-editor-exercise-toggle { min-width:0; min-height:64px; flex:1 1 auto; display:grid; align-content:center; gap:2px; padding:var(--space-2) 0; border:0; border-radius:0; background:transparent; color:var(--fg); text-align:left; box-shadow:none }
+.compact-editor-exercise-toggle:hover { background:transparent }
+.compact-editor-exercise-toggle:focus-visible { outline:3px solid var(--accent-ring); outline-offset:2px; border-radius:var(--radius-sm) }
+.compact-editor-exercise-title { min-width:0; display:flex; align-items:baseline; gap:var(--space-2) }
+.compact-editor-exercise-title strong { min-width:0; overflow-wrap:anywhere; font-size:var(--type-body-size); font-weight:var(--weight-medium); line-height:var(--leading-snug) }
+.compact-editor-chevron { flex:0 0 auto; width:8px; height:8px; margin-bottom:3px; border-right:2px solid var(--muted); border-bottom:2px solid var(--muted); transform:rotate(45deg); transition:transform var(--motion-fast) var(--ease) }
+.compact-editor-exercise-toggle[aria-expanded='true'] .compact-editor-chevron { margin-bottom:0; transform:rotate(225deg) }
+.compact-editor-exercise-summary { overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-body-size); font-weight:var(--weight-semibold); font-variant-numeric:tabular-nums; line-height:var(--leading-snug) }
+.compact-editor-exercise-options { color:var(--secondary-label-fg); font-size:var(--text-sm); font-weight:var(--weight-medium); line-height:var(--leading-snug) }
+.compact-editor-exercise-fields { padding-top:var(--space-1); border-top:1px solid var(--hairline) }
+.planned-exercise .planned-set-remove { color:var(--muted) }
+.planned-exercise .planned-set-remove:hover { color:var(--danger) }
 /* Блок упражнений (суперсет/трисет/круговая): одна лёгкая группа, без вложенных карточек. */
 .exercise-block { border: 1px solid var(--border); border-left: 2px solid var(--neutral-current-border); border-radius: 12px; padding: 8px; margin: 8px 0; background: var(--surface-sunken); display: flex; flex-direction: column; gap: 6px }
 .exercise-block .exercise { margin: 0 }
@@ -632,6 +644,15 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-options-fields .block-rest-field { flex-direction: row; align-items: center; gap: 8px }
 .exercise-options-fields .block-rest-field input { min-height: 40px }
 .exercise-options-fields .exercise-comment { margin-top: 0 }
+.exercise-settings-sheet { width:min(100%, 440px); max-height:min(82dvh, 680px); overflow:hidden auto; display:grid; gap:var(--space-4); padding:var(--space-5) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom)); border:1px solid var(--border); border-bottom:0; border-radius:var(--radius-lg) var(--radius-lg) 0 0; background:var(--surface-elevated); box-shadow:0 -24px 70px #00000055 }
+.exercise-settings-sheet .picker-header { align-items:flex-start }
+.exercise-settings-sheet .picker-header .eyebrow { margin:0 0 var(--space-1); color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label) }
+.exercise-settings-sheet .picker-header h2 { margin:0; font-size:var(--type-section-size); overflow-wrap:anywhere }
+.exercise-settings-fields { display:grid; gap:var(--space-4) }
+.exercise-settings-fields .field input, .exercise-settings-fields .field textarea { width:100%; min-height:var(--control-height-standard); border-radius:var(--radius-md); background:var(--surface-sunken) }
+.exercise-settings-fields .exercise-comment { min-height:72px; resize:none }
+.exercise-settings-done { margin:0; min-height:var(--control-height-primary); border-radius:var(--radius-lg) }
+.keyboard-open .exercise-settings-sheet { max-height:100%; padding-top:var(--space-3); padding-bottom:var(--space-3); border-radius:var(--radius-lg) var(--radius-lg) 0 0 }
 .running-preset-actions { width: 100%; display: grid; gap: 7px }
 .running-preset-actions > span { color: var(--muted); font-size: 12px; font-weight: 700 }
 .running-preset-actions .secondary { width: 100%; min-height: 42px; padding: 9px 12px; text-align: left; box-shadow: none }
@@ -1467,7 +1488,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-editor-footer { display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center; gap:var(--space-2); margin-top:var(--space-3) }
 .workout-editor-footer > .secondary { min-height:var(--control-height-standard); margin:0; border-radius:var(--radius-md) }
 .workout-editor-footer .overflow-trigger { min-height:var(--control-height-standard) }
-.workout-form { gap: var(--space-5); padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom)) }
+.workout-form { gap: var(--space-5); padding-bottom: calc(92px + env(safe-area-inset-bottom)) }
 .workout-form-section { display: grid; gap: 14px; padding: 20px; border: 1px solid var(--border); border-radius: 22px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
 .workout-form-section-head { display: grid; gap: 3px; padding-bottom: 0 }
 .workout-form-section-head .eyebrow { margin: 0; color: var(--accent-strong); font-size: 12px; font-weight: 800; letter-spacing: .075em }
@@ -1494,10 +1515,15 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-form-exercises { gap:var(--space-3); padding:0; border:0; border-radius:0; background:transparent; box-shadow:none }
 .workout-form-exercises .workout-form-section-head { gap:0; padding:0 }
 .workout-form-exercises .workout-form-section-head h2 { font-size:var(--type-title-size) }
+.workout-form-exercises .workout-form-exercise-heading h2 { font-size:var(--type-section-size); font-weight:var(--weight-semibold) }
 .workout-form-exercises .workout-composer { margin:0 }
 .workout-form .actions { margin: 0; padding: 0; background: transparent }
 .workout-form .actions button:last-child { min-height: var(--control-height-primary); border-radius: var(--radius-lg); font-size: var(--type-body-size); font-weight: 800 }
-.workout-form .workout-action-row { display:grid; grid-template-columns:1fr; padding:0; border:0; background:transparent; box-shadow:none }
+.workout-form .workout-action-row { position:fixed; z-index:9; left:50%; bottom:0; width:min(100%, 440px); display:grid; grid-template-columns:1fr; margin:0; padding:var(--space-3) 18px calc(var(--space-3) + env(safe-area-inset-bottom)); border:0; border-top:1px solid var(--border); background:var(--bar-bg); box-shadow:none; backdrop-filter:blur(18px) saturate(135%); transform:translateX(-50%) }
+.workout-form-shell, .workout-form-shell .content, .workout-form-page { background:var(--bg) }
+.workout-form-shell.keyboard-open .content-immersive { padding-bottom:var(--space-5); scroll-padding-top:calc(env(safe-area-inset-top) + 72px); scroll-padding-bottom:var(--space-4); background:var(--bg) }
+.workout-form-shell.keyboard-open .workout-form { padding-bottom:var(--space-5) }
+.workout-form-shell.keyboard-open .workout-action-row { display:none }
 .profile-form { gap: 16px }
 .profile-form-section { display: grid; gap: 14px; padding: 20px; border: 1px solid var(--border); border-radius: 22px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
 .profile-form-section-head { display: grid; gap: 3px; padding-bottom: 2px }
