@@ -763,10 +763,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-history-set.missed .workout-history-set-status { color:var(--muted); background:var(--surface-sunken); font-weight:700 }
 .workout-chronicle-list { gap:10px }
 .workout-chronicle-card { display:grid; gap:11px; min-width:0; padding:16px; border-radius:20px; color:inherit }
+.workout-chronicle-card.has-pr { border-color:var(--success-border); box-shadow:inset 3px 0 0 var(--success), var(--shadow-card) }
 .workout-chronicle-head { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0 }
 .workout-chronicle-head > strong { min-width:0; font-size:18px }
 .workout-chronicle-head-badges { display:flex; flex:0 0 auto; align-items:center; gap:7px }
-.workout-pr-badge { display:inline-flex; align-items:center; min-height:26px; padding:4px 9px; border:1px solid var(--success-border); border-radius:999px; color:var(--success-fg); background:var(--success-surface); font-size:12px; font-weight:900; letter-spacing:.06em }
+.workout-pr-badge { display:inline-flex; align-items:center; gap:4px; min-height:26px; padding:4px 9px; border:1px solid var(--success-border); border-radius:999px; color:var(--success-fg); background:var(--success-surface); font-size:12px; font-weight:900; letter-spacing:.06em }
+.workout-pr-badge svg { width:14px; height:14px; flex:0 0 auto }
 .workout-chronicle-card .card-author { margin:-5px 0 0 }
 .workout-chronicle-exercises { display:grid; gap:8px; min-width:0; padding:10px 0; border-top:1px solid var(--hairline); border-bottom:1px solid var(--hairline) }
 .workout-chronicle-exercise { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.25fr); align-items:baseline; gap:12px; min-width:0 }
@@ -1139,6 +1141,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-decisions article > span { color: var(--accent-strong); font-size: var(--type-caption-size); font-weight: var(--weight-bold); letter-spacing: var(--tracking-label); text-transform: uppercase }
 .trainer-progress-decisions article > strong { font-size: var(--type-body-size); line-height: var(--leading-snug) }
 .trainer-progress-decisions article > p { margin: 0; color: var(--muted); font-size: var(--type-caption-size); line-height: var(--leading-snug) }
+.trainer-progress-decisions article.is-positive { background:var(--success-surface); box-shadow:inset 3px 0 0 var(--success) }
+.trainer-progress-decisions article.is-positive > span { color:var(--success-fg) }
 .trainer-progress-decisions article.needs-attention { background: var(--ai-attention-surface) }
 .trainer-progress-decisions article.needs-attention > strong { color: var(--ai-attention-fg) }
 .trainer-progress-decisions article.is-clear { background: var(--success-surface) }
@@ -1217,6 +1221,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .ai-progress-hero { display: flex; flex-direction: column; gap: 5px; padding: 15px 17px; border-block: 1px solid var(--ai-divider); background: var(--ai-subtle-surface) }
 .ai-progress-hero span, .ai-progress-regularity span { color: var(--accent-weak); font-size: var(--type-caption-size); font-weight: var(--weight-bold); letter-spacing: var(--tracking-label); text-transform: uppercase }
 .ai-progress-hero strong { font-size: var(--type-body-size); line-height: var(--leading-body) }
+.client-progress-result { border-color:var(--success-border); background:var(--success-surface); box-shadow:inset 3px 0 0 var(--success) }
+.client-progress-result span { color:var(--success-fg) }
+.client-progress-result strong { font-size:var(--type-section-size); line-height:var(--leading-snug) }
 .ai-progress-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; border-bottom: 1px solid var(--ai-divider); background: var(--ai-divider) }
 .ai-progress-stats div { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 12px 3px; background: var(--ai-stat-surface); text-align: center }
 .ai-progress-stats strong { font-size: var(--type-numeric-size); font-variant-numeric: tabular-nums; line-height: var(--leading-tight) }
@@ -1401,6 +1408,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-progress-current strong, .exercise-progress-records strong { display: block; font-size: 16px; line-height: 1.15; overflow-wrap: anywhere }
 .exercise-progress-records { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px }
 .exercise-progress-records.single { grid-template-columns: 1fr }
+.exercise-progress-records > div.is-new-record { border:1px solid var(--success-border); background:var(--success-surface); box-shadow:inset 3px 0 0 var(--success) }
+.exercise-progress-records > div.is-new-record > span { display:flex; align-items:center; gap:4px; color:var(--success-fg); font-weight:var(--weight-bold) }
+.exercise-progress-records > div.is-new-record svg { width:14px; height:14px; flex:0 0 auto }
 .exercise-progress-method { margin: 12px 0 0; color: var(--muted); font-size: var(--text-xs); line-height: 1.35 }
 .exercise-progress-timeline .card { display: block }
 .exercise-progress-row-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px }

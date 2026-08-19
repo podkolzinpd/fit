@@ -1,4 +1,5 @@
 import type { ExerciseProgressResult, ExerciseProgressSet, InputKind } from '../../shared/domain'
+import { RecordIcon } from '../../shared/icons'
 import { formatLocalDate } from '../../shared/local-date'
 
 function compactNumber(value: number): string {
@@ -65,11 +66,11 @@ export function ExerciseProgressSummary({
     </div>
     {strength
       ? <div className="exercise-progress-records">
-          <div><span>Рекорд рабочего веса</span><strong>{exerciseProgressValueLabel(latest.allTimeBestWeightKg, 'strength')}</strong></div>
-          <div><span>Рекорд вес × повторы</span><strong>{latest.allTimeBestWeightReps === null ? '—' : `${compactNumber(latest.allTimeBestWeightReps)} кг·повт.`}</strong></div>
+          <div className={latest.isWeightPr ? 'is-new-record' : undefined}><span>{latest.isWeightPr && <RecordIcon />}Рекорд рабочего веса</span><strong>{exerciseProgressValueLabel(latest.allTimeBestWeightKg, 'strength')}</strong></div>
+          <div className={latest.isWeightRepsPr ? 'is-new-record' : undefined}><span>{latest.isWeightRepsPr && <RecordIcon />}Рекорд вес × повторы</span><strong>{latest.allTimeBestWeightReps === null ? '—' : `${compactNumber(latest.allTimeBestWeightReps)} кг·повт.`}</strong></div>
         </div>
       : <div className="exercise-progress-records single">
-          <div><span>Лучший результат</span><strong>{exerciseProgressValueLabel(latest.allTimePrimaryValue, latest.inputKind)}</strong></div>
+          <div className={latest.isPrimaryPr ? 'is-new-record' : undefined}><span>{latest.isPrimaryPr && <RecordIcon />}Лучший результат</span><strong>{exerciseProgressValueLabel(latest.allTimePrimaryValue, latest.inputKind)}</strong></div>
         </div>}
     <p className="exercise-progress-method">Только подтверждённые подходы завершённых тренировок. План и черновой ввод не учитываются.{strength ? ' Рекорды основаны на выполненных подходах, без расчётных значений.' : ''}</p>
   </section>

@@ -62,6 +62,13 @@ describe('TrainerProgressOverviewContent', () => {
     expect(screen.getByText('Рабочий вес вырос на 17%.')).toBeVisible()
     expect(screen.getByText('Проверить максимальный перерыв в 21 день.')).toBeVisible()
     expect(screen.getByText('Ещё сигналов: 1')).toBeVisible()
+    expect(screen.getByText('Регулярность').closest('article')).toHaveClass('is-positive')
+  })
+
+  it('does not show a success state before a workout is completed', () => {
+    render(<TrainerProgressOverviewContent week={{ ...week, completedCount: 0, completedPlannedCount: 0, partialCount: 0 }} summary={summary} />)
+
+    expect(screen.getByText('Регулярность').closest('article')).not.toHaveClass('is-positive')
   })
 
   it('explains what to do before the AI analysis exists', () => {

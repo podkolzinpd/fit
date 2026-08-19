@@ -30,6 +30,10 @@ export function ExerciseIcon(props: IconProps) {
   return <Icon data-icon="exercise" {...props}><path d="M7 9v6M17 9v6M4.5 10.5v3M19.5 10.5v3M7 12h10M2.5 11.5v1M21.5 11.5v1" /></Icon>
 }
 
+export function RecordIcon(props: IconProps) {
+  return <Icon data-icon="record" {...props}><circle cx="12" cy="9" r="5.5" /><path d="m9 14-1 7 4-2 4 2-1-7M10 9l1.3 1.3L14.5 7" /></Icon>
+}
+
 export function ProfileIcon(props: IconProps) {
   return <Icon data-icon="profile" {...props}><circle cx="12" cy="8" r="4" /><path d="M4.5 21c.6-4 3.2-6.3 7.5-6.3s6.9 2.3 7.5 6.3" /></Icon>
 }
