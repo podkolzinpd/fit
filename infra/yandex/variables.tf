@@ -133,6 +133,20 @@ variable "yandex_oauth_client_id" {
   }
 }
 
+variable "api_cors_allowed_origins" {
+  description = "Exact browser origins allowed to call the pilot API. Keep empty until a reviewed browser pilot is enabled."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition = alltrue([
+      for origin in var.api_cors_allowed_origins :
+      can(regex("^(https://[^/]+|http://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?)$", origin))
+    ])
+    error_message = "api_cors_allowed_origins must use HTTPS, except for exact localhost development origins."
+  }
+}
+
 variable "database_url_secret_version_id" {
   description = "Optional existing Lockbox version containing DATABASE_URL. Create it outside Terraform to keep credentials out of state."
   type        = string

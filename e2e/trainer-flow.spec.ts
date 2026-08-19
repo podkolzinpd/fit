@@ -578,7 +578,9 @@ test('карточка упражнения: шапка с оборудован�
   const detailExerciseImage = page.locator('.exercise-image-detail')
   await expect(detailExerciseImage.locator('img')).toHaveCSS('object-fit', 'contain')
   const detailExerciseImageBox = await detailExerciseImage.boundingBox()
-  expect(detailExerciseImageBox?.width).toBe(detailExerciseImageBox?.height)
+  if (detailExerciseImageBox === null) throw new Error('Exercise image is not visible')
+  // Linux Chromium can report one side with a tiny subpixel rounding delta.
+  expect(Math.abs(detailExerciseImageBox.width - detailExerciseImageBox.height)).toBeLessThan(0.01)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
   await page.screenshot({ path: testInfo.outputPath('exercise-image-detail.png'), fullPage: true })
   await expect(page.getByText('Оборудование: Штанга')).toBeVisible()

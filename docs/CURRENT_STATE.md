@@ -5,15 +5,16 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-19
-Проверенный `main`: `6bdbbd3` (`карточка спортсмена тренера (#452)`)
+Проверенный `main`: `34bd0d7` (`безопасная локальная автоматизация БД (#454)`)
 
 ## Активная работа
 
 - Yandex ID/profile vertical slice и серверная tenant-allowlist реализованы в
-  коде. Следующий этап — зарегистрировать OAuth-приложение, отдельно одобрить
-  deploy миграции `000004` и auth-revision, затем включить внутренний read-only
-  pilot без переключения production frontend. PR `#419` с локальным guarded
-  pilot открыт отдельно и не относится к продуктовой UI-фазе.
+  коде; OAuth-приложение и Lockbox-секрет созданы. Следующий этап — отдельно
+  одобрить deploy миграции `000004` и auth-revision, затем включить внутренний
+  read-only pilot без переключения production frontend. PR `#419` с guarded
+  pilot обновлён поверх `main`. После `#454` локальный запуск автоматически
+  готовит Supabase и PostgreSQL 17, а CI проверяет обе цепочки миграций.
 - Функциональный MVP признан достаточным для системной фазы удобства. Аудит
   `#420` зафиксировал P0/P1/P2; навигационная ясность завершена в `#421`,
   информационная архитектура Trainer Progress — в `#423`, visual regression
@@ -76,12 +77,10 @@
 
 ## Последние проверки
 
-- `#452`: GitHub app/database/e2e и production Vercel прошли; e2e занял 10 мин
-  19 сек. Локально прошли полный `npm run check` (496 тестов приложения и 20
-  API-тестов), Chromium, iPhone WebKit на 360/375/390 px, сквозные переходы в
-  профиль/историю/прогресс и новый visual baseline Trainer 1440 px. Свежий
-  iOS bundle собран из `main`, установлен и запущен в iPhone 17 Simulator через
-  локальный Supabase/Podman.
+- `#454`: GitHub migration-safety/app/database/yandex-database/e2e и Vercel
+  прошли. Локально прошли `npm run check`, `npm run local:verify`, повторный
+  запуск pending-миграций и smoke `/health`, `/ready`, frontend. Обычный dev не
+  очищает базы и не обращается к Yandex Cloud.
 
 ## Ближайший roadmap
 

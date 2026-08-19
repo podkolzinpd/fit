@@ -28,6 +28,9 @@ resource "yandex_serverless_container" "api" {
       var.yandex_oauth_client_id == null ? {} : {
         YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id
       },
+      length(var.api_cors_allowed_origins) == 0 ? {} : {
+        CORS_ALLOWED_ORIGINS = join(",", var.api_cors_allowed_origins)
+      },
     )
   }
 
