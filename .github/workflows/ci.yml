@@ -8,6 +8,18 @@ permissions:
   contents: read
 
 jobs:
+  migration-safety:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reject rewritten or destructive migrations
+        run: node scripts/check-migrations.mjs "$MIGRATION_BASE"
+        env:
+          MIGRATION_BASE: ${{ github.event.pull_request.base.sha }}
+
   app:
     runs-on: ubuntu-latest
     steps:
@@ -41,6 +53,38 @@ jobs:
       - run: supabase test db --local
       - name: Check generated database types
         run: npm run db:types:check
+
+  yandex-database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: fit_actor_test
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fit_actor_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - run: npm ci --prefix services/api
+      - name: Apply clean PostgreSQL 17 migration chain and run RLS tests
+        run: npm --prefix services/api run test:db
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/fit_actor_test
+      - name: Verify no pending API migrations remain
+        run: npm --prefix services/api run db:migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/fit_actor_test
 
   e2e:
     runs-on: ubuntu-latest
