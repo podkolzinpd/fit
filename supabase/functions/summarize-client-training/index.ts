@@ -15,6 +15,7 @@ import {
   yandexHttpError,
 } from "./self-service.ts"
 import { completedWorkoutsInPeriod } from "./workout-source.ts"
+import { buildSummaryConsistency } from "./summary-consistency.ts"
 
 const YANDEX_COMPLETION_URL =
   "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
@@ -267,23 +268,13 @@ function percentChange(start?: number, end?: number): number | undefined {
   return Math.round(((end - start) / start) * 100)
 }
 
-function isoWeekKey(date: string): string {
-  const value = new Date(`${date}T00:00:00Z`)
-  const day = value.getUTCDay() || 7
-  value.setUTCDate(value.getUTCDate() + 4 - day)
-  const yearStart = new Date(Date.UTC(value.getUTCFullYear(), 0, 1))
-  const week = Math.ceil(
-    ((value.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7,
-  )
-  return `${value.getUTCFullYear()}-${String(week).padStart(2, "0")}`
-}
-
 function buildProgressData(
   workouts: WorkoutRow[],
   exercises: ExerciseRow[],
   sets: SetRow[],
   periodStart: string,
   periodEnd: string,
+  firstCompletedWorkoutDate: string | null,
 ) {
   const setsByExercise = new Map<string, SetRow[]>()
   for (const set of sets) {
@@ -376,30 +367,21 @@ function buildProgressData(
   const workoutDates = workouts
     .map((workout) => workout.workout_date)
     .sort()
-  const periodDays =
-    (Date.parse(`${periodEnd}T00:00:00Z`) -
-      Date.parse(`${periodStart}T00:00:00Z`)) /
-      86_400_000 + 1
-  const gaps = workoutDates.slice(1).map((date, index) =>
-    (Date.parse(`${date}T00:00:00Z`) -
-      Date.parse(`${workoutDates[index]}T00:00:00Z`)) /
-    86_400_000
+  const consistency = buildSummaryConsistency(
+    workoutDates,
+    periodStart,
+    periodEnd,
+    firstCompletedWorkoutDate,
   )
 
   return {
     period: {
-      start: periodStart,
+      start: consistency.observation_start,
       end: periodEnd,
-      days: periodDays,
+      days: consistency.observation_days,
+      requested_start: periodStart,
     },
-    consistency: {
-      completed_workouts: workouts.length,
-      workouts_per_week: rounded(workouts.length / (periodDays / 7)),
-      active_weeks: new Set(workoutDates.map(isoWeekKey)).size,
-      first_workout_date: workoutDates[0] ?? null,
-      last_workout_date: workoutDates.at(-1) ?? null,
-      longest_gap_days: gaps.length ? Math.max(...gaps) : null,
-    },
+    consistency,
     exercises: Array.from(exerciseProgress.values())
       .map((progress) => {
         const sessions = Array.from(progress.sessions.values())
@@ -667,6 +649,22 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
         input.period_end,
       )
 
+      const { data: firstCompletedWorkout, error: firstCompletedWorkoutError } =
+        await userClient
+          .from("workouts")
+          .select("workout_date")
+          .eq("client_id", input.client_id)
+          .eq("trainer_id", trainerId)
+          .eq("status", "done")
+          .is("deleted_at", null)
+          .lte("workout_date", input.period_end)
+          .order("workout_date")
+          .limit(1)
+          .maybeSingle()
+      if (firstCompletedWorkoutError) {
+        throw new HttpError(500, "first_workout_lookup_failed")
+      }
+
       const { data: workouts, error: workoutsError } = await userClient
         .from("workouts")
         .select("id,workout_date,status,deleted_at")
@@ -735,6 +733,7 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
           sets,
           input.period_start,
           input.period_end,
+          firstCompletedWorkout?.workout_date ?? null,
         ),
         goal: goalContext,
       }
@@ -762,8 +761,8 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
 
       const generated = await requestYandexSummary(
         trainingData,
-        input.period_start,
-        input.period_end,
+        trainingData.period.start,
+        trainingData.period.end,
       )
       const displayMetrics = trainingData.consistency
 
