@@ -122,7 +122,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await expect(clientChronicleCard).toContainText('🔥')
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
   await page.goto(workoutUrl)
-  await page.getByRole('link', { name: /Планка.*история/ }).click()
+  await page.getByRole('link', { name: 'История упражнения «Планка (Своё тело)»' }).click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   const progressProof = page.getByLabel('Доказательство прогресса')
   await expect(progressProof).toBeVisible()

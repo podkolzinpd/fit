@@ -666,8 +666,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .planned-round-exercise { margin-bottom: 6px }
 .planned-round-exercise:last-child { margin-bottom: 0 }
 .planned-round-exercise-name { display: block; font-size: 13px; font-weight: 600; margin-bottom: 3px }
-.exercise-name-link { display: inline-flex; align-items: baseline; gap: 8px; text-decoration: none; color: var(--fg) }
-.exercise-name-hint { font-size: 12px; color: var(--accent-label); font-weight: 600 }
+.workout-detail-exercise-title { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:var(--space-2) }
+.workout-detail-exercise-title > strong { min-width:0; overflow-wrap:anywhere; font-size:17px; line-height:1.25 }
+.exercise-history-link { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:44px; margin:-10px -4px -8px 0; padding:0 4px; color:var(--secondary-label-fg); font-size:var(--text-sm); font-weight:var(--weight-semibold); line-height:1; text-decoration:none; white-space:nowrap }
+.exercise-history-link svg { width:16px; height:16px; flex:0 0 auto }
+.exercise-history-link:hover { color:var(--accent-strong) }
+.exercise-history-link:focus-visible { outline:3px solid var(--accent-ring); outline-offset:1px; border-radius:var(--radius-sm) }
 /* Приписка плана рядом с фактом (при расхождении) — тусклая. */
 .plan-note { color: var(--muted); font-size: 12px }
 .exercise header, .workout-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 12px; flex-wrap: nowrap }
@@ -759,9 +763,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-page > .completed-exercise-list > .completed-exercise-block .block-badge { margin-bottom:2px }
 .workout-detail-page > .completed-exercise-list > .completed-exercise-block .completed-exercise { margin:0; padding:8px 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
 .workout-detail-page > .completed-exercise-list > .completed-exercise-block .completed-exercise:last-child { border-bottom:0 }
-.workout-detail-page .completed-exercise .exercise-name-link { font-size:17px; line-height:1.25 }
-.workout-detail-page .exercise-name-link { max-width: 100%; overflow-wrap: anywhere }
-.workout-detail-page .exercise-name-hint { flex: 0 0 auto }
 .workout-history-sets { display:grid; margin-top:8px; border-top:1px solid var(--hairline) }
 .planned-exercise-details { margin-top:var(--space-1) }
 .planned-exercise-details > summary { min-height:var(--control-height-compact); display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:var(--space-2); color:var(--muted); cursor:pointer; list-style:none }
@@ -1739,10 +1740,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   color:var(--secondary-label-fg);
   font-size:var(--text-sm);
 }
-.workout-focused-page .exercise-name-hint,
 .workout-focused-page .set-deviation,
 .workout-focused-page .set-rpe-field,
-.workout-detail-page .exercise-name-hint {
+.workout-detail-page .exercise-history-link {
   font-size:var(--text-sm);
 }
 @media (max-width: 360px) {
