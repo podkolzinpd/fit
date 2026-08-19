@@ -120,6 +120,18 @@ icon button styles; card stacks; form stacks/actions; badges; bottom tabs;
 modal and bottom-sheet shells. New primitives should compose these contracts
 instead of reproducing their pixels feature by feature.
 
+Workout actions use the shared `WorkoutCta` hierarchy contract:
+
+- `primary` is the single next-step action on the current screen;
+- `secondary` is a reversible alternative or a lower-priority transition;
+- `tertiary` is an optional, dismissive, or rare text action;
+- `destructive` is reserved for deletion and always requires confirmation.
+
+On Live, confirming the current set is the primary repeated action. Finishing
+the whole workout remains secondary until the explicit completion confirmation
+is open. A pending action preserves its hierarchy, changes its label, exposes
+`aria-busy`, and cannot be submitted twice.
+
 Data-state behavior follows one contract on the protected screens:
 
 - root loading, empty, error, and unavailable states explain what is happening

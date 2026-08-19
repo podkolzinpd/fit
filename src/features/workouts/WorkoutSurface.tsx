@@ -2,6 +2,7 @@ import type { ButtonHTMLAttributes, PropsWithChildren, ReactNode } from 'react'
 
 export type WorkoutUiState = 'planned' | 'current' | 'upcoming' | 'completed' | 'partial' | 'skipped' | 'history'
 export type WorkoutUiTone = 'accent' | 'success' | 'warning' | 'neutral'
+export type WorkoutActionVariant = 'primary' | 'secondary' | 'tertiary' | 'destructive'
 
 const STATUS_LABELS: Record<WorkoutUiState, string> = {
   planned: 'Планируется',
@@ -79,12 +80,20 @@ export function WorkoutSetRow({ state, className = '', children }: PropsWithChil
   return <div className={`workout-set-row workout-set-contract workout-set-${state} ${className}`.trim()} data-state={state}>{children}</div>
 }
 
-export function WorkoutCta({ pending, pendingLabel, className = '', children, ...props }: PropsWithChildren<{
+const ACTION_VARIANT_CLASSES: Record<WorkoutActionVariant, string> = {
+  primary: '',
+  secondary: 'secondary',
+  tertiary: 'link',
+  destructive: 'secondary danger',
+}
+
+export function WorkoutCta({ pending, pendingLabel, variant = 'primary', className = '', children, ...props }: PropsWithChildren<{
   pending?: boolean
   pendingLabel?: string
+  variant?: WorkoutActionVariant
   className?: string
 } & ButtonHTMLAttributes<HTMLButtonElement>>) {
-  return <button {...props} className={`workout-cta ${className}`.trim()} disabled={props.disabled || pending} aria-busy={pending || undefined}>
+  return <button {...props} className={`workout-cta ${ACTION_VARIANT_CLASSES[variant]} ${className}`.trim()} data-variant={variant} disabled={props.disabled || pending} aria-busy={pending || undefined}>
     {pending ? pendingLabel ?? 'Сохраняем…' : children}
   </button>
 }

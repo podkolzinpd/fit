@@ -38,4 +38,16 @@ describe('workout surface contract', () => {
     fireEvent.click(screen.getByRole('button', { name: /Планка/ }))
     expect(onClick).toHaveBeenCalledTimes(1)
   })
+
+  it.each([
+    ['primary', ''],
+    ['secondary', 'secondary'],
+    ['tertiary', 'link'],
+    ['destructive', 'danger'],
+  ] as const)('exposes the %s action hierarchy', (variant, expectedClass) => {
+    render(<WorkoutCta variant={variant}>Действие</WorkoutCta>)
+    const action = screen.getByRole('button', { name: 'Действие' })
+    expect(action).toHaveAttribute('data-variant', variant)
+    if (expectedClass) expect(action).toHaveClass(expectedClass)
+  })
 })
