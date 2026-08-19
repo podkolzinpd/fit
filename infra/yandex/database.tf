@@ -88,10 +88,18 @@ resource "yandex_mdb_postgresql_user" "api" {
   }
 }
 
+data "yandex_connectionmanager_connection" "owner" {
+  connection_id = yandex_mdb_postgresql_user.owner.user_connection_manager[0].connection_id
+}
+
+data "yandex_connectionmanager_connection" "api" {
+  connection_id = yandex_mdb_postgresql_user.api.user_connection_manager[0].connection_id
+}
+
 resource "yandex_lockbox_secret" "database_url" {
   folder_id   = var.folder_id
   name        = "${local.name_prefix}-database-url"
-  description = "DATABASE_URL for the Fit API; payload is managed outside Terraform"
+  description = "Legacy DATABASE_URL metadata retained only for the stage credential transition"
   labels      = local.labels
 }
 
@@ -104,7 +112,7 @@ resource "yandex_lockbox_secret_iam_member" "api_lockbox_reader" {
 resource "yandex_lockbox_secret" "database_owner_url" {
   folder_id   = var.folder_id
   name        = "${local.name_prefix}-database-owner-url"
-  description = "Temporary fit_owner URL used only by the private migration runner"
+  description = "Legacy fit_owner URL metadata retained only for the stage credential transition"
   labels      = local.labels
 }
 
@@ -112,6 +120,20 @@ resource "yandex_lockbox_secret_iam_member" "migration_lockbox_reader" {
   count = var.database_owner_url_secret_version_id == null || var.migration_invoker_member == null ? 0 : 1
 
   secret_id = yandex_lockbox_secret.database_owner_url.id
+  role      = "lockbox.payloadViewer"
+  member    = "serviceAccount:${yandex_iam_service_account.migration.id}"
+}
+
+resource "yandex_lockbox_secret_iam_member" "api_connection_secret_reader" {
+  secret_id = data.yandex_connectionmanager_connection.api.lockbox_secret.id
+  role      = "lockbox.payloadViewer"
+  member    = "serviceAccount:${yandex_iam_service_account.api.id}"
+}
+
+resource "yandex_lockbox_secret_iam_member" "migration_connection_secret_reader" {
+  count = var.migration_invoker_member == null ? 0 : 1
+
+  secret_id = data.yandex_connectionmanager_connection.owner.lockbox_secret.id
   role      = "lockbox.payloadViewer"
   member    = "serviceAccount:${yandex_iam_service_account.migration.id}"
 }

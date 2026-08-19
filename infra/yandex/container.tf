@@ -22,8 +22,13 @@ resource "yandex_serverless_container" "api" {
     url = "cr.yandex/${yandex_container_repository.api.name}:${var.api_image_tag}"
     environment = merge(
       {
-        APP_ENV   = var.environment
-        LOG_LEVEL = "info"
+        APP_ENV                = var.environment
+        LOG_LEVEL              = "info"
+        DATABASE_HOST          = yandex_mdb_postgresql_cluster_v2.fit.hosts["primary"].fqdn
+        DATABASE_PORT          = "6432"
+        DATABASE_NAME          = yandex_mdb_postgresql_database.fit.name
+        DATABASE_USER          = yandex_mdb_postgresql_user.api.name
+        DATABASE_SSL_ROOT_CERT = "/app/certs/yandex-cloud-ca.pem"
       },
       var.yandex_oauth_client_id == null ? {} : {
         YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id
@@ -34,15 +39,11 @@ resource "yandex_serverless_container" "api" {
     )
   }
 
-  dynamic "secrets" {
-    for_each = var.database_url_secret_version_id == null ? [] : [var.database_url_secret_version_id]
-
-    content {
-      id                   = yandex_lockbox_secret.database_url.id
-      version_id           = secrets.value
-      key                  = "DATABASE_URL"
-      environment_variable = "DATABASE_URL"
-    }
+  secrets {
+    id                   = data.yandex_connectionmanager_connection.api.lockbox_secret.id
+    version_id           = data.yandex_connectionmanager_connection.api.lockbox_secret.version
+    key                  = data.yandex_connectionmanager_connection.api.params.postgresql.auth.user_password.password.lockbox_secret_key
+    environment_variable = "DATABASE_PASSWORD"
   }
 
   log_options {
@@ -52,20 +53,23 @@ resource "yandex_serverless_container" "api" {
 
   depends_on = [
     yandex_container_registry_iam_binding.api_image_puller,
-    yandex_lockbox_secret_iam_member.api_lockbox_reader,
+    yandex_lockbox_secret_iam_member.api_connection_secret_reader,
   ]
 }
 
-resource "yandex_serverless_container_iam_binding" "public_invocation" {
-  count = var.allow_unauthenticated_api ? 1 : 0
+resource "yandex_serverless_container_iam_binding" "api_invocation" {
+  count = var.allow_unauthenticated_api || var.api_invoker_member != null ? 1 : 0
 
   container_id = yandex_serverless_container.api.id
   role         = "serverless.containers.invoker"
-  members      = ["system:allUsers"]
+  members = concat(
+    var.api_invoker_member == null ? [] : [var.api_invoker_member],
+    var.allow_unauthenticated_api ? ["system:allUsers"] : [],
+  )
 }
 
 resource "yandex_serverless_container" "migration" {
-  count = var.database_owner_url_secret_version_id == null || var.migration_invoker_member == null ? 0 : 1
+  count = var.migration_invoker_member == null ? 0 : 1
 
   folder_id          = var.folder_id
   name               = "${local.name_prefix}-migration"
@@ -87,19 +91,24 @@ resource "yandex_serverless_container" "migration" {
   }
 
   image {
-    url     = "cr.yandex/${yandex_container_repository.api.name}:${var.api_image_tag}"
+    url     = "cr.yandex/${yandex_container_repository.api.name}:${var.migration_image_tag}"
     command = ["node", "dist/migration-server.js"]
     environment = {
-      APP_ENV   = var.environment
-      LOG_LEVEL = "info"
+      APP_ENV                          = var.environment
+      LOG_LEVEL                        = "info"
+      MIGRATION_DATABASE_HOST          = yandex_mdb_postgresql_cluster_v2.fit.hosts["primary"].fqdn
+      MIGRATION_DATABASE_PORT          = "6432"
+      MIGRATION_DATABASE_NAME          = yandex_mdb_postgresql_database.fit.name
+      MIGRATION_DATABASE_USER          = yandex_mdb_postgresql_user.owner.name
+      MIGRATION_DATABASE_SSL_ROOT_CERT = "/app/certs/yandex-cloud-ca.pem"
     }
   }
 
   secrets {
-    id                   = yandex_lockbox_secret.database_owner_url.id
-    version_id           = var.database_owner_url_secret_version_id
-    key                  = "MIGRATION_DATABASE_URL"
-    environment_variable = "MIGRATION_DATABASE_URL"
+    id                   = data.yandex_connectionmanager_connection.owner.lockbox_secret.id
+    version_id           = data.yandex_connectionmanager_connection.owner.lockbox_secret.version
+    key                  = data.yandex_connectionmanager_connection.owner.params.postgresql.auth.user_password.password.lockbox_secret_key
+    environment_variable = "MIGRATION_DATABASE_PASSWORD"
   }
 
   log_options {
@@ -109,12 +118,12 @@ resource "yandex_serverless_container" "migration" {
 
   depends_on = [
     yandex_container_registry_iam_binding.api_image_puller,
-    yandex_lockbox_secret_iam_member.migration_lockbox_reader,
+    yandex_lockbox_secret_iam_member.migration_connection_secret_reader,
   ]
 }
 
 resource "yandex_serverless_container_iam_binding" "migration_invocation" {
-  count = var.database_owner_url_secret_version_id == null || var.migration_invoker_member == null ? 0 : 1
+  count = var.migration_invoker_member == null ? 0 : 1
 
   container_id = yandex_serverless_container.migration[0].id
   role         = "serverless.containers.invoker"

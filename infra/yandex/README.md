@@ -13,36 +13,24 @@ database password, OAuth secret or Terraform state.
 - one Serverless Container with 1 GB RAM and no provisioned instances;
 - one Container Registry repository with image retention;
 - one least-privilege runtime service account;
-- Lockbox secret metadata for runtime and temporary migration URLs, without
-  secret payloads;
-- an opt-in private migration runner, created only while an owner secret
-  version and one scoped invoker are configured.
+- direct references to the generated Connection Manager Lockbox secrets;
+- a private cold migration runner invoked only by the OIDC-backed deployment
+  identity before an API revision is changed.
 
 The container is private by default. Do not set
 `allow_unauthenticated_api = true` until the API validates Yandex ID tokens.
 
 ## Safe workflow
 
-1. Create a private Object Storage bucket for Terraform state outside this
-   stack. Copy `backend.hcl.example` to ignored `backend.hcl`, set its bucket
-   and key, and export credentials from a dedicated temporary S3 access key as
-   `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. Revoke that key after the
-   manual deployment; Cloud Shell does not require a permanent authorized-key
-   JSON file.
-2. Authenticate the Yandex provider outside the repository and set
-   `TF_VAR_cloud_id` and `TF_VAR_folder_id`.
-3. Run `TF_CLI_CONFIG_FILE=terraform.rc.example terraform init
-   -backend-config=backend.hcl` in this directory. The config uses the official
-   Yandex Cloud provider mirror.
-4. Run `terraform fmt -check` and `terraform validate`.
-5. Copy `terraform.tfvars.example` to an ignored local `.tfvars` file and
-   review `terraform plan -out=stage.tfplan`.
-6. Bootstrap only the Container Registry and repository, then build
-   `services/api/Dockerfile` with Podman, tag it with the
-   `api_repository_name` output and push it before any container apply.
-7. Create the `DATABASE_URL` Lockbox payload outside Terraform after the
-   generated database credentials exist. Pass only its version ID to Terraform.
-8. Review a new full plan before the first full apply.
+The first infrastructure bootstrap is manual and reviewed. Steady-state stage
+delivery is owned by `.github/workflows/deploy-yandex-stage.yml`: OIDC
+authentication, immutable image push, locked forward migrations, final
+Terraform plan/apply, private readiness checks and automatic image rollback.
+
+The only long-lived CI credentials are repository secrets containing the
+dedicated S3 access key and secret for the private Terraform state bucket.
+Yandex API access uses short-lived OIDC tokens; an authorized-key JSON is not
+stored in GitHub.
 
 The Terraform service account needs `vpc.user` and
 `connection-manager.editor` in addition to the resource-management roles used
@@ -58,11 +46,12 @@ The service network `198.19.0.0/16` is explicitly allowed to reach only the
 PostgreSQL Odyssey port `6432`. Yandex assigns addresses from this range to
 network-connected Serverless Containers; it is distinct from the user subnet.
 
-Do not place backend credentials, OAuth secrets, database URLs, `.tfplan` or
-state files in the repository.
+Do not place backend credentials, OAuth secrets, database passwords or URLs,
+`.tfplan` or state files in the repository.
 
-Do not run `terraform apply` as part of review or CI. The first apply needs a
-separate approval because Managed PostgreSQL and other resources are billable.
+Pull-request CI never applies Terraform. A merge creates a plan; the protected
+`yandex-stage` GitHub Environment requires an explicit approval before any
+image push, migration or apply.
 
 ## Current intentional limits
 

@@ -87,6 +87,12 @@ variable "api_image_tag" {
   default     = "foundation"
 }
 
+variable "migration_image_tag" {
+  description = "Candidate image tag deployed to the migration runner before the API revision."
+  type        = string
+  default     = "foundation"
+}
+
 variable "api_memory_mb" {
   description = "Memory allocated to one Serverless Container instance."
   type        = number
@@ -113,6 +119,21 @@ variable "allow_unauthenticated_api" {
   description = "Make the container publicly invokable. Keep false until Yandex ID verification exists."
   type        = bool
   default     = false
+}
+
+variable "api_invoker_member" {
+  description = "Optional scoped IAM member used for private readiness checks."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = (
+      var.api_invoker_member == null
+      || can(regex("^(userAccount|serviceAccount|federatedUser|group):[^[:space:]]+$", var.api_invoker_member))
+    )
+    error_message = "api_invoker_member must be a supported scoped IAM member or null."
+  }
 }
 
 variable "yandex_oauth_client_id" {
@@ -148,21 +169,21 @@ variable "api_cors_allowed_origins" {
 }
 
 variable "database_url_secret_version_id" {
-  description = "Optional existing Lockbox version containing DATABASE_URL. Create it outside Terraform to keep credentials out of state."
+  description = "Deprecated transition input. Connection Manager now supplies the runtime password directly."
   type        = string
   default     = null
   nullable    = true
 }
 
 variable "database_owner_url_secret_version_id" {
-  description = "Temporary Lockbox version containing the fit_owner URL. Setting it creates the private migration runner."
+  description = "Deprecated transition input. Connection Manager now supplies the migration password directly."
   type        = string
   default     = null
   nullable    = true
 }
 
 variable "migration_invoker_member" {
-  description = "Temporary IAM member allowed to invoke the private migration runner, for example userAccount:<id>."
+  description = "Scoped CI identity allowed to invoke the private migration runner, for example serviceAccount:<id>."
   type        = string
   default     = null
   nullable    = true

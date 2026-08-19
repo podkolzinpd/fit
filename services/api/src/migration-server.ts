@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url'
 
 import { runner } from 'node-pg-migrate'
 
+import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { buildMigrationApp } from './migration-app.js'
 
 function parsePort(value: string | undefined): number {
@@ -14,10 +15,8 @@ function parsePort(value: string | undefined): number {
   return port
 }
 
-const databaseUrl = process.env.MIGRATION_DATABASE_URL
-if (databaseUrl === undefined) {
-  throw new Error('MIGRATION_DATABASE_URL is required')
-}
+const databaseConfig = buildDatabaseConnectionConfig('MIGRATION_DATABASE')
+if (databaseConfig === undefined) throw new Error('Migration database is required')
 
 const migrationsDirectory = fileURLToPath(
   new URL('../db/migrations', import.meta.url),
@@ -34,7 +33,7 @@ const app = buildMigrationApp({
     const migrations = await runner({
       advisoryLockMode: 'fail',
       createMigrationsSchema: true,
-      databaseUrl,
+      databaseUrl: databaseConfig,
       dir: migrationsDirectory,
       direction: 'up',
       logger: redactedMigrationLogger,

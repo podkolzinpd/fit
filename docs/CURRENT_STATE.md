@@ -5,15 +5,15 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-19
-Проверенный `main`: `a1de7ee` (`guarded Yandex ID local pilot (#419)`)
+Проверенный `main`: `805f922` (`fix: label planned workout sets correctly (#460)`)
 
 ## Активная работа
 
-- Yandex ID/profile vertical slice и серверная tenant-allowlist реализованы в
-  коде; OAuth-приложение и Lockbox-секрет созданы. Следующий этап — отдельно
-  одобрить deploy миграции `000004` и auth-revision, затем включить внутренний
-  read-only pilot без переключения production frontend. PR `#419` с guarded
-  pilot обновлён поверх `main`. После `#454` локальный запуск автоматически
+- Yandex ID/profile vertical slice и серверная tenant-allowlist находятся в
+  `main`; OAuth-приложение создано. Готовится постоянный stage delivery:
+  GitHub OIDC без JSON-ключа, один SHA-образ, автоматические forward-only
+  миграции перед API revision, private smoke и rollback. Production frontend и
+  Supabase не переключаются. После `#454` локальный запуск автоматически
   готовит Supabase и PostgreSQL 17, а CI проверяет обе цепочки миграций.
 - Функциональный MVP признан достаточным для системной фазы удобства. Аудит
   `#420` зафиксировал P0/P1/P2; навигационная ясность завершена в `#421`,
@@ -91,8 +91,8 @@
 
 ## Ближайший roadmap
 
-1. В auth-потоке отдельно завершить `#419`, OAuth-приложение Yandex ID и
-   одобренный stage deploy; production frontend не переключать.
+1. Завершить и одобрить постоянный Yandex stage pipeline, развернуть миграцию
+   `000004` и private auth revision; production frontend не переключать.
 2. Продолжать UI-полировку только с экрана, который явно выберет пользователь;
    не собирать несколько экранов в один PR. Desktop shell тренера и P2
    отложены и без нового прямого решения не начинаются.
