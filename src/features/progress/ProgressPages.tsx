@@ -13,6 +13,7 @@ import { AsyncView, Field, Page } from '../../shared/ui'
 import { ProgressChart, type MetricKey, type MetricSelector } from './ProgressChart'
 import { MEASURE_PRESETS, groupMetricRows, presetMetricNames } from './measure-presets'
 import { TrainerTrainingSummaryCard } from './TrainingSummaryCard'
+import { TrainerProgressOverviewCard } from './TrainerProgressOverviewCard'
 import { WorkoutRegularityCard } from './WorkoutRegularityCard'
 import { RunningProgressCard } from './RunningProgressCard'
 
@@ -57,6 +58,10 @@ export function ProgressPage() {
   const chartMetric: MetricSelector = activeBuiltin ? activeBuiltin.key : { customMetricId: selectedMetric }
   const chartLabel = activeBuiltin?.label ?? activeCustom?.name ?? METRIC_TABS[0]!.label
   const chartUnit = activeBuiltin?.unit ?? activeCustom?.unit ?? ''
+  const latestEntry = entries.data?.[0]
+  const latestEntrySummary = latestEntry
+    ? entrySummaryParts(latestEntry, metrics.data ?? []).join(' · ') || 'Показатели не указаны'
+    : 'Добавьте первый замер, когда появятся данные'
   function saveNewProgress(form: HTMLFormElement) {
     const data = new FormData(form)
     const recordedOn = localDate(String(data.get('recordedOn')))
@@ -87,29 +92,60 @@ export function ProgressPage() {
     if (tabsDraggedRef.current) { tabsDraggedRef.current = false; return }
     action()
   }
-  return <Page className="progress-page" title={client.data ? `Прогресс · ${client.data.fullName}` : 'Прогресс'} back={`/clients/${clientId}`}><AsyncView loading={loading} error={error}>{client.data && <>
-    <WorkoutRegularityCard clientId={clientId} />
-    <TrainerTrainingSummaryCard clientId={clientId} />
-    <RunningProgressCard clientId={clientId} />
-    {entries.data && entries.data.length > 0 && <>
-      <div className="metric-tabs" ref={tabsRef}
-        onPointerDown={handleTabsPointerDown} onPointerMove={handleTabsPointerMove} onPointerUp={handleTabsPointerUp} onPointerLeave={handleTabsPointerUp}>
-        {METRIC_TABS.map((tab) => <button key={tab.key} type="button" className={`metric-tab${tab.key === selectedMetric ? ' active' : ''}`} onClick={() => selectMetricTab(() => setSelectedMetric(tab.key))}>{tab.label}</button>)}
-        {overflowMetrics.length > 0 && <button type="button" className={`metric-tab${activeCustom ? ' active' : ''}`} onClick={() => selectMetricTab(() => setMetricSheetOpen(true))}>{activeCustom ? `⋯ ${activeCustom.name}` : '⋯'}</button>}
+  return <Page className="progress-page" title={client.data ? `Прогресс · ${client.data.fullName}` : 'Прогресс'} back={`/clients/${clientId}`}><AsyncView loading={loading} error={error} onRetry={() => { void client.refetch(); void entries.refetch(); void metrics.refetch() }}>{client.data && <>
+    <TrainerProgressOverviewCard clientId={clientId} />
+    <details className="trainer-progress-details">
+      <summary>
+        <div>
+          <p className="eyebrow">ТРЕНИРОВКИ</p>
+          <h2>Подробный анализ</h2>
+          <span>Ритм по неделе и месяцу, ИИ-анализ и беговая динамика</span>
+        </div>
+        <span className="trainer-details-open">Открыть</span>
+        <span className="trainer-details-close">Свернуть</span>
+      </summary>
+      <div className="trainer-progress-details-content">
+        <WorkoutRegularityCard clientId={clientId} />
+        <TrainerTrainingSummaryCard clientId={clientId} />
+        <RunningProgressCard clientId={clientId} />
       </div>
-      <ProgressChart entries={entries.data} metric={chartMetric} label={chartLabel} unit={chartUnit} windowEnd={windowEnd} onWindowChange={setWindowEnd} />
-    </>}
-    <ProgressForm entry={null} metrics={metrics.data ?? []} today={today} busy={save.isPending} errorMessage={createError ?? save.error?.message ?? null} onDateChange={() => { setCreateError(null); save.reset() }} onSubmit={saveNewProgress} />
-    <section className="progress-history">
-      <div className="workout-editor-heading">
-        <h2>История замеров ({entries.data?.length ?? 0})</h2>
-        {entries.data && entries.data.length > 0 && <button type="button" className="link" onClick={() => setHistoryOpen((value) => !value)}>{historyOpen ? 'Скрыть' : 'Показать'}</button>}
+    </details>
+    <details className="trainer-measurements">
+      <summary>
+        <div className="trainer-measurements-summary-copy">
+          <p className="eyebrow">ЗАМЕРЫ И ПОКАЗАТЕЛИ</p>
+          <h2>{latestEntry ? 'Последний замер' : 'Замеров пока нет'}</h2>
+          <span>{latestEntry ? `${formatLocalDate(latestEntry.recordedOn)} · ${latestEntrySummary}` : latestEntrySummary}</span>
+        </div>
+        <div className="trainer-measurements-summary-meta">
+          <strong>{entries.data?.length ?? 0}</strong>
+          <span>в истории</span>
+          <span className="trainer-measurements-open">Открыть</span>
+          <span className="trainer-measurements-close">Свернуть</span>
+        </div>
+      </summary>
+      <div className="trainer-measurements-content">
+        {entries.data && entries.data.length > 0 && <>
+          <div className="metric-tabs" ref={tabsRef}
+            onPointerDown={handleTabsPointerDown} onPointerMove={handleTabsPointerMove} onPointerUp={handleTabsPointerUp} onPointerLeave={handleTabsPointerUp}>
+            {METRIC_TABS.map((tab) => <button key={tab.key} type="button" className={`metric-tab${tab.key === selectedMetric ? ' active' : ''}`} onClick={() => selectMetricTab(() => setSelectedMetric(tab.key))}>{tab.label}</button>)}
+            {overflowMetrics.length > 0 && <button type="button" className={`metric-tab${activeCustom ? ' active' : ''}`} onClick={() => selectMetricTab(() => setMetricSheetOpen(true))}>{activeCustom ? `⋯ ${activeCustom.name}` : '⋯'}</button>}
+          </div>
+          <ProgressChart entries={entries.data} metric={chartMetric} label={chartLabel} unit={chartUnit} windowEnd={windowEnd} onWindowChange={setWindowEnd} />
+        </>}
+        <ProgressForm entry={null} metrics={metrics.data ?? []} today={today} busy={save.isPending} errorMessage={createError ?? save.error?.message ?? null} onDateChange={() => { setCreateError(null); save.reset() }} onSubmit={saveNewProgress} />
+        <section className="progress-history">
+          <div className="workout-editor-heading">
+            <h2>История замеров ({entries.data?.length ?? 0})</h2>
+            {entries.data && entries.data.length > 0 && <button type="button" className="link" onClick={() => setHistoryOpen((value) => !value)}>{historyOpen ? 'Скрыть' : 'Показать'}</button>}
+          </div>
+          {historyOpen && <div className="cards">{entries.data?.map((entry) => editing?.id === entry.id
+            ? <article className="card editing" key={entry.id}><ProgressForm entry={entry} metrics={metrics.data ?? []} today={today} busy={save.isPending} errorMessage={save.error?.message ?? null} onSubmit={(form) => save.mutate(form)} onCancel={() => setEditing(null)} /></article>
+            : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{entrySummaryParts(entry, metrics.data ?? []).join(' · ')}</p></div>{canManage(entry) && <div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" onClick={() => remove.mutate(entry)}>Удалить</button></div>}</article>)}</div>}
+        </section>
+        <MetricsManager metrics={metrics.data ?? []} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />
       </div>
-      {historyOpen && <div className="cards">{entries.data?.map((entry) => editing?.id === entry.id
-        ? <article className="card editing" key={entry.id}><ProgressForm entry={entry} metrics={metrics.data ?? []} today={today} busy={save.isPending} errorMessage={save.error?.message ?? null} onSubmit={(form) => save.mutate(form)} onCancel={() => setEditing(null)} /></article>
-        : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{entrySummaryParts(entry, metrics.data ?? []).join(' · ')}</p></div>{canManage(entry) && <div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" onClick={() => remove.mutate(entry)}>Удалить</button></div>}</article>)}</div>}
-    </section>
-    <MetricsManager metrics={metrics.data ?? []} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />
+    </details>
     {metricSheetOpen && <MetricOverflowSheet metrics={overflowMetrics} onPick={(id) => { setSelectedMetric(id); setMetricSheetOpen(false) }} onClose={() => setMetricSheetOpen(false)} />}
   </>}</AsyncView></Page>
 }
@@ -127,7 +163,7 @@ function ProgressForm({ entry, metrics, today, busy, errorMessage, onSubmit, onC
   return <section className="progress-form-card"><h2>{entry ? 'Изменить замер' : 'Новый замер'}</h2><form className="stack compact" onSubmit={(event) => { event.preventDefault(); onSubmit(event.currentTarget) }}><Field label="Дата"><input name="recordedOn" type="date" max={today} defaultValue={entry?.recordedOn ?? today} onChange={onDateChange} required /></Field><div className="measure-grid"><Field label="Вес, кг"><input name="weightKg" type="number" step="0.1" defaultValue={entry?.weightKg} /></Field><Field label="Грудь, см"><input name="chestCm" type="number" step="0.1" defaultValue={entry?.chestCm} /></Field><Field label="Талия, см"><input name="waistCm" type="number" step="0.1" defaultValue={entry?.waistCm} /></Field><Field label="Бёдра, см"><input name="hipCm" type="number" step="0.1" defaultValue={entry?.hipCm} /></Field></div>{groupMetricRows(metrics.filter((metric) => !metric.archivedAt)).map((row) => row.kind === 'single'
       ? <Field key={row.metric.id} label={`${row.metric.name}${row.metric.unit ? `, ${row.metric.unit}` : ''}`}>{metricField(row.metric, entry)}</Field>
       : <Field key={row.base} label={`${row.base}${row.unit ? `, ${row.unit}` : ''}`}><div className="measure-pair">{row.left && metricField(row.left, entry, 'Л')}{row.right && metricField(row.right, entry, 'П')}</div></Field>
-    )}<Field label="Заметка"><textarea name="notes" defaultValue={entry?.notes} /></Field>{errorMessage && <p className="error">{errorMessage}</p>}<div className="actions">{onCancel && <button type="button" className="secondary" onClick={onCancel}>Отмена</button>}<button disabled={busy}>Сохранить замер</button></div></form></section>
+    )}<Field label="Заметка"><textarea name="notes" defaultValue={entry?.notes} /></Field>{errorMessage && <p className="error" role="alert">{errorMessage}</p>}<div className="actions">{onCancel && <button type="button" className="secondary" disabled={busy} onClick={onCancel}>Отмена</button>}<button disabled={busy} aria-busy={busy}>{busy ? 'Сохраняем…' : 'Сохранить замер'}</button></div></form></section>
 }
 
 function MetricsManager({ metrics, onCreate, onArchive }: { metrics: CustomMetric[]; onCreate: (name: string, unit: string | null) => void; onArchive: (metric: CustomMetric) => void }) {

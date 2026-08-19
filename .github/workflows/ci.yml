@@ -8,6 +8,18 @@ permissions:
   contents: read
 
 jobs:
+  migration-safety:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reject rewritten or destructive migrations
+        run: node scripts/check-migrations.mjs "$MIGRATION_BASE"
+        env:
+          MIGRATION_BASE: ${{ github.event.pull_request.base.sha }}
+
   app:
     runs-on: ubuntu-latest
     steps:
@@ -42,11 +54,46 @@ jobs:
       - name: Check generated database types
         run: npm run db:types:check
 
+  yandex-database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: fit_actor_test
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fit_actor_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - run: npm ci --prefix services/api
+      - name: Apply clean PostgreSQL 17 migration chain and run RLS tests
+        run: npm --prefix services/api run test:db
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/fit_actor_test
+      - name: Verify no pending API migrations remain
+        run: npm --prefix services/api run db:migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/fit_actor_test
+
   e2e:
     runs-on: ubuntu-latest
     env:
       VITE_SUPABASE_URL: http://127.0.0.1:54321
       VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
+      # The version must match @playwright/test in package-lock.json. The
+      # official image already contains Chromium, WebKit and their OS deps.
+      PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.61.1-noble
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -61,14 +108,50 @@ jobs:
       # Keep the CI container set minimal and avoid Mailpit's fixed port.
       - run: supabase start --exclude mailpit
       - run: supabase db reset --local
-      - run: npx playwright install --with-deps chromium webkit
+      - name: Pull pinned Playwright runtime
+        run: docker pull "$PLAYWRIGHT_IMAGE"
       - name: Run Chromium behavior scenarios
-        run: npx playwright test --project=mobile-chromium
+        run: |
+          docker run --rm --init --ipc=host --network host \
+            --env CI=true \
+            --env VITE_SUPABASE_URL \
+            --env VITE_SUPABASE_PUBLISHABLE_KEY \
+            --volume "${{ github.workspace }}:/work" \
+            --workdir /work \
+            "$PLAYWRIGHT_IMAGE" \
+            npx playwright test --project=mobile-chromium
       - name: Run iPhone behavior scenarios
-        run: npx playwright test --project=iphone-13-webkit --workers=1
+        run: |
+          docker run --rm --init --ipc=host --network host \
+            --env CI=true \
+            --env VITE_SUPABASE_URL \
+            --env VITE_SUPABASE_PUBLISHABLE_KEY \
+            --volume "${{ github.workspace }}:/work" \
+            --workdir /work \
+            "$PLAYWRIGHT_IMAGE" \
+            npx playwright test --project=iphone-13-webkit --workers=1
       # Поведенческие сценарии меняют общие seed-данные. Возвращаем эталонное
       # состояние перед снимками, иначе параллельные тренировки меняют главную.
       - name: Reset visual baseline data
         run: supabase db reset --local
       - name: Run isolated visual baselines
-        run: npx playwright test --project=visual-client-390 --project=visual-client-430 --project=visual-trainer-1440 --workers=1
+        run: |
+          docker run --rm --init --ipc=host --network host \
+            --env CI=true \
+            --env VITE_SUPABASE_URL \
+            --env VITE_SUPABASE_PUBLISHABLE_KEY \
+            --volume "${{ github.workspace }}:/work" \
+            --volume "/usr/share/fonts:/usr/share/fonts:ro" \
+            --workdir /work \
+            "$PLAYWRIGHT_IMAGE" \
+            bash -lc 'fc-cache -f >/dev/null && exec npx playwright test --project=visual-client-390 --project=visual-client-430 --project=visual-trainer-1440 --workers=1'
+      - name: Upload Playwright diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-diagnostics
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7

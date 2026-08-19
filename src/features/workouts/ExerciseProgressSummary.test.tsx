@@ -37,13 +37,19 @@ describe('exercise progress presentation', () => {
     expect(screen.getByText('520 кг·повт.')).toBeVisible()
     expect(screen.getByText('12 из 25 до следующей отметки')).toBeVisible()
     expect(screen.getByText(/без расчётных значений/)).toBeVisible()
+    const weightRecord = screen.getByText('Личный рекорд · рабочий вес').closest('div')
+    const volumeRecord = screen.getByText('Личный рекорд · вес × повторы').closest('div')
+    expect(weightRecord).toHaveClass('is-new-record')
+    expect(weightRecord?.querySelector('[data-icon="record"]')).toBeInTheDocument()
+    expect(volumeRecord).not.toHaveClass('is-new-record')
+    expect(volumeRecord?.querySelector('[data-icon="record"]')).not.toBeInTheDocument()
   })
 
   it('marks only server-provided PRs and renders confirmed fact without a plan fallback', () => {
     render(<ExerciseProgressHistory items={[strength]} showRpe={false} />)
 
-    expect(screen.getByText('Рекорд веса')).toBeVisible()
-    expect(screen.queryByText('Рекорд: вес × повторы')).not.toBeInTheDocument()
+    expect(screen.getByText('Личный рекорд · вес')).toBeVisible()
+    expect(screen.queryByText('Личный рекорд · вес × повторы')).not.toBeInTheDocument()
     expect(screen.getByText('60 кг × 8 повт. · 55 кг × 10 повт.')).toBeVisible()
     expect(screen.getByText('💬 Чистая техника')).toBeVisible()
     expect(screen.queryByText(/RPE/)).not.toBeInTheDocument()
@@ -52,7 +58,7 @@ describe('exercise progress presentation', () => {
   it('uses a transparent primary metric for every input kind', () => {
     expect(exerciseProgressValueLabel(30, 'reps')).toBe('30 повт.')
     expect(exerciseProgressValueLabel(90, 'duration')).toBe('1:30')
-    expect(exerciseProgressValueLabel(5.25, 'distance')).toBe('5,25 км')
+    expect(exerciseProgressValueLabel(5.25, 'distance')).toBe('5,3 км')
     expect(exerciseProgressSetLabel({ durationSec: 60, rpe: 7.5 }, true)).toBe('1 мин × RPE 7,5')
   })
 

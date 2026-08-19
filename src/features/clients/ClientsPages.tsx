@@ -7,17 +7,17 @@ import { clientsRepository } from '../../data/repositories/clients.repository'
 import { goalsRepository } from '../../data/repositories/goals.repository'
 import { invitationsRepository } from '../../data/repositories/invitations.repository'
 import { bmiLabel, computeClientStats, splitClientWorkouts, workoutsRepository } from '../../data/repositories/workouts.repository'
-import { TodayPage, WorkoutExercisesSummary } from '../workouts'
+import { TodayPage, WorkoutExercisesSummary, workoutCountLabel } from '../workouts'
 import type { Client, Gender } from '../../shared/domain'
 import { currentStage, daysToTarget, stageProgress } from '../../shared/goal-rules'
 import { formatLocalDate, formatLocalDateShort, localDate, normalizeTimeZone, todayInTimeZone } from '../../shared/local-date'
-import { AsyncView, Field, Page, useConfirm } from '../../shared/ui'
+import { AsyncView, Field, OverflowMenu, Page, useConfirm } from '../../shared/ui'
 import { clientSchema } from '../../shared/validation'
 import { VoiceNoteField } from '../voice-input'
 import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
-import { ProfileIcon } from '../../shared/icons'
+import { AddIcon, ProfileIcon } from '../../shared/icons'
 
 export function ClientsPage() {
   const showArchived = localStorage.getItem('fit.showArchivedClients') === 'true'
@@ -31,10 +31,11 @@ export function ClientsPage() {
       ?.filter((client) => !normalizedSearch || client.fullName.toLocaleLowerCase('ru').includes(normalizedSearch))
       .sort((left, right) => (right.lastActivityAt ?? '').localeCompare(left.lastActivityAt ?? '')) ?? []
   }, [query.data, search])
-  return <Page title="Клиенты" className="clients-page" action={<Link className="button" to="/clients/new">Добавить</Link>}>
+  return <Page title="Клиенты" className="clients-page" action={query.data?.length ? <Link className="button" to="/clients/new">Добавить</Link> : undefined}>
     <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}
       emptyTitle="Клиентов пока нет"
-      emptyDescription="Нажмите «Добавить» сверху, чтобы создать первого клиента, планировать тренировки и отслеживать прогресс.">
+      emptyDescription="Добавьте первого клиента, чтобы планировать тренировки и отслеживать прогресс."
+      emptyAction={<Link className="button" to="/clients/new">Добавить клиента</Link>}>
       <label className="clients-search"><span className="sr-only">Поиск клиента</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Поиск по имени" autoComplete="off" /></label>
       {clients.length > 0 ? <div className="cards clients-list">{clients.map((client) => <Link className="card client-card" key={client.id} to={`/clients/${client.id}`}><span className="client-avatar" aria-hidden="true"><ProfileIcon /></span><div><strong>{client.fullName}</strong><p>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</p></div>{client.archivedAt && <span className="badge">Архив</span>}<span className="client-card-arrow" aria-hidden="true">›</span></Link>)}</div> : <p className="clients-search-empty">По этому имени клиентов не найдено.</p>}
     </AsyncView>
@@ -173,7 +174,7 @@ function ClientForm({
         <Controller control={form.control} name="privateNote" render={({ field }) => <VoiceNoteField name={field.name} source="client_form" label="Личная заметка" value={field.value ?? ''} onValueChange={field.onChange} />} />
       </section>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions">{onCancel && <button type="button" className="secondary" onClick={onCancel}>Отмена</button>}<button disabled={mutation.isPending}>{createMode === 'self' && !existing ? 'Создать карточку' : 'Сохранить'}</button></div>
+      <div className="actions">{onCancel && <button type="button" className="secondary" disabled={mutation.isPending} onClick={onCancel}>Отмена</button>}<button disabled={mutation.isPending} aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : createMode === 'self' && !existing ? 'Создать карточку' : 'Сохранить'}</button></div>
     </form>
   return embedded ? contents : <Page title={existing ? 'Редактировать клиента' : 'Новый клиент'}>{contents}</Page>
 }
@@ -257,7 +258,7 @@ function ClientNoteBlock({ client }: { client: Client }) {
   const form = useForm<{ note: string }>({ defaultValues: { note: client.note ?? '' } })
   const mutation = useSaveClient(client, () => setEditing(false))
   const startEditing = () => { form.reset({ note: client.note ?? '' }); setEditing(true) }
-  if (editing) return <section className="goal-block">
+  if (editing) return <section className="goal-block client-note-block">
     <form className="stack" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate({ note: values.note }))(event)}>
       <Controller control={form.control} name="note" render={({ field }) =>
         <VoiceNoteField name={field.name} source="client_form" label="Заметка" value={field.value} onValueChange={field.onChange} />
@@ -266,7 +267,7 @@ function ClientNoteBlock({ client }: { client: Client }) {
       <div className="actions"><button type="button" className="secondary" onClick={() => setEditing(false)}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
     </form>
   </section>
-  return <section className="goal-block">
+  return <section className="goal-block client-note-block">
     <div className="goal-head"><h2>Заметка</h2><button type="button" className="link" onClick={startEditing}>{client.note ? 'Изменить' : '＋ Добавить'}</button></div>
     {client.note ? <p>{client.note}</p> : <p className="muted">Заметок пока нет</p>}
   </section>
@@ -289,36 +290,44 @@ export function ClientDetailPage() {
   const currentMembership = trainers.data?.find((trainer) => trainer.trainerId === actor?.userId)
   const leave = useMutation({ mutationFn: () => invitationsRepository.leave(clientId), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); navigate('/clients') } })
   const [confirm, confirmDialog] = useConfirm()
-  return <Page title={query.data?.fullName ?? 'Клиент'} className="client-detail-page" back="/clients" action={query.data && <Link className="button secondary" to={`/clients/${clientId}/edit`}>Редактировать профиль</Link>}>
+  return <Page title={query.data?.fullName ?? 'Клиент'} className="client-detail-page" back="/clients" action={query.data && <OverflowMenu label="Действия с профилем спортсмена" items={[
+    { label: 'Редактировать профиль', onClick: () => navigate(`/clients/${clientId}/edit`) },
+  ]} />}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
-      <section className="summary client-detail-summary"><div><span>Возраст</span><strong>{query.data.ageYears ?? '—'}</strong></div><div><span>Рост</span><strong>{query.data.heightCm ? `${query.data.heightCm} см` : '—'}</strong></div><div><span>Вес</span><strong>{query.data.currentWeightKg ? `${query.data.currentWeightKg} кг` : '—'}</strong></div></section>
-      {stats.data && <>
-        {stats.data.needsAttention && <p className="attention">⚠ Давно не тренировался</p>}
-        <section className="summary stats stats-3 client-detail-stats">
-          <div><span>Тренировок</span><strong>{stats.data.doneCount}</strong></div>
-          <div><span>Выполнено</span><strong>{stats.data.completionPercent === null ? '—' : `${stats.data.completionPercent}%`}</strong></div>
-          <div><span>ИМТ</span><strong>{bmiLabel(query.data.heightCm, query.data.currentWeightKg)}</strong></div>
-        </section>
-      </>}
-      <div className="client-actions">
-        <div className="client-actions-row">
-          <Link className="button" to={`/workouts/new?client=${clientId}`}>＋ Запланировать</Link>
-          <Link className="button secondary" to={`/clients/${clientId}/workouts`}>История</Link>
-        </div>
-        <Link className="button secondary wide" to={`/progress/${clientId}`}>Замеры и прогресс</Link>
+      <section className="client-detail-snapshot" aria-label="Сводка по спортсмену">
+        <p className="client-detail-vitals">
+          <span><span className="sr-only">Возраст: </span>{query.data.ageYears ? `${query.data.ageYears} лет` : 'Возраст не указан'}</span>
+          <span><span className="sr-only">Рост: </span>{query.data.heightCm ? `${query.data.heightCm} см` : 'Рост не указан'}</span>
+          <span><span className="sr-only">Вес: </span>{query.data.currentWeightKg ? `${query.data.currentWeightKg.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} кг` : 'Вес не указан'}</span>
+          <span>ИМТ {bmiLabel(query.data.heightCm, query.data.currentWeightKg).replace('.', ',')}</span>
+        </p>
+        {stats.data && <div className="client-detail-activity">
+          <p><strong>{workoutCountLabel(stats.data.doneCount)}</strong><span>проведено за всё время</span></p>
+          <p>{stats.data.completionPercent === null
+            ? <><strong>Нет данных</strong><span>о выполнении тренировок</span></>
+            : <><strong>{stats.data.completionPercent}%</strong><span>прошедших тренировок выполнено</span></>}</p>
+        </div>}
+      </section>
+      {stats.data?.needsAttention && <p className="attention">Давно не тренировался</p>}
+      <div className="client-detail-actions">
+        <Link className="button wide client-detail-plan" to={`/workouts/new?client=${clientId}`}><AddIcon />Запланировать тренировку</Link>
+        <nav className="client-detail-routes" aria-label="Разделы спортсмена">
+          <Link to={`/clients/${clientId}/workouts`}>История тренировок</Link>
+          <Link to={`/progress/${clientId}`}>Прогресс и замеры</Link>
+        </nav>
       </div>
       <ClientGoalBlock client={query.data} />
+      {upcoming.length > 0 && <section className="client-detail-upcoming"><h2>Предстоит</h2><div className="cards">{upcoming.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}{workout.startTime ? ` · ${workout.startTime.slice(0, 5)}` : ''}</strong><WorkoutExercisesSummary workout={workout} />{workout.stageTitle && <p className="stage-tag">🎯 {workout.stageTitle}</p>}</div><span className={`badge ${workout.status}`}>{workout.status === 'in_progress' ? 'Идёт' : 'План'}</span></Link>)}</div></section>}
       <ClientNoteBlock client={query.data} />
-      {upcoming.length > 0 && <section className="client-detail-upcoming"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2><div className="cards">{upcoming.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}{workout.startTime ? ` · ${workout.startTime.slice(0, 5)}` : ''}</strong><WorkoutExercisesSummary workout={workout} />{workout.stageTitle && <p className="stage-tag">🎯 {workout.stageTitle}</p>}</div><span className={`badge ${workout.status}`}>{workout.status === 'in_progress' ? 'Идёт' : 'План'}</span></Link>)}</div></section>}
       <div className="page-actions">
-        {query.data.hasAccount === false && <button className="secondary wide" disabled={invite.isPending} onClick={() => invite.mutate()}>Пригласить клиента</button>}
+        {query.data.hasAccount === false && <button className="secondary wide" disabled={invite.isPending} aria-busy={invite.isPending} onClick={() => invite.mutate()}>{invite.isPending ? 'Создаём приглашение…' : 'Пригласить клиента'}</button>}
         {invite.data && <div className="card"><strong>Код клиента: {invite.data}</strong><p>Передайте код клиенту. Он действует 7 дней и используется один раз.</p></div>}
-        {invitations.data?.map((item) => <article className="card" key={item.id}><div><strong>Активное приглашение клиента</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU', { timeZone: normalizeTimeZone(actor?.timezone) })}</p></div><button className="link danger" disabled={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Код больше нельзя будет использовать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>Отозвать</button></article>)}
+        {invitations.data?.map((item) => <article className="card" key={item.id}><div><strong>Активное приглашение клиента</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU', { timeZone: normalizeTimeZone(actor?.timezone) })}</p></div><button className="link danger" disabled={revoke.isPending} aria-busy={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Код больше нельзя будет использовать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>{revoke.isPending ? 'Отзываем…' : 'Отозвать'}</button></article>)}
         {invite.error && <p className="error">{invite.error.message}</p>}
         {revoke.error && <p className="error">{revoke.error.message}</p>}
-        {currentMembership && !currentMembership.isRoot && <button className="danger secondary wide" disabled={leave.isPending} onClick={async () => { if (await confirm({ message: 'Покинуть пространство клиента? Доступ к тренировкам и прогрессу будет закрыт.', confirmLabel: 'Покинуть', danger: true })) leave.mutate() }}>Покинуть пространство клиента</button>}
+        {currentMembership && !currentMembership.isRoot && <button className="danger secondary wide" disabled={leave.isPending} aria-busy={leave.isPending} onClick={async () => { if (await confirm({ message: 'Покинуть пространство клиента? Доступ к тренировкам и прогрессу будет закрыт.', confirmLabel: 'Покинуть', danger: true })) leave.mutate() }}>{leave.isPending ? 'Покидаем пространство…' : 'Покинуть пространство клиента'}</button>}
         {leave.error && <p className="error">{leave.error.message}</p>}
-        {currentMembership?.isRoot && <button className="danger secondary wide" disabled={archive.isPending} onClick={() => archive.mutate(query.data!)}>{query.data.archivedAt ? 'Вернуть из архива' : 'Архивировать клиента'}</button>}
+        {currentMembership?.isRoot && <button className="danger secondary wide" disabled={archive.isPending} aria-busy={archive.isPending} onClick={() => archive.mutate(query.data!)}>{archive.isPending ? 'Обновляем…' : query.data.archivedAt ? 'Вернуть из архива' : 'Архивировать клиента'}</button>}
       </div>
       {confirmDialog}
     </>}</AsyncView>

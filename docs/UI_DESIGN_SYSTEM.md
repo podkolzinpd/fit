@@ -41,24 +41,70 @@ Generic cards use `--surface-raised`, `--card-grad`, `--border`, and
 AI cards have semantic token groups because their meaning and hierarchy differ.
 These groups should not be used as arbitrary decoration on unrelated screens.
 
+Workout states use the following fixed color contract. A text label or icon
+always accompanies color, so meaning never depends on color alone:
+
+| Meaning | Tone | Examples |
+| --- | --- | --- |
+| Primary action, current work, selected control | Coral accent | Current workout/set, submit CTA, selected RPE |
+| Confirmed success or positive result | Green success | Saved set, completed workout, personal record |
+| Temporary attention | Amber warning | Partial completion, saving, rest timer |
+| Error, destructive action, or health concern | Red danger | Failed save, delete, discomfort |
+| Context without urgency | Neutral | Planned/upcoming work, history, skipped set |
+
+The red Live indicator is the one explicit realtime convention and uses its own
+`--live-indicator` token; it must not reuse destructive surfaces or replace the
+visible `LIVE` label.
+
 ## Typography
 
 - Font stack: `-apple-system`, BlinkMacSystemFont, `SF Pro Text`, Inter,
   `system-ui`, sans-serif. No downloadable brand font is required.
-- Base: 16 px with 1.45 line height.
-- Token scale: 11, 12, 13, 14, 16, 18, 22, and 30 px from `--text-xs` through
-  `--text-display`.
-- Weights: 600, 700, and 800. Uppercase eyebrow labels use a small size,
-  semibold/bold weight, and `--tracking-label`; titles use tight tracking.
-- Large page/hero headings may use `clamp()` to fit the 390–440 px shell.
+- Base: 16 px with 1.45 line height. Product content uses six semantic roles;
+  feature CSS must not invent an intermediate role from a local pixel value.
+
+| Content role | Size | Default treatment | Use |
+| --- | --- | --- | --- |
+| `display` | 30 px, fluid in page headers | 800, tight | page and hero heading |
+| `title` | 22 px | 800, tight | card or major block title |
+| `section` | 18 px | 700 | section heading |
+| `body` | 16 px | 400; 700 for emphasis | primary reading text |
+| `caption` | 12 px | 600 | metadata, supporting copy, eyebrow variant |
+| `numeric` | 22 px | 800, tabular | primary measured value or count |
+
+Operational workout labels are an accessibility exception to the compact
+caption role: column headings, plan/fact context, Live hints, and history
+metadata use at least 13 px and `--secondary-label-fg`. Twelve-pixel text is
+reserved for self-contained badges or nonessential decorative metadata.
+
+- CSS variables are `--type-<role>-size`; reusable classes are
+  `.type-display`, `.type-title`, `.type-section`, `.type-body`,
+  `.type-caption`, and `.type-numeric`.
+- Uppercase eyebrow labels are a bold caption variant with
+  `--tracking-label`. Control labels may keep `--text-ui` (14 px); icon marks
+  may inherit their own size because they are not content typography.
+- Weights are only 600, 700, and 800. Do not introduce intermediate 650/750
+  weights. Large page headings use `--type-display-fluid` inside the
+  390–440 px shell.
+- The contract is migrated by real screens rather than a blind global rewrite.
+  Client Progress/Workouts/Live and Trainer Clients/Schedule/Progress are the
+  first protected set. Role Home for both users deliberately keeps its existing
+  hierarchy and primary actions.
 
 ## Spacing, geometry, and effects
 
 - Spacing tokens: 4, 8, 12, 16, 20, and 24 px (`--space-1`…`--space-6`).
-- Canonical radii: 9, 12, and 16 px plus a pill radius of 99 px. Product cards
-  also currently use 17–22 px and frame/sheets use 26–28 px.
-- Minimum interactive size is represented by `--tap: 44px`; primary mobile
-  actions are commonly 50–56 px tall.
+- Canonical radii are semantic: `--radius-sm` (9 px) for compact segments,
+  `--radius-md` (12 px) for controls and inset surfaces, `--radius-lg` (16 px)
+  for cards, and `--radius-pill` (99 px) for chips. Frame and bottom-sheet
+  shells may keep their separate 26–28 px geometry.
+- Control heights are `--control-height-compact` (36 px),
+  `--control-height-standard` (44 px), and `--control-height-primary` (50 px).
+  Chips use `--chip-height` (32 px); ordinary cards use `--card-padding`
+  (16 px), and major single-column sections use `--section-gap` (20 px).
+- Client Progress/Workouts/Live and Trainer Clients/Schedule/Progress are the
+  first protected geometry set. Role Home for both users deliberately keeps
+  its existing cards, voice/text actions, and primary buttons.
 - Cards use a restrained warm shadow (`--shadow-card`). Overlays use
   `--overlay` and blur; sheets rise from the bottom on mobile.
 - Motion is short (about 180–220 ms) and must respect
@@ -69,7 +115,7 @@ These groups should not be used as arbitrary decoration on unrelated screens.
 `src/shared/ui.tsx` owns the reusable application primitives:
 
 - `Page` and page header/back navigation;
-- `AsyncView`, `Skeleton`, and `EmptyState` for data states;
+- `AsyncView`, `Skeleton`, `StatePanel`, and `EmptyState` for data states;
 - `Field`, `Switch`, `SaveStatus`, and `StatusBadge`;
 - in-app `ConfirmDialog` through `useConfirm`;
 - `OverflowMenu`, positioned inside the phone frame and above fixed bars.
@@ -78,6 +124,62 @@ Global CSS also defines primary, secondary, tertiary/link, danger, wide, and
 icon button styles; card stacks; form stacks/actions; badges; bottom tabs;
 modal and bottom-sheet shells. New primitives should compose these contracts
 instead of reproducing their pixels feature by feature.
+
+Workout actions use the shared `WorkoutCta` hierarchy contract:
+
+- `primary` is the single next-step action on the current screen;
+- `secondary` is a reversible alternative or a lower-priority transition;
+- `tertiary` is an optional, dismissive, or rare text action;
+- `destructive` is reserved for deletion and always requires confirmation.
+
+Interactive workout controls expose the same state contract instead of styling
+feature-local classes independently:
+
+- `WorkoutCta` owns `loading`, `disabled`, and `destructive` action states;
+- `WorkoutChoice` owns neutral/destructive choices and the `selected` state;
+- `WorkoutStatus` and completed workout surfaces own the `completed` state;
+- pending controls retain their visual hierarchy, set `aria-busy`, and cannot
+  be activated twice; selected choices set `aria-pressed`.
+
+Post-workout RPE uses one continuous 1–10 slider with a large touch target,
+the selected number, and a plain-language effort label. It must not return to
+a two-row number grid that resembles a numeric keypad.
+
+On Live, confirming the current set is the primary repeated action. Finishing
+the whole workout remains secondary until the explicit completion confirmation
+is open. A pending action preserves its hierarchy, changes its label, exposes
+`aria-busy`, and cannot be submitted twice.
+
+Data-state behavior follows one contract on the protected screens:
+
+- root loading, empty, error, and unavailable states explain what is happening
+  in one panel; section-level empty states use the compact variant;
+- recoverable loading errors expose one visible `Повторить` action;
+- an empty state names the missing data and the next useful action instead of
+  leaving an empty page or a bare dash;
+- a pending primary action is disabled against duplicate submission, sets
+  `aria-busy`, and changes its label (`Сохраняем…`, `Завершаем…`, and so on);
+- when the user remains on the same screen, save success or failure uses
+  `SaveStatus`; successful actions that navigate use the destination screen as
+  their confirmation.
+
+Exercise media uses one `ExerciseImage` contract in the picker and exercise
+detail: a square Fit surface, `object-fit: contain` so technique is not cropped,
+and the same neutral exercise placeholder for missing or failed media.
+
+Positive result emphasis is shared across secondary product surfaces:
+
+- a confirmed personal record uses `RecordIcon`, a visible Russian label, and
+  the success border/surface; the icon and color never carry meaning alone;
+- Client Progress gives its single main result the same calm success surface;
+- Trainer Progress marks weekly regularity as positive only after at least one
+  completed workout; zero and unavailable data stay neutral;
+- role Home remains unchanged and must not inherit these secondary-screen rules.
+
+Progress copy is Russian-first: visible labels use `Личный рекорд`, `ИИ-анализ`
+and `в неделю`, not unexplained `PR`, `AI` or `/ нед.` abbreviations. Percentages
+are whole numbers, rates and displayed Progress measurements use at most one
+decimal place, and counters select the correct Russian noun form.
 
 ## Icons
 

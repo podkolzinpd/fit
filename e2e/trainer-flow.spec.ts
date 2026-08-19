@@ -32,9 +32,9 @@ test('форма: быстрый ввод разбирает текст в уп�
   await page.goto('/clients')
 
   await page.goto('/workouts/new')
-  // Таббар остаётся доступен, заметка не занимает экран до явного раскрытия,
-  // а быстрый ввод упражнений открыт сразу.
-  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible()
+  // Внутри создания нет конкурирующего таббара; заметка не занимает экран до
+  // явного раскрытия, а быстрый ввод упражнений открыт сразу.
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toHaveCount(0)
   await expect(page.getByRole('textbox', { name: 'Заметка' })).toBeHidden()
   await page.locator('.workout-notes summary').click()
   await expect(page.getByRole('textbox', { name: 'Заметка' })).toBeVisible()
@@ -127,7 +127,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByRole('heading', { name: 'Анна Тестова' })).toBeVisible()
   const clientUrl = page.url()
 
-  await page.getByRole('link', { name: 'Редактировать профиль' }).click()
+  await page.getByRole('button', { name: 'Действия с профилем спортсмена' }).click()
+  await page.getByRole('menuitem', { name: 'Редактировать профиль' }).click()
   await page.getByLabel('Имя', { exact: true }).fill(trainerAlias)
   await page.getByLabel('Имя в моём списке').fill(trainerAlias)
   await page.getByLabel('Личная заметка').fill('Моя приватная заметка')
@@ -145,6 +146,12 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByRole('heading', { name: 'Тип тренировки' })).toBeVisible()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await expect(page.getByRole('button', { name: /Присед со штангой/ }).first()).toBeVisible()
+  const firstExerciseImage = page.locator('.picker-list .exercise-image').first()
+  await expect(firstExerciseImage).toBeVisible()
+  await expect(firstExerciseImage.locator('img')).toHaveCSS('object-fit', 'contain')
+  const firstExerciseImageBox = await firstExerciseImage.boundingBox()
+  expect(firstExerciseImageBox?.width).toBe(firstExerciseImageBox?.height)
+  expect(firstExerciseImageBox?.width).toBeGreaterThanOrEqual(48)
   // Список упражнений маскируем: миниатюры-фото волатильны и различаются по ОС.
   // Под визуальным контролем — search-first хром пикера.
   await expect(page).toHaveScreenshot('exercise-picker-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03, mask: [page.locator('.picker-list')] })
@@ -253,7 +260,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByLabel('Фактический вес, подход 1').fill('45')
   await page.getByRole('button', { name: 'Сохранить изменения' }).click()
   await expect(page.locator('.workout-detail-page .badge.done')).toHaveText('Готово')
-  await expect(page.getByText(/45 кг × 9 повт\./)).toBeVisible()
+  await expect(page.locator('.completed-set-summary').filter({ hasText: /45 кг × 9 повт\./ }).first()).toBeVisible()
 
   // «Назад» с завершённой тренировки ведёт в расписание (все запланированные).
   await page.locator('.page-back').click()
@@ -261,11 +268,9 @@ test('trainer can create client, complete workout and save progress', async ({ p
 
   // После завершения тренировки статистика клиента обновлена.
   await page.goto(clientUrl)
-  await expect(page.getByText('Тренировок', { exact: true })).toBeVisible()
-  await expect(page.locator('.summary.stats')).toContainText('1')
-  await expect(page.locator('.summary.stats')).toContainText('100%')
-  // Вместо «Последней» на карточке показываем ИМТ.
-  await expect(page.locator('.summary.stats')).toContainText('ИМТ')
+  await expect(page.locator('.client-detail-activity')).toContainText('1 тренировка')
+  await expect(page.locator('.client-detail-activity')).toContainText('100%')
+  await expect(page.locator('.client-detail-vitals')).toContainText('ИМТ')
 
   // Новая тренировка подхватывает фактические значения всех подходов из
   // последнего завершённого выполнения этого упражнения.
@@ -286,13 +291,16 @@ test('trainer can create client, complete workout and save progress', async ({ p
 
   // История и карточка используют один префикс ключа кэша, но разной формы —
   // переход туда-обратно не должен ронять приложение (регресс e.filter).
-  await page.getByRole('link', { name: 'История', exact: true }).click()
+  await page.getByRole('link', { name: 'История тренировок', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'История тренировок' })).toBeVisible()
   await expect(page.locator('.card').first()).toBeVisible()
   // На карточке истории — список упражнений (а не группы мышц) и тоннаж.
   await expect(page.locator('.cards .card').first()).toContainText('Болгарский присед')
   await expect(page.locator('.cards .card').first()).toContainText('45 кг × 9 повт.')
-  await expect(page.locator('.cards .card').first().locator('.workout-pr-badge')).toHaveText('Новый рекорд')
+  const personalRecordCard = page.locator('.cards .card').first()
+  await expect(personalRecordCard).toHaveClass(/has-pr/)
+  await expect(personalRecordCard.locator('.workout-pr-badge')).toHaveText('Личный рекорд')
+  await expect(personalRecordCard.locator('[data-icon="record"]')).toBeVisible()
   await expect(page.locator('.card-meta').first()).toContainText('1.2 т')
   await page.locator('.card').first().click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
@@ -313,7 +321,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // Прогресс открывается из карточки клиента, без отдельного списка-посредника.
   await page.goto(clientUrl)
   await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
-  await page.getByRole('link', { name: 'Замеры и прогресс' }).click()
+  await page.getByRole('link', { name: 'Прогресс и замеры' }).click()
+  await page.locator('.trainer-measurements > summary').click()
   await page.getByLabel('Дата').fill('2026-07-20')
   await page.getByLabel('Вес, кг').fill('61')
   await page.getByRole('button', { name: 'Сохранить замер' }).click()
@@ -534,7 +543,7 @@ test('замена упражнения: в форме плана и в live', a
   await expect(page.getByRole('menuitem', { name: 'Заменить' })).toHaveCount(0)
 })
 
-test('карточка упражнения: шапка с оборудованием/мышцами и табы', async ({ page }) => {
+test('карточка упражнения: шапка с оборудованием/мышцами и табы', async ({ page }, testInfo) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -566,6 +575,12 @@ test('карточка упражнения: шапка с оборудован�
   await page.getByRole('link', { name: /Тяга штанги в наклоне/ }).first().click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   // Шапка: оборудование и группы мышц из каталога.
+  const detailExerciseImage = page.locator('.exercise-image-detail')
+  await expect(detailExerciseImage.locator('img')).toHaveCSS('object-fit', 'contain')
+  const detailExerciseImageBox = await detailExerciseImage.boundingBox()
+  expect(detailExerciseImageBox?.width).toBe(detailExerciseImageBox?.height)
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('exercise-image-detail.png'), fullPage: true })
   await expect(page.getByText('Оборудование: Штанга')).toBeVisible()
   await expect(page.getByText(/Основная группа мышц:/)).toBeVisible()
   // Табы: Статистика (по умолчанию), История, Техника.
@@ -901,7 +916,7 @@ test('комментарий тренера к упражнению: план �
   // первому совпавшему тексту из списка.
   await page.goto(commentClientUrl)
   await expect(page.getByRole('heading', { name: 'Коммент Клиент' })).toBeVisible()
-  await page.getByRole('link', { name: 'История', exact: true }).click()
+  await page.getByRole('link', { name: 'История тренировок', exact: true }).click()
   // Дожидаемся, что история клиента открылась и список подгрузился (не «Загрузка…»),
   // потом ищем карточку/коммент. Явный timeout переживает холодный кэш запроса
   // list_workouts под нагрузкой (иначе .card ловил таймаут до ответа RPC).
