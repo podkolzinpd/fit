@@ -1705,9 +1705,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-cta[data-variant='tertiary'] { min-height:var(--control-height-standard); color:var(--tertiary-fg); font-weight:var(--weight-semibold) }
 .workout-cta[data-variant='destructive'] { border-color:var(--danger-border); background:var(--danger-surface); color:var(--danger); box-shadow:none }
 .workout-action-row > .workout-cta[data-variant='primary'] { flex-grow:1.35 }
-.workout-detail-actions { align-items:center }
+.workout-detail-actions { align-items:center; justify-content:flex-end }
 .workout-detail-actions > .button { min-height:var(--control-height-standard); display:inline-flex; align-items:center; justify-content:center }
-.workout-detail-copy { color:var(--tertiary-fg) }
+.workout-detail-actions > .overflow-menu { flex:0 0 auto }
 .workout-exercise-compact { width:100%; min-height:64px; display:flex; align-items:center; gap:var(--space-3); margin:var(--space-3) 0; padding:var(--space-3) 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; color:var(--fg); text-align:left; box-shadow:none }
 .workout-exercise-compact-mark { flex:0 0 auto; width:28px; height:28px; display:grid; place-items:center; border-radius:50%; background:var(--surface-sunken); color:var(--muted); font-weight:var(--weight-bold) }
 .workout-exercise-compact.workout-exercise-completed .workout-exercise-compact-mark { background:var(--success-mark-surface); color:var(--success-fg) }

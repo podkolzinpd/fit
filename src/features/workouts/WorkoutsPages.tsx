@@ -639,6 +639,9 @@ export function WorkoutDetailPage() {
         : statusPresentation?.tone === 'skipped' ? 'skipped'
           : 'planned'
   const plannedActions = workout?.status === 'planned' ? plannedWorkoutActionLabels(workout.workoutDate, today) : null
+  const requestWorkoutRemoval = async () => {
+    if (await confirm({ message: 'Удалить тренировку?', confirmLabel: 'Удалить', danger: true })) remove.mutate()
+  }
   return <Page title="Тренировка" hideTitle className="workout-detail-page" back={backTo}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       {justCompleted && <section className="workout-completion" aria-labelledby="workout-completion-title">
@@ -687,11 +690,13 @@ export function WorkoutDetailPage() {
         return <div className={`exercise-block view${done ? ' completed-exercise-block' : ''}`} key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
       })}</div>
       {workout.notes && <section className="workout-review workout-review-readonly"><div className="workout-review-head"><div><p className="eyebrow">{clientMode && !clientOwned ? 'ОТ ТРЕНЕРА' : 'К ТРЕНИРОВКЕ'}</p><h2>{clientMode && !clientOwned ? 'Инструкции' : 'Заметка'}</h2></div></div><p className="workout-review-text">{workout.notes}</p></section>}
-      {canManage && <><div className="actions workout-detail-actions">
+      {canManage && <div className="actions workout-detail-actions">
         {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
-        <Link className="button link workout-detail-copy" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link>
-      </div>
-      <WorkoutCta variant="destructive" className="wide" pending={remove.isPending} pendingLabel="Удаляем…" onClick={async () => { if (await confirm({ message: 'Удалить тренировку?', confirmLabel: 'Удалить', danger: true })) remove.mutate() }}>Удалить тренировку</WorkoutCta></>}
+        <OverflowMenu label="Другие действия с тренировкой" items={[
+          { label: 'Копировать тренировку', onClick: () => navigate(`/workouts/new?copy=${workoutId}`) },
+          { label: 'Удалить тренировку', danger: true, disabled: remove.isPending, onClick: () => { void requestWorkoutRemoval() } },
+        ]} />
+      </div>}
       {clientAuthoredReadOnly && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Скопировать и отправить план</Link></div>}
       {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Создать свою копию</Link></div>}
       {remove.error && <p className="error">{remove.error.message}</p>}
