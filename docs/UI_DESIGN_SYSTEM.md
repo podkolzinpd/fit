@@ -176,6 +176,11 @@ Positive result emphasis is shared across secondary product surfaces:
   completed workout; zero and unavailable data stay neutral;
 - role Home remains unchanged and must not inherit these secondary-screen rules.
 
+Progress copy is Russian-first: visible labels use `Личный рекорд`, `ИИ-анализ`
+and `в неделю`, not unexplained `PR`, `AI` or `/ нед.` abbreviations. Percentages
+are whole numbers, rates and displayed Progress measurements use at most one
+decimal place, and counters select the correct Russian noun form.
+
 ## Icons
 
 The primary icon language is a small set of hand-authored, outline SVGs in

@@ -194,5 +194,5 @@ function generationErrorMessage(code: string): string {
   if (code === 'summary_save_failed' || code === 'summary_visibility_save_failed') {
     return 'Сводка сформирована, но не сохранилась в Supabase. Проверьте права таблиц и повторите.'
   }
-  return 'Не удалось обновить AI-анализ.'
+  return 'Не удалось обновить ИИ-анализ.'
 }

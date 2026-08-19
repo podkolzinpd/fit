@@ -48,8 +48,8 @@ test('trainer reviews the client copy separately from internal attention items',
 
   await page.locator('.trainer-progress-details > summary').click()
   await expect(page.getByLabel('Регулярность тренировок')).toBeVisible()
-  const trainerAnalysis = page.getByLabel('AI-анализ тренировок')
-  await expect(trainerAnalysis.getByText('AI-анализ тренировок')).toBeVisible()
+  const trainerAnalysis = page.getByLabel('ИИ-анализ тренировок')
+  await expect(trainerAnalysis.getByText('ИИ-анализ тренировок')).toBeVisible()
   await expect(trainerAnalysis.getByText('Доступно клиенту')).toBeVisible()
   await expect(trainerAnalysis.getByText('Обратить внимание')).toBeVisible()
   await page.getByRole('button', { name: 'Подробнее об анализе' }).click()

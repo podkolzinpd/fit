@@ -74,9 +74,9 @@ describe('TrainerProgressOverviewContent', () => {
   it('explains what to do before the AI analysis exists', () => {
     render(<TrainerProgressOverviewContent week={week} />)
 
-    expect(screen.getByText('AI-анализ за 6 месяцев ещё не создан')).toBeVisible()
+    expect(screen.getByText('ИИ-анализ за 6 месяцев ещё не создан')).toBeVisible()
     expect(screen.getByText('Создать его можно в подробном анализе')).toBeVisible()
-    expect(screen.getByText('Появится после создания AI-анализа')).toBeVisible()
+    expect(screen.getByText('Появится после создания ИИ-анализа')).toBeVisible()
   })
 })
 

@@ -213,7 +213,7 @@ export function WorkoutChronicleCard({ workout, contextLabel }: { workout: Worko
     <div className="workout-chronicle-head">
       <strong>{formatLocalDate(workout.workoutDate)}</strong>
       <div className="workout-chronicle-head-badges">
-        {workout.hasPr && <span className="workout-pr-badge"><RecordIcon />Новый рекорд</span>}
+        {workout.hasPr && <span className="workout-pr-badge"><RecordIcon />Личный рекорд</span>}
         <WorkoutStatusBadge workout={workout} />
       </div>
     </div>

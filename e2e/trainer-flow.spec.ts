@@ -300,7 +300,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.cards .card').first()).toContainText('45 кг × 9 повт.')
   const personalRecordCard = page.locator('.cards .card').first()
   await expect(personalRecordCard).toHaveClass(/has-pr/)
-  await expect(personalRecordCard.locator('.workout-pr-badge')).toHaveText('Новый рекорд')
+  await expect(personalRecordCard.locator('.workout-pr-badge')).toHaveText('Личный рекорд')
   await expect(personalRecordCard.locator('[data-icon="record"]')).toBeVisible()
   await expect(page.locator('.card-meta').first()).toContainText('1.2 т')
   await page.locator('.card').first().click()

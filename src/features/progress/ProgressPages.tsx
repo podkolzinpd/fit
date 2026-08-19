@@ -99,7 +99,7 @@ export function ProgressPage() {
         <div>
           <p className="eyebrow">ТРЕНИРОВКИ</p>
           <h2>Подробный анализ</h2>
-          <span>Ритм по неделе и месяцу, AI-анализ и беговая динамика</span>
+          <span>Ритм по неделе и месяцу, ИИ-анализ и беговая динамика</span>
         </div>
         <span className="trainer-details-open">Открыть</span>
         <span className="trainer-details-close">Свернуть</span>
