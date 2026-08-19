@@ -591,6 +591,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .overflow-item:hover { background: var(--secondary-hover) }
 .overflow-item.danger { color: var(--danger) }
 .overflow-item:disabled { opacity: .5; cursor: default }
+.coachmark-bubble { position: fixed; z-index: 20; width: min(280px, calc(100vw - 32px)); display: grid; gap: var(--space-1); padding: var(--card-padding); border: 1px solid var(--accent-border); border-radius: var(--radius-lg); background: var(--surface-elevated); box-shadow: 0 14px 40px #00000033 }
+.coachmark-bubble strong { font-size: var(--type-body-size); color: var(--fg-strong) }
+.coachmark-bubble p { margin: 0; color: var(--muted); font-size: var(--type-caption-size); line-height: var(--leading-body) }
+.coachmark-bubble button { justify-self: start; min-height: var(--control-height-standard); padding: var(--space-2) var(--space-4); border-radius: var(--radius-md) }
+.theme-light .coachmark-bubble { background: var(--surface-elevated) }
 .live-exercise-head { display: flex; align-items: center; justify-content: space-between; gap: 10px }
 .live-exercise-head h2, .live-exercise-head h3 { margin: 0; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere }
 .live-previous-result { margin:2px 0 0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
