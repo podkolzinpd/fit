@@ -16,6 +16,12 @@ Development-сборка программно отклоняет любой Supa
 
 После merge миграции применяет `.github/workflows/deploy-database.yml`. Запуск SQL через Dashboard запрещён. Publishable key может находиться в frontend deployment environment; service role и DB password — никогда.
 
+Изменения `summarize-client-training` после merge выкатывает отдельный
+`.github/workflows/deploy-summary-function.yml`. Он публикует только эту Edge
+Function через Supabase API, не использует Docker и получает project id и access
+token только из GitHub Secrets. `verify_jwt=false` сохраняется намеренно:
+функция самостоятельно проверяет пользователя и его роль по bearer token.
+
 Workflow не использует GitHub Environment: для приватного репозитория на GitHub Free эта возможность недоступна. Переход на environment secrets выполняется отдельно после подключения подходящего тарифа.
 
 ## Frontend hosting
