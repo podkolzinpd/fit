@@ -17,6 +17,10 @@ api_image_tag = "foundation"
 # deployed and the read-only allowlist is populated.
 # yandex_oauth_client_id = "00000000000000000000000000000000"
 
+# Keep empty until the read-only browser pilot is approved. Localhost and the
+# production frontend must be reviewed and added independently.
+api_cors_allowed_origins = []
+
 # Add only after creating a DATABASE_URL payload outside Terraform.
 # database_url_secret_version_id = "e6q00000000000000000"
 

@@ -20,3 +20,30 @@ export function isWearablesPilotEnabled(userId: string) {
     .filter(Boolean)
   return allowedUserIds.includes(userId)
 }
+
+export interface YandexIdPilotConfig {
+  apiBaseUrl: string
+  clientId: string
+}
+
+function isSafePilotApiUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    if (url.protocol === 'https:') return true
+    return url.protocol === 'http:'
+      && (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]')
+  } catch {
+    return false
+  }
+}
+
+// Yandex ID пока открывает только изолированный read-only pilot. Одного флага
+// недостаточно: кнопка появляется лишь при наличии публичного client ID и
+// безопасного API URL. Client secret во frontend не используется.
+export function getYandexIdPilotConfig(): YandexIdPilotConfig | null {
+  if (import.meta.env.VITE_YANDEX_ID_PILOT_ENABLED !== 'true') return null
+  const clientId = String(import.meta.env.VITE_YANDEX_OAUTH_CLIENT_ID ?? '').trim()
+  const apiBaseUrl = String(import.meta.env.VITE_YANDEX_API_BASE_URL ?? '').trim().replace(/\/$/, '')
+  if (clientId.length === 0 || clientId.length > 200 || !isSafePilotApiUrl(apiBaseUrl)) return null
+  return { apiBaseUrl, clientId }
+}

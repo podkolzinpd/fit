@@ -134,6 +134,12 @@ jobs:
       # состояние перед снимками, иначе параллельные тренировки меняют главную.
       - name: Reset visual baseline data
         run: supabase db reset --local
+      - name: Wait for local Auth after reset
+        run: >-
+          curl --fail --silent --show-error
+          --retry 30 --retry-all-errors --retry-delay 1
+          http://127.0.0.1:54321/auth/v1/health
+          > /dev/null
       - name: Run isolated visual baselines
         run: |
           docker run --rm --init --ipc=host --network host \

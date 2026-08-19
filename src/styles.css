@@ -237,6 +237,11 @@ p { margin: 6px 0 }
 .auth-form input, .auth-form select { min-height: 50px; border-radius: 14px; background: var(--surface-sunken) }
 .auth-form > button { min-height: 52px; margin-top: 2px; border-radius: 16px; font-size: 17px; font-weight: 800 }
 .auth-google { min-height: 50px; border-radius: 16px }
+.auth-yandex { min-height: 50px; border-radius: 16px; border-color: #df342a; color: var(--fg-on-surface) }
+.yandex-pilot-profile { gap: 12px }
+.yandex-pilot-profile > div { display: flex; justify-content: space-between; gap: 16px }
+.yandex-pilot-profile span { color: var(--muted) }
+.yandex-pilot-profile strong { text-align: right }
 .auth-back-link { align-self: flex-start; margin-top: 2px; font-weight: 700 }
 .brand { width: 58px; height: 58px; display: grid; place-items: center; background: var(--accent-grad); border: 1px solid var(--accent-border); border-radius: 19px; box-shadow: 0 12px 28px var(--accent-shadow); color: var(--on-accent); font-size: 19px; font-weight: 900; letter-spacing: -.04em }
 .stack { display: flex; flex-direction: column; gap: 16px }
