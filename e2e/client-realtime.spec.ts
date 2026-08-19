@@ -163,7 +163,7 @@ test('client and trainer receive progress and workout changes without reload', a
     await expect(client.getByText(trainerReview, { exact: true })).toBeVisible({ timeout: 10_000 })
     await expect(client.getByLabel('Реакция 👍', { exact: true })).toBeVisible({ timeout: 10_000 })
 
-    const exerciseHistoryUrl = await trainer.locator('.exercise-name-link').first().getAttribute('href')
+    const exerciseHistoryUrl = await trainer.locator('.exercise-history-link').first().getAttribute('href')
     expect(exerciseHistoryUrl).toBeTruthy()
     await Promise.all([
       trainer.goto(exerciseHistoryUrl!),

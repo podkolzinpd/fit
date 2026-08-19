@@ -310,7 +310,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   // Заходим в аналитику упражнения и возвращаемся: «назад» с упражнения ведёт
   // на тренировку, «назад» с тренировки — в расписание (без петли).
-  await page.locator('.exercise-name-link').first().click()
+  await page.locator('.exercise-history-link').first().click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   // После одной проведённой тренировки статистика показывает текущий результат.
   const progressProof = page.getByLabel('Доказательство прогресса')
@@ -575,7 +575,7 @@ test('карточка упражнения: шапка с оборудован�
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
-  // Открываем карточку упражнения через ссылку «↗ история».
+  // Открываем карточку упражнения через отдельное действие «История».
   await page.getByRole('link', { name: /Тяга штанги в наклоне/ }).first().click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   // Шапка: оборудование и группы мышц из каталога.
@@ -911,7 +911,7 @@ test('комментарий тренера к упражнению: план �
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
   // Комментарий виден в истории упражнения.
-  await page.locator('.exercise-name-link').first().click()
+  await page.locator('.exercise-history-link').first().click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   await page.getByRole('tab', { name: 'История' }).click()
   await expect(page.getByText('💬 Держи спину прямо', { exact: true }).first()).toBeVisible()
