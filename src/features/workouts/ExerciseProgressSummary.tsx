@@ -3,7 +3,7 @@ import { RecordIcon } from '../../shared/icons'
 import { formatLocalDate } from '../../shared/local-date'
 
 function compactNumber(value: number): string {
-  return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 3 }).format(value)
+  return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(value)
 }
 
 function durationValue(seconds: number): string {
@@ -66,8 +66,8 @@ export function ExerciseProgressSummary({
     </div>
     {strength
       ? <div className="exercise-progress-records">
-          <div className={latest.isWeightPr ? 'is-new-record' : undefined}><span>{latest.isWeightPr && <RecordIcon />}Рекорд рабочего веса</span><strong>{exerciseProgressValueLabel(latest.allTimeBestWeightKg, 'strength')}</strong></div>
-          <div className={latest.isWeightRepsPr ? 'is-new-record' : undefined}><span>{latest.isWeightRepsPr && <RecordIcon />}Рекорд вес × повторы</span><strong>{latest.allTimeBestWeightReps === null ? '—' : `${compactNumber(latest.allTimeBestWeightReps)} кг·повт.`}</strong></div>
+          <div className={latest.isWeightPr ? 'is-new-record' : undefined}><span>{latest.isWeightPr && <RecordIcon />}Личный рекорд · рабочий вес</span><strong>{exerciseProgressValueLabel(latest.allTimeBestWeightKg, 'strength')}</strong></div>
+          <div className={latest.isWeightRepsPr ? 'is-new-record' : undefined}><span>{latest.isWeightRepsPr && <RecordIcon />}Личный рекорд · вес × повторы</span><strong>{latest.allTimeBestWeightReps === null ? '—' : `${compactNumber(latest.allTimeBestWeightReps)} кг·повт.`}</strong></div>
         </div>
       : <div className="exercise-progress-records single">
           <div className={latest.isPrimaryPr ? 'is-new-record' : undefined}><span>{latest.isPrimaryPr && <RecordIcon />}Лучший результат</span><strong>{exerciseProgressValueLabel(latest.allTimePrimaryValue, latest.inputKind)}</strong></div>
@@ -86,8 +86,8 @@ export function ExerciseProgressHistory({
   if (!items.length) return <p className="muted empty-hint">Ещё нет выполненных подходов по этому упражнению.</p>
   return <div className="timeline exercise-progress-timeline">{items.map((item) => {
     const badges = item.inputKind === 'strength'
-      ? [item.isWeightPr ? 'Рекорд веса' : null, item.isWeightRepsPr ? 'Рекорд: вес × повторы' : null]
-      : [item.isPrimaryPr ? 'Новый рекорд' : null]
+      ? [item.isWeightPr ? 'Личный рекорд · вес' : null, item.isWeightRepsPr ? 'Личный рекорд · вес × повторы' : null]
+      : [item.isPrimaryPr ? 'Личный рекорд' : null]
     const visibleBadges = badges.filter((value): value is string => value !== null)
     return <article key={item.workoutId} className="card">
       <div className="exercise-progress-row-head"><strong>{formatLocalDate(item.workoutDate)}</strong><span>{item.confirmedSetCount} подх.</span></div>

@@ -14,7 +14,7 @@ import { formatLocalDate, normalizeTimeZone, todayInTimeZone, type LocalDate } f
 import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { ClientProgressGoalSection } from './ClientProgressGoalSection'
-import { formatSummaryText, formatWorkoutsPerWeek } from './summary-format'
+import { formatSummaryText, formatWorkoutsPerWeek, progressMetricNoun } from './summary-format'
 import { SUMMARY_PERIODS, summaryPeriodMatch, summaryPeriodRange, type SummaryPeriod } from './summary-period'
 
 function PeriodTabs({ value, onChange }: {
@@ -36,11 +36,13 @@ function Metrics({ metrics, audience }: {
   audience: 'trainer' | 'client'
 }) {
   return <div className="ai-progress-stats">
-    <div><strong>{metrics.completedWorkouts}</strong><span>тренировки</span></div>
+    <div><strong>{metrics.completedWorkouts}</strong><span>{progressMetricNoun(metrics.completedWorkouts, 'workout')}</span></div>
     <div><strong>{formatWorkoutsPerWeek(metrics.workoutsPerWeek)}</strong><span>в неделю</span></div>
     <div>
       <strong>{audience === 'trainer' ? (metrics.longestGapDays ?? '—') : metrics.activeWeeks}</strong>
-      <span>{audience === 'trainer' ? 'макс. перерыв, дн.' : 'активных недель'}</span>
+      <span>{audience === 'trainer'
+        ? metrics.longestGapDays === null ? 'самый долгий перерыв' : progressMetricNoun(metrics.longestGapDays, 'gapDay')
+        : progressMetricNoun(metrics.activeWeeks, 'activeWeek')}</span>
     </div>
   </div>
 }
@@ -50,7 +52,7 @@ function SummaryHeader({ client = false, published }: { client?: boolean; publis
     <div className="ai-progress-title">
       <span className="ai-progress-mark" aria-hidden="true">✦</span>
       <div>
-        <h2>{client ? 'Твой прогресс' : 'AI-анализ тренировок'}</h2>
+        <h2>{client ? 'Твой прогресс' : 'ИИ-анализ тренировок'}</h2>
         <p>{client ? 'Сводка по твоим завершённым тренировкам' : 'Прогресс за выбранный период'}</p>
       </div>
     </div>
@@ -84,7 +86,7 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
     }),
   })
 
-  return <section className="ai-progress-card" aria-label="AI-анализ тренировок">
+  return <section className="ai-progress-card" aria-label="ИИ-анализ тренировок">
     <SummaryHeader published={summary?.published} />
     <PeriodTabs value={period} onChange={setPeriod} />
     <AsyncView
@@ -154,7 +156,7 @@ function TrainerSummaryContent({ summary, clientId, onChanged }: {
         <ul>{summary.trainer.progress.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
       </div>
       <div className="ai-progress-section ai-progress-regularity">
-        <div><span>Регулярность за период</span><strong>{formatWorkoutsPerWeek(summary.metrics.workoutsPerWeek)} / нед.</strong></div>
+        <div><span>Регулярность за период</span><strong>{formatWorkoutsPerWeek(summary.metrics.workoutsPerWeek)} в неделю</strong></div>
         <p>{formatSummaryText(summary.trainer.consistency)}</p>
       </div>
       <div className="client-copy-toggle">
@@ -308,7 +310,7 @@ function ClientSummaryContent({ summary, goal, profileGoal, today, goalLoading, 
       <ul>{summary.summary.achievements.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
     </div>
     <div className="ai-progress-section ai-progress-regularity">
-      <div><span>Твоя регулярность</span><strong>{formatWorkoutsPerWeek(summary.metrics.workoutsPerWeek)} / нед.</strong></div>
+      <div><span>Твоя регулярность</span><strong>{formatWorkoutsPerWeek(summary.metrics.workoutsPerWeek)} в неделю</strong></div>
       <p>{formatSummaryText(summary.summary.consistency)}</p>
     </div>
     <ClientProgressGoalSection

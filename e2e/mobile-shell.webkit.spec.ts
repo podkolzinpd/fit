@@ -671,7 +671,7 @@ test('iPhone: LLM regularity stays inside the single Progress summary at 390 px'
   await expect(summary).toBeVisible()
   await expect(summary.locator('.client-progress-result')).toBeVisible()
   await expect(summary.getByText('Твоя регулярность', { exact: true })).toBeVisible()
-  await expect(summary.getByText(/\/ нед\./)).toBeVisible()
+  await expect(summary.locator('.ai-progress-regularity strong')).toHaveText(/^\d(?:,\d)? в неделю$/)
   await expect(summary.getByText('Твоя цель', { exact: true })).toBeVisible()
   await expectNoHorizontalOverflow(page)
 })

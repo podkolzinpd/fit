@@ -43,14 +43,14 @@ export function TrainerProgressOverviewContent({ week, summary }: {
       <span>Измеримый прогресс</span>
       <strong>{summary
         ? formatSummaryText(summary.trainer.headline)
-        : 'AI-анализ за 6 месяцев ещё не создан'}</strong>
+        : 'ИИ-анализ за 6 месяцев ещё не создан'}</strong>
       <p>{summary ? 'По подтверждённым завершённым тренировкам' : 'Создать его можно в подробном анализе'}</p>
     </article>
     <article className={attention.length > 0 ? 'needs-attention' : 'is-clear'}>
       <span>Обратить внимание</span>
       <strong>{summary
         ? attention[0] ? formatSummaryText(attention[0]) : 'Отдельных предупреждений нет'
-        : 'Появится после создания AI-анализа'}</strong>
+        : 'Появится после создания ИИ-анализа'}</strong>
       {attention.length > 1 && <p>Ещё сигналов: {attention.length - 1}</p>}
       {summary && attention.length === 0 && <p>По текущему анализу отдельное действие не требуется</p>}
     </article>
