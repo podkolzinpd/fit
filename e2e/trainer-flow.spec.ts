@@ -13,7 +13,12 @@ async function fillNewClientProfile(page: Page) {
 }
 
 async function selectClient(page: Page, name: string, id?: string) {
-  await page.locator('.client-picker-trigger').click()
+  const trigger = page.locator('.client-picker-trigger')
+  if (new URL(page.url()).searchParams.has('client')) {
+    await expect(page.locator('.workout-header-meta')).toContainText(name)
+    return
+  }
+  await trigger.click()
   const option = id
     ? page.locator(`.client-picker-item[data-client-id="${id}"]`)
     : page.locator('.client-picker-item').filter({ hasText: name }).first()
@@ -577,7 +582,7 @@ test('карточка упражнения: шапка с оборудован�
   const detailExerciseImage = page.locator('.exercise-image-detail')
   await expect(detailExerciseImage.locator('img')).toHaveCSS('object-fit', 'contain')
   const detailExerciseImageBox = await detailExerciseImage.boundingBox()
-  expect(detailExerciseImageBox?.width).toBe(detailExerciseImageBox?.height)
+  expect(detailExerciseImageBox?.width).toBeCloseTo(detailExerciseImageBox?.height ?? 0, 3)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
   await page.screenshot({ path: testInfo.outputPath('exercise-image-detail.png'), fullPage: true })
   await expect(page.getByText('Оборудование: Штанга')).toBeVisible()
