@@ -24,7 +24,7 @@ describe('summaryQualityIssues', () => {
   it('accepts a safe dual-audience summary with Russian word forms', () => {
     const issues = summaryQualityIssues({
       trainer: {
-        headline: 'Сила и выносливость выросли.',
+        headline: 'В жиме лёжа вес вырос на 25%, в беге темп улучшился на 10%.',
         progress: [
           'В жиме лёжа рабочий вес вырос на 25%.',
           'В беге темп улучшился на 10%.',
@@ -33,7 +33,7 @@ describe('summaryQualityIssues', () => {
         attention: ['Проверить: причина перерыва в 21 день.'],
       },
       client: {
-        headline: 'Рабочий вес вырос на 25%, темп — на 10%.',
+        headline: 'В жиме лёжа рабочий вес вырос на 25%, в беге темп — на 10%.',
         achievements: [
           'В жиме лёжа рабочий вес вырос на 25%.',
           'В беге темп улучшился на 10%.',
@@ -46,6 +46,61 @@ describe('summaryQualityIssues', () => {
     }, trainingData)
 
     expect(issues).toEqual([])
+  })
+
+  it('rejects technical keys and a vague headline', () => {
+    const issues = summaryQualityIssues({
+      trainer: {
+        headline: 'Наблюдается улучшение силовых показателей в некоторых упражнениях.',
+        progress: ['В жиме лёжа рабочий вес вырос на 25%.', 'В беге темп улучшился на 10%.'],
+        consistency: 'workouts_per_week составляет 0.9.',
+        attention: [],
+      },
+      client: {
+        headline: 'В жиме лёжа рабочий вес вырос на 25%.',
+        achievements: ['В жиме лёжа рабочий вес вырос на 25%.', 'В беге темп улучшился на 10%.'],
+        consistency: 'Средняя частота — 0,9 тренировки в неделю.',
+        encouragement: 'Рост уже виден в цифрах.',
+        goalAlignment: '',
+        nextSteps: ['Сравнить ещё 4 тренировки.'],
+      },
+    }, trainingData)
+
+    expect(issues).toEqual(expect.arrayContaining([
+      expect.stringContaining('технические идентификаторы'),
+      expect.stringContaining('Headline'),
+    ]))
+  })
+
+  it('requires a numeric current rhythm even in the first two weeks', () => {
+    const issues = summaryQualityIssues({
+      trainer: {
+        headline: 'В жиме лёжа рабочий вес вырос на 25%.',
+        progress: ['В жиме лёжа рабочий вес вырос на 25%.', 'В беге темп улучшился на 10%.'],
+        consistency: 'Данных пока мало для оценки ритма.',
+        attention: ['Проверить: стабильность тренировок после перерыва в 5 дней.'],
+      },
+      client: {
+        headline: 'В жиме лёжа рабочий вес вырос на 25%.',
+        achievements: ['В жиме лёжа рабочий вес вырос на 25%.', 'В беге темп улучшился на 10%.'],
+        consistency: 'Данных пока мало для оценки ритма.',
+        encouragement: 'Рост уже виден в цифрах.',
+        goalAlignment: '',
+        nextSteps: ['Сравнить ещё 4 тренировки.'],
+      },
+    }, {
+      ...trainingData,
+      consistency: {
+        workouts_per_week: 2,
+        longest_gap_days: 5,
+        observation_days: 7,
+      },
+    })
+
+    expect(issues).toEqual(expect.arrayContaining([
+      expect.stringContaining('Короткий период'),
+      expect.stringContaining('короче 7 дней'),
+    ]))
   })
 
   it('rejects unsafe client language and unsupported trainer assumptions', () => {

@@ -8,6 +8,16 @@ function stringList(value: unknown): string[] {
     : []
 }
 
+const technicalLanguage = /\b(?:workouts?|week|active|session|change|distance|pace|volume|weight|reps?|completed)(?:_[a-z]+)*\b|\b[a-z]+_[a-z_]+\b/i
+const vagueHeadline = /(?:наблюдается|отмечается|есть)\s+(?:улучшение|прогресс|динамика).*(?:некотор|ряд)|(?:показатели|результаты)\s+(?:улучшились|выросли)\s*(?:в целом)?[.!]?$/i
+
+function exerciseNameKey(name: string): string {
+  const firstWord = name.toLocaleLowerCase("ru")
+    .split(/[^а-яёa-z0-9]+/i)
+    .find(Boolean) ?? ""
+  return firstWord.length > 6 ? firstWord.slice(0, -2) : firstWord
+}
+
 export function summaryQualityIssues(
   summary: unknown,
   trainingData: unknown,
@@ -41,6 +51,9 @@ export function summaryQualityIssues(
 
   if (/\d+[.,]\d+\s*%/.test(allText)) {
     issues.push("Процентные изменения должны быть округлены до целых процентов.")
+  }
+  if (technicalLanguage.test(allText)) {
+    issues.push("Пользовательский текст не должен содержать технические идентификаторы или английские названия метрик.")
   }
   if (/\d+[.,]\d{2,}\s*(?:\/\s*нед\.?|в\s+недел(?:ю|и))/i.test(allText)) {
     issues.push("Средняя частота должна содержать максимум один знак после запятой.")
@@ -94,6 +107,7 @@ export function summaryQualityIssues(
     : {}
   const workoutsPerWeek = Number(consistency.workouts_per_week)
   const longestGapDays = Number(consistency.longest_gap_days)
+  const observationDays = Number(consistency.observation_days)
   const combinedConsistency = [trainer.consistency, client.consistency]
     .filter((item): item is string => typeof item === "string")
     .join(" ")
@@ -104,6 +118,18 @@ export function summaryQualityIssues(
     issues.push(
       "Регулярность нельзя называть хорошей или регулярной при частоте ниже 1 в неделю или перерыве от 21 дня.",
     )
+  }
+  if (
+    observationDays > 0 && observationDays < 14 &&
+    /(?:данных\s+(?:пока\s+)?мало|недостаточно\s+данных|нельзя\s+оценить)/i.test(combinedConsistency)
+  ) {
+    issues.push("Короткий период всё равно должен содержать численную оценку текущего ритма.")
+  }
+  if (
+    observationDays > 0 && observationDays < 14 &&
+    !/\d/.test(combinedConsistency)
+  ) {
+    issues.push("Для короткого периода укажи число тренировок или текущую частоту.")
   }
 
   const goal = isRecord(trainingData) ? trainingData.goal : null
@@ -133,15 +159,25 @@ export function summaryQualityIssues(
     )
   })
 
+  const headlineText = [trainer.headline, client.headline]
+    .filter((item): item is string => typeof item === "string")
+  if (changedExercises.length > 0) {
+    for (const headline of headlineText) {
+      const normalized = headline.toLocaleLowerCase("ru")
+      const namesExercise = changedExercises.some((exercise) =>
+        typeof exercise.name === "string" && normalized.includes(exerciseNameKey(exercise.name))
+      )
+      if (!/\d/.test(headline) || !namesExercise || vagueHeadline.test(headline)) {
+        issues.push("Headline должен называть конкретное упражнение и подтверждённое число, а не общий прогресс.")
+        break
+      }
+    }
+  }
+
   if (changedExercises.length >= 2 && changedExercises.length <= 4) {
     for (const exercise of changedExercises) {
       if (typeof exercise.name !== "string") continue
-      const firstWord = exercise.name.toLocaleLowerCase("ru")
-        .split(/[^а-яёa-z0-9]+/i)
-        .find(Boolean) ?? ""
-      const nameKey = firstWord.length > 6
-        ? firstWord.slice(0, -2)
-        : firstWord
+      const nameKey = exerciseNameKey(exercise.name)
       const trainerMatches = trainerProgress.filter((item) =>
         item.toLocaleLowerCase("ru").includes(nameKey)
       ).length
@@ -154,6 +190,13 @@ export function summaryQualityIssues(
         )
       }
     }
+  }
+
+  if (
+    Number.isFinite(longestGapDays) && longestGapDays < 7 &&
+    trainerAttention.some((item) => /(?:перерыв|без тренировок|стабильност)/i.test(item))
+  ) {
+    issues.push("Обычный перерыв короче 7 дней сам по себе не требует внимания тренера.")
   }
 
   return [...new Set(issues)]
