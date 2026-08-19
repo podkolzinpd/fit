@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   getYandexIdPilotConfig,
+  isAssistantNavPilotEnabled,
   isTodayStartRedesignEnabled,
   isWearablesPilotEnabled,
   trainerHomePath,
@@ -19,6 +20,54 @@ describe('today start redesign flag', () => {
     vi.stubEnv('VITE_TODAY_START_REDESIGN', 'false')
     expect(isTodayStartRedesignEnabled()).toBe(false)
     expect(trainerHomePath()).toBe('/clients')
+  })
+})
+
+describe('assistant nav pilot flag', () => {
+  it('is disabled when the enabled flag is missing or not exactly "true", even for an allowlisted user', () => {
+    vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', '')
+    vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'trainer-1')
+    expect(isAssistantNavPilotEnabled('trainer-1')).toBe(false)
+    vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'TRUE')
+    expect(isAssistantNavPilotEnabled('trainer-1')).toBe(false)
+    vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', '1')
+    expect(isAssistantNavPilotEnabled('trainer-1')).toBe(false)
+  })
+
+  it('is enabled for an allowlisted user when the flag is exactly "true"', () => {
+    vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
+    vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'trainer-1,trainer-2')
+    expect(isAssistantNavPilotEnabled('trainer-1')).toBe(true)
+  })
+
+  it('is disabled for a user outside the allowlist', () => {
+    vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
+    vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'trainer-1,trainer-2')
+    expect(isAssistantNavPilotEnabled('trainer-3')).toBe(false)
+  })
+
+  it('is disabled for everyone when the allowlist is empty or missing', () => {
+    vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
+    vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', '')
+    expect(isAssistantNavPilotEnabled('trainer-1')).toBe(false)
+  })
+
+  it('trims whitespace and drops empty allowlist entries', () => {
+    vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
+    vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', ' , trainer-1 , ,trainer-2, ')
+    expect(isAssistantNavPilotEnabled('trainer-1')).toBe(true)
+    expect(isAssistantNavPilotEnabled('trainer-2')).toBe(true)
+    expect(isAssistantNavPilotEnabled('')).toBe(false)
+  })
+
+  it('does not leak access between users and stays independent from the wearables allowlist', () => {
+    vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
+    vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'trainer-1')
+    vi.stubEnv('VITE_WEARABLES_ENABLED', 'true')
+    vi.stubEnv('VITE_WEARABLES_PILOT_USER_IDS', 'client-9')
+    expect(isAssistantNavPilotEnabled('trainer-1')).toBe(true)
+    expect(isAssistantNavPilotEnabled('client-9')).toBe(false)
+    expect(isWearablesPilotEnabled('trainer-1')).toBe(false)
   })
 })
 
