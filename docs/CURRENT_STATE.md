@@ -5,7 +5,7 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-20
-Проверенный базовый `main`: `e56a7ed` (`fix(yandex): verify revision identity grants (#473)`)
+Проверенный базовый `main`: `e136c06` (`YAFIT-319: считать Progress по реальному периоду (#474)`)
 
 ## Активная работа
 
@@ -15,11 +15,9 @@
   перед API revision, private smoke и rollback. `#468` обходит известный сбой
   `DeployRevision` Terraform provider через официальный REST API, строит запрос
   только из reviewed plan JSON и требует отсутствие container drift после
-  refresh. `#472` исправил timeout, а `#473` добавил прямые `iam.serviceAccounts.user` bindings. Run `32308441654` подтвердил их,
-  переиспользовал образ и остановился на HTTP 403 при создании migration
-  revision. В каталоге нет рекомендованного folder-level
-  `iam.serviceAccounts.user`; текущая ветка фиксирует owner-managed bootstrap и диагностику 403. Миграция `000004`, API revision и
-  production cutover не применены.
+  refresh. `#473` добавил прямые `iam.serviceAccounts.user` bindings; run
+  `32308441654` подтвердил их, но получил HTTP 403. В каталоге нет явного
+  folder-level grant; ветка фиксирует bootstrap и диагностику. Миграция `000004`, API revision и cutover не применены.
 - Функциональный MVP признан достаточным для системной фазы удобства. Аудит
   `#420` зафиксировал P0/P1/P2; навигационная ясность завершена в `#421`,
   информационная архитектура Trainer Progress — в `#423`, visual regression
@@ -28,9 +26,10 @@
   фаза P0/P1 закрыта финальной приёмкой `YAFIT-316`; desktop shell тренера
   отложен пользователем и не является следующей автоматической задачей.
 - Пользователь продолжает продуктовую полировку по одному выбранному экрану за
-  раз: отдельные ветка/PR/CI/production-проверка, без автоматического перехода
-  к следующему экрану. Главные страницы клиента и тренера сохраняются без
-  изменений, пока пользователь отдельно не попросит их менять.
+  раз: отдельные ветка/PR/CI/production-проверка. Для согласованного плана
+  Progress разрешён последовательный переход к следующей задаче только после
+  полного завершения предыдущего PR. Главные страницы клиента и тренера
+  сохраняются без изменений.
 - Тёмная палитра из Figma-макета «Фит» (node `116-4449`) перенесена в набор
   токенов `theme-dark-pilot` и закрыта default-off allowlist по образцу Apple
   Health (`VITE_DARK_THEME_PILOT_ENABLED` + `VITE_DARK_THEME_PILOT_USER_IDS`,
@@ -41,6 +40,10 @@
 
 ## Последняя проверенная продуктовая точка
 
+- Отдельная серия улучшений Progress идёт по согласованному плану. Первый блок исправляет доступность
+  горизонтов 1/3/6 месяцев и считает регулярность по реальному периоду от первой
+  завершённой тренировки; полный план сохранён в
+  `docs/design/PROGRESS_SCREEN_PLAN_2026-08-20.md`.
 - После `#461` сохранённый план показывает компактный список упражнений и
   раскрываемые подходы без потери блоков и интервалов. Строка упражнения во
   всех режимах просмотра состоит из спокойного названия со стрелкой и одной
@@ -72,11 +75,9 @@
 
 ## Последние проверки
 
-- `#473`: GitHub проверки и Vercel прошли. Stage run `32308441654` прошёл OIDC,
-  validate, plan/policy, три прямых identity bindings и переиспользование
-  образа. REST вернул HTTP 403 на `DeployRevision`; миграция и API не
-  запускались. Официальный CI/CD-сценарий Yandex назначает deployer роль
-  `iam.serviceAccounts.user` на каталог, чего в stage нет.
+- `#473`: stage run `32308441654` прошёл OIDC, plan/policy, три прямых identity
+  bindings и переиспользование образа, затем получил 403 на `DeployRevision`.
+  Миграция/API не запускались; явного folder-level grant в stage нет.
 - `#454`: GitHub migration-safety/app/database/yandex-database/e2e и Vercel
   прошли. Локально прошли `npm run check`, `npm run local:verify`, повторный
   запуск pending-миграций и smoke `/health`, `/ready`, frontend. Обычный dev не
@@ -84,13 +85,11 @@
 
 ## Ближайший roadmap
 
-1. Назначить deployer явный folder-level `iam.serviceAccounts.user`, слить
-   bootstrap/diagnostics PR и выполнить один reviewed stage delivery с уже
-   сохранённым образом: migration revision, миграция `000004`, private auth API
-   revision и smoke; production frontend не переключать.
-2. Продолжать UI-полировку только с экрана, который явно выберет пользователь;
-   не собирать несколько экранов в один PR. Desktop shell тренера и P2
-   отложены и без нового прямого решения не начинаются.
+1. Назначить deployer folder-level `iam.serviceAccounts.user`, слить bootstrap
+   PR и выполнить reviewed migration/API stage delivery без frontend cutover.
+2. Завершить оставшиеся блоки Progress из
+   `docs/design/PROGRESS_SCREEN_PLAN_2026-08-20.md`, по одному PR и с полной
+   проверкой каждого до перехода дальше.
 
 Ручной беговой MVP `YAFIT-300/301/307/302/303` завершён. Актуальный UX/UI-план
 и отложенные фичи находятся в `docs/design/PRODUCT_USABILITY_AUDIT_2026-08-18.md`

@@ -43,7 +43,7 @@ export function TrainerProgressOverviewContent({ week, summary }: {
       <span>Измеримый прогресс</span>
       <strong>{summary
         ? formatSummaryText(summary.trainer.headline)
-        : 'ИИ-анализ за 6 месяцев ещё не создан'}</strong>
+        : 'ИИ-анализ за последний месяц ещё не создан'}</strong>
       <p>{summary ? 'По подтверждённым завершённым тренировкам' : 'Создать его можно в подробном анализе'}</p>
     </article>
     <article className={attention.length > 0 ? 'needs-attention' : 'is-clear'}>
@@ -69,7 +69,7 @@ export function TrainerProgressOverviewCard({ clientId }: { clientId: string }) 
     queryFn: () => trainingSummariesRepository.listForTrainer(clientId),
   })
   const week = regularity.data?.find((item) => item.period === 'week')
-  const summary = summaryPeriodMatch(summaries.data ?? [], '6m', today)
+  const summary = summaryPeriodMatch(summaries.data ?? [], '1m', today)
   const loading = regularity.isLoading || summaries.isLoading
   const error = regularity.error ?? summaries.error
 

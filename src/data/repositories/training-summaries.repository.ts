@@ -115,6 +115,11 @@ function fromPublished(row: PublishedRows[number]): PublishedTrainingSummary {
 }
 
 export const trainingSummariesRepository = {
+  async firstCompletedWorkoutDate(clientId: string) {
+    const result = await trainingSummaryQueries.firstCompletedWorkoutDate(clientId)
+    if (result.error) throw repositoryError(result.error)
+    return result.data?.workout_date ? localDate(result.data.workout_date) : null
+  },
   async listForTrainer(clientId: string): Promise<TrainingSummary[]> {
     const [internal, published] = await Promise.all([
       trainingSummaryQueries.listInternal(clientId),

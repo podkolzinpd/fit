@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { goalsRepository } from '../../data/repositories/goals.repository'
 import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
@@ -15,14 +15,15 @@ import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { ClientProgressGoalSection } from './ClientProgressGoalSection'
 import { formatSummaryText, formatWorkoutsPerWeek, progressMetricNoun } from './summary-format'
-import { SUMMARY_PERIODS, summaryPeriodMatch, summaryPeriodRange, type SummaryPeriod } from './summary-period'
+import { availableSummaryPeriods, SUMMARY_PERIODS, summaryPeriodMatch, summaryPeriodRange, type SummaryPeriod } from './summary-period'
 
-function PeriodTabs({ value, onChange }: {
+function PeriodTabs({ value, available, onChange }: {
   value: SummaryPeriod
+  available: readonly SummaryPeriod[]
   onChange: (period: SummaryPeriod) => void
 }) {
   return <div className="ai-progress-periods" aria-label="Период анализа">
-    {SUMMARY_PERIODS.map((period) => <button
+    {SUMMARY_PERIODS.filter((period) => available.includes(period.key)).map((period) => <button
       type="button"
       key={period.key}
       className={period.key === value ? 'active' : ''}
@@ -67,11 +68,19 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
   const today = todayInTimeZone(actor?.timezone)
   const timeZone = normalizeTimeZone(actor?.timezone)
   const queryClient = useQueryClient()
-  const [period, setPeriod] = useState<SummaryPeriod>('6m')
+  const [period, setPeriod] = useState<SummaryPeriod>('1m')
+  const firstWorkout = useQuery({
+    queryKey: ['training-summary-first-workout', clientId],
+    queryFn: () => trainingSummariesRepository.firstCompletedWorkoutDate(clientId),
+  })
   const query = useQuery({
     queryKey: ['training-summaries', 'trainer', clientId],
     queryFn: () => trainingSummariesRepository.listForTrainer(clientId),
   })
+  const availablePeriods = availableSummaryPeriods(firstWorkout.data, today, query.data)
+  useEffect(() => {
+    if (!availablePeriods.includes(period)) setPeriod('1m')
+  }, [availablePeriods, period])
   const summary = summaryPeriodMatch(query.data ?? [], period, today)
   const range = summaryPeriodRange(period, today)
   const generate = useMutation({
@@ -88,11 +97,11 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
 
   return <section className="ai-progress-card" aria-label="ИИ-анализ тренировок">
     <SummaryHeader published={summary?.published} />
-    <PeriodTabs value={period} onChange={setPeriod} />
+    <PeriodTabs value={period} available={availablePeriods} onChange={setPeriod} />
     <AsyncView
-      loading={query.isLoading}
-      error={query.error}
-      onRetry={() => void query.refetch()}
+      loading={query.isLoading || firstWorkout.isLoading}
+      error={query.error ?? firstWorkout.error}
+      onRetry={() => void Promise.all([query.refetch(), firstWorkout.refetch()])}
     >
       {summary
         ? <TrainerSummaryContent
@@ -239,14 +248,19 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
   const timeZone = normalizeTimeZone(actor?.timezone)
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState<SummaryPeriod>('1m')
+  const firstWorkout = useQuery({
+    queryKey: ['training-summary-first-workout', clientId],
+    queryFn: () => trainingSummariesRepository.firstCompletedWorkoutDate(clientId),
+  })
   const query = useQuery({
     queryKey: ['training-summaries', 'client', clientId],
     queryFn: () => trainingSummariesRepository.listForClient(clientId),
   })
-  const summary = useMemo(
-    () => summaryPeriodMatch(query.data ?? [], period, today),
-    [query.data, period, today],
-  )
+  const availablePeriods = availableSummaryPeriods(firstWorkout.data, today, query.data)
+  useEffect(() => {
+    if (!availablePeriods.includes(period)) setPeriod('1m')
+  }, [availablePeriods, period])
+  const summary = summaryPeriodMatch(query.data ?? [], period, today)
   const goal = useQuery({
     queryKey: ['client-goal', clientId],
     queryFn: () => goalsRepository.get(clientId),
@@ -263,8 +277,12 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
 
   return <section className="ai-progress-card client-progress-card" aria-label="Прогресс тренировок">
     <SummaryHeader client />
-    <PeriodTabs value={period} onChange={setPeriod} />
-    <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
+    <PeriodTabs value={period} available={availablePeriods} onChange={setPeriod} />
+    <AsyncView
+      loading={query.isLoading || firstWorkout.isLoading}
+      error={query.error ?? firstWorkout.error}
+      onRetry={() => void Promise.all([query.refetch(), firstWorkout.refetch()])}
+    >
       {summary ? <ClientSummaryContent
         summary={summary}
         goal={goal.data}

@@ -16,11 +16,27 @@ export function summaryPeriodRange(key: SummaryPeriod, end: LocalDate): {
   return { start: addDays(addMonths(end, -months), 1), end }
 }
 
+export function availableSummaryPeriods(
+  firstCompletedWorkoutDate: LocalDate | null | undefined,
+  today: LocalDate,
+  existingSummaries: ReadonlyArray<{ periodStart: LocalDate; periodEnd: LocalDate }> = [],
+): SummaryPeriod[] {
+  const available = new Set<SummaryPeriod>(['1m'])
+  if (firstCompletedWorkoutDate) {
+    if (firstCompletedWorkoutDate < summaryPeriodRange('1m', today).start) available.add('3m')
+    if (firstCompletedWorkoutDate < summaryPeriodRange('3m', today).start) available.add('6m')
+  }
+  for (const period of SUMMARY_PERIODS) {
+    if (summaryPeriodMatch(existingSummaries, period.key, today)) available.add(period.key)
+  }
+  return SUMMARY_PERIODS.map((period) => period.key).filter((key) => available.has(key))
+}
+
 // Сводку сопоставляем с выбранным периодом по длине окна, а не по точному
 // совпадению дат: границы БД и приложения могут сдвинуться на несколько дней
 // из-за таймзоны или смены месяца.
 export function summaryPeriodMatch<T extends { periodStart: LocalDate; periodEnd: LocalDate }>(
-  values: T[],
+  values: readonly T[],
   key: SummaryPeriod,
   today: LocalDate,
 ): T | undefined {
