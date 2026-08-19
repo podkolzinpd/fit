@@ -163,6 +163,10 @@ Data-state behavior follows one contract on the protected screens:
   `SaveStatus`; successful actions that navigate use the destination screen as
   their confirmation.
 
+Exercise media uses one `ExerciseImage` contract in the picker and exercise
+detail: a square Fit surface, `object-fit: contain` so technique is not cropped,
+and the same neutral exercise placeholder for missing or failed media.
+
 ## Icons
 
 The primary icon language is a small set of hand-authored, outline SVGs in

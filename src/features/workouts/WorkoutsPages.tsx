@@ -17,7 +17,7 @@ import {
   type LocalDate,
 } from '../../shared/local-date'
 import { AsyncView, Field, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
-import { ExercisePicker, recentExercisesForClient, useExerciseCatalog } from '../exercises'
+import { ExerciseImage, ExercisePicker, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { clientWorkoutAuthorLabel, ClientPicker, type ClientPickerSelection } from '../clients'
 import { VoiceNoteField } from '../voice-input'
 import { QuickWorkoutEntry } from './QuickWorkoutEntry'
@@ -1570,7 +1570,7 @@ export function ExerciseHistoryPage() {
   return <Page title="Упражнение" back={`/workouts/${workoutId}`}>
     <AsyncView loading={current.isLoading || history.isLoading} error={current.error ?? history.error} onRetry={() => { void current.refetch(); void history.refetch() }}>
       <section className="exercise-card-head card">
-        {meta?.imageUrl && <img className="exercise-card-image" src={meta.imageUrl} alt={name} />}
+        <ExerciseImage src={meta?.imageUrl} alt={name} variant="detail" />
         <div className="exercise-card-meta">
           <h2>{name}</h2>
           {meta?.equipment && <p><span className="muted">Оборудование:</span> {meta.equipment}</p>}

@@ -145,6 +145,12 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByRole('heading', { name: 'Тип тренировки' })).toBeVisible()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await expect(page.getByRole('button', { name: /Присед со штангой/ }).first()).toBeVisible()
+  const firstExerciseImage = page.locator('.picker-list .exercise-image').first()
+  await expect(firstExerciseImage).toBeVisible()
+  await expect(firstExerciseImage.locator('img')).toHaveCSS('object-fit', 'contain')
+  const firstExerciseImageBox = await firstExerciseImage.boundingBox()
+  expect(firstExerciseImageBox?.width).toBe(firstExerciseImageBox?.height)
+  expect(firstExerciseImageBox?.width).toBeGreaterThanOrEqual(48)
   // Список упражнений маскируем: миниатюры-фото волатильны и различаются по ОС.
   // Под визуальным контролем — search-first хром пикера.
   await expect(page).toHaveScreenshot('exercise-picker-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03, mask: [page.locator('.picker-list')] })
@@ -535,7 +541,7 @@ test('замена упражнения: в форме плана и в live', a
   await expect(page.getByRole('menuitem', { name: 'Заменить' })).toHaveCount(0)
 })
 
-test('карточка упражнения: шапка с оборудованием/мышцами и табы', async ({ page }) => {
+test('карточка упражнения: шапка с оборудованием/мышцами и табы', async ({ page }, testInfo) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -567,6 +573,12 @@ test('карточка упражнения: шапка с оборудован�
   await page.getByRole('link', { name: /Тяга штанги в наклоне/ }).first().click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   // Шапка: оборудование и группы мышц из каталога.
+  const detailExerciseImage = page.locator('.exercise-image-detail')
+  await expect(detailExerciseImage.locator('img')).toHaveCSS('object-fit', 'contain')
+  const detailExerciseImageBox = await detailExerciseImage.boundingBox()
+  expect(detailExerciseImageBox?.width).toBe(detailExerciseImageBox?.height)
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('exercise-image-detail.png'), fullPage: true })
   await expect(page.getByText('Оборудование: Штанга')).toBeVisible()
   await expect(page.getByText(/Основная группа мышц:/)).toBeVisible()
   // Табы: Статистика (по умолчанию), История, Техника.
