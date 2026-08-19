@@ -76,6 +76,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await page.goto(workoutUrl)
   await expect(page.getByText(review, { exact: true })).toBeVisible()
   const trainerReviewCard = page.locator('.workout-review').filter({ has: page.getByRole('heading', { name: 'Отзыв тренера' }) })
+  await expect(trainerReviewCard).toHaveClass(/workout-review-readonly/)
   await expect(trainerReviewCard.getByLabel('Реакция 🔥', { exact: true })).toBeVisible()
   await expect(trainerReviewCard.getByRole('button')).toHaveCount(0)
   const clientComment = 'После второго подхода стало тяжело, обсудим вес на следующей тренировке.'
@@ -86,6 +87,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await feedbackCard.getByRole('button', { name: 'Да', exact: true }).click()
   await page.getByRole('textbox', { name: 'Пояснение о дискомфорте', exact: true }).fill(clientComment)
   await feedbackCard.getByRole('button', { name: 'Отправить отзыв', exact: true }).click()
+  await expect(feedbackCard).toHaveClass(/workout-review-readonly/)
   await expect(feedbackCard.getByText('Спасибо, тренер увидит ваш отзыв.', { exact: false })).toBeVisible()
   await expect(feedbackCard.getByText('RPE 8/10', { exact: true })).toBeVisible()
   await expect(feedbackCard.getByText(clientComment, { exact: true })).toBeVisible()
@@ -156,11 +158,14 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await page.goto(ownWorkoutUrl)
   await expect(page.getByText('Создано клиентом · только просмотр', { exact: true })).toBeVisible()
   const ownTrainerReviewCard = page.locator('.workout-review').filter({ has: page.getByRole('heading', { name: 'Отзыв тренера' }) })
+  await expect(ownTrainerReviewCard).toHaveClass(/workout-review-readonly/)
   await ownTrainerReviewCard.getByRole('button', { name: 'Добавить', exact: true }).click()
+  await expect(ownTrainerReviewCard).not.toHaveClass(/workout-review-readonly/)
   await ownTrainerReviewCard.getByRole('button', { name: '💪', exact: true }).click()
   const ownTrainerReview = 'Сильная самостоятельная работа — сохраняй этот темп.'
   await ownTrainerReviewCard.getByRole('textbox', { name: 'Отзыв тренера', exact: true }).fill(ownTrainerReview)
   await ownTrainerReviewCard.getByRole('button', { name: 'Отправить ответ', exact: true }).click()
+  await expect(ownTrainerReviewCard).toHaveClass(/workout-review-readonly/)
   await expect(ownTrainerReviewCard.getByLabel('Реакция 💪', { exact: true })).toBeVisible()
   await expect(ownTrainerReviewCard.getByText(ownTrainerReview, { exact: true })).toBeVisible()
 
