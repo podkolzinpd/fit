@@ -5,7 +5,7 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-20
-Проверенный базовый `main`: `0b2ee0d` (`Тёмная палитра из Figma за индивидуальным default-off пилотом (#470)`)
+Проверенный базовый `main`: `e56a7ed` (`fix(yandex): verify revision identity grants (#473)`)
 
 ## Активная работа
 
@@ -15,12 +15,11 @@
   перед API revision, private smoke и rollback. `#468` обходит известный сбой
   `DeployRevision` Terraform provider через официальный REST API, строит запрос
   только из reviewed plan JSON и требует отсутствие container drift после
-  refresh. `#472` исправил формат timeout. Run `32304255488` сформировал
-  корректный REST request, переиспользовал образ и остановился на HTTP 403 при
-  создании migration revision. Миграция `000004`, API revision и production
-  cutover не применены. Аудит выявил отсутствующий `iam.serviceAccounts.user`
-  deploy-аккаунта на самом себе; текущая ветка добавляет узкий grant и проверяет
-  все три identity binding до registry, образов и миграций.
+  refresh. `#472` исправил timeout, а `#473` добавил прямые `iam.serviceAccounts.user` bindings. Run `32308441654` подтвердил их,
+  переиспользовал образ и остановился на HTTP 403 при создании migration
+  revision. В каталоге нет рекомендованного folder-level
+  `iam.serviceAccounts.user`; текущая ветка фиксирует owner-managed bootstrap и диагностику 403. Миграция `000004`, API revision и
+  production cutover не применены.
 - Функциональный MVP признан достаточным для системной фазы удобства. Аудит
   `#420` зафиксировал P0/P1/P2; навигационная ясность завершена в `#421`,
   информационная архитектура Trainer Progress — в `#423`, visual regression
@@ -73,11 +72,11 @@
 
 ## Последние проверки
 
-- `#472`: GitHub проверки и Vercel прошли. Stage run `32304255488` прошёл OIDC,
-  validate, plan/policy, scoped runtime IAM и переиспользование образа; REST
-  вернул HTTP 403 на `DeployRevision`. Миграции и API не изменились. Официальная
-  диагностика Yandex требует от service-account caller права использовать
-  самого себя; в stage binding отсутствовал.
+- `#473`: GitHub проверки и Vercel прошли. Stage run `32308441654` прошёл OIDC,
+  validate, plan/policy, три прямых identity bindings и переиспользование
+  образа. REST вернул HTTP 403 на `DeployRevision`; миграция и API не
+  запускались. Официальный CI/CD-сценарий Yandex назначает deployer роль
+  `iam.serviceAccounts.user` на каталог, чего в stage нет.
 - `#454`: GitHub migration-safety/app/database/yandex-database/e2e и Vercel
   прошли. Локально прошли `npm run check`, `npm run local:verify`, повторный
   запуск pending-миграций и smoke `/health`, `/ready`, frontend. Обычный dev не
@@ -85,9 +84,10 @@
 
 ## Ближайший roadmap
 
-1. Слить финальный IAM preflight PR и выполнить один reviewed stage delivery с
-   уже сохранённым образом: migration revision, миграция `000004`, private auth
-   API revision и smoke; production frontend не переключать.
+1. Назначить deployer явный folder-level `iam.serviceAccounts.user`, слить
+   bootstrap/diagnostics PR и выполнить один reviewed stage delivery с уже
+   сохранённым образом: migration revision, миграция `000004`, private auth API
+   revision и smoke; production frontend не переключать.
 2. Продолжать UI-полировку только с экрана, который явно выберет пользователь;
    не собирать несколько экранов в один PR. Desktop shell тренера и P2
    отложены и без нового прямого решения не начинаются.

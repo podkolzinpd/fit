@@ -67,12 +67,13 @@ Identity Federation configured as follows:
 The service account needs the existing Terraform resource-management roles,
 `container-registry.images.pusher`, `logging.editor`, Connection Manager
 metadata read access and permission to update Serverless Container IAM
-bindings. Terraform grants this same account `serverless.containers.invoker`
-on the private migration and API containers and `iam.serviceAccounts.user`
-directly on itself and the two runtime service accounts. Yandex checks both
-permissions when a service account creates a revision with an attached runtime
-identity. These grants are deliberately scoped to three service accounts
-instead of the whole folder.
+bindings. A folder owner must grant this account an explicit
+`iam.serviceAccounts.user` role on the stage folder. This one-time bootstrap
+follows Yandex Cloud's documented CI/CD setup and is intentionally outside the
+Terraform stack: the deployer must not be able to expand its own folder
+permissions. Terraform additionally grants `iam.serviceAccounts.user` directly
+on the deployer itself and the two runtime service accounts, and grants
+`serverless.containers.invoker` on the private migration and API containers.
 
 Keep one dedicated static S3 key for the Terraform state backend. This is not a
 Yandex API authorized-key JSON and is not used for provider authentication.
@@ -160,8 +161,9 @@ frontend dependency tree and can exhaust the local Podman VM.
 
 The approved workflow verifies:
 
-1. the deployer has an effective `iam.serviceAccounts.user` binding on itself
-   and both runtime identities before any image work;
+1. the deployer has direct `iam.serviceAccounts.user` bindings on itself and
+   both runtime identities before any image work; `DeployRevision` also fails
+   closed if the one-time folder grant is missing;
 2. migration response is `200` with a generic migrated result;
 3. `GET /health` returns `200 {"status":"ok"}`;
 4. `GET /ready` returns `200 {"status":"ready"}`;

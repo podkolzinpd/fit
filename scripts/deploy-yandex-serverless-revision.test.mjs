@@ -154,6 +154,8 @@ test('reports the failed API operation and safe request identifier', () => {
       headers,
     }),
     'Yandex Cloud DeployRevision request returned HTTP 403: Permission denied '
-      + '(code: 7, request ID: request-123)',
+      + '(code: 7, request ID: request-123) Verify that the deploy service '
+      + 'account has an explicit iam.serviceAccounts.user role on the stage '
+      + 'folder; if it does, contact Yandex Cloud support with the request ID.',
   )
 })
