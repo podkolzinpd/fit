@@ -4,7 +4,7 @@ import { progressRepository } from '../../data/repositories/progress.repository'
 import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
 import type { TrainingSummary, WorkoutRegularity } from '../../shared/domain'
 import { todayInTimeZone } from '../../shared/local-date'
-import { AsyncView } from '../../shared/ui'
+import { AsyncView, Coachmark } from '../../shared/ui'
 import { formatSummaryText } from './summary-format'
 import { summaryPeriodMatch } from './summary-period'
 
@@ -76,7 +76,10 @@ export function TrainerProgressOverviewCard({ clientId }: { clientId: string }) 
   return <section className="trainer-progress-overview-card" aria-labelledby="trainer-progress-overview-title">
     <header>
       <p className="eyebrow">ОБЗОР</p>
-      <h2 id="trainer-progress-overview-title">Главное по клиенту</h2>
+      <Coachmark id="trainer-progress-overview-2026-08" userId={actor?.userId}
+        title="Progress обновился" description="Теперь сразу видно регулярность, измеримый прогресс и на что обратить внимание — без лишних переходов.">
+        <h2 id="trainer-progress-overview-title">Главное по клиенту</h2>
+      </Coachmark>
       <p>Сначала выводы для решения, затем подробности и служебные действия.</p>
     </header>
     <AsyncView loading={loading} error={error} onRetry={() => void Promise.all([regularity.refetch(), summaries.refetch()])}>

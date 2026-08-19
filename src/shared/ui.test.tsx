@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
-import { AsyncView, EmptyState, Field, OverflowMenu, Page, SaveStatus, StatePanel, Switch, useConfirm } from './ui'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { isCoachmarkSeen } from './coachmarks'
+import { AsyncView, Coachmark, EmptyState, Field, OverflowMenu, Page, SaveStatus, StatePanel, Switch, useConfirm } from './ui'
 
 describe('AsyncView', () => {
   it('показывает loading, empty и content состояния', () => {
@@ -84,6 +85,49 @@ describe('system actions', () => {
     fireEvent.click(trigger)
     fireEvent.click(screen.getByRole('menuitem', { name: 'Удалить' }))
     expect(action).toHaveBeenCalledOnce()
+  })
+})
+
+describe('Coachmark', () => {
+  beforeEach(() => {
+    const values = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+    })
+  })
+
+  it('показывает подсказку один раз и запоминает per userId после закрытия', () => {
+    const { unmount } = render(<Coachmark id="progress-overview" userId="user-1" title="Новое" description="Стало иначе">
+      <h2>Заголовок</h2>
+    </Coachmark>)
+    expect(screen.getByRole('status')).toHaveTextContent('Новое')
+    fireEvent.click(screen.getByRole('button', { name: 'Понятно' }))
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(isCoachmarkSeen('user-1', 'progress-overview')).toBe(true)
+    unmount()
+
+    render(<Coachmark id="progress-overview" userId="user-1" title="Новое" description="Стало иначе">
+      <h2>Заголовок</h2>
+    </Coachmark>)
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('закрывается по Escape и не показывает уже увиденный id другому монтированию', () => {
+    render(<Coachmark id="progress-overview" userId="user-2" title="Новое" description="Стало иначе">
+      <h2>Заголовок</h2>
+    </Coachmark>)
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(isCoachmarkSeen('user-2', 'progress-overview')).toBe(true)
+  })
+
+  it('всегда рендерит children, даже когда подсказка не показывается', () => {
+    render(<Coachmark id="progress-overview" userId="user-3" title="Новое" description="Стало иначе">
+      <h2>Заголовок карточки</h2>
+    </Coachmark>)
+    expect(screen.getByRole('heading', { name: 'Заголовок карточки' })).toBeVisible()
   })
 })
 

@@ -14,7 +14,18 @@ github_response=$(curl --fail --silent --show-error \
 github_token=$(jq -er '.value' <<<"$github_response")
 
 echo "::add-mask::$github_token"
-exchange_response=$(curl --fail --silent --show-error \
+oidc_claims=$(node -e '
+  let token = ""
+  process.stdin.setEncoding("utf8")
+  process.stdin.on("data", (chunk) => { token += chunk })
+  process.stdin.on("end", () => {
+    const claims = JSON.parse(Buffer.from(token.trim().split(".")[1], "base64url"))
+    process.stdout.write(JSON.stringify({ iss: claims.iss, aud: claims.aud, sub: claims.sub }))
+  })
+' <<<"$github_token")
+printf 'GitHub OIDC claims: %s\n' "$oidc_claims"
+
+exchange_response=$(curl --silent --show-error \
   --request POST \
   --header 'Content-Type: application/x-www-form-urlencoded' \
   --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
@@ -23,7 +34,12 @@ exchange_response=$(curl --fail --silent --show-error \
   --data-urlencode "subject_token=$github_token" \
   --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
   https://auth.yandex.cloud/oauth/token)
-iam_token=$(jq -er '.access_token' <<<"$exchange_response")
+if ! iam_token=$(jq -er '.access_token' <<<"$exchange_response"); then
+  error_code=$(jq -r '.error // .code // "unknown_error"' <<<"$exchange_response")
+  error_description=$(jq -r '.error_description // .message // "No error description"' <<<"$exchange_response")
+  printf 'Yandex token exchange failed: %s: %s\n' "$error_code" "$error_description" >&2
+  exit 1
+fi
 
 echo "::add-mask::$iam_token"
 printf 'YC_TOKEN=%s\n' "$iam_token" >>"$GITHUB_ENV"

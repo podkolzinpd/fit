@@ -526,6 +526,27 @@ export function compactPlannedSetSummary(sets: readonly WorkoutSet[], showRpe = 
   return sets.length === 1 ? first : `${sets.length} × ${first}`
 }
 
+function setCountLabel(count: number): string {
+  const lastTwo = count % 100
+  const last = count % 10
+  if (lastTwo >= 11 && lastTwo <= 14) return 'подходов'
+  if (last === 1) return 'подход'
+  if (last >= 2 && last <= 4) return 'подхода'
+  return 'подходов'
+}
+
+// Карточка плана всегда получает короткий читаемый итог. Одинаковые подходы
+// сворачиваются полностью, у разных показываем первые два значения и оставляем
+// полный порядок в раскрываемом списке.
+export function compactPlannedSetOverview(sets: readonly WorkoutSet[], showRpe = false): string {
+  const compact = compactPlannedSetSummary(sets, showRpe)
+  if (compact) return compact
+  if (sets.length === 0) return 'Без подходов'
+  const lines = sets.map((set) => setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin, set.rpe, showRpe) || 'без значений')
+  const preview = lines.slice(0, 2).join(' · ')
+  return `${sets.length} ${setCountLabel(sets.length)} · ${preview}${lines.length > 2 ? ' · …' : ''}`
+}
+
 // Итог тренировки — это чтение факта, а не таблица для редактирования. Одинаковые
 // подтверждённые подходы сворачиваются в одну строку; разные остаются в порядке
 // выполнения, но без служебных номера и статуса каждой строки.

@@ -34,6 +34,10 @@ export function RecordIcon(props: IconProps) {
   return <Icon data-icon="record" {...props}><circle cx="12" cy="9" r="5.5" /><path d="m9 14-1 7 4-2 4 2-1-7M10 9l1.3 1.3L14.5 7" /></Icon>
 }
 
+export function HistoryIcon(props: IconProps) {
+  return <Icon data-icon="history" {...props}><path d="M3.5 12a8.5 8.5 0 1 0 2.2-5.7L3.5 8.5" /><path d="M3.5 4.5v4h4M12 7.5V12l3 2" /></Icon>
+}
+
 export function ProfileIcon(props: IconProps) {
   return <Icon data-icon="profile" {...props}><circle cx="12" cy="8" r="4" /><path d="M4.5 21c.6-4 3.2-6.3 7.5-6.3s6.9 2.3 7.5 6.3" /></Icon>
 }

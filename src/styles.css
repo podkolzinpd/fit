@@ -591,6 +591,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .overflow-item:hover { background: var(--secondary-hover) }
 .overflow-item.danger { color: var(--danger) }
 .overflow-item:disabled { opacity: .5; cursor: default }
+.coachmark-bubble { position: fixed; z-index: 20; width: min(280px, calc(100vw - 32px)); display: grid; gap: var(--space-1); padding: var(--card-padding); border: 1px solid var(--accent-border); border-radius: var(--radius-lg); background: var(--surface-elevated); box-shadow: 0 14px 40px #00000033 }
+.coachmark-bubble strong { font-size: var(--type-body-size); color: var(--fg-strong) }
+.coachmark-bubble p { margin: 0; color: var(--muted); font-size: var(--type-caption-size); line-height: var(--leading-body) }
+.coachmark-bubble button { justify-self: start; min-height: var(--control-height-standard); padding: var(--space-2) var(--space-4); border-radius: var(--radius-md) }
+.theme-light .coachmark-bubble { background: var(--surface-elevated) }
 .live-exercise-head { display: flex; align-items: center; justify-content: space-between; gap: 10px }
 .live-exercise-head h2, .live-exercise-head h3 { margin: 0; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere }
 .live-previous-result { margin:2px 0 0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
@@ -666,8 +671,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .planned-round-exercise { margin-bottom: 6px }
 .planned-round-exercise:last-child { margin-bottom: 0 }
 .planned-round-exercise-name { display: block; font-size: 13px; font-weight: 600; margin-bottom: 3px }
-.exercise-name-link { display: inline-flex; align-items: baseline; gap: 8px; text-decoration: none; color: var(--fg) }
-.exercise-name-hint { font-size: 12px; color: var(--accent-label); font-weight: 600 }
+.workout-detail-exercise-title { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:var(--space-2) }
+.workout-detail-exercise-title > strong { min-width:0; overflow-wrap:anywhere; font-size:17px; line-height:1.25 }
+.exercise-history-link { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:44px; margin:-10px -4px -8px 0; padding:0 4px; color:var(--secondary-label-fg); font-size:var(--text-sm); font-weight:var(--weight-semibold); line-height:1; text-decoration:none; white-space:nowrap }
+.exercise-history-link svg { width:16px; height:16px; flex:0 0 auto }
+.exercise-history-link:hover { color:var(--accent-strong) }
+.exercise-history-link:focus-visible { outline:3px solid var(--accent-ring); outline-offset:1px; border-radius:var(--radius-sm) }
 /* Приписка плана рядом с фактом (при расхождении) — тусклая. */
 .plan-note { color: var(--muted); font-size: 12px }
 .exercise header, .workout-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 12px; flex-wrap: nowrap }
@@ -743,6 +752,15 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-feedback-confirmation { margin:0; padding:10px 12px; border:1px solid var(--success-border); border-radius:12px; color:var(--success-fg); background:var(--success-surface); font-weight:var(--weight-semibold) }
 .workout-detail-page > .cards { gap: 8px }
 .workout-detail-page > .cards > .exercise { margin: 0; padding: 14px 16px; border-radius: 18px; box-shadow: var(--shadow-card) }
+.workout-detail-exercise-overview { display:flex; align-items:baseline; justify-content:space-between; gap:var(--space-3); margin:var(--section-gap) 0 var(--space-1); padding-bottom:var(--space-2); border-bottom:1px solid var(--border) }
+.workout-detail-exercise-overview p { margin:0; color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label) }
+.workout-detail-exercise-overview span { color:var(--secondary-label-fg); font-size:var(--text-sm); font-weight:var(--weight-semibold); text-align:right }
+.workout-detail-page > .planned-exercise-list { gap:0 }
+.workout-detail-page > .planned-exercise-list > .planned-detail-exercise { margin:0; padding:var(--space-3) 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
+.workout-detail-page > .planned-exercise-list > .planned-detail-exercise:first-child { padding-top:var(--space-2) }
+.workout-detail-page > .planned-exercise-list > .exercise-block.view { margin:0; padding:var(--space-3) 0 var(--space-1) var(--space-2); border:0; border-left:2px solid var(--neutral-current-border); border-radius:0; background:transparent; box-shadow:none; gap:0 }
+.workout-detail-page > .planned-exercise-list > .exercise-block.view .planned-detail-exercise { margin:0; padding:var(--space-2) 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
+.workout-detail-page > .planned-exercise-list > .exercise-block.view .planned-detail-exercise:last-child { border-bottom:0 }
 .workout-detail-page > .completed-exercise-list { gap:0 }
 .workout-detail-page > .completed-exercise-list > .completed-exercise { margin:0; padding:10px 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
 .workout-detail-page > .completed-exercise-list > .completed-exercise:first-child { padding-top:4px }
@@ -750,11 +768,14 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-page > .completed-exercise-list > .completed-exercise-block .block-badge { margin-bottom:2px }
 .workout-detail-page > .completed-exercise-list > .completed-exercise-block .completed-exercise { margin:0; padding:8px 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
 .workout-detail-page > .completed-exercise-list > .completed-exercise-block .completed-exercise:last-child { border-bottom:0 }
-.workout-detail-page .completed-exercise .exercise-name-link { font-size:17px; line-height:1.25 }
-.workout-detail-page .exercise-name-link { max-width: 100%; overflow-wrap: anywhere }
-.workout-detail-page .exercise-name-hint { flex: 0 0 auto }
 .workout-history-sets { display:grid; margin-top:8px; border-top:1px solid var(--hairline) }
-.planned-set-summary { display:flex; align-items:baseline; gap:8px; margin:8px 0 0; color:var(--muted); font-size:14px }
+.planned-exercise-details { margin-top:var(--space-1) }
+.planned-exercise-details > summary { min-height:var(--control-height-compact); display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:var(--space-2); color:var(--muted); cursor:pointer; list-style:none }
+.planned-exercise-details > summary::-webkit-details-marker { display:none }
+.planned-exercise-details > summary::after { content:'Подходы'; color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold) }
+.planned-exercise-details[open] > summary::after { content:'Скрыть' }
+.planned-exercise-details > summary:focus-visible { outline:3px solid var(--accent-ring); outline-offset:3px; border-radius:var(--radius-sm) }
+.planned-set-summary { margin:0; color:var(--muted); font-size:14px }
 .planned-set-summary span { font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase }
 .planned-set-summary strong { color:var(--fg); font-size:16px; line-height:1.25 }
 .completed-set-summary { margin:4px 0 0; color:var(--fg); font-size:16px; font-weight:700; line-height:1.35; overflow-wrap:anywhere }
@@ -1724,10 +1745,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   color:var(--secondary-label-fg);
   font-size:var(--text-sm);
 }
-.workout-focused-page .exercise-name-hint,
 .workout-focused-page .set-deviation,
 .workout-focused-page .set-rpe-field,
-.workout-detail-page .exercise-name-hint {
+.workout-detail-page .exercise-history-link {
   font-size:var(--text-sm);
 }
 @media (max-width: 360px) {
