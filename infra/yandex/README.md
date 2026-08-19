@@ -48,9 +48,11 @@ refreshes state and a second plan must show no container drift before remaining
 infrastructure changes can be applied.
 
 When `deployer_member` is set, Terraform grants that OIDC-backed service
-account `iam.serviceAccounts.user` only on the two runtime service accounts.
-Serverless Containers requires this scoped role to attach a runtime identity
-to a revision; a folder-wide impersonation grant is unnecessary.
+account `iam.serviceAccounts.user` on itself and the two runtime service
+accounts. Serverless Containers requires both self-use and runtime-identity
+attachment permission when the caller is a service account. The deployment
+workflow verifies all three grants through IAM before touching the registry or
+running a migration; a folder-wide impersonation grant is unnecessary.
 
 The exact bootstrap, migration and smoke-test sequence is documented in
 `docs/STAGE_DEPLOYMENT.md`.

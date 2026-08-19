@@ -17,11 +17,13 @@ After the one-time bootstrap, a release is performed only by
 3. GitHub exchanges its OIDC token for a short-lived Yandex Cloud IAM token.
    No authorized-key JSON is used by CI.
 4. Terraform applies the scoped runtime identity and secret access grants
-   before any revision is created and gives Yandex IAM time to propagate them.
-   The workflow derives an immutable image tag from the `services/api` Git tree
-   hash and checks it in Container Registry. Changes outside the API and retries
-   reuse the existing image; an API content change builds it once on the GitHub
-   runner and pushes it.
+   before any revision is created. A read-only preflight polls Yandex IAM until
+   the deployer can use itself and both runtime service accounts. A missing
+   grant or IAM authorization error stops the release before Container Registry,
+   image build and migrations. The workflow then derives an immutable image tag
+   from the `services/api` Git tree hash and checks it in Container Registry.
+   Changes outside the API and retries reuse the existing image; an API content
+   change builds it once on the GitHub runner and pushes it.
 5. The workflow converts the reviewed Terraform planned values into a
    Serverless Containers REST `DeployRevision` request and deploys the
    candidate image only to the private migration runner. `POST /migrate`
@@ -67,9 +69,10 @@ The service account needs the existing Terraform resource-management roles,
 metadata read access and permission to update Serverless Container IAM
 bindings. Terraform grants this same account `serverless.containers.invoker`
 on the private migration and API containers and `iam.serviceAccounts.user`
-directly on their two runtime service accounts. The latter is required to
-attach those identities to a revision and is deliberately not granted
-folder-wide.
+directly on itself and the two runtime service accounts. Yandex checks both
+permissions when a service account creates a revision with an attached runtime
+identity. These grants are deliberately scoped to three service accounts
+instead of the whole folder.
 
 Keep one dedicated static S3 key for the Terraform state backend. This is not a
 Yandex API authorized-key JSON and is not used for provider authentication.
@@ -157,10 +160,12 @@ frontend dependency tree and can exhaust the local Podman VM.
 
 The approved workflow verifies:
 
-1. migration response is `200` with a generic migrated result;
-2. `GET /health` returns `200 {"status":"ok"}`;
-3. `GET /ready` returns `200 {"status":"ready"}`;
-4. the API remains private and has no `system:allUsers` binding.
+1. the deployer has an effective `iam.serviceAccounts.user` binding on itself
+   and both runtime identities before any image work;
+2. migration response is `200` with a generic migrated result;
+3. `GET /health` returns `200 {"status":"ok"}`;
+4. `GET /ready` returns `200 {"status":"ready"}`;
+5. the API remains private and has no `system:allUsers` binding.
 
 Until a separate cutover is reviewed, do not change the frontend API URL,
 production Vercel variables or the existing Supabase path. The local Yandex ID

@@ -172,7 +172,19 @@ export function buildDeployRevisionRequest(values) {
   return request
 }
 
-async function requestJson(url, token, options = {}) {
+export function formatYandexCloudApiError({ operation, status, body, headers }) {
+  const requestId = headers?.get?.('x-request-id')
+    ?? headers?.get?.('x-server-trace-id')
+  const diagnostics = [
+    body?.code == null ? null : `code: ${String(body.code)}`,
+    requestId == null || requestId === '' ? null : `request ID: ${requestId}`,
+  ].filter(Boolean)
+  return `Yandex Cloud ${operation} returned HTTP ${status}: `
+    + `${body?.message ?? 'unknown error'}`
+    + (diagnostics.length === 0 ? '' : ` (${diagnostics.join(', ')})`)
+}
+
+async function requestJson(url, token, options = {}, operation = 'API request') {
   const response = await fetch(url, {
     ...options,
     headers: {
@@ -189,9 +201,12 @@ async function requestJson(url, token, options = {}) {
     body = { message: text.slice(0, 500) }
   }
   if (!response.ok) {
-    throw new Error(
-      `Yandex Cloud API returned HTTP ${response.status}: ${body.message ?? 'unknown error'}`,
-    )
+    throw new Error(formatYandexCloudApiError({
+      operation,
+      status: response.status,
+      body,
+      headers: response.headers,
+    }))
   }
   return body
 }
@@ -202,6 +217,8 @@ async function waitForOperation(operationId, token, timeoutMs = DEFAULT_TIMEOUT_
     const operation = await requestJson(
       `${OPERATIONS_API}/operations/${encodeURIComponent(operationId)}`,
       token,
+      {},
+      'operation poll',
     )
     if (operation.done) {
       if (operation.error) {
@@ -228,6 +245,7 @@ async function deployFromPlan({ planPath, address, token }) {
     `${CONTAINERS_API}/containers/v1/revisions:deploy`,
     token,
     { method: 'POST', body: JSON.stringify(request) },
+    'DeployRevision request',
   )
   requiredString(operation.id, 'operation id')
   const completed = await waitForOperation(operation.id, token)
@@ -246,6 +264,7 @@ async function rollback({ containerId, revisionId, token }) {
     `${CONTAINERS_API}/containers/v1/containers/${encodeURIComponent(containerId)}:rollback`,
     token,
     { method: 'POST', body: JSON.stringify({ revisionId }) },
+    'rollback request',
   )
   requiredString(operation.id, 'operation id')
   await waitForOperation(operation.id, token)
