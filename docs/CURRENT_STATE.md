@@ -4,8 +4,8 @@
 > После каждого подтверждённого merge заменяйте сведения ниже, не добавляйте
 > хронологию: полная история уже хранится в Git и Tracker.
 
-Обновлено: 2026-08-19
-Проверенный базовый `main`: `0f33ba8` (`fix(yandex): normalize revision execution timeout (#472)`)
+Обновлено: 2026-08-20
+Проверенный базовый `main`: `0b2ee0d` (`Тёмная палитра из Figma за индивидуальным default-off пилотом (#470)`)
 
 ## Активная работа
 
@@ -15,11 +15,12 @@
   перед API revision, private smoke и rollback. `#468` обходит известный сбой
   `DeployRevision` Terraform provider через официальный REST API, строит запрос
   только из reviewed plan JSON и требует отсутствие container drift после
-  refresh. Одобренный run `32299769664` прошёл plan/policy, применил scoped IAM,
-  один раз создал content-addressed образ и безопасно остановился до БД/API:
-  Terraform state вернул Go-duration `5m0s`, а REST требует protobuf-duration
-  `300s`. Текущая ветка добавляет эту конвертацию и regression tests. Миграция
-  `000004`, новая API revision и production cutover не применены.
+  refresh. `#472` исправил формат timeout. Run `32304255488` сформировал
+  корректный REST request, переиспользовал образ и остановился на HTTP 403 при
+  создании migration revision. Миграция `000004`, API revision и production
+  cutover не применены. Аудит выявил отсутствующий `iam.serviceAccounts.user`
+  deploy-аккаунта на самом себе; текущая ветка добавляет узкий grant и проверяет
+  все три identity binding до registry, образов и миграций.
 - Функциональный MVP признан достаточным для системной фазы удобства. Аудит
   `#420` зафиксировал P0/P1/P2; навигационная ясность завершена в `#421`,
   информационная архитектура Trainer Progress — в `#423`, visual regression
@@ -58,11 +59,9 @@
   и массовые операции больше не дублируются. Бег с RPE не сжимает время,
   дистанцию и единицы измерения в одну строку. Расчёты, LLM, SpeechKit и главные
   страницы ролей не менялись.
-- Форма копии тренировки открывает исходные упражнения компактными двухстрочными
-  строками; подходы раскрываются по нажатию, а новые упражнения — сразу. Отдых, заметка и
-  беговые пресеты собраны в «Настройках упражнения» в `⋯`; под строкой видна короткая пометка,
-  если задан нестандартный отдых или заметка. Нижнее действие закреплено и не перекрывает ввод при
-  открытой iOS-клавиатуре. Права, данные, LLM, SpeechKit и главные страницы ролей не менялись.
+- Форма копии тренировки показывает упражнения компактными раскрываемыми
+  строками. Отдых, заметка и беговые пресеты собраны в `⋯`; нижнее действие не
+  перекрывает ввод при открытой iOS-клавиатуре. Права и данные не менялись.
 - Изолированный Yandex Cloud stage содержит приватные Managed PostgreSQL 17 и
   Serverless Container без прогретых экземпляров. Миграции `000001`–`000003`
   применены; API readiness подтверждён. Код `#413` добавил проверку Yandex ID,
@@ -74,10 +73,11 @@
 
 ## Последние проверки
 
-- `#468`: полный `npm run check`, GitHub migration-safety/app/database/
-  yandex-database/e2e и Vercel прошли. Stage run `32299769664` прошёл OIDC,
-  validate, plan/policy, IAM propagation и image push; REST вернул HTTP 400 на
-  формате `executionTimeout`, после чего workflow остановился до миграций и API.
+- `#472`: GitHub проверки и Vercel прошли. Stage run `32304255488` прошёл OIDC,
+  validate, plan/policy, scoped runtime IAM и переиспользование образа; REST
+  вернул HTTP 403 на `DeployRevision`. Миграции и API не изменились. Официальная
+  диагностика Yandex требует от service-account caller права использовать
+  самого себя; в stage binding отсутствовал.
 - `#454`: GitHub migration-safety/app/database/yandex-database/e2e и Vercel
   прошли. Локально прошли `npm run check`, `npm run local:verify`, повторный
   запуск pending-миграций и smoke `/health`, `/ready`, frontend. Обычный dev не
@@ -85,9 +85,9 @@
 
 ## Ближайший roadmap
 
-1. Слить конвертацию Go-duration → protobuf-duration и повторить reviewed stage
-   delivery с уже сохранённым образом: migration revision, миграция `000004`,
-   private auth API revision и smoke; production frontend не переключать.
+1. Слить финальный IAM preflight PR и выполнить один reviewed stage delivery с
+   уже сохранённым образом: migration revision, миграция `000004`, private auth
+   API revision и smoke; production frontend не переключать.
 2. Продолжать UI-полировку только с экрана, который явно выберет пользователь;
    не собирать несколько экранов в один PR. Desktop shell тренера и P2
    отложены и без нового прямого решения не начинаются.

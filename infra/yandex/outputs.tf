@@ -8,6 +8,16 @@ output "api_repository_name" {
   value       = yandex_container_repository.api.name
 }
 
+output "api_service_account_id" {
+  description = "Runtime service account attached to API revisions."
+  value       = yandex_iam_service_account.api.id
+}
+
+output "migration_service_account_id" {
+  description = "Runtime service account attached to migration revisions."
+  value       = yandex_iam_service_account.migration.id
+}
+
 output "database_cluster_id" {
   description = "Managed PostgreSQL cluster ID."
   value       = yandex_mdb_postgresql_cluster_v2.fit.id

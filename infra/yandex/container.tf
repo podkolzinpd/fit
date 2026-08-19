@@ -53,6 +53,7 @@ resource "yandex_serverless_container" "api" {
 
   depends_on = [
     yandex_container_registry_iam_binding.api_image_puller,
+    yandex_iam_service_account_iam_member.deployer_self_use,
     yandex_iam_service_account_iam_member.api_deployer,
     yandex_lockbox_secret_iam_member.api_connection_secret_reader,
   ]
@@ -119,6 +120,7 @@ resource "yandex_serverless_container" "migration" {
 
   depends_on = [
     yandex_container_registry_iam_binding.api_image_puller,
+    yandex_iam_service_account_iam_member.deployer_self_use,
     yandex_iam_service_account_iam_member.migration_deployer,
     yandex_lockbox_secret_iam_member.migration_connection_secret_reader,
   ]

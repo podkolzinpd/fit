@@ -9,6 +9,7 @@ on:
       - 'services/api/**'
       - 'scripts/check-yandex-terraform-plan.mjs'
       - 'scripts/deploy-yandex-serverless-revision.mjs'
+      - 'scripts/verify-yandex-stage-access.mjs'
       - 'scripts/yandex-github-oidc.sh'
   workflow_dispatch:
     inputs:
@@ -128,12 +129,18 @@ jobs:
         run: >-
           terraform apply -auto-approve
           -target=yandex_container_registry_iam_binding.api_image_puller
+          -target=yandex_iam_service_account_iam_member.deployer_self_use
           -target=yandex_iam_service_account_iam_member.api_deployer
           -target=yandex_iam_service_account_iam_member.migration_deployer
           -target=yandex_lockbox_secret_iam_member.api_connection_secret_reader
           -target=yandex_lockbox_secret_iam_member.migration_connection_secret_reader
-      - name: Wait for runtime identity permissions to propagate
-        run: sleep 30
+      - name: Verify runtime identity permissions are effective
+        working-directory: infra/yandex
+        run: >-
+          node ../../scripts/verify-yandex-stage-access.mjs
+          --deployer-sa-id "$YC_DEPLOY_SA_ID"
+          --api-runtime-sa-id "$(terraform output -raw api_service_account_id)"
+          --migration-runtime-sa-id "$(terraform output -raw migration_service_account_id)"
       - name: Build and push immutable API image once
         env:
           IMAGE_REPOSITORY: cr.yandex/${{ vars.YC_API_REPOSITORY }}

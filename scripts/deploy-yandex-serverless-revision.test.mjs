@@ -4,6 +4,7 @@ import test from 'node:test'
 import {
   buildDeployRevisionRequest,
   findPlannedResource,
+  formatYandexCloudApiError,
   hasPlannedChange,
   normalizeExecutionTimeout,
 } from './deploy-yandex-serverless-revision.mjs'
@@ -140,5 +141,19 @@ test('rejects invalid resource numbers before calling the API', () => {
   assert.throws(
     () => buildDeployRevisionRequest({ ...values, memory: null }),
     /memory must be a non-negative integer/,
+  )
+})
+
+test('reports the failed API operation and safe request identifier', () => {
+  const headers = new Headers({ 'x-request-id': 'request-123' })
+  assert.equal(
+    formatYandexCloudApiError({
+      operation: 'DeployRevision request',
+      status: 403,
+      body: { code: 7, message: 'Permission denied' },
+      headers,
+    }),
+    'Yandex Cloud DeployRevision request returned HTTP 403: Permission denied '
+      + '(code: 7, request ID: request-123)',
   )
 })
