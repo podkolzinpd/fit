@@ -163,6 +163,14 @@ cross-tenant tests, API transaction/DTO, repository adapter and observable
 parity acceptance. Supabase migration files are evidence for the current
 contract, not scripts to copy into the replacement chain.
 
+Stage delivery uses a single durable gate for every slice: GitHub OIDC issues a
+short-lived deploy token, CI builds one immutable SHA image, the private
+one-shot endpoint applies all pending expand-only migrations under an advisory
+lock, and the API revision changes only after migration success. Connection
+Manager supplies the separate owner/runtime passwords directly; application
+database URL secrets are not recreated for each release. A failed API readiness
+check restores the previous image, while migration history remains forward-only.
+
 A production pilot cannot start after only profiles and memberships have been
 ported. Every mutable and shared domain reachable by that tenant cohort must
 either be fully served by Yandex Cloud or remain unavailable during a declared

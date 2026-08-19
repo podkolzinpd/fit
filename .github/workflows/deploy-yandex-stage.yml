@@ -1,0 +1,192 @@
+name: Deploy Yandex stage
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-yandex-stage.yml'
+      - 'infra/yandex/**'
+      - 'services/api/**'
+      - 'scripts/check-yandex-terraform-plan.mjs'
+      - 'scripts/yandex-github-oidc.sh'
+  workflow_dispatch:
+    inputs:
+      allow_destroy:
+        description: Allow reviewed non-database delete or replacement actions
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: yandex-stage
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  TF_CLI_CONFIG_FILE: ${{ github.workspace }}/infra/yandex/terraform.rc.example
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-provider-cache
+  TF_VAR_cloud_id: ${{ vars.YC_CLOUD_ID }}
+  TF_VAR_folder_id: ${{ vars.YC_FOLDER_ID }}
+  TF_VAR_environment: stage
+  TF_VAR_allow_unauthenticated_api: 'false'
+  TF_VAR_api_image_tag: ${{ github.sha }}
+  TF_VAR_migration_image_tag: ${{ github.sha }}
+  TF_VAR_migration_invoker_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
+  TF_VAR_yandex_oauth_client_id: ${{ vars.YC_YANDEX_OAUTH_CLIENT_ID }}
+  TF_VAR_api_cors_allowed_origins: '["http://localhost:5173"]'
+  TF_VAR_api_invoker_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_TFSTATE_SECRET_ACCESS_KEY }}
+
+jobs:
+  plan:
+    name: Review Terraform plan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          terraform_wrapper: false
+      - uses: actions/cache@v4
+        with:
+          path: .terraform-provider-cache
+          key: terraform-yandex-${{ runner.os }}-${{ hashFiles('infra/yandex/.terraform.lock.hcl') }}
+      - name: Prepare Terraform provider cache
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+      - name: Exchange GitHub OIDC token for a short-lived IAM token
+        run: scripts/yandex-github-oidc.sh
+      - name: Initialize Terraform remote state
+        working-directory: infra/yandex
+        run: >-
+          terraform init
+          -backend-config=backend.hcl.example
+          -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }}
+          -backend-config=key=fit/stage/terraform.tfstate
+      - name: Validate Terraform
+        working-directory: infra/yandex
+        run: |
+          terraform fmt -check
+          terraform validate
+      - name: Create reviewed plan
+        working-directory: infra/yandex
+        run: |
+          terraform plan -out=stage.tfplan
+          terraform show -json stage.tfplan > stage.tfplan.json
+      - name: Enforce plan policy and publish safe summary
+        run: >-
+          node scripts/check-yandex-terraform-plan.mjs
+          infra/yandex/stage.tfplan.json
+          ${{ inputs.allow_destroy && '--allow-destroy' || '' }}
+
+  deploy:
+    name: Migrate and deploy API
+    needs: plan
+    runs-on: ubuntu-24.04
+    environment: yandex-stage
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          terraform_wrapper: false
+      - uses: actions/cache@v4
+        with:
+          path: .terraform-provider-cache
+          key: terraform-yandex-${{ runner.os }}-${{ hashFiles('infra/yandex/.terraform.lock.hcl') }}
+      - name: Prepare Terraform provider cache
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+      - name: Exchange GitHub OIDC token for a short-lived IAM token
+        run: scripts/yandex-github-oidc.sh
+      - name: Initialize Terraform remote state
+        working-directory: infra/yandex
+        run: >-
+          terraform init
+          -backend-config=backend.hcl.example
+          -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }}
+          -backend-config=key=fit/stage/terraform.tfstate
+      - name: Build and push immutable API image once
+        env:
+          IMAGE: cr.yandex/${{ vars.YC_API_REPOSITORY }}:${{ github.sha }}
+        run: |
+          printf '%s' "$YC_TOKEN" | podman login --username iam --password-stdin cr.yandex
+          if skopeo inspect --creds "iam:$YC_TOKEN" "docker://$IMAGE" >/dev/null 2>&1; then
+            echo "Image $IMAGE already exists; reusing it."
+          else
+            podman build --platform linux/amd64 --file services/api/Dockerfile --tag "$IMAGE" services/api
+            podman push "$IMAGE"
+          fi
+      - name: Deploy candidate only to the private migration runner
+        working-directory: infra/yandex
+        run: >-
+          terraform apply -auto-approve
+          -target=yandex_serverless_container.migration
+          -target=yandex_serverless_container_iam_binding.migration_invocation
+      - name: Apply all pending migrations
+        working-directory: infra/yandex
+        run: |
+          migration_url=$(terraform output -raw migration_container_url)
+          status=$(curl --silent --show-error --output migration-response.json --write-out '%{http_code}' \
+            --request POST --header "Authorization: Bearer $YC_TOKEN" "${migration_url%/}/migrate")
+          test "$status" = 200
+          jq -e '.status == "migrated" and (.migrations | type == "array")' migration-response.json >/dev/null
+          jq -r '"Applied migrations: " + ((.migrations | length) | tostring)' migration-response.json
+      - name: Re-plan after migration and enforce policy
+        working-directory: infra/yandex
+        run: |
+          terraform plan -out=stage-final.tfplan
+          terraform show -json stage-final.tfplan > stage-final.tfplan.json
+          node ../../scripts/check-yandex-terraform-plan.mjs stage-final.tfplan.json \
+            ${{ inputs.allow_destroy && '--allow-destroy' || '' }}
+      - name: Record the current API image for automatic rollback
+        id: previous
+        working-directory: infra/yandex
+        run: |
+          previous_image=$(terraform show -json | jq -r '
+            [
+              .values.root_module.resources[]?
+              | select(.address == "yandex_serverless_container.api")
+              | .values.image[0].url
+            ][0] // ""
+          ')
+          previous_tag=${previous_image##*:}
+          echo "tag=$previous_tag" >>"$GITHUB_OUTPUT"
+      - name: Deploy the API revision
+        working-directory: infra/yandex
+        run: terraform apply -auto-approve stage-final.tfplan
+      - name: Verify private API health and readiness
+        id: smoke
+        continue-on-error: true
+        working-directory: infra/yandex
+        run: |
+          api_url=$(terraform output -raw api_container_url)
+          health=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
+            --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/health")
+          ready=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
+            --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/ready")
+          jq -e '.status == "ok"' <<<"$health" >/dev/null
+          jq -e '.status == "ready"' <<<"$ready" >/dev/null
+      - name: Roll back the API image when readiness fails
+        if: steps.smoke.outcome == 'failure' && steps.previous.outputs.tag != ''
+        working-directory: infra/yandex
+        env:
+          TF_VAR_api_image_tag: ${{ steps.previous.outputs.tag }}
+        run: >-
+          terraform apply -auto-approve
+          -target=yandex_serverless_container.api
+      - name: Fail after a completed rollback
+        if: steps.smoke.outcome == 'failure'
+        run: |
+          if test -n '${{ steps.previous.outputs.tag }}'; then
+            echo 'The candidate API failed readiness and the previous image was restored.' >&2
+          else
+            echo 'The first API revision failed readiness; there was no previous image to restore.' >&2
+          fi
+          exit 1
