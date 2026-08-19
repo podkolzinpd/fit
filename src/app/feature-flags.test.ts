@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   getYandexIdPilotConfig,
   isAssistantNavPilotEnabled,
+  isDarkThemePilotEnabled,
   isTodayStartRedesignEnabled,
   isWearablesPilotEnabled,
   trainerHomePath,
@@ -89,6 +90,46 @@ describe('wearables pilot flag', () => {
     vi.stubEnv('VITE_WEARABLES_ENABLED', 'true')
     vi.stubEnv('VITE_WEARABLES_PILOT_USER_IDS', '')
     expect(isWearablesPilotEnabled('client-1')).toBe(false)
+  })
+})
+
+describe('dark theme pilot flag', () => {
+  it('is disabled by default even for an allowlisted user', () => {
+    vi.stubEnv('VITE_DARK_THEME_PILOT_ENABLED', '')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_USER_IDS', 'trainer-1')
+    expect(isDarkThemePilotEnabled('trainer-1')).toBe(false)
+  })
+
+  it('requires the flag to be exactly "true"', () => {
+    vi.stubEnv('VITE_DARK_THEME_PILOT_USER_IDS', 'trainer-1')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_ENABLED', 'TRUE')
+    expect(isDarkThemePilotEnabled('trainer-1')).toBe(false)
+    vi.stubEnv('VITE_DARK_THEME_PILOT_ENABLED', '1')
+    expect(isDarkThemePilotEnabled('trainer-1')).toBe(false)
+  })
+
+  it('is enabled only for an explicitly allowlisted user', () => {
+    vi.stubEnv('VITE_DARK_THEME_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_USER_IDS', ' , trainer-1 , ,client-2, ')
+    expect(isDarkThemePilotEnabled('trainer-1')).toBe(true)
+    expect(isDarkThemePilotEnabled('client-2')).toBe(true)
+    expect(isDarkThemePilotEnabled('trainer-3')).toBe(false)
+    expect(isDarkThemePilotEnabled('')).toBe(false)
+  })
+
+  it('requires a non-empty allowlist', () => {
+    vi.stubEnv('VITE_DARK_THEME_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_USER_IDS', '')
+    expect(isDarkThemePilotEnabled('trainer-1')).toBe(false)
+  })
+
+  it('stays independent from the wearables allowlist', () => {
+    vi.stubEnv('VITE_DARK_THEME_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_USER_IDS', 'trainer-1')
+    vi.stubEnv('VITE_WEARABLES_ENABLED', 'true')
+    vi.stubEnv('VITE_WEARABLES_PILOT_USER_IDS', 'client-9')
+    expect(isDarkThemePilotEnabled('client-9')).toBe(false)
+    expect(isWearablesPilotEnabled('trainer-1')).toBe(false)
   })
 })
 

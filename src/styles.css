@@ -190,6 +190,105 @@
   --page-back-bg: #fffefc;
   background: var(--bg); color: var(--fg);
 }
+/* ── Пилотная тёмная палитра (Figma «Фит», node 116-4449). Это не третья тема,
+   а второй набор значений для тёмной: пользователь по-прежнему выбирает
+   «светлая/тёмная», а какой из двух тёмных наборов применить, решает
+   default-off allowlist (`isDarkThemePilotEnabled`). Разметка и правила общие —
+   меняются только значения токенов, как и у .theme-light.
+
+   Из макета взяты: чистый чёрный фон, плоские графитовые поверхности
+   (#1A1A1A карточка → #3C3C3C поле/значение), фиолетовый акцент #6E4CE6,
+   белый основной текст и фиолетовое свечение у нижней кромки экрана.
+   Границ в макете почти нет — иерархию держит светлота поверхности, поэтому
+   --border здесь тише, чем в базовой тёмной теме. */
+.phone-frame.theme-dark-pilot, .theme-dark-pilot {
+  color-scheme: dark;
+  --bg: #000000; --fg: #ffffff;
+  /* Акцент — фиолетовый #6E4CE6 из макета: он держит заливки (кнопки, чипы,
+     реплики ассистента). Для акцент-ТЕКСТА на чёрном #6E4CE6 даёт всего 3.8:1,
+     поэтому текстовый вариант осветлён до #A68CF0 (7.6:1 на фоне, 6.3:1 на
+     карточке) — тот же приём, что и с коралловым #A83714 в светлой теме. */
+  --accent: #6e4ce6; --accent-label: #a68cf0;
+  --accent-strong: #a68cf0; --accent-weak: #a68cf0;
+  --accent-border: #6e4ce6; --accent-ring: #6e4ce659; --accent-focus: #8a6cf0;
+  --accent-grad: linear-gradient(145deg, #7a58ea, #6242d8);
+  --accent-surface: #211744; --accent-surface-border: #46329a;
+  --accent-shadow: #6e4ce640; --selection: #6e4ce666;
+  --on-accent: #ffffff;
+  /* Аватары остаются различимыми внутри одной фиолетовой гаммы; зелёный
+     по-прежнему зарезервирован за успехом и положительной динамикой. */
+  --avatar-grad-0: linear-gradient(145deg, #7d5cea, #4c2fb0);
+  --avatar-grad-1: linear-gradient(145deg, #9a72f0, #5b3bc4);
+  --avatar-grad-2: linear-gradient(145deg, #6a7cf0, #3b3fb4);
+  --avatar-grad-3: linear-gradient(145deg, #b06ae8, #6b2fae);
+  /* Лестница поверхностей из макета: фон → карточка → утопленный контрол →
+     поле/значение → всплывашка. Светлее значит выше, поэтому «утопленные»
+     токены здесь светлее карточки, а не темнее, как в светлой теме. */
+  --surface: #121212; --surface-raised: #1a1a1a; --muted: #a1a1aa; --secondary-label-fg: #c7c7cf;
+  --border: #2b2b2b; --danger: #ff8189; --success: #4ade80; --success-fg: #6ee7a0; --warning: #fbbf24; --input: #3c3c3c;
+  --fg-strong: #ffffff; --fg-on-surface: #ffffff;
+  --surface-sunken: #2e2e2e; --surface-elevated: #3a3a3a;
+  --hairline: #ffffff1f; --overlay: #000000cc;
+  --card-grad: #1a1a1a;
+  --live-warm: #211744; --live-warm-border: var(--accent-surface-border);
+  --progress-grad: radial-gradient(circle at 90% -10%, #6e4ce633, transparent 42%), linear-gradient(155deg, #1c1630, #141419 62%);
+  --progress-border: #3a2d6b;
+  --shadow-card: 0 10px 24px #00000073;
+  --voice-ring: #6e4ce650; --voice-ring-active: #6e4ce68f;
+  --voice-shadow: 0 12px 28px #00000066; --voice-shadow-active: 0 7px 18px #00000080;
+  --ai-card-border: #3a2d6b;
+  --ai-card-background: radial-gradient(circle at 90% -10%, #6e4ce633, transparent 42%), linear-gradient(155deg, #1c1630, #141419 62%);
+  --ai-card-shadow: 0 16px 40px #00000080; --ai-divider: #2b2b2b;
+  --ai-subtle-surface: #12121a99; --ai-stat-surface: #1f1f26; --ai-copy: #d4d4d8;
+  --ai-regularity-border: #2f2f3a; --ai-regularity-surface: #17171d;
+  --ai-demo-border: #46329a; --ai-demo-fg: #c9b8ff; --ai-demo-surface: #211744;
+  --ai-mark-border: #8a6cf080; --ai-mark-background: linear-gradient(145deg, #7a58ea, #5a35cf); --ai-mark-shadow: 0 8px 24px #6e4ce659;
+  --ai-published-border: #2f7048; --ai-published-fg: #6ee7a0; --ai-published-surface: #10241a;
+  --ai-attention-border: #6b5424; --ai-attention-surface: #241c0e; --ai-attention-fg: #ffd483;
+  --ai-empty-fg: #d4d4d8;
+  --ai-editor-border: #2b2b2b; --ai-editor-surface: #121212e6;
+  --client-ai-card-border: #2f7048;
+  --client-ai-card-background: radial-gradient(circle at 90% -10%, #4ade8024, transparent 42%), linear-gradient(155deg, #14251c, #141419 62%);
+  --client-ai-mark-border: #6ee7a080; --client-ai-mark-background: linear-gradient(145deg, #4ade80, #22794a); --client-ai-mark-shadow: 0 8px 24px #22c55e40;
+  --client-ai-note-border: #2f7048; --client-ai-note-surface: #10241a; --client-ai-note-fg: #cdead7; --client-ai-note-icon: #6ee7a0;
+  --success-surface: #10241a; --success-border: #2f7048;
+  --success-mark-surface: #17351f;
+  --live-indicator: #ff5c5c; --live-indicator-ring: #ff5c5c66;
+  --neutral-current: #3c3c3c; --neutral-current-border: #5c5c5c;
+  --progress-dot: #3c3c3c; --progress-dot-current: #8f8f99; --progress-dot-current-border: #b4b4bd;
+  --warning-surface: #241c0e; --warning-border: #6b5424; --warning-fg: #ffd483;
+  --danger-surface: #26141a; --danger-border: #5c2b33; --danger-hover: #31191f;
+  --secondary-hover: #4a4a4a; --tertiary-fg: #a1a1aa;
+  --bar-bg: #0d0b17e6;
+  --secondary-bg: #3c3c3c; --secondary-fg: #ffffff;
+  --page-back-bg: #1a1a1a;
+  /* Свечение у нижней кромки — подпись макета. Ступени взяты из рендера, но
+     привязаны к нижнему краю рамки в пикселях, а не в процентах: контент
+     заканчивается примерно за 70–94 px до низа (там стоит таб-бар), и до этой
+     отметки свечение не ярче #33236B — вторичный текст держит ≥5:1. Ярче
+     становится только полоса под баром. Это осознанное отступление от макета,
+     где в нижней зоне лежит лишь белый текст поля ввода. */
+  --frame-border: #1f1f1f;
+  --frame-bg: linear-gradient(180deg,
+    #000000 0,
+    #000000 calc(100% - 300px),
+    #120c26 calc(100% - 210px),
+    #231854 calc(100% - 140px),
+    #33236b calc(100% - 70px),
+    #4a34a1 calc(100% - 34px),
+    #7a63d4 calc(100% - 10px),
+    #947ee0 100%);
+}
+/* Фон и цвет ставим отдельным правилом с одним классом: у .phone-frame есть
+   собственный background с --frame-bg и та же специфичность, но правило ниже по
+   файлу — поэтому свечение выигрывает внутри рамки, а снаружи остаётся чёрный.
+   Со сдвоенным селектором (.phone-frame.theme-dark-pilot) заливка перебивала бы
+   рамку, и градиент не рисовался бы вовсе. */
+.theme-dark-pilot { background: var(--bg); color: var(--fg) }
+/* При открытой клавиатуре нижние отступы контента сокращаются, и текст может
+   оказаться там, где свечение уже яркое. Клавиатура всё равно закрывает низ
+   экрана, поэтому в этом состоянии оставляем чистый чёрный. */
+.phone-frame.theme-dark-pilot.keyboard-open { --frame-bg: #000000 }
 * { box-sizing: border-box }
 body { margin: 0; min-height: 100dvh; background: var(--bg); }
 ::selection { color: white; background: var(--selection) }
@@ -1831,3 +1930,34 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-session-progress-copy strong { color:var(--fg); white-space:nowrap }
 .live-session-progress-track { width:100%; height:4px; overflow:hidden; border-radius:var(--radius-pill); background:var(--surface-sunken) }
 .live-session-progress-track > span { display:block; height:100%; border-radius:inherit; background:var(--accent); transition:width .2s ease }
+/* ── Пилотная тёмная палитра: правила, где базовая тёмная тема держит цвет
+   литералом, а не токеном. Собраны одним блоком, чтобы пилот целиком
+   удалялся или раскатывался одним куском. Значения — из макета «Фит». */
+.theme-dark-pilot .page-back { background: var(--page-back-bg) }
+.theme-dark-pilot .badge { color: var(--secondary-label-fg); background: var(--surface-sunken) }
+.theme-dark-pilot .badge.in_progress { color: var(--warning-fg); background: var(--warning-surface) }
+.theme-dark-pilot .badge.done { color: var(--success-fg); background: var(--success-surface) }
+.theme-dark-pilot .badge.planned { color: var(--accent-label); background: var(--accent-surface) }
+.theme-dark-pilot .badge.partial { color: var(--warning-fg); background: var(--warning-surface) }
+.theme-dark-pilot .badge.skipped { color: var(--secondary-label-fg); background: var(--surface-sunken) }
+/* Нижний бар — полупрозрачное стекло поверх свечения, как в макете, но тёмное:
+   на ≤480px бар прижат к нижней кромке, где свечение самое яркое, и на светлом
+   стекле подписи вкладок (11px) давали всего 2.9:1. Тёмное стекло сохраняет
+   просвечивающий фиолетовый и возвращает подписям ≥8:1. */
+.theme-dark-pilot .tab-bar { border-color: #ffffff29; background: #140e2cb8 }
+.theme-dark-pilot .tab-bar a { color: #d9d5e8 }
+.theme-dark-pilot .tab-bar a.active { color: var(--on-accent); background: var(--accent) }
+.theme-dark-pilot .attention { background: var(--danger-surface) }
+.theme-dark-pilot .goal-stages-hint { background: var(--surface-sunken) }
+.theme-dark-pilot .today-primary-cta { border-color: var(--accent-border); background: var(--accent-grad) }
+.theme-dark-pilot .exercise.current .live-confirm { box-shadow: 0 8px 22px var(--accent-shadow) }
+.theme-dark-pilot .ai-progress-periods button.active { box-shadow: 0 6px 18px var(--accent-shadow) }
+.theme-dark-pilot .client-welcome { border-color: var(--border); background: var(--card-grad) }
+.theme-dark-pilot .client-access-card { background: var(--surface-raised) }
+.theme-dark-pilot .client-access-card.connected { border-color: var(--success-border); background: var(--success-surface) }
+.theme-dark-pilot .client-access-card.connected > div > span { color: var(--success-fg); background: var(--success-mark-surface) }
+.theme-dark-pilot .exercise-picker { border-color: var(--border); background: var(--surface-elevated) }
+.theme-dark-pilot .picker-category { color: var(--fg); background: var(--input) }
+.theme-dark-pilot .picker-muscle.active { color: var(--accent-label) }
+.theme-dark-pilot .picker-create { border-color: var(--accent-surface-border); color: var(--accent-label); background: var(--accent-surface) }
+.theme-dark-pilot .voice-input-button.recording { border-color: var(--danger-border); color: var(--danger); background: var(--danger-surface) }

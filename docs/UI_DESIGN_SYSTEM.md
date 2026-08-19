@@ -12,6 +12,9 @@ work consistent and easier to verify.
   installed component framework.
 - Default product theme: `theme-light`, called **LIGHT PREMIUM PERFORMANCE** in
   the CSS. A dark token set remains as a build-time fallback.
+- Dark has two token sets. The base one in `:root` is the coral fallback; the
+  Figma-derived `theme-dark-pilot` set is served only to allowlisted accounts
+  that also chose the dark theme themselves (see the pilot section below).
 - Client and Trainer render inside `.phone-frame`, currently capped at 440 px.
   Client has four bottom tabs; Trainer has three in the current feature-flagged
   navigation. Live workout hides the tab bar and uses an immersive bottom bar.
@@ -55,6 +58,44 @@ always accompanies color, so meaning never depends on color alone:
 The red Live indicator is the one explicit realtime convention and uses its own
 `--live-indicator` token; it must not reuse destructive surfaces or replace the
 visible `LIVE` label.
+
+## Dark pilot palette (`theme-dark-pilot`)
+
+Ported from the Figma file «Фит», node `116-4449`. It is a second value set for
+the existing dark theme, not a third theme and not a second token system: the
+markup, selectors, roles and geometry stay the same, only values change.
+
+| Role | Value | Source in the frame |
+| --- | --- | --- |
+| App background | `--bg: #000000` | screen background |
+| Card / sheet | `--surface-raised: #1a1a1a`, `--card-grad: #1a1a1a` | exercise card |
+| Inset control | `--surface-sunken: #2e2e2e` | segmented tracks, chips |
+| Field / value pill | `--input: #3c3c3c` | weight and reps fields |
+| Popover / menu | `--surface-elevated: #3a3a3a` | bottom sheets, overflow menu |
+| Main text | `--fg: #ffffff` | all primary copy |
+| Muted text | `--muted: #a1a1aa` | inactive tab, secondary copy |
+| Primary fill | `--accent: #6e4ce6`, `--accent-grad` | assistant replies, CTA |
+| Accent text | `--accent-strong: #a68cf0` | links, eyebrow labels |
+| Frame glow | `--frame-bg` | violet gradient at the bottom edge |
+
+Surfaces carry the hierarchy: lighter means higher, so the inset tokens sit
+above the card here, unlike in the light theme. Borders are quieter
+(`--border: #2b2b2b`) because the frame has almost none. Success, warning and
+danger keep their meaning and are only retuned for a pure black background.
+
+Two deliberate deviations from the frame, both for readability:
+
+- The bottom glow is anchored to the frame bottom in pixels, not percent. Up to
+  70 px from the bottom — where content still ends — it stays at most `#33236b`,
+  so muted text keeps ≥5:1. Full strength lives only under the bar. With the
+  keyboard open the glow is dropped entirely, because content padding shrinks.
+- The bottom bar is dark glass instead of the frame's light glass. On ≤480 px
+  the bar sits flush against the brightest part of the glow, where 11 px tab
+  labels dropped to 2.9:1; dark glass keeps the violet showing through and
+  returns the labels to ≥8:1.
+
+The pilot lives in one token block plus one grouped list of selector overrides
+at the end of `src/styles.css`, so it can be rolled out or deleted as a unit.
 
 ## Typography
 
