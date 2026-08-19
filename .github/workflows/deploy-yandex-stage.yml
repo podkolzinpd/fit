@@ -36,6 +36,7 @@ env:
   TF_VAR_allow_unauthenticated_api: 'false'
   TF_VAR_api_image_tag: ${{ github.sha }}
   TF_VAR_migration_image_tag: ${{ github.sha }}
+  TF_VAR_deployer_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   TF_VAR_migration_invoker_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   TF_VAR_yandex_oauth_client_id: ${{ vars.YC_YANDEX_OAUTH_CLIENT_ID }}
   TF_VAR_api_cors_allowed_origins: '["http://localhost:5173"]'

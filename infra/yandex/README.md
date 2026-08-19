@@ -39,6 +39,11 @@ folder. Current Managed PostgreSQL API versions choose their managed
 Connection Manager and Lockbox folders automatically; do not add explicit
 `user_connection_manager` folder IDs to the database users.
 
+When `deployer_member` is set, Terraform grants that OIDC-backed service
+account `iam.serviceAccounts.user` only on the two runtime service accounts.
+Serverless Containers requires this scoped role to attach a runtime identity
+to a revision; a folder-wide impersonation grant is unnecessary.
+
 The exact bootstrap, migration and smoke-test sequence is documented in
 `docs/STAGE_DEPLOYMENT.md`.
 

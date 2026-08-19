@@ -41,15 +41,17 @@ Identity Federation configured as follows:
 - audience: `https://github.com/podkolzinpd`;
 - JWKS URL: `https://token.actions.githubusercontent.com/.well-known/jwks`;
 - subject for the plan job:
-  `repo:podkolzinpd/fit:ref:refs/heads/main`;
+  `repo:podkolzinpd@3878475/fit@1307853602:ref:refs/heads/main`;
 - subject for the approved deploy job:
-  `repo:podkolzinpd/fit:environment:yandex-stage`.
+  `repo:podkolzinpd@3878475/fit@1307853602:environment:yandex-stage`.
 
 The service account needs the existing Terraform resource-management roles,
 `container-registry.images.pusher`, Connection Manager metadata read access and
 permission to update Serverless Container IAM bindings. Terraform grants this
-same account only `serverless.containers.invoker` on the private migration and
-API containers.
+same account `serverless.containers.invoker` on the private migration and API
+containers and `iam.serviceAccounts.user` directly on their two runtime
+service accounts. The latter is required to attach those identities to a
+revision and is deliberately not granted folder-wide.
 
 Keep one dedicated static S3 key for the Terraform state backend. This is not a
 Yandex API authorized-key JSON and is not used for provider authentication.
