@@ -5,7 +5,7 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-19
-Проверенный базовый `main`: `4c14778` (`docs: record Yandex stage bootstrap status (#463)`)
+Проверенный базовый `main`: `e7e48ea` (`fix(yandex): grant deployer runtime identity use (#466)`)
 
 ## Активная работа
 
@@ -13,15 +13,17 @@
   stage delivery находятся в `main`: GitHub OIDC без JSON-ключа, один SHA-образ,
   автоматические forward-only миграции перед API revision, private smoke и
   rollback. OIDC-федерация использует подтверждённые GitHub subject со
-  стабильными owner/repository ID; plan и policy gate проходят. Первый
-  одобренный apply создал SHA-образ и metadata migration container, но Yandex
-  отказал в первой revision: deploy identity не имела обязательную
-  `iam.serviceAccounts.user` на runtime identities. Узкие роли вручную выданы
-  только на `fit-stage-api` и `fit-stage-migration`; текущая ветка закрепляет их
-  в Terraform и создаст новый immutable tag для корректной revision. Миграция
-  `000004`, новый API и smoke ещё не прошли. Production frontend и Supabase не
-  переключались. После `#454` локальный запуск автоматически готовит Supabase
-  и PostgreSQL 17, а CI проверяет обе цепочки миграций.
+  стабильными owner/repository ID; plan и policy gate проходят. `#466`
+  закрепил scoped `iam.serviceAccounts.user` на двух runtime identities.
+  Одобренный run `32278252889` создал и переиспользуемо сохранил SHA-образ, но
+  Yandex IAM не успел распространить только что применённую роль до создания
+  migration revision. Провайдер вернул `PermissionDenied` как warning и
+  ошибочно завершился с кодом 0; защитный вызов миграции остановил workflow,
+  поэтому миграция `000004` и API revision не применены. Текущая ветка
+  разделяет IAM и revision фазой ожидания и превращает такой warning в hard
+  failure. Production frontend и Supabase не переключались. После `#454`
+  локальный запуск автоматически готовит Supabase и PostgreSQL 17, а CI
+  проверяет обе цепочки миграций.
 - Функциональный MVP признан достаточным для системной фазы удобства. Аудит
   `#420` зафиксировал P0/P1/P2; навигационная ясность завершена в `#421`,
   информационная архитектура Trainer Progress — в `#423`, visual regression
@@ -59,11 +61,10 @@
 
 ## Последние проверки
 
-- `#463`: полный `npm run check`, GitHub CI и Vercel прошли. Stage run `#5`
-  успешно прошёл OIDC, init, validate, plan и policy, собрал один SHA-образ и
-  применил безопасную часть Terraform без destroy. API не переключён:
-  migration revision не создалась без `iam.serviceAccounts.user`, а повторный
-  job корректно переиспользовал образ и остановился до миграции.
+- `#466`: полный `npm run check`, GitHub CI и Vercel прошли. Stage run
+  `32278252889` прошёл OIDC, plan/policy и безопасно остановился до БД/API:
+  scoped роль создалась, но revision получила `PermissionDenied` во время
+  распространения IAM; образ `e7e48ea` сохранён для повторного использования.
 - `#454`: GitHub migration-safety/app/database/yandex-database/e2e и Vercel
   прошли. Локально прошли `npm run check`, `npm run local:verify`, повторный
   запуск pending-миграций и smoke `/health`, `/ready`, frontend. Обычный dev не
@@ -71,9 +72,9 @@
 
 ## Ближайший roadmap
 
-1. Закрепить scoped `iam.serviceAccounts.user` для deploy identity в Terraform,
-   после merge повторить reviewed stage delivery: миграция `000004`, private
-   auth revision и smoke; production frontend не переключать.
+1. После merge защиты от IAM propagation повторить reviewed stage delivery:
+   migration revision, миграция `000004`, private auth API revision и smoke;
+   production frontend не переключать.
 2. Продолжать UI-полировку только с экрана, который явно выберет пользователь;
    не собирать несколько экранов в один PR. Desktop shell тренера и P2
    отложены и без нового прямого решения не начинаются.
