@@ -7,3 +7,24 @@ export type WorkoutRecordMode = 'planned' | 'completed'
 export function workoutDateForRecordMode(mode: WorkoutRecordMode, value: LocalDate, today: LocalDate): LocalDate {
   return mode === 'completed' && value > today ? today : value
 }
+
+export interface PlannedWorkoutActionLabels {
+  primary: string
+  pending: string
+  secondary?: string
+}
+
+// План в прошлом остаётся доступным для внесения факта, но это уже не сценарий
+// «начать тренировку сейчас». Тренеру и клиенту показываем действие в терминах
+// результата и отдельно предлагаем перенести план на другую дату.
+export function plannedWorkoutActionLabels(workoutDate: LocalDate, today: LocalDate): PlannedWorkoutActionLabels {
+  if (workoutDate < today) return {
+    primary: 'Записать результат',
+    pending: 'Открываем…',
+    secondary: 'Перенести тренировку',
+  }
+  return {
+    primary: 'Начать тренировку',
+    pending: 'Начинаем…',
+  }
+}
