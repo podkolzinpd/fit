@@ -714,6 +714,40 @@ test('iPhone: создание тренировки сфокусировано �
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: пустую тренировку нельзя сохранить на 390 px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+  await page.goto('/workouts/new')
+
+  await expect(page.getByText('Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Сохранить', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Выбрать упражнения' })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+})
+
+test('iPhone: длинное название и 10 подходов не ломают форму и Live на 390 px', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const clientName = await createIsolatedClient(page, testInfo)
+  await page.goto('/workouts/new')
+  await selectClient(page, clientName)
+  const longName = 'Фронтальный присед тяжелоатлетическим хватом'
+  await addExercise(page, longName, true)
+
+  const exercise = page.locator('.planned-exercise').first()
+  await expect(exercise).toContainText(longName)
+  for (let index = 1; index < 10; index += 1) await exercise.getByRole('button', { name: '＋ Подход' }).click()
+  await expect(exercise.locator('.planned-set')).toHaveCount(10)
+  await exercise.getByLabel('Вес, подход 10').fill('40')
+  await exercise.getByLabel('Повторы, подход 10').fill('10')
+  await expectNoHorizontalOverflow(page)
+
+  await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await page.getByRole('button', { name: 'Начать тренировку' }).click()
+  await expect(page.locator('.live-session-progress')).toContainText('подход 1 из 10')
+  await expect(page.locator('.live-exercise.current')).toContainText(longName)
+  await expectNoHorizontalOverflow(page)
+})
+
 test('iPhone: одиночный отдых переживает reload, сдвиг и пропуск на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const clientName = await createIsolatedClient(page, testInfo)
@@ -766,6 +800,8 @@ test('iPhone: введённый live-факт переживает обрыв �
   await page.reload()
   await expect(page.getByText(/Восстановили несохранённые данные/)).toBeVisible()
   await expect(page.getByLabel('Фактический вес')).toHaveValue('55')
+  await page.getByRole('button', { name: 'Готово, отдых' }).click()
+  await expect(page.locator('.live-exercise-collapsed')).toContainText('55 кг × 10 повт.')
   await expectNoHorizontalOverflow(page)
 })
 

@@ -449,7 +449,9 @@ export function WorkoutFormPage() {
   }
   function closePicker() { setPickerOpen(false); setReplaceIndex(null); setPickerSearch('') }
   function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const form = new FormData(event.currentTarget)
+    event.preventDefault()
+    if (exercises.length === 0) return
+    const form = new FormData(event.currentTarget)
     const submitClientId = String(form.get('clientId'))
     if (!submitClientId) { setClientSelectionError('Выберите клиента для тренировки'); return }
     const date = workoutDateForRecordMode(completedMode ? 'completed' : 'planned', entryDate, today)
@@ -501,11 +503,12 @@ export function WorkoutFormPage() {
       <section className="workout-form-section workout-form-exercises">
         <div className="workout-form-section-head"><p className="eyebrow">УПРАЖНЕНИЯ</p><h2>{completedMode ? 'Что выполнено' : 'Что нужно выполнить'}</h2></div>
         <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} onAdd={(parsed) => void addQuickEntry(parsed)} onOpenCatalog={(search) => { setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) }} />
+        {exercises.length === 0 && <p className="workout-empty-hint" role="status">Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.</p>}
         <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions"><button type="button" className="secondary" disabled={mutation.isPending} onClick={() => navigate(-1)}>Отмена</button><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…">{recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить'}</WorkoutCta></div>
+      <div className="actions"><button type="button" className="secondary" disabled={mutation.isPending} onClick={() => navigate(-1)}>Отмена</button><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0}>{recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить'}</WorkoutCta></div>
     </form>}</AsyncView>
     {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
   </Page>

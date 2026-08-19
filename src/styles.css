@@ -1067,6 +1067,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-focused-page > .page-header { min-height:var(--control-height-standard); margin-bottom:var(--space-2) }
 .workout-focused-page > .page-header .page-back { min-width:var(--tap); min-height:var(--tap) }
 .workout-form-page .workout-form-section:first-child { padding:0 0 var(--space-5); border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
+.workout-empty-hint { margin:0; padding:var(--space-3) 0; color:var(--muted); font-size:var(--type-body-size); line-height:var(--leading-body) }
 .today-review-head { gap:var(--space-2) }
 .today-review-head .workout-header-contract { margin-bottom:0 }
 .today-review-head .today-review-back { min-height:var(--tap) }
