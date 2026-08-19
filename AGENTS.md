@@ -191,6 +191,28 @@ success, disabled, and retry states that can occur. Mutations need visible
 pending and outcome feedback. Never present planned data as confirmed fact, and
 never use color as the only status signal.
 
+## NOTIFY USERS OF NOTABLE CHANGES (COACHMARKS)
+
+Trainers reported too many silent UI/behavior changes. When a PR changes
+navigation, terminology, or the primary flow of an existing trainer/client
+screen in a way a returning user would notice and need explained, wrap the
+changed element with `Coachmark` from `src/shared/ui.tsx` (pilot:
+`TrainerProgressOverviewCard`).
+
+- One `Coachmark` per notable change, with a new unique `id` (e.g.
+  `"<feature>-<yyyy-mm>"`) and `userId={actor?.userId}`. Reusing an old id
+  means the message will never show again for users who already dismissed it.
+- Keep the copy to a title and one short sentence: what changed and why it
+  helps. No images, no multi-step tours.
+- Skip it for cosmetic-only tweaks, internal/service tasks, and changes too
+  small to need explanation — do not add one to every PR by default.
+- Storage is `localStorage` only (`src/shared/coachmarks.ts`), scoped per
+  `userId`; no migration or DB table needed for this.
+- This is a lightweight in-app alternative to stories/onboarding videos,
+  chosen because it scales with weekly release cadence without a separate
+  production cycle. Do not build a stories/video system without a new
+  decision — see the pilot PR discussion for the tradeoff.
+
 ## VISUAL VERIFICATION
 
 Visual verification is mandatory for UI changes. Run the relevant component or
