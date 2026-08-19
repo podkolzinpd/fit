@@ -4,6 +4,7 @@ folder_id = "b1g00000000000000000"
 # Stage stays private until Yandex ID token verification is implemented.
 environment               = "stage"
 allow_unauthenticated_api = false
+# deployer_member = "serviceAccount:aje00000000000000000"
 # api_invoker_member = "serviceAccount:aje00000000000000000"
 
 # Yandex assigns network-connected Serverless Containers addresses from this
