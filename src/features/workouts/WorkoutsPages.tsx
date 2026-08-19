@@ -36,7 +36,7 @@ import { useAuth } from '../../app/auth-context'
 import { useRpeDisplay } from '../../app/rpe-display'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft } from './workout-form-draft'
-import { workoutDateForRecordMode } from './workout-entry-rules'
+import { plannedWorkoutActionLabels, workoutDateForRecordMode } from './workout-entry-rules'
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
 import { parseRunDurationInput, runDistanceKmFromInput, runDistanceLabel, runPaceLabel, type RunDistanceUnit } from '../../shared/run-metrics'
@@ -622,7 +622,14 @@ export function WorkoutDetailPage() {
   // Карточка не должна угадывать источник открытия. Быстрый сценарий «Сегодня»
   // передаёт returnTo, остальные пути сохраняют прежний безопасный fallback.
   const backTo = navigationState?.returnTo ?? (clientMode ? '/me/workouts' : '/schedule')
-  const detailState: WorkoutUiState = workout?.status === 'done' ? (completedSets < sets.length ? 'partial' : 'completed') : workout?.status === 'in_progress' ? 'current' : 'planned'
+  const today = todayInTimeZone(actor?.timezone)
+  const statusPresentation = workout ? workoutStatusPresentation(workout, today) : null
+  const detailState: WorkoutUiState = statusPresentation?.tone === 'done' ? 'completed'
+    : statusPresentation?.tone === 'partial' ? 'partial'
+      : statusPresentation?.tone === 'in_progress' ? 'current'
+        : statusPresentation?.tone === 'skipped' ? 'skipped'
+          : 'planned'
+  const plannedActions = workout?.status === 'planned' ? plannedWorkoutActionLabels(workout.workoutDate, today) : null
   return <Page title="Тренировка" hideTitle className="workout-detail-page" back={backTo}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       {justCompleted && <section className="workout-completion" aria-labelledby="workout-completion-title">
@@ -634,9 +641,12 @@ export function WorkoutDetailPage() {
         </div>
       </section>}
       <WorkoutHeader eyebrow={clientMode ? 'ВАША ТРЕНИРОВКА' : 'ТРЕНИРОВКА КЛИЕНТА'} title={clientMode ? 'Ваша тренировка' : workout.clientName} state={detailState}
-        statusLabel={workoutStatusPresentation(workout, todayInTimeZone(actor?.timezone)).label}
+        statusLabel={statusPresentation?.label}
         meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span>{clientMode && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · только просмотр</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />
-      {workout.status === 'planned' && canExecute && <WorkoutCta className="wide" pending={start.isPending} pendingLabel="Начинаем…" onClick={() => start.mutate()}>Начать тренировку</WorkoutCta>}
+      {plannedActions && canExecute && <div className="workout-detail-primary-actions">
+        <WorkoutCta className="wide" pending={start.isPending} pendingLabel={plannedActions.pending} onClick={() => start.mutate()}>{plannedActions.primary}</WorkoutCta>
+        {plannedActions.secondary && <Link className="button secondary wide" to={`/workouts/${workoutId}/edit`}>{plannedActions.secondary}</Link>}
+      </div>}
       {start.error && !(start.error instanceof Error && 'code' in start.error && start.error.code === 'active_workout_exists') && <p className="error">{start.error.message}</p>}
       {workout.status === 'in_progress' && canExecute && <Link className="button wide" to={`/workouts/${workoutId}/live`}>Продолжить тренировку</Link>}
       {done && <section className="workout-fact-summary" aria-label="Сводка тренировки">
@@ -654,7 +664,7 @@ export function WorkoutDetailPage() {
           <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
           {done ? <details className="completed-exercise-details"><summary className="completed-set-summary">{compactCompletedSetSummary(exercise.sets, showRpe)}</summary><WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={['Результат']} className="workout-history-sets">
             {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done showRpe={showRpe} />)}
-          </WorkoutSetTable></details> : compactPlan ? <p className="planned-set-summary"><span>План</span><strong>{compactPlan}</strong></p> : <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={['Результат']} className="workout-history-sets">
+          </WorkoutSetTable></details> : compactPlan ? <p className="planned-set-summary"><span>План</span><strong>{compactPlan}</strong></p> : <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={['План']} className="workout-history-sets">
             {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} />)}
           </WorkoutSetTable>}
           {exercise.trainerComment && <p className="exercise-comment-note">💬 {exercise.trainerComment}</p>}

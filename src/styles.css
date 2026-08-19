@@ -683,6 +683,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-page .workout-title h2 { font-size: 22px; line-height: 1.14; letter-spacing: var(--tracking-tight) }
 .workout-detail-page .workout-title p { color: var(--muted); font-size: 14px }
 .workout-detail-page > .wide { min-height: 50px; margin-top: -3px; border-radius: 16px; font-size: 17px; font-weight: 800 }
+.workout-detail-primary-actions { display:grid; gap:var(--space-2); margin-top:-3px }
+.workout-detail-primary-actions > .wide { width:100%; min-height:var(--control-height-primary); margin:0 }
 .workout-fact-summary { display:flex; flex-wrap:wrap; align-items:baseline; gap:5px 14px; margin:0 0 14px; padding:9px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border) }
 .workout-fact-summary p { display:flex; align-items:baseline; gap:5px; margin:0; min-width:0 }
 .workout-fact-summary span { color:var(--muted); font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase }

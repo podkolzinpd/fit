@@ -964,6 +964,56 @@ test('iPhone: частично завершённая тренировка по�
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: пропущенный план предлагает записать результат или перенести тренировку', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const clientName = await createIsolatedClient(page, testInfo)
+  await page.goto('/workouts/new')
+  await selectClient(page, clientName)
+  await page.getByLabel('Дата').fill('2026-08-01')
+  await addExercise(page, 'Присед со штангой', true)
+  await page.getByLabel('Вес, подход 1').fill('40')
+  await page.getByLabel('Повторы, подход 1').fill('10')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+
+  await expect(page.locator('.workout-detail-page .badge.skipped')).toHaveText('Пропущена')
+  await expect(page.getByRole('button', { name: 'Начать тренировку' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Записать результат' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Перенести тренировку' })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('missed-workout-actions-390.png'), fullPage: true })
+
+  await page.getByRole('link', { name: 'Перенести тренировку' }).click()
+  await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]+\/edit$/)
+  await expect(page.getByLabel('Дата')).toHaveValue('2026-08-01')
+  await page.goBack()
+
+  await page.getByRole('button', { name: 'Записать результат' }).click()
+  await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]+\/live$/)
+})
+
+test('iPhone: разные плановые подходы не выдаются за результат', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const clientName = await createIsolatedClient(page, testInfo)
+  await page.goto('/workouts/new')
+  await selectClient(page, clientName)
+  await addExercise(page, 'Присед со штангой', true)
+  await page.getByLabel('Вес, подход 1').fill('40')
+  await page.getByLabel('Повторы, подход 1').fill('10')
+  await page.getByRole('button', { name: '＋ Подход' }).click()
+  await page.getByLabel('Вес, подход 2').fill('45')
+  await page.getByLabel('Повторы, подход 2').fill('8')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+
+  const plannedSets = page.locator('.workout-detail-page .workout-history-sets')
+  await expect(plannedSets).toBeVisible()
+  await expect(plannedSets.locator('.workout-set-table-head')).toContainText('План')
+  await expect(plannedSets.locator('.workout-set-table-head')).not.toContainText('Результат')
+  await expect(plannedSets).toContainText('40 кг × 10 повт.')
+  await expect(plannedSets).toContainText('45 кг × 8 повт.')
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('planned-variable-sets-390.png'), fullPage: true })
+})
+
 test('iPhone: прогресс открывается из карточки клиента на 390 px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
