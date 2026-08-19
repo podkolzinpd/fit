@@ -41,7 +41,7 @@ Client names, contacts, trainer notes, private details and body measurements are
 not included.
 
 The Yandex Text Generation request uses `jsonSchema` and prompt version
-`training-progress-v5`. Generated rows are never client-readable directly.
+`training-progress-v6`. Generated rows are never client-readable directly.
 Publication copies only `client_summary` and deterministic display metrics into
 `client_published_training_summaries`.
 
