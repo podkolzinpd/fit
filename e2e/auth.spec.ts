@@ -231,7 +231,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   ])
   const clientDetailUrl = page.url()
   await page.getByRole('link', { name: 'Запланировать тренировку' }).click()
-  await expect(page.getByText('Связанный клиент', { exact: true })).toBeVisible()
+  await expect(page.locator('.workout-header-meta')).toContainText('Связанный клиент')
   await expect(page.locator('.client-picker-trigger')).toHaveCount(0)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Бег/ }).click()

@@ -5,7 +5,7 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-20
-Проверенный базовый `main`: `e56a7ed` (`fix(yandex): verify revision identity grants (#473)`)
+Проверенный базовый `main`: `e136c06` (`YAFIT-319: считать Progress по реальному периоду (#474)`)
 
 ## Активная работа
 
@@ -15,12 +15,9 @@
   перед API revision, private smoke и rollback. `#468` обходит известный сбой
   `DeployRevision` Terraform provider через официальный REST API, строит запрос
   только из reviewed plan JSON и требует отсутствие container drift после
-  refresh. `#472` исправил формат timeout. Run `32304255488` сформировал
-  корректный REST request, переиспользовал образ и остановился на HTTP 403 при
-  создании migration revision. Миграция `000004`, API revision и production
-  cutover не применены. `#473` добавил отсутствовавший узкий
-  `iam.serviceAccounts.user` deploy-аккаунта на самом себе и preflight всех
-  трёх identity binding до registry, образов и миграций.
+  refresh. `#473` добавил прямые `iam.serviceAccounts.user` bindings; run
+  `32308441654` подтвердил их, но получил HTTP 403. В каталоге нет явного
+  folder-level grant; ветка фиксирует bootstrap и диагностику. Миграция `000004`, API revision и cutover не применены.
 - Функциональный MVP признан достаточным для системной фазы удобства. Аудит
   `#420` зафиксировал P0/P1/P2; навигационная ясность завершена в `#421`,
   информационная архитектура Trainer Progress — в `#423`, visual regression
@@ -78,11 +75,9 @@
 
 ## Последние проверки
 
-- `#473`: GitHub проверки и Vercel прошли. Предыдущий stage run `32304255488` прошёл OIDC,
-  validate, plan/policy, scoped runtime IAM и переиспользование образа; REST
-  вернул HTTP 403 на `DeployRevision`. Миграции и API не изменились. Официальная
-  диагностика Yandex требует от service-account caller права использовать
-  самого себя; в stage binding отсутствовал.
+- `#473`: stage run `32308441654` прошёл OIDC, plan/policy, три прямых identity
+  bindings и переиспользование образа, затем получил 403 на `DeployRevision`.
+  Миграция/API не запускались; явного folder-level grant в stage нет.
 - `#454`: GitHub migration-safety/app/database/yandex-database/e2e и Vercel
   прошли. Локально прошли `npm run check`, `npm run local:verify`, повторный
   запуск pending-миграций и smoke `/health`, `/ready`, frontend. Обычный dev не
@@ -90,13 +85,11 @@
 
 ## Ближайший roadmap
 
-1. Завершить шесть отдельных блоков Progress из
+1. Назначить deployer folder-level `iam.serviceAccounts.user`, слить bootstrap
+   PR и выполнить reviewed migration/API stage delivery без frontend cutover.
+2. Завершить оставшиеся блоки Progress из
    `docs/design/PROGRESS_SCREEN_PLAN_2026-08-20.md`, по одному PR и с полной
    проверкой каждого до перехода дальше.
-2. После серии Progress повторить reviewed stage delivery с уже сохранённым
-   образом: migration revision, миграция `000004`, private auth API revision и
-   smoke; production frontend не переключать. Desktop shell тренера и P2
-   остаются отложенными.
 
 Ручной беговой MVP `YAFIT-300/301/307/302/303` завершён. Актуальный UX/UI-план
 и отложенные фичи находятся в `docs/design/PRODUCT_USABILITY_AUDIT_2026-08-18.md`

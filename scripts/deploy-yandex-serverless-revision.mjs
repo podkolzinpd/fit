@@ -179,9 +179,15 @@ export function formatYandexCloudApiError({ operation, status, body, headers }) 
     body?.code == null ? null : `code: ${String(body.code)}`,
     requestId == null || requestId === '' ? null : `request ID: ${requestId}`,
   ].filter(Boolean)
+  const permissionHint = operation === 'DeployRevision request' && status === 403
+    ? ' Verify that the deploy service account has an explicit '
+      + 'iam.serviceAccounts.user role on the stage folder; if it does, '
+      + 'contact Yandex Cloud support with the request ID.'
+    : ''
   return `Yandex Cloud ${operation} returned HTTP ${status}: `
     + `${body?.message ?? 'unknown error'}`
     + (diagnostics.length === 0 ? '' : ` (${diagnostics.join(', ')})`)
+    + permissionHint
 }
 
 async function requestJson(url, token, options = {}, operation = 'API request') {

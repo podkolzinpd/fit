@@ -47,12 +47,14 @@ plan JSON, not duplicated workflow configuration. After deployment Terraform
 refreshes state and a second plan must show no container drift before remaining
 infrastructure changes can be applied.
 
-When `deployer_member` is set, Terraform grants that OIDC-backed service
-account `iam.serviceAccounts.user` on itself and the two runtime service
-accounts. Serverless Containers requires both self-use and runtime-identity
-attachment permission when the caller is a service account. The deployment
-workflow verifies all three grants through IAM before touching the registry or
-running a migration; a folder-wide impersonation grant is unnecessary.
+Before the first deployment, a folder owner must grant the OIDC-backed deploy
+service account an explicit `iam.serviceAccounts.user` role on the stage
+folder, as required by the documented Serverless Containers CI/CD setup. This
+bootstrap grant is deliberately not managed by this Terraform stack: the
+deployer must not be able to expand its own folder permissions. When
+`deployer_member` is set, Terraform additionally manages direct grants on the
+deployer itself and both runtime service accounts, and the workflow verifies
+those three least-privilege bindings before image work or migrations.
 
 The exact bootstrap, migration and smoke-test sequence is documented in
 `docs/STAGE_DEPLOYMENT.md`.
