@@ -127,7 +127,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByRole('heading', { name: 'Анна Тестова' })).toBeVisible()
   const clientUrl = page.url()
 
-  await page.getByRole('link', { name: 'Редактировать профиль' }).click()
+  await page.getByRole('button', { name: 'Действия с профилем спортсмена' }).click()
+  await page.getByRole('menuitem', { name: 'Редактировать профиль' }).click()
   await page.getByLabel('Имя', { exact: true }).fill(trainerAlias)
   await page.getByLabel('Имя в моём списке').fill(trainerAlias)
   await page.getByLabel('Личная заметка').fill('Моя приватная заметка')
@@ -267,11 +268,9 @@ test('trainer can create client, complete workout and save progress', async ({ p
 
   // После завершения тренировки статистика клиента обновлена.
   await page.goto(clientUrl)
-  await expect(page.getByText('Тренировок', { exact: true })).toBeVisible()
-  await expect(page.locator('.summary.stats')).toContainText('1')
-  await expect(page.locator('.summary.stats')).toContainText('100%')
-  // Вместо «Последней» на карточке показываем ИМТ.
-  await expect(page.locator('.summary.stats')).toContainText('ИМТ')
+  await expect(page.locator('.client-detail-activity')).toContainText('1 тренировка')
+  await expect(page.locator('.client-detail-activity')).toContainText('100%')
+  await expect(page.locator('.client-detail-vitals')).toContainText('ИМТ')
 
   // Новая тренировка подхватывает фактические значения всех подходов из
   // последнего завершённого выполнения этого упражнения.
@@ -292,7 +291,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
 
   // История и карточка используют один префикс ключа кэша, но разной формы —
   // переход туда-обратно не должен ронять приложение (регресс e.filter).
-  await page.getByRole('link', { name: 'История', exact: true }).click()
+  await page.getByRole('link', { name: 'История тренировок', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'История тренировок' })).toBeVisible()
   await expect(page.locator('.card').first()).toBeVisible()
   // На карточке истории — список упражнений (а не группы мышц) и тоннаж.
@@ -322,7 +321,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // Прогресс открывается из карточки клиента, без отдельного списка-посредника.
   await page.goto(clientUrl)
   await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
-  await page.getByRole('link', { name: 'Замеры и прогресс' }).click()
+  await page.getByRole('link', { name: 'Прогресс и замеры' }).click()
   await page.locator('.trainer-measurements > summary').click()
   await page.getByLabel('Дата').fill('2026-07-20')
   await page.getByLabel('Вес, кг').fill('61')
@@ -917,7 +916,7 @@ test('комментарий тренера к упражнению: план �
   // первому совпавшему тексту из списка.
   await page.goto(commentClientUrl)
   await expect(page.getByRole('heading', { name: 'Коммент Клиент' })).toBeVisible()
-  await page.getByRole('link', { name: 'История', exact: true }).click()
+  await page.getByRole('link', { name: 'История тренировок', exact: true }).click()
   // Дожидаемся, что история клиента открылась и список подгрузился (не «Загрузка…»),
   // потом ищем карточку/коммент. Явный timeout переживает холодный кэш запроса
   // list_workouts под нагрузкой (иначе .card ловил таймаут до ответа RPC).

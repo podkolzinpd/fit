@@ -220,7 +220,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
     page.getByRole('button', { name: 'Сохранить' }).click(),
   ])
   const clientDetailUrl = page.url()
-  await page.getByRole('link', { name: '＋ Запланировать' }).click()
+  await page.getByRole('link', { name: 'Запланировать тренировку' }).click()
   await selectClient(page, 'Связанный клиент')
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Бег/ }).click()
