@@ -5,6 +5,17 @@ const CONTAINERS_API = 'https://serverless-containers.api.cloud.yandex.net'
 const OPERATIONS_API = 'https://operation.api.cloud.yandex.net'
 const DEFAULT_TIMEOUT_MS = 180_000
 const POLL_INTERVAL_MS = 2_000
+const NANOSECONDS_PER_SECOND = 1_000_000_000n
+const DURATION_UNIT_NANOSECONDS = {
+  h: 3_600_000_000_000n,
+  m: 60_000_000_000n,
+  s: NANOSECONDS_PER_SECOND,
+  ms: 1_000_000n,
+  us: 1_000n,
+  'µs': 1_000n,
+  'μs': 1_000n,
+  ns: 1n,
+}
 
 function requiredString(value, field) {
   if (typeof value !== 'string' || value.trim() === '') {
@@ -25,6 +36,41 @@ function requiredInteger(value, field) {
     throw new Error(`${field} must be a non-negative integer`)
   }
   return number
+}
+
+export function normalizeExecutionTimeout(value) {
+  const duration = requiredString(value, 'execution timeout').trim()
+  const componentPattern = /(\d+(?:\.\d+)?)(ns|us|µs|μs|ms|s|m|h)/gu
+  let totalNanoseconds = 0n
+  let consumed = 0
+
+  for (const match of duration.matchAll(componentPattern)) {
+    if (match.index !== consumed) {
+      throw new Error('execution timeout must use Go duration syntax')
+    }
+    const [whole, fraction = ''] = match[1].split('.')
+    const denominator = 10n ** BigInt(fraction.length)
+    const numerator = BigInt(whole) * denominator + BigInt(fraction || '0')
+    const unitNanoseconds = DURATION_UNIT_NANOSECONDS[match[2]]
+    const scaledNanoseconds = numerator * unitNanoseconds
+    if (scaledNanoseconds % denominator !== 0n) {
+      throw new Error('execution timeout has sub-nanosecond precision')
+    }
+    totalNanoseconds += scaledNanoseconds / denominator
+    consumed += match[0].length
+  }
+
+  if (consumed !== duration.length || totalNanoseconds <= 0n) {
+    throw new Error('execution timeout must be a positive Go duration')
+  }
+
+  const seconds = totalNanoseconds / NANOSECONDS_PER_SECOND
+  const fractionalNanoseconds = totalNanoseconds % NANOSECONDS_PER_SECOND
+  const fraction = fractionalNanoseconds
+    .toString()
+    .padStart(9, '0')
+    .replace(/0+$/u, '')
+  return `${seconds}${fraction === '' ? '' : `.${fraction}`}s`
 }
 
 function optionalBlock(blocks, field) {
@@ -82,7 +128,7 @@ export function buildDeployRevisionRequest(values) {
       cores: String(cores),
       coreFraction: String(coreFraction),
     },
-    executionTimeout: requiredString(values.execution_timeout, 'execution timeout'),
+    executionTimeout: normalizeExecutionTimeout(values.execution_timeout),
     serviceAccountId: requiredString(values.service_account_id, 'service account id'),
     imageSpec: {
       imageUrl: requiredString(image.url, 'image URL'),

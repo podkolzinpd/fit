@@ -10,20 +10,16 @@
 ## Активная работа
 
 - Yandex ID/profile vertical slice, серверная tenant-allowlist и постоянный
-  stage delivery находятся в `main`: GitHub OIDC без JSON-ключа, один SHA-образ,
-  автоматические forward-only миграции перед API revision, private smoke и
-  rollback. OIDC-федерация использует подтверждённые GitHub subject со
-  стабильными owner/repository ID; plan и policy gate проходят. `#466`
-  закрепил scoped `iam.serviceAccounts.user` на двух runtime identities.
-  Одобренный run `32278252889` создал и переиспользуемо сохранил SHA-образ, но
-  Yandex IAM не успел распространить только что применённую роль до создания
-  migration revision. Провайдер вернул `PermissionDenied` как warning и
-  ошибочно завершился с кодом 0; защитный вызов миграции остановил workflow,
-  поэтому миграция `000004` и API revision не применены. Текущая ветка
-  разделяет IAM и revision фазой ожидания и превращает такой warning в hard
-  failure. Production frontend и Supabase не переключались. После `#454`
-  локальный запуск автоматически готовит Supabase и PostgreSQL 17, а CI
-  проверяет обе цепочки миграций.
+  stage delivery находятся в `main`: GitHub OIDC без JSON-ключа, immutable
+  образ по Git tree hash `services/api`, автоматические forward-only миграции
+  перед API revision, private smoke и rollback. `#468` обходит известный сбой
+  `DeployRevision` Terraform provider через официальный REST API, строит запрос
+  только из reviewed plan JSON и требует отсутствие container drift после
+  refresh. Одобренный run `32299769664` прошёл plan/policy, применил scoped IAM,
+  один раз создал content-addressed образ и безопасно остановился до БД/API:
+  Terraform state вернул Go-duration `5m0s`, а REST требует protobuf-duration
+  `300s`. Текущая ветка добавляет эту конвертацию и regression tests. Миграция
+  `000004`, новая API revision и production cutover не применены.
 - Функциональный MVP признан достаточным для системной фазы удобства. Аудит
   `#420` зафиксировал P0/P1/P2; навигационная ясность завершена в `#421`,
   информационная архитектура Trainer Progress — в `#423`, visual regression
@@ -64,15 +60,17 @@
   Serverless Container без прогретых экземпляров. Миграции `000001`–`000003`
   применены; API readiness подтверждён. Код `#413` добавил проверку Yandex ID,
   hashed identity mapping, allowlist и read-only `/v1/profile`, но миграция
-  `000004` и новая revision ещё не развёрнуты. Production frontend продолжает
+  `000004` и новая revision ещё не развёрнуты. Образ с tag
+  `cee48ab2b835ed45b7f1f7d010512274e04bb704` уже сохранён в Container Registry
+  и должен переиспользоваться при следующем run. Production frontend продолжает
   использовать Supabase, публичный invoker и frontend cutover не включены.
 
 ## Последние проверки
 
-- `#466`: полный `npm run check`, GitHub CI и Vercel прошли. Stage run
-  `32278252889` прошёл OIDC, plan/policy и безопасно остановился до БД/API:
-  scoped роль создалась, но revision получила `PermissionDenied` во время
-  распространения IAM; образ `e7e48ea` сохранён для повторного использования.
+- `#468`: полный `npm run check`, GitHub migration-safety/app/database/
+  yandex-database/e2e и Vercel прошли. Stage run `32299769664` прошёл OIDC,
+  validate, plan/policy, IAM propagation и image push; REST вернул HTTP 400 на
+  формате `executionTimeout`, после чего workflow остановился до миграций и API.
 - `#454`: GitHub migration-safety/app/database/yandex-database/e2e и Vercel
   прошли. Локально прошли `npm run check`, `npm run local:verify`, повторный
   запуск pending-миграций и smoke `/health`, `/ready`, frontend. Обычный dev не
@@ -80,9 +78,9 @@
 
 ## Ближайший roadmap
 
-1. После merge защиты от IAM propagation повторить reviewed stage delivery:
-   migration revision, миграция `000004`, private auth API revision и smoke;
-   production frontend не переключать.
+1. Слить конвертацию Go-duration → protobuf-duration и повторить reviewed stage
+   delivery с уже сохранённым образом: migration revision, миграция `000004`,
+   private auth API revision и smoke; production frontend не переключать.
 2. Продолжать UI-полировку только с экрана, который явно выберет пользователь;
    не собирать несколько экранов в один PR. Desktop shell тренера и P2
    отложены и без нового прямого решения не начинаются.
