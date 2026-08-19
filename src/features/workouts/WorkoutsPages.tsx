@@ -508,7 +508,7 @@ export function WorkoutFormPage() {
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions"><button type="button" className="secondary" disabled={mutation.isPending} onClick={() => navigate(-1)}>Отмена</button><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0}>{recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить'}</WorkoutCta></div>
+      <div className="actions workout-action-row"><WorkoutCta type="button" variant="tertiary" disabled={mutation.isPending} onClick={() => navigate(-1)}>Отмена</WorkoutCta><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0}>{recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить'}</WorkoutCta></div>
     </form>}</AsyncView>
     {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
   </Page>
@@ -641,11 +641,11 @@ export function WorkoutDetailPage() {
         return <div className={`exercise-block view${done ? ' completed-exercise-block' : ''}`} key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
       })}</div>
       {workout.notes && <section className="workout-review workout-review-readonly"><div className="workout-review-head"><div><p className="eyebrow">{clientMode && !clientOwned ? 'ОТ ТРЕНЕРА' : 'К ТРЕНИРОВКЕ'}</p><h2>{clientMode && !clientOwned ? 'Инструкции' : 'Заметка'}</h2></div></div><p className="workout-review-text">{workout.notes}</p></section>}
-      {canManage && <><div className="actions">
+      {canManage && <><div className="actions workout-detail-actions">
         {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
-        <Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link>
+        <Link className="button link workout-detail-copy" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link>
       </div>
-      <button className="danger secondary wide" disabled={remove.isPending} aria-busy={remove.isPending} onClick={async () => { if (await confirm({ message: 'Удалить тренировку?', confirmLabel: 'Удалить', danger: true })) remove.mutate() }}>{remove.isPending ? 'Удаляем…' : 'Удалить тренировку'}</button></>}
+      <WorkoutCta variant="destructive" className="wide" pending={remove.isPending} pendingLabel="Удаляем…" onClick={async () => { if (await confirm({ message: 'Удалить тренировку?', confirmLabel: 'Удалить', danger: true })) remove.mutate() }}>Удалить тренировку</WorkoutCta></>}
       {clientAuthoredReadOnly && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Скопировать и отправить план</Link></div>}
       {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Создать свою копию</Link></div>}
       {remove.error && <p className="error">{remove.error.message}</p>}
@@ -749,9 +749,9 @@ function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave }: {
     </fieldset>
     {discomfort && <Field label="Что беспокоило?"><textarea aria-label="Пояснение о дискомфорте" rows={3} maxLength={500} placeholder="Где и на каком движении почувствовали дискомфорт" value={comment} onChange={(event) => setComment(event.target.value)} /></Field>}
     {error && <p className="error">{error.message}</p>}
-    <div className="actions workout-review-actions">
-      {hasFeedback && <button type="button" className="secondary" disabled={saving} onClick={() => setEditing(false)}>Отмена</button>}
-      <button type="submit" disabled={saving || !valid}>{saving ? 'Сохраняем…' : hasFeedback ? 'Сохранить изменения' : 'Отправить отзыв'}</button>
+    <div className="actions workout-review-actions workout-action-row">
+      {hasFeedback && <WorkoutCta type="button" variant="tertiary" disabled={saving} onClick={() => setEditing(false)}>Отмена</WorkoutCta>}
+      <WorkoutCta type="submit" pending={saving} pendingLabel="Сохраняем…" disabled={!valid}>{hasFeedback ? 'Сохранить изменения' : 'Отправить отзыв'}</WorkoutCta>
     </div>
   </form>
 }
@@ -794,9 +794,9 @@ function WorkoutTrainerReview({ workout, canEdit, authorName, saving, error, onS
       <VoiceNoteField name="trainerReview" source="workout_review" label="Отзыв тренера" placeholder="Что получилось и на что обратить внимание дальше" value={value} onValueChange={(next) => setValue(next.slice(0, 500))} autoResize />
       <p className="workout-response-limit muted">{value.length}/500</p>
       {error && <p className="error">{error.message}</p>}
-      <div className="actions workout-review-actions">
-        <button type="button" className="secondary" disabled={saving} onClick={() => { setValue(workout.trainerReview ?? ''); setReaction(workout.trainerReaction); setEditing(false) }}>Отмена</button>
-        <button type="button" disabled={saving || !valid} onClick={async () => {
+      <div className="actions workout-review-actions workout-action-row">
+        <WorkoutCta type="button" variant="tertiary" disabled={saving} onClick={() => { setValue(workout.trainerReview ?? ''); setReaction(workout.trainerReaction); setEditing(false) }}>Отмена</WorkoutCta>
+        <WorkoutCta type="button" pending={saving} pendingLabel="Сохраняем…" disabled={!valid} onClick={async () => {
           if (!reaction) return
           try {
             await onSave({ reaction, review: value })
@@ -804,7 +804,7 @@ function WorkoutTrainerReview({ workout, canEdit, authorName, saving, error, onS
           } catch {
             // Ошибку мутации показывает общий экранный state ниже поля.
           }
-        }}>{saving ? 'Сохраняем…' : 'Отправить ответ'}</button>
+        }}>Отправить ответ</WorkoutCta>
       </div>
     </> : hasReview ? <>
       <div className="workout-response-body">
@@ -1526,12 +1526,12 @@ export function LiveWorkoutPage() {
         {confirmFinish
           ? <div className="finish-confirm">
               <p>Есть незавершённые подходы. Завершить частично?</p>
-              <div className="actions">
-                <button type="button" className="secondary" onClick={() => setConfirmFinish(false)}>Отмена</button>
+              <div className="actions workout-action-row">
+                <WorkoutCta type="button" variant="tertiary" onClick={() => setConfirmFinish(false)}>Отмена</WorkoutCta>
                 <WorkoutCta pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>Завершить</WorkoutCta>
               </div>
             </div>
-          : <WorkoutCta className="secondary wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => !exercise.sets.every((set) => set.confirmedAt)); if (incomplete) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>}
+          : <WorkoutCta variant="secondary" className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => !exercise.sets.every((set) => set.confirmedAt)); if (incomplete) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>}
       </div>
     </>}</AsyncView>
     {canManageLiveStructure && pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} onPick={pickLiveExercise} onClose={closePicker} />}
