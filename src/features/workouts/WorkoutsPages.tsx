@@ -640,7 +640,7 @@ export function WorkoutDetailPage() {
         if (block.blockType === 'single' || block.exercises.length === 1) return articles
         return <div className={`exercise-block view${done ? ' completed-exercise-block' : ''}`} key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
       })}</div>
-      {workout.notes && <section className="workout-review"><div className="workout-review-head"><div><p className="eyebrow">{clientMode && !clientOwned ? 'ОТ ТРЕНЕРА' : 'К ТРЕНИРОВКЕ'}</p><h2>{clientMode && !clientOwned ? 'Инструкции' : 'Заметка'}</h2></div></div><p className="workout-review-text">{workout.notes}</p></section>}
+      {workout.notes && <section className="workout-review workout-review-readonly"><div className="workout-review-head"><div><p className="eyebrow">{clientMode && !clientOwned ? 'ОТ ТРЕНЕРА' : 'К ТРЕНИРОВКЕ'}</p><h2>{clientMode && !clientOwned ? 'Инструкции' : 'Заметка'}</h2></div></div><p className="workout-review-text">{workout.notes}</p></section>}
       {canManage && <><div className="actions">
         {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
         <Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Копировать</Link>
@@ -700,7 +700,7 @@ function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave }: {
   const valid = sessionRpe !== undefined && wellbeing !== undefined && discomfort !== undefined
     && (!discomfort || comment.trim().length > 0)
 
-  if (!editing) return <section className="workout-review workout-feedback" aria-labelledby="workout-feedback-title">
+  if (!editing) return <section className="workout-review workout-feedback workout-review-readonly" aria-labelledby="workout-feedback-title">
     <div className="workout-review-head">
       <div><p className="eyebrow">ОБРАТНАЯ СВЯЗЬ</p><h2 id="workout-feedback-title">{canEdit ? 'Ваш итог' : 'Самочувствие клиента'}</h2></div>
       {canEdit && <button type="button" className="secondary" onClick={() => { setSaved(false); setEditing(true) }}>Изменить</button>}
@@ -779,7 +779,7 @@ function WorkoutTrainerReview({ workout, canEdit, authorName, saving, error, onS
 
   if (!canEdit && !hasReview) return null
 
-  return <section className="workout-review" aria-labelledby="workout-review-title">
+  return <section className={`workout-review ${editing ? '' : 'workout-review-readonly'}`} aria-labelledby="workout-review-title">
     <div className="workout-review-head">
       <div><p className="eyebrow">ПОСЛЕ ТРЕНИРОВКИ</p><h2 id="workout-review-title">Отзыв тренера</h2></div>
       {canEdit && !editing && <button type="button" className="secondary" onClick={() => setEditing(true)}>{hasReview ? 'Изменить' : 'Добавить'}</button>}
@@ -817,7 +817,7 @@ function WorkoutTrainerReview({ workout, canEdit, authorName, saving, error, onS
 }
 
 function WorkoutClientComment({ workout }: { workout: Workout }) {
-  return <section className="workout-review" aria-labelledby="workout-client-comment-title">
+  return <section className="workout-review workout-review-readonly" aria-labelledby="workout-client-comment-title">
     <div className="workout-review-head"><div><p className="eyebrow">ОБРАТНАЯ СВЯЗЬ</p><h2 id="workout-client-comment-title">Комментарий клиента</h2></div></div>
     <p className="workout-review-text">{workout.clientComment}</p>
   </section>
