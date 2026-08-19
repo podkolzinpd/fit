@@ -674,8 +674,9 @@ test('iPhone: LLM regularity stays inside the single Progress summary at 390 px'
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: ручной выбор начинает с недавних, а не с разминки на 390 px', async ({ page }) => {
+test('iPhone: ручной выбор начинает с недавних, а не с разминки на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
+  await page.route('**/exercises/base-bench-press.jpg', (route) => route.abort())
   await loginAsTrainer(page)
   await page.evaluate(() => window.localStorage.setItem('fit.recent-exercises', JSON.stringify(['bench-press'])))
   await page.goto('/workouts/new')
@@ -686,8 +687,17 @@ test('iPhone: ручной выбор начинает с недавних, а �
   await expect(page.getByText('Недавние')).toBeVisible()
   await expect(page.getByText('Все упражнения')).toBeVisible()
   await expect(page.getByText('Разминка и мобилити')).toHaveCount(0)
-  await expect(page.locator('.picker-item[data-exercise-ref="bench-press"]')).toHaveCount(1)
+  const recentExercise = page.locator('.picker-item[data-exercise-ref="bench-press"]')
+  await expect(recentExercise).toHaveCount(1)
+  await expect(recentExercise.locator('.exercise-image-empty')).toBeVisible()
+  await expect(recentExercise.locator('img')).toHaveCount(0)
+  const catalogImage = page.locator('.picker-item[data-exercise-ref="barbell-squat"] .exercise-image')
+  await expect(catalogImage.locator('img')).toHaveCSS('object-fit', 'contain')
+  const catalogImageBox = await catalogImage.boundingBox()
+  expect(catalogImageBox?.width).toBe(catalogImageBox?.height)
+  expect(catalogImageBox?.width).toBeGreaterThanOrEqual(48)
   await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('exercise-images-picker.png'), fullPage: true })
 })
 
 test('iPhone: создание тренировки сфокусировано и меню не перекрывает действия на 390 px', async ({ page }) => {
