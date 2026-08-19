@@ -5,6 +5,7 @@ import {
   buildDeployRevisionRequest,
   findPlannedResource,
   hasPlannedChange,
+  normalizeExecutionTimeout,
 } from './deploy-yandex-serverless-revision.mjs'
 
 const values = {
@@ -12,7 +13,7 @@ const values = {
   memory: 512,
   cores: 1,
   core_fraction: 100,
-  execution_timeout: '300s',
+  execution_timeout: '5m0s',
   service_account_id: 'runtime-sa',
   concurrency: 1,
   image: [
@@ -114,6 +115,18 @@ test('deploys only when Terraform planned a resource change', () => {
     false,
   )
   assert.equal(hasPlannedChange({ resource_changes: [] }, address), false)
+})
+
+test('normalizes Terraform Go durations to protobuf JSON durations', () => {
+  assert.equal(normalizeExecutionTimeout('5m0s'), '300s')
+  assert.equal(normalizeExecutionTimeout('1m30.5s'), '90.5s')
+  assert.equal(normalizeExecutionTimeout('500ms'), '0.5s')
+  assert.equal(normalizeExecutionTimeout('30s'), '30s')
+})
+
+test('rejects invalid or over-precise execution timeouts', () => {
+  assert.throws(() => normalizeExecutionTimeout('300'), /positive Go duration/)
+  assert.throws(() => normalizeExecutionTimeout('1.5ns'), /sub-nanosecond/)
 })
 
 test('rejects a plan without a known container id', () => {

@@ -44,7 +44,9 @@ API instead of the Terraform provider. Provider `DeployRevision` can return a
 successful Terraform process status while the cloud API reports a permission
 warning for service-account authentication. Terraform still owns the reviewed
 configuration and remote state: direct revisions are built only from plan JSON,
-then state is refreshed and a second plan must contain no container drift.
+then state is refreshed and a second plan must contain no container drift. The
+adapter converts Terraform's Go-duration values such as `5m0s` to the protobuf
+JSON duration required by REST, such as `300s`.
 
 ## 2. One-time Yandex Cloud bootstrap
 
