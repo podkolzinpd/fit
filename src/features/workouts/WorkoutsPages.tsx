@@ -45,6 +45,7 @@ import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProg
 import { AddIcon } from '../../shared/icons'
 import { WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
+import { chronicleExercisePreview } from './workout-chronicle'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -206,6 +207,7 @@ export function WorkoutChronicleCard({ workout, contextLabel }: { workout: Worko
   const tonnage = workoutTonnage(workout)
   const meta = done ? [duration, tonnage > 0 ? tonnageLabel(tonnage) : null].filter(Boolean) : []
   const hasFeedback = workout.sessionRpe !== undefined && workout.wellbeing !== undefined
+  const exercisePreview = chronicleExercisePreview(workout.exercises)
 
   return <Link className="card workout-chronicle-card" to={`/workouts/${workout.id}`}>
     <div className="workout-chronicle-head">
@@ -217,7 +219,7 @@ export function WorkoutChronicleCard({ workout, contextLabel }: { workout: Worko
     </div>
     {contextLabel && <p className="card-author">{contextLabel}</p>}
     <div className="workout-chronicle-exercises">
-      {workout.exercises.length > 0 ? workout.exercises.map((exercise) => {
+      {exercisePreview.visible.length > 0 ? exercisePreview.visible.map((exercise) => {
         const result = done
           ? compactCompletedSetSummary(exercise.sets)
           : compactPlannedSetSummary(exercise.sets) ?? 'План без числовых значений'
@@ -228,6 +230,7 @@ export function WorkoutChronicleCard({ workout, contextLabel }: { workout: Worko
           <strong>{result}</strong>
         </div>
       }) : <p className="muted">Без упражнений</p>}
+      {exercisePreview.hiddenCount > 0 && <p className="workout-chronicle-more">Ещё {exercisePreview.hiddenCount} {exerciseCountLabel(exercisePreview.hiddenCount)}</p>}
     </div>
     {(meta.length > 0 || hasFeedback || workout.discomfort) && <div className="card-meta workout-chronicle-facts">
       {meta.map((item) => <span key={item}>{item}</span>)}
@@ -235,10 +238,10 @@ export function WorkoutChronicleCard({ workout, contextLabel }: { workout: Worko
       {workout.wellbeing && <span>{chronicleWellbeingLabels[workout.wellbeing]}</span>}
       {workout.discomfort && <span className="attention">Дискомфорт</span>}
     </div>}
-    {workout.clientComment && <p className="workout-chronicle-comment"><span>Клиент</span>{workout.clientComment}</p>}
+    {workout.clientComment && <p className="workout-chronicle-comment"><span className="workout-chronicle-note-label">Клиент</span><span className="workout-chronicle-note-text">{workout.clientComment}</span></p>}
     {workout.trainerReview && <p className="workout-chronicle-response">
-      <span>{workout.trainerReaction ? chronicleReactionLabels[workout.trainerReaction] : 'Тренер'}</span>
-      {workout.trainerReview}
+      <span className="workout-chronicle-note-label">{workout.trainerReaction ? chronicleReactionLabels[workout.trainerReaction] : 'Тренер'}</span>
+      <span className="workout-chronicle-note-text">{workout.trainerReview}</span>
     </p>}
   </Link>
 }
