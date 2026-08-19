@@ -42,7 +42,7 @@ import { RunMetricsFields } from './RunMetricsFields'
 import { parseRunDurationInput, runDistanceKmFromInput, runDistanceLabel, runPaceLabel, type RunDistanceUnit } from '../../shared/run-metrics'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
-import { AddIcon } from '../../shared/icons'
+import { AddIcon, RecordIcon } from '../../shared/icons'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
 import { chronicleExercisePreview } from './workout-chronicle'
@@ -209,11 +209,11 @@ export function WorkoutChronicleCard({ workout, contextLabel }: { workout: Worko
   const hasFeedback = workout.sessionRpe !== undefined && workout.wellbeing !== undefined
   const exercisePreview = chronicleExercisePreview(workout.exercises)
 
-  return <Link className="card workout-chronicle-card" to={`/workouts/${workout.id}`}>
+  return <Link className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}`} to={`/workouts/${workout.id}`}>
     <div className="workout-chronicle-head">
       <strong>{formatLocalDate(workout.workoutDate)}</strong>
       <div className="workout-chronicle-head-badges">
-        {workout.hasPr && <span className="workout-pr-badge">Новый рекорд</span>}
+        {workout.hasPr && <span className="workout-pr-badge"><RecordIcon />Новый рекорд</span>}
         <WorkoutStatusBadge workout={workout} />
       </div>
     </div>

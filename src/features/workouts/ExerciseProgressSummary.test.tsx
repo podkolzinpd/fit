@@ -37,6 +37,12 @@ describe('exercise progress presentation', () => {
     expect(screen.getByText('520 кг·повт.')).toBeVisible()
     expect(screen.getByText('12 из 25 до следующей отметки')).toBeVisible()
     expect(screen.getByText(/без расчётных значений/)).toBeVisible()
+    const weightRecord = screen.getByText('Рекорд рабочего веса').closest('div')
+    const volumeRecord = screen.getByText('Рекорд вес × повторы').closest('div')
+    expect(weightRecord).toHaveClass('is-new-record')
+    expect(weightRecord?.querySelector('[data-icon="record"]')).toBeInTheDocument()
+    expect(volumeRecord).not.toHaveClass('is-new-record')
+    expect(volumeRecord?.querySelector('[data-icon="record"]')).not.toBeInTheDocument()
   })
 
   it('marks only server-provided PRs and renders confirmed fact without a plan fallback', () => {

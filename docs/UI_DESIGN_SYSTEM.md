@@ -167,6 +167,15 @@ Exercise media uses one `ExerciseImage` contract in the picker and exercise
 detail: a square Fit surface, `object-fit: contain` so technique is not cropped,
 and the same neutral exercise placeholder for missing or failed media.
 
+Positive result emphasis is shared across secondary product surfaces:
+
+- a confirmed personal record uses `RecordIcon`, a visible Russian label, and
+  the success border/surface; the icon and color never carry meaning alone;
+- Client Progress gives its single main result the same calm success surface;
+- Trainer Progress marks weekly regularity as positive only after at least one
+  completed workout; zero and unavailable data stay neutral;
+- role Home remains unchanged and must not inherit these secondary-screen rules.
+
 ## Icons
 
 The primary icon language is a small set of hand-authored, outline SVGs in

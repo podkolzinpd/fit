@@ -32,7 +32,7 @@ export function TrainerProgressOverviewContent({ week, summary }: {
 }) {
   const attention = summary?.trainer.attention ?? []
   return <div className="trainer-progress-decisions">
-    <article>
+    <article className={week && week.completedCount > 0 ? 'is-positive' : undefined}>
       <span>Регулярность</span>
       <strong>{week
         ? `${week.completedCount} ${workoutCountLabel(week.completedCount)} за неделю`

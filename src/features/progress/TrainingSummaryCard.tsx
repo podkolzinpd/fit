@@ -301,7 +301,7 @@ function ClientSummaryContent({ summary, goal, profileGoal, today, goalLoading, 
   onGoalRetry: () => void
 }) {
   return <>
-    <div className="ai-progress-hero"><span>Главный результат</span><strong>{formatSummaryText(summary.summary.headline)}</strong></div>
+    <div className="ai-progress-hero client-progress-result"><span>Главный результат</span><strong>{formatSummaryText(summary.summary.headline)}</strong></div>
     <Metrics metrics={summary.metrics} audience="client" />
     <div className="ai-progress-section">
       <h3>Что получилось</h3>
