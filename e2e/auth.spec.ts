@@ -105,7 +105,8 @@ test('client registers, creates a standalone card and own workout without traine
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await expect(page.locator('.planned-set-summary')).toHaveText(/2 × 40 кг × 10 повт\./)
-  await page.getByRole('link', { name: 'Копировать' }).click()
+  await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
+  await page.getByRole('menuitem', { name: 'Копировать тренировку' }).click()
   await expect(page).toHaveURL(/\/workouts\/new\?copy=/)
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
@@ -337,6 +338,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.getByText('Создано клиентом · только просмотр')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Изменить результат' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Удалить тренировку' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Другие действия с тренировкой' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Начать тренировку' })).toHaveCount(0)
 
   // Тренер создаёт новый план из клиентского результата: исходная запись
