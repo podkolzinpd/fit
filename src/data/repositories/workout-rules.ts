@@ -599,16 +599,17 @@ function repeatedSeries(values: readonly string[], suffix = ''): string {
 // объединяются через «/» без повторения служебного слова «подходы».
 export function compactExerciseDetailSummary(
   inputKind: InputKind,
-  sets: readonly WorkoutSet[],
+  sets: readonly (WorkoutSet | WorkoutSetDraft)[],
   mode: ExerciseDetailMode,
   showRpe = false,
 ): string {
   if (sets.length === 0) return 'Без значений'
 
   const values: ExerciseDetailValue[] = sets.map((set) => {
-    const skipped = mode === 'completed' && !set.confirmedAt
+    const savedSet = 'fact' in set ? set : null
+    const skipped = mode === 'completed' && !savedSet?.confirmedAt
     if (skipped) return { skipped }
-    const fact = mode === 'completed' ? set.fact : {}
+    const fact = mode === 'completed' ? savedSet?.fact ?? {} : {}
     const durationSec = fact.durationSec
       ?? (fact.durationMin === undefined ? set.durationSec : Math.round(fact.durationMin * 60))
       ?? (set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60))

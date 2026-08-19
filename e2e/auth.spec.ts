@@ -108,6 +108,19 @@ test('client registers, creates a standalone card and own workout without traine
   await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
   await page.getByRole('menuitem', { name: 'Копировать тренировку' }).click()
   await expect(page).toHaveURL(/\/workouts\/new\?copy=/)
+  await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
+  await expect(page.getByText(/Скопировано ·/)).toBeVisible()
+  const copiedExercise = page.locator('.planned-exercise').first()
+  const copiedExerciseToggle = copiedExercise.locator('.compact-editor-exercise-toggle')
+  await expect(copiedExerciseToggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(copiedExercise).toContainText('2 × 40 кг × 10')
+  await expect(copiedExercise.getByLabel('Вес, подход 1')).toHaveCount(0)
+  await expect(page.getByText('Дополнительно', { exact: true })).toHaveCount(0)
+  await copiedExerciseToggle.click()
+  await expect(copiedExercise.getByLabel('Вес, подход 1')).toHaveValue('40')
+  await page.locator('.phone-frame').evaluate((element) => element.classList.add('keyboard-open'))
+  await expect(page.locator('.workout-action-row')).toBeHidden()
+  await page.locator('.phone-frame').evaluate((element) => element.classList.remove('keyboard-open'))
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
     page.getByRole('button', { name: 'Сохранить' }).click(),

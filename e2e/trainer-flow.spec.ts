@@ -93,7 +93,8 @@ test('форма: короткая беговая фраза создаёт ре
   await expect(page.getByLabel(/Расстояние, подход/)).toHaveCount(6)
   await expect(page.getByLabel('Расстояние, подход 1')).toHaveValue('400')
   await expect(page.getByLabel('Единица расстояния, подход 1')).toHaveValue('m')
-  await page.locator('.planned-exercise').getByText('Дополнительно').click()
+  await page.locator('.planned-exercise').getByRole('button', { name: 'Ещё действия' }).click()
+  await page.getByRole('menuitem', { name: 'Настройки упражнения' }).click()
   await expect(page.getByLabel('Отдых между подходами, с')).toHaveValue('90')
 })
 
@@ -892,8 +893,10 @@ test('комментарий тренера к упражнению: план �
   await page.getByLabel('Вес, подход 1').fill('90')
   await page.getByLabel('Повторы, подход 1').fill('8')
   // Комментарий тренера к упражнению в форме плана.
-  await page.getByText('Дополнительно', { exact: true }).click()
+  await page.locator('.planned-exercise').getByRole('button', { name: 'Ещё действия' }).click()
+  await page.getByRole('menuitem', { name: 'Настройки упражнения' }).click()
   await page.getByLabel('Комментарий к упражнению').fill('Держи спину прямо')
+  await page.getByRole('button', { name: 'Готово' }).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
