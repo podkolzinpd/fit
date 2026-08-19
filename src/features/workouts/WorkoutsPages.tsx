@@ -626,7 +626,9 @@ export function WorkoutDetailPage() {
           const compactPlan = workout.status === 'planned' ? compactPlannedSetSummary(exercise.sets, showRpe) : null
           return <WorkoutExercise state={done ? 'history' : 'planned'} className={`exercise ${done ? 'completed-exercise' : ''}`} key={exercise.id}>
           <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
-          {done ? <p className="completed-set-summary">{compactCompletedSetSummary(exercise.sets, showRpe)}</p> : compactPlan ? <p className="planned-set-summary"><span>План</span><strong>{compactPlan}</strong></p> : <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={['Результат']} className="workout-history-sets">
+          {done ? <details className="completed-exercise-details"><summary className="completed-set-summary">{compactCompletedSetSummary(exercise.sets, showRpe)}</summary><WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={['Результат']} className="workout-history-sets">
+            {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done showRpe={showRpe} />)}
+          </WorkoutSetTable></details> : compactPlan ? <p className="planned-set-summary"><span>План</span><strong>{compactPlan}</strong></p> : <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={['Результат']} className="workout-history-sets">
             {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} />)}
           </WorkoutSetTable>}
           {exercise.trainerComment && <p className="exercise-comment-note">💬 {exercise.trainerComment}</p>}

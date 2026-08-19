@@ -717,6 +717,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .planned-set-summary span { font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase }
 .planned-set-summary strong { color:var(--fg); font-size:16px; line-height:1.25 }
 .completed-set-summary { margin:4px 0 0; color:var(--fg); font-size:16px; font-weight:700; line-height:1.35; overflow-wrap:anywhere }
+.completed-exercise-details { margin-top:var(--space-1) }
+.completed-exercise-details > summary { min-height:var(--control-height-compact); display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); color:var(--fg); cursor:pointer; list-style:none }
+.completed-exercise-details > summary::-webkit-details-marker { display:none }
+.completed-exercise-details > summary::after { content:'Показать'; flex:0 0 auto; color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold) }
+.completed-exercise-details[open] > summary::after { content:'Скрыть' }
+.completed-exercise-details > summary:focus-visible { outline:3px solid var(--accent-ring); outline-offset:3px; border-radius:var(--radius-sm) }
 .workout-history-set { display:grid; grid-template-columns:24px minmax(0, 1fr) 24px; align-items:center; gap:8px; min-height:48px; padding:8px 0; border-bottom:1px solid var(--hairline) }
 .completed-exercise .workout-history-sets { margin-top:6px }
 .completed-exercise .workout-history-set { min-height:42px; padding:4px 0 }
