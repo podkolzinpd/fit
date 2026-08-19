@@ -121,6 +121,21 @@ variable "allow_unauthenticated_api" {
   default     = false
 }
 
+variable "deployer_member" {
+  description = "OIDC-backed service account allowed to attach the API and migration runtime identities to container revisions."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = (
+      var.deployer_member == null
+      || can(regex("^serviceAccount:[^[:space:]]+$", var.deployer_member))
+    )
+    error_message = "deployer_member must be a serviceAccount IAM member or null."
+  }
+}
+
 variable "api_invoker_member" {
   description = "Optional scoped IAM member used for private readiness checks."
   type        = string
