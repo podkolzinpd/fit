@@ -72,6 +72,11 @@ visible `LIVE` label.
 | `caption` | 12 px | 600 | metadata, supporting copy, eyebrow variant |
 | `numeric` | 22 px | 800, tabular | primary measured value or count |
 
+Operational workout labels are an accessibility exception to the compact
+caption role: column headings, plan/fact context, Live hints, and history
+metadata use at least 13 px and `--secondary-label-fg`. Twelve-pixel text is
+reserved for self-contained badges or nonessential decorative metadata.
+
 - CSS variables are `--type-<role>-size`; reusable classes are
   `.type-display`, `.type-title`, `.type-section`, `.type-body`,
   `.type-caption`, and `.type-numeric`.

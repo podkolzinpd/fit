@@ -708,6 +708,17 @@ test('iPhone: создание тренировки сфокусировано �
   await save.scrollIntoViewIfNeeded()
   await expect(save).toHaveAttribute('data-variant', 'primary')
   await expect(page.getByRole('button', { name: 'Отмена', exact: true })).toHaveAttribute('data-variant', 'tertiary')
+  const setTableHeading = page.locator('.workout-set-table-head').first()
+  await expect(setTableHeading).toHaveCSS('font-size', '13px')
+  expect(await setTableHeading.evaluate((element) => {
+    const style = window.getComputedStyle(element)
+    const probe = document.createElement('span')
+    probe.style.color = style.getPropertyValue('--secondary-label-fg')
+    document.body.append(probe)
+    const matches = window.getComputedStyle(probe).color === style.color
+    probe.remove()
+    return matches
+  })).toBe(true)
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toHaveCount(0)
   const viewportHeight = await page.evaluate(() => window.visualViewport?.height ?? window.innerHeight)
   const saveBox = await save.boundingBox()

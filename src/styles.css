@@ -28,7 +28,7 @@
   --avatar-grad-1: linear-gradient(145deg, #d95c54, #a33232);
   --avatar-grad-2: linear-gradient(145deg, #d8872d, #965018);
   --avatar-grad-3: linear-gradient(145deg, #c96f4a, #8e3f28);
-  --surface: #19171f; --surface-raised: #24212b; --muted: #a59ead;
+  --surface: #19171f; --surface-raised: #24212b; --muted: #a59ead; --secondary-label-fg: #b8b1bf;
   --border: #3a3643; --danger: #ff7380; --success: #62d786; --success-fg: #62d786; --warning: #ffc06b; --input: #2a2732;
   /* ── Семантические токены тем (заложены в YAFIT-77). В базовой тёмной теме =
      исходные значения 1:1, в основной .theme-light переопределяются.
@@ -144,7 +144,7 @@
   --accent-surface: #fdeee8; --accent-surface-border: #f3c4b3;
   --accent-shadow: #c9481f30; --selection: #f26b4a3d;
   --on-accent: #ffffff;
-  --surface: #fffefc; --surface-raised: #fffefc; --muted: #6c717a;
+  --surface: #fffefc; --surface-raised: #fffefc; --muted: #6c717a; --secondary-label-fg: #5c6169;
   --border: #e5ded3; --danger: #dc4c4c; --success: #22c55e; --success-fg: #1f7a44; --warning: #f59e0b; --input: #f2eee8;
   --fg-strong: #17191d; --fg-on-surface: #17191d;
   --surface-sunken: #f2eee8; --surface-elevated: #fffefc;
@@ -1614,6 +1614,43 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-exercise-compact-copy { flex:1 1 auto; min-width:0; display:grid; gap:2px }
 .workout-exercise-compact-copy strong { overflow-wrap:anywhere; font-size:var(--type-body-size); line-height:var(--leading-snug) }
 .workout-exercise-compact-copy span { color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
+/* Вторичные подписи тренировочного цикла остаются спокойнее основного текста,
+   но не опускаются ниже 13 px и используют более контрастный neutral-токен. */
+.workout-focused-page .workout-header-meta,
+.workout-detail-page .workout-header-meta,
+.workout-focused-page .workout-status[data-tone='neutral'],
+.workout-detail-page .workout-status[data-tone='neutral'],
+.workout-focused-page .workout-exercise-compact-copy span,
+.workout-focused-page .block-badge,
+.workout-focused-page .circuit-round-label,
+.workout-focused-page .block-rest-field,
+.workout-focused-page .running-preset-actions > span,
+.workout-focused-page .planned-round-label,
+.workout-focused-page .live-previous-result,
+.workout-focused-page .live-upcoming-summary,
+.workout-focused-page .workout-set-table-head,
+.workout-focused-page .live-set-compact-values small,
+.workout-focused-page .live-rpe-details summary,
+.workout-focused-page .live-set-save-feedback .save-status,
+.workout-detail-page .workout-fact-summary span,
+.workout-detail-page .workout-response-meta,
+.workout-detail-page .workout-feedback-fieldset > .muted,
+.workout-detail-page .workout-feedback-summary span,
+.workout-detail-page .planned-set-summary span,
+.workout-detail-page .workout-history-set .plan-note,
+.workout-detail-page .workout-chronicle-exercise-name .workout-exercise-comment,
+.workout-detail-page .workout-chronicle-more,
+.workout-detail-page .workout-chronicle-facts span,
+.workout-detail-page .workout-chronicle-note-label {
+  color:var(--secondary-label-fg);
+  font-size:var(--text-sm);
+}
+.workout-focused-page .exercise-name-hint,
+.workout-focused-page .set-deviation,
+.workout-focused-page .set-rpe-field,
+.workout-detail-page .exercise-name-hint {
+  font-size:var(--text-sm);
+}
 @media (max-width: 360px) {
   .workout-header-contract { align-items:flex-start }
   .workout-header-side { max-width:42% }
