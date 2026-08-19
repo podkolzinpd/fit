@@ -9,7 +9,7 @@ import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactPlannedSetOverview, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -177,6 +177,15 @@ function exerciseCountLabel(count: number): string {
   if (last === 1) return 'упражнение'
   if (last >= 2 && last <= 4) return 'упражнения'
   return 'упражнений'
+}
+
+function setCountLabel(count: number): string {
+  const lastTwo = count % 100
+  const last = count % 10
+  if (lastTwo >= 11 && lastTwo <= 14) return 'подходов'
+  if (last === 1) return 'подход'
+  if (last >= 2 && last <= 4) return 'подхода'
+  return 'подходов'
 }
 
 export function WorkoutExercisesSummary({ workout, maxItems }: { workout: Workout; maxItems?: number }) {
@@ -657,16 +666,17 @@ export function WorkoutDetailPage() {
       {done && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
       {done && <WorkoutTrainerReview workout={workout} canEdit={canReview} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
       {!clientMode && workout.clientComment && workout.sessionRpe === undefined && <WorkoutClientComment workout={workout} />}
-      <div className={`cards ${done ? 'completed-exercise-list' : ''}`}>{groupIntoBlocks(workout.exercises).map((block) => {
+      {!done && <div className="workout-detail-exercise-overview"><p>ПЛАН ТРЕНИРОВКИ</p><span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)} · {sets.length} {setCountLabel(sets.length)}</span></div>}
+      <div className={`cards ${done ? 'completed-exercise-list' : 'planned-exercise-list'}`}>{groupIntoBlocks(workout.exercises).map((block) => {
         const articles = block.exercises.map((exercise) => {
-          const compactPlan = workout.status === 'planned' ? compactPlannedSetSummary(exercise.sets, showRpe) : null
-          return <WorkoutExercise state={done ? 'history' : 'planned'} className={`exercise ${done ? 'completed-exercise' : ''}`} key={exercise.id}>
+          const plannedOverview = compactPlannedSetOverview(exercise.sets, showRpe)
+          return <WorkoutExercise state={done ? 'history' : 'planned'} className={`exercise ${done ? 'completed-exercise' : 'planned-detail-exercise'}`} key={exercise.id}>
           <Link className="exercise-name-link" to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><strong>{exercise.name}</strong> <span className="exercise-name-hint">↗ история</span></Link>
           {done ? <details className="completed-exercise-details"><summary className="completed-set-summary">{compactCompletedSetSummary(exercise.sets, showRpe)}</summary><WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={['Результат']} className="workout-history-sets">
             {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done showRpe={showRpe} />)}
-          </WorkoutSetTable></details> : compactPlan ? <p className="planned-set-summary"><span>План</span><strong>{compactPlan}</strong></p> : <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={['План']} className="workout-history-sets">
+          </WorkoutSetTable></details> : <details className="planned-exercise-details"><summary className="planned-set-summary"><strong>{plannedOverview}</strong></summary><WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={['План']} className="workout-history-sets">
             {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} />)}
-          </WorkoutSetTable>}
+          </WorkoutSetTable></details>}
           {exercise.trainerComment && <p className="exercise-comment-note">💬 {exercise.trainerComment}</p>}
         </WorkoutExercise>
         })

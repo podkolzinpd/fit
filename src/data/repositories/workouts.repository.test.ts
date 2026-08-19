@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactCompletedSetSummary, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, createRunningFormatDrafts, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactCompletedSetSummary, compactPlannedSetOverview, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, createRunningFormatDrafts, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
@@ -23,6 +23,14 @@ describe('workouts repository rules', () => {
     expect(compactPlannedSetSummary([base(0), base(1, 8)])).toBeNull()
     expect(compactPlannedSetSummary([{ id: 'duration', position: 0, durationSec: 300, fact: {}, confirmedAt: null, version: 1 }])).toBe('5:00')
     expect(compactPlannedSetSummary([{ id: 'run', position: 0, durationSec: 1800, distanceKm: 5, fact: {}, confirmedAt: null, version: 1 }])).toBe('5 км × 30:00 · темп 6:00/км')
+  })
+
+  it('даёт короткий обзор разного плана и сохраняет полный порядок отдельно', () => {
+    const set = (position: number, weightKg?: number, reps?: number): WorkoutSet => ({ id: `overview-${position}`, position, weightKg, reps, fact: {}, confirmedAt: null, version: 1 })
+    expect(compactPlannedSetOverview([set(0, 35, 15), set(1, 35, 15), set(2, 35, 10)]))
+      .toBe('3 подхода · 35 кг × 15 повт. · 35 кг × 15 повт. · …')
+    expect(compactPlannedSetOverview([set(0), set(1)])).toBe('2 подхода · без значений · без значений')
+    expect(compactPlannedSetOverview([])).toBe('Без подходов')
   })
 
   it('сворачивает одинаковый факт и кратко отмечает невыполненные подходы', () => {
