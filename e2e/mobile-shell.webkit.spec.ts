@@ -614,7 +614,7 @@ for (const viewport of mobileViewports) {
       }
       if (screen.includes('11111111')) {
         await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()
-        await expect(page.getByRole('link', { name: 'Редактировать профиль' })).toBeVisible()
+        await expect(page.getByRole('button', { name: 'Действия с профилем спортсмена' })).toBeVisible()
         await expect(page.locator('.client-detail-overview')).toHaveCount(0)
       }
       await expectNoHorizontalOverflow(page)
@@ -920,7 +920,7 @@ test('iPhone: прогресс открывается из карточки кл
   await page.goto('/clients')
   await page.getByRole('link', { name: /Анна Смирнова/ }).first().click()
   await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()
-  await page.getByRole('link', { name: 'Замеры и прогресс' }).click()
+  await page.getByRole('link', { name: 'Прогресс и замеры' }).click()
   await expect(page.getByRole('heading', { name: /Прогресс · Анна Смирнова/ })).toBeVisible()
   await page.locator('.page-back').click()
   await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()

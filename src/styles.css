@@ -412,17 +412,23 @@ p { margin: 6px 0 }
 .client-detail-page { padding: max(16px, calc(38px - env(safe-area-inset-top))) 20px 28px }
 .client-detail-page .page-header { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 11px; margin-bottom: 18px }
 .client-detail-page .page-header .page-back { grid-column: 1; grid-row: 1 }
-.client-detail-page .page-header .button { grid-column: 3; grid-row: 1; min-height: 44px; max-width: none; padding: 9px 12px; border-radius: 14px; line-height: 1.15 }
+.client-detail-page .page-header .overflow-menu { grid-column: 3; grid-row: 1; justify-self: end }
+.client-detail-page .page-header .overflow-trigger { border-radius: var(--radius-md); background: transparent }
 .client-detail-page .page-header h1 { grid-column: 1 / -1; grid-row: 2; padding: 0; font-size: clamp(29px, 8.2vw, 34px); line-height: 1.06 }
-.client-detail-summary, .client-detail-stats { gap: 1px; overflow: hidden; border: 1px solid var(--border); border-radius: 18px; background: var(--border) }
-.client-detail-summary { margin-bottom: 9px }
-.client-detail-summary div, .client-detail-stats div { min-height: 68px; justify-content: center; padding: 10px 5px; border: 0; border-radius: 0; box-shadow: none }
-.client-detail-summary strong, .client-detail-stats strong { font-size: 17px }
-.client-detail-stats { margin-top: 9px }
+.client-detail-snapshot { padding: var(--card-padding); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-card) }
+.client-detail-vitals { display: flex; flex-wrap: wrap; gap: 5px 15px; margin: 0; color: var(--muted); font-size: 14px; font-weight: var(--weight-semibold); line-height: var(--leading-snug) }
+.client-detail-vitals > span { white-space: nowrap }
+.client-detail-activity { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--border) }
+.client-detail-activity p { display: grid; align-content: start; gap: 3px; min-width: 0; margin: 0 }
+.client-detail-activity strong { overflow-wrap: anywhere; font-size: 18px; line-height: var(--leading-snug); font-variant-numeric: tabular-nums }
+.client-detail-activity span { color: var(--muted); font-size: 13px; font-weight: var(--weight-medium); line-height: 1.35 }
 .client-detail-page .attention { margin: 9px 0 0; border: 1px solid var(--danger-border); background: var(--danger-surface) }
-.client-detail-page .client-actions { gap: 9px; margin: 16px 0 }
-.client-detail-page .client-actions-row { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 9px }
-.client-detail-page .client-actions .button { min-height: 48px; margin: 0; padding: 10px 11px; border-radius: 15px; font-size: 15px }
+.client-detail-actions { display: grid; gap: var(--space-2); margin: var(--space-4) 0 var(--space-3) }
+.client-detail-actions .client-detail-plan { min-height: var(--control-height-primary); gap: var(--space-2); margin: 0; border-radius: var(--radius-lg); font-size: var(--type-body-size) }
+.client-detail-plan svg { width: 19px; height: 19px }
+.client-detail-routes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) }
+.client-detail-routes a { min-height: var(--control-height-standard); display: grid; place-items: center; padding: var(--space-2); color: var(--accent-strong); font-size: 14px; font-weight: var(--weight-semibold); line-height: var(--leading-snug); text-align: center; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px }
+.client-detail-routes a:hover, .client-detail-routes a:focus-visible { text-decoration-color: currentColor }
 .client-detail-page .goal-block { margin-top: 12px; padding: 16px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
 .client-detail-page .goal-block + .goal-block { margin-top: 10px }
 .client-detail-page .goal-head { align-items: center }
@@ -435,10 +441,11 @@ p { margin: 6px 0 }
 .client-detail-page .goal-stage-title { color: var(--fg); font-weight: var(--weight-semibold) }
 .client-detail-page .goal-stages-hint { margin-top: 7px; padding: 12px; border-radius: 14px; background: var(--surface-sunken) }
 .client-detail-upcoming { display: grid; gap: 7px; margin-top: 18px }
-.client-detail-upcoming .eyebrow, .client-detail-upcoming h2 { margin: 0 }
+.client-detail-upcoming h2 { margin: 0 }
 .client-detail-upcoming h2 { font-size: 22px }
 .client-detail-upcoming .cards { gap: 8px }
 .client-detail-upcoming .card { min-height: 76px; padding: 14px 15px; border-radius: 17px }
+.client-detail-page .goal-block.client-note-block { margin-top: 18px; padding: 16px 0 0; border: 0; border-top: 1px solid var(--border); border-radius: 0; background: transparent; box-shadow: none }
 .client-detail-page .page-actions { display: grid; gap: 9px; margin-top: 16px }
 .client-detail-page .page-actions .card { border-radius: 16px; background: var(--surface-raised); box-shadow: none }
 .client-detail-page .page-actions > button { min-height: 48px; margin: 0; border-radius: 15px }

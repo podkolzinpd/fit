@@ -117,6 +117,14 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await expect(page.getByRole('link', { name: /Анна Смирнова/ }).first()).toBeVisible()
   await expectVisualBaseline(page, 'trainer-clients.png')
 
+  await page.goto(`/clients/${demoClientId}`)
+  await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Сводка по спортсмену' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Запланировать тренировку' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Разделы спортсмена' })).toBeVisible()
+  await expect(page.getByText('БЛИЖАЙШЕЕ')).toHaveCount(0)
+  await expectVisualBaseline(page, 'trainer-client-detail.png')
+
   await page.goto('/schedule')
   await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
   await expectVisualBaseline(page, 'trainer-schedule.png')
