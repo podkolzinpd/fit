@@ -39,8 +39,18 @@ output "database_url_secret_id" {
 }
 
 output "database_owner_url_secret_id" {
-  description = "Temporary migration owner secret metadata ID. No payload is stored in Terraform."
+  description = "Legacy migration owner secret metadata ID retained during the credential transition."
   value       = yandex_lockbox_secret.database_owner_url.id
+}
+
+output "api_connection_secret_id" {
+  description = "Connection Manager Lockbox secret used by the API runtime."
+  value       = data.yandex_connectionmanager_connection.api.lockbox_secret.id
+}
+
+output "migration_connection_secret_id" {
+  description = "Connection Manager Lockbox secret used by the migration runner."
+  value       = data.yandex_connectionmanager_connection.owner.lockbox_secret.id
 }
 
 output "migration_container_url" {

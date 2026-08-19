@@ -23,8 +23,16 @@ resource "yandex_container_repository_lifecycle_policy" "api" {
   status        = "active"
 
   rule {
-    description  = "Keep the latest ten API images"
-    untagged     = true
-    retained_top = 10
+    description   = "Keep the latest ten immutable commit images"
+    tag_regexp    = "^[0-9a-f]{40}$"
+    retained_top  = 10
+    expire_period = "168h"
+  }
+
+  rule {
+    description   = "Remove stale untagged layers"
+    untagged      = true
+    retained_top  = 3
+    expire_period = "168h"
   }
 }

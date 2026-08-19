@@ -4,6 +4,7 @@ folder_id = "b1g00000000000000000"
 # Stage stays private until Yandex ID token verification is implemented.
 environment               = "stage"
 allow_unauthenticated_api = false
+# api_invoker_member = "serviceAccount:aje00000000000000000"
 
 # Yandex assigns network-connected Serverless Containers addresses from this
 # service range. Keep it explicit so a provider/platform change is reviewed.
@@ -11,6 +12,7 @@ serverless_service_cidr = "198.19.0.0/16"
 
 # The tagged image must be pushed before apply.
 api_image_tag = "foundation"
+migration_image_tag = "foundation"
 
 # Public identifier of the Yandex OAuth application. Do not put its client
 # secret here. Keep public invocation disabled until the reviewed auth image is
@@ -21,10 +23,6 @@ api_image_tag = "foundation"
 # production frontend must be reviewed and added independently.
 api_cors_allowed_origins = []
 
-# Add only after creating a DATABASE_URL payload outside Terraform.
-# database_url_secret_version_id = "e6q00000000000000000"
-
-# Set only for a reviewed migration run, invoke the private migration
-# container once, then set back to null and apply to remove the runner.
-# database_owner_url_secret_version_id = "e6q00000000000000000"
-# migration_invoker_member             = "userAccount:aje00000000000000000"
+# The private migration runner stays cold between releases and can only be
+# invoked by the OIDC-backed deployment service account.
+# migration_invoker_member = "serviceAccount:aje00000000000000000"

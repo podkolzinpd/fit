@@ -1,6 +1,7 @@
 import { buildApp } from './app.js'
 import { YandexIdentityClient } from './auth/yandex-identity.js'
 import { YandexOAuthCodeClient } from './auth/yandex-oauth-code.js'
+import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
 import { DatabasePilotProfileReader } from './pilot-profile-reader.js'
 
@@ -28,10 +29,9 @@ function parseAllowedOrigins(value: string | undefined): string[] {
   })
 }
 
+const databaseConfig = buildDatabaseConnectionConfig('DATABASE')
 const databasePool =
-  process.env.DATABASE_URL === undefined
-    ? undefined
-    : new PgDatabasePool({ connectionString: process.env.DATABASE_URL })
+  databaseConfig === undefined ? undefined : new PgDatabasePool(databaseConfig)
 const identityProvider =
   process.env.YANDEX_OAUTH_CLIENT_ID === undefined
     ? undefined
