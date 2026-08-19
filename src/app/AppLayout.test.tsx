@@ -3,14 +3,24 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AppLayout } from './AppLayout'
 
-const authState = vi.hoisted(() => ({ role: 'client' as 'client' | 'trainer', userId: 'user-1' }))
+const authState = vi.hoisted(() => ({
+  role: 'client' as 'client' | 'trainer',
+  userId: 'user-1',
+  theme: 'light' as 'light' | 'dark',
+}))
 
 vi.mock('./auth-context', () => ({
   useAuth: () => ({ actor: { role: authState.role, userId: authState.userId } }),
 }))
-vi.mock('./theme', () => ({ useAppTheme: () => 'light' }))
-// isAssistantNavPilotEnabled остаётся настоящей: пилотные тесты управляют ею
-// через vi.stubEnv и проверяют реальный проброс actor.userId в allowlist.
+// Мокаем только выбор пользователя: разрешение варианта и применение класса
+// остаются настоящими, иначе пилотная палитра не была бы проверена.
+vi.mock('./theme', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./theme')>()),
+  useAppTheme: () => authState.theme,
+}))
+// isDarkThemePilotEnabled и isAssistantNavPilotEnabled остаются настоящими:
+// тесты пилотов управляют ими через vi.stubEnv и проверяют реальный проброс
+// actor.userId в allowlist.
 vi.mock('./feature-flags', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./feature-flags')>()),
   isTodayStartRedesignEnabled: () => true,
@@ -30,7 +40,13 @@ function iconName(link: HTMLElement) {
   return link.querySelector('svg')?.getAttribute('data-icon')
 }
 
-afterEach(() => { authState.role = 'client'; authState.userId = 'user-1'; vi.unstubAllEnvs() })
+afterEach(() => {
+  authState.role = 'client'
+  authState.userId = 'user-1'
+  authState.theme = 'light'
+  vi.unstubAllEnvs()
+  document.documentElement.className = ''
+})
 
 describe('AppLayout navigation', () => {
   it('показывает Кабинет клиента как домашний раздел', () => {
@@ -64,6 +80,53 @@ describe('AppLayout navigation', () => {
     renderLayout('/workouts/workout-1/live')
     expect(screen.queryByRole('navigation', { name: 'Основная навигация' })).not.toBeInTheDocument()
     expect(document.querySelector('.phone-frame')).toHaveClass('live-session-shell')
+  })
+})
+
+describe('AppLayout: пилот тёмной палитры', () => {
+  function enablePilotFor(userId: string) {
+    vi.stubEnv('VITE_DARK_THEME_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_USER_IDS', userId)
+  }
+
+  it('аккаунт из allowlist с тёмной темой получает пилотную палитру', () => {
+    enablePilotFor('pilot-user')
+    authState.userId = 'pilot-user'
+    authState.theme = 'dark'
+    renderLayout('/me')
+    expect(document.querySelector('.phone-frame')).toHaveClass('theme-dark-pilot')
+    expect(document.documentElement).toHaveClass('theme-dark-pilot')
+  })
+
+  it('аккаунт вне allowlist остаётся на прежней тёмной теме', () => {
+    enablePilotFor('pilot-user')
+    authState.userId = 'other-user'
+    authState.theme = 'dark'
+    renderLayout('/me')
+    const frame = document.querySelector('.phone-frame')
+    expect(frame).not.toHaveClass('theme-dark-pilot')
+    expect(frame).not.toHaveClass('theme-light')
+    expect(document.documentElement).not.toHaveClass('theme-dark-pilot')
+  })
+
+  it('при выключенном флаге пилот недоступен даже аккаунту из списка', () => {
+    vi.stubEnv('VITE_DARK_THEME_PILOT_ENABLED', '')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_USER_IDS', 'pilot-user')
+    authState.userId = 'pilot-user'
+    authState.theme = 'dark'
+    renderLayout('/me')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('theme-dark-pilot')
+  })
+
+  it('со светлой темой пилотная палитра не подменяет выбор пользователя', () => {
+    enablePilotFor('pilot-user')
+    authState.userId = 'pilot-user'
+    authState.theme = 'light'
+    renderLayout('/me')
+    const frame = document.querySelector('.phone-frame')
+    expect(frame).toHaveClass('theme-light')
+    expect(frame).not.toHaveClass('theme-dark-pilot')
+    expect(document.documentElement).toHaveClass('theme-light')
   })
 })
 

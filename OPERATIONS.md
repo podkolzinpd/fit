@@ -63,6 +63,24 @@ frontend bundle, поэтому этот механизм служит толь�
 не является границей авторизации: данные и мутации защищаются существующими
 RLS/ownership-проверками.
 
+Закрытый пилот тёмной палитры из Figma-макета «Фит» управляется build-time
+переменными Vercel:
+
+```text
+VITE_DARK_THEME_PILOT_ENABLED=true
+VITE_DARK_THEME_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
+```
+
+Механизм default-off и повторяет форму allowlist Apple Health: по умолчанию, при
+пустом списке или любом значении флага кроме точного `true` тёмная тема остаётся
+прежней. Список открыт и тренерским, и клиентским аккаунтам. Переменные только
+открывают доступ к новой палитре: она применяется, когда участник пилота сам
+включил тёмную тему в профиле, и этот выбор хранится в `localStorage` устройства,
+то есть включается на каждом устройстве отдельно. Изменение списка требует нового
+deployment. UUID попадают во frontend bundle, поэтому этот механизм служит только
+для rollout оформления и не является границей авторизации: данные и мутации
+защищаются существующими RLS/ownership-проверками.
+
 - Site URL: `https://<production-domain>`;
 - Redirect URLs: `https://<production-domain>/auth/callback` и `https://<production-domain>/auth/reset`;
 - локальные `http://localhost:5173/auth/callback` и `http://localhost:5173/auth/reset` остаются разрешёнными для разработки.

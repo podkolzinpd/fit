@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnalyticsIcon, ClientsIcon, HomeIcon, ProfileIcon, ScheduleIcon, SettingsIcon, TodayIcon } from '../shared/icons'
 import { useAuth } from './auth-context'
-import { useAppTheme } from './theme'
-import { isAssistantNavPilotEnabled, isTodayStartRedesignEnabled } from './feature-flags'
+import { applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from './theme'
+import { isAssistantNavPilotEnabled, isDarkThemePilotEnabled, isTodayStartRedesignEnabled } from './feature-flags'
 
 export function AppLayout() {
   const { actor } = useAuth()
@@ -12,6 +12,16 @@ export function AppLayout() {
   const { pathname, search } = useLocation()
   const redesignedStart = isTodayStartRedesignEnabled()
   const [keyboardOpen, setKeyboardOpen] = useState(false)
+  // main.tsx применяет тему до первого render, когда аккаунт ещё неизвестен.
+  // Пилотный вариант подключается здесь — как только auth вернул actor и
+  // allowlist можно проверить; вне allowlist вариант остаётся прежним тёмным.
+  const themeVariant = resolveThemeVariant(theme, Boolean(actor && isDarkThemePilotEnabled(actor.userId)))
+
+  useEffect(() => {
+    // Класс живёт на <html>: фон вне рамки телефона и цвет системной панели
+    // должны совпадать с палитрой внутри неё.
+    applyThemeVariant(themeVariant)
+  }, [themeVariant])
 
   useEffect(() => {
     // Route content can grow again while its draft is restored. Reset on the
@@ -45,7 +55,14 @@ export function AppLayout() {
   const immersive = liveSession || workoutForm || todayStep
   const contentClass = immersive ? 'content content-immersive' : 'content'
 
-  const frameClass = `${theme === 'light' ? 'phone-frame theme-light' : 'phone-frame'}${redesignedStart && pathname === '/today' ? ' today-start-shell' : ''}${liveSession ? ' live-session-shell' : ''}${workoutForm ? ' workout-form-shell' : ''}${keyboardOpen ? ' keyboard-open' : ''}`
+  const frameClass = [
+    'phone-frame',
+    themeVariantClass(themeVariant),
+    redesignedStart && pathname === '/today' ? 'today-start-shell' : '',
+    liveSession ? 'live-session-shell' : '',
+    workoutForm ? 'workout-form-shell' : '',
+    keyboardOpen ? 'keyboard-open' : '',
+  ].filter(Boolean).join(' ')
 
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
     <NavLink to="/me" end><HomeIcon />Кабинет</NavLink>
