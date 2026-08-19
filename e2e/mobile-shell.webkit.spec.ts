@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+const demoClientId = '11111111-1111-4111-8111-111111111111'
+
 const mobileViewports = [
   { width: 390, height: 844 },
   { width: 375, height: 812 },
@@ -716,10 +718,10 @@ test('iPhone: создание тренировки сфокусировано �
   await expect(page.getByRole('menuitem', { name: 'Удалить' })).toBeVisible()
   await expectOverflowMenuAboveBars(page)
   await page.keyboard.press('Escape')
-  const save = page.getByRole('button', { name: 'Сохранить', exact: true })
+  const save = page.getByRole('button', { name: 'Сохранить план', exact: true })
   await save.scrollIntoViewIfNeeded()
   await expect(save).toHaveAttribute('data-variant', 'primary')
-  await expect(page.getByRole('button', { name: 'Отмена', exact: true })).toHaveAttribute('data-variant', 'tertiary')
+  await expect(page.getByRole('button', { name: 'Отмена', exact: true })).toHaveCount(0)
   const setTableHeading = page.locator('.workout-set-table-head').first()
   await expect(setTableHeading).toHaveCSS('font-size', '13px')
   expect(await setTableHeading.evaluate((element) => {
@@ -739,13 +741,66 @@ test('iPhone: создание тренировки сфокусировано �
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: планирование из карточки спортсмена сохраняет контекст и компактную иерархию', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+  await page.goto(`/workouts/new?client=${demoClientId}`)
+
+  await expect(page.locator('.workout-header-meta')).toContainText('Анна Смирнова')
+  await expect(page.getByLabel('Клиент')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'План', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await page.screenshot({ path: testInfo.outputPath('workout-planning-top-390.png') })
+  await page.getByRole('button', { name: 'Завершённая', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Завершённая', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'План', exact: true }).click()
+  await expect(page.getByLabel('Окончание')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Добавить время окончания' }).click()
+  await expect(page.getByLabel('Окончание')).toBeVisible()
+  await page.getByRole('button', { name: 'Убрать окончание' }).click()
+
+  await addExercise(page, 'Присед со штангой', true)
+  await expect(page.getByRole('button', { name: 'Добавить голосом или текстом' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Выбрать упражнения' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '＋ Упражнение' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Упражнения', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Сохранить план', exact: true })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('workout-planning-client-390.png'), fullPage: true })
+
+  await page.setViewportSize({ width: 430, height: 932 })
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('workout-planning-client-430.png'), fullPage: true })
+})
+
+test('iPhone: бег с RPE не сжимает время и дистанцию в одну тесную строку', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+  await page.goto(`/workouts/new?client=${demoClientId}`)
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Бег/ }).click()
+  await page.locator('[data-running-format="free"]').click()
+  await page.getByRole('button', { name: 'Ещё действия' }).click()
+  await page.getByRole('menuitem', { name: 'Указать RPE' }).click()
+
+  const runningSet = page.locator('.planned-set-running.rpe-visible')
+  await expect(runningSet).toBeVisible()
+  const runningSetBox = await runningSet.boundingBox()
+  expect(runningSetBox).not.toBeNull()
+  expect(runningSetBox!.height).toBeGreaterThanOrEqual(100)
+  await expect(page.getByLabel('Время, подход 1')).toBeVisible()
+  await expect(page.getByLabel('Расстояние, подход 1')).toBeVisible()
+  await expect(page.getByLabel('Целевой RPE, подход 1')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('workout-planning-running-rpe-390.png'), fullPage: true })
+})
+
 test('iPhone: пустую тренировку нельзя сохранить на 390 px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
   await page.goto('/workouts/new')
 
   await expect(page.getByText('Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Сохранить', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Сохранить план', exact: true })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Выбрать упражнения' })).toBeVisible()
   await expectNoHorizontalOverflow(page)
 })
@@ -766,7 +821,7 @@ test('iPhone: длинное название и 10 подходов не лом
   await exercise.getByLabel('Повторы, подход 10').fill('10')
   await expectNoHorizontalOverflow(page)
 
-  await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
   await expect(page.locator('.live-session-progress')).toContainText('подход 1 из 10')
   await expect(page.locator('.live-exercise.current')).toContainText(longName)

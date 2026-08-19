@@ -276,7 +276,9 @@ export function WorkoutFormPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [confirmLeave, confirmLeaveDialog] = useConfirm()
   const sourceId = workoutId ?? params.get('copy') ?? undefined
+  const routeClientId = params.get('client') ?? ''
   const source = useQuery({ queryKey: ['workout', sourceId], queryFn: () => workoutsRepository.get(sourceId ?? ''), enabled: Boolean(sourceId) })
   const clientMode = actor?.role === 'client'
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false), enabled: !clientMode })
@@ -290,6 +292,7 @@ export function WorkoutFormPage() {
   const [entryDate, setEntryDate] = useState<LocalDate>(() => localDate(params.get('date') ?? today))
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
+  const [showEndTime, setShowEndTime] = useState(false)
   const [notes, setNotes] = useState('')
   const [clientSelectionError, setClientSelectionError] = useState<string | null>(null)
   const [stageId, setStageId] = useState('')
@@ -303,7 +306,7 @@ export function WorkoutFormPage() {
   const exercises = draftExercises ?? initial?.exercises ?? []
   const draftKey = workoutFormDraftKey(actor?.userId ?? 'anonymous', sourceId ?? `new-${params.get('client') ?? ''}-${params.get('date') ?? ''}`)
   // Клиент, для которого выбираем этап (реактивно — при смене в селекте).
-  const defaultClientId = clientMode ? (mine.data?.id ?? '') : (initial?.clientId ?? params.get('client') ?? '')
+  const defaultClientId = clientMode ? (mine.data?.id ?? '') : (initial?.clientId ?? routeClientId)
   const [selectedClientId, setSelectedClientId] = useState<string>('')
   const clientId = selectedClientId || defaultClientId
   const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId), enabled: Boolean(clientId) })
@@ -320,10 +323,11 @@ export function WorkoutFormPage() {
     if (!actor || source.isLoading || (clientMode && mine.isLoading) || formDraftReady) return
     const saved = readWorkoutFormDraft(draftKey)
     if (saved) {
-      setSelectedClientId(saved.clientId)
+      setSelectedClientId(routeClientId || saved.clientId)
       setEntryDate(saved.workoutDate)
       setStartTime(saved.startTime.slice(0, 5))
       setEndTime(saved.endTime.slice(0, 5))
+      setShowEndTime(Boolean(saved.endTime))
       setNotes(saved.notes)
       setStageId(saved.stageId)
       setRecordCompleted(saved.recordCompleted)
@@ -334,11 +338,12 @@ export function WorkoutFormPage() {
       // без шага секунд принимает HH:MM. Иначе браузер молча блокирует submit.
       setStartTime(initial.startTime?.slice(0, 5) ?? '')
       setEndTime(initial.endTime?.slice(0, 5) ?? '')
+      setShowEndTime(Boolean(initial.endTime))
       setNotes(initial.notes ?? '')
       setStageId(initial.stageId ?? '')
     }
     setFormDraftReady(true)
-  }, [actor, clientMode, draftKey, formDraftReady, initial, mine.isLoading, source.data?.status, source.isLoading])
+  }, [actor, clientMode, draftKey, formDraftReady, initial, mine.isLoading, routeClientId, source.data?.status, source.isLoading])
 
   useEffect(() => {
     if (!formDraftReady || workoutId) return
@@ -457,37 +462,54 @@ export function WorkoutFormPage() {
     const date = workoutDateForRecordMode(completedMode ? 'completed' : 'planned', entryDate, today)
     const submittedStartTime = startTime
     const submittedEndTime = endTime
-    const endTimeInput = event.currentTarget.elements.namedItem('endTime') as HTMLInputElement
+    const endTimeInput = event.currentTarget.elements.namedItem('endTime') as HTMLInputElement | null
     const timeError = submittedEndTime && !submittedStartTime
       ? 'Укажите время начала тренировки'
       : submittedEndTime && submittedEndTime <= submittedStartTime
         ? 'Окончание должно быть позже начала'
         : ''
-    endTimeInput.setCustomValidity(timeError)
-    if (timeError) { endTimeInput.reportValidity(); return }
+    endTimeInput?.setCustomValidity(timeError)
+    if (timeError) { endTimeInput?.reportValidity(); return }
     const stageId = String(form.get('stageId') || '') || null
     mutation.mutate({ id: workoutId, requestId: workoutId ? undefined : createRequestId.current, clientId: submitClientId, workoutDate: date, startTime: submittedStartTime || undefined,
       endTime: submittedEndTime || undefined,
       notes: notes || undefined, stageId: stageId || null, exercises, version: source.data?.version })
   }
   const availableClients = clientMode ? (mine.data ? [mine.data] : []) : clients.data
+  const selectedClientName = availableClients?.find((client) => client.id === clientId)?.fullName
+  const clientContextLocked = !clientMode && !workoutId && !params.has('copy') && Boolean(routeClientId)
   const editingDenied = Boolean(clientMode && workoutId && source.data && source.data.createdBy !== actor?.userId)
   const loading = source.isLoading || mine.isLoading
   const error = source.error ?? mine.error
   const pageTitle = workoutId ? 'Редактировать тренировку' : params.has('copy') ? 'Копия тренировки' : 'Новая тренировка'
   const documentTitle = workoutId ? 'Редактирование тренировки' : params.has('copy') ? 'Копирование тренировки' : 'Создание тренировки'
-  return <Page title={documentTitle} hideTitle className="workout-form-page workout-focused-page" back={-1}>
+  const exerciseMeta = exercises.length > 0 ? `${exercises.length} ${exerciseCountLabel(exercises.length)}` : 'Сначала добавьте упражнения'
+  const headerMeta = selectedClientName ? exercises.length > 0 ? `${selectedClientName} · ${exerciseMeta}` : selectedClientName : exerciseMeta
+  const hasMeaningfulDraft = exercises.length > 0 || Boolean(notes.trim() || startTime || endTime || selectedClientId || recordCompleted || entryDate !== localDate(params.get('date') ?? today))
+  async function leaveForm() {
+    if (!workoutId && hasMeaningfulDraft) {
+      const shouldLeave = await confirmLeave({ message: 'Выйти из тренировки? Черновик и введённые значения будут удалены.', confirmLabel: 'Выйти', danger: true })
+      if (!shouldLeave) return
+      removeWorkoutFormDraft(draftKey)
+    }
+    navigate(-1)
+  }
+  return <Page title={documentTitle} hideTitle className="workout-form-page workout-focused-page" back={-1} onBack={() => void leaveForm()}>
     <WorkoutHeader eyebrow={completedMode ? 'РЕЗУЛЬТАТ' : 'ПЛАН ТРЕНИРОВКИ'} title={pageTitle} state={completedMode ? 'history' : 'planned'}
-      meta={exercises.length > 0 ? `${exercises.length} ${exerciseCountLabel(exercises.length)}` : 'Сначала добавьте упражнения'} />
+      meta={headerMeta} />
     <AsyncView loading={loading} error={error} onRetry={() => { void source.refetch(); void mine.refetch() }}>{editingDenied ? <StatePanel tone="info" title="Редактирование недоступно" description="Назначенную тренером тренировку может менять только тренер." action={<button type="button" className="secondary" onClick={() => navigate(-1)}>Вернуться</button>} /> : clientMode && !mine.data ? <StatePanel tone="info" title="Карточка ещё не подключена" description="Создайте личную карточку в кабинете — после этого можно будет добавлять самостоятельные тренировки." action={<Link className="button" to="/me">Создать карточку</Link>} /> : <form className="stack workout-form" onSubmit={(event) => void submit(event)}>
       <section className="workout-form-section">
-        <div className="workout-form-section-head"><p className="eyebrow">ОСНОВНЫЕ ДАННЫЕ</p><h2>Тренировка</h2></div>
         {clientMode
           ? <input type="hidden" name="clientId" value={mine.data?.id ?? ''} />
-          : <ClientPicker userId={actor?.userId} clients={availableClients ?? []} selectedId={clientId} onChange={(id) => { setClientSelectionError(null); setSelectedClientId(id) }} selectionError={clientSelectionError} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
-        <div className="split"><Field label="Дата"><input name="date" type="date" max={completedMode ? today : undefined} value={entryDate} onChange={(event) => setEntryDate(localDate(event.target.value))} required /></Field><Field label="Время"><input name="startTime" type="time" value={startTime} onChange={(event) => { setStartTime(event.target.value); (event.currentTarget.form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} /></Field></div>
-        <Field label="Окончание"><input name="endTime" type="time" value={endTime} onChange={(event) => { setEndTime(event.target.value); event.currentTarget.setCustomValidity('') }} /></Field>
+          : clientContextLocked
+            ? <input type="hidden" name="clientId" value={clientId} />
+            : <ClientPicker userId={actor?.userId} clients={availableClients ?? []} selectedId={clientId} onChange={(id) => { setClientSelectionError(null); setSelectedClientId(id) }} selectionError={clientSelectionError} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
         {!workoutId && <div className="workout-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={!recordCompleted ? 'active' : ''} aria-pressed={!recordCompleted} onClick={() => setRecordCompleted(false)}>План</button><button type="button" className={recordCompleted ? 'active' : ''} aria-pressed={recordCompleted} onClick={() => { setRecordCompleted(true); setEntryDate((date) => workoutDateForRecordMode('completed', date, today)) }}>Завершённая</button></div>}
+        <div className="workout-form-section-head"><p className="eyebrow">КОГДА</p></div>
+        <div className="split workout-time-row"><Field label="Дата"><input name="date" type="date" max={completedMode ? today : undefined} value={entryDate} onChange={(event) => setEntryDate(localDate(event.target.value))} required /></Field><Field label="Начало"><input name="startTime" type="time" value={startTime} onChange={(event) => { setStartTime(event.target.value); (event.currentTarget.form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} /></Field></div>
+        {showEndTime
+          ? <div className="workout-end-time"><Field label="Окончание"><input name="endTime" type="time" value={endTime} onChange={(event) => { setEndTime(event.target.value); event.currentTarget.setCustomValidity('') }} /></Field><button type="button" className="link" onClick={() => { setEndTime(''); setShowEndTime(false) }}>Убрать окончание</button></div>
+          : <button type="button" className="link workout-add-end-time" onClick={() => setShowEndTime(true)}>＋ Добавить время окончания</button>}
         {stages.length > 0 && <Field label="Этап цели">
           {/* key — чтобы defaultValue пересчитался при смене клиента/загрузке цели */}
           <select name="stageId" key={`${clientId}-${defaultStageId}`} value={stageId || defaultStageId} onChange={(event) => setStageId(event.target.value)}>
@@ -496,21 +518,22 @@ export function WorkoutFormPage() {
           </select>
         </Field>}
         <details className="workout-notes" open={Boolean(initial?.notes)}>
-          <summary>Заметка <span>Необязательно</span></summary>
+          <summary>Заметка для спортсмена <span>Необязательно</span></summary>
           <VoiceNoteField name="notes" source="workout_form" value={notes} onValueChange={setNotes} hideLabel />
         </details>
       </section>
       <section className="workout-form-section workout-form-exercises">
         <div className="workout-form-section-head"><p className="eyebrow">УПРАЖНЕНИЯ</p><h2>{completedMode ? 'Что выполнено' : 'Что нужно выполнить'}</h2></div>
-        <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} onAdd={(parsed) => void addQuickEntry(parsed)} onOpenCatalog={(search) => { setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) }} />
+        <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} onAdd={(parsed) => void addQuickEntry(parsed)} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search) => { setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) } : undefined} />
         {exercises.length === 0 && <p className="workout-empty-hint" role="status">Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.</p>}
         <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions workout-action-row"><WorkoutCta type="button" variant="tertiary" disabled={mutation.isPending} onClick={() => navigate(-1)}>Отмена</WorkoutCta><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0}>{recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить'}</WorkoutCta></div>
+      <div className="actions workout-action-row"><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0}>{recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить план'}</WorkoutCta></div>
     </form>}</AsyncView>
     {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
+    {confirmLeaveDialog}
   </Page>
 }
 

@@ -3,14 +3,14 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { AddIcon, AlertIcon, BackIcon, CheckIcon, InfoIcon, MoreIcon, PendingIcon } from './icons'
 
-export function Page({ title, action, back, center, hideTitle, className, children }: PropsWithChildren<{
-  title: string; action?: ReactNode; back?: string | number; center?: boolean; hideTitle?: boolean; className?: string
+export function Page({ title, action, back, onBack, center, hideTitle, className, children }: PropsWithChildren<{
+  title: string; action?: ReactNode; back?: string | number; onBack?: () => void; center?: boolean; hideTitle?: boolean; className?: string
 }>) {
   const navigate = useNavigate()
   const classes = ['page', center ? 'page-center' : '', className].filter(Boolean).join(' ')
   return <main className={classes}>
     <header className="page-header">
-      {back !== undefined && <button type="button" className="page-back" aria-label="Назад" onClick={() => navigate(back as never)}><BackIcon /></button>}
+      {back !== undefined && <button type="button" className="page-back" aria-label="Назад" onClick={() => onBack ? onBack() : navigate(back as never)}><BackIcon /></button>}
       {/* hideTitle — заголовок дублируется таб-баром (напр. «Расписание»);
           прячем визуально, но оставляем для скринридеров. */}
       <h1 className={hideTitle ? 'sr-only' : undefined}>{title}</h1>
@@ -156,7 +156,7 @@ function ConfirmDialog({ message, confirmLabel = 'Подтвердить', cance
 export interface OverflowMenuItem { label: string; onClick: () => void; danger?: boolean; disabled?: boolean }
 // Меню «три точки» для редких действий, чтобы они не конкурировали с основными.
 // Пункты сохраняют свои названия (доступны по имени после раскрытия меню).
-export function OverflowMenu({ items, label = 'Ещё действия' }: { items: OverflowMenuItem[]; label?: string }) {
+export function OverflowMenu({ items, label = 'Ещё действия', trigger }: { items: OverflowMenuItem[]; label?: string; trigger?: ReactNode }) {
   const [open, setOpen] = useState(false)
   const [position, setPosition] = useState<CSSProperties | null>(null)
   const triggerRef = useRef<HTMLDivElement>(null)
@@ -217,7 +217,7 @@ export function OverflowMenu({ items, label = 'Ещё действия' }: { ite
   if (items.length === 0) return null
   const host = document.querySelector('.phone-frame') ?? document.body
   return <div className="overflow-menu" ref={triggerRef}>
-    <button type="button" className="overflow-trigger" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}><MoreIcon /></button>
+    <button type="button" className={`overflow-trigger${trigger ? ' overflow-trigger-text' : ''}`} aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}>{trigger ?? <MoreIcon />}</button>
     {open && createPortal(<div ref={menuRef} className="overflow-list" role="menu" style={position ?? { visibility: 'hidden' }}>
       {items.map((item) => <button key={item.label} type="button" role="menuitem" disabled={item.disabled}
         className={item.danger ? 'overflow-item danger' : 'overflow-item'}

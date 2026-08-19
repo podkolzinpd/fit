@@ -82,12 +82,25 @@ describe('workout exercise editor rules', () => {
     expect(screen.getByLabelText('Время, подход 1')).toBeInTheDocument()
     expect(screen.getByLabelText('Расстояние, подход 1')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Сбросить значения' }))
+    await user.click(screen.getByRole('button', { name: 'Действия с планом' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Сбросить значения' }))
+    await user.click(screen.getByRole('button', { name: 'Очистить' }))
     expect(onChange.mock.calls.at(-1)?.[0]?.[0]?.sets[0]).toEqual({ position: 0 })
-    await user.click(screen.getByRole('button', { name: '+5%' }))
+    await user.click(screen.getByRole('button', { name: 'Действия с планом' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Рабочие веса +5%' }))
     expect(onChange.mock.calls.at(-1)?.[0]?.[0]?.sets[0]?.weightKg).toBe(55)
-    await user.click(screen.getByRole('button', { name: '−5%' }))
+    await user.click(screen.getByRole('button', { name: 'Действия с планом' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Рабочие веса −5%' }))
     expect(onChange).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not offer weight adjustments for a running-only plan', async () => {
+    const user = userEvent.setup()
+    render(<RunningEditorHarness />)
+
+    await user.click(screen.getByRole('button', { name: 'Действия с планом' }))
+    expect(screen.queryByRole('menuitem', { name: /Рабочие веса/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Сбросить значения' })).toBeInTheDocument()
   })
 
   it('accepts copied factual seconds that are not multiples of 15', () => {

@@ -54,7 +54,7 @@ test('форма: быстрый ввод разбирает текст в уп�
   await squatCandidates.first().click()
   await expect(page.getByText('Распознано: 2')).toBeVisible()
   await expect(page.getByText('Уточните упражнение')).toBeHidden()
-  await page.getByRole('button', { name: 'Добавить распознанные (2)' }).click()
+  await page.getByRole('button', { name: 'Добавить в план (2)' }).click()
   await expect(page.getByLabel('Вес, подход 1')).toHaveValue('80')
   await expect(page.getByLabel('Вес, подход 2')).toHaveValue('85')
   await expect(page.getByLabel('Повторы, подход 3')).toHaveValue('5')
@@ -63,7 +63,6 @@ test('форма: быстрый ввод разбирает текст в уп�
   await page.getByRole('menuitem', { name: 'Указать RPE' }).click()
   await expect(squatEditor.getByLabel('Целевой RPE, подход 1')).toHaveValue('8')
   await expect(page.getByLabel('Время, сек, подход 3')).toHaveValue('45')
-  await page.getByRole('button', { name: 'Отмена' }).click()
 })
 
 test('форма: короткая беговая фраза создаёт редактируемые интервалы в метрах', async ({ page }) => {
@@ -77,7 +76,7 @@ test('форма: короткая беговая фраза создаёт ре
   await page.getByLabel('Запись тренировки').fill('6 по 400 метров')
   await expect(page.getByText('Распознано: 1')).toBeVisible()
   await expect(page.getByText('Бег — интервалы · 6 подходов')).toBeVisible()
-  await page.getByRole('button', { name: 'Добавить распознанные (1)' }).click()
+  await page.getByRole('button', { name: 'Добавить в план (1)' }).click()
 
   await expect(page.getByText('Бег — интервалы', { exact: true }).last()).toBeVisible()
   await expect(page.getByLabel(/Расстояние, подход/)).toHaveCount(6)
@@ -85,7 +84,6 @@ test('форма: короткая беговая фраза создаёт ре
   await expect(page.getByLabel('Единица расстояния, подход 1')).toHaveValue('m')
   await page.locator('.planned-exercise').getByText('Дополнительно').click()
   await expect(page.getByLabel('Отдых между подходами, с')).toHaveValue('90')
-  await page.getByRole('button', { name: 'Отмена' }).click()
 })
 
 test('стартовый экран показывает точный результат автоматического распознавания до сохранения', async ({ page }) => {
@@ -286,7 +284,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await expect(page.getByLabel('Вес, подход 1')).toHaveValue('45')
   await expect(page.getByLabel('Повторы, подход 1')).toHaveValue('9')
-  await page.getByRole('button', { name: 'Отмена' }).click()
+  await page.getByRole('button', { name: 'Назад' }).click()
+  await page.getByRole('button', { name: 'Выйти' }).click()
   await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
 
   // История и карточка используют один префикс ключа кэша, но разной формы —
@@ -795,7 +794,7 @@ test('расписание: отмена создания возвращает �
   const selectedNumber = await selectedDay.locator('.day-num').innerText()
   await page.getByRole('link', { name: 'Новая тренировка' }).click()
   const selectedDate = await page.getByLabel('Дата').inputValue()
-  await page.getByRole('button', { name: 'Отмена' }).click()
+  await page.getByRole('button', { name: 'Назад' }).click()
 
   await expect(page.locator('.schedule-count')).toBeVisible()
   await expect(page).toHaveURL(new RegExp(`date=${selectedDate}`))
@@ -821,7 +820,7 @@ test('расписание: карточка события — время, им
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
   await page.getByRole('link', { name: 'Новая тренировка' }).click()
   await selectClient(page, clientName)
-  await page.getByLabel('Время').fill('09:00')
+  await page.getByLabel('Начало').fill('09:00')
   // Три упражнения — на карточке должны показаться максимум два и « …».
   for (const [index, q] of ['присед со штангой', 'жим ногами', 'подтягивания'].entries()) {
     await page.getByRole('button', { name: index === 0 ? 'Выбрать упражнения' : '＋ Упражнение' }).click()
