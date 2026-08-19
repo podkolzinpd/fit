@@ -253,7 +253,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByLabel('Фактический вес, подход 1').fill('45')
   await page.getByRole('button', { name: 'Сохранить изменения' }).click()
   await expect(page.locator('.workout-detail-page .badge.done')).toHaveText('Готово')
-  await expect(page.getByText(/45 кг × 9 повт\./)).toBeVisible()
+  await expect(page.locator('.completed-set-summary').filter({ hasText: /45 кг × 9 повт\./ }).first()).toBeVisible()
 
   // «Назад» с завершённой тренировки ведёт в расписание (все запланированные).
   await page.locator('.page-back').click()

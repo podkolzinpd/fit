@@ -833,7 +833,11 @@ test('iPhone: частично завершённая тренировка по�
   await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
   await expect(page.locator('.workout-detail-page .badge.partial')).toHaveText('Частично')
   await expect(page.locator('.completed-set-summary')).toContainText('не выполнено:')
-  await expect(page.locator('.workout-history-sets')).toHaveCount(0)
+  const completedDetails = page.locator('.completed-exercise-details').first()
+  await expect(completedDetails).not.toHaveAttribute('open')
+  await completedDetails.locator('summary').click()
+  await expect(completedDetails.locator('.workout-history-sets')).toBeVisible()
+  await expect(completedDetails).toContainText('не выполнено')
   await expectNoHorizontalOverflow(page)
 })
 
