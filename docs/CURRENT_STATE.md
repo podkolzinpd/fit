@@ -5,7 +5,7 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-19
-Проверенный базовый `main`: `e7e48ea` (`fix(yandex): grant deployer runtime identity use (#466)`)
+Проверенный базовый `main`: `7d8dbf1` (`YAFIT-317: верхняя навигация «Ассистент» за индивидуальным default-off пилотом (#434)`)
 
 ## Активная работа
 
@@ -64,6 +64,15 @@
 
 ## Последние проверки
 
+- `#434` / `YAFIT-317`: верхняя навигация тренера («Клиенты / Ассистент /
+  Расписание» + шестерёнка профиля, «Сегодня» → «Ассистент» c sr-only h1)
+  в `main` строго за default-off пилотом `isAssistantNavPilotEnabled`
+  (`VITE_ASSISTANT_NAV_ENABLED` + `VITE_ASSISTANT_NAV_PILOT_USER_IDS`,
+  образец wearables). Вне allowlist рендер бит-в-бит прежний — visual
+  эталоны и e2e не менялись (добавлен default-off инвариант). `npm run
+  check`, unit флага/шапки/AppLayout, ручная проверка пилота в Chromium 375
+  и WebKit 390. Переменные пилота в Vercel не установлены — фича выключена
+  для всех; включение первого аккаунта выполняется отдельно.
 - `#466`: полный `npm run check`, GitHub CI и Vercel прошли. Stage run
   `32278252889` прошёл OIDC, plan/policy и безопасно остановился до БД/API:
   scoped роль создалась, но revision получила `PermissionDenied` во время
