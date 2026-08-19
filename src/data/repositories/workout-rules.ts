@@ -569,6 +569,113 @@ export function compactCompletedSetSummary(sets: readonly WorkoutSet[], showRpe 
   return missed > 0 ? `${fact} · не выполнено: ${missed}` : fact
 }
 
+type ExerciseDetailMode = 'planned' | 'completed'
+
+type ExerciseDetailValue = {
+  skipped: boolean
+  weightKg?: number
+  reps?: number
+  distanceKm?: number
+  durationSec?: number
+  rpe?: number
+}
+
+function compactSeries(values: readonly string[]): string {
+  return values.length <= 4 ? values.join(' / ') : `${values.slice(0, 4).join(' / ')} / …`
+}
+
+function repeatedSeries(values: readonly string[], suffix = ''): string {
+  const visible = values.filter((value) => value !== '—')
+  const first = visible[0]
+  if (first && visible.length === values.length && values.every((value) => value === first)) {
+    return values.length === 1 ? `${first}${suffix}` : `${values.length} × ${first}${suffix}`
+  }
+  return `${compactSeries(values)}${suffix}`
+}
+
+// Детальный экран тренировки показывает только две спокойные строки:
+// название и легко сканируемый итог. Полный порядок подходов остаётся внутри
+// раскрытия, поэтому одинаковые значения сворачиваются, а разные
+// объединяются через «/» без повторения служебного слова «подходы».
+export function compactExerciseDetailSummary(
+  inputKind: InputKind,
+  sets: readonly WorkoutSet[],
+  mode: ExerciseDetailMode,
+  showRpe = false,
+): string {
+  if (sets.length === 0) return 'Без значений'
+
+  const values: ExerciseDetailValue[] = sets.map((set) => {
+    const skipped = mode === 'completed' && !set.confirmedAt
+    if (skipped) return { skipped }
+    const fact = mode === 'completed' ? set.fact : {}
+    const durationSec = fact.durationSec
+      ?? (fact.durationMin === undefined ? set.durationSec : Math.round(fact.durationMin * 60))
+      ?? (set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60))
+    return {
+      skipped,
+      weightKg: fact.weightKg ?? set.weightKg,
+      reps: fact.reps ?? set.reps,
+      distanceKm: fact.distanceKm ?? set.distanceKm,
+      durationSec,
+      rpe: fact.rpe ?? set.rpe,
+    }
+  })
+
+  const completed = values.filter((value) => !value.skipped)
+  if (completed.length === 0) return 'Не выполнено'
+
+  let summary: string
+  if (inputKind === 'strength') {
+    const withoutValues = completed.filter((value) => value.weightKg === undefined && value.reps === undefined).length
+    if (withoutValues === completed.length) return mode === 'completed' ? 'Без результата' : 'Без значений'
+    if (withoutValues > 0 && mode === 'planned') return 'Значения заполнены частично'
+    const weights = completed.map((value) => value.weightKg)
+    const commonWeight = weights[0] !== undefined && weights.every((weight) => weight === weights[0]) ? weights[0] : undefined
+    const reps = values.map((value) => value.skipped || value.reps === undefined ? '—' : String(value.reps))
+    if (commonWeight !== undefined) {
+      const completedReps = completed.map((value) => value.reps)
+      const sameCompleteReps = completedReps[0] !== undefined && completedReps.every((repetition) => repetition === completedReps[0])
+      summary = sameCompleteReps && completed.length === values.length
+        ? values.length === 1 ? `${commonWeight} кг × ${completedReps[0]}` : `${values.length} × ${commonWeight} кг × ${completedReps[0]}`
+        : `${commonWeight} кг × ${compactSeries(reps)}`
+    } else {
+      summary = compactSeries(values.map((value) => value.skipped
+        ? '—'
+        : [value.weightKg !== undefined ? `${value.weightKg} кг` : null, value.reps !== undefined ? String(value.reps) : null].filter(Boolean).join(' × ') || 'без результата'))
+    }
+  } else if (inputKind === 'reps') {
+    summary = repeatedSeries(values.map((value) => value.skipped || value.reps === undefined ? '—' : String(value.reps)), ' повт.')
+  } else if (inputKind === 'duration') {
+    summary = repeatedSeries(values.map((value) => value.skipped ? '—' : durationLabel(value.durationSec) ?? '—'))
+  } else {
+    const distances = completed.map((value) => runDistanceLabel(value.distanceKm))
+    const commonDistance = distances[0] && distances.every((distance) => distance === distances[0]) ? distances[0] : null
+    const durations = values.map((value) => value.skipped ? '—' : durationLabel(value.durationSec) ?? '—')
+    const completedDurations = completed.map((value) => durationLabel(value.durationSec))
+    const commonDuration = completedDurations[0] && completedDurations.every((duration) => duration === completedDurations[0]) ? completedDurations[0] : null
+    if (commonDistance && commonDuration && completed.length === values.length) {
+      summary = values.length === 1 ? `${commonDistance} · ${commonDuration}` : `${values.length} × ${commonDistance} · ${commonDuration}`
+    } else if (commonDistance) {
+      summary = `${commonDistance} · ${compactSeries(durations)}`
+    } else {
+      summary = compactSeries(values.map((value) => value.skipped
+        ? '—'
+        : [runDistanceLabel(value.distanceKm), durationLabel(value.durationSec)].filter(Boolean).join(' · ') || 'без значений'))
+    }
+    if (values.length === 1) {
+      const pace = runPaceLabel(values[0]?.durationSec, values[0]?.distanceKm)
+      if (pace) summary += ` · ${pace}`
+    }
+  }
+
+  if (showRpe) {
+    const rpeValues = values.map((value) => value.skipped || value.rpe === undefined ? '—' : String(value.rpe))
+    if (rpeValues.some((value) => value !== '—')) summary += ` · RPE ${compactSeries(rpeValues)}`
+  }
+  return summary
+}
+
 // Результат подхода: строка факта (факт, иначе план) и приписка плана — только
 // если факт был введён и отличается от плана хоть по одному параметру.
 // Совпал факт с планом или факта нет вовсе → planNote = null.
