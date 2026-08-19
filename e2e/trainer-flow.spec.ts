@@ -32,6 +32,12 @@ test('форма: быстрый ввод разбирает текст в уп�
   await page.getByRole('button', { name: 'Войти' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Аналитика', exact: true })).toHaveCount(0)
+  // Пилот YAFIT-317 default-off: вне allowlist входы в верхнюю навигацию
+  // («Ассистент», шестерёнка профиля в навигации) не рендерятся вовсе.
+  // «Открыть профиль» проверяется внутри навигации: аватар в шапке «Сегодня»
+  // легитимно носит тот же aria-label вне пилота.
+  await expect(page.getByRole('link', { name: 'Ассистент', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Открыть профиль' })).toHaveCount(0)
   await page.goto('/analytics')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')

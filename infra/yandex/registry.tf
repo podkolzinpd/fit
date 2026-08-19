@@ -23,7 +23,7 @@ resource "yandex_container_repository_lifecycle_policy" "api" {
   status        = "active"
 
   rule {
-    description   = "Keep the latest ten immutable commit images"
+    description   = "Keep the latest ten immutable API content images"
     tag_regexp    = "^[0-9a-f]{40}$"
     retained_top  = 10
     expire_period = "168h"

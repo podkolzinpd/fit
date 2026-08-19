@@ -28,6 +28,7 @@ import { RunMetricsFields } from './RunMetricsFields'
 import { formatRunDuration, runDistanceLabel, runPaceLabel } from '../../shared/run-metrics'
 import { WearableHealthCard } from '../wearables'
 import { isWearablesPilotEnabled } from '../../app/feature-flags'
+import { todayHeaderProps } from './today-header'
 import { ClientHomeOverview, clientHomeLatestDoneWorkout } from './ClientHomeOverview'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { WorkoutCta, WorkoutExercise, WorkoutHeader, WorkoutSetRow } from './WorkoutSurface'
@@ -506,7 +507,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const greetingName = clientMode ? mine.data?.fullName || actor?.firstName || 'спортсмен' : actor?.firstName || 'тренер'
   const greeting = `${new Date().getHours() < 12 ? 'Доброе утро' : new Date().getHours() < 18 ? 'Добрый день' : 'Добрый вечер'}, ${greetingName}`
 
-  return <Page title="Сегодня" className="today-page today-start-page" action={<Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}>
+  const header = todayHeaderProps(clientMode, actor)
+  return <Page title={header.title} hideTitle={header.hideTitle} className="today-page today-start-page" action={header.showProfileAvatar ? <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link> : undefined}>
     {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase}`}>
       <p className="today-greeting">{greeting} 👋</p>
       {clientMode && !textComposerOpen ? <ClientHomeOverview

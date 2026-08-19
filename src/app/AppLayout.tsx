@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { AnalyticsIcon, ClientsIcon, HomeIcon, ProfileIcon, ScheduleIcon, TodayIcon } from '../shared/icons'
+import { AnalyticsIcon, ClientsIcon, HomeIcon, ProfileIcon, ScheduleIcon, SettingsIcon, TodayIcon } from '../shared/icons'
 import { useAuth } from './auth-context'
 import { useAppTheme } from './theme'
-import { isTodayStartRedesignEnabled } from './feature-flags'
+import { isAssistantNavPilotEnabled, isTodayStartRedesignEnabled } from './feature-flags'
 
 export function AppLayout() {
   const { actor } = useAuth()
@@ -53,6 +53,15 @@ export function AppLayout() {
     <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
     <NavLink to="/me/profile"><ProfileIcon />Профиль</NavLink>
   </nav>}</div>
+  // Пилот YAFIT-317: у allowlisted-тренеров навигация — текстовые табы сверху
+  // (ассистент в центре, как в Figma-макете), профиль — шестерёнка в той же
+  // строке. Вне пилота тренерский рендер ниже не меняется ни на байт.
+  if (actor && isAssistantNavPilotEnabled(actor.userId)) return <div className={`${frameClass} trainer-top-shell`}>{!immersive && <nav className="top-tab-bar" aria-label="Основная навигация">
+    <NavLink to="/clients" data-label="Клиенты">Клиенты</NavLink>
+    <NavLink to="/today" data-label="Ассистент">Ассистент</NavLink>
+    <NavLink to="/schedule" data-label="Расписание">Расписание</NavLink>
+    <NavLink to="/profile" className="top-tab-settings" aria-label="Открыть профиль"><SettingsIcon /></NavLink>
+  </nav>}<div className={contentClass} ref={contentRef}><Outlet /></div></div>
   return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
     <NavLink to="/today"><TodayIcon />Сегодня</NavLink>
     {redesignedStart && <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>}
