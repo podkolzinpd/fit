@@ -8,6 +8,7 @@ on:
       - 'infra/yandex/**'
       - 'services/api/**'
       - 'scripts/check-yandex-terraform-plan.mjs'
+      - 'scripts/deploy-yandex-serverless-revision.mjs'
       - 'scripts/yandex-github-oidc.sh'
   workflow_dispatch:
     inputs:
@@ -34,8 +35,6 @@ env:
   TF_VAR_folder_id: ${{ vars.YC_FOLDER_ID }}
   TF_VAR_environment: stage
   TF_VAR_allow_unauthenticated_api: 'false'
-  TF_VAR_api_image_tag: ${{ github.sha }}
-  TF_VAR_migration_image_tag: ${{ github.sha }}
   TF_VAR_deployer_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   TF_VAR_migration_invoker_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   TF_VAR_yandex_oauth_client_id: ${{ vars.YC_YANDEX_OAUTH_CLIENT_ID }}
@@ -52,6 +51,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Resolve immutable API image tag
+        run: |
+          image_tag=$(git rev-parse 'HEAD:services/api')
+          echo "TF_VAR_api_image_tag=$image_tag" >>"$GITHUB_ENV"
+          echo "TF_VAR_migration_image_tag=$image_tag" >>"$GITHUB_ENV"
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.8.5
@@ -94,6 +98,12 @@ jobs:
     environment: yandex-stage
     steps:
       - uses: actions/checkout@v4
+      - name: Resolve immutable API image tag
+        run: |
+          image_tag=$(git rev-parse 'HEAD:services/api')
+          echo "TF_VAR_api_image_tag=$image_tag" >>"$GITHUB_ENV"
+          echo "TF_VAR_migration_image_tag=$image_tag" >>"$GITHUB_ENV"
+          echo "API_IMAGE_TAG=$image_tag" >>"$GITHUB_ENV"
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.8.5
@@ -117,14 +127,18 @@ jobs:
         working-directory: infra/yandex
         run: >-
           terraform apply -auto-approve
+          -target=yandex_container_registry_iam_binding.api_image_puller
           -target=yandex_iam_service_account_iam_member.api_deployer
           -target=yandex_iam_service_account_iam_member.migration_deployer
+          -target=yandex_lockbox_secret_iam_member.api_connection_secret_reader
+          -target=yandex_lockbox_secret_iam_member.migration_connection_secret_reader
       - name: Wait for runtime identity permissions to propagate
         run: sleep 30
       - name: Build and push immutable API image once
         env:
-          IMAGE: cr.yandex/${{ vars.YC_API_REPOSITORY }}:${{ github.sha }}
+          IMAGE_REPOSITORY: cr.yandex/${{ vars.YC_API_REPOSITORY }}
         run: |
+          IMAGE="$IMAGE_REPOSITORY:$API_IMAGE_TAG"
           printf '%s' "$YC_TOKEN" | podman login --username iam --password-stdin cr.yandex
           if skopeo inspect --creds "iam:$YC_TOKEN" "docker://$IMAGE" >/dev/null 2>&1; then
             echo "Image $IMAGE already exists; reusing it."
@@ -135,16 +149,16 @@ jobs:
       - name: Deploy candidate only to the private migration runner
         working-directory: infra/yandex
         run: |
-          set -o pipefail
-          terraform apply -auto-approve \
+          terraform plan -out=migration-candidate.tfplan \
             -target=yandex_serverless_container.migration \
-            -target=yandex_serverless_container_iam_binding.migration_invocation \
-            2>&1 | tee migration-candidate-apply.log
-          if grep -Eq 'Failed to deploy revision|Error while requesting API to deploy revision' \
-            migration-candidate-apply.log; then
-            echo 'Yandex provider did not create the migration revision.' >&2
-            exit 1
-          fi
+            -target=yandex_serverless_container_iam_binding.migration_invocation
+          terraform show -json migration-candidate.tfplan > migration-candidate.tfplan.json
+          node ../../scripts/deploy-yandex-serverless-revision.mjs deploy \
+            --plan migration-candidate.tfplan.json \
+            --address 'yandex_serverless_container.migration[0]'
+          terraform apply -refresh-only -auto-approve
+          terraform apply -auto-approve \
+            -target=yandex_serverless_container_iam_binding.migration_invocation
       - name: Apply all pending migrations
         working-directory: infra/yandex
         run: |
@@ -164,30 +178,41 @@ jobs:
           terraform show -json stage-final.tfplan > stage-final.tfplan.json
           node ../../scripts/check-yandex-terraform-plan.mjs stage-final.tfplan.json \
             ${{ inputs.allow_destroy && '--allow-destroy' || '' }}
-      - name: Record the current API image for automatic rollback
+      - name: Record the current API revision for automatic rollback
         id: previous
         working-directory: infra/yandex
         run: |
-          previous_image=$(terraform show -json | jq -r '
-            [
-              .values.root_module.resources[]?
+          container=$(terraform show -json | jq -c '
+            [.values.root_module.resources[]?
               | select(.address == "yandex_serverless_container.api")
-              | .values.image[0].url
-            ][0] // ""
+              | .values][0] // {}
           ')
-          previous_tag=${previous_image##*:}
-          echo "tag=$previous_tag" >>"$GITHUB_OUTPUT"
+          echo "container_id=$(jq -r '.id // ""' <<<"$container")" >>"$GITHUB_OUTPUT"
+          echo "revision_id=$(jq -r '.revision_id // ""' <<<"$container")" >>"$GITHUB_OUTPUT"
       - name: Deploy the API revision
         working-directory: infra/yandex
         run: |
-          set -o pipefail
-          terraform apply -auto-approve stage-final.tfplan \
-            2>&1 | tee api-revision-apply.log
-          if grep -Eq 'Failed to deploy revision|Error while requesting API to deploy revision' \
-            api-revision-apply.log; then
-            echo 'Yandex provider did not create the API revision.' >&2
+          node ../../scripts/deploy-yandex-serverless-revision.mjs deploy \
+            --plan stage-final.tfplan.json \
+            --address yandex_serverless_container.api
+          terraform apply -refresh-only -auto-approve
+          terraform plan -out=stage-post-revision.tfplan
+          terraform show -json stage-post-revision.tfplan > stage-post-revision.tfplan.json
+          node ../../scripts/check-yandex-terraform-plan.mjs stage-post-revision.tfplan.json \
+            ${{ inputs.allow_destroy && '--allow-destroy' || '' }}
+          if jq -e '
+            [.resource_changes[]?
+              | select(
+                  (.address == "yandex_serverless_container.api"
+                    or .address == "yandex_serverless_container.migration[0]")
+                  and .change.actions != ["no-op"]
+                )]
+            | length > 0
+          ' stage-post-revision.tfplan.json >/dev/null; then
+            echo 'A Serverless Container still differs after the direct revision deploy.' >&2
             exit 1
           fi
+          terraform apply -auto-approve stage-post-revision.tfplan
       - name: Verify private API health and readiness
         id: smoke
         continue-on-error: true
@@ -200,26 +225,19 @@ jobs:
             --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/ready")
           jq -e '.status == "ok"' <<<"$health" >/dev/null
           jq -e '.status == "ready"' <<<"$ready" >/dev/null
-      - name: Roll back the API image when readiness fails
-        if: steps.smoke.outcome == 'failure' && steps.previous.outputs.tag != ''
+      - name: Roll back the API revision when readiness fails
+        if: steps.smoke.outcome == 'failure' && steps.previous.outputs.revision_id != ''
         working-directory: infra/yandex
-        env:
-          TF_VAR_api_image_tag: ${{ steps.previous.outputs.tag }}
         run: |
-          set -o pipefail
-          terraform apply -auto-approve \
-            -target=yandex_serverless_container.api \
-            2>&1 | tee api-rollback-apply.log
-          if grep -Eq 'Failed to deploy revision|Error while requesting API to deploy revision' \
-            api-rollback-apply.log; then
-            echo 'Yandex provider did not create the rollback revision.' >&2
-            exit 1
-          fi
+          node ../../scripts/deploy-yandex-serverless-revision.mjs rollback \
+            --container-id '${{ steps.previous.outputs.container_id }}' \
+            --revision-id '${{ steps.previous.outputs.revision_id }}'
+          terraform apply -refresh-only -auto-approve
       - name: Fail after a completed rollback
         if: steps.smoke.outcome == 'failure'
         run: |
-          if test -n '${{ steps.previous.outputs.tag }}'; then
-            echo 'The candidate API failed readiness and the previous image was restored.' >&2
+          if test -n '${{ steps.previous.outputs.revision_id }}'; then
+            echo 'The candidate API failed readiness and the previous revision was restored.' >&2
           else
             echo 'The first API revision failed readiness; there was no previous image to restore.' >&2
           fi

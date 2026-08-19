@@ -32,12 +32,20 @@ dedicated S3 access key and secret for the private Terraform state bucket.
 Yandex API access uses short-lived OIDC tokens; an authorized-key JSON is not
 stored in GitHub.
 
-The Terraform service account needs `vpc.user` and
+The Terraform service account needs `vpc.user`, `logging.editor` and
 `connection-manager.editor` in addition to the resource-management roles used
 by this stack, and the Connection Manager service must be enabled in the
-folder. Current Managed PostgreSQL API versions choose their managed
-Connection Manager and Lockbox folders automatically; do not add explicit
-`user_connection_manager` folder IDs to the database users.
+folder. `logging.editor` is required because revision configuration explicitly
+selects the stage folder as its log destination. Current Managed PostgreSQL API
+versions choose their managed Connection Manager and Lockbox folders
+automatically; do not add explicit `user_connection_manager` folder IDs to the
+database users.
+
+Revision deployment uses the Serverless Containers REST API with the same
+short-lived OIDC IAM token as Terraform. The request is derived from Terraform
+plan JSON, not duplicated workflow configuration. After deployment Terraform
+refreshes state and a second plan must show no container drift before remaining
+infrastructure changes can be applied.
 
 When `deployer_member` is set, Terraform grants that OIDC-backed service
 account `iam.serviceAccounts.user` only on the two runtime service accounts.
