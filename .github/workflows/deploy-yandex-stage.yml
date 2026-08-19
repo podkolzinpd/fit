@@ -113,6 +113,14 @@ jobs:
           -backend-config=backend.hcl.example
           -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }}
           -backend-config=key=fit/stage/terraform.tfstate
+      - name: Apply runtime identity attachment permissions
+        working-directory: infra/yandex
+        run: >-
+          terraform apply -auto-approve
+          -target=yandex_iam_service_account_iam_member.api_deployer
+          -target=yandex_iam_service_account_iam_member.migration_deployer
+      - name: Wait for runtime identity permissions to propagate
+        run: sleep 30
       - name: Build and push immutable API image once
         env:
           IMAGE: cr.yandex/${{ vars.YC_API_REPOSITORY }}:${{ github.sha }}
@@ -126,17 +134,27 @@ jobs:
           fi
       - name: Deploy candidate only to the private migration runner
         working-directory: infra/yandex
-        run: >-
-          terraform apply -auto-approve
-          -target=yandex_serverless_container.migration
-          -target=yandex_serverless_container_iam_binding.migration_invocation
+        run: |
+          set -o pipefail
+          terraform apply -auto-approve \
+            -target=yandex_serverless_container.migration \
+            -target=yandex_serverless_container_iam_binding.migration_invocation \
+            2>&1 | tee migration-candidate-apply.log
+          if grep -Eq 'Failed to deploy revision|Error while requesting API to deploy revision' \
+            migration-candidate-apply.log; then
+            echo 'Yandex provider did not create the migration revision.' >&2
+            exit 1
+          fi
       - name: Apply all pending migrations
         working-directory: infra/yandex
         run: |
           migration_url=$(terraform output -raw migration_container_url)
           status=$(curl --silent --show-error --output migration-response.json --write-out '%{http_code}' \
             --request POST --header "Authorization: Bearer $YC_TOKEN" "${migration_url%/}/migrate")
-          test "$status" = 200
+          if test "$status" != 200; then
+            echo "Migration runner returned HTTP $status; the API was not changed." >&2
+            exit 1
+          fi
           jq -e '.status == "migrated" and (.migrations | type == "array")' migration-response.json >/dev/null
           jq -r '"Applied migrations: " + ((.migrations | length) | tostring)' migration-response.json
       - name: Re-plan after migration and enforce policy
@@ -161,7 +179,15 @@ jobs:
           echo "tag=$previous_tag" >>"$GITHUB_OUTPUT"
       - name: Deploy the API revision
         working-directory: infra/yandex
-        run: terraform apply -auto-approve stage-final.tfplan
+        run: |
+          set -o pipefail
+          terraform apply -auto-approve stage-final.tfplan \
+            2>&1 | tee api-revision-apply.log
+          if grep -Eq 'Failed to deploy revision|Error while requesting API to deploy revision' \
+            api-revision-apply.log; then
+            echo 'Yandex provider did not create the API revision.' >&2
+            exit 1
+          fi
       - name: Verify private API health and readiness
         id: smoke
         continue-on-error: true
@@ -179,9 +205,16 @@ jobs:
         working-directory: infra/yandex
         env:
           TF_VAR_api_image_tag: ${{ steps.previous.outputs.tag }}
-        run: >-
-          terraform apply -auto-approve
-          -target=yandex_serverless_container.api
+        run: |
+          set -o pipefail
+          terraform apply -auto-approve \
+            -target=yandex_serverless_container.api \
+            2>&1 | tee api-rollback-apply.log
+          if grep -Eq 'Failed to deploy revision|Error while requesting API to deploy revision' \
+            api-rollback-apply.log; then
+            echo 'Yandex provider did not create the rollback revision.' >&2
+            exit 1
+          fi
       - name: Fail after a completed rollback
         if: steps.smoke.outcome == 'failure'
         run: |

@@ -16,7 +16,9 @@ After the one-time bootstrap, a release is performed only by
    reviewer approval.
 3. GitHub exchanges its OIDC token for a short-lived Yandex Cloud IAM token.
    No authorized-key JSON is used by CI.
-4. The workflow checks for the immutable commit image in Container Registry.
+4. Terraform applies the two scoped runtime-service-account attachment grants
+   before any revision is created and gives Yandex IAM time to propagate them.
+   The workflow then checks for the immutable commit image in Container Registry.
    A retry of the same SHA reuses the existing image; otherwise the image is
    built once on the GitHub runner and pushed.
 5. Terraform deploys the candidate image only to the private migration runner.
@@ -30,6 +32,12 @@ The migration runner has no provisioned instances and costs nothing while
 idle. It stays private, has concurrency one and can be invoked only by the
 OIDC-backed deployment service account. The runtime API service account cannot
 read the migration owner's password.
+
+The Yandex Terraform provider can report a failed revision deployment as a
+warning while returning a successful process status. The workflow treats that
+specific warning as a hard failure for the migration candidate, API deployment
+and rollback. This prevents Terraform state from being mistaken for a live
+revision.
 
 ## 2. One-time Yandex Cloud bootstrap
 
