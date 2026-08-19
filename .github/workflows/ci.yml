@@ -97,9 +97,10 @@ jobs:
             --env VITE_SUPABASE_URL \
             --env VITE_SUPABASE_PUBLISHABLE_KEY \
             --volume "${{ github.workspace }}:/work" \
+            --volume "/usr/share/fonts:/usr/share/fonts:ro" \
             --workdir /work \
             "$PLAYWRIGHT_IMAGE" \
-            npx playwright test --project=visual-client-390 --project=visual-client-430 --project=visual-trainer-1440 --workers=1
+            bash -lc 'fc-cache -f >/dev/null && exec npx playwright test --project=visual-client-390 --project=visual-client-430 --project=visual-trainer-1440 --workers=1'
       - name: Upload Playwright diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
