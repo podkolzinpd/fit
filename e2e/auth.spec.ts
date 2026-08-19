@@ -104,7 +104,7 @@ test('client registers, creates a standalone card and own workout without traine
   await page.getByLabel('Повторы, подход 2').fill('10')
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
-  await expect(page.locator('.planned-set-summary')).toHaveText(/2 × 40 кг × 10 повт\./)
+  await expect(page.locator('.planned-set-summary')).toHaveText(/2 × 40 кг × 10/)
   await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
   await page.getByRole('menuitem', { name: 'Копировать тренировку' }).click()
   await expect(page).toHaveURL(/\/workouts\/new\?copy=/)
