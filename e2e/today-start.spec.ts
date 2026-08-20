@@ -50,6 +50,7 @@ test('today: voice-first запускает запись, отменяет её 
 
   await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Слушаю…' })).toBeVisible()
+  await expect(page.getByText('Назовите упражнения, подходы, повторения и вес')).toBeVisible()
   await page.getByRole('button', { name: 'Отменить' }).click()
   await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toHaveCount(0)

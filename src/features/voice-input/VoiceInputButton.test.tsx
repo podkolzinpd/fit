@@ -115,8 +115,10 @@ describe('VoiceInputButton', () => {
     />)
 
     expect(screen.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
+    expect(screen.queryByText('Назовите упражнения, подходы, повторения и вес')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Надиктовать тренировку' }))
     expect(onStart).toHaveBeenCalledOnce()
+    expect(await screen.findByText('Назовите упражнения, подходы, повторения и вес')).toBeVisible()
     expect(await screen.findByRole('button', { name: /Завершить запись/ })).toHaveAttribute('aria-pressed', 'true')
     await user.click(screen.getByRole('button', { name: 'Отменить' }))
 

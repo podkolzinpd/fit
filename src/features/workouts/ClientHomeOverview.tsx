@@ -2,7 +2,8 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { ClientGoal, TrainerReaction, Workout, WorkoutPersonalRecord, WorkoutRegularity } from '../../shared/domain'
 import { currentStage } from '../../shared/goal-rules'
-import { formatLocalDate, type LocalDate } from '../../shared/local-date'
+import { addDays, formatLocalDate, type LocalDate } from '../../shared/local-date'
+import { RecordIcon } from '../../shared/icons'
 import { exerciseProgressValueLabel } from './ExerciseProgressSummary'
 
 type NextWorkout = { kind: 'active' | 'assigned'; workout: Workout }
@@ -53,19 +54,40 @@ export function clientHomeHighlight(
 function exerciseSummary(workout: Workout): string {
   const names = workout.exercises.map((exercise) => exercise.name)
   if (!names.length) return 'План тренировки'
-  return `${names.slice(0, 2).join(', ')}${names.length > 2 ? ` и ещё ${names.length - 2}` : ''}`
+  const count = `${names.length} ${exerciseCountLabel(names.length)}`
+  return `${count} · ${names.slice(0, 2).join(', ')}${names.length > 2 ? ` и ещё ${names.length - 2}` : ''}`
+}
+
+function exerciseCountLabel(count: number): string {
+  const mod100 = count % 100
+  const mod10 = count % 10
+  if (mod100 >= 11 && mod100 <= 14) return 'упражнений'
+  if (mod10 === 1) return 'упражнение'
+  if (mod10 >= 2 && mod10 <= 4) return 'упражнения'
+  return 'упражнений'
 }
 
 function workoutTiming(workout: Workout, today: LocalDate): string {
-  const day = workout.workoutDate === today ? 'Сегодня' : formatLocalDate(workout.workoutDate)
+  const day = workout.workoutDate === today
+    ? 'Сегодня'
+    : workout.workoutDate === addDays(today, 1)
+      ? 'Завтра'
+      : formatLocalDate(workout.workoutDate)
   return `${day}${workout.startTime ? `, ${workout.startTime.slice(0, 5)}` : ' · без времени'}`
+}
+
+function nextWorkoutLabel(next: NextWorkout, today: LocalDate): string {
+  if (next.kind === 'active') return 'ИДЁТ ТРЕНИРОВКА'
+  if (next.workout.workoutDate === today) return 'СЕГОДНЯ'
+  if (next.workout.workoutDate === addDays(today, 1)) return 'ЗАВТРА'
+  return 'БЛИЖАЙШАЯ'
 }
 
 function NextActionCard({ next, today }: { next: NextWorkout; today: LocalDate }) {
   const active = next.kind === 'active'
   return <section className={`client-home-next ${active ? 'active' : 'assigned'}`} aria-labelledby="client-home-next-title">
-    <p className="eyebrow">СЕЙЧАС</p>
-    <h2 id="client-home-next-title">{active ? 'Продолжите тренировку' : next.workout.workoutDate === today ? 'Тренировка на сегодня' : 'Следующая тренировка'}</h2>
+    <p className="eyebrow">{nextWorkoutLabel(next, today)}</p>
+    <h2 id="client-home-next-title">{active ? 'Продолжите тренировку' : 'Тренировка по плану'}</h2>
     <p className="client-home-next-time">{workoutTiming(next.workout, today)}</p>
     <strong className="client-home-next-exercises">{exerciseSummary(next.workout)}</strong>
     <Link className="button wide" to={active ? `/workouts/${next.workout.id}/live` : `/workouts/${next.workout.id}`} state={{ returnTo: '/me' }}>
@@ -81,8 +103,11 @@ function WeekCard({ week, loading }: { week: WorkoutRegularity | undefined; load
   const independent = Math.max(0, completed - completedPlanned)
   const title = completed > 0 ? `${completed} ${workoutCountLabel(completed)}` : 'Пока без тренировок'
   const description = completed > 0
-    ? [completedPlanned > 0 ? `${completedPlanned} по плану` : null, independent > 0 ? `${independent} самостоятельно` : null]
-      .filter(Boolean).join(' · ') || 'Все тренировки завершены'
+    ? completedPlanned === completed
+      ? completed === 1 ? 'По плану тренера' : completed === 2 ? 'Обе — по плану тренера' : 'Все — по плану тренера'
+      : independent === completed
+        ? completed === 1 ? 'Самостоятельно' : completed === 2 ? 'Обе — самостоятельно' : 'Все — самостоятельно'
+        : `${completedPlanned} по плану · ${independent} самостоятельно`
     : week?.plannedCount
       ? `План тренера: 0 из ${week.plannedCount} выполнено`
       : 'Здесь появится первая завершённая тренировка'
@@ -91,7 +116,7 @@ function WeekCard({ week, loading }: { week: WorkoutRegularity | undefined; load
     week?.skippedCount ? `Пропущено: ${week.skippedCount}` : null,
   ].filter(Boolean).join(' · ')
   return <section className="client-home-week" aria-labelledby="client-home-week-title">
-    <div className="client-home-section-head"><div><p className="eyebrow">ЭТА НЕДЕЛЯ</p><h2 id="client-home-week-title">{title}</h2></div><Link to="/me/progress">Подробнее</Link></div>
+    <div className="client-home-section-head"><div><p className="eyebrow">ЭТА НЕДЕЛЯ</p><h2 id="client-home-week-title">{title}</h2></div><Link to="/me/progress">Прогресс ›</Link></div>
     <p>{description}</p>
     {alerts && <small className="client-home-week-alerts">{alerts}</small>}
   </section>
@@ -123,11 +148,13 @@ function HighlightCard({ highlight, today }: { highlight: HomeHighlight; today: 
       ? `${exerciseProgressValueLabel(record.weightKg, 'strength')}${record.reps === null ? '' : ` × ${record.reps} повт.`}`
       : exerciseProgressValueLabel(record.primaryValue, record.inputKind)
     : ''
-  const recordType = record?.metric === 'weight' ? 'рекорд рабочего веса' : record?.metric === 'weight_reps' ? 'лучший подход' : 'лучший результат'
   const link = response
     ? `/workouts/${highlight.workout.id}`
     : `/workouts/${highlight.workout.id}/history/${encodeURIComponent(record!.exerciseRef)}`
-  return <section className="client-home-highlight" aria-labelledby="client-home-highlight-title"><p className="eyebrow">{response ? 'ОТ ТРЕНЕРА' : 'ДОСТИЖЕНИЕ'}</p><Link to={link} state={{ returnTo: '/me' }}><span><h2 id="client-home-highlight-title">{response ? `${reaction} Новый ответ` : `${record!.exerciseName}: новый рекорд`}</h2><small>{response ? highlight.workout.trainerReview?.trim() || 'Тренер отметил вашу тренировку' : `${recordValue} · ${recordType}`}</small></span><b>›</b></Link></section>
+  return <section className={`client-home-highlight${response ? '' : ' record'}`} aria-labelledby="client-home-highlight-title">
+    <p className="eyebrow">{response ? 'ОТ ТРЕНЕРА' : <><RecordIcon /> НОВЫЙ ЛИЧНЫЙ РЕКОРД</>}</p>
+    <Link to={link} state={{ returnTo: '/me' }}><span><h2 id="client-home-highlight-title">{response ? `${reaction} Новый ответ` : record!.exerciseName}</h2><small>{response ? highlight.workout.trainerReview?.trim() || 'Тренер отметил вашу тренировку' : recordValue}</small></span><b>›</b></Link>
+  </section>
 }
 
 interface ClientHomeOverviewProps {
