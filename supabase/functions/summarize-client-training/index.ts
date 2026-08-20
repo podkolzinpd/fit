@@ -17,6 +17,7 @@ import {
 import { completedWorkoutsInPeriod } from "./workout-source.ts"
 import { buildSummaryConsistency } from "./summary-consistency.ts"
 import { buildSummaryProgressFacts } from "./summary-progress-facts.ts"
+import { buildSummaryModelInput } from "./summary-model-input.ts"
 
 const YANDEX_COMPLETION_URL =
   "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
@@ -551,7 +552,13 @@ async function requestYandexSummary(
       return { summary, modelUri, modelVersion, usage }
     }
     if (attempt === 3) {
-      throw new HttpError(502, "yandex_cloud_quality_check_failed")
+      // The model has already returned schema-valid JSON three times. Quality
+      // rules are an editorial guard, not a reason to make Progress entirely
+      // unavailable. The UI independently renders deterministic progress
+      // facts and sanitizes legacy metric names, so keeping the final valid
+      // answer is safer than turning a wording mismatch into a hard failure.
+      console.warn("summary quality fallback accepted", { issues })
+      return { summary, modelUri, modelVersion, usage }
     }
 
     messages.push(
@@ -739,6 +746,7 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
         goal: goalContext,
       }
       const inputFingerprint = await fingerprint(trainingData)
+      const modelInput = buildSummaryModelInput(trainingData)
 
       if (isTrainer && !input.force) {
         const { data: cached, error: cacheError } = await userClient
@@ -761,7 +769,7 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
       }
 
       const generated = await requestYandexSummary(
-        trainingData,
+        modelInput,
         trainingData.period.start,
         trainingData.period.end,
       )
@@ -832,13 +840,26 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
       return Response.json({ data: saved, cached: false })
     } catch (error) {
       if (error instanceof HttpError) {
-        return Response.json({ error: error.message }, { status: error.status })
+        console.warn("summarize-client-training request failed", {
+          code: error.message,
+          status: error.status,
+        })
+        return Response.json(
+          { error: error.message },
+          {
+            status: error.status,
+            headers: { "x-fit-error-code": error.message },
+          },
+        )
       }
       if (error instanceof SyntaxError) {
         return Response.json({ error: "invalid_json" }, { status: 400 })
       }
       console.error("summarize-client-training failed", error)
-      return Response.json({ error: "internal_error" }, { status: 500 })
+      return Response.json(
+        { error: "internal_error" },
+        { status: 500, headers: { "x-fit-error-code": "internal_error" } },
+      )
     }
 })
 
