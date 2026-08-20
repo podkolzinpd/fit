@@ -5,7 +5,7 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-20
-Проверенный базовый `main`: `196895d` (`YAFIT-328: сделать Client Home компактнее и понятнее (#490)`)
+Проверенный базовый `main`: `632d10e` (`feat(yandex): add read-only pilot clients (#491)`)
 
 ## Активная работа
 
@@ -20,11 +20,13 @@
   Preview подтверждает read-only профиль. OAuth Client secret перевыпущен и не
   используется: текущий PKCE-контракт требует только публичный Client ID.
   Production frontend и Supabase не переключались.
-- Активная ветка `codex/yandex-readonly-clients` начинает domain-port: migration
-  `000005` хранит только SHA-256 короткоживущей opaque-сессии Fit, а защищённый
-  `GET /v1/clients` читает только активных клиентов actor tenant. Callback-пилот
-  показывает список/empty/error/retry без ссылок и mutations; в `main` этого
-  ещё нет.
+- Read-only clients slice находится в `main`: migration `000005` хранит только
+  SHA-256 короткоживущей opaque-сессии Fit, а защищённый `GET /v1/clients`
+  читает только активных клиентов actor tenant. Callback-пилот показывает
+  список/empty/error/retry без ссылок и mutations.
+- Активная ветка `codex/yandex-stage-deployment-status` исправляет только
+  устаревший красный GitHub Environment status через Deployment API, не
+  возвращая ручной environment approval gate.
 - Функциональный MVP признан достаточным для системной фазы удобства. Навигация,
   Trainer Progress, visual regression, типографика, геометрия и единые состояния
   закрыты в `#421`…`#431`; мобильная тренировочная фаза P0/P1 — `YAFIT-316`.
@@ -65,7 +67,7 @@
   RPE не сжимается в одну строку. Форма копии использует те же раскрываемые
   строки и не перекрывает ввод при открытой iOS-клавиатуре.
 - Изолированный Yandex Cloud stage содержит приватные Managed PostgreSQL 17 и
-  Serverless Containers без прогретых экземпляров. Миграции `000001`–`000004`
+  Serverless Containers без прогретых экземпляров. Миграции `000001`–`000005`
   применены автоматически; runtime получает отдельные owner/API пароли из
   Connection Manager. API transport публичен только для точного пилотного CORS,
   migration runner остаётся private. Production остаётся на Supabase; tenant
@@ -76,18 +78,21 @@
 - Поиск клиентов: `npm run check` зелёный; Playwright проверил 390/430/1440 px,
   светлую и пилотную тёмную тему, ввод, фильтрацию, empty, focus и reset без
   переполнения и ошибок консоли.
-- Автоматический run `32359436334`: plan/deploy/migrate/state refresh/API smoke
-  и Vercel Preview CORS зелёные; существующий immutable image переиспользован.
-- Ветка read-only clients: полный `npm run check` (592 frontend tests, API,
-  infra policy и production build) зелёный. Playwright проверил success на
+- Автоматический run `32372968388`: migration `000005`, обе revisions,
+  Terraform policy/state refresh и API health/readiness зелёные; rollback не
+  потребовался. Красная карточка `yandex-stage` осталась от старого deployment
+  `5999810837`, потому что автоматический workflow не публиковал новый status.
+- Read-only clients: полный `npm run check` (592 frontend tests, API, infra
+  policy и production build) зелёный. Playwright проверил success на
   390/430/1440 px и mobile empty/error/retry без overflow. Локальный
   `npm run local:verify` без скачивания образов применил только migration
   `000005`; 517 Supabase pgTAP и 7 PostgreSQL actor/RLS/session тестов прошли.
 
 ## Ближайший roadmap
 
-1. Завершить PR read-only clients, автоматически применить `000005` на stage и
-   повторить Yandex ID browser flow. До миграции tenant-данных ожидается empty.
+1. Исправить GitHub deployment status, обновить существующий пилотный Vercel
+   Preview свежим `main` и повторить Yandex ID browser flow. До миграции
+   tenant-данных ожидается empty.
 2. Портировать memberships/invitations, затем exercises/workouts и остальные
    вертикали из `docs/design/yandex-cloud-migration.md`.
 3. После полного tenant-контракта провести две миграционные репетиции; только
