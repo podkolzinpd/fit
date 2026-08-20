@@ -22,8 +22,8 @@ test('linked client sees only the published client progress view', async ({ page
   await expect(page.getByRole('heading', { name: 'Что делать дальше' })).toBeVisible()
   await expect(page.getByText(/причина максимального перерыва/)).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Обновить' })).toBeVisible()
-  await page.getByText('ЗАМЕРЫ ТЕЛА', { exact: true }).scrollIntoViewIfNeeded()
-  await expect(page.getByText('ЗАМЕРЫ ТЕЛА', { exact: true })).toBeVisible()
+  await page.getByText('ЗАМЕРЫ И ПОКАЗАТЕЛИ', { exact: true }).scrollIntoViewIfNeeded()
+  await expect(page.getByText('ЗАМЕРЫ И ПОКАЗАТЕЛИ', { exact: true })).toBeVisible()
 
   await page.goto('/clients')
   await expect(page).toHaveURL(/\/me$/)

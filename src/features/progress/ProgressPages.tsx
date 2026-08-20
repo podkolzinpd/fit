@@ -16,6 +16,7 @@ import { TrainerTrainingSummaryCard } from './TrainingSummaryCard'
 import { TrainerProgressOverviewCard } from './TrainerProgressOverviewCard'
 import { WorkoutRegularityCard } from './WorkoutRegularityCard'
 import { RunningProgressCard } from './RunningProgressCard'
+import { measurementSummaryText } from './measurement-summary'
 
 const METRIC_TABS: Array<{ key: MetricKey; label: string; unit: string }> = [
   { key: 'weightKg', label: 'Вес', unit: 'кг' },
@@ -36,16 +37,18 @@ export function ProgressPage() {
   const [selectedMetric, setSelectedMetric] = useState<string>('weightKg')
   const [windowEnd, setWindowEnd] = useState<LocalDate | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [createFormOpen, setCreateFormOpen] = useState(false)
+  const [metricsOpen, setMetricsOpen] = useState(false)
   const [metricSheetOpen, setMetricSheetOpen] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const tabsRef = useRef<HTMLDivElement>(null)
   const tabsDragOriginRef = useRef<{ x: number; scrollLeft: number } | null>(null)
   const tabsDraggedRef = useRef(false)
-  useEffect(() => { setSelectedMetric('weightKg'); setWindowEnd(null); setHistoryOpen(false); setMetricSheetOpen(false); setCreateError(null) }, [clientId])
+  useEffect(() => { setSelectedMetric('weightKg'); setWindowEnd(null); setHistoryOpen(false); setCreateFormOpen(false); setMetricsOpen(false); setMetricSheetOpen(false); setCreateError(null) }, [clientId])
   const client = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
   const entries = useQuery({ queryKey: ['progress', clientId], queryFn: () => progressRepository.list(clientId) })
   const metrics = useQuery({ queryKey: ['metrics', clientId], queryFn: () => progressRepository.listMetrics(clientId) })
-  const save = useMutation({ mutationFn: async (form: HTMLFormElement) => { const data = new FormData(form); const recordedOn = localDate(String(data.get('recordedOn'))); if (recordedOn > today) throw new Error('Нельзя добавить замер с будущей датой'); return progressRepository.save({ id: editing?.id, clientId, version: editing?.version, recordedOn, weightKg: numberValue(data.get('weightKg')), chestCm: numberValue(data.get('chestCm')), waistCm: numberValue(data.get('waistCm')), hipCm: numberValue(data.get('hipCm')), notes: String(data.get('notes') || '') || undefined, customMetrics: metrics.data?.filter((metric) => !metric.archivedAt).flatMap((metric) => { const value = numberValue(data.get(`metric-${metric.id}`)); return value === undefined ? [] : [{ metricId: metric.id, value }] }) ?? [] }) }, onSuccess: async () => { setEditing(null); await queryClient.invalidateQueries({ queryKey: ['progress', clientId] }); await queryClient.invalidateQueries({ queryKey: ['client', clientId] }) } })
+  const save = useMutation({ mutationFn: async (form: HTMLFormElement) => { const data = new FormData(form); const recordedOn = localDate(String(data.get('recordedOn'))); if (recordedOn > today) throw new Error('Нельзя добавить замер с будущей датой'); return progressRepository.save({ id: editing?.id, clientId, version: editing?.version, recordedOn, weightKg: numberValue(data.get('weightKg')), chestCm: numberValue(data.get('chestCm')), waistCm: numberValue(data.get('waistCm')), hipCm: numberValue(data.get('hipCm')), notes: String(data.get('notes') || '') || undefined, customMetrics: metrics.data?.filter((metric) => !metric.archivedAt).flatMap((metric) => { const value = numberValue(data.get(`metric-${metric.id}`)); return value === undefined ? [] : [{ metricId: metric.id, value }] }) ?? [] }) }, onSuccess: async () => { setEditing(null); setCreateFormOpen(false); await queryClient.invalidateQueries({ queryKey: ['progress', clientId] }); await queryClient.invalidateQueries({ queryKey: ['client', clientId] }) } })
   const remove = useMutation({ mutationFn: (entry: ProgressEntry) => progressRepository.remove(entry), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['progress', clientId] }) })
   const createMetric = useMutation({ mutationFn: ({ name, unit }: { name: string; unit: string | null }) => progressRepository.createMetric(actor!.userId, clientId, name, unit), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }) })
   const archiveMetric = useMutation({ mutationFn: (metric: CustomMetric) => progressRepository.setMetricArchived(metric, !metric.archivedAt), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }) })
@@ -60,7 +63,7 @@ export function ProgressPage() {
   const chartUnit = activeBuiltin?.unit ?? activeCustom?.unit ?? ''
   const latestEntry = entries.data?.[0]
   const latestEntrySummary = latestEntry
-    ? entrySummaryParts(latestEntry, metrics.data ?? []).join(' · ') || 'Показатели не указаны'
+    ? measurementSummaryText(latestEntry, metrics.data ?? []) || 'Показатели не указаны'
     : 'Добавьте первый замер, когда появятся данные'
   function saveNewProgress(form: HTMLFormElement) {
     const data = new FormData(form)
@@ -68,6 +71,7 @@ export function ProgressPage() {
     const conflict = findProgressDateConflict(entries.data ?? [], recordedOn)
     if (conflict) {
       setCreateError(`Замер за ${formatLocalDate(recordedOn)} уже существует. Открыли его для редактирования.`)
+      setCreateFormOpen(false)
       setHistoryOpen(true)
       setEditing(conflict)
       return
@@ -125,25 +129,30 @@ export function ProgressPage() {
         </div>
       </summary>
       <div className="trainer-measurements-content">
-        {entries.data && entries.data.length > 0 && <>
+        {entries.data && entries.data.length > 0 && <section className="measurement-trend" aria-label="Динамика замеров">
           <div className="metric-tabs" ref={tabsRef}
             onPointerDown={handleTabsPointerDown} onPointerMove={handleTabsPointerMove} onPointerUp={handleTabsPointerUp} onPointerLeave={handleTabsPointerUp}>
             {METRIC_TABS.map((tab) => <button key={tab.key} type="button" className={`metric-tab${tab.key === selectedMetric ? ' active' : ''}`} onClick={() => selectMetricTab(() => setSelectedMetric(tab.key))}>{tab.label}</button>)}
             {overflowMetrics.length > 0 && <button type="button" className={`metric-tab${activeCustom ? ' active' : ''}`} onClick={() => selectMetricTab(() => setMetricSheetOpen(true))}>{activeCustom ? `⋯ ${activeCustom.name}` : '⋯'}</button>}
           </div>
           <ProgressChart entries={entries.data} metric={chartMetric} label={chartLabel} unit={chartUnit} windowEnd={windowEnd} onWindowChange={setWindowEnd} />
-        </>}
-        <ProgressForm entry={null} metrics={metrics.data ?? []} today={today} busy={save.isPending} errorMessage={createError ?? save.error?.message ?? null} onDateChange={() => { setCreateError(null); save.reset() }} onSubmit={saveNewProgress} />
-        <section className="progress-history">
+        </section>}
+        <nav className="measurement-actions" aria-label="Действия с замерами">
+          <button type="button" className="secondary measurement-primary-action" aria-expanded={createFormOpen} onClick={() => setCreateFormOpen((value) => { if (!value) setEditing(null); return !value })}>{createFormOpen ? 'Закрыть форму' : 'Добавить замер'}</button>
+          {entries.data && entries.data.length > 0 && <button type="button" className="link" aria-expanded={historyOpen} onClick={() => setHistoryOpen((value) => !value)}>История · {entries.data.length}</button>}
+          <button type="button" className="link" aria-expanded={metricsOpen} onClick={() => setMetricsOpen((value) => !value)}>Настроить показатели</button>
+        </nav>
+        {createError && !createFormOpen && <p className="error" role="alert">{createError}</p>}
+        {createFormOpen && <ProgressForm entry={null} metrics={metrics.data ?? []} today={today} busy={save.isPending} errorMessage={createError ?? save.error?.message ?? null} onDateChange={() => { setCreateError(null); save.reset() }} onSubmit={saveNewProgress} onCancel={() => setCreateFormOpen(false)} />}
+        {historyOpen && <section className="progress-history">
           <div className="workout-editor-heading">
             <h2>История замеров ({entries.data?.length ?? 0})</h2>
-            {entries.data && entries.data.length > 0 && <button type="button" className="link" onClick={() => setHistoryOpen((value) => !value)}>{historyOpen ? 'Скрыть' : 'Показать'}</button>}
           </div>
-          {historyOpen && <div className="cards">{entries.data?.map((entry) => editing?.id === entry.id
+          <div className="cards">{entries.data?.map((entry) => editing?.id === entry.id
             ? <article className="card editing" key={entry.id}><ProgressForm entry={entry} metrics={metrics.data ?? []} today={today} busy={save.isPending} errorMessage={save.error?.message ?? null} onSubmit={(form) => save.mutate(form)} onCancel={() => setEditing(null)} /></article>
-            : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{entrySummaryParts(entry, metrics.data ?? []).join(' · ')}</p></div>{canManage(entry) && <div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" onClick={() => remove.mutate(entry)}>Удалить</button></div>}</article>)}</div>}
-        </section>
-        <MetricsManager metrics={metrics.data ?? []} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />
+            : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{measurementSummaryText(entry, metrics.data ?? []) || 'Показатели не указаны'}</p></div>{canManage(entry) && <div className="row-actions"><button className="link" onClick={() => { setCreateError(null); setCreateFormOpen(false); setEditing(entry) }}>Изменить</button><button className="link danger" onClick={() => remove.mutate(entry)}>Удалить</button></div>}</article>)}</div>
+        </section>}
+        {metricsOpen && <MetricsManager metrics={metrics.data ?? []} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />}
       </div>
     </details>
     {metricSheetOpen && <MetricOverflowSheet metrics={overflowMetrics} onPick={(id) => { setSelectedMetric(id); setMetricSheetOpen(false) }} onClose={() => setMetricSheetOpen(false)} />}
@@ -179,7 +188,7 @@ function MetricsManager({ metrics, onCreate, onArchive }: { metrics: CustomMetri
     presetMetricNames(option).forEach((name) => { if (!existing.has(name)) onCreate(name, option.unit) })
     setPreset('')
   }
-  return <section className="metrics-manager"><h2>Свои метрики</h2>
+  return <section className="metrics-manager"><div className="measurement-section-heading"><p className="eyebrow">НАСТРОЙКА</p><h2>Показатели замера</h2><span>Добавьте параметры, которые важно отслеживать для этого клиента.</span></div>
     {available.length > 0 && <div className="metric-preset-row">
       <select aria-label="Готовый замер" value={preset} onChange={(event) => setPreset(event.target.value)}>
         <option value="">Выберите замер…</option>
@@ -194,17 +203,3 @@ function MetricsManager({ metrics, onCreate, onArchive }: { metrics: CustomMetri
 }
 
 function numberValue(value: FormDataEntryValue | null) { return value ? Number(value) : undefined }
-
-function entrySummaryParts(entry: ProgressEntry, metrics: CustomMetric[]): string[] {
-  const parts = [
-    entry.weightKg !== undefined && `${entry.weightKg} кг`,
-    entry.chestCm !== undefined && `грудь ${entry.chestCm}`,
-    entry.waistCm !== undefined && `талия ${entry.waistCm}`,
-    entry.hipCm !== undefined && `бёдра ${entry.hipCm}`,
-    ...entry.customMetrics.map(({ metricId, value }) => {
-      const metric = metrics.find((item) => item.id === metricId)
-      return metric ? `${metric.name} ${value}${metric.unit ? ` ${metric.unit}` : ''}` : String(value)
-    }),
-  ]
-  return parts.filter((part): part is string => Boolean(part)).slice(0, 4)
-}

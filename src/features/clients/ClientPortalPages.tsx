@@ -11,6 +11,7 @@ import type { CustomMetric, ProgressEntry } from '../../shared/domain'
 import { formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, EmptyState, Field, Page, useConfirm } from '../../shared/ui'
 import { ClientTrainingSummaryCard, groupMetricRows, ProgressChart, RunningProgressCard } from '../progress'
+import { measurementSummaryItems, measurementSummaryText } from '../progress/measurement-summary'
 import { LoadMoreButton, WorkoutChronicleCard, WorkoutExercisesSummary, WorkoutStatusBadge, WORKOUT_HISTORY_PAGE_SIZE } from '../workouts'
 import { clientWorkoutAuthorLabel } from './workout-author'
 
@@ -53,6 +54,7 @@ export function MyProgressPage() {
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState<ProgressEntry | null>(null)
   const [measurementFormOpen, setMeasurementFormOpen] = useState(false)
+  const [measurementHistoryOpen, setMeasurementHistoryOpen] = useState(false)
   const entries = useQuery({ queryKey: ['progress', mine.data?.id], queryFn: () => progressRepository.list(mine.data!.id), enabled: Boolean(mine.data) })
   const metrics = useQuery({ queryKey: ['metrics', mine.data?.id], queryFn: () => progressRepository.listMetrics(mine.data!.id), enabled: Boolean(mine.data) })
   const [confirm, confirmDialog] = useConfirm()
@@ -94,14 +96,16 @@ export function MyProgressPage() {
     {entries.data && mine.data && <div className="client-progress-stack"><ClientTrainingSummaryCard clientId={mine.data.id} profileGoal={mine.data.goal} />
       <RunningProgressCard clientId={mine.data.id} />
       <section className="client-progress-measurement">
-        <div className="client-progress-measurement-head"><div><p className="eyebrow">ЗАМЕРЫ ТЕЛА</p><h2>{entries.data[0] ? 'Последний замер' : 'Замеров пока нет'}</h2></div><button type="button" className="secondary" aria-expanded={measurementFormOpen} onClick={() => setMeasurementFormOpen((open) => !open)}>{measurementFormOpen ? 'Скрыть' : 'Добавить замер'}</button></div>
-        {entries.data[0] && <div className="client-progress-measurement-latest"><strong>{progressSummary(entries.data[0], metrics.data ?? []).join(' · ') || 'Показатели не указаны'}</strong><span>{formatLocalDate(entries.data[0].recordedOn)}</span></div>}
+        <div className="client-progress-measurement-head"><div><p className="eyebrow">ЗАМЕРЫ И ПОКАЗАТЕЛИ</p><h2>{entries.data[0] ? 'Последний замер' : 'Замеров пока нет'}</h2></div></div>
+        {entries.data[0] && <div className="client-progress-measurement-latest"><span>{formatLocalDate(entries.data[0].recordedOn)}</span><div className="measurement-latest-values">{measurementSummaryItems(entries.data[0], metrics.data ?? []).slice(0, 4).map((item) => <span key={item.label}><small>{item.label}</small><strong>{item.value}</strong></span>)}</div></div>}
         {!entries.data[0] && <p>Сохрани вес или объёмы — здесь появится последняя точка.</p>}
+        {entries.data.length > 0 && <section className="measurement-trend" aria-label="Динамика замеров"><ProgressChart entries={entries.data} metric="weightKg" label="Вес" unit="кг" windowEnd={null} onWindowChange={() => undefined} /></section>}
+        <nav className="measurement-actions" aria-label="Действия с замерами"><button type="button" className="secondary measurement-primary-action" aria-expanded={measurementFormOpen} onClick={() => setMeasurementFormOpen((open) => !open)}>{measurementFormOpen ? 'Закрыть форму' : 'Добавить замер'}</button>{entries.data.length > 0 && <button type="button" className="link" aria-expanded={measurementHistoryOpen} onClick={() => setMeasurementHistoryOpen((open) => !open)}>История · {entries.data.length}</button>}</nav>
         {measurementFormOpen && <ClientProgressForm entry={null} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, null)} onCancel={() => setMeasurementFormOpen(false)} />}
-      </section>
-      {entries.data.length > 0 && <><ProgressChart entries={entries.data} metric="weightKg" label="Вес" unit="кг" windowEnd={null} onWindowChange={() => undefined} /><section className="client-progress-history"><div className="client-progress-section-head"><p className="eyebrow">ДИНАМИКА</p><h2>История замеров</h2></div><div className="cards">{entries.data.map((entry) => editing?.id === entry.id
+        {measurementHistoryOpen && <section className="client-progress-history"><div className="client-progress-section-head"><p className="eyebrow">ИСТОРИЯ</p><h2>Все замеры</h2></div><div className="cards">{entries.data.map((entry) => editing?.id === entry.id
         ? <article className="card editing" key={entry.id}><ClientProgressForm entry={entry} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, entry)} onCancel={() => setEditing(null)} /></article>
-        : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{progressSummary(entry, metrics.data ?? []).join(' · ') || 'Показатели не указаны'}</p>{entry.notes && <p className="muted">{entry.notes}</p>}</div><div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" disabled={remove.isPending} onClick={() => void confirmRemove(entry)}>Удалить</button></div></article>)}</div></section></>}
+        : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{measurementSummaryText(entry, metrics.data ?? []) || 'Показатели не указаны'}</p>{entry.notes && <p className="muted">{entry.notes}</p>}</div><div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" disabled={remove.isPending} onClick={() => void confirmRemove(entry)}>Удалить</button></div></article>)}</div></section>}
+      </section>
     </div>}
     {confirmDialog}
   </AsyncView></Page>
@@ -132,18 +136,6 @@ function ClientMetricInput({ metric, entry, placeholder }: { metric: CustomMetri
   return <input name={`metric-${metric.id}`} type="number" step="0.001" placeholder={placeholder} defaultValue={entry?.customMetrics.find((value) => value.metricId === metric.id)?.value} />
 }
 
-function progressSummary(entry: ProgressEntry, metrics: CustomMetric[]) {
-  return [
-    entry.weightKg !== undefined && `${entry.weightKg} кг`,
-    entry.chestCm !== undefined && `грудь ${entry.chestCm} см`,
-    entry.waistCm !== undefined && `талия ${entry.waistCm} см`,
-    entry.hipCm !== undefined && `бёдра ${entry.hipCm} см`,
-    ...entry.customMetrics.map(({ metricId, value }) => {
-      const metric = metrics.find((item) => item.id === metricId)
-      return metric ? `${metric.name} ${value}${metric.unit ? ` ${metric.unit}` : ''}` : String(value)
-    }),
-  ].filter((part): part is string => Boolean(part))
-}
 
 function numberValue(value: FormDataEntryValue | null) {
   return value ? Number(value) : undefined
