@@ -12,12 +12,6 @@ on:
       - 'scripts/verify-yandex-stage-access.mjs'
       - 'scripts/yandex-github-oidc.sh'
   workflow_dispatch:
-    inputs:
-      allow_destroy:
-        description: Allow reviewed non-database delete or replacement actions
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
@@ -91,13 +85,13 @@ jobs:
           node scripts/check-yandex-terraform-plan.mjs
           infra/yandex/stage.tfplan.json
           --allow-public-api
-          ${{ inputs.allow_destroy && '--allow-destroy' || '' }}
+          --automatic-stage-update
 
   deploy:
     name: Migrate and deploy API
     needs: plan
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    environment: yandex-stage
     steps:
       - uses: actions/checkout@v4
       - name: Resolve immutable API image tag
@@ -186,7 +180,7 @@ jobs:
           terraform show -json stage-final.tfplan > stage-final.tfplan.json
           node ../../scripts/check-yandex-terraform-plan.mjs stage-final.tfplan.json \
             --allow-public-api \
-            ${{ inputs.allow_destroy && '--allow-destroy' || '' }}
+            --automatic-stage-update
       - name: Record the current API revision for automatic rollback
         id: previous
         working-directory: infra/yandex
@@ -209,7 +203,7 @@ jobs:
           terraform show -json stage-post-revision.tfplan > stage-post-revision.tfplan.json
           node ../../scripts/check-yandex-terraform-plan.mjs stage-post-revision.tfplan.json \
             --allow-public-api \
-            ${{ inputs.allow_destroy && '--allow-destroy' || '' }}
+            --automatic-stage-update
           if jq -e '
             [.resource_changes[]?
               | select(

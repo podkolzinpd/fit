@@ -67,9 +67,10 @@ network-connected Serverless Containers; it is distinct from the user subnet.
 Do not place backend credentials, OAuth secrets, database passwords or URLs,
 `.tfplan` or state files in the repository.
 
-Pull-request CI never applies Terraform. A merge creates a plan; the protected
-`yandex-stage` GitHub Environment requires an explicit approval before any
-image push, migration or apply.
+Pull-request CI never applies Terraform. A merge to `main` creates a plan and
+automatically deploys only when policy confirms an existing API/migration image
+update with no new paid resource, resize, identity change, delete or replacement.
+Every other infrastructure plan stops before image push, migration or apply.
 
 ## Current intentional limits
 
