@@ -5,7 +5,7 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-20
-Проверенный базовый `main`: `a865936` (`YAFIT-327: цельный экран прогресса тренера (#489)`)
+Проверенный базовый `main`: `196895d` (`YAFIT-328: сделать Client Home компактнее и понятнее (#490)`)
 
 ## Активная работа
 
@@ -78,7 +78,9 @@
   переполнения и ошибок консоли.
 - Автоматический run `32359436334`: plan/deploy/migrate/state refresh/API smoke
   и Vercel Preview CORS зелёные; существующий immutable image переиспользован.
-- Ветка read-only clients: API check и целевые frontend tests зелёные. Локальный
+- Ветка read-only clients: полный `npm run check` (592 frontend tests, API,
+  infra policy и production build) зелёный. Playwright проверил success на
+  390/430/1440 px и mobile empty/error/retry без overflow. Локальный
   `npm run local:verify` без скачивания образов применил только migration
   `000005`; 517 Supabase pgTAP и 7 PostgreSQL actor/RLS/session тестов прошли.
 
