@@ -49,6 +49,31 @@ async function expectOverflowMenuAboveBars(page: Page) {
   expect(await menu.evaluate((element) => window.getComputedStyle(element).opacity)).toBe('1')
 }
 
+test('iPhone: поиск и фильтры каталога не перекрывают друг друга', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await page.getByRole('button', { name: 'Выбрать упражнения вручную' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
+
+  const search = page.getByLabel('Поиск упражнения')
+  await search.focus()
+  await expect(search).toBeFocused()
+  await page.getByRole('button', { name: 'Фильтры' }).click()
+  await expect(search).not.toBeFocused()
+  await page.getByLabel('Группа мышц').selectOption('legs')
+  await expect(page.getByRole('button', { name: 'Фильтры 1' })).toBeVisible()
+
+  await search.focus()
+  await expect(page.getByLabel('Группа мышц')).toBeHidden()
+  await expect(page.getByRole('button', { name: 'Фильтры 1' })).toBeVisible()
+  await search.fill('присед')
+  await expect(page.locator('.picker-list-meta').getByText(/\d+ упражнени(?:е|я|й)/)).toBeVisible()
+  await expect(page.getByRole('button', { name: /Присед/ }).first()).toBeInViewport()
+  await expectNoHorizontalOverflow(page)
+})
+
 test('iPhone: поля бега не перекрываются в быстрой проверке тренера на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
