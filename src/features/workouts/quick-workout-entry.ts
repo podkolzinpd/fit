@@ -85,6 +85,23 @@ export function formatWorkoutText(text: string, catalog: readonly ExerciseSnapsh
   return startsAt.slice(1).reverse().reduce((result, index) => `${result.slice(0, index).trimEnd()}\n${result.slice(index).trimStart()}`, text).replace(/\n{2,}/g, '\n')
 }
 
+/**
+ * В зале часто говорят «сведение и разведение ног» как одну связку, хотя для
+ * истории прогресса это два разных упражнения. Повторяем общие значения для
+ * обоих движений, но только для этой однозначной пары и только внутри строки —
+ * более общие конструкции с «и» локально не угадываем.
+ */
+function expandPairedExerciseShorthand(text: string): string {
+  return text.split('\n').flatMap((rawLine) => {
+    const line = rawLine.trim()
+    const direct = /^сведени[ея]\s+(?:и|плюс)\s+разведени[ея]\s+ног\s+(.+)$/iu.exec(line)
+    if (direct?.[1]) return [`Сведение ног ${direct[1]}`, `Разведение ног ${direct[1]}`]
+    const reverse = /^разведени[ея]\s+(?:и|плюс)\s+сведени[ея]\s+ног\s+(.+)$/iu.exec(line)
+    if (reverse?.[1]) return [`Разведение ног ${reverse[1]}`, `Сведение ног ${reverse[1]}`]
+    return [rawLine]
+  }).join('\n')
+}
+
 function normalizeSportSpeech(value: string): string {
   const normalized = normalize(value)
   return sportSpeechAliases[normalized] ?? value
@@ -187,7 +204,7 @@ function needsTrainerChoice(name: string, catalog: readonly ExerciseSnapshot[]):
 export function splitWorkoutText(text: string, catalog: readonly ExerciseSnapshot[]): string[] {
   // Whisper обычно сохраняет слова-связки, а не переносы. Разделяем только
   // явные «затем/потом» и найденные по каталогу начала упражнений.
-  return formatWorkoutText(text, catalog)
+  return formatWorkoutText(expandPairedExerciseShorthand(text), catalog)
     .split(/[\n;]+/)
     .flatMap((line) => line.split(/\s+(?:затем|потом|далее|после\s+этого)\s+/iu))
     .flatMap((line) => line.split(/\s*\+\s*/u))
