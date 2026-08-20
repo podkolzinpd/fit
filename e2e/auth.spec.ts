@@ -430,7 +430,8 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByLabel('Дата').fill(weekAgo)
   await page.getByLabel('Вес, кг').fill('59.5')
   await page.getByRole('button', { name: 'Сохранить замер' }).click()
-  await expect(page.getByRole('paragraph').filter({ hasText: '59.5 кг' })).toBeVisible()
+  await page.getByRole('button', { name: 'История · 2' }).click()
+  await expect(page.getByRole('paragraph').filter({ hasText: '59,5 кг' })).toBeVisible()
 
   await page.goto('/me/profile')
   await page.getByRole('button', { name: 'Пригласить тренера' }).click()
