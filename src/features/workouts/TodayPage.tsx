@@ -142,6 +142,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const showRpeByDefault = useRpeDisplay(actor?.userId)
   const [rpeOverrides, setRpeOverrides] = useState<Map<number, boolean>>(() => new Map())
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerFromCompose, setPickerFromCompose] = useState(false)
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const [clientId, setClientId] = useState('')
   const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId), enabled: Boolean(clientId) })
@@ -391,6 +392,10 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   }
 
   async function pickExercises(exercises: ExerciseSnapshot[], runningFormat?: RunningFormat) {
+    if (pickerFromCompose) {
+      setScreen('review')
+      setPickerFromCompose(false)
+    }
     if (runningFormat && exercises[0]) {
       const selectedItems = runningFormatItems(exercises[0], runningFormat)
       setItems((current) => {
@@ -540,7 +545,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       {!textComposerOpen && <VoiceInputButton variant="hero" source="today_workout" idleLabel="Надиктовать тренировку" onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }} onPhaseChange={setVoicePhase} onTranscript={handleHeroTranscript} />}
       {!textComposerOpen && voicePhase === 'idle' && <button type="button" className="link today-text-toggle" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}>Ввести текстом</button>}
       {restoredDraftScreen && !textComposerOpen && voicePhase === 'idle' && <section className="today-resume"><span><strong>Есть незавершённая тренировка</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
-      {textComposerOpen && <div className="today-text-fallback"><div className="today-text-fallback-head"><div><strong>Новая тренировка</strong><small>Введите упражнения, подходы и значения</small></div><button type="button" className="link" onClick={() => setTextComposerOpen(false)}>Скрыть</button></div><WorkoutComposer name="today-workout" source="today_workout" value={text} showVoice={false} onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="link wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}>Выбрать упражнения вручную</button>}>
+      {textComposerOpen && <div className="today-text-fallback"><div className="today-text-fallback-head"><div><strong>Новая тренировка</strong><small>Введите упражнения, подходы и значения</small></div><button type="button" className="link" onClick={() => setTextComposerOpen(false)}>Скрыть</button></div><WorkoutComposer name="today-workout" source="today_workout" value={text} showVoice={false} onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="link wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setPickerFromCompose(true); setPickerOpen(true) }}>Выбрать упражнения вручную</button>}>
       {voiceRefinement && voiceRefinement.state !== 'loading' && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
       {(resolved.length > 0 || clarification || displayedUnparsed.length > 0) && <div className="today-parse-preview" aria-live="polite">
         {resolved.length > 0 && <section className="today-recognized" aria-label="Распознанные упражнения">
@@ -586,6 +591,6 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </section></section>}
     </section>}
     {(catalog.error ?? (!clientMode ? todayWorkouts.error : null)) && <p className="error">{(catalog.error ?? (!clientMode ? todayWorkouts.error : null))?.message}</p>}
-    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null); setPickerFromCompose(false) }} />}
   </Page>
 }
