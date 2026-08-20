@@ -136,8 +136,10 @@ rollout assignment invalidates the session immediately. `GET /v1/clients`
 resolves that session to the internal actor inside one transaction and returns
 only the active client rows allowed by RLS. The raw session remains only in the
 callback page memory and is neither persisted nor used to unlock the Supabase
-application. The existing Yandex-token-protected `GET /v1/profile` remains
-available for reviewed native or trusted clients.
+application. Browser calls send it in `X-Fit-Pilot-Session`, because Yandex
+Serverless Containers reserves the `Authorization` header for its own IAM
+invocation token. The existing Yandex-token-protected `GET /v1/profile`
+remains available for reviewed native or trusted clients.
 
 The OAuth application and auth API revision are deployed on isolated stage.
 The default-off frontend pilot can request a Yandex token and display only the

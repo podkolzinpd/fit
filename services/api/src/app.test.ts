@@ -52,6 +52,7 @@ describe('browser pilot CORS', () => {
     expect(preflight.statusCode).toBe(204)
     expect(preflight.headers['access-control-allow-origin']).toBe('http://localhost:5173')
     expect(preflight.headers['access-control-allow-headers']).toContain('authorization')
+    expect(preflight.headers['access-control-allow-headers']).toContain('x-fit-pilot-session')
 
     const rejected = await app.inject({
       method: 'OPTIONS',
@@ -408,7 +409,7 @@ describe('read-only pilot clients endpoint', () => {
     const response = await app.inject({
       method: 'GET',
       url: '/v1/clients',
-      headers: { authorization: `Bearer ${'s'.repeat(43)}` },
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
     })
 
     expect(response.statusCode).toBe(200)
@@ -429,11 +430,17 @@ describe('read-only pilot clients endpoint', () => {
     const expired = await app.inject({
       method: 'GET',
       url: '/v1/clients',
-      headers: { authorization: `Bearer ${'x'.repeat(43)}` },
+      headers: { 'x-fit-pilot-session': 'x'.repeat(43) },
+    })
+    const reservedAuthorizationHeader = await app.inject({
+      method: 'GET',
+      url: '/v1/clients',
+      headers: { authorization: `Bearer ${'s'.repeat(43)}` },
     })
 
     expect(missing.statusCode).toBe(401)
     expect(expired.statusCode).toBe(401)
     expect(expired.json()).toEqual({ error: 'unauthorized' })
+    expect(reservedAuthorizationHeader.statusCode).toBe(401)
   })
 })

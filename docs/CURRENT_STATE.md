@@ -5,16 +5,17 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-20
-Проверенный базовый `main`: `632d10e` (`feat(yandex): add read-only pilot clients (#491)`)
+Проверенный базовый `main`: `53ebc32` (`fix(yandex): publish stage deployment status (#492)`)
 
 ## Активная работа
 
 - Yandex ID/profile, tenant-allowlist и автоматическая stage delivery находятся
   в `main`: GitHub OIDC без JSON-ключа, immutable image, forward-only миграции,
   private migration runner, smoke и rollback. После явной роли
-  `functions.editor` run `32359436334` полностью прошёл: миграций не ожидалось,
-  обе revisions и Terraform state согласованы, health/readiness и точный CORS
-  зелёные. Новая, cost-sensitive, destructive или identity-инфраструктура
+  `functions.editor` автоматический run `32376225799` полностью прошёл:
+  миграций не ожидалось, обе revisions и Terraform state согласованы,
+  health/readiness, точный CORS и новый GitHub deployment status зелёные. Новая,
+  cost-sensitive, destructive или identity-инфраструктура
   по-прежнему блокируется policy до отдельного reviewed apply.
 - Тестовый Yandex ID зарегистрирован как `trainer`; обычный PKCE-вход на Vercel
   Preview подтверждает read-only профиль. OAuth Client secret перевыпущен и не
@@ -24,15 +25,12 @@
   SHA-256 короткоживущей opaque-сессии Fit, а защищённый `GET /v1/clients`
   читает только активных клиентов actor tenant. Callback-пилот показывает
   список/empty/error/retry без ссылок и mutations.
-- Активная ветка `codex/yandex-stage-deployment-status` исправляет только
-  устаревший красный GitHub Environment status через Deployment API, не
-  возвращая ручной environment approval gate.
-- Функциональный MVP признан достаточным для системной фазы удобства. Навигация,
-  Trainer Progress, visual regression, типографика, геометрия и единые состояния
-  закрыты в `#421`…`#431`; мобильная тренировочная фаза P0/P1 — `YAFIT-316`.
-  Desktop shell тренера отложен пользователем.
-- Продуктовая полировка идёт по одному экрану и PR за раз, с полной проверкой
-  перед следующим шагом.
+- Существующий pilot Preview синхронизирован со свежим `main`; Yandex ID и
+  выдача Fit-сессии проходят. Live-проверка выявила точный transport-конфликт:
+  Serverless Containers перехватывает `Authorization` как Yandex IAM token и
+  возвращает `403` до Fastify. Активная ветка
+  `codex/yandex-pilot-session-header` переносит только browser pilot session в
+  отдельный `X-Fit-Pilot-Session`; Supabase и production не меняются.
 - `YAFIT-327` завершает цельную композицию Trainer Progress без дублирующего
   обзора и глобальных раскрытий: текущая неделя и ИИ видны сразу, бег и замеры
   открываются отдельными компактными маршрутами. Контракт LLM, клиентский
@@ -80,19 +78,22 @@
   переполнения и ошибок консоли.
 - Автоматический run `32372968388`: migration `000005`, обе revisions,
   Terraform policy/state refresh и API health/readiness зелёные; rollback не
-  потребовался. Красная карточка `yandex-stage` осталась от старого deployment
-  `5999810837`, потому что автоматический workflow не публиковал новый status.
+  потребовался. Следующий run `32376225799` также зелёный и опубликовал
+  успешный deployment `6003600605`, заменив устаревшую красную карточку.
 - Read-only clients: полный `npm run check` (592 frontend tests, API, infra
   policy и production build) зелёный. Playwright проверил success на
   390/430/1440 px и mobile empty/error/retry без overflow. Локальный
   `npm run local:verify` без скачивания образов применил только migration
   `000005`; 517 Supabase pgTAP и 7 PostgreSQL actor/RLS/session тестов прошли.
+- Live pilot Preview обновлён до `main`: OAuth callback/profile success зелёные,
+  а прямой запрос воспроизвёл `403` gateway для application Bearer token.
+  Исправление custom-header проходит локальную проверку в активной ветке.
 
 ## Ближайший roadmap
 
-1. Исправить GitHub deployment status, обновить существующий пилотный Vercel
-   Preview свежим `main` и повторить Yandex ID browser flow. До миграции
-   tenant-данных ожидается empty.
+1. Влить custom session header, дождаться автоматического stage deploy,
+   обновить существующий pilot Preview и подтвердить Yandex ID + ожидаемый
+   empty clients state до миграции tenant-данных.
 2. Портировать memberships/invitations, затем exercises/workouts и остальные
    вертикали из `docs/design/yandex-cloud-migration.md`.
 3. После полного tenant-контракта провести две миграционные репетиции; только
