@@ -423,6 +423,30 @@ export interface TrainingSummaryMetrics {
   workoutsPerWeek: number
   activeWeeks: number
   longestGapDays: number | null
+  progressFacts: TrainingProgressFact[]
+}
+
+export type TrainingProgressMetric =
+  | 'max_weight'
+  | 'volume'
+  | 'total_reps'
+  | 'distance'
+  | 'duration'
+  | 'pace'
+
+export interface TrainingProgressFactChange {
+  metric: TrainingProgressMetric
+  from: number
+  to: number
+  changePercent: number
+  favorable: boolean | null
+}
+
+export interface TrainingProgressFact {
+  exerciseName: string
+  kind: InputKind
+  sessionCount: number
+  changes: TrainingProgressFactChange[]
 }
 
 export interface TrainingSummary {

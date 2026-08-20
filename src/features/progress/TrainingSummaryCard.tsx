@@ -9,11 +9,13 @@ import type {
   PublishedTrainingSummary,
   TrainingSummary,
   TrainingSummaryMetrics,
+  TrainingProgressFact,
 } from '../../shared/domain'
 import { formatLocalDate, normalizeTimeZone, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { ClientProgressGoalSection } from './ClientProgressGoalSection'
+import { progressFactChangeLabel } from './progress-facts'
 import { formatSummaryText, formatWorkoutsPerWeek, progressMetricNoun } from './summary-format'
 import { availableSummaryPeriods, SUMMARY_PERIODS, summaryPeriodMatch, summaryPeriodRange, type SummaryPeriod } from './summary-period'
 
@@ -45,6 +47,21 @@ function Metrics({ metrics, audience }: {
         ? metrics.longestGapDays === null ? 'самый долгий перерыв' : progressMetricNoun(metrics.longestGapDays, 'gapDay')
         : progressMetricNoun(metrics.activeWeeks, 'activeWeek')}</span>
     </div>
+  </div>
+}
+
+function ProgressFacts({ facts, fallback }: {
+  facts: readonly TrainingProgressFact[]
+  fallback: readonly string[]
+}) {
+  if (facts.length === 0) {
+    return <ul>{fallback.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
+  }
+  return <div className="ai-progress-facts">
+    {facts.map((fact) => <div className="ai-progress-fact" key={fact.exerciseName}>
+      <strong>{fact.exerciseName}</strong>
+      {fact.changes.map((change) => <span key={change.metric}>{progressFactChangeLabel(change)}</span>)}
+    </div>)}
   </div>
 }
 
@@ -162,7 +179,7 @@ function TrainerSummaryContent({ summary, clientId, onChanged }: {
       <Metrics metrics={summary.metrics} audience="trainer" />
       <div className="ai-progress-section">
         <h3>Измеримый прогресс</h3>
-        <ul>{summary.trainer.progress.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
+        <ProgressFacts facts={summary.metrics.progressFacts} fallback={summary.trainer.progress} />
       </div>
       <div className="ai-progress-section ai-progress-regularity">
         <div><span>Регулярность за период</span><strong>{formatWorkoutsPerWeek(summary.metrics.workoutsPerWeek)} в неделю</strong></div>
@@ -325,7 +342,7 @@ function ClientSummaryContent({ summary, goal, profileGoal, today, goalLoading, 
     <Metrics metrics={summary.metrics} audience="client" />
     <div className="ai-progress-section">
       <h3>Что получилось</h3>
-      <ul>{summary.summary.achievements.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
+      <ProgressFacts facts={summary.metrics.progressFacts} fallback={summary.summary.achievements} />
     </div>
     <div className="ai-progress-section ai-progress-regularity">
       <div><span>Твоя регулярность</span><strong>{formatWorkoutsPerWeek(summary.metrics.workoutsPerWeek)} в неделю</strong></div>

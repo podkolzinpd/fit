@@ -5,6 +5,10 @@ import type {
   TrainerTrainingSummary,
   TrainingSummary,
   TrainingSummaryMetrics,
+  TrainingProgressFact,
+  TrainingProgressFactChange,
+  TrainingProgressMetric,
+  InputKind,
 } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { trainingSummaryQueries } from '../queries/training-summaries.queries'
@@ -72,6 +76,51 @@ function numericValue(value: Json | undefined): number {
   return typeof value === 'number' ? value : 0
 }
 
+const progressMetrics = new Set<TrainingProgressMetric>([
+  'max_weight', 'volume', 'total_reps', 'distance', 'duration', 'pace',
+])
+const inputKinds = new Set<InputKind>(['strength', 'distance', 'reps', 'duration'])
+
+function progressFactChange(value: Json): TrainingProgressFactChange | null {
+  if (!value || Array.isArray(value) || typeof value !== 'object') return null
+  const item = value as Record<string, Json | undefined>
+  if (
+    typeof item.metric !== 'string' || !progressMetrics.has(item.metric as TrainingProgressMetric) ||
+    typeof item.from !== 'number' || typeof item.to !== 'number' ||
+    typeof item.change_percent !== 'number' ||
+    (typeof item.favorable !== 'boolean' && item.favorable !== null)
+  ) return null
+  return {
+    metric: item.metric as TrainingProgressMetric,
+    from: item.from,
+    to: item.to,
+    changePercent: item.change_percent,
+    favorable: item.favorable,
+  }
+}
+
+function progressFacts(value: Json | undefined): TrainingProgressFact[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((value): TrainingProgressFact[] => {
+    if (!value || Array.isArray(value) || typeof value !== 'object') return []
+    const item = value as Record<string, Json | undefined>
+    const changes = Array.isArray(item.changes)
+      ? item.changes.map(progressFactChange).filter((change): change is TrainingProgressFactChange => change !== null)
+      : []
+    if (
+      typeof item.exercise_name !== 'string' || !item.exercise_name.trim() ||
+      typeof item.kind !== 'string' || !inputKinds.has(item.kind as InputKind) ||
+      typeof item.session_count !== 'number' || changes.length === 0
+    ) return []
+    return [{
+      exerciseName: item.exercise_name.trim(),
+      kind: item.kind as InputKind,
+      sessionCount: item.session_count,
+      changes,
+    }]
+  })
+}
+
 function metrics(value: Json): TrainingSummaryMetrics {
   const item = record(value)
   return {
@@ -79,6 +128,7 @@ function metrics(value: Json): TrainingSummaryMetrics {
     workoutsPerWeek: numericValue(item.workouts_per_week),
     activeWeeks: numericValue(item.active_weeks),
     longestGapDays: typeof item.longest_gap_days === 'number' ? item.longest_gap_days : null,
+    progressFacts: progressFacts(item.progress_facts),
   }
 }
 
