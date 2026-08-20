@@ -7,6 +7,6 @@ export const yandexPilotQueries = {
   }),
   listClients: (apiBaseUrl: string, sessionToken: string) => fetch(`${apiBaseUrl}/v1/clients`, {
     cache: 'no-store',
-    headers: { authorization: `Bearer ${sessionToken}` },
+    headers: { 'x-fit-pilot-session': sessionToken },
   }),
 }

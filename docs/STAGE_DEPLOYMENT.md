@@ -200,6 +200,13 @@ Only that preview branch receives the three pilot build variables:
 `VITE_YANDEX_OAUTH_CLIENT_ID`, and `VITE_YANDEX_API_BASE_URL` pointing to the
 stage API. Do not add them to Production or to every Preview deployment.
 
+The browser sends the short-lived Fit pilot session in
+`X-Fit-Pilot-Session`, not in `Authorization`. Yandex Serverless Containers
+reserves `Authorization: Bearer ...` for Yandex IAM invocation tokens and can
+reject an application token at the gateway before Fastify receives it. The
+custom header is allowed only for the exact pilot origins by the API CORS
+policy; it contains no Yandex token and is never persisted by the browser.
+
 ## 8. Enroll a stage pilot account
 
 Enrollment is an explicit stage administration operation. It validates a

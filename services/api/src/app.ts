@@ -46,7 +46,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       reply
         .header('access-control-allow-origin', origin)
         .header('access-control-allow-methods', 'GET, POST, OPTIONS')
-        .header('access-control-allow-headers', 'authorization, content-type')
+        .header(
+          'access-control-allow-headers',
+          'authorization, content-type, x-fit-pilot-session',
+        )
         .header('vary', 'Origin')
     }
     if (request.method === 'OPTIONS') {
@@ -182,8 +185,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.get('/v1/clients', async (request, reply) => {
-    const token = readBearerToken(request.headers.authorization)
-    if (token === undefined) {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     if (options.pilotClientsReader === undefined) {
@@ -193,7 +196,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     try {
       return reply
         .header('cache-control', 'no-store')
-        .send(await options.pilotClientsReader.readClients(token))
+        .send(await options.pilotClientsReader.readClients(sessionToken))
     } catch (error) {
       if (error instanceof PilotSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })
