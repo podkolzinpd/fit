@@ -18,6 +18,7 @@ import { completedWorkoutsInPeriod } from "./workout-source.ts"
 import { buildSummaryConsistency } from "./summary-consistency.ts"
 import { buildSummaryProgressFacts } from "./summary-progress-facts.ts"
 import { buildSummaryModelInput } from "./summary-model-input.ts"
+import { resolveSupabasePublicKey } from "./supabase-public-key.ts"
 
 const YANDEX_COMPLETION_URL =
   "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
@@ -230,9 +231,17 @@ function serviceClient() {
 
 function requestClient(req: Request) {
   const authorization = req.headers.get("authorization")
+  const publicKey = resolveSupabasePublicKey({
+    publishableKey: Deno.env.get("SUPABASE_PUBLISHABLE_KEY"),
+    publishableKeys: Deno.env.get("SUPABASE_PUBLISHABLE_KEYS"),
+    anonKey: Deno.env.get("SUPABASE_ANON_KEY"),
+  })
+  if (!publicKey) {
+    throw new HttpError(500, "supabase_public_key_not_configured")
+  }
   return createClient(
     requiredSecret("SUPABASE_URL"),
-    requiredSecret("SUPABASE_PUBLISHABLE_KEY"),
+    publicKey,
     {
       global: {
         headers: authorization ? { Authorization: authorization } : {},
