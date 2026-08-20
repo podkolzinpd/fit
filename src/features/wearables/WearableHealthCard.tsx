@@ -44,10 +44,14 @@ export function WearableHealthCard({ source = nativeHealthSource }: { source?: W
     }
   }
 
+  if (state.kind === 'unavailable') return <section className="wearable-card wearable-card-unavailable" aria-labelledby="wearable-title">
+    <p className="eyebrow">ДАННЫЕ С ЧАСОВ</p>
+    <div><strong id="wearable-title">Доступны в приложении Fit на iPhone</strong><small>Сон, шаги и восстановление</small></div>
+  </section>
+
   return <section className="wearable-card" aria-labelledby="wearable-title">
     <div className="wearable-card-head"><div><p className="eyebrow">ДАННЫЕ С ЧАСОВ</p><h2 id="wearable-title">Активность и восстановление</h2></div>{state.kind === 'ready' && <button className="link" onClick={() => void connect()}>Обновить</button>}</div>
     {state.kind === 'checking' && <p className="muted">Проверяем доступность…</p>}
-    {state.kind === 'unavailable' && <div className="wearable-empty"><strong>Доступно в приложении Fit на iPhone</strong><p>В веб-версии Apple Health недоступен. Откройте этот кабинет в iOS-приложении.</p></div>}
     {state.kind === 'idle' && <div className="wearable-empty"><strong>Подключите Apple Health</strong><p>Fit прочитает только сон, шаги, активную энергию, пульс покоя и HRV. Данные пока остаются на устройстве.</p><button onClick={() => void connect()}>Подключить</button></div>}
     {state.kind === 'loading' && <p className="muted" role="status">Читаем данные здоровья…</p>}
     {state.kind === 'error' && <div className="wearable-empty"><p className="error">{state.message}</p><button className="secondary" onClick={() => void connect()}>Повторить</button></div>}

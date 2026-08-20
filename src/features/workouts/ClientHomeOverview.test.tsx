@@ -54,15 +54,25 @@ describe('ClientHomeOverview', () => {
   it('explains the exact personal record and opens exercise progress', () => {
     const latest = workout({ id: 'latest', status: 'done', hasPr: true })
     render(<MemoryRouter><ClientHomeOverview today={today} workouts={[latest]} regularity={[week]} goal={goal} personalRecords={[squatRecord]} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Своя тренировка</button>} /></MemoryRouter>)
-    expect(screen.getByRole('heading', { name: 'Присед: новый рекорд' })).toBeVisible()
-    expect(screen.getByText('40 кг × 12 повт. · лучший подход')).toBeVisible()
-    expect(screen.getByRole('link', { name: /Присед: новый рекорд/ })).toHaveAttribute('href', '/workouts/latest/history/squat')
+    expect(screen.getByText('НОВЫЙ ЛИЧНЫЙ РЕКОРД')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Присед' })).toBeVisible()
+    expect(screen.getByText('40 кг × 12 повт.')).toBeVisible()
+    expect(screen.getByRole('link', { name: /Присед/ })).toHaveAttribute('href', '/workouts/latest/history/squat')
   })
 
   it('renders the next action, week progress and one secondary highlight without dashes', () => {
-    const assigned = workout({ id: 'assigned', trainerId: 'trainer-1', startTime: '18:30' })
+    const assigned = workout({
+      id: 'assigned', trainerId: 'trainer-1', startTime: '18:30',
+      exercises: [
+        { id: 'row', source: 'system', ref: 'row', name: 'Гребной тренажёр', muscleGroup: 'cardio', inputKind: 'distance', position: 0, blockId: 'row', blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90, sets: [] },
+        { id: 'press', source: 'system', ref: 'press', name: 'Жим гантелей лёжа', muscleGroup: 'chest', inputKind: 'strength', position: 1, blockId: 'press', blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90, sets: [] },
+        { id: 'plank', source: 'system', ref: 'plank', name: 'Планка', muscleGroup: 'core', inputKind: 'duration', position: 2, blockId: 'plank', blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90, sets: [] },
+      ],
+    })
     render(<MemoryRouter><ClientHomeOverview today={today} workouts={[assigned]} regularity={[week]} goal={goal} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Своя тренировка</button>} /></MemoryRouter>)
-    expect(screen.getByRole('heading', { name: 'Тренировка на сегодня' })).toBeVisible()
+    expect(screen.getByText('СЕГОДНЯ')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Тренировка по плану' })).toBeVisible()
+    expect(screen.getByText('3 упражнения · Гребной тренажёр, Жим гантелей лёжа и ещё 1')).toBeVisible()
     expect(screen.getByRole('link', { name: 'Открыть план' })).toBeVisible()
     expect(screen.getByRole('heading', { name: '3 тренировки' })).toBeVisible()
     expect(screen.getByText('1 по плану · 2 самостоятельно')).toBeVisible()
@@ -71,6 +81,15 @@ describe('ClientHomeOverview', () => {
     expect(screen.getByRole('heading', { name: 'Вернуться к бегу' })).toBeVisible()
     expect(screen.queryByText('—')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Своя тренировка' })).toBeVisible()
+  })
+
+  it('names tomorrow instead of presenting a future assignment as current', () => {
+    const assigned = workout({ id: 'tomorrow', trainerId: 'trainer-1', workoutDate: localDate('2026-08-17'), startTime: '07:20' })
+    render(<MemoryRouter><ClientHomeOverview today={today} workouts={[assigned]} regularity={[{ ...week, completedCount: 2, completedPlannedCount: 0 }]} goal={null} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Своя тренировка</button>} /></MemoryRouter>)
+    expect(screen.getByText('ЗАВТРА')).toBeVisible()
+    expect(screen.getByText('Завтра, 07:20')).toBeVisible()
+    expect(screen.getByText('Обе — самостоятельно')).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Прогресс ›' })).toHaveAttribute('href', '/me/progress')
   })
 
   it('keeps the empty state useful and puts self-training first', () => {
