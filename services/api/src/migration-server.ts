@@ -2,7 +2,10 @@ import { fileURLToPath } from 'node:url'
 
 import { runner } from 'node-pg-migrate'
 
+import { YandexIdentityClient } from './auth/yandex-identity.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
+import { PgDatabasePool } from './db/pg-pool.js'
+import { DatabasePilotEnroller } from './db/yandex-pilot-enrollment.js'
 import { buildMigrationApp } from './migration-app.js'
 
 function parsePort(value: string | undefined): number {
@@ -28,7 +31,29 @@ const redactedMigrationLogger = {
   error: () => undefined,
 }
 
+const pilotEnrollmentEnabled = process.env.YANDEX_PILOT_ENROLLMENT_ENABLED === 'true'
+if (pilotEnrollmentEnabled && process.env.APP_ENV !== 'stage') {
+  throw new Error('Pilot enrollment can be enabled only in stage')
+}
+const pilotEnrollmentPool = pilotEnrollmentEnabled
+  ? new PgDatabasePool(databaseConfig)
+  : undefined
+const yandexClientId = process.env.YANDEX_OAUTH_CLIENT_ID
+if (pilotEnrollmentEnabled && yandexClientId === undefined) {
+  throw new Error('YANDEX_OAUTH_CLIENT_ID is required for pilot enrollment')
+}
+
 const app = buildMigrationApp({
+  ...(pilotEnrollmentPool === undefined || yandexClientId === undefined
+    ? {}
+    : {
+        pilotEnrollment: {
+          enroller: new DatabasePilotEnroller(pilotEnrollmentPool),
+          identityProvider: new YandexIdentityClient({
+            expectedClientId: yandexClientId,
+          }),
+        },
+      }),
   runMigrations: async () => {
     const migrations = await runner({
       advisoryLockMode: 'fail',
@@ -44,6 +69,10 @@ const app = buildMigrationApp({
     return migrations.map((migration) => migration.name)
   },
 })
+
+if (pilotEnrollmentPool !== undefined) {
+  app.addHook('onClose', async () => pilotEnrollmentPool.end())
+}
 
 try {
   await app.listen({ host: '0.0.0.0', port: parsePort(process.env.PORT) })

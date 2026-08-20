@@ -95,15 +95,21 @@ resource "yandex_serverless_container" "migration" {
   image {
     url     = "cr.yandex/${yandex_container_repository.api.name}:${var.migration_image_tag}"
     command = ["node", "dist/migration-server.js"]
-    environment = {
-      APP_ENV                          = var.environment
-      LOG_LEVEL                        = "info"
-      MIGRATION_DATABASE_HOST          = yandex_mdb_postgresql_cluster_v2.fit.hosts["primary"].fqdn
-      MIGRATION_DATABASE_PORT          = "6432"
-      MIGRATION_DATABASE_NAME          = yandex_mdb_postgresql_database.fit.name
-      MIGRATION_DATABASE_USER          = yandex_mdb_postgresql_user.owner.name
-      MIGRATION_DATABASE_SSL_ROOT_CERT = "/app/certs/yandex-cloud-ca.pem"
-    }
+    environment = merge(
+      {
+        APP_ENV                          = var.environment
+        LOG_LEVEL                        = "info"
+        MIGRATION_DATABASE_HOST          = yandex_mdb_postgresql_cluster_v2.fit.hosts["primary"].fqdn
+        MIGRATION_DATABASE_PORT          = "6432"
+        MIGRATION_DATABASE_NAME          = yandex_mdb_postgresql_database.fit.name
+        MIGRATION_DATABASE_USER          = yandex_mdb_postgresql_user.owner.name
+        MIGRATION_DATABASE_SSL_ROOT_CERT = "/app/certs/yandex-cloud-ca.pem"
+        YANDEX_PILOT_ENROLLMENT_ENABLED  = var.environment == "stage" && var.yandex_oauth_client_id != null ? "true" : "false"
+      },
+      var.yandex_oauth_client_id == null ? {} : {
+        YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id
+      },
+    )
   }
 
   secrets {

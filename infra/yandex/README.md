@@ -17,15 +17,16 @@ database password, OAuth secret or Terraform state.
 - a private cold migration runner invoked only by the OIDC-backed deployment
   identity before an API revision is changed.
 
-The container is private by default. Do not set
-`allow_unauthenticated_api = true` until the API validates Yandex ID tokens.
+The container is private by default. Stage delivery enables browser invocation
+only after Yandex ID validation and the read-only rollout allowlist are present.
+The migration runner is always private.
 
 ## Safe workflow
 
 The first infrastructure bootstrap is manual and reviewed. Steady-state stage
 delivery is owned by `.github/workflows/deploy-yandex-stage.yml`: OIDC
 authentication, immutable image push, locked forward migrations, final
-Terraform plan/apply, private readiness checks and automatic image rollback.
+Terraform plan/apply, readiness checks and automatic image rollback.
 
 The only long-lived CI credentials are repository secrets containing the
 dedicated S3 access key and secret for the private Terraform state bucket.
@@ -66,16 +67,17 @@ network-connected Serverless Containers; it is distinct from the user subnet.
 Do not place backend credentials, OAuth secrets, database passwords or URLs,
 `.tfplan` or state files in the repository.
 
-Pull-request CI never applies Terraform. A merge creates a plan; the protected
-`yandex-stage` GitHub Environment requires an explicit approval before any
-image push, migration or apply.
+Pull-request CI never applies Terraform. A merge to `main` creates a plan and
+automatically deploys only when policy confirms an existing API/migration image
+update with no new paid resource, resize, identity change, delete or replacement.
+Every other infrastructure plan stops before image push, migration or apply.
 
 ## Current intentional limits
 
 - a single PostgreSQL host is the MVP cost choice, not a high-availability
   production topology;
 - the first compatibility migration provides transaction-local actor context;
-- Yandex ID verification and the read-only profile endpoint are implemented in
-  the API, but the OAuth application, real allowlist, public invocation,
-  frontend routing and stage revision deployment remain separate operations;
+- Yandex ID verification, controlled stage enrollment and the read-only profile
+  endpoint are implemented. The default-off browser pilot still requires a
+  reviewed stage apply and an explicitly enrolled test identity;
 - Terraform state backend and CI identity are selected before the first apply.

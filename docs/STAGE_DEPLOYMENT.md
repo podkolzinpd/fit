@@ -1,8 +1,10 @@
 # Yandex Cloud stage deployment
 
 This runbook describes the durable stage delivery path. It does not authorize a
-production cutover, public API invocation or changes to the current Supabase
-production path.
+production cutover or changes to the current Supabase production path. The
+stage API transport is browser-accessible for the default-off Yandex ID pilot;
+application data remains protected by verified Yandex ID and a database
+allowlist. The migration runner remains private.
 
 ## 1. Steady-state contract
 
@@ -12,8 +14,10 @@ After the one-time bootstrap, a release is performed only by
 1. A push to `main` affecting `services/api` or `infra/yandex` creates a
    Terraform plan. The plan contains no secret values and its safe resource
    summary is written to the workflow summary.
-2. The `yandex-stage` GitHub Environment pauses the workflow for an explicit
-   reviewer approval.
+2. The plan policy allows only existing API and migration runner revisions,
+   exact credential metadata and lifecycle updates, and the reviewed public API
+   binding. A new resource, resize, identity change, delete or replacement stops
+   the workflow before any apply. Safe plans continue automatically.
 3. GitHub exchanges its OIDC token for a short-lived Yandex Cloud IAM token.
    No authorized-key JSON is used by CI.
 4. Terraform applies the scoped runtime identity and secret access grants
@@ -34,7 +38,9 @@ After the one-time bootstrap, a release is performed only by
    direct deployment and refuses to continue if either container still differs
    from the reviewed configuration. Private `/health` and `/ready` checks must
    pass. A readiness failure rolls back to the exact previous revision. If the
-   plan contains no container change, the active revision is reused.
+   plan contains no container change, the active revision is reused. The stage
+   API receives a public invocation binding only through the exact reviewed
+   Terraform resource; the migration runner never receives one.
 
 The migration runner has no provisioned instances and costs nothing while
 idle. It stays private, has concurrency one and can be invoked only by the
@@ -61,8 +67,8 @@ Identity Federation configured as follows:
 - JWKS URL: `https://token.actions.githubusercontent.com/.well-known/jwks`;
 - subject for the plan job:
   `repo:podkolzinpd@3878475/fit@1307853602:ref:refs/heads/main`;
-- subject for the approved deploy job:
-  `repo:podkolzinpd@3878475/fit@1307853602:environment:yandex-stage`.
+- subject for the deploy job:
+  `repo:podkolzinpd@3878475/fit@1307853602:ref:refs/heads/main`.
 
 The service account needs the existing Terraform resource-management roles,
 `container-registry.images.pusher`, `logging.editor`, Connection Manager
@@ -78,15 +84,12 @@ on the deployer itself and the two runtime service accounts, and grants
 Keep one dedicated static S3 key for the Terraform state backend. This is not a
 Yandex API authorized-key JSON and is not used for provider authentication.
 Store it only in GitHub repository secrets and rotate it on schedule or after
-an incident, not on every deployment. The pre-approval plan job deliberately
-does not enter the protected Environment, so it cannot read Environment-only
-secrets.
+an incident, not on every deployment. Both jobs use only repository-level
+values; no deploy credential is stored in a GitHub Environment.
 
 ## 3. One-time GitHub configuration
 
-Create a protected GitHub Environment named `yandex-stage` with at least one
-required reviewer. Add these repository variables (not Environment-only
-variables, because the plan job runs before approval):
+Add these repository variables:
 
 - `YC_CLOUD_ID`;
 - `YC_FOLDER_ID`;
@@ -128,12 +131,22 @@ image can run after an automatic application rollback.
 
 - State remains in the private Object Storage backend. GitHub Actions
   serializes every stage operation with one concurrency group.
-- A plan containing delete or replacement actions fails by default.
+- A plan containing delete or replacement actions always fails in the automatic
+  workflow.
 - Managed PostgreSQL cluster or database destruction is always blocked by the
   plan policy, including manual runs.
-- A reviewed `workflow_dispatch` may set `allow_destroy=true` only for a known
-  non-database transition.
-- Adding `system:allUsers` is outside this workflow and is always rejected.
+- Automatic deployment accepts only updates to the existing API and migration
+  containers without CPU, memory, timeout, concurrency, identity, connectivity
+  or logging changes; the existing registry lifecycle and credential metadata;
+  and the exact reviewed public API binding. Every other create or in-place
+  infrastructure change fails before apply.
+- `workflow_dispatch` is a safe retry of the same policy, not a destructive or
+  infrastructure-change override. New or cost-changing infrastructure requires
+  a separate reviewed workflow change and must show its cost before apply.
+- `system:allUsers` is accepted only on the exact stage API invocation binding,
+  only with the explicit `--allow-public-api` policy flag used by this workflow,
+  and only for the `serverless.containers.invoker` role. It is rejected for the
+  migration runner and every other resource.
 - Plan files and state are never uploaded as GitHub artifacts.
 
 ## 6. Image lifecycle
@@ -159,7 +172,7 @@ frontend dependency tree and can exhaust the local Podman VM.
 
 ## 7. Smoke and stop conditions
 
-The approved workflow verifies:
+The automatic workflow verifies:
 
 1. the deployer has direct `iam.serviceAccounts.user` bindings on itself and
    both runtime identities before any image work; `DeployRevision` also fails
@@ -167,13 +180,62 @@ The approved workflow verifies:
 2. migration response is `200` with a generic migrated result;
 3. `GET /health` returns `200 {"status":"ok"}`;
 4. `GET /ready` returns `200 {"status":"ready"}`;
-5. the API remains private and has no `system:allUsers` binding.
+5. the API has only the reviewed public invoker binding; the migration runner
+   remains private.
 
 Until a separate cutover is reviewed, do not change the frontend API URL,
-production Vercel variables or the existing Supabase path. The local Yandex ID
-pilot remains default-off and read-only.
+production Vercel variables or the existing Supabase path. The Yandex ID pilot
+remains default-off and read-only.
 
-## 8. Legacy credential transition
+The first browser pilot uses the existing branch-scoped Vercel Preview rather
+than a separate cloud frontend. Its exact origin is included in the stage CORS
+allowlist and its Yandex OAuth callback is:
+
+```text
+https://fit-git-codex-yandex-id-b494d5-uniteddispatch999-8643s-projects.vercel.app/auth/yandex/callback
+```
+
+Only that preview branch receives the three pilot build variables:
+`VITE_YANDEX_ID_PILOT_ENABLED=true`, the public
+`VITE_YANDEX_OAUTH_CLIENT_ID`, and `VITE_YANDEX_API_BASE_URL` pointing to the
+stage API. Do not add them to Production or to every Preview deployment.
+
+## 8. Enroll a stage pilot account
+
+Enrollment is an explicit stage administration operation. It validates a
+temporary Yandex OAuth token against the configured client, stores only the
+SHA-256 identity mapping, creates a profile without name or email and assigns
+read-only Yandex backend access. The route exists only on the private migration
+runner when `YANDEX_PILOT_ENROLLMENT_ENABLED=true`; it is not part of the public
+API container.
+
+Run the following in Yandex Cloud Shell after the matching revision is active.
+The hidden prompt and stdin request body keep the OAuth token out of shell
+history and process arguments:
+
+```sh
+read -rsp 'Temporary Yandex OAuth token: ' FIT_YANDEX_TOKEN
+printf '\n'
+FIT_YC_TOKEN="$(yc iam create-token)"
+FIT_MIGRATION_URL="$(terraform -chdir=infra/yandex output -raw migration_container_url)"
+test -n "${FIT_YANDEX_TOKEN:?}" && test -n "${FIT_YC_TOKEN:?}" && test -n "${FIT_MIGRATION_URL:?}"
+jq -n --arg token "$FIT_YANDEX_TOKEN" --arg role trainer \
+  '{accessToken: $token, accountRole: $role}' \
+  | curl --fail --silent --show-error \
+      --request POST \
+      --header "Authorization: Bearer $FIT_YC_TOKEN" \
+      --header 'Content-Type: application/json' \
+      --data-binary @- \
+      "${FIT_MIGRATION_URL%/}/pilot/enroll"
+unset FIT_YANDEX_TOKEN FIT_YC_TOKEN FIT_MIGRATION_URL
+```
+
+Use `client` instead of `trainer` only when that is the intended product role.
+Repeating the same role is idempotent. Changing an enrolled identity's role is
+rejected and requires a separately reviewed data correction. Never paste the
+OAuth token into a URL, a GitHub variable, logs or repository files.
+
+## 9. Legacy credential transition
 
 The first deployment through this pipeline switches the containers from the
 manually created URL secrets to the managed Connection Manager secrets. Keep

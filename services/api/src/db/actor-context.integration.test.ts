@@ -8,6 +8,10 @@ import { withActorTransaction } from './actor-transaction.js'
 import { PgDatabasePool } from './pg-pool.js'
 import type { DatabasePool } from './types.js'
 import {
+  DatabasePilotEnroller,
+  PilotEnrollmentConflictError,
+} from './yandex-pilot-enrollment.js'
+import {
   PilotAccessDeniedError,
   withYandexPilotActorTransaction,
 } from './yandex-pilot-transaction.js'
@@ -19,6 +23,7 @@ const OUTSIDE_TRAINER_ID = '3f520f21-0be4-4a38-bb2a-e25225e1e608'
 const CLIENT_ID = 'b3942b20-52a2-4d5d-9895-b3b63cf61442'
 const PILOT_SUBJECT_HASH = 'b'.repeat(64)
 const OUTSIDE_SUBJECT_HASH = 'c'.repeat(64)
+const ENROLLMENT_SUBJECT_HASH = 'e'.repeat(64)
 const RUNTIME_PASSWORD = 'fit-api-test-only'
 const migrationsDirectory = fileURLToPath(
   new URL('../../db/migrations', import.meta.url),
@@ -30,6 +35,10 @@ interface ActorRow extends QueryResultRow {
 
 interface ProfileRow extends QueryResultRow {
   first_name: string | null
+}
+
+interface EnrollmentProfileRow extends QueryResultRow {
+  account_role: 'trainer' | 'client'
 }
 
 interface ClientRow extends QueryResultRow {
@@ -66,11 +75,16 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
   'actor context PostgreSQL baseline',
   () => {
     let ownerPool: Pool | undefined
+    let enrollmentPool: PgDatabasePool | undefined
     let runtimePool: PgDatabasePool | undefined
 
     beforeAll(async () => {
       const ownerUrl = requireLocalTestDatabaseUrl()
       ownerPool = new Pool({ connectionString: ownerUrl, max: 1 })
+      enrollmentPool = new PgDatabasePool({
+        connectionString: ownerUrl,
+        max: 1,
+      })
       await ownerPool.query(`
         do $$
         begin
@@ -182,6 +196,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
     afterAll(async () => {
       await runtimePool?.end()
+      await enrollmentPool?.end()
       await ownerPool?.end()
     })
 
@@ -227,6 +242,71 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         ),
       ).rejects.toBeInstanceOf(PilotAccessDeniedError)
       expect(await readActor(runtimePool)).toBeNull()
+    })
+
+    it('enrolls a verified pilot identity once without allowing role changes', async () => {
+      if (
+        ownerPool === undefined
+        || enrollmentPool === undefined
+        || runtimePool === undefined
+      ) {
+        throw new Error('Database pools are not ready')
+      }
+
+      await ownerPool.query(
+        `
+          delete from public.trainers
+          where profile_id in (
+            select profile_id
+            from app_private.auth_identities
+            where provider = 'yandex' and provider_subject_sha256 = $1
+          )
+        `,
+        [ENROLLMENT_SUBJECT_HASH],
+      )
+      await ownerPool.query(
+        `
+          delete from public.profiles
+          where id in (
+            select profile_id
+            from app_private.auth_identities
+            where provider = 'yandex' and provider_subject_sha256 = $1
+          )
+        `,
+        [ENROLLMENT_SUBJECT_HASH],
+      )
+
+      const enroller = new DatabasePilotEnroller(enrollmentPool)
+      await expect(
+        enroller.enroll(ENROLLMENT_SUBJECT_HASH, 'trainer'),
+      ).resolves.toEqual({ created: true })
+      await ownerPool.query(
+        `
+          delete from app_private.profile_rollout_assignments
+          where profile_id = (
+            select profile_id
+            from app_private.auth_identities
+            where provider = 'yandex' and provider_subject_sha256 = $1
+          )
+        `,
+        [ENROLLMENT_SUBJECT_HASH],
+      )
+      await expect(
+        enroller.enroll(ENROLLMENT_SUBJECT_HASH, 'trainer'),
+      ).resolves.toEqual({ created: false })
+      await expect(
+        enroller.enroll(ENROLLMENT_SUBJECT_HASH, 'client'),
+      ).rejects.toBeInstanceOf(PilotEnrollmentConflictError)
+
+      const profiles = await withYandexPilotActorTransaction(
+        runtimePool,
+        ENROLLMENT_SUBJECT_HASH,
+        (client) =>
+          client.query<EnrollmentProfileRow>(
+            'select account_role from public.profiles',
+          ),
+      )
+      expect(profiles).toEqual([{ account_role: 'trainer' }])
     })
 
     it('keeps profile reads and updates inside the actor tenant', async () => {
