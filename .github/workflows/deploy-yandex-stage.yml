@@ -35,11 +35,11 @@ env:
   TF_VAR_cloud_id: ${{ vars.YC_CLOUD_ID }}
   TF_VAR_folder_id: ${{ vars.YC_FOLDER_ID }}
   TF_VAR_environment: stage
-  TF_VAR_allow_unauthenticated_api: 'false'
+  TF_VAR_allow_unauthenticated_api: 'true'
   TF_VAR_deployer_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   TF_VAR_migration_invoker_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   TF_VAR_yandex_oauth_client_id: ${{ vars.YC_YANDEX_OAUTH_CLIENT_ID }}
-  TF_VAR_api_cors_allowed_origins: '["http://localhost:5173"]'
+  TF_VAR_api_cors_allowed_origins: '["http://localhost:5173","https://fit-git-codex-yandex-id-b494d5-uniteddispatch999-8643s-projects.vercel.app"]'
   TF_VAR_api_invoker_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
   YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
@@ -90,6 +90,7 @@ jobs:
         run: >-
           node scripts/check-yandex-terraform-plan.mjs
           infra/yandex/stage.tfplan.json
+          --allow-public-api
           ${{ inputs.allow_destroy && '--allow-destroy' || '' }}
 
   deploy:
@@ -184,6 +185,7 @@ jobs:
           terraform plan -out=stage-final.tfplan
           terraform show -json stage-final.tfplan > stage-final.tfplan.json
           node ../../scripts/check-yandex-terraform-plan.mjs stage-final.tfplan.json \
+            --allow-public-api \
             ${{ inputs.allow_destroy && '--allow-destroy' || '' }}
       - name: Record the current API revision for automatic rollback
         id: previous
@@ -206,6 +208,7 @@ jobs:
           terraform plan -out=stage-post-revision.tfplan
           terraform show -json stage-post-revision.tfplan > stage-post-revision.tfplan.json
           node ../../scripts/check-yandex-terraform-plan.mjs stage-post-revision.tfplan.json \
+            --allow-public-api \
             ${{ inputs.allow_destroy && '--allow-destroy' || '' }}
           if jq -e '
             [.resource_changes[]?
@@ -220,7 +223,7 @@ jobs:
             exit 1
           fi
           terraform apply -auto-approve stage-post-revision.tfplan
-      - name: Verify private API health and readiness
+      - name: Verify API health and readiness
         id: smoke
         continue-on-error: true
         working-directory: infra/yandex
