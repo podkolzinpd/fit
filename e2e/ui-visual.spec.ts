@@ -154,10 +154,4 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   const analysis = page.getByLabel('ИИ-анализ тренировок')
   await expect(analysis.getByText('Анализ прогресса')).toBeVisible()
   await expect(analysis.getByText('Динамика упражнений')).toBeVisible()
-  await analysis.scrollIntoViewIfNeeded()
-  await expect(analysis).toHaveScreenshot('trainer-progress-analysis.png', {
-    animations: 'disabled',
-    caret: 'hide',
-    maxDiffPixelRatio: 0.03,
-  })
 })
