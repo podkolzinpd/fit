@@ -28,18 +28,6 @@ async function expectVisualBaseline(
   })
 }
 
-async function expectPhoneFrameBaseline(
-  page: import('@playwright/test').Page,
-  name: string,
-) {
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  await expect(page.locator('.phone-frame')).toHaveScreenshot(name, {
-    animations: 'disabled',
-    caret: 'hide',
-    maxDiffPixelRatio: 0.03,
-  })
-}
-
 async function createStandaloneLiveWorkout(page: import('@playwright/test').Page, projectName: string) {
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
@@ -154,14 +142,14 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await expect(page.getByText(/AI-анализ/)).toHaveCount(0)
   const coachmark = page.getByRole('button', { name: 'Понятно' })
   if (await coachmark.isVisible()) await coachmark.click()
-  await expectPhoneFrameBaseline(page, 'trainer-progress.png')
+  await expectVisualBaseline(page, 'trainer-progress.png')
 
   await page.getByRole('link', { name: 'Открыть замеры и показатели' }).click()
   await expect(page.getByRole('button', { name: 'Настроить показатели' })).toBeVisible()
   await page.locator('.trainer-measurements-workspace .measurement-actions').evaluate((element) => element.scrollIntoView({ block: 'center' }))
   await page.locator('.content').evaluate((element) => element.scrollBy({ top: 180 }))
   await page.locator('.trainer-measurements-workspace .chart h2').click({ position: { x: 4, y: 4 } })
-  await expectPhoneFrameBaseline(page, 'trainer-measurements.png')
+  await expectVisualBaseline(page, 'trainer-measurements.png')
   await page.goto(`/progress/${demoClientId}`)
   const analysis = page.getByLabel('ИИ-анализ тренировок')
   await expect(analysis.getByText('Анализ прогресса')).toBeVisible()

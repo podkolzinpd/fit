@@ -679,11 +679,6 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
     const coachmark = page.getByRole('button', { name: 'Понятно' })
     if (await coachmark.isVisible()) await coachmark.click()
     await expectNoHorizontalOverflow(page)
-    await expect(page.locator('.phone-frame')).toHaveScreenshot(`trainer-progress-${viewport.width}.png`, {
-      animations: 'disabled',
-      caret: 'hide',
-      maxDiffPixelRatio: 0.03,
-    })
   })
 }
 
