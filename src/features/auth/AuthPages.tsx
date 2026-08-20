@@ -1,10 +1,15 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { authRepository } from '../../data/repositories/auth.repository'
-import { yandexPilotRepository, type YandexPilotProfile } from '../../data/repositories/yandex-pilot.repository'
+import {
+  yandexPilotRepository,
+  type YandexPilotClient,
+  type YandexPilotSession,
+} from '../../data/repositories/yandex-pilot.repository'
 import { useAuth } from '../../app/auth-context'
 import { getYandexIdPilotConfig, trainerHomePath } from '../../app/feature-flags'
-import { Field } from '../../shared/ui'
+import { ProfileIcon } from '../../shared/icons'
+import { AsyncView, Field } from '../../shared/ui'
 import type { AccountRole } from '../../shared/domain'
 import { consumeYandexAuthorizationCallback, createYandexAuthorizationUrl } from './yandex-pilot-oauth'
 
@@ -67,8 +72,24 @@ export function AuthPage() {
 export function YandexPilotCallbackPage() {
   const config = getYandexIdPilotConfig()
   const apiBaseUrl = config?.apiBaseUrl ?? null
-  const [profile, setProfile] = useState<YandexPilotProfile | null>(null)
+  const [session, setSession] = useState<YandexPilotSession | null>(null)
+  const [clients, setClients] = useState<YandexPilotClient[] | null>(null)
+  const [clientsLoading, setClientsLoading] = useState(false)
+  const [clientsError, setClientsError] = useState<Error | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const sessionRequest = useRef<Promise<YandexPilotSession> | null>(null)
+
+  async function loadClients(targetApiBaseUrl: string, sessionToken: string): Promise<void> {
+    setClientsLoading(true)
+    setClientsError(null)
+    try {
+      setClients(await yandexPilotRepository.listClients(targetApiBaseUrl, sessionToken))
+    } catch (caught) {
+      setClientsError(caught instanceof Error ? caught : new Error('Не удалось загрузить клиентов.'))
+    } finally {
+      setClientsLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (apiBaseUrl === null) return
@@ -78,13 +99,31 @@ export function YandexPilotCallbackPage() {
     let cancelled = false
     async function verify() {
       try {
-        const authorization = consumeYandexAuthorizationCallback(search)
-        const result = await yandexPilotRepository.exchangeCodeForProfile(
-          targetApiBaseUrl,
-          authorization.code,
-          authorization.codeVerifier,
-        )
-        if (!cancelled) setProfile(result)
+        sessionRequest.current ??= Promise.resolve().then(() => {
+          const authorization = consumeYandexAuthorizationCallback(search)
+          return yandexPilotRepository.exchangeCodeForSession(
+            targetApiBaseUrl,
+            authorization.code,
+            authorization.codeVerifier,
+          )
+        })
+        const result = await sessionRequest.current
+        if (cancelled) return
+        setSession(result)
+        setClientsLoading(true)
+        try {
+          const resultClients = await yandexPilotRepository.listClients(
+            targetApiBaseUrl,
+            result.session.token,
+          )
+          if (!cancelled) setClients(resultClients)
+        } catch (caught) {
+          if (!cancelled) {
+            setClientsError(caught instanceof Error ? caught : new Error('Не удалось загрузить клиентов.'))
+          }
+        } finally {
+          if (!cancelled) setClientsLoading(false)
+        }
       } catch (caught) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : 'Не удалось проверить Yandex ID.')
       }
@@ -94,25 +133,57 @@ export function YandexPilotCallbackPage() {
   }, [apiBaseUrl])
 
   if (config === null) return <Navigate to="/auth" replace />
-  const fullName = profile === null
+  const fullName = session === null
     ? ''
-    : [profile.profile.firstName, profile.profile.lastName].filter(Boolean).join(' ') || 'Пользователь FIT'
+    : [session.profile.firstName, session.profile.lastName].filter(Boolean).join(' ') || 'Пользователь FIT'
   return <main className="auth-screen auth-entry">
     <header className="auth-entry-head">
       <div className="brand" aria-hidden="true">FIT</div>
       <p className="eyebrow">YANDEX ID · ПИЛОТ</p>
-      <h1>{profile ? 'Доступ подтверждён' : error ? 'Не удалось войти' : 'Проверяем доступ'}</h1>
-      <p className="muted">{profile
+      <h1>{session ? 'Доступ подтверждён' : error ? 'Не удалось войти' : 'Проверяем доступ'}</h1>
+      <p className="muted">{session
         ? 'Yandex ID связан с тестовым профилем. Данные открыты только для чтения.'
         : error ?? 'Проверяем Yandex ID и доступ к изолированному stage…'}</p>
     </header>
-    {profile && <section className="compact stack yandex-pilot-profile" aria-label="Профиль пилота">
+    {session && <section className="compact stack yandex-pilot-profile" aria-label="Профиль пилота">
       <div><span>Профиль</span><strong>{fullName}</strong></div>
-      <div><span>Роль</span><strong>{profile.profile.accountRole === 'trainer' ? 'Тренер' : 'Клиент'}</strong></div>
+      <div><span>Роль</span><strong>{session.profile.accountRole === 'trainer' ? 'Тренер' : 'Клиент'}</strong></div>
       <div><span>Режим</span><strong>Только чтение</strong></div>
+    </section>}
+    {session?.profile.accountRole === 'trainer' && <section className="yandex-pilot-clients" aria-labelledby="yandex-pilot-clients-title">
+      <div className="yandex-pilot-section-head">
+        <h2 id="yandex-pilot-clients-title">Клиенты</h2>
+      </div>
+      <AsyncView
+        loading={clientsLoading}
+        error={clientsError}
+        empty={clients !== null && clients.length === 0}
+        onRetry={() => void loadClients(config.apiBaseUrl, session.session.token)}
+        emptyTitle="В stage пока нет клиентов"
+        emptyDescription="Список появится после переноса данных этого тренера."
+      >
+        <div className="cards yandex-pilot-clients-list">
+          {clients?.map((client) => <article className="card yandex-pilot-client" key={client.id}>
+            <span className="client-avatar" aria-hidden="true"><ProfileIcon /></span>
+            <div>
+              <strong>{client.fullName}</strong>
+              <p>{pilotClientSummary(client)}</p>
+            </div>
+          </article>)}
+        </div>
+      </AsyncView>
     </section>}
     <Link className="auth-back-link" to="/auth">Вернуться ко входу</Link>
   </main>
+}
+
+function pilotClientSummary(client: YandexPilotClient): string {
+  const details = [
+    client.ageYears === null ? null : `${client.ageYears} лет`,
+    client.heightCm === null ? null : `${client.heightCm} см`,
+    client.goal,
+  ].filter((value): value is string => value !== null && value !== '')
+  return details.length > 0 ? details.join(' · ') : 'Профиль без дополнительных данных'
 }
 
 export function ForgotPasswordPage() {

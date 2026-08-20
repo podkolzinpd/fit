@@ -5,34 +5,31 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-20
-Проверенный базовый `main`: `a865936` (`YAFIT-327: цельный экран прогресса тренера (#489)`)
+Проверенный базовый `main`: `2b83cb9` (`fix(yandex): avoid reserved authorization header (#493)`)
 
 ## Активная работа
 
-- Yandex ID/profile, tenant-allowlist и stage delivery находятся в `main`:
-  GitHub OIDC без JSON-ключа, immutable image, forward-only миграции, private
-  migration runner, smoke и rollback. `#468` выполняет `DeployRevision`
-  официальным REST API из reviewed plan; `#473` и `#475` добавили identity
-  bindings и folder bootstrap. Run `32312662735` получил 403; по нему открыто
-  обращение `BR904300`. Вручную развёрнуты migration/API revisions, проверки
-  миграций, readiness, auth route и CORS прошли. Terraform state всё ещё видит
-  drift; production frontend не переключался.
-- `#487` добавил следующий stage gate в `main`: закрытую регистрацию тестового
-  Yandex ID через migration runner, публичный только transport API, точную
-  CORS/identity/DB-allowlist защиту и Terraform policy, запрещающую
-  `system:allUsers` на других ресурсах. Отдельный Vercel Preview с pilot env и
-  точный callback в Yandex OAuth настроены; production/Supabase не менялись.
-  Run `32355671699` построил безопасный plan `1 add / 5 change / 0 destroy`, но
-  старый общий environment gate остановил даже эту безопасную доставку. Он и
-  пустой дубликат `32355676393` отменены. Готовится разделение: обычные
-  migrations/API revisions после merge идут автоматически, а новая или
-  cost-sensitive инфраструктура блокируется policy до apply.
-- Функциональный MVP признан достаточным для системной фазы удобства. Навигация,
-  Trainer Progress, visual regression, типографика, геометрия и единые состояния
-  закрыты в `#421`…`#431`; мобильная тренировочная фаза P0/P1 — `YAFIT-316`.
-  Desktop shell тренера отложен пользователем.
-- Продуктовая полировка идёт по одному экрану и PR за раз, с полной проверкой
-  перед следующим шагом.
+- Yandex ID/profile, tenant-allowlist и автоматическая stage delivery находятся
+  в `main`: GitHub OIDC без JSON-ключа, immutable image, forward-only миграции,
+  private migration runner, smoke и rollback. Автоматический run `32381263395`
+  после `#493` полностью прошёл: миграций не ожидалось, обе revisions и
+  Terraform state согласованы, health/readiness, точный CORS и GitHub
+  deployment status зелёные. Новая,
+  cost-sensitive, destructive или identity-инфраструктура
+  по-прежнему блокируется policy до отдельного reviewed apply.
+- Тестовый Yandex ID зарегистрирован как `trainer`; обычный PKCE-вход на Vercel
+  Preview подтверждает read-only профиль. OAuth Client secret перевыпущен и не
+  используется: текущий PKCE-контракт требует только публичный Client ID.
+  Production frontend и Supabase не переключались.
+- Read-only clients slice находится в `main`: migration `000005` хранит только
+  SHA-256 короткоживущей opaque-сессии Fit, а защищённый `GET /v1/clients`
+  читает только активных клиентов actor tenant. Callback-пилот показывает
+  список/empty/error/retry без ссылок и mutations.
+- Конфликт с зарезервированным Serverless Containers заголовком `Authorization`
+  устранён в `#493`: browser pilot session передаётся отдельным
+  `X-Fit-Pilot-Session`. Live-проверка через Yandex ID на localhost против
+  stage API подтвердила профиль тренера и ожидаемый empty clients state.
+  Supabase и production frontend не переключались.
 - `YAFIT-327` завершает цельную композицию Trainer Progress без дублирующего
   обзора и глобальных раскрытий: текущая неделя и ИИ видны сразу, бег и замеры
   открываются отдельными компактными маршрутами. Контракт LLM, клиентский
@@ -72,36 +69,37 @@
   RPE не сжимается в одну строку. Форма копии использует те же раскрываемые
   строки и не перекрывает ввод при открытой iOS-клавиатуре.
 - Изолированный Yandex Cloud stage содержит приватные Managed PostgreSQL 17 и
-  Serverless Containers без прогретых экземпляров. Миграции `000001`–`000004`
-  применены. Reviewed image `cee48ab2b835ed45b7f1f7d010512274e04bb704`
-  вручную развёрнут в migration/API revisions; API пока использует совместимый
-  legacy `DATABASE_URL` secret и CORS для `http://localhost:5173`. Код `#413`
-  предоставляет Yandex ID mapping, allowlist и read-only `/v1/profile`.
-  Production остаётся на Supabase; public invoker и cutover не включены.
+  Serverless Containers без прогретых экземпляров. Миграции `000001`–`000005`
+  применены автоматически; runtime получает отдельные owner/API пароли из
+  Connection Manager. API transport публичен только для точного пилотного CORS,
+  migration runner остаётся private. Production остаётся на Supabase; tenant
+  cutover не включён.
 
 ## Последние проверки
 
 - Поиск клиентов: `npm run check` зелёный; Playwright проверил 390/430/1440 px,
   светлую и пилотную тёмную тему, ввод, фильтрацию, empty, focus и reset без
   переполнения и ошибок консоли.
-- Ручной stage rollout: migration `bbai99uv0viq7ij8q38f` и API
-  `bbaon5v6lqqf4sef732t` Active; `/migrate` вернул `migrations: []`, `/health`
-  и `/ready` — 200, пустой auth request — 400, CORS preflight — 204.
-- Ветка stage-пилота: `npm run check`, 23 infra-policy теста, 6 локальных
-  PostgreSQL integration tests, Terraform fmt/validate прошли без загрузки
-  новых Podman-образов.
-- После merge `#487` Terraform plan прошёл policy: создаётся только IAM binding
-  публичного вызова точного API container, пять существующих ресурсов меняются
-  in-place, удалений и новых вычислительных/DB-ресурсов нет. Apply не выполнялся.
+- Автоматический run `32372968388`: migration `000005`, обе revisions,
+  Terraform policy/state refresh и API health/readiness зелёные; rollback не
+  потребовался. Следующий run `32376225799` также зелёный и опубликовал
+  успешный deployment `6003600605`, заменив устаревшую красную карточку.
+- Read-only clients: полный `npm run check` (592 frontend tests, API, infra
+  policy и production build) зелёный. Playwright проверил success на
+  390/430/1440 px и mobile empty/error/retry без overflow. Локальный
+  `npm run local:verify` без скачивания образов применил только migration
+  `000005`; 517 Supabase pgTAP и 7 PostgreSQL actor/RLS/session тестов прошли.
+- Полный `npm run check` для `#493` зелёный: 593 frontend tests, API, infra
+  policy, lint, typecheck и production build. После автоматического stage deploy
+  локальный browser E2E прошёл Yandex OAuth/PKCE, выдачу Fit-сессии, профиль и
+  защищённый `GET /v1/clients`; до переноса tenant-данных показан ожидаемый empty.
 
 ## Ближайший roadmap
 
-1. Завершить безопасный автоматический rollout stage-пилота; затем
-   зарегистрировать один тестовый Yandex ID и пройти read-only profile flow.
-   Production frontend остаётся на Supabase.
-2. Получить ответ по `BR904300`, устранить `DeployRevision` 403, согласовать
-   Terraform state с ручными revisions и вернуть автоматический pipeline.
-3. Следующий продуктовый блок начинать только после выбора пользователя.
+1. Портировать memberships/invitations, затем exercises/workouts и остальные
+   вертикали из `docs/design/yandex-cloud-migration.md`.
+2. После полного tenant-контракта провести две миграционные репетиции; только
+   затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
 
 Ручной беговой MVP `YAFIT-300/301/307/302/303` завершён. UX/UI-план и отложенные
 фичи — в `docs/design/PRODUCT_USABILITY_AUDIT_2026-08-18.md` и `BACKLOG-OVERVIEW.md`.

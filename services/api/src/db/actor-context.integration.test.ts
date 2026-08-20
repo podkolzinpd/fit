@@ -4,6 +4,9 @@ import { runner } from 'node-pg-migrate'
 import { Pool, type QueryResultRow } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
+import { hashPilotSessionToken } from '../auth/pilot-session-token.js'
+import { DatabasePilotClientsReader } from '../pilot-clients-reader.js'
+import { DatabasePilotSessionIssuer } from '../pilot-session.js'
 import { withActorTransaction } from './actor-transaction.js'
 import { PgDatabasePool } from './pg-pool.js'
 import type { DatabasePool } from './types.js'
@@ -13,6 +16,7 @@ import {
 } from './yandex-pilot-enrollment.js'
 import {
   PilotAccessDeniedError,
+  PilotSessionInvalidError,
   withYandexPilotActorTransaction,
 } from './yandex-pilot-transaction.js'
 
@@ -43,6 +47,10 @@ interface EnrollmentProfileRow extends QueryResultRow {
 
 interface ClientRow extends QueryResultRow {
   id: string
+}
+
+interface SessionDigestRow extends QueryResultRow {
+  token_sha256: string
 }
 
 function requireLocalTestDatabaseUrl(): string {
@@ -241,6 +249,73 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           () => Promise.resolve(undefined),
         ),
       ).rejects.toBeInstanceOf(PilotAccessDeniedError)
+      expect(await readActor(runtimePool)).toBeNull()
+    })
+
+    it('issues an opaque session and keeps its client list inside the pilot tenant', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const issuer = new DatabasePilotSessionIssuer(runtimePool)
+      const clientsReader = new DatabasePilotClientsReader(runtimePool)
+      const session = await issuer.issue(PILOT_SUBJECT_HASH)
+
+      expect(session?.profile.id).toBe(ACTOR_ID)
+      expect(session?.session.token).toMatch(/^[A-Za-z0-9_-]{43}$/)
+      const sessionDigest = session === undefined
+        ? undefined
+        : hashPilotSessionToken(session.session.token)
+      const storedSessions = await ownerPool.query<SessionDigestRow>(
+        `
+          select token_sha256
+          from app_private.yandex_pilot_sessions
+          where profile_id = $1 and expires_at > now()
+          order by created_at desc
+          limit 1
+        `,
+        [ACTOR_ID],
+      )
+      expect(storedSessions.rows).toEqual([{ token_sha256: sessionDigest }])
+      expect(storedSessions.rows[0]?.token_sha256).not.toBe(session?.session.token)
+      await expect(
+        clientsReader.readClients(session?.session.token ?? ''),
+      ).resolves.toMatchObject({
+        accessMode: 'read_only',
+        clients: [{ id: CLIENT_ID, fullName: 'Root alias' }],
+      })
+      expect(await readActor(runtimePool)).toBeNull()
+
+      await ownerPool.query(
+        'update app_private.profile_rollout_assignments set enabled = false where profile_id = $1',
+        [ACTOR_ID],
+      )
+      await expect(
+        clientsReader.readClients(session?.session.token ?? ''),
+      ).rejects.toBeInstanceOf(PilotSessionInvalidError)
+      await ownerPool.query(
+        'update app_private.profile_rollout_assignments set enabled = true where profile_id = $1',
+        [ACTOR_ID],
+      )
+
+      await expect(
+        issuer.issue(OUTSIDE_SUBJECT_HASH),
+      ).rejects.toBeInstanceOf(PilotAccessDeniedError)
+
+      const expiredToken = 'x'.repeat(43)
+      const expiredHash = hashPilotSessionToken(expiredToken)
+      if (expiredHash === undefined) throw new Error('Expired fixture token is invalid')
+      await ownerPool.query(
+        `
+          insert into app_private.yandex_pilot_sessions (
+            token_sha256, profile_id, created_at, expires_at
+          ) values ($1, $2, now() - interval '2 minutes', now() - interval '1 minute')
+        `,
+        [expiredHash, ACTOR_ID],
+      )
+      await expect(
+        clientsReader.readClients(expiredToken),
+      ).rejects.toBeInstanceOf(PilotSessionInvalidError)
       expect(await readActor(runtimePool)).toBeNull()
     })
 
