@@ -21,7 +21,8 @@
   регистрацию тестового Yandex ID через migration runner, публичный только
   transport API, точную CORS/identity/DB-allowlist защиту и Terraform policy,
   запрещающую `system:allUsers` на других ресурсах. Apply не выполнялся, новые
-  платные ресурсы и production/Supabase не менялись.
+  платные ресурсы и production/Supabase не менялись. Для этой ветки настроен
+  отдельный Vercel Preview с pilot env; точный callback сохранён в Yandex OAuth.
 - Функциональный MVP признан достаточным для системной фазы удобства. Навигация,
   Trainer Progress, visual regression, типографика, геометрия и единые состояния
   закрыты в `#421`…`#431`; мобильная тренировочная фаза P0/P1 — `YAFIT-316`.

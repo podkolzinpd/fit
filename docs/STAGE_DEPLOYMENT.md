@@ -178,8 +178,21 @@ The approved workflow verifies:
    remains private.
 
 Until a separate cutover is reviewed, do not change the frontend API URL,
-production Vercel variables or the existing Supabase path. The local Yandex ID
-pilot remains default-off and read-only.
+production Vercel variables or the existing Supabase path. The Yandex ID pilot
+remains default-off and read-only.
+
+The first browser pilot uses the existing branch-scoped Vercel Preview rather
+than a separate cloud frontend. Its exact origin is included in the stage CORS
+allowlist and its Yandex OAuth callback is:
+
+```text
+https://fit-git-codex-yandex-id-b494d5-uniteddispatch999-8643s-projects.vercel.app/auth/yandex/callback
+```
+
+Only that preview branch receives the three pilot build variables:
+`VITE_YANDEX_ID_PILOT_ENABLED=true`, the public
+`VITE_YANDEX_OAUTH_CLIENT_ID`, and `VITE_YANDEX_API_BASE_URL` pointing to the
+stage API. Do not add them to Production or to every Preview deployment.
 
 ## 8. Enroll a stage pilot account
 

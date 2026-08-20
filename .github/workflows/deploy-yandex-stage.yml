@@ -39,7 +39,7 @@ env:
   TF_VAR_deployer_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   TF_VAR_migration_invoker_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   TF_VAR_yandex_oauth_client_id: ${{ vars.YC_YANDEX_OAUTH_CLIENT_ID }}
-  TF_VAR_api_cors_allowed_origins: '["http://localhost:5173"]'
+  TF_VAR_api_cors_allowed_origins: '["http://localhost:5173","https://fit-git-codex-yandex-id-b494d5-uniteddispatch999-8643s-projects.vercel.app"]'
   TF_VAR_api_invoker_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
   YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
