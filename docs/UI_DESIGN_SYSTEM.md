@@ -12,14 +12,18 @@ work consistent and easier to verify.
   installed component framework.
 - Default product theme: `theme-light`, called **LIGHT PREMIUM PERFORMANCE** in
   the CSS. A dark token set remains as a build-time fallback.
-- Dark has two token sets. The base one in `:root` is the coral fallback; the
-  Figma-derived `theme-dark-pilot` set is served only to allowlisted accounts
-  that also chose the dark theme themselves (see the pilot section below).
+- Each theme has two token sets. For dark the base is `:root` (the coral
+  fallback) and the Figma-derived `theme-dark-pilot` sits on top; for light the
+  base is `theme-light` and the Figma-derived `theme-light-pilot` sits on top.
+  Both pilots are served only to allowlisted accounts that also picked that
+  theme themselves, through separate allowlists (see the pilot sections below).
 - Client and Trainer render inside `.phone-frame`, currently capped at 440 px.
   Client has four bottom tabs; Trainer has three in the current feature-flagged
   navigation. Live workout hides the tab bar and uses an immersive bottom bar.
-- Semantic tokens are defined in `:root` and overridden by `.theme-light`.
-  Prefer tokens over literal colors in new rules.
+- Semantic tokens are defined in `:root` and overridden by `.theme-light`, then
+  by `.theme-light-pilot` / `.theme-dark-pilot` for allowlisted accounts. Prefer
+  tokens over literal colors in new rules: every literal in a `.theme-light`
+  rule has to be repeated in the pilot block.
 
 ## Color and surfaces
 
@@ -96,6 +100,60 @@ Two deliberate deviations from the frame, both for readability:
 
 The pilot lives in one token block plus one grouped list of selector overrides
 at the end of `src/styles.css`, so it can be rolled out or deleted as a unit.
+
+## Light pilot palette (`theme-light-pilot`)
+
+Ported from the same Figma file, section «Светлая тема» (nodes `242-133`,
+`242-230`, `245-736`). Like the dark pilot it is a second value set for an
+existing theme, not a new theme and not a second token system.
+
+It differs from the dark pilot in one structural way: the base for light is a
+class, not `:root`, so the variant applies **both** classes
+(`theme-light theme-light-pilot`). The pilot block therefore lists only the
+values the frame actually changes and inherits every structural rule of the
+shipped light theme. Red, amber and the green surfaces are absent from the
+frame and deliberately keep their current light-theme values.
+
+| Role | Value | Source in the frame |
+| --- | --- | --- |
+| App background | `--bg: #ffffff` | screen background |
+| Header (status + tab row) | `--surface: #f7f7f9` | top bar |
+| Card / sheet | `--surface-raised: #ffffff`, `--card-grad: #ffffff` | exercise and form cards |
+| Field / value pill | `--input`, `--surface-sunken: #f5f4f2` | weight, reps, name, goal |
+| Main text | `--fg: #21201f` | all primary copy |
+| Muted text | `--muted: #696866` | labels, placeholders |
+| Primary fill | `--accent: #8766ff`, `--accent-grad` | assistant replies, CTA |
+| Accent text | `--accent-strong: #6e4ce6` | links, eyebrow labels |
+| Success | `--success: #1cc052` | confirmation check |
+| Frame glow | `--frame-bg` | violet gradient at the bottom edge |
+
+Surfaces carry the hierarchy the same way as in the frame: the card shares the
+page white and is separated by a soft shadow rather than a border, so `--border`
+is quieter (`#e7e7e6`) than in the shipped light theme. The frame glow needs an
+explicit rule — `.phone-frame.theme-light` paints the frame with `--bg`, so
+`.phone-frame.theme-light-pilot` puts `--frame-bg` back.
+
+Three deliberate deviations from the frame, all recorded rather than silently
+chosen:
+
+- The bottom glow is anchored to the frame bottom in pixels, not percent, and
+  stays no stronger than `#ebe5ff` until 70 px from the bottom — where the tab
+  bar starts — so muted text keeps ≥4.5:1. Full strength lives only under the
+  bar. With the keyboard open the glow is dropped entirely. This mirrors the
+  dark pilot's cap in the opposite direction.
+- Muted and label greys are darkened from the frame's `#8b8a88`, which gives
+  only 3.1:1 on `#f5f4f2`. `--muted: #696866` and `--secondary-label-fg:
+  #55534f` hold AA on white, on the field fill and on the palest glow band.
+  Accent text is darkened from `#8766ff` (3.9:1 on white) to `#6e4ce6` (5.4:1),
+  the same treatment coral gets in the shipped light theme.
+- The frame's primary confirm button is a neutral inverted fill — graphite
+  `#444342` on light, near-white `#ecebf0` on the dark screens — while violet is
+  reserved for assistant replies. The pilot keeps `--accent-grad` violet, as the
+  shipped dark pilot already does, because Fit has one primary-action token that
+  also drives brand mark, selected switch and route CTA; splitting action colour
+  from accent colour is a design-system decision, not a palette swap. Revisiting
+  it is a change to `--accent-grad`/`--accent-border`/`--accent-shadow` plus a
+  new action token, not a value edit inside this block.
 
 ## Typography
 

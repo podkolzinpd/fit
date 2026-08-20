@@ -18,7 +18,7 @@ vi.mock('./theme', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./theme')>()),
   useAppTheme: () => authState.theme,
 }))
-// isDarkThemePilotEnabled и isAssistantNavPilotEnabled остаются настоящими:
+// isDarkThemePilotEnabled, isLightThemePilotEnabled и isAssistantNavPilotEnabled остаются настоящими:
 // тесты пилотов управляют ими через vi.stubEnv и проверяют реальный проброс
 // actor.userId в allowlist.
 vi.mock('./feature-flags', async (importOriginal) => ({
@@ -126,7 +126,70 @@ describe('AppLayout: пилот тёмной палитры', () => {
     const frame = document.querySelector('.phone-frame')
     expect(frame).toHaveClass('theme-light')
     expect(frame).not.toHaveClass('theme-dark-pilot')
+    expect(frame).not.toHaveClass('theme-light-pilot')
     expect(document.documentElement).toHaveClass('theme-light')
+  })
+})
+
+describe('AppLayout: пилот светлой палитры', () => {
+  function enablePilotFor(userId: string) {
+    vi.stubEnv('VITE_LIGHT_THEME_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_LIGHT_THEME_PILOT_USER_IDS', userId)
+  }
+
+  it('аккаунт из allowlist со светлой темой получает пилотную палитру поверх основной светлой', () => {
+    enablePilotFor('pilot-user')
+    authState.userId = 'pilot-user'
+    authState.theme = 'light'
+    renderLayout('/me')
+    const frame = document.querySelector('.phone-frame')
+    expect(frame).toHaveClass('theme-light')
+    expect(frame).toHaveClass('theme-light-pilot')
+    expect(document.documentElement).toHaveClass('theme-light')
+    expect(document.documentElement).toHaveClass('theme-light-pilot')
+  })
+
+  it('аккаунт вне allowlist остаётся на прежней светлой теме', () => {
+    enablePilotFor('pilot-user')
+    authState.userId = 'other-user'
+    authState.theme = 'light'
+    renderLayout('/me')
+    const frame = document.querySelector('.phone-frame')
+    expect(frame).toHaveClass('theme-light')
+    expect(frame).not.toHaveClass('theme-light-pilot')
+    expect(document.documentElement).not.toHaveClass('theme-light-pilot')
+  })
+
+  it('при выключенном флаге пилот недоступен даже аккаунту из списка', () => {
+    vi.stubEnv('VITE_LIGHT_THEME_PILOT_ENABLED', '')
+    vi.stubEnv('VITE_LIGHT_THEME_PILOT_USER_IDS', 'pilot-user')
+    authState.userId = 'pilot-user'
+    authState.theme = 'light'
+    renderLayout('/me')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('theme-light-pilot')
+  })
+
+  it('с тёмной темой светлая пилотная палитра не подменяет выбор пользователя', () => {
+    enablePilotFor('pilot-user')
+    authState.userId = 'pilot-user'
+    authState.theme = 'dark'
+    renderLayout('/me')
+    const frame = document.querySelector('.phone-frame')
+    expect(frame).not.toHaveClass('theme-light-pilot')
+    expect(frame).not.toHaveClass('theme-light')
+    expect(frame).not.toHaveClass('theme-dark-pilot')
+  })
+
+  // Списки открываются независимо: участник светлого пилота не должен получать
+  // пилотную тёмную палитру, и наоборот.
+  it('не выдаёт тёмную пилотную палитру участнику только светлого пилота', () => {
+    enablePilotFor('pilot-user')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_USER_IDS', 'another-user')
+    authState.userId = 'pilot-user'
+    authState.theme = 'dark'
+    renderLayout('/me')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('theme-dark-pilot')
   })
 })
 

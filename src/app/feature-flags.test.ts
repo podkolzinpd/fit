@@ -3,6 +3,7 @@ import {
   getYandexIdPilotConfig,
   isAssistantNavPilotEnabled,
   isDarkThemePilotEnabled,
+  isLightThemePilotEnabled,
   isTodayStartRedesignEnabled,
   isWearablesPilotEnabled,
   trainerHomePath,
@@ -130,6 +131,48 @@ describe('dark theme pilot flag', () => {
     vi.stubEnv('VITE_WEARABLES_PILOT_USER_IDS', 'client-9')
     expect(isDarkThemePilotEnabled('client-9')).toBe(false)
     expect(isWearablesPilotEnabled('trainer-1')).toBe(false)
+  })
+})
+
+describe('light theme pilot flag', () => {
+  it('is disabled by default even for an allowlisted user', () => {
+    vi.stubEnv('VITE_LIGHT_THEME_PILOT_ENABLED', '')
+    vi.stubEnv('VITE_LIGHT_THEME_PILOT_USER_IDS', 'trainer-1')
+    expect(isLightThemePilotEnabled('trainer-1')).toBe(false)
+  })
+
+  it('requires the flag to be exactly "true"', () => {
+    vi.stubEnv('VITE_LIGHT_THEME_PILOT_USER_IDS', 'trainer-1')
+    vi.stubEnv('VITE_LIGHT_THEME_PILOT_ENABLED', 'TRUE')
+    expect(isLightThemePilotEnabled('trainer-1')).toBe(false)
+    vi.stubEnv('VITE_LIGHT_THEME_PILOT_ENABLED', '1')
+    expect(isLightThemePilotEnabled('trainer-1')).toBe(false)
+  })
+
+  it('is enabled only for an explicitly allowlisted user', () => {
+    vi.stubEnv('VITE_LIGHT_THEME_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_LIGHT_THEME_PILOT_USER_IDS', ' , trainer-1 , ,client-2, ')
+    expect(isLightThemePilotEnabled('trainer-1')).toBe(true)
+    expect(isLightThemePilotEnabled('client-2')).toBe(true)
+    expect(isLightThemePilotEnabled('trainer-3')).toBe(false)
+    expect(isLightThemePilotEnabled('')).toBe(false)
+  })
+
+  it('requires a non-empty allowlist', () => {
+    vi.stubEnv('VITE_LIGHT_THEME_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_LIGHT_THEME_PILOT_USER_IDS', '')
+    expect(isLightThemePilotEnabled('trainer-1')).toBe(false)
+  })
+
+  // Аудитории светлого и тёмного пилотов раскатываются независимо, поэтому
+  // списки не должны подменять друг друга.
+  it('stays independent from the dark palette allowlist', () => {
+    vi.stubEnv('VITE_LIGHT_THEME_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_LIGHT_THEME_PILOT_USER_IDS', 'trainer-1')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_USER_IDS', 'client-9')
+    expect(isLightThemePilotEnabled('client-9')).toBe(false)
+    expect(isDarkThemePilotEnabled('trainer-1')).toBe(false)
   })
 })
 
