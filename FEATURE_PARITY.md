@@ -17,7 +17,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | History | Done workouts only, set list and max-value chart | Implemented: paginated confirmed-only exercise facts, transparent per-kind chart and computed strength PR; broader visual pending |
 | Post-workout feedback | Клиент после завершения фиксирует session RPE 1–10, самочувствие и дискомфорт; тренер видит сигнал без доступа посторонних аккаунтов | Implemented: assigned и client-authored workout, отдельный idempotent submit с version check, RLS/SQL и WebKit 390 px acceptance |
 | Trainer response | После завершения клиент видит реакцию 👍 / 🔥 / 💪 и короткий ответ ответственного тренера | Implemented: trainer-author для назначения, root trainer для client-authored workout, автор/время, idempotent versioned RPC, realtime/refetch и RLS matrix |
-| Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; duplicate-date create opens the existing entry without a failing DB request; weekly/monthly regularity uses one role-safe server aggregate; broader visual/E2E matrix pending |
+| Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; Trainer first shows current week and the shared AI card, with running and measurements on explicit subroutes; duplicate-date create opens the existing entry without a failing DB request; visual regression covers Trainer 390/430/1440 px |
 | Wearables | Клиент подключает системное health-хранилище и видит локальные показатели активности и восстановления | Prototype: iOS HealthKit read-only PoC for sleep, steps, active energy, resting HR and HRV; server sync, trainer visibility and real-device acceptance pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; acceptance matrix pending |
 
@@ -37,6 +37,11 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 
 ## Client self-service workout acceptance contract
 
+- Главная клиента всегда начинает с крупного голосового действия и отдельного
+  ввода текстом; инструкция показывается после запуска микрофона. Следом идут
+  не более одного актуального назначения, короткого итога недели и одного
+  акцента. Будущее назначение не называется текущим, длинный состав не обрезается
+  посреди слова, а личный рекорд называет упражнение и точный результат.
 - Клиент создаёт самостоятельную карточку без тренера и затем создаёт тренировки только для себя, используя общий workout aggregate и системный каталог упражнений.
 - Клиент может редактировать и удалять только созданную им запланированную тренировку; назначенный тренером план остаётся защищённым.
 - Клиент может скопировать назначенный тренером план в новую собственную тренировку, но не может записывать trainer comments.

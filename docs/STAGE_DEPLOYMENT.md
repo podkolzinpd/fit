@@ -14,8 +14,10 @@ After the one-time bootstrap, a release is performed only by
 1. A push to `main` affecting `services/api` or `infra/yandex` creates a
    Terraform plan. The plan contains no secret values and its safe resource
    summary is written to the workflow summary.
-2. The `yandex-stage` GitHub Environment pauses the workflow for an explicit
-   reviewer approval.
+2. The plan policy allows only existing API and migration runner revisions,
+   exact credential metadata and lifecycle updates, and the reviewed public API
+   binding. A new resource, resize, identity change, delete or replacement stops
+   the workflow before any apply. Safe plans continue automatically.
 3. GitHub exchanges its OIDC token for a short-lived Yandex Cloud IAM token.
    No authorized-key JSON is used by CI.
 4. Terraform applies the scoped runtime identity and secret access grants
@@ -65,8 +67,8 @@ Identity Federation configured as follows:
 - JWKS URL: `https://token.actions.githubusercontent.com/.well-known/jwks`;
 - subject for the plan job:
   `repo:podkolzinpd@3878475/fit@1307853602:ref:refs/heads/main`;
-- subject for the approved deploy job:
-  `repo:podkolzinpd@3878475/fit@1307853602:environment:yandex-stage`.
+- subject for the deploy job:
+  `repo:podkolzinpd@3878475/fit@1307853602:ref:refs/heads/main`.
 
 The service account needs the existing Terraform resource-management roles,
 `container-registry.images.pusher`, `logging.editor`, Connection Manager
@@ -82,15 +84,12 @@ on the deployer itself and the two runtime service accounts, and grants
 Keep one dedicated static S3 key for the Terraform state backend. This is not a
 Yandex API authorized-key JSON and is not used for provider authentication.
 Store it only in GitHub repository secrets and rotate it on schedule or after
-an incident, not on every deployment. The pre-approval plan job deliberately
-does not enter the protected Environment, so it cannot read Environment-only
-secrets.
+an incident, not on every deployment. Both jobs use only repository-level
+values; no deploy credential is stored in a GitHub Environment.
 
 ## 3. One-time GitHub configuration
 
-Create a protected GitHub Environment named `yandex-stage` with at least one
-required reviewer. Add these repository variables (not Environment-only
-variables, because the plan job runs before approval):
+Add these repository variables:
 
 - `YC_CLOUD_ID`;
 - `YC_FOLDER_ID`;
@@ -132,11 +131,18 @@ image can run after an automatic application rollback.
 
 - State remains in the private Object Storage backend. GitHub Actions
   serializes every stage operation with one concurrency group.
-- A plan containing delete or replacement actions fails by default.
+- A plan containing delete or replacement actions always fails in the automatic
+  workflow.
 - Managed PostgreSQL cluster or database destruction is always blocked by the
   plan policy, including manual runs.
-- A reviewed `workflow_dispatch` may set `allow_destroy=true` only for a known
-  non-database transition.
+- Automatic deployment accepts only updates to the existing API and migration
+  containers without CPU, memory, timeout, concurrency, identity, connectivity
+  or logging changes; the existing registry lifecycle and credential metadata;
+  and the exact reviewed public API binding. Every other create or in-place
+  infrastructure change fails before apply.
+- `workflow_dispatch` is a safe retry of the same policy, not a destructive or
+  infrastructure-change override. New or cost-changing infrastructure requires
+  a separate reviewed workflow change and must show its cost before apply.
 - `system:allUsers` is accepted only on the exact stage API invocation binding,
   only with the explicit `--allow-public-api` policy flag used by this workflow,
   and only for the `serverless.containers.invoker` role. It is rejected for the
@@ -166,7 +172,7 @@ frontend dependency tree and can exhaust the local Podman VM.
 
 ## 7. Smoke and stop conditions
 
-The approved workflow verifies:
+The automatic workflow verifies:
 
 1. the deployer has direct `iam.serviceAccounts.user` bindings on itself and
    both runtime identities before any image work; `DeployRevision` also fails

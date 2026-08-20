@@ -187,6 +187,7 @@ export function VoiceInputButton({
   if (variant === 'hero') return <section className={`voice-action voice-action-${phase}`} aria-live="polite">
     <div className="voice-action-copy">
       <h2>{recording ? 'Слушаю…' : busy ? voiceHeroStatus(phase) : 'Что будем делать?'}</h2>
+      {recording && <p className="voice-action-guidance">Назовите упражнения, подходы, повторения и вес</p>}
       {recording && message?.startsWith('Сейчас распознаю:') && <p className="voice-action-transcript">«{message.replace('Сейчас распознаю:', '').trim()}»</p>}
     </div>
     <button
@@ -200,7 +201,7 @@ export function VoiceInputButton({
       {recording ? <StopIcon /> : <MicIcon />}
       <span className="voice-action-ring" aria-hidden="true" />
     </button>
-    {recording ? <div className="voice-action-recording-controls"><button type="button" className="wide" onClick={() => void (streamingRef.current ? finishStreaming() : finishRecording())}>Готово</button><button type="button" className="link" onClick={cancelRecording}>Отменить</button></div> : <div className="voice-action-label">{!busy && <strong>{idleLabel}</strong>}<span>{busy ? 'Это займёт несколько секунд' : 'Скажите упражнения, подходы, повторы и веса'}</span></div>}
+    {recording ? <div className="voice-action-recording-controls"><button type="button" className="wide" onClick={() => void (streamingRef.current ? finishStreaming() : finishRecording())}>Готово</button><button type="button" className="link" onClick={cancelRecording}>Отменить</button></div> : <div className="voice-action-label">{!busy && <strong>{idleLabel}</strong>}{busy && <span>Это займёт несколько секунд</span>}</div>}
     {message && !message.startsWith('Сейчас распознаю:') && <div className="voice-action-error" role="alert"><strong>{message}</strong></div>}
   </section>
 

@@ -1,13 +1,15 @@
 import { readFileSync } from 'node:fs'
 import process from 'node:process'
+import { isDeepStrictEqual } from 'node:util'
 
 const planPath = process.argv[2]
 const allowDestroy = process.argv.includes('--allow-destroy')
 const allowPublicApi = process.argv.includes('--allow-public-api')
+const automaticStageUpdate = process.argv.includes('--automatic-stage-update')
 
 if (planPath === undefined) {
   throw new Error(
-    'Usage: check-yandex-terraform-plan.mjs <plan.json> [--allow-destroy] [--allow-public-api]',
+    'Usage: check-yandex-terraform-plan.mjs <plan.json> [--allow-destroy] [--allow-public-api] [--automatic-stage-update]',
   )
 }
 
@@ -29,12 +31,97 @@ const publicResources = changes.filter(
 )
 const allowedPublicApiAddress =
   'yandex_serverless_container_iam_binding.api_invocation[0]'
+const automaticContainerAddresses = new Set([
+  'yandex_serverless_container.api',
+  'yandex_serverless_container.migration[0]',
+])
+const automaticLockboxAddresses = new Set([
+  'yandex_lockbox_secret.database_owner_url',
+  'yandex_lockbox_secret.database_url',
+])
+const costSensitiveContainerFields = [
+  'memory',
+  'cores',
+  'core_fraction',
+  'concurrency',
+  'execution_timeout',
+  'provisioned_instances_count',
+  'service_account_id',
+  'connectivity',
+  'log_options',
+]
 const unexpectedPublicResources = publicResources.filter(
   (resource) =>
     !allowPublicApi
     || resource.address !== allowedPublicApiAddress
     || resource.change.after?.role !== 'serverless.containers.invoker',
 )
+const isExactPublicApiBinding = (resource) =>
+  resource.address === allowedPublicApiAddress
+  && allowPublicApi
+  && resource.change.after?.role === 'serverless.containers.invoker'
+  && Array.isArray(resource.change.after?.members)
+  && resource.change.after.members.includes('system:allUsers')
+  && resource.change.after.members.length <= 2
+  && resource.change.after.members.every(
+    (member) =>
+      member === 'system:allUsers' || member.startsWith('serviceAccount:'),
+  )
+
+const hasOnlyTopLevelChanges = (resource, allowedFields) => {
+  const withoutAllowedFields = (value) => Object.fromEntries(
+    Object.entries(value ?? {}).filter(([key]) => !allowedFields.has(key)),
+  )
+  return isDeepStrictEqual(
+    withoutAllowedFields(resource.change.before),
+    withoutAllowedFields(resource.change.after),
+  )
+}
+
+const hasBoundedImageRetention = (resource) => {
+  const rules = resource.change.after?.rule
+  return Array.isArray(rules)
+    && rules.length > 0
+    && rules.every((rule) => {
+      const duration = /^(\d+)h(?:0m0s)?$/.exec(rule.expire_period ?? '')
+      return duration !== null
+        && Number(duration[1]) <= 168
+        && Number(rule.retained_top) <= 10
+    })
+}
+
+const changesContainerCostOrIdentity = (resource) =>
+  costSensitiveContainerFields.some(
+    (field) =>
+      JSON.stringify(resource.change.before?.[field])
+      !== JSON.stringify(resource.change.after?.[field]),
+  )
+
+const isAutomaticStageChange = (resource) => {
+  const actions = resource.change.actions.join(',')
+  if (actions === 'create') {
+    return isExactPublicApiBinding(resource)
+  }
+  if (actions !== 'update') {
+    return false
+  }
+  if (isExactPublicApiBinding(resource)) {
+    return true
+  }
+  if (automaticContainerAddresses.has(resource.address)) {
+    return !changesContainerCostOrIdentity(resource)
+  }
+  if (automaticLockboxAddresses.has(resource.address)) {
+    return hasOnlyTopLevelChanges(resource, new Set(['description']))
+  }
+  if (resource.address === 'yandex_container_repository_lifecycle_policy.api') {
+    return hasBoundedImageRetention(resource)
+  }
+  return false
+}
+const unexpectedAutomaticChanges = automaticStageUpdate
+  ? changes.filter((resource) => !isAutomaticStageChange(resource))
+  : []
 
 const summary = [
   '## Yandex stage Terraform plan',
@@ -70,6 +157,11 @@ if (protectedDestruction.length > 0) {
 if (unexpectedPublicResources.length > 0) {
   throw new Error(
     'Public invocation is allowed only for the reviewed stage API binding',
+  )
+}
+if (unexpectedAutomaticChanges.length > 0) {
+  throw new Error(
+    `Automatic stage deploy contains new or cost-sensitive infrastructure changes: ${unexpectedAutomaticChanges.map((resource) => resource.address).join(', ')}`,
   )
 }
 if (destructive.length > 0 && !allowDestroy) {

@@ -21,7 +21,7 @@
     "db:types": "supabase gen types typescript --local > src/data/database.types.ts",
     "db:types:check": "node scripts/check-db-types.mjs",
     "migrations:check": "node scripts/check-migrations.mjs",
-    "infra:policy:test": "node --test scripts/check-yandex-terraform-plan.test.mjs scripts/deploy-yandex-serverless-revision.test.mjs scripts/verify-yandex-stage-access.test.mjs",
+    "infra:policy:test": "node --test scripts/check-yandex-terraform-plan.test.mjs scripts/deploy-yandex-serverless-revision.test.mjs scripts/deploy-yandex-stage-workflow.test.mjs scripts/verify-yandex-stage-access.test.mjs",
     "ios:permissions:check": "node scripts/check-ios-permissions.mjs",
     "api:check": "npm --prefix services/api run check",
     "ai:smoke": "node scripts/run-yandex-summary-live.mjs",

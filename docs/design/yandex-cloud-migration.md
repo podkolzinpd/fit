@@ -39,15 +39,18 @@ The following remain unchanged during the foundation phase:
    remaining domain: remote state, service-network access to private
    PostgreSQL, reviewed migrations and database readiness checks. Profiles,
    trainers, clients and read-only trainer memberships are already ported.
-5. [Implemented, deployment pending] Add Yandex ID token validation, identity
+5. [Done in #487/#488 and verified on stage] Add Yandex ID token validation, identity
    mapping and the read-only profile vertical slice. The server-side rollout
    assignment is keyed by the internal profile UUID; a frontend flag is not an
    authorization or routing boundary.
-6. [Implemented, stage apply pending] Enroll synthetic/internal identities
+6. [Done and verified on stage] Enroll synthetic/internal identities
    through the private migration runner and run the first allowlisted,
    read-only browser pilot. Supabase remains the only product write source
    during this gate.
-7. Port the current domain contract in the dependency order below. The scope
+7. [In progress] Port the current domain contract in the dependency order below.
+   The first slice adds a short-lived hashed pilot session and the trainer's
+   tenant-scoped read-only client list without unlocking the main application.
+   The remaining scope
    now includes timezone, optimistic concurrency, actor attribution, running
    metrics, feedback/reactions and the derived progress/chronicle reads added
    after the foundation migrations.
@@ -127,8 +130,14 @@ Endpoint outcomes are deliberately distinct:
 The default-off browser pilot uses Authorization Code with PKCE. It sends the
 one-time code and verifier to `POST /v1/auth/yandex/pilot`; the API exchanges the
 code without a client secret and never returns or persists the Yandex token.
-The existing bearer-protected `GET /v1/profile` remains available for reviewed
-native or trusted clients.
+After every identity and rollout gate passes, the API returns a random
+15-minute Fit session. PostgreSQL stores only its SHA-256 digest; disabling the
+rollout assignment invalidates the session immediately. `GET /v1/clients`
+resolves that session to the internal actor inside one transaction and returns
+only the active client rows allowed by RLS. The raw session remains only in the
+callback page memory and is neither persisted nor used to unlock the Supabase
+application. The existing Yandex-token-protected `GET /v1/profile` remains
+available for reviewed native or trusted clients.
 
 The OAuth application and auth API revision are deployed on isolated stage.
 The default-off frontend pilot can request a Yandex token and display only the

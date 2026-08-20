@@ -412,8 +412,7 @@ test('iPhone: client edits shared progress, custom metrics and deletion safely',
   const metricName = `Объём ${testInfo.workerIndex}-${Date.now()}`
 
   await loginAsTrainer(page)
-  await page.goto(`/progress/${clientId}`)
-  await page.locator('.trainer-measurements > summary').click()
+  await page.goto(`/progress/${clientId}?view=measurements`)
   await page.getByRole('button', { name: 'Настроить показатели' }).click()
   await page.getByPlaceholder('Название').fill(metricName)
   await page.getByPlaceholder('Единица').fill('балл')
@@ -658,12 +657,30 @@ test('iPhone: voice-first и AI-поверхности сохраняют кон
   await expect(page.locator('.phone-frame')).toHaveScreenshot('today-voice-dark-390.png', { animations: 'disabled', maxDiffPixelRatio: 0.03 })
 
   await page.goto('/progress/11111111-1111-4111-8111-111111111111')
-  await page.locator('.trainer-progress-details > summary').click()
   const aiCard = page.locator('.ai-progress-card')
   await expect(aiCard).toBeVisible()
   expect(await aiCard.evaluate((element) => getComputedStyle(element).borderTopColor)).toBe('rgb(107, 68, 54)')
   await expectNoHorizontalOverflow(page)
 })
+
+for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {
+  test(`iPhone: Progress тренера остаётся компактным на ${viewport.width} px`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await loginAsTrainer(page)
+    await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+    await page.goto(`/progress/${demoClientId}`)
+
+    await expect(page.getByRole('heading', { level: 1, name: 'Прогресс', exact: true })).toBeVisible()
+    await expect(page.getByText('Анна Смирнова', { exact: true })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Тренировки за неделю' })).toBeVisible()
+    await expect(page.getByLabel('ИИ-анализ тренировок')).toBeVisible()
+    await expect(page.locator('details')).toHaveCount(0)
+    await expect(page.getByRole('link', { name: 'Открыть замеры и показатели' })).toBeVisible()
+    const coachmark = page.getByRole('button', { name: 'Понятно' })
+    if (await coachmark.isVisible()) await coachmark.click()
+    await expectNoHorizontalOverflow(page)
+  })
+}
 
 test('iPhone: LLM regularity stays inside the single Progress summary at 390 px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
@@ -1167,7 +1184,7 @@ test('iPhone: прогресс открывается из карточки кл
   await page.getByRole('link', { name: /Анна Смирнова/ }).first().click()
   await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()
   await page.getByRole('link', { name: 'Прогресс и замеры' }).click()
-  await expect(page.getByRole('heading', { name: /Прогресс · Анна Смирнова/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Прогресс' })).toBeVisible()
   await page.locator('.page-back').click()
   await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()
   await expectNoHorizontalOverflow(page)
