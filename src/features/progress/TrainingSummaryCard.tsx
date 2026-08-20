@@ -24,8 +24,9 @@ function PeriodTabs({ value, available, onChange }: {
   available: readonly SummaryPeriod[]
   onChange: (period: SummaryPeriod) => void
 }) {
-  return <div className="ai-progress-periods" aria-label="Период анализа">
-    {SUMMARY_PERIODS.filter((period) => available.includes(period.key)).map((period) => <button
+  const periods = SUMMARY_PERIODS.filter((period) => available.includes(period.key))
+  return <div className={`ai-progress-periods period-count-${periods.length}`} aria-label="Период анализа">
+    {periods.map((period) => <button
       type="button"
       key={period.key}
       className={period.key === value ? 'active' : ''}
@@ -34,18 +35,15 @@ function PeriodTabs({ value, available, onChange }: {
   </div>
 }
 
-function Metrics({ metrics, audience }: {
+function Metrics({ metrics }: {
   metrics: TrainingSummaryMetrics
-  audience: 'trainer' | 'client'
 }) {
   return <div className="ai-progress-stats">
     <div><strong>{metrics.completedWorkouts}</strong><span>{progressMetricNoun(metrics.completedWorkouts, 'workout')}</span></div>
     <div><strong>{formatWorkoutsPerWeek(metrics.workoutsPerWeek)}</strong><span>в неделю</span></div>
     <div>
-      <strong>{audience === 'trainer' ? (metrics.longestGapDays ?? '—') : metrics.activeWeeks}</strong>
-      <span>{audience === 'trainer'
-        ? metrics.longestGapDays === null ? 'самый долгий перерыв' : progressMetricNoun(metrics.longestGapDays, 'gapDay')
-        : progressMetricNoun(metrics.activeWeeks, 'activeWeek')}</span>
+      <strong>{metrics.activeWeeks}</strong>
+      <span>{progressMetricNoun(metrics.activeWeeks, 'activeWeek')}</span>
     </div>
   </div>
 }
@@ -70,14 +68,34 @@ function SummaryHeader({ client = false, published }: { client?: boolean; publis
     <div className="ai-progress-title">
       <span className="ai-progress-mark" aria-hidden="true">✦</span>
       <div>
-        <h2>{client ? 'Твой прогресс' : 'ИИ-анализ тренировок'}</h2>
-        <p>{client ? 'Сводка по твоим завершённым тренировкам' : 'Прогресс за выбранный период'}</p>
+        <h2>{client ? 'Твой прогресс' : 'Анализ прогресса'}</h2>
+        <p>По завершённым тренировкам</p>
       </div>
     </div>
     {published !== undefined && <span className={`ai-progress-demo${published ? ' published' : ''}`}>
       {published ? 'Доступно клиенту' : 'Только тренеру'}
     </span>}
   </header>
+}
+
+function SummaryCore({ headline, metrics, progress, consistency }: {
+  headline: string
+  metrics: TrainingSummaryMetrics
+  progress: readonly string[]
+  consistency: string
+}) {
+  return <>
+    <div className="ai-progress-hero"><span>Главное за период</span><strong>{formatSummaryText(headline)}</strong></div>
+    <Metrics metrics={metrics} />
+    <div className="ai-progress-section ai-progress-changes">
+      <h3>Динамика упражнений</h3>
+      <ProgressFacts facts={metrics.progressFacts} fallback={progress} />
+    </div>
+    <div className="ai-progress-section ai-progress-regularity">
+      <div><span>Ритм тренировок</span><strong>{formatWorkoutsPerWeek(metrics.workoutsPerWeek)} в неделю</strong></div>
+      <p>{formatSummaryText(consistency)}</p>
+    </div>
+  </>
 }
 
 export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
@@ -157,45 +175,31 @@ function TrainerSummaryContent({ summary, clientId, onChanged }: {
   clientId: string
   onChanged: () => Promise<unknown>
 }) {
-  const [detailsOpen, setDetailsOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   return <>
-    <div className="ai-progress-hero"><span>Итог</span><strong>{formatSummaryText(summary.trainer.headline)}</strong></div>
-    <div className={`ai-progress-attention${summary.trainer.attention.length === 0 ? ' is-clear' : ''}`}>
-      {summary.trainer.attention.length > 0 && <span aria-hidden="true">!</span>}
+    <SummaryCore
+      headline={summary.trainer.headline}
+      metrics={summary.metrics}
+      progress={summary.trainer.progress}
+      consistency={summary.trainer.consistency}
+    />
+    {summary.trainer.attention.length > 0 && <div className="ai-progress-attention">
+      <span aria-hidden="true">!</span>
       <div>
-        <strong>{summary.trainer.attention.length > 0 ? 'Обратить внимание' : 'Отдельных предупреждений нет'}</strong>
-        {summary.trainer.attention.length > 0
-          ? summary.trainer.attention.map((point) => <p key={point}>{formatSummaryText(point)}</p>)
-          : <p>По текущему анализу нет сигнала, требующего отдельного действия.</p>}
+        <strong>На что обратить внимание</strong>
+        {summary.trainer.attention.map((point) => <p key={point}>{formatSummaryText(point)}</p>)}
       </div>
-    </div>
-    <div className="ai-progress-details-toggle">
-      <button type="button" className="link" aria-expanded={detailsOpen} onClick={() => setDetailsOpen((value) => !value)}>
-        {detailsOpen ? 'Скрыть подробный анализ' : 'Подробнее об анализе'}
+    </div>}
+    <div className="client-copy-toggle">
+      <button type="button" className="link" onClick={() => setPreviewOpen((value) => !value)}>
+        {previewOpen ? 'Скрыть версию для клиента' : 'Проверить версию для клиента'}
       </button>
     </div>
-    {detailsOpen && <div className="ai-progress-details">
-      <Metrics metrics={summary.metrics} audience="trainer" />
-      <div className="ai-progress-section">
-        <h3>Измеримый прогресс</h3>
-        <ProgressFacts facts={summary.metrics.progressFacts} fallback={summary.trainer.progress} />
-      </div>
-      <div className="ai-progress-section ai-progress-regularity">
-        <div><span>Регулярность за период</span><strong>{formatWorkoutsPerWeek(summary.metrics.workoutsPerWeek)} в неделю</strong></div>
-        <p>{formatSummaryText(summary.trainer.consistency)}</p>
-      </div>
-      <div className="client-copy-toggle">
-        <button type="button" className="link" onClick={() => setPreviewOpen((value) => !value)}>
-          {previewOpen ? 'Скрыть версию для клиента' : 'Проверить версию для клиента'}
-        </button>
-      </div>
-      {previewOpen && <ClientCopyEditor
-        summary={summary}
-        clientId={clientId}
-        onChanged={onChanged}
-      />}
-    </div>}
+    {previewOpen && <ClientCopyEditor
+      summary={summary}
+      clientId={clientId}
+      onChanged={onChanged}
+    />}
   </>
 }
 
@@ -309,8 +313,8 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
         goalError={goal.error}
         onGoalRetry={() => void goal.refetch()}
       /> : <div className="ai-progress-empty">
-        <strong>За этот период сводка ещё не запрошена</strong>
-        <p>Запроси анализ — Yandex Cloud соберёт прогресс по твоим тренировкам.</p>
+        <strong>Анализ за этот период ещё не создан</strong>
+        <p>Создай его по завершённым тренировкам.</p>
       </div>}
     </AsyncView>
     <footer className="ai-progress-footer">
@@ -321,7 +325,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
         disabled={generate.isPending}
         onClick={() => generate.mutate()}
       >
-        {generate.isPending ? 'Запрашиваем…' : summary ? 'Обновить мой прогресс' : 'Запросить мой прогресс'}
+        {generate.isPending ? 'Обновляем…' : summary ? 'Обновить' : 'Создать анализ'}
       </button>
     </footer>
     {generate.error && <p className="ai-progress-error error" role="alert">{generate.error.message}</p>}
@@ -338,16 +342,12 @@ function ClientSummaryContent({ summary, goal, profileGoal, today, goalLoading, 
   onGoalRetry: () => void
 }) {
   return <>
-    <div className="ai-progress-hero client-progress-result"><span>Главный результат</span><strong>{formatSummaryText(summary.summary.headline)}</strong></div>
-    <Metrics metrics={summary.metrics} audience="client" />
-    <div className="ai-progress-section">
-      <h3>Что получилось</h3>
-      <ProgressFacts facts={summary.metrics.progressFacts} fallback={summary.summary.achievements} />
-    </div>
-    <div className="ai-progress-section ai-progress-regularity">
-      <div><span>Твоя регулярность</span><strong>{formatWorkoutsPerWeek(summary.metrics.workoutsPerWeek)} в неделю</strong></div>
-      <p>{formatSummaryText(summary.summary.consistency)}</p>
-    </div>
+    <SummaryCore
+      headline={summary.summary.headline}
+      metrics={summary.metrics}
+      progress={summary.summary.achievements}
+      consistency={summary.summary.consistency}
+    />
     <ClientProgressGoalSection
       goal={goal}
       profileGoal={profileGoal}
