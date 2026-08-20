@@ -115,7 +115,7 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
   const loading = query.isLoading || firstWorkout.isLoading
   const loadError = query.error ?? firstWorkout.error
   const ready = !loading && !loadError
-  const availablePeriods = availableSummaryPeriods(firstWorkout.data, today, query.data)
+  const availablePeriods = availableSummaryPeriods(firstWorkout.data, today)
   useEffect(() => {
     if (!availablePeriods.includes(period)) setPeriod('1m')
   }, [availablePeriods, period])
@@ -283,7 +283,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
   const loading = query.isLoading || firstWorkout.isLoading
   const loadError = query.error ?? firstWorkout.error
   const ready = !loading && !loadError
-  const availablePeriods = availableSummaryPeriods(firstWorkout.data, today, query.data)
+  const availablePeriods = availableSummaryPeriods(firstWorkout.data, today)
   useEffect(() => {
     if (!availablePeriods.includes(period)) setPeriod('1m')
   }, [availablePeriods, period])
