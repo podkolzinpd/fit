@@ -146,7 +146,7 @@ export function ProgressChart({ entries, metric, label, unit, windowEnd, onWindo
         </div>
       : <div ref={dragAreaRef} className={`chart-drag-area${isDragging ? ' dragging' : ''}`}
           onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp}>
-          <ResponsiveContainer width="100%" height={260}>
+          <ResponsiveContainer width="100%" height={220}>
             <LineChart data={visibleData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="date" stroke="var(--muted)" height={40} tick={AxisTick} interval={Math.max(0, Math.ceil(visibleData.length / 5) - 1)} />

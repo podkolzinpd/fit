@@ -414,6 +414,7 @@ test('iPhone: client edits shared progress, custom metrics and deletion safely',
   await loginAsTrainer(page)
   await page.goto(`/progress/${clientId}`)
   await page.locator('.trainer-measurements > summary').click()
+  await page.getByRole('button', { name: 'Настроить показатели' }).click()
   await page.getByPlaceholder('Название').fill(metricName)
   await page.getByPlaceholder('Единица').fill('балл')
   await page.getByRole('button', { name: 'Добавить', exact: true }).last().click()
@@ -426,13 +427,14 @@ test('iPhone: client edits shared progress, custom metrics and deletion safely',
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
   await page.getByRole('button', { name: 'Добавить замер' }).click()
   await expect(page.getByLabel(`${metricName}, балл`)).toBeVisible()
+  await page.getByRole('button', { name: /История ·/ }).click()
 
   const trainerEntry = page.locator('.client-progress-history article.card').first()
   await expect(trainerEntry).toContainText('27 июля 2026 г.')
   await trainerEntry.getByRole('button', { name: 'Изменить' }).click()
   await trainerEntry.getByLabel('Вес, кг').fill('65.7')
   await trainerEntry.getByRole('button', { name: 'Сохранить замер' }).click()
-  await expect(trainerEntry).toContainText('65.7 кг')
+  await expect(trainerEntry).toContainText('65,7 кг')
 
   await page.getByLabel(`${metricName}, балл`).fill('3')
   await page.getByLabel('Заметка').fill('Проверила замер после тренировки')
@@ -501,7 +503,7 @@ test('iPhone: client progress keeps one goal-aware LLM summary and compact runni
   await expect(runningProgress).toContainText('быстрее на 8%')
   await expect(runningProgress).toContainText('Последняя нагрузка: RPE 7')
 
-  await page.getByText('ЗАМЕРЫ ТЕЛА', { exact: true }).scrollIntoViewIfNeeded()
+  await page.getByText('ЗАМЕРЫ И ПОКАЗАТЕЛИ', { exact: true }).scrollIntoViewIfNeeded()
   await page.getByRole('button', { name: 'Добавить замер' }).click()
   await expect(page.getByRole('heading', { name: 'Новый замер' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Сохранить замер' })).toBeVisible()

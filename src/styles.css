@@ -530,16 +530,19 @@ p { margin: 6px 0 }
 .today-assignment-self { margin: 0; padding: 13px 14px; border: 1px solid var(--accent-border); border-radius: 14px; background: var(--accent-soft); color: var(--accent-strong); font-weight: var(--weight-medium) }
 .client-onboarding { display:grid; gap:18px; max-width:640px; margin:0 auto; }.client-onboarding-hero { padding:8px 0 2px; }.client-onboarding-hero .eyebrow { margin:0 0 8px; }.client-onboarding-hero h2 { margin:0; font-size:clamp(30px, 8.2vw, 36px); line-height:1.08; letter-spacing:var(--tracking-tight); }.client-onboarding-hero > p:last-child { max-width:350px; margin:10px 0 0; color:var(--muted); font-size:16px; line-height:1.42; }
 .client-workouts-page .page-header, .client-progress-page .page-header { margin-bottom:var(--section-gap); }.client-workouts-stack, .client-progress-stack { display:grid; gap:var(--section-gap); }.client-workout-section, .client-progress-form, .client-progress-history { display:grid; gap:var(--space-2); }.client-workout-section-head, .client-progress-section-head { display:grid; gap:var(--space-1); }.client-workout-section-head .eyebrow, .client-progress-section-head .eyebrow { margin:0; }.client-workout-section-head h2, .client-progress-section-head h2 { margin:0; font-size:var(--type-title-size); letter-spacing:var(--tracking-tight); }.client-workout-cards { gap:var(--space-2); }.client-workout-card { min-height:78px; padding:var(--card-padding); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); }.client-workout-card strong { font-size:var(--type-body-size); }.client-workout-card p { margin:var(--space-1) 0 0; }.client-section-empty { margin:0; padding:var(--card-padding); border:1px dashed var(--border); border-radius:var(--radius-lg); color:var(--muted); background:var(--surface-raised); font-size:var(--type-body-size); line-height:var(--leading-body); }.client-progress-form, .client-progress-history { padding:var(--card-padding); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); box-shadow:var(--shadow-card); }.client-progress-form .compact { padding:0; border:0; background:transparent; }.client-progress-form .measure-grid input { background:var(--surface-sunken); }.client-progress-form .compact button { min-height:var(--control-height-primary); border-radius:var(--radius-lg); font-size:var(--type-body-size); font-weight:var(--weight-bold); }.client-progress-history .cards { gap:var(--space-2); }.client-progress-history .card { border-radius:var(--radius-lg); box-shadow:none; }
-.client-progress-measurement { display:grid; gap:var(--space-3); padding:var(--card-padding); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); box-shadow:var(--shadow-card); }
+.client-progress-measurement { display:grid; gap:var(--space-3); overflow:hidden; padding:var(--card-padding); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); box-shadow:var(--shadow-card); }
 .client-progress-measurement-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
 .client-progress-measurement-head > div { display:grid; gap:3px; min-width:0; }
 .client-progress-measurement-head .eyebrow { margin:0; }
 .client-progress-measurement-head h2 { margin:0; font-size:var(--type-section-size); }
 .client-progress-measurement-head .secondary { min-height:var(--control-height-standard); padding:var(--space-2) var(--space-3); border-radius:var(--radius-md); font-size:var(--type-caption-size); white-space:nowrap; }
-.client-progress-measurement-latest { display:grid; gap:var(--space-1); padding:var(--space-3); border-radius:var(--radius-md); background:var(--surface-sunken); }
-.client-progress-measurement-latest strong { overflow:hidden; font-size:var(--type-body-size); line-height:var(--leading-snug); text-overflow:ellipsis; white-space:nowrap; }
+.client-progress-measurement-latest { display:grid; gap:var(--space-2); padding:var(--space-3); border-radius:var(--radius-md); background:var(--surface-sunken); }
 .client-progress-measurement-latest span, .client-progress-measurement > p { margin:0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug); }
 .client-progress-measurement .client-progress-form { padding:15px 0 0; border:0; border-top:1px solid var(--border); border-radius:0; box-shadow:none; }
+.measurement-latest-values { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-2) var(--space-3); }
+.measurement-latest-values > span { display:grid; gap:1px; min-width:0; }
+.measurement-latest-values small { overflow:hidden; color:var(--muted); font-size:var(--type-caption-size); text-overflow:ellipsis; white-space:nowrap; }
+.measurement-latest-values strong { overflow:hidden; color:var(--fg-strong); font-size:var(--type-body-size); font-variant-numeric:tabular-nums; line-height:var(--leading-snug); text-overflow:ellipsis; white-space:nowrap; }
 /* Карточка спортсмена использует ту же типографику и компактную сетку, что
    клиентские корневые экраны. Имя занимает отдельную строку: редактирование и
    кнопка назад больше не сжимают длинный заголовок на 390 px. */
@@ -1358,11 +1361,18 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-measurements-open, .trainer-measurements-close { min-height: 32px; margin-top: 7px; color: var(--accent-strong); font-weight: var(--weight-bold); line-height: 32px }
 .trainer-measurements-close, .trainer-measurements[open] .trainer-measurements-open { display: none }
 .trainer-measurements[open] .trainer-measurements-close { display: inline }
-.trainer-measurements-content { padding: var(--card-padding) }
+.trainer-measurements-content { display:grid; gap:var(--space-4); padding: var(--card-padding) }
 .trainer-measurements-content > .progress-form-card,
 .trainer-measurements-content > .progress-history,
 .trainer-measurements-content > .metrics-manager { margin-inline: 0 }
 .trainer-measurements-content > .progress-form-card:first-of-type { margin-top: 0 }
+.measurement-trend { min-width:0 }
+.measurement-trend .chart { margin:0; border:0; border-radius:0; background:transparent; box-shadow:none }
+.measurement-trend .chart h2 { margin-inline:0 }
+.measurement-actions { display:grid; grid-template-columns:minmax(0,1.25fr) repeat(2,minmax(0,1fr)); align-items:center; gap:var(--space-2); padding-top:var(--space-3); border-top:1px solid var(--border) }
+.measurement-actions button { min-width:0; min-height:var(--control-height-standard); padding:var(--space-2) var(--space-3); font-size:var(--type-caption-size) }
+.measurement-actions .link { text-align:center }
+.measurement-primary-action { color:var(--accent-strong) }
 .progress-form-card, .progress-history, .metrics-manager { margin-top: var(--space-4); padding: var(--card-padding); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-card) }
 .progress-form-card h2, .progress-history h2, .metrics-manager h2 { margin-top: 0 }
 .progress-form-card .actions { margin-bottom: 0 }
@@ -1370,7 +1380,18 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-history .cards { gap: 8px }
 .progress-history .card { border-radius: var(--radius-lg); box-shadow: none }
 .metrics-manager .metric:last-child { border-bottom: 0 }
+.trainer-measurements-content > .progress-form-card,
+.trainer-measurements-content > .progress-history,
+.trainer-measurements-content > .metrics-manager,
+.client-progress-measurement > .client-progress-history { margin-top:0; padding:var(--space-4) 0 0; border:0; border-top:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
+.measurement-section-heading { display:grid; gap:2px }
+.measurement-section-heading .eyebrow, .measurement-section-heading h2, .measurement-section-heading > span { margin:0 }
+.measurement-section-heading h2 { font-size:var(--type-section-size) }
+.measurement-section-heading > span { color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
 .theme-light .progress-form-card, .theme-light .progress-history, .theme-light .metrics-manager { background: #fffefc }
+.theme-light .trainer-measurements-content > .progress-form-card,
+.theme-light .trainer-measurements-content > .progress-history,
+.theme-light .trainer-measurements-content > .metrics-manager { background:transparent }
 .workout-regularity-card { margin: 0 -2px var(--space-5); overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-card) }
 .workout-regularity-header { padding: var(--card-padding) var(--card-padding) var(--space-3) }
 .workout-regularity-header .eyebrow { margin: 0 0 2px }
@@ -1822,6 +1843,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
    капсулы и перекрытия поля. На клавиатуре он скрывается через VisualViewport. */
 .today-start-shell .tab-bar { left:50%; bottom:0; width:min(100%, 440px); transform:translateX(-50%); border:0; border-top:1px solid var(--border); border-radius:0; box-shadow:none; }.today-start-shell .content { padding-bottom:calc(86px + env(safe-area-inset-bottom)); }.today-start-shell.keyboard-open .tab-bar { display:none; }.today-start-shell.keyboard-open .content { padding-bottom:20px; }
 @media (max-width: 480px) { .phone-frame { width: 100%; height: 100dvh; margin: 0; border: 0; border-radius: 0 }.auth-screen { width: 100%; min-height: 100dvh; margin: 0; border: 0; border-radius: 0 }.content:not(.content-immersive) { padding-bottom:0 }.tab-bar { position:static; flex:0 0 auto; bottom:auto; width:100%; border-width:1px 0 0; border-radius:0; box-shadow:none; backdrop-filter:none }.today-start-shell .tab-bar { left:auto; width:100%; transform:none }.today-start-shell .content { padding-bottom:0 } }
+@media (max-width: 480px) { .measurement-actions { grid-template-columns:repeat(2,minmax(0,1fr)) }.measurement-actions .measurement-primary-action { grid-column:1 / -1 }.trainer-measurements-content { gap:var(--space-3) }.trainer-measurements-summary-meta > span:not(.trainer-measurements-open):not(.trainer-measurements-close) { display:none } }
+@media (max-width: 480px) { .client-progress-measurement .measurement-actions { grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr) }.client-progress-measurement .measurement-actions .measurement-primary-action { grid-column:auto } }
 @media (max-width: 360px) { .measure-grid { grid-template-columns: 1fr }.inline-form { grid-template-columns: 1fr }.inline-form button { grid-column: 1 }.tab-bar a { font-size: 11px } }
 
 /* Единый component contract тренировки (YAFIT-315): создание, live и
