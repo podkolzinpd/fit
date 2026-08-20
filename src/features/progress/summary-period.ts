@@ -19,15 +19,11 @@ export function summaryPeriodRange(key: SummaryPeriod, end: LocalDate): {
 export function availableSummaryPeriods(
   firstCompletedWorkoutDate: LocalDate | null | undefined,
   today: LocalDate,
-  existingSummaries: ReadonlyArray<{ periodStart: LocalDate; periodEnd: LocalDate }> = [],
 ): SummaryPeriod[] {
   const available = new Set<SummaryPeriod>(['1m'])
   if (firstCompletedWorkoutDate) {
     if (firstCompletedWorkoutDate < summaryPeriodRange('1m', today).start) available.add('3m')
-    if (firstCompletedWorkoutDate < summaryPeriodRange('3m', today).start) available.add('6m')
-  }
-  for (const period of SUMMARY_PERIODS) {
-    if (summaryPeriodMatch(existingSummaries, period.key, today)) available.add(period.key)
+    if (firstCompletedWorkoutDate < summaryPeriodRange('6m', today).start) available.add('6m')
   }
   return SUMMARY_PERIODS.map((period) => period.key).filter((key) => available.has(key))
 }

@@ -165,7 +165,12 @@ describe('Training summary card states', () => {
 
   it('accepts a short history, a long exercise name and no client goal without leaking technical text', async () => {
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-08-10'))
-    repositories.listForClient.mockResolvedValue([publishedSummary])
+    repositories.listForClient.mockResolvedValue([publishedSummary, {
+      ...publishedSummary,
+      id: 'legacy-6m',
+      sourceSummaryId: 'legacy-summary-6m',
+      periodStart: localDate('2026-02-21'),
+    }])
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
@@ -174,6 +179,7 @@ describe('Training summary card states', () => {
     expect(screen.getByText('1,1 в неделю')).toBeVisible()
     expect(screen.getByRole('button', { name: '1 месяц' })).toBeVisible()
     expect(screen.queryByRole('button', { name: '3 месяца' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '6 месяцев' })).toBeNull()
     expect(screen.getByRole('link', { name: 'Добавить цель' })).toBeVisible()
     expect(document.body).not.toHaveTextContent(/custom_metric_key|workouts_per_week/)
   })
