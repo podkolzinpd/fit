@@ -16,6 +16,7 @@ import {
 } from "./self-service.ts"
 import { completedWorkoutsInPeriod } from "./workout-source.ts"
 import { buildSummaryConsistency } from "./summary-consistency.ts"
+import { buildSummaryProgressFacts } from "./summary-progress-facts.ts"
 
 const YANDEX_COMPLETION_URL =
   "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
@@ -764,7 +765,10 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
         trainingData.period.start,
         trainingData.period.end,
       )
-      const displayMetrics = trainingData.consistency
+      const displayMetrics = {
+        ...trainingData.consistency,
+        progress_facts: buildSummaryProgressFacts(trainingData.exercises),
+      }
 
       const summaryStore = isClient || isConnectedTrainer ? serviceClient() : userClient
       const { data: saved, error: saveError } = await summaryStore

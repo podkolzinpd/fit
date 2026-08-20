@@ -47,7 +47,7 @@ const summary: TrainingSummary = {
   client: {
     headline: 'Силовые показатели растут.', achievements: [], consistency: '', encouragement: '',
   },
-  metrics: { completedWorkouts: 5, workoutsPerWeek: 1.13, activeWeeks: 2, longestGapDays: 21 },
+  metrics: { completedWorkouts: 5, workoutsPerWeek: 1.13, activeWeeks: 2, longestGapDays: 21, progressFacts: [] },
   generatedAt: '2026-08-16T11:23:56Z',
   version: 1,
   published: true,

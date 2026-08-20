@@ -1423,6 +1423,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .ai-progress-section ul { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none }
 .ai-progress-section li { position: relative; padding-left: 16px; color: var(--ai-copy); font-size: var(--type-caption-size); line-height: var(--leading-body) }
 .ai-progress-section li::before { content: ''; position: absolute; top: .55em; left: 1px; width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px #62d7861f }
+.ai-progress-facts { display: grid; gap: 10px }
+.ai-progress-fact { display: grid; gap: 2px; padding-bottom: 9px; border-bottom: 1px solid var(--ai-divider) }
+.ai-progress-fact:last-child { padding-bottom: 0; border-bottom: 0 }
+.ai-progress-fact strong { font-size: var(--type-caption-size); line-height: var(--leading-snug) }
+.ai-progress-fact span { color: var(--ai-copy); font-size: var(--type-caption-size); font-variant-numeric: tabular-nums; line-height: var(--leading-body) }
 .ai-progress-regularity { display: block; margin: var(--space-4) var(--card-padding) 0; padding: var(--space-3); border: 1px solid var(--ai-regularity-border); border-radius: var(--radius-md); background: var(--ai-regularity-surface) }
 .ai-progress-regularity div { display: flex; align-items: center; justify-content: space-between; gap: 10px }
 .ai-progress-regularity strong { font-size: var(--type-body-size) }
