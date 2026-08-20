@@ -27,6 +27,7 @@ export const trainingSummaryQueries = {
   generate: async (clientId: string, periodStart: string, periodEnd: string, force: boolean) => {
     const { data: { session } } = await supabase.auth.getSession()
     return supabase.functions.invoke('summarize-client-training', {
+      timeout: 100_000,
       headers: session?.access_token
         ? { Authorization: `Bearer ${session.access_token}` }
         : undefined,

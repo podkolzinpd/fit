@@ -190,11 +190,22 @@ export const trainingSummariesRepository = {
     periodStart: string,
     periodEnd: string,
     force = false,
-  ): Promise<void> {
+  ): Promise<{ generatedAt: string; cached: boolean }> {
     const result = await trainingSummaryQueries.generate(clientId, periodStart, periodEnd, force)
     if (result.error) throw await summaryGenerationError(result.error)
-    const payload = result.data as { error?: string } | null
+    const payload = result.data as {
+      error?: string
+      cached?: boolean
+      data?: { generated_at?: unknown }
+    } | null
     if (payload?.error) throw new Error(generationErrorMessage(payload.error))
+    if (typeof payload?.data?.generated_at !== 'string') {
+      throw new Error('Сервер не подтвердил обновление ИИ-анализа. Попробуйте ещё раз.')
+    }
+    return {
+      generatedAt: payload.data.generated_at,
+      cached: payload.cached === true,
+    }
   },
   async publish(summary: TrainingSummary, clientCopy: ClientTrainingSummary): Promise<void> {
     const result = await trainingSummaryQueries.publish(summary.id, clientCopy, summary.version)
@@ -212,6 +223,12 @@ async function summaryGenerationError(error: unknown): Promise<Error> {
   const context = error && typeof error === 'object' && 'context' in error
     ? (error as { context?: unknown }).context
     : undefined
+  if (
+    context && typeof context === 'object' &&
+    'name' in context && context.name === 'AbortError'
+  ) {
+    return new Error('Обновление заняло слишком много времени. Попробуйте ещё раз через минуту.')
+  }
   if (context && typeof context === 'object' && 'json' in context && typeof context.json === 'function') {
     try {
       const payload = await (context as { json: () => Promise<unknown> }).json()

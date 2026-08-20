@@ -1469,7 +1469,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .ai-progress-attention > div { min-width: 0; display: flex; flex-direction: column; gap: 5px }
 .ai-progress-attention strong { color: var(--ai-attention-fg); font-size: var(--type-caption-size); letter-spacing: var(--tracking-label); text-transform: uppercase }
 .ai-progress-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-3); padding: var(--space-3) var(--card-padding); border-top: 1px solid var(--ai-divider); background: var(--ai-subtle-surface) }
-.ai-progress-footer > span { color: var(--muted); font-size: var(--type-caption-size); line-height: var(--leading-snug) }
+.ai-progress-footer > span { flex: 1 1 auto; color: var(--muted); font-size: var(--type-caption-size); line-height: var(--leading-snug) }
 .ai-progress-footer button { flex: 0 0 auto; min-height: var(--control-height-compact); padding: 7px var(--space-3); border-radius: var(--radius-sm); font-size: var(--type-caption-size) }
 .ai-progress-empty { display: flex; min-height: 150px; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 24px 22px; border-block: 1px solid var(--ai-divider); color: var(--ai-empty-fg); text-align: center; background: var(--ai-subtle-surface) }
 .ai-progress-empty p { color: var(--muted); font-size: var(--type-caption-size) }

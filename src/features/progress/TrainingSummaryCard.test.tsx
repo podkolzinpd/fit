@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { PublishedTrainingSummary } from '../../shared/domain'
+import type { PublishedTrainingSummary, TrainingSummary } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { ClientProgressGoalSection } from './ClientProgressGoalSection'
 import { ClientTrainingSummaryCard, TrainerTrainingSummaryCard } from './TrainingSummaryCard'
@@ -73,6 +73,24 @@ const publishedSummary: PublishedTrainingSummary = {
   },
   generatedAt: '2026-08-20T08:00:00Z',
   publishedAt: '2026-08-20T08:05:00Z',
+}
+
+const trainerSummary: TrainingSummary = {
+  id: 'summary-1',
+  clientId: 'client-1',
+  periodStart: publishedSummary.periodStart,
+  periodEnd: publishedSummary.periodEnd,
+  trainer: {
+    headline: 'В жиме лёжа рабочий вес вырос на 10%.',
+    progress: ['В жиме лёжа рабочий вес вырос на 10%.'],
+    consistency: 'Выполнено 6 тренировок.',
+    attention: [],
+  },
+  client: publishedSummary.summary,
+  metrics: publishedSummary.metrics,
+  generatedAt: publishedSummary.generatedAt,
+  version: 1,
+  published: true,
 }
 
 describe('ClientProgressGoalSection', () => {
@@ -195,5 +213,43 @@ describe('Training summary card states', () => {
 
     expect(await screen.findByText('Служебный показатель равен 1,3.')).toBeVisible()
     expect(document.body).not.toHaveTextContent('custom_metric_key')
+  })
+
+  it('replaces the trainer card with the freshly loaded analysis and confirms success', async () => {
+    const user = userEvent.setup()
+    const updated = {
+      ...trainerSummary,
+      id: 'summary-2',
+      trainer: { ...trainerSummary.trainer, headline: 'В жиме лёжа рабочий вес вырос на 20%.' },
+      generatedAt: '2026-08-20T10:00:00Z',
+    }
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForTrainer
+      .mockResolvedValueOnce([trainerSummary])
+      .mockResolvedValueOnce([updated])
+    repositories.generate.mockResolvedValue({ generatedAt: updated.generatedAt, cached: false })
+
+    render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByText(trainerSummary.trainer.headline)).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Обновить' }))
+    expect(await screen.findByText(updated.trainer.headline)).toBeVisible()
+    expect(screen.getByRole('status')).toHaveTextContent('Анализ обновлён')
+    expect(repositories.listForTrainer).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps the current client analysis and exposes a readable refresh error', async () => {
+    const user = userEvent.setup()
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForClient.mockResolvedValue([publishedSummary])
+    repositories.generate.mockRejectedValue(new Error('YandexGPT временно недоступен. Попробуйте ещё раз через минуту.'))
+
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByText('Рабочий вес вырос на 17%.')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Обновить' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('YandexGPT временно недоступен')
+    expect(screen.getByRole('button', { name: 'Обновить' })).toBeEnabled()
+    expect(screen.getByText('Рабочий вес вырос на 17%.')).toBeVisible()
   })
 })
