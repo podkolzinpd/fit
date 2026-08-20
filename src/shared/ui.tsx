@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { isCoachmarkSeen, markCoachmarkSeen } from './coachmarks'
 import { AddIcon, AlertIcon, BackIcon, CheckIcon, InfoIcon, MoreIcon, PendingIcon } from './icons'
 
-export function Page({ title, action, back, onBack, center, hideTitle, className, children }: PropsWithChildren<{
-  title: string; action?: ReactNode; back?: string | number; onBack?: () => void; center?: boolean; hideTitle?: boolean; className?: string
+export function Page({ title, subtitle, action, back, onBack, center, hideTitle, className, children }: PropsWithChildren<{
+  title: string; subtitle?: string; action?: ReactNode; back?: string | number; onBack?: () => void; center?: boolean; hideTitle?: boolean; className?: string
 }>) {
   const navigate = useNavigate()
   const classes = ['page', center ? 'page-center' : '', className].filter(Boolean).join(' ')
@@ -14,7 +14,9 @@ export function Page({ title, action, back, onBack, center, hideTitle, className
       {back !== undefined && <button type="button" className="page-back" aria-label="Назад" onClick={() => onBack ? onBack() : navigate(back as never)}><BackIcon /></button>}
       {/* hideTitle — заголовок дублируется таб-баром (напр. «Расписание»);
           прячем визуально, но оставляем для скринридеров. */}
-      <h1 className={hideTitle ? 'sr-only' : undefined}>{title}</h1>
+      {subtitle
+        ? <div className="page-title-group"><h1 className={hideTitle ? 'sr-only' : undefined}>{title}</h1><p>{subtitle}</p></div>
+        : <h1 className={hideTitle ? 'sr-only' : undefined}>{title}</h1>}
       {action}
     </header>
     {children}

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { clientsRepository } from '../../data/repositories/clients.repository'
@@ -8,13 +8,12 @@ import { findProgressDateConflict } from '../../data/repositories/progress-rules
 import { progressRepository } from '../../data/repositories/progress.repository'
 import type { CustomMetric, ProgressEntry } from '../../shared/domain'
 import { formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
-import { CloseIcon } from '../../shared/icons'
+import { ChevronRightIcon, CloseIcon } from '../../shared/icons'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ProgressChart, type MetricKey, type MetricSelector } from './ProgressChart'
 import { MEASURE_PRESETS, groupMetricRows, presetMetricNames } from './measure-presets'
 import { TrainerTrainingSummaryCard } from './TrainingSummaryCard'
 import { TrainerProgressOverviewCard } from './TrainerProgressOverviewCard'
-import { WorkoutRegularityCard } from './WorkoutRegularityCard'
 import { RunningProgressCard } from './RunningProgressCard'
 import { measurementSummaryText } from './measurement-summary'
 
@@ -32,6 +31,8 @@ function metricField(metric: CustomMetric, entry: ProgressEntry | null, placehol
 
 export function ProgressPage() {
   const { clientId = '' } = useParams(); const queryClient = useQueryClient(); const { actor } = useAuth(); const [editing, setEditing] = useState<ProgressEntry | null>(null)
+  const [searchParams] = useSearchParams()
+  const view = searchParams.get('view')
   const today = todayInTimeZone(actor?.timezone)
   useClientRealtime(clientId)
   const [selectedMetric, setSelectedMetric] = useState<string>('weightKg')
@@ -96,67 +97,68 @@ export function ProgressPage() {
     if (tabsDraggedRef.current) { tabsDraggedRef.current = false; return }
     action()
   }
-  return <Page className="progress-page" title={client.data ? `Прогресс · ${client.data.fullName}` : 'Прогресс'} back={`/clients/${clientId}`}><AsyncView loading={loading} error={error} onRetry={() => { void client.refetch(); void entries.refetch(); void metrics.refetch() }}>{client.data && <>
-    <TrainerProgressOverviewCard clientId={clientId} />
-    <details className="trainer-progress-details">
-      <summary>
-        <div>
-          <p className="eyebrow">ТРЕНИРОВКИ</p>
-          <h2>Подробный анализ</h2>
-          <span>Ритм по неделе и месяцу, ИИ-анализ и беговая динамика</span>
-        </div>
-        <span className="trainer-details-open">Открыть</span>
-        <span className="trainer-details-close">Свернуть</span>
-      </summary>
-      <div className="trainer-progress-details-content">
-        <WorkoutRegularityCard clientId={clientId} />
+  if (view === 'running') {
+    return <Page className="progress-page trainer-progress-subpage" title="Бег" subtitle={client.data?.fullName} back={`/progress/${clientId}`}>
+      <AsyncView loading={client.isLoading} error={client.error} onRetry={() => void client.refetch()}>
+        {client.data && <RunningProgressCard clientId={clientId} />}
+      </AsyncView>
+    </Page>
+  }
+
+  if (view === 'measurements') {
+    return <Page className="progress-page trainer-progress-subpage" title="Замеры" subtitle={client.data?.fullName} back={`/progress/${clientId}`}>
+      <AsyncView loading={loading} error={error} onRetry={() => { void client.refetch(); void entries.refetch(); void metrics.refetch() }}>
+        {client.data && <section className="trainer-measurements-workspace" aria-label="Замеры и показатели">
+          <header className="trainer-measurements-workspace-head">
+            <p className="eyebrow">ЗАМЕРЫ И ПОКАЗАТЕЛИ</p>
+            <h2>{latestEntry ? 'Последний замер' : 'Замеров пока нет'}</h2>
+            <span>{latestEntry ? `${formatLocalDate(latestEntry.recordedOn)} · ${latestEntrySummary}` : latestEntrySummary}</span>
+          </header>
+          {entries.data && entries.data.length > 0 && <section className="measurement-trend" aria-label="Динамика замеров">
+            <div className="metric-tabs" ref={tabsRef}
+              onPointerDown={handleTabsPointerDown} onPointerMove={handleTabsPointerMove} onPointerUp={handleTabsPointerUp} onPointerLeave={handleTabsPointerUp}>
+              {METRIC_TABS.map((tab) => <button key={tab.key} type="button" className={`metric-tab${tab.key === selectedMetric ? ' active' : ''}`} onClick={() => selectMetricTab(() => setSelectedMetric(tab.key))}>{tab.label}</button>)}
+              {overflowMetrics.length > 0 && <button type="button" className={`metric-tab${activeCustom ? ' active' : ''}`} onClick={() => selectMetricTab(() => setMetricSheetOpen(true))}>{activeCustom ? `⋯ ${activeCustom.name}` : '⋯'}</button>}
+            </div>
+            <ProgressChart entries={entries.data} metric={chartMetric} label={chartLabel} unit={chartUnit} windowEnd={windowEnd} onWindowChange={setWindowEnd} />
+          </section>}
+          <nav className="measurement-actions" aria-label="Действия с замерами">
+            <button type="button" className="secondary measurement-primary-action" aria-expanded={createFormOpen} onClick={() => setCreateFormOpen((value) => { if (!value) setEditing(null); return !value })}>{createFormOpen ? 'Закрыть форму' : 'Добавить замер'}</button>
+            {entries.data && entries.data.length > 0 && <button type="button" className="link" aria-expanded={historyOpen} onClick={() => setHistoryOpen((value) => !value)}>История · {entries.data.length}</button>}
+            <button type="button" className="link" aria-expanded={metricsOpen} onClick={() => setMetricsOpen((value) => !value)}>Настроить показатели</button>
+          </nav>
+          {createError && !createFormOpen && <p className="error" role="alert">{createError}</p>}
+          {createFormOpen && <ProgressForm entry={null} metrics={metrics.data ?? []} today={today} busy={save.isPending} errorMessage={createError ?? save.error?.message ?? null} onDateChange={() => { setCreateError(null); save.reset() }} onSubmit={saveNewProgress} onCancel={() => setCreateFormOpen(false)} />}
+          {historyOpen && <section className="progress-history">
+            <div className="workout-editor-heading"><h2>История замеров ({entries.data?.length ?? 0})</h2></div>
+            <div className="cards">{entries.data?.map((entry) => editing?.id === entry.id
+              ? <article className="card editing" key={entry.id}><ProgressForm entry={entry} metrics={metrics.data ?? []} today={today} busy={save.isPending} errorMessage={save.error?.message ?? null} onSubmit={(form) => save.mutate(form)} onCancel={() => setEditing(null)} /></article>
+              : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{measurementSummaryText(entry, metrics.data ?? []) || 'Показатели не указаны'}</p></div>{canManage(entry) && <div className="row-actions"><button className="link" onClick={() => { setCreateError(null); setCreateFormOpen(false); setEditing(entry) }}>Изменить</button><button className="link danger" onClick={() => remove.mutate(entry)}>Удалить</button></div>}</article>)}</div>
+          </section>}
+          {metricsOpen && <MetricsManager metrics={metrics.data ?? []} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />}
+        </section>}
+        {metricSheetOpen && <MetricOverflowSheet metrics={overflowMetrics} onPick={(id) => { setSelectedMetric(id); setMetricSheetOpen(false) }} onClose={() => setMetricSheetOpen(false)} />}
+      </AsyncView>
+    </Page>
+  }
+
+  return <Page className="progress-page trainer-progress-page" title="Прогресс" subtitle={client.data?.fullName} back={`/clients/${clientId}`}>
+    <AsyncView loading={loading} error={error} onRetry={() => { void client.refetch(); void entries.refetch(); void metrics.refetch() }}>
+      {client.data && <div className="trainer-progress-stack">
+        <TrainerProgressOverviewCard clientId={clientId} />
         <TrainerTrainingSummaryCard clientId={clientId} />
-        <RunningProgressCard clientId={clientId} />
-      </div>
-    </details>
-    <details className="trainer-measurements">
-      <summary>
-        <div className="trainer-measurements-summary-copy">
-          <p className="eyebrow">ЗАМЕРЫ И ПОКАЗАТЕЛИ</p>
-          <h2>{latestEntry ? 'Последний замер' : 'Замеров пока нет'}</h2>
-          <span>{latestEntry ? `${formatLocalDate(latestEntry.recordedOn)} · ${latestEntrySummary}` : latestEntrySummary}</span>
-        </div>
-        <div className="trainer-measurements-summary-meta">
-          <strong>{entries.data?.length ?? 0}</strong>
-          <span>в истории</span>
-          <span className="trainer-measurements-open">Открыть</span>
-          <span className="trainer-measurements-close">Свернуть</span>
-        </div>
-      </summary>
-      <div className="trainer-measurements-content">
-        {entries.data && entries.data.length > 0 && <section className="measurement-trend" aria-label="Динамика замеров">
-          <div className="metric-tabs" ref={tabsRef}
-            onPointerDown={handleTabsPointerDown} onPointerMove={handleTabsPointerMove} onPointerUp={handleTabsPointerUp} onPointerLeave={handleTabsPointerUp}>
-            {METRIC_TABS.map((tab) => <button key={tab.key} type="button" className={`metric-tab${tab.key === selectedMetric ? ' active' : ''}`} onClick={() => selectMetricTab(() => setSelectedMetric(tab.key))}>{tab.label}</button>)}
-            {overflowMetrics.length > 0 && <button type="button" className={`metric-tab${activeCustom ? ' active' : ''}`} onClick={() => selectMetricTab(() => setMetricSheetOpen(true))}>{activeCustom ? `⋯ ${activeCustom.name}` : '⋯'}</button>}
+        <RunningProgressCard clientId={clientId} compact detailsPath={`/progress/${clientId}?view=running`} />
+        <Link className="trainer-progress-route-card measurements" to={`/progress/${clientId}?view=measurements`} aria-label="Открыть замеры и показатели">
+          <div>
+            <p className="eyebrow">ЗАМЕРЫ И ПОКАЗАТЕЛИ</p>
+            <strong>{latestEntry ? 'Последний замер' : 'Замеров пока нет'}</strong>
+            <span>{latestEntry ? `${formatLocalDate(latestEntry.recordedOn)} · ${latestEntrySummary}` : latestEntrySummary}</span>
           </div>
-          <ProgressChart entries={entries.data} metric={chartMetric} label={chartLabel} unit={chartUnit} windowEnd={windowEnd} onWindowChange={setWindowEnd} />
-        </section>}
-        <nav className="measurement-actions" aria-label="Действия с замерами">
-          <button type="button" className="secondary measurement-primary-action" aria-expanded={createFormOpen} onClick={() => setCreateFormOpen((value) => { if (!value) setEditing(null); return !value })}>{createFormOpen ? 'Закрыть форму' : 'Добавить замер'}</button>
-          {entries.data && entries.data.length > 0 && <button type="button" className="link" aria-expanded={historyOpen} onClick={() => setHistoryOpen((value) => !value)}>История · {entries.data.length}</button>}
-          <button type="button" className="link" aria-expanded={metricsOpen} onClick={() => setMetricsOpen((value) => !value)}>Настроить показатели</button>
-        </nav>
-        {createError && !createFormOpen && <p className="error" role="alert">{createError}</p>}
-        {createFormOpen && <ProgressForm entry={null} metrics={metrics.data ?? []} today={today} busy={save.isPending} errorMessage={createError ?? save.error?.message ?? null} onDateChange={() => { setCreateError(null); save.reset() }} onSubmit={saveNewProgress} onCancel={() => setCreateFormOpen(false)} />}
-        {historyOpen && <section className="progress-history">
-          <div className="workout-editor-heading">
-            <h2>История замеров ({entries.data?.length ?? 0})</h2>
-          </div>
-          <div className="cards">{entries.data?.map((entry) => editing?.id === entry.id
-            ? <article className="card editing" key={entry.id}><ProgressForm entry={entry} metrics={metrics.data ?? []} today={today} busy={save.isPending} errorMessage={save.error?.message ?? null} onSubmit={(form) => save.mutate(form)} onCancel={() => setEditing(null)} /></article>
-            : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{measurementSummaryText(entry, metrics.data ?? []) || 'Показатели не указаны'}</p></div>{canManage(entry) && <div className="row-actions"><button className="link" onClick={() => { setCreateError(null); setCreateFormOpen(false); setEditing(entry) }}>Изменить</button><button className="link danger" onClick={() => remove.mutate(entry)}>Удалить</button></div>}</article>)}</div>
-        </section>}
-        {metricsOpen && <MetricsManager metrics={metrics.data ?? []} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />}
-      </div>
-    </details>
-    {metricSheetOpen && <MetricOverflowSheet metrics={overflowMetrics} onPick={(id) => { setSelectedMetric(id); setMetricSheetOpen(false) }} onClose={() => setMetricSheetOpen(false)} />}
-  </>}</AsyncView></Page>
+          <div className="trainer-progress-route-meta"><b>{entries.data?.length ?? 0}</b><ChevronRightIcon aria-hidden="true" /></div>
+        </Link>
+      </div>}
+    </AsyncView>
+  </Page>
 }
 
 function MetricOverflowSheet({ metrics, onPick, onClose }: { metrics: CustomMetric[]; onPick: (id: string) => void; onClose: () => void }) {

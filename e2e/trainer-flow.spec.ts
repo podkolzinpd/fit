@@ -333,7 +333,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.goto(clientUrl)
   await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
   await page.getByRole('link', { name: 'Прогресс и замеры' }).click()
-  await page.locator('.trainer-measurements > summary').click()
+  await page.getByRole('link', { name: 'Открыть замеры и показатели' }).click()
   await page.getByRole('button', { name: 'Добавить замер' }).click()
   await page.getByLabel('Дата').fill('2026-07-20')
   await page.getByLabel('Вес, кг').fill('61')
@@ -341,6 +341,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // История замеров свёрнута по умолчанию — разворачиваем, чтобы увидеть карточку.
   await page.getByRole('button', { name: /История ·/ }).click()
   await expect(page.getByText('61 кг')).toBeVisible()
+  await page.locator('.page-back').click()
+  await expect(page.getByRole('heading', { name: 'Прогресс', exact: true })).toBeVisible()
   await page.locator('.page-back').click()
   await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
 })
