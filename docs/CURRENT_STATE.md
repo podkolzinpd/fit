@@ -5,16 +5,16 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-20
-Проверенный базовый `main`: `53ebc32` (`fix(yandex): publish stage deployment status (#492)`)
+Проверенный базовый `main`: `2b83cb9` (`fix(yandex): avoid reserved authorization header (#493)`)
 
 ## Активная работа
 
 - Yandex ID/profile, tenant-allowlist и автоматическая stage delivery находятся
   в `main`: GitHub OIDC без JSON-ключа, immutable image, forward-only миграции,
-  private migration runner, smoke и rollback. После явной роли
-  `functions.editor` автоматический run `32376225799` полностью прошёл:
-  миграций не ожидалось, обе revisions и Terraform state согласованы,
-  health/readiness, точный CORS и новый GitHub deployment status зелёные. Новая,
+  private migration runner, smoke и rollback. Автоматический run `32381263395`
+  после `#493` полностью прошёл: миграций не ожидалось, обе revisions и
+  Terraform state согласованы, health/readiness, точный CORS и GitHub
+  deployment status зелёные. Новая,
   cost-sensitive, destructive или identity-инфраструктура
   по-прежнему блокируется policy до отдельного reviewed apply.
 - Тестовый Yandex ID зарегистрирован как `trainer`; обычный PKCE-вход на Vercel
@@ -25,12 +25,11 @@
   SHA-256 короткоживущей opaque-сессии Fit, а защищённый `GET /v1/clients`
   читает только активных клиентов actor tenant. Callback-пилот показывает
   список/empty/error/retry без ссылок и mutations.
-- Существующий pilot Preview синхронизирован со свежим `main`; Yandex ID и
-  выдача Fit-сессии проходят. Live-проверка выявила точный transport-конфликт:
-  Serverless Containers перехватывает `Authorization` как Yandex IAM token и
-  возвращает `403` до Fastify. Активная ветка
-  `codex/yandex-pilot-session-header` переносит только browser pilot session в
-  отдельный `X-Fit-Pilot-Session`; Supabase и production не меняются.
+- Конфликт с зарезервированным Serverless Containers заголовком `Authorization`
+  устранён в `#493`: browser pilot session передаётся отдельным
+  `X-Fit-Pilot-Session`. Live-проверка через Yandex ID на localhost против
+  stage API подтвердила профиль тренера и ожидаемый empty clients state.
+  Supabase и production frontend не переключались.
 - `YAFIT-327` завершает цельную композицию Trainer Progress без дублирующего
   обзора и глобальных раскрытий: текущая неделя и ИИ видны сразу, бег и замеры
   открываются отдельными компактными маршрутами. Контракт LLM, клиентский
@@ -85,18 +84,16 @@
   390/430/1440 px и mobile empty/error/retry без overflow. Локальный
   `npm run local:verify` без скачивания образов применил только migration
   `000005`; 517 Supabase pgTAP и 7 PostgreSQL actor/RLS/session тестов прошли.
-- Live pilot Preview обновлён до `main`: OAuth callback/profile success зелёные,
-  а прямой запрос воспроизвёл `403` gateway для application Bearer token.
-  Исправление custom-header проходит локальную проверку в активной ветке.
+- Полный `npm run check` для `#493` зелёный: 593 frontend tests, API, infra
+  policy, lint, typecheck и production build. После автоматического stage deploy
+  локальный browser E2E прошёл Yandex OAuth/PKCE, выдачу Fit-сессии, профиль и
+  защищённый `GET /v1/clients`; до переноса tenant-данных показан ожидаемый empty.
 
 ## Ближайший roadmap
 
-1. Влить custom session header, дождаться автоматического stage deploy,
-   обновить существующий pilot Preview и подтвердить Yandex ID + ожидаемый
-   empty clients state до миграции tenant-данных.
-2. Портировать memberships/invitations, затем exercises/workouts и остальные
+1. Портировать memberships/invitations, затем exercises/workouts и остальные
    вертикали из `docs/design/yandex-cloud-migration.md`.
-3. После полного tenant-контракта провести две миграционные репетиции; только
+2. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
 
 Ручной беговой MVP `YAFIT-300/301/307/302/303` завершён. UX/UI-план и отложенные
