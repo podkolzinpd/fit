@@ -43,8 +43,10 @@ The following remain unchanged during the foundation phase:
    mapping and the read-only profile vertical slice. The server-side rollout
    assignment is keyed by the internal profile UUID; a frontend flag is not an
    authorization or routing boundary.
-6. Run the first allowlisted pilot with synthetic/internal accounts and
-   read-only behavior. Supabase remains the only write source during this gate.
+6. [Implemented, stage apply pending] Enroll synthetic/internal identities
+   through the private migration runner and run the first allowlisted,
+   read-only browser pilot. Supabase remains the only product write source
+   during this gate.
 7. Port the current domain contract in the dependency order below. The scope
    now includes timezone, optimistic concurrency, actor attribution, running
    metrics, feedback/reactions and the derived progress/chronicle reads added
@@ -131,9 +133,12 @@ native or trusted clients.
 The OAuth application and auth API revision are deployed on isolated stage.
 The default-off frontend pilot can request a Yandex token and display only the
 allowlisted read-only profile; it does not create a Supabase session or unlock
-the main application. Populating real identity mappings, adding an exact CORS
-origin and enabling public container invocation remain separately reviewed
-stage operations.
+the main application. A stage-only administrative route on the private
+migration runner validates a temporary Yandex token and creates the hashed
+identity mapping plus read-only rollout assignment without storing email,
+login, token or raw `psuid`. Browser invocation is public only at the API
+transport layer; the exact CORS allowlist, verified Yandex identity, private
+mapping and rollout assignment remain mandatory application gates.
 
 ## Current main parity impact
 

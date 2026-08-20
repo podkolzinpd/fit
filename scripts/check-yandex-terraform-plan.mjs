@@ -3,9 +3,12 @@ import process from 'node:process'
 
 const planPath = process.argv[2]
 const allowDestroy = process.argv.includes('--allow-destroy')
+const allowPublicApi = process.argv.includes('--allow-public-api')
 
 if (planPath === undefined) {
-  throw new Error('Usage: check-yandex-terraform-plan.mjs <plan.json> [--allow-destroy]')
+  throw new Error(
+    'Usage: check-yandex-terraform-plan.mjs <plan.json> [--allow-destroy] [--allow-public-api]',
+  )
 }
 
 const plan = JSON.parse(readFileSync(planPath, 'utf8'))
@@ -19,10 +22,18 @@ const protectedDestruction = destructive.filter((resource) =>
   resource.address === 'yandex_mdb_postgresql_cluster_v2.fit'
   || resource.address === 'yandex_mdb_postgresql_database.fit',
 )
-const publicApi = changes.find(
+const publicResources = changes.filter(
   (resource) =>
-    resource.address === 'yandex_serverless_container_iam_binding.api_invocation'
-    && resource.change.after?.members?.includes('system:allUsers'),
+    resource.change.after?.member === 'system:allUsers'
+    || resource.change.after?.members?.includes('system:allUsers'),
+)
+const allowedPublicApiAddress =
+  'yandex_serverless_container_iam_binding.api_invocation[0]'
+const unexpectedPublicResources = publicResources.filter(
+  (resource) =>
+    !allowPublicApi
+    || resource.address !== allowedPublicApiAddress
+    || resource.change.after?.role !== 'serverless.containers.invoker',
 )
 
 const summary = [
@@ -56,8 +67,10 @@ if (
 if (protectedDestruction.length > 0) {
   throw new Error('Managed PostgreSQL cluster or database destruction is always blocked')
 }
-if (publicApi !== undefined) {
-  throw new Error('Public API invocation is outside the stage deployment workflow')
+if (unexpectedPublicResources.length > 0) {
+  throw new Error(
+    'Public invocation is allowed only for the reviewed stage API binding',
+  )
 }
 if (destructive.length > 0 && !allowDestroy) {
   throw new Error(

@@ -116,7 +116,7 @@ variable "api_concurrency" {
 }
 
 variable "allow_unauthenticated_api" {
-  description = "Make the container publicly invokable. Keep false until Yandex ID verification exists."
+  description = "Allow browser invocation of the API transport. Application data remains protected by verified Yandex ID and the rollout allowlist."
   type        = bool
   default     = false
 }

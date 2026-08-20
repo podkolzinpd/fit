@@ -26,6 +26,7 @@ function runPolicy(resourceChanges, options = {}) {
       policyScript,
       planPath,
       ...(options.allowDestroy === true ? ['--allow-destroy'] : []),
+      ...(options.allowPublicApi === true ? ['--allow-public-api'] : []),
     ],
     { encoding: 'utf8' },
   )
@@ -68,10 +69,13 @@ describe('Yandex Terraform plan policy', () => {
   test('blocks public API invocation', () => {
     const result = runPolicy([
       {
-        address: 'yandex_serverless_container_iam_binding.api_invocation',
+        address: 'yandex_serverless_container_iam_binding.api_invocation[0]',
         change: {
           actions: ['create'],
-          after: { members: ['system:allUsers'] },
+          after: {
+            members: ['system:allUsers'],
+            role: 'serverless.containers.invoker',
+          },
         },
       },
     ])
@@ -79,7 +83,86 @@ describe('Yandex Terraform plan policy', () => {
     assert.notEqual(result.status, 0)
     assert.match(
       result.stderr,
-      /Public API invocation is outside the stage deployment workflow/,
+      /Public invocation is allowed only for the reviewed stage API binding/,
     )
+  })
+
+  test('allows only the exact stage API invocation binding with a review flag', () => {
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_serverless_container_iam_binding.api_invocation[0]',
+          change: {
+            actions: ['create'],
+            after: {
+              members: ['serviceAccount:deployer', 'system:allUsers'],
+              role: 'serverless.containers.invoker',
+            },
+          },
+        },
+      ],
+      { allowPublicApi: true },
+    )
+
+    assert.equal(result.status, 0)
+  })
+
+  test('keeps the migration runner private even with the API review flag', () => {
+    const result = runPolicy(
+      [
+        {
+          address:
+            'yandex_serverless_container_iam_binding.migration_invocation[0]',
+          change: {
+            actions: ['update'],
+            after: {
+              members: ['system:allUsers'],
+              role: 'serverless.containers.invoker',
+            },
+          },
+        },
+      ],
+      { allowPublicApi: true },
+    )
+
+    assert.notEqual(result.status, 0)
+    assert.match(
+      result.stderr,
+      /Public invocation is allowed only for the reviewed stage API binding/,
+    )
+  })
+
+  test('blocks a public API binding with an unexpected role', () => {
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_serverless_container_iam_binding.api_invocation[0]',
+          change: {
+            actions: ['update'],
+            after: { members: ['system:allUsers'], role: 'editor' },
+          },
+        },
+      ],
+      { allowPublicApi: true },
+    )
+
+    assert.notEqual(result.status, 0)
+  })
+
+  test('blocks a singular public IAM member on every other resource', () => {
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_storage_bucket_iam_member.unexpected',
+          change: {
+            actions: ['create'],
+            after: { member: 'system:allUsers', role: 'storage.viewer' },
+          },
+        },
+      ],
+      { allowPublicApi: true },
+    )
+
+    assert.notEqual(result.status, 0)
   })
 })
