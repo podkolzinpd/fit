@@ -13,6 +13,7 @@ import type {
 import { localDate } from '../../shared/local-date'
 import { trainingSummaryQueries } from '../queries/training-summaries.queries'
 import { repositoryError } from './error'
+import { generationErrorMessage } from './training-summary-errors'
 
 type InternalRows = NonNullable<
   Awaited<ReturnType<typeof trainingSummaryQueries.listInternal>>['data']
@@ -229,6 +230,11 @@ async function summaryGenerationError(error: unknown): Promise<Error> {
   ) {
     return new Error('Обновление заняло слишком много времени. Попробуйте ещё раз через минуту.')
   }
+  if (context && typeof context === 'object' && 'headers' in context) {
+    const headers = (context as { headers?: { get?: (name: string) => string | null } }).headers
+    const code = headers?.get?.('x-fit-error-code')
+    if (code) return new Error(generationErrorMessage(code))
+  }
   if (context && typeof context === 'object' && 'json' in context && typeof context.json === 'function') {
     try {
       const payload = await (context as { json: () => Promise<unknown> }).json()
@@ -247,24 +253,4 @@ async function summaryGenerationError(error: unknown): Promise<Error> {
     }
   }
   return repositoryError(error)
-}
-
-function generationErrorMessage(code: string): string {
-  if (code === 'no_completed_workouts') return 'За выбранный период нет завершённых тренировок.'
-  if (code === 'source_row_limit_reached') return 'Для этого периода слишком много данных. Выберите меньший период.'
-  if (code === 'yandex_cloud_invalid_summary') return 'Модель вернула неполную суммаризацию. Попробуйте ещё раз.'
-  if (code === 'yandex_cloud_invalid_json') return 'Модель вернула ответ в неожиданном формате. Попробуйте ещё раз.'
-  if (code === 'yandex_cloud_quality_check_failed') {
-    return 'Модель не прошла автоматическую проверку качества. Попробуйте ещё раз.'
-  }
-  if (code.startsWith('yandex_cloud_error_')) {
-    return 'YandexGPT временно не принял запрос. Проверьте настройки модели и повторите позже.'
-  }
-  if (code === 'yandex_cloud_unavailable' || code === 'yandex_cloud_timeout') {
-    return 'YandexGPT временно недоступен. Попробуйте ещё раз через минуту.'
-  }
-  if (code === 'summary_save_failed' || code === 'summary_visibility_save_failed') {
-    return 'Сводка сформирована, но не сохранилась в Supabase. Проверьте права таблиц и повторите.'
-  }
-  return 'Не удалось обновить ИИ-анализ.'
 }

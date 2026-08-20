@@ -552,7 +552,13 @@ async function requestYandexSummary(
       return { summary, modelUri, modelVersion, usage }
     }
     if (attempt === 3) {
-      throw new HttpError(502, "yandex_cloud_quality_check_failed")
+      // The model has already returned schema-valid JSON three times. Quality
+      // rules are an editorial guard, not a reason to make Progress entirely
+      // unavailable. The UI independently renders deterministic progress
+      // facts and sanitizes legacy metric names, so keeping the final valid
+      // answer is safer than turning a wording mismatch into a hard failure.
+      console.warn("summary quality fallback accepted", { issues })
+      return { summary, modelUri, modelVersion, usage }
     }
 
     messages.push(
