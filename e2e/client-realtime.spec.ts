@@ -87,9 +87,7 @@ test('client and trainer receive progress and workout changes without reload', a
     await trainer.getByRole('button', { name: 'Добавить этап' }).click()
     await expect(client.getByText('Текущий этап: Realtime этап', { exact: true })).toBeVisible({ timeout: 10_000 })
 
-    await trainer.goto(`/progress/${clientId}`)
-    await trainer.locator('.trainer-progress-details > summary').click()
-    await trainer.locator('.trainer-measurements > summary').click()
+    await trainer.goto(`/progress/${clientId}?view=measurements`)
     await trainer.getByRole('button', { name: /История ·/ }).click()
     await client.goto('/me/progress')
     await expect(client.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
@@ -186,12 +184,11 @@ test('client and trainer receive progress and workout changes without reload', a
       trainer.goto(`/progress/${clientId}`),
       client.goto('/me'),
     ])
-    await trainer.locator('.trainer-progress-details > summary').click()
-    const trainerRegularity = trainer.getByLabel('Регулярность тренировок')
+    const trainerRegularity = trainer.getByLabel('Тренировки за неделю')
     const clientWeek = client.locator('.client-home-week')
     await expect(trainerRegularity).toBeVisible()
     await expect(clientWeek).toBeVisible()
-    await expect(trainerRegularity.getByText('Тренировок состоялось').first()).toBeVisible()
+    await expect(trainerRegularity.getByText(/трениров(?:ка|ки|ок) состоял/).first()).toBeVisible()
     await expect(clientWeek.getByRole('heading', { name: /трениров/ })).toBeVisible()
     await expect(clientWeek.getByRole('link', { name: 'Подробнее' })).toHaveAttribute('href', '/me/progress')
   } finally {

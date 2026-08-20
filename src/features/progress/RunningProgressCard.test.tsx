@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { localDate } from '../../shared/local-date'
 import { RunningProgressCard } from './RunningProgressCard'
@@ -14,7 +15,7 @@ vi.mock('../../app/auth-context', () => ({
 
 function wrapper() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  return ({ children }: { children: ReactNode }) => <MemoryRouter><QueryClientProvider client={client}>{children}</QueryClientProvider></MemoryRouter>
 }
 
 describe('RunningProgressCard', () => {
@@ -49,5 +50,18 @@ describe('RunningProgressCard', () => {
     await screen.findByText('1 пробежка')
     await userEvent.click(screen.getByRole('tab', { name: '3 мес.' }))
     expect(repository.running).toHaveBeenCalledTimes(2)
+  })
+
+  it('uses one compact navigation row on the trainer overview', async () => {
+    repository.running.mockResolvedValue([
+      { workoutId: 'w1', workoutDate: localDate('2026-08-01'), format: 'easy', distanceKm: 5, durationSec: 1800, paceSecPerKm: 360 },
+      { workoutId: 'w2', workoutDate: localDate('2026-08-08'), format: 'easy', distanceKm: 5, durationSec: 1800, paceSecPerKm: 360 },
+    ])
+    render(<RunningProgressCard clientId="client-1" compact detailsPath="/progress/client-1?view=running" />, { wrapper: wrapper() })
+
+    expect(await screen.findByRole('link', { name: 'Открыть беговой прогресс' })).toHaveAttribute('href', '/progress/client-1?view=running')
+    expect(screen.getByText('2 пробежки')).toBeVisible()
+    expect(screen.getByText('10 км · средний темп 6:00 мин/км')).toBeVisible()
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument()
   })
 })

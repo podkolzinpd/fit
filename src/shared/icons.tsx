@@ -58,6 +58,10 @@ export function BackIcon(props: IconProps) {
   return <Icon data-icon="back" {...props}><path d="m15 18-6-6 6-6" /></Icon>
 }
 
+export function ChevronRightIcon(props: IconProps) {
+  return <Icon data-icon="chevron-right" {...props}><path d="m9 18 6-6-6-6" /></Icon>
+}
+
 export function MoreIcon(props: IconProps) {
   return <Icon data-icon="more" {...props}><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none" /></Icon>
 }

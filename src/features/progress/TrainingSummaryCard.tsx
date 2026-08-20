@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { goalsRepository } from '../../data/repositories/goals.repository'
 import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
@@ -11,6 +11,7 @@ import type {
   TrainingSummaryMetrics,
   TrainingProgressFact,
 } from '../../shared/domain'
+import { CloseIcon } from '../../shared/icons'
 import { formatLocalDate, normalizeTimeZone, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
@@ -48,19 +49,28 @@ function Metrics({ metrics }: {
   </div>
 }
 
-function ProgressFacts({ facts, fallback }: {
+function ProgressFacts({ facts, fallback, limit, onShowAll }: {
   facts: readonly TrainingProgressFact[]
   fallback: readonly string[]
+  limit?: number
+  onShowAll?: () => void
 }) {
+  const visibleFacts = limit ? facts.slice(0, limit) : facts
+  const visibleFallback = limit ? fallback.slice(0, limit) : fallback
+  const hiddenCount = facts.length > 0
+    ? Math.max(0, facts.length - visibleFacts.length)
+    : Math.max(0, fallback.length - visibleFallback.length)
   if (facts.length === 0) {
-    return <ul>{fallback.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
+    return <><ul>{visibleFallback.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
+      {hiddenCount > 0 && onShowAll && <button type="button" className="link ai-progress-more" onClick={onShowAll}>Ещё {hiddenCount}</button>}
+    </>
   }
-  return <div className="ai-progress-facts">
-    {facts.map((fact) => <div className="ai-progress-fact" key={fact.exerciseName}>
+  return <><div className="ai-progress-facts">
+    {visibleFacts.map((fact) => <div className="ai-progress-fact" key={fact.exerciseName}>
       <strong>{fact.exerciseName}</strong>
       {fact.changes.map((change) => <span key={change.metric}>{progressFactChangeLabel(change)}</span>)}
     </div>)}
-  </div>
+  </div>{hiddenCount > 0 && onShowAll && <button type="button" className="link ai-progress-more" onClick={onShowAll}>Ещё {hiddenCount} {hiddenCount === 1 ? 'упражнение' : 'упражнения'}</button>}</>
 }
 
 function SummaryHeader({ client = false, published }: { client?: boolean; published?: boolean }) {
@@ -78,18 +88,20 @@ function SummaryHeader({ client = false, published }: { client?: boolean; publis
   </header>
 }
 
-function SummaryCore({ headline, metrics, progress, consistency }: {
+function SummaryCore({ headline, metrics, progress, consistency, progressLimit, onShowAllProgress }: {
   headline: string
   metrics: TrainingSummaryMetrics
   progress: readonly string[]
   consistency: string
+  progressLimit?: number
+  onShowAllProgress?: () => void
 }) {
   return <>
     <div className="ai-progress-hero"><span>Главное за период</span><strong>{formatSummaryText(headline)}</strong></div>
     <Metrics metrics={metrics} />
     <div className="ai-progress-section ai-progress-changes">
       <h3>Динамика упражнений</h3>
-      <ProgressFacts facts={metrics.progressFacts} fallback={progress} />
+      <ProgressFacts facts={metrics.progressFacts} fallback={progress} limit={progressLimit} onShowAll={onShowAllProgress} />
     </div>
     <div className="ai-progress-section ai-progress-regularity">
       <div><span>Ритм тренировок</span><strong>{formatWorkoutsPerWeek(metrics.workoutsPerWeek)} в неделю</strong></div>
@@ -196,32 +208,49 @@ function TrainerSummaryContent({ summary, clientId, onChanged }: {
   clientId: string
   onChanged: () => Promise<unknown>
 }) {
-  const [previewOpen, setPreviewOpen] = useState(false)
+  const [clientCopyOpen, setClientCopyOpen] = useState(false)
+  const [progressOpen, setProgressOpen] = useState(false)
+  const [attentionOpen, setAttentionOpen] = useState(false)
+  const hiddenAttentionCount = Math.max(0, summary.trainer.attention.length - 1)
   return <>
     <SummaryCore
       headline={summary.trainer.headline}
       metrics={summary.metrics}
       progress={summary.trainer.progress}
       consistency={summary.trainer.consistency}
+      progressLimit={3}
+      onShowAllProgress={() => setProgressOpen(true)}
     />
     {summary.trainer.attention.length > 0 && <div className="ai-progress-attention">
       <span aria-hidden="true">!</span>
       <div>
         <strong>На что обратить внимание</strong>
-        {summary.trainer.attention.map((point) => <p key={point}>{formatSummaryText(point)}</p>)}
+        <p>{formatSummaryText(summary.trainer.attention[0]!)}</p>
+        {hiddenAttentionCount > 0 && <button type="button" className="link ai-progress-more" onClick={() => setAttentionOpen(true)}>Ещё {hiddenAttentionCount} {hiddenAttentionCount === 1 ? 'сигнал' : 'сигнала'}</button>}
       </div>
     </div>}
     <div className="client-copy-toggle">
-      <button type="button" className="link" onClick={() => setPreviewOpen((value) => !value)}>
-        {previewOpen ? 'Скрыть версию для клиента' : 'Проверить версию для клиента'}
-      </button>
+      <button type="button" className="link" onClick={() => setClientCopyOpen(true)}>Версия для спортсмена</button>
     </div>
-    {previewOpen && <ClientCopyEditor
-      summary={summary}
-      clientId={clientId}
-      onChanged={onChanged}
-    />}
+    {progressOpen && <SummarySheet title="Динамика упражнений" onClose={() => setProgressOpen(false)}>
+      <ProgressFacts facts={summary.metrics.progressFacts} fallback={summary.trainer.progress} />
+    </SummarySheet>}
+    {attentionOpen && <SummarySheet title="На что обратить внимание" onClose={() => setAttentionOpen(false)}>
+      <div className="ai-progress-sheet-list">{summary.trainer.attention.map((point) => <p key={point}>{formatSummaryText(point)}</p>)}</div>
+    </SummarySheet>}
+    {clientCopyOpen && <SummarySheet title="Версия для спортсмена" onClose={() => setClientCopyOpen(false)}>
+      <ClientCopyEditor summary={summary} clientId={clientId} onChanged={onChanged} />
+    </SummarySheet>}
   </>
+}
+
+function SummarySheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  return <div className="sheet-overlay" onClick={onClose}>
+    <section className="ai-progress-sheet" role="dialog" aria-modal="true" aria-label={title} onClick={(event) => event.stopPropagation()}>
+      <header><h2>{title}</h2><button type="button" className="picker-close" aria-label="Закрыть" onClick={onClose}><CloseIcon /></button></header>
+      <div className="ai-progress-sheet-content">{children}</div>
+    </section>
+  </div>
 }
 
 function ClientCopyEditor({ summary, clientId, onChanged }: {
@@ -257,8 +286,8 @@ function ClientCopyEditor({ summary, clientId, onChanged }: {
   }
 
   return <form className="client-copy-editor" onSubmit={(event) => void submit(event)}>
-    <div className="client-copy-heading">
-      <div><strong>Версия для клиента</strong><p>Внутренние замечания сюда не попадут</p></div>
+    <div className="client-copy-heading client-copy-status">
+      <p>Внутренние замечания сюда не попадут</p>
       <span>{summary.published ? 'Клиент уже видит' : 'Клиент может запросить сам'}</span>
     </div>
     <Field label="Главный результат"><textarea name="headline" defaultValue={formatSummaryText(summary.client.headline)} required /></Field>
