@@ -11,8 +11,14 @@ import {
   YandexOAuthCodeRejectedError,
   type YandexOAuthCodeProvider,
 } from './auth/yandex-oauth-code.js'
-import { PilotAccessDeniedError } from './db/yandex-pilot-transaction.js'
+import {
+  PilotAccessDeniedError,
+  PilotSessionInvalidError,
+} from './db/yandex-pilot-transaction.js'
+import type { PilotClientsResponse } from './clients.js'
+import type { PilotClientsReader } from './pilot-clients-reader.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
+import type { PilotSessionIssuer, PilotSessionResponse } from './pilot-session.js'
 import type { ProfileResponse } from './profile.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
@@ -160,6 +166,35 @@ const PROFILE_RESPONSE: ProfileResponse = {
   },
 }
 
+const SESSION_RESPONSE: PilotSessionResponse = {
+  ...PROFILE_RESPONSE,
+  session: {
+    token: 's'.repeat(43),
+    expiresAt: '2026-08-20T13:15:00.000Z',
+  },
+}
+
+const CLIENTS_RESPONSE: PilotClientsResponse = {
+  accessMode: 'read_only',
+  clients: [{
+    id: '1a0c5295-0a0f-4ccb-a39a-e58090967245',
+    hasAccount: false,
+    fullName: 'Тестовый клиент',
+    canonicalFullName: 'Тестовый клиент',
+    gender: null,
+    ageYears: null,
+    ageUpdatedAt: null,
+    heightCm: null,
+    goal: null,
+    note: null,
+    currentWeightKg: null,
+    lastActivityAt: '2026-08-20T12:00:00.000Z',
+    archivedAt: null,
+    version: 1,
+    membershipVersion: 1,
+  }],
+}
+
 function buildProfileReader(
   result: ProfileResponse | undefined | Error = PROFILE_RESPONSE,
 ): {
@@ -170,6 +205,30 @@ function buildProfileReader(
     result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
   )
   return { pilotProfileReader: { readProfile }, readProfile }
+}
+
+function buildSessionIssuer(
+  result: PilotSessionResponse | undefined | Error = SESSION_RESPONSE,
+): {
+  pilotSessionIssuer: PilotSessionIssuer
+  issue: ReturnType<typeof vi.fn>
+} {
+  const issue = vi.fn(() =>
+    result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
+  )
+  return { pilotSessionIssuer: { issue }, issue }
+}
+
+function buildClientsReader(
+  result: PilotClientsResponse | Error = CLIENTS_RESPONSE,
+): {
+  pilotClientsReader: PilotClientsReader
+  readClients: ReturnType<typeof vi.fn>
+} {
+  const readClients = vi.fn(() =>
+    result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
+  )
+  return { pilotClientsReader: { readClients }, readClients }
 }
 
 describe('read-only Yandex profile endpoint', () => {
@@ -272,14 +331,14 @@ describe('read-only Yandex profile endpoint', () => {
 })
 
 describe('Yandex PKCE pilot callback', () => {
-  it('exchanges a one-time code server-side and returns only the profile', async () => {
+  it('exchanges a one-time code and returns an app session without exposing the Yandex token', async () => {
     const oauth = buildOAuthCodeProvider()
     const identity = buildIdentityProvider()
-    const profileReader = buildProfileReader()
+    const session = buildSessionIssuer()
     const app = buildApp({
       oauthCodeProvider: oauth.oauthCodeProvider,
       identityProvider: identity.identityProvider,
-      pilotProfileReader: profileReader.pilotProfileReader,
+      pilotSessionIssuer: session.pilotSessionIssuer,
       logger: false,
     })
     apps.push(app)
@@ -291,10 +350,12 @@ describe('Yandex PKCE pilot callback', () => {
     })
 
     expect(response.statusCode).toBe(200)
-    expect(response.json()).toEqual(PROFILE_RESPONSE)
+    expect(response.json()).toEqual(SESSION_RESPONSE)
+    expect(response.headers['cache-control']).toBe('no-store')
     expect(response.body).not.toContain('temporary-yandex-token')
     expect(oauth.exchangeCode).toHaveBeenCalledWith('one-time-code', 'v'.repeat(43))
     expect(identity.verifyAccessToken).toHaveBeenCalledWith('temporary-yandex-token')
+    expect(session.issue).toHaveBeenCalledWith(SUBJECT_HASH)
   })
 
   it('rejects malformed input before contacting Yandex OAuth', async () => {
@@ -315,7 +376,12 @@ describe('Yandex PKCE pilot callback', () => {
 
   it('does not expose a rejected authorization code', async () => {
     const oauth = buildOAuthCodeProvider(new YandexOAuthCodeRejectedError())
-    const app = buildApp({ oauthCodeProvider: oauth.oauthCodeProvider, logger: false })
+    const app = buildApp({
+      oauthCodeProvider: oauth.oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      pilotSessionIssuer: buildSessionIssuer().pilotSessionIssuer,
+      logger: false,
+    })
     apps.push(app)
 
     const response = await app.inject({
@@ -327,5 +393,47 @@ describe('Yandex PKCE pilot callback', () => {
     expect(response.statusCode).toBe(401)
     expect(response.json()).toEqual({ error: 'unauthorized' })
     expect(response.body).not.toContain('rejected-code')
+  })
+})
+
+describe('read-only pilot clients endpoint', () => {
+  it('returns only clients resolved by the opaque pilot session', async () => {
+    const clients = buildClientsReader()
+    const app = buildApp({
+      pilotClientsReader: clients.pilotClientsReader,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/clients',
+      headers: { authorization: `Bearer ${'s'.repeat(43)}` },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(CLIENTS_RESPONSE)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(clients.readClients).toHaveBeenCalledWith('s'.repeat(43))
+  })
+
+  it('rejects a missing or expired pilot session', async () => {
+    const clients = buildClientsReader(new PilotSessionInvalidError())
+    const app = buildApp({
+      pilotClientsReader: clients.pilotClientsReader,
+      logger: false,
+    })
+    apps.push(app)
+
+    const missing = await app.inject({ method: 'GET', url: '/v1/clients' })
+    const expired = await app.inject({
+      method: 'GET',
+      url: '/v1/clients',
+      headers: { authorization: `Bearer ${'x'.repeat(43)}` },
+    })
+
+    expect(missing.statusCode).toBe(401)
+    expect(expired.statusCode).toBe(401)
+    expect(expired.json()).toEqual({ error: 'unauthorized' })
   })
 })

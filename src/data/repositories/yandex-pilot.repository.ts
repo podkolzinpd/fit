@@ -12,7 +12,38 @@ const profileSchema = z.object({
   }),
 })
 
-export type YandexPilotProfile = z.infer<typeof profileSchema>
+const sessionSchema = profileSchema.extend({
+  session: z.object({
+    token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+    expiresAt: z.iso.datetime(),
+  }),
+})
+
+const clientSchema = z.object({
+  id: z.uuid(),
+  hasAccount: z.boolean(),
+  fullName: z.string().min(1),
+  canonicalFullName: z.string().min(1),
+  gender: z.enum(['male', 'female']).nullable(),
+  ageYears: z.number().int().min(1).max(119).nullable(),
+  ageUpdatedAt: z.iso.date().nullable(),
+  heightCm: z.number().positive().max(260).nullable(),
+  goal: z.string().nullable(),
+  note: z.string().nullable(),
+  currentWeightKg: z.null(),
+  lastActivityAt: z.iso.datetime(),
+  archivedAt: z.iso.datetime().nullable(),
+  version: z.number().int().positive(),
+  membershipVersion: z.number().int().positive(),
+})
+
+const clientsSchema = z.object({
+  accessMode: z.literal('read_only'),
+  clients: z.array(clientSchema),
+})
+
+export type YandexPilotSession = z.infer<typeof sessionSchema>
+export type YandexPilotClient = z.infer<typeof clientSchema>
 
 function responseError(status: number): Error {
   if (status === 401) return new Error('Yandex ID не подтвердил вход. Начните заново.')
@@ -22,17 +53,35 @@ function responseError(status: number): Error {
   return new Error('Не удалось проверить доступ к пилоту.')
 }
 
+function clientsResponseError(status: number): Error {
+  if (status === 401) return new Error('Сессия пилота истекла. Начните вход через Yandex ID заново.')
+  if (status === 503) return new Error('Пилот временно недоступен. Попробуйте позднее.')
+  return new Error('Не удалось загрузить клиентов из stage.')
+}
+
 export const yandexPilotRepository = {
-  async exchangeCodeForProfile(apiBaseUrl: string, code: string, codeVerifier: string): Promise<YandexPilotProfile> {
+  async exchangeCodeForSession(apiBaseUrl: string, code: string, codeVerifier: string): Promise<YandexPilotSession> {
     let response: Response
     try {
-      response = await yandexPilotQueries.exchangeCodeForProfile(apiBaseUrl, code, codeVerifier)
+      response = await yandexPilotQueries.exchangeCodeForSession(apiBaseUrl, code, codeVerifier)
     } catch {
       throw new Error('Не удалось подключиться к Yandex Cloud stage.')
     }
     if (!response.ok) throw responseError(response.status)
-    const result = profileSchema.safeParse(await response.json())
-    if (!result.success) throw new Error('Stage вернул неподдерживаемый формат профиля.')
+    const result = sessionSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый формат сессии.')
     return result.data
+  },
+  async listClients(apiBaseUrl: string, sessionToken: string): Promise<YandexPilotClient[]> {
+    let response: Response
+    try {
+      response = await yandexPilotQueries.listClients(apiBaseUrl, sessionToken)
+    } catch {
+      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    }
+    if (!response.ok) throw clientsResponseError(response.status)
+    const result = clientsSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый формат клиентов.')
+    return result.data.clients
   },
 }

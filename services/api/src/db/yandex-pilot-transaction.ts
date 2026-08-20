@@ -10,6 +10,8 @@ interface ActorRow extends QueryResultRow {
   profile_id: string | null
 }
 
+type ActorResolver = (client: DatabaseClient) => Promise<string | null>
+
 export class PilotAccessDeniedError extends Error {
   constructor() {
     super('Identity is not enabled for the Yandex read-only pilot')
@@ -17,15 +19,19 @@ export class PilotAccessDeniedError extends Error {
   }
 }
 
-export async function withYandexPilotActorTransaction<Result>(
+export class PilotSessionInvalidError extends Error {
+  constructor() {
+    super('Pilot session is missing, invalid, or expired')
+    this.name = 'PilotSessionInvalidError'
+  }
+}
+
+async function withResolvedPilotActorTransaction<Result>(
   pool: DatabasePool,
-  subjectHash: string,
+  resolveActor: ActorResolver,
+  deniedError: Error,
   work: (client: DatabaseClient) => Promise<Result>,
 ): Promise<Result> {
-  if (!SUBJECT_HASH_PATTERN.test(subjectHash)) {
-    throw new PilotAccessDeniedError()
-  }
-
   const connection = await pool.connect()
   let transactionStarted = false
 
@@ -33,14 +39,8 @@ export async function withYandexPilotActorTransaction<Result>(
     await connection.query('begin')
     transactionStarted = true
 
-    const actorRows = await connection.query<ActorRow>(
-      'select app_private.resolve_yandex_pilot_actor($1) as profile_id',
-      [subjectHash],
-    )
-    const actorId = actorRows[0]?.profile_id
-    if (actorId === null || actorId === undefined || !UUID_PATTERN.test(actorId)) {
-      throw new PilotAccessDeniedError()
-    }
+    const actorId = await resolveActor(connection)
+    if (actorId === null || !UUID_PATTERN.test(actorId)) throw deniedError
 
     await connection.query(
       "select set_config('request.jwt.claim.sub', $1, true)",
@@ -66,4 +66,83 @@ export async function withYandexPilotActorTransaction<Result>(
   } finally {
     connection.release()
   }
+}
+
+export async function withYandexPilotActorTransaction<Result>(
+  pool: DatabasePool,
+  subjectHash: string,
+  work: (client: DatabaseClient) => Promise<Result>,
+): Promise<Result> {
+  if (!SUBJECT_HASH_PATTERN.test(subjectHash)) {
+    throw new PilotAccessDeniedError()
+  }
+
+  return withResolvedPilotActorTransaction(
+    pool,
+    async (client) => {
+      const actorRows = await client.query<ActorRow>(
+        'select app_private.resolve_yandex_pilot_actor($1) as profile_id',
+        [subjectHash],
+      )
+      return actorRows[0]?.profile_id ?? null
+    },
+    new PilotAccessDeniedError(),
+    work,
+  )
+}
+
+export async function withIssuedYandexPilotSessionTransaction<Result>(
+  pool: DatabasePool,
+  subjectHash: string,
+  tokenHash: string,
+  expiresAt: Date,
+  work: (client: DatabaseClient) => Promise<Result>,
+): Promise<Result> {
+  if (
+    !SUBJECT_HASH_PATTERN.test(subjectHash)
+    || !SUBJECT_HASH_PATTERN.test(tokenHash)
+    || !Number.isFinite(expiresAt.getTime())
+  ) {
+    throw new PilotAccessDeniedError()
+  }
+
+  return withResolvedPilotActorTransaction(
+    pool,
+    async (client) => {
+      const actorRows = await client.query<ActorRow>(
+        `
+          select app_private.create_yandex_pilot_session(
+            $1, $2, $3
+          ) as profile_id
+        `,
+        [subjectHash, tokenHash, expiresAt.toISOString()],
+      )
+      return actorRows[0]?.profile_id ?? null
+    },
+    new PilotAccessDeniedError(),
+    work,
+  )
+}
+
+export async function withYandexPilotSessionTransaction<Result>(
+  pool: DatabasePool,
+  tokenHash: string,
+  work: (client: DatabaseClient) => Promise<Result>,
+): Promise<Result> {
+  if (!SUBJECT_HASH_PATTERN.test(tokenHash)) {
+    throw new PilotSessionInvalidError()
+  }
+
+  return withResolvedPilotActorTransaction(
+    pool,
+    async (client) => {
+      const actorRows = await client.query<ActorRow>(
+        'select app_private.resolve_yandex_pilot_session($1) as profile_id',
+        [tokenHash],
+      )
+      return actorRows[0]?.profile_id ?? null
+    },
+    new PilotSessionInvalidError(),
+    work,
+  )
 }
