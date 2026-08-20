@@ -5,7 +5,7 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-20
-Проверенный базовый `main`: `cc8d2cf` (`fix: use hosted Supabase public keys in summary function (#486)`)
+Проверенный базовый `main`: `916a194` (`feat(yandex): enable read-only Yandex ID stage pilot (#487)`)
 
 ## Активная работа
 
@@ -17,12 +17,16 @@
   обращение `BR904300`. Вручную развёрнуты migration/API revisions, проверки
   миграций, readiness, auth route и CORS прошли. Terraform state всё ещё видит
   drift; production frontend не переключался.
-- Ветка `codex/yandex-id-stage-pilot` готовит следующий stage gate: закрытую
-  регистрацию тестового Yandex ID через migration runner, публичный только
-  transport API, точную CORS/identity/DB-allowlist защиту и Terraform policy,
-  запрещающую `system:allUsers` на других ресурсах. Apply не выполнялся, новые
-  платные ресурсы и production/Supabase не менялись. Для этой ветки настроен
-  отдельный Vercel Preview с pilot env; точный callback сохранён в Yandex OAuth.
+- `#487` добавил следующий stage gate в `main`: закрытую регистрацию тестового
+  Yandex ID через migration runner, публичный только transport API, точную
+  CORS/identity/DB-allowlist защиту и Terraform policy, запрещающую
+  `system:allUsers` на других ресурсах. Отдельный Vercel Preview с pilot env и
+  точный callback в Yandex OAuth настроены; production/Supabase не менялись.
+  Run `32355671699` построил безопасный plan `1 add / 5 change / 0 destroy`, но
+  старый общий environment gate остановил даже эту безопасную доставку. Он и
+  пустой дубликат `32355676393` отменены. Готовится разделение: обычные
+  migrations/API revisions после merge идут автоматически, а новая или
+  cost-sensitive инфраструктура блокируется policy до apply.
 - Функциональный MVP признан достаточным для системной фазы удобства. Навигация,
   Trainer Progress, visual regression, типографика, геометрия и единые состояния
   закрыты в `#421`…`#431`; мобильная тренировочная фаза P0/P1 — `YAFIT-316`.
@@ -72,12 +76,15 @@
 - Ветка stage-пилота: `npm run check`, 23 infra-policy теста, 6 локальных
   PostgreSQL integration tests, Terraform fmt/validate прошли без загрузки
   новых Podman-образов.
+- После merge `#487` Terraform plan прошёл policy: создаётся только IAM binding
+  публичного вызова точного API container, пять существующих ресурсов меняются
+  in-place, удалений и новых вычислительных/DB-ресурсов нет. Apply не выполнялся.
 
 ## Ближайший roadmap
 
-1. Проверить и применить reviewed plan stage-пилота только после отдельного
-   подтверждения; затем зарегистрировать один тестовый Yandex ID и пройти
-   read-only profile flow. Production frontend остаётся на Supabase.
+1. Завершить безопасный автоматический rollout stage-пилота; затем
+   зарегистрировать один тестовый Yandex ID и пройти read-only profile flow.
+   Production frontend остаётся на Supabase.
 2. Получить ответ по `BR904300`, устранить `DeployRevision` 403, согласовать
    Terraform state с ручными revisions и вернуть автоматический pipeline.
 3. Следующий продуктовый блок начинать только после выбора пользователя.
