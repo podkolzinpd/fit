@@ -1,0 +1,57 @@
+name: Diagnose summary runtime
+
+on:
+  push:
+    branches:
+      - diag/summary-runtime-20260820
+    paths:
+      - .github/workflows/diagnose-summary-runtime.yml
+
+permissions:
+  contents: read
+
+jobs:
+  aggregate-error-codes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Count known function failures
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          start="$(date -u -d '6 hours ago' '+%Y-%m-%dT%H:%M:%SZ')"
+          end="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+          sql="SELECT \
+            countIf(position(event_message, 'authentication_required') > 0) AS authentication_required, \
+            countIf(position(event_message, 'client_not_found') > 0) AS client_not_found, \
+            countIf(position(event_message, 'client_goal_lookup_failed') > 0) AS client_goal_lookup_failed, \
+            countIf(position(event_message, 'first_workout_lookup_failed') > 0) AS first_workout_lookup_failed, \
+            countIf(position(event_message, 'workouts_lookup_failed') > 0) AS workouts_lookup_failed, \
+            countIf(position(event_message, 'exercises_lookup_failed') > 0) AS exercises_lookup_failed, \
+            countIf(position(event_message, 'sets_lookup_failed') > 0) AS sets_lookup_failed, \
+            countIf(position(event_message, 'no_completed_workouts') > 0) AS no_completed_workouts, \
+            countIf(position(event_message, 'summary_cache_lookup_failed') > 0) AS summary_cache_lookup_failed, \
+            countIf(position(event_message, 'summary_save_failed') > 0) AS summary_save_failed, \
+            countIf(position(event_message, 'summary_visibility_save_failed') > 0) AS summary_visibility_save_failed, \
+            countIf(position(event_message, 'yandex_cloud_error_') > 0) AS yandex_cloud_http_error, \
+            countIf(position(event_message, 'yandex_cloud_timeout') > 0) AS yandex_cloud_timeout, \
+            countIf(position(event_message, 'yandex_cloud_unavailable') > 0) AS yandex_cloud_unavailable, \
+            countIf(position(event_message, 'yandex_cloud_invalid_json') > 0) AS yandex_cloud_invalid_json, \
+            countIf(position(event_message, 'yandex_cloud_invalid_summary') > 0) AS yandex_cloud_invalid_summary, \
+            countIf(position(event_message, 'yandex_cloud_empty_response') > 0) AS yandex_cloud_empty_response, \
+            countIf(position(event_message, 'internal_error') > 0) AS internal_error, \
+            maxIf(timestamp, position(event_message, 'summarize-client-training request failed') > 0) AS latest_known_failure \
+          FROM logs WHERE source = 'function_logs'"
+
+          status="$(curl --silent --show-error --output /tmp/summary-log-counts.json --write-out '%{http_code}' \
+            --get "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_ID}/analytics/endpoints/logs" \
+            --header "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            --data-urlencode "sql=${sql}" \
+            --data-urlencode "iso_timestamp_start=${start}" \
+            --data-urlencode "iso_timestamp_end=${end}")"
+
+          echo "management_api_status=${status}"
+          test "${status}" = "200"
+          jq -c '.result // []' /tmp/summary-log-counts.json
