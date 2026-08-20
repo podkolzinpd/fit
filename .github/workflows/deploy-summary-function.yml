@@ -51,7 +51,7 @@ jobs:
             --header "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
             --data-urlencode "iso_timestamp_start=${start_at}" \
             --data-urlencode "iso_timestamp_end=${end_at}" \
-            --data-urlencode "sql=select timestamp,severity_text,event_message from logs where source = 'function_logs' and match(event_message, 'summarize-client-training failed') order by timestamp desc limit 20"
+            --data-urlencode "sql=select timestamp,toInt32OrZero(log_attributes['response.status_code']) as status,event_message from logs where source = 'function_edge_logs' and match(event_message, 'summarize-client-training') and toInt32OrZero(log_attributes['response.status_code']) >= 400 order by timestamp desc limit 20"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
