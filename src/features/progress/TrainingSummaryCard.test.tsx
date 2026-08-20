@@ -1,8 +1,79 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { PublishedTrainingSummary } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { ClientProgressGoalSection } from './ClientProgressGoalSection'
+import { ClientTrainingSummaryCard, TrainerTrainingSummaryCard } from './TrainingSummaryCard'
+
+const repositories = vi.hoisted(() => ({
+  firstCompletedWorkoutDate: vi.fn(),
+  listForTrainer: vi.fn(),
+  listForClient: vi.fn(),
+  generate: vi.fn(),
+  publish: vi.fn(),
+  unpublish: vi.fn(),
+  goal: vi.fn(),
+}))
+vi.mock('../../app/auth-context', () => ({
+  useAuth: () => ({ actor: { timezone: 'Europe/Moscow' } }),
+}))
+vi.mock('../../data/repositories/training-summaries.repository', () => ({
+  trainingSummariesRepository: {
+    firstCompletedWorkoutDate: repositories.firstCompletedWorkoutDate,
+    listForTrainer: repositories.listForTrainer,
+    listForClient: repositories.listForClient,
+    generate: repositories.generate,
+    publish: repositories.publish,
+    unpublish: repositories.unpublish,
+  },
+}))
+vi.mock('../../data/repositories/goals.repository', () => ({
+  goalsRepository: { get: repositories.goal },
+}))
+vi.mock('../../shared/yandex-metrika', () => ({ trackGoal: vi.fn() }))
+
+function wrapper(queryClient: QueryClient) {
+  return function QueryWrapper({ children }: { children: ReactNode }) {
+    return <MemoryRouter><QueryClientProvider client={queryClient}>{children}</QueryClientProvider></MemoryRouter>
+  }
+}
+
+function queryClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+}
+
+const longExerciseName = 'Тяга верхнего блока обратным узким хватом в кроссовере с дополнительной рукоятью'
+const publishedSummary: PublishedTrainingSummary = {
+  id: 'published-1',
+  sourceSummaryId: 'summary-1',
+  clientId: 'client-1',
+  periodStart: localDate('2026-07-20'),
+  periodEnd: localDate('2026-08-20'),
+  summary: {
+    headline: 'Рабочий вес вырос на 16,67%.',
+    achievements: ['Служебный custom_metric_key равен 1.25.'],
+    consistency: 'Средняя частота — 1,13 в неделю.',
+    encouragement: 'Продолжай в том же ритме.',
+  },
+  metrics: {
+    completedWorkouts: 6,
+    workoutsPerWeek: 1.13,
+    activeWeeks: 3,
+    longestGapDays: 5,
+    progressFacts: [{
+      exerciseName: longExerciseName,
+      kind: 'strength',
+      sessionCount: 3,
+      changes: [{ metric: 'max_weight', from: 50, to: 68, changePercent: 36, favorable: true }],
+    }],
+  },
+  generatedAt: '2026-08-20T08:00:00Z',
+  publishedAt: '2026-08-20T08:05:00Z',
+}
 
 describe('ClientProgressGoalSection', () => {
   it('shows the active structured goal, stage and LLM interpretation', () => {
@@ -40,5 +111,83 @@ describe('ClientProgressGoalSection', () => {
 
     expect(screen.getByText(/Добавь цель, чтобы ИИ оценивал прогресс/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Добавить цель' })).toHaveAttribute('href', '/me/edit')
+  })
+
+  it('keeps explicit loading and retry states for the optional goal', async () => {
+    const retry = vi.fn()
+    const { rerender } = render(<MemoryRouter><ClientProgressGoalSection
+      goal={undefined} today={localDate('2026-08-20')} loading error={null} onRetry={retry}
+    /></MemoryRouter>)
+    expect(screen.getByRole('status')).toHaveTextContent('Проверяем цель')
+    expect(screen.queryByRole('link', { name: 'Добавить цель' })).toBeNull()
+
+    rerender(<MemoryRouter><ClientProgressGoalSection
+      goal={undefined} today={localDate('2026-08-20')} loading={false}
+      error={new Error('Цель недоступна')} onRetry={retry}
+    /></MemoryRouter>)
+    await userEvent.click(screen.getByRole('button', { name: 'Повторить' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Не удалось загрузить цель')
+    expect(retry).toHaveBeenCalledOnce()
+  })
+})
+
+describe('Training summary card states', () => {
+  beforeEach(() => {
+    Object.values(repositories).forEach((mock) => mock.mockReset())
+    repositories.goal.mockResolvedValue(null)
+  })
+
+  it('does not expose period or generation actions while trainer data is loading', () => {
+    repositories.firstCompletedWorkoutDate.mockReturnValue(new Promise(() => undefined))
+    repositories.listForTrainer.mockReturnValue(new Promise(() => undefined))
+
+    render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    expect(screen.getByLabelText('ИИ-анализ тренировок')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('status')).toHaveTextContent('Загрузка')
+    expect(screen.queryByRole('button', { name: '1 месяц' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Создать анализ' })).toBeNull()
+  })
+
+  it('offers only retry after a trainer load error and restores the empty action after retry', async () => {
+    const user = userEvent.setup()
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(null)
+    repositories.listForTrainer.mockRejectedValueOnce(new Error('Анализ недоступен')).mockResolvedValueOnce([])
+
+    render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Анализ недоступен')
+    expect(screen.queryByRole('button', { name: 'Создать анализ' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Повторить' }))
+    expect(await screen.findByText('Анализ за этот период ещё не создан')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Создать анализ' })).toBeVisible()
+  })
+
+  it('accepts a short history, a long exercise name and no client goal without leaking technical text', async () => {
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-08-10'))
+    repositories.listForClient.mockResolvedValue([publishedSummary])
+
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByText(longExerciseName)).toBeVisible()
+    expect(screen.getByText('Рабочий вес вырос на 17%.')).toBeVisible()
+    expect(screen.getByText('1,1 в неделю')).toBeVisible()
+    expect(screen.getByRole('button', { name: '1 месяц' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: '3 месяца' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Добавить цель' })).toBeVisible()
+    expect(document.body).not.toHaveTextContent(/custom_metric_key|workouts_per_week/)
+  })
+
+  it('keeps the readable legacy fallback when structured progress facts are absent', async () => {
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(null)
+    repositories.listForClient.mockResolvedValue([{
+      ...publishedSummary,
+      metrics: { ...publishedSummary.metrics, progressFacts: [] },
+    }])
+
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByText('Служебный показатель равен 1,3.')).toBeVisible()
+    expect(document.body).not.toHaveTextContent('custom_metric_key')
   })
 })

@@ -112,6 +112,9 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
     queryKey: ['training-summaries', 'trainer', clientId],
     queryFn: () => trainingSummariesRepository.listForTrainer(clientId),
   })
+  const loading = query.isLoading || firstWorkout.isLoading
+  const loadError = query.error ?? firstWorkout.error
+  const ready = !loading && !loadError
   const availablePeriods = availableSummaryPeriods(firstWorkout.data, today, query.data)
   useEffect(() => {
     if (!availablePeriods.includes(period)) setPeriod('1m')
@@ -130,12 +133,12 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
     }),
   })
 
-  return <section className="ai-progress-card" aria-label="ИИ-анализ тренировок">
+  return <section className="ai-progress-card" aria-label="ИИ-анализ тренировок" aria-busy={loading}>
     <SummaryHeader published={summary?.published} />
-    <PeriodTabs value={period} available={availablePeriods} onChange={setPeriod} />
+    {ready && <PeriodTabs value={period} available={availablePeriods} onChange={setPeriod} />}
     <AsyncView
-      loading={query.isLoading || firstWorkout.isLoading}
-      error={query.error ?? firstWorkout.error}
+      loading={loading}
+      error={loadError}
       onRetry={() => void Promise.all([query.refetch(), firstWorkout.refetch()])}
     >
       {summary
@@ -152,7 +155,7 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
             <p>{formatLocalDate(range.start)} — {formatLocalDate(range.end)}</p>
           </div>}
     </AsyncView>
-    <footer className="ai-progress-footer">
+    {ready && <footer className="ai-progress-footer">
       <span>{summary ? `Обновлено ${new Date(summary.generatedAt).toLocaleString('ru-RU', { timeZone })}` : 'Данные клиента не отправляются без действия тренера'}</span>
       <button
         type="button"
@@ -165,7 +168,7 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
       >
         {generate.isPending ? 'Обновляем…' : summary ? 'Обновить' : 'Создать анализ'}
       </button>
-    </footer>
+    </footer>}
     {generate.error && <p className="ai-progress-error error" role="alert">{generate.error.message}</p>}
   </section>
 }
@@ -277,6 +280,9 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
     queryKey: ['training-summaries', 'client', clientId],
     queryFn: () => trainingSummariesRepository.listForClient(clientId),
   })
+  const loading = query.isLoading || firstWorkout.isLoading
+  const loadError = query.error ?? firstWorkout.error
+  const ready = !loading && !loadError
   const availablePeriods = availableSummaryPeriods(firstWorkout.data, today, query.data)
   useEffect(() => {
     if (!availablePeriods.includes(period)) setPeriod('1m')
@@ -296,12 +302,12 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
     }),
   })
 
-  return <section className="ai-progress-card client-progress-card" aria-label="Прогресс тренировок">
+  return <section className="ai-progress-card client-progress-card" aria-label="Прогресс тренировок" aria-busy={loading}>
     <SummaryHeader client />
-    <PeriodTabs value={period} available={availablePeriods} onChange={setPeriod} />
+    {ready && <PeriodTabs value={period} available={availablePeriods} onChange={setPeriod} />}
     <AsyncView
-      loading={query.isLoading || firstWorkout.isLoading}
-      error={query.error ?? firstWorkout.error}
+      loading={loading}
+      error={loadError}
       onRetry={() => void Promise.all([query.refetch(), firstWorkout.refetch()])}
     >
       {summary ? <ClientSummaryContent
@@ -317,7 +323,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
         <p>Создай его по завершённым тренировкам.</p>
       </div>}
     </AsyncView>
-    <footer className="ai-progress-footer">
+    {ready && <footer className="ai-progress-footer">
       <span>{summary ? `Сводка сформирована ${new Date(summary.publishedAt).toLocaleDateString('ru-RU', { timeZone })}` : 'Можно запросить первый анализ'}</span>
       <button
         type="button"
@@ -327,7 +333,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
       >
         {generate.isPending ? 'Обновляем…' : summary ? 'Обновить' : 'Создать анализ'}
       </button>
-    </footer>
+    </footer>}
     {generate.error && <p className="ai-progress-error error" role="alert">{generate.error.message}</p>}
   </section>
 }
