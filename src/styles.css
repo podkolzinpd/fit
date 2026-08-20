@@ -190,6 +190,97 @@
   --page-back-bg: #fffefc;
   background: var(--bg); color: var(--fg);
 }
+/* ── Пилотная светлая палитра (Figma «Фит», секция «Светлая тема»,
+   nodes 242-133 / 242-230 / 245-736). Это не третья тема, а второй набор
+   значений для светлой: пользователь по-прежнему выбирает «светлая/тёмная», а
+   какой из двух светлых наборов применить, решает default-off allowlist
+   (`isLightThemePilotEnabled`).
+
+   Вариант отдаёт обе метки — `theme-light theme-light-pilot`, — поэтому здесь
+   перечислены только значения, которые в макете отличаются от текущей светлой
+   темы; структурные правила и геометрия остаются общими. Красную, янтарную и
+   зелёные поверхности макет не показывает, они сознательно оставлены прежними.
+
+   Из макета взяты: белый фон, холодная шапка #F7F7F9, плоские поверхности полей
+   и значений #F5F4F2, графитовый текст #21201F, фиолетовый акцент #8766FF,
+   зелёный успех #1CC052 и фиолетовое свечение у нижней кромки экрана. Границ в
+   макете почти нет — иерархию держат светлота поверхности и мягкая тень,
+   поэтому --border здесь тише, чем в основной светлой теме. */
+.phone-frame.theme-light-pilot, .theme-light-pilot {
+  --bg: #ffffff; --fg: #21201f;
+  /* Акцент — фиолетовый #8766FF из макета: он держит заливки (реплики
+     ассистента, чипы, активные состояния). Для акцент-ТЕКСТА на белом #8766FF
+     даёт всего 3.9:1, поэтому текстовый вариант затемнён до #6E4CE6 (5.4:1 на
+     фоне, 5.2:1 на карточке) — тот же приём, что с коралловым #A83714 в
+     основной светлой теме и с #A68CF0 в тёмном пилоте. */
+  --accent: #8766ff; --accent-label: #6e4ce6;
+  --accent-strong: #6e4ce6; --accent-weak: #6e4ce6;
+  --accent-border: #c3b2ff; --accent-ring: #8766ff3d; --accent-focus: #8766ff;
+  --accent-grad: linear-gradient(145deg, #8766ff, #8563ff);
+  --accent-surface: #f0ecff; --accent-surface-border: #d9cfff;
+  --accent-shadow: #6e4ce629; --selection: #8766ff3d;
+  /* Аватары уходят в ту же фиолетовую гамму, что и в тёмном пилоте; зелёный
+     по-прежнему зарезервирован за успехом и положительной динамикой. */
+  --avatar-grad-0: linear-gradient(145deg, #7d5cea, #4c2fb0);
+  --avatar-grad-1: linear-gradient(145deg, #9a72f0, #5b3bc4);
+  --avatar-grad-2: linear-gradient(145deg, #6a7cf0, #3b3fb4);
+  --avatar-grad-3: linear-gradient(145deg, #b06ae8, #6b2fae);
+  /* Лестница поверхностей из макета: шапка → фон → карточка → поле/значение.
+     Карточка совпадает с фоном по цвету, её отделяет мягкая тень, а не рамка. */
+  --surface: #f7f7f9; --surface-raised: #ffffff;
+  --muted: #696866; --secondary-label-fg: #55534f;
+  --border: #e7e7e6; --success: #1cc052; --input: #f5f4f2;
+  --fg-strong: #21201f; --fg-on-surface: #21201f;
+  --surface-sunken: #f5f4f2; --surface-elevated: #ffffff;
+  --hairline: #21201f14; --overlay: #21201f8f;
+  --card-grad: #ffffff;
+  --live-warm: #f0ecff; --live-warm-border: var(--accent-surface-border);
+  --progress-grad: radial-gradient(circle at 90% -10%, #8766ff1f, transparent 40%), linear-gradient(155deg, #f4f1ff, #ffffff 60%);
+  --progress-border: #d9cfff;
+  --shadow-card: 0 6px 18px #21201f14;
+  --voice-inset: #f7f5ff;
+  --voice-ring: #8766ff36; --voice-ring-active: #8766ff70;
+  --voice-shadow: 0 12px 28px #21201f1f; --voice-shadow-active: 0 7px 18px #21201f29;
+  --voice-context-divider: #ececeb;
+  --voice-context-shadow: 0 6px 18px #21201f12; --voice-context-arrow: #696866;
+  --ai-card-border: var(--progress-border); --ai-card-background: var(--progress-grad);
+  --ai-card-shadow: 0 12px 32px #6e4ce614; --ai-divider: var(--border);
+  --ai-subtle-surface: #f7f5ff; --ai-regularity-surface: #f6f4ff;
+  --ai-demo-border: #cbbcf7; --ai-demo-fg: #5a3fc0; --ai-demo-surface: #f0ecff;
+  --ai-mark-border: #a68cf080; --ai-mark-background: linear-gradient(145deg, #8766ff, #6242d8); --ai-mark-shadow: 0 8px 24px #6e4ce640;
+  --ai-editor-surface: #ffffff;
+  --neutral-current: #f5f4f2; --neutral-current-border: #d5d5d4;
+  --progress-dot: #e0dfdd; --progress-dot-current: #8b8a88; --progress-dot-current-border: #696866;
+  --secondary-hover: #ececea; --tertiary-fg: #696866;
+  --bar-bg: #fffffff2;
+  --secondary-bg: #f5f4f2; --secondary-fg: #21201f;
+  --page-back-bg: #ffffff;
+  /* Свечение у нижней кромки — подпись макета. Ступени взяты из рендера, но
+     привязаны к нижнему краю рамки в пикселях, а не в процентах, и до отметки
+     70 px от низа (там стоит таб-бар) не насыщеннее #EBE5FF: вторичный текст
+     держит ≥4.5:1. Полную силу свечение набирает только под баром. Это то же
+     осознанное отступление, что и в тёмном пилоте, но в другую сторону — там
+     свечение ограничивали сверху по темноте, здесь по светлоте. */
+  --frame-border: #ececeb;
+  --frame-bg: linear-gradient(180deg,
+    #ffffff 0,
+    #ffffff calc(100% - 340px),
+    #f6f3ff calc(100% - 250px),
+    #f0ebff calc(100% - 160px),
+    #ebe5ff calc(100% - 70px),
+    #cfc2ff calc(100% - 34px),
+    #b09aff calc(100% - 10px),
+    #a389ff 100%);
+}
+/* Внутри рамки должно быть видно свечение макета. У .phone-frame.theme-light та
+   же специфичность и собственный `background: var(--bg)`, поэтому фон рамки
+   возвращаем на --frame-bg правилом ниже по файлу. Снаружи рамки и на <html>
+   остаётся чистый --bg: второй селектор сюда намеренно не добавлен. */
+.phone-frame.theme-light-pilot { background: var(--frame-bg) }
+/* При открытой клавиатуре нижние отступы контента сокращаются, и текст может
+   оказаться там, где свечение уже насыщенное. Клавиатура всё равно закрывает
+   низ экрана, поэтому в этом состоянии оставляем чистый белый. */
+.phone-frame.theme-light-pilot.keyboard-open { --frame-bg: #ffffff }
 /* ── Пилотная тёмная палитра (Figma «Фит», node 116-4449). Это не третья тема,
    а второй набор значений для тёмной: пользователь по-прежнему выбирает
    «светлая/тёмная», а какой из двух тёмных наборов применить, решает
@@ -2023,3 +2114,30 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .theme-dark-pilot .picker-muscle.active { color: var(--accent-label) }
 .theme-dark-pilot .picker-create { border-color: var(--accent-surface-border); color: var(--accent-label); background: var(--accent-surface) }
 .theme-dark-pilot .voice-input-button.recording { border-color: var(--danger-border); color: var(--danger); background: var(--danger-surface) }
+/* ── Пилотная светлая палитра: правила, где основная светлая тема держит цвет
+   литералом, а не токеном, и он остался тёплым коралловым. Собраны одним
+   блоком после `.theme-light`-правил — та же специфичность, побеждает порядок,
+   поэтому пилот целиком удаляется или раскатывается одним куском. */
+.theme-light-pilot .tab-bar { background: #ffffffed }
+.theme-light-pilot .tab-bar a { color: #696866 }
+.theme-light-pilot .week-day { background: #ffffff; box-shadow: 0 3px 10px #21201f0d }
+.theme-light-pilot .day-grid-event { box-shadow: 0 4px 12px #21201f12 }
+.theme-light-pilot .progress-form-card,
+.theme-light-pilot .progress-history,
+.theme-light-pilot .metrics-manager { background: #ffffff }
+.theme-light-pilot .trainer-measurements-content > .progress-form-card,
+.theme-light-pilot .trainer-measurements-content > .progress-history,
+.theme-light-pilot .trainer-measurements-content > .metrics-manager { background: transparent }
+.theme-light-pilot .client-access-card { background: #f7f5ff }
+.theme-light-pilot .badge { color: #55534f; background: #f0efed }
+.theme-light-pilot .goal-stages-hint { background: #f6f4ff }
+/* Ниже — правила, где коралловый или тёмный цвет зашит литералом в базовом
+   слое и не переопределён светлой темой; тёмный пилот снимает их тем же
+   списком. */
+.theme-light-pilot .attention { background: var(--danger-surface) }
+.theme-light-pilot .today-primary-cta { border-color: var(--accent-border); background: var(--accent-grad) }
+.theme-light-pilot .exercise.current .live-confirm { box-shadow: 0 8px 22px var(--accent-shadow) }
+.theme-light-pilot .ai-progress-periods button.active { box-shadow: 0 6px 18px var(--accent-shadow) }
+.theme-light-pilot .voice-input-button.recording { border-color: var(--danger-border); color: var(--danger); background: var(--danger-surface) }
+.theme-light-pilot .wearable-card { background: #ffffff }
+.theme-light-pilot .catalog-custom-section, .theme-light-pilot .catalog-system-section { background: #ffffff }

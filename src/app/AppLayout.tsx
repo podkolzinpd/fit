@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnalyticsIcon, ClientsIcon, HomeIcon, ProfileIcon, ScheduleIcon, SettingsIcon, TodayIcon } from '../shared/icons'
 import { useAuth } from './auth-context'
 import { applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from './theme'
-import { isAssistantNavPilotEnabled, isDarkThemePilotEnabled, isTodayStartRedesignEnabled } from './feature-flags'
+import { isAssistantNavPilotEnabled, isDarkThemePilotEnabled, isLightThemePilotEnabled, isTodayStartRedesignEnabled } from './feature-flags'
 
 export function AppLayout() {
   const { actor } = useAuth()
@@ -14,8 +14,11 @@ export function AppLayout() {
   const [keyboardOpen, setKeyboardOpen] = useState(false)
   // main.tsx применяет тему до первого render, когда аккаунт ещё неизвестен.
   // Пилотный вариант подключается здесь — как только auth вернул actor и
-  // allowlist можно проверить; вне allowlist вариант остаётся прежним тёмным.
-  const themeVariant = resolveThemeVariant(theme, Boolean(actor && isDarkThemePilotEnabled(actor.userId)))
+  // allowlist можно проверить; вне allowlist вариант остаётся прежним.
+  const themeVariant = resolveThemeVariant(theme, {
+    light: Boolean(actor && isLightThemePilotEnabled(actor.userId)),
+    dark: Boolean(actor && isDarkThemePilotEnabled(actor.userId)),
+  })
 
   useEffect(() => {
     // Класс живёт на <html>: фон вне рамки телефона и цвет системной панели

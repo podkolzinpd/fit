@@ -48,6 +48,21 @@ export function isDarkThemePilotEnabled(userId: string) {
   return allowedUserIds.includes(userId)
 }
 
+// Светлая палитра из Figma-макета «Фит» поставляется в общем бандле, но
+// включается только участникам пилота и только когда пользователь сам выбрал
+// светлую тему. Allowlist отдельный от тёмного пилота: аудитории раскатываются
+// независимо. Флаг намеренно default-off; allowlist не является границей
+// авторизации и содержит только публичные UUID аккаунтов — данные защищаются
+// существующими RLS/ownership-проверками.
+export function isLightThemePilotEnabled(userId: string) {
+  if (import.meta.env.VITE_LIGHT_THEME_PILOT_ENABLED !== 'true') return false
+  const allowedUserIds = String(import.meta.env.VITE_LIGHT_THEME_PILOT_USER_IDS ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+  return allowedUserIds.includes(userId)
+}
+
 export interface YandexIdPilotConfig {
   apiBaseUrl: string
   clientId: string
