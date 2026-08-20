@@ -26,12 +26,15 @@ jobs:
           sql="SELECT \
             countIf(position(event_message, 'authentication_required') > 0) AS authentication_required, \
             countIf(position(event_message, 'client_not_found') > 0) AS client_not_found, \
+            countIf(position(event_message, 'client_lookup_failed') > 0) AS client_lookup_failed, \
+            countIf(position(event_message, 'client_memberships_lookup_failed') > 0) AS client_memberships_lookup_failed, \
             countIf(position(event_message, 'client_goal_lookup_failed') > 0) AS client_goal_lookup_failed, \
             countIf(position(event_message, 'first_workout_lookup_failed') > 0) AS first_workout_lookup_failed, \
             countIf(position(event_message, 'workouts_lookup_failed') > 0) AS workouts_lookup_failed, \
             countIf(position(event_message, 'exercises_lookup_failed') > 0) AS exercises_lookup_failed, \
             countIf(position(event_message, 'sets_lookup_failed') > 0) AS sets_lookup_failed, \
             countIf(position(event_message, 'no_completed_workouts') > 0) AS no_completed_workouts, \
+            countIf(position(event_message, 'source_row_limit_reached') > 0) AS source_row_limit_reached, \
             countIf(position(event_message, 'summary_cache_lookup_failed') > 0) AS summary_cache_lookup_failed, \
             countIf(position(event_message, 'summary_save_failed') > 0) AS summary_save_failed, \
             countIf(position(event_message, 'summary_visibility_save_failed') > 0) AS summary_visibility_save_failed, \
@@ -41,6 +44,11 @@ jobs:
             countIf(position(event_message, 'yandex_cloud_invalid_json') > 0) AS yandex_cloud_invalid_json, \
             countIf(position(event_message, 'yandex_cloud_invalid_summary') > 0) AS yandex_cloud_invalid_summary, \
             countIf(position(event_message, 'yandex_cloud_empty_response') > 0) AS yandex_cloud_empty_response, \
+            countIf(position(event_message, 'supabase_url_not_configured') > 0) AS supabase_url_not_configured, \
+            countIf(position(event_message, 'supabase_publishable_key_not_configured') > 0) AS supabase_publishable_key_not_configured, \
+            countIf(position(event_message, 'supabase_service_role_key_not_configured') > 0) AS supabase_service_role_key_not_configured, \
+            countIf(position(event_message, 'yandex_cloud_api_key_not_configured') > 0) AS yandex_cloud_api_key_not_configured, \
+            countIf(position(event_message, 'yandex_cloud_folder_id_not_configured') > 0) AS yandex_cloud_folder_id_not_configured, \
             countIf(position(event_message, 'internal_error') > 0) AS internal_error, \
             maxIf(timestamp, position(event_message, 'summarize-client-training request failed') > 0) AS latest_known_failure \
           FROM logs WHERE source = 'function_logs'"
