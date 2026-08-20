@@ -104,6 +104,7 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
   const timeZone = normalizeTimeZone(actor?.timezone)
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState<SummaryPeriod>('1m')
+  const [generationMessage, setGenerationMessage] = useState<string | null>(null)
   const firstWorkout = useQuery({
     queryKey: ['training-summary-first-workout', clientId],
     queryFn: () => trainingSummariesRepository.firstCompletedWorkoutDate(clientId),
@@ -122,20 +123,31 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
   const summary = summaryPeriodMatch(query.data ?? [], period, today)
   const range = summaryPeriodRange(period, today)
   const generate = useMutation({
-    mutationFn: () => trainingSummariesRepository.generate(
-      clientId,
-      range.start,
-      range.end,
-      Boolean(summary),
-    ),
-    onSuccess: async () => queryClient.invalidateQueries({
-      queryKey: ['training-summaries', 'trainer', clientId],
-    }),
+    mutationFn: async () => {
+      const generation = await trainingSummariesRepository.generate(
+        clientId,
+        range.start,
+        range.end,
+        Boolean(summary),
+      )
+      const summaries = await trainingSummariesRepository.listForTrainer(clientId)
+      return { generation, summaries }
+    },
+    onMutate: () => setGenerationMessage(null),
+    onSuccess: ({ generation, summaries }) => {
+      queryClient.setQueryData(['training-summaries', 'trainer', clientId], summaries)
+      setGenerationMessage(generation.cached ? 'Анализ уже актуален' : 'Анализ обновлён')
+    },
   })
+  const changePeriod = (nextPeriod: SummaryPeriod) => {
+    generate.reset()
+    setGenerationMessage(null)
+    setPeriod(nextPeriod)
+  }
 
   return <section className="ai-progress-card" aria-label="ИИ-анализ тренировок" aria-busy={loading}>
     <SummaryHeader published={summary?.published} />
-    {ready && <PeriodTabs value={period} available={availablePeriods} onChange={setPeriod} />}
+    {ready && <PeriodTabs value={period} available={availablePeriods} onChange={changePeriod} />}
     <AsyncView
       loading={loading}
       error={loadError}
@@ -156,7 +168,13 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
           </div>}
     </AsyncView>
     {ready && <footer className="ai-progress-footer">
-      <span>{summary ? `Обновлено ${new Date(summary.generatedAt).toLocaleString('ru-RU', { timeZone })}` : 'Данные клиента не отправляются без действия тренера'}</span>
+      <span role={generationMessage ? 'status' : undefined}>
+        {generate.isPending
+          ? 'Формируем новый анализ — это может занять до минуты'
+          : generationMessage ?? (summary
+            ? `Обновлено ${new Date(summary.generatedAt).toLocaleString('ru-RU', { timeZone })}`
+            : 'Данные клиента не отправляются без действия тренера')}
+      </span>
       <button
         type="button"
         className="secondary"
@@ -272,6 +290,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
   const timeZone = normalizeTimeZone(actor?.timezone)
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState<SummaryPeriod>('1m')
+  const [generationMessage, setGenerationMessage] = useState<string | null>(null)
   const firstWorkout = useQuery({
     queryKey: ['training-summary-first-workout', clientId],
     queryFn: () => trainingSummariesRepository.firstCompletedWorkoutDate(clientId),
@@ -293,18 +312,27 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
     queryFn: () => goalsRepository.get(clientId),
   })
   const generate = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const range = summaryPeriodRange(period, today)
-      return trainingSummariesRepository.generate(clientId, range.start, range.end, true)
+      const generation = await trainingSummariesRepository.generate(clientId, range.start, range.end, true)
+      const summaries = await trainingSummariesRepository.listForClient(clientId)
+      return { generation, summaries }
     },
-    onSuccess: async () => queryClient.invalidateQueries({
-      queryKey: ['training-summaries', 'client', clientId],
-    }),
+    onMutate: () => setGenerationMessage(null),
+    onSuccess: ({ generation, summaries }) => {
+      queryClient.setQueryData(['training-summaries', 'client', clientId], summaries)
+      setGenerationMessage(generation.cached ? 'Анализ уже актуален' : 'Анализ обновлён')
+    },
   })
+  const changePeriod = (nextPeriod: SummaryPeriod) => {
+    generate.reset()
+    setGenerationMessage(null)
+    setPeriod(nextPeriod)
+  }
 
   return <section className="ai-progress-card client-progress-card" aria-label="Прогресс тренировок" aria-busy={loading}>
     <SummaryHeader client />
-    {ready && <PeriodTabs value={period} available={availablePeriods} onChange={setPeriod} />}
+    {ready && <PeriodTabs value={period} available={availablePeriods} onChange={changePeriod} />}
     <AsyncView
       loading={loading}
       error={loadError}
@@ -324,7 +352,13 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
       </div>}
     </AsyncView>
     {ready && <footer className="ai-progress-footer">
-      <span>{summary ? `Сводка сформирована ${new Date(summary.publishedAt).toLocaleDateString('ru-RU', { timeZone })}` : 'Можно запросить первый анализ'}</span>
+      <span role={generationMessage ? 'status' : undefined}>
+        {generate.isPending
+          ? 'Формируем новый анализ — это может занять до минуты'
+          : generationMessage ?? (summary
+            ? `Сводка сформирована ${new Date(summary.publishedAt).toLocaleDateString('ru-RU', { timeZone })}`
+            : 'Можно запросить первый анализ')}
+      </span>
       <button
         type="button"
         className="secondary"
