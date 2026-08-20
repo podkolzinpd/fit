@@ -12,7 +12,9 @@ describe('WearableHealthCard', () => {
       authorize, read: vi.fn(),
     }
     render(<WearableHealthCard source={source} />)
-    expect(await screen.findByText('Доступно в приложении Fit на iPhone')).toBeInTheDocument()
+    expect(await screen.findByText('Доступны в приложении Fit на iPhone')).toBeInTheDocument()
+    expect(screen.getByText('Сон, шаги и восстановление')).toBeInTheDocument()
+    expect(screen.queryByText('Активность и восстановление')).not.toBeInTheDocument()
     expect(authorize).not.toHaveBeenCalled()
   })
 
