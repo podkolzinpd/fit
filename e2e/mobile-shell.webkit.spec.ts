@@ -680,6 +680,65 @@ test('iPhone: LLM regularity stays inside the single Progress summary at 390 px'
   await expectNoHorizontalOverflow(page)
 })
 
+for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {
+  test(`iPhone: короткая история и длинное упражнение не ломают Progress на ${viewport.width} px`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await login(page, 'client@fit.local')
+    await page.clock.install({ time: new Date('2026-08-20T18:00:00+03:00') })
+    await page.route('**/rest/v1/workouts?*', async (route) => {
+      const url = new URL(route.request().url())
+      if (url.searchParams.get('select') === 'workout_date') {
+        await route.fulfill({
+          contentType: 'application/json',
+          body: JSON.stringify({ workout_date: '2026-08-10' }),
+        })
+        return
+      }
+      await route.fallback()
+    })
+    await page.route('**/rest/v1/client_published_training_summaries?*', async (route) => {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify([{
+          id: '96000000-0000-4000-8000-000000000001',
+          source_summary_id: '96000000-0000-4000-8000-000000000002',
+          client_id: demoClientId,
+          period_start: '2026-07-21',
+          period_end: '2026-08-20',
+          summary: {
+            headline: 'Рабочий вес вырос на 16,67%.',
+            achievements: ['Рост подтверждён завершёнными тренировками.'],
+            consistency: 'За период выполнено 6 тренировок, в среднем 1,13 в неделю.',
+            encouragement: 'Продолжай в том же ритме.',
+          },
+          display_metrics: {
+            completed_workouts: 6,
+            workouts_per_week: 1.13,
+            active_weeks: 3,
+            longest_gap_days: 5,
+            progress_facts: [{
+              exercise_name: 'Тяга верхнего блока обратным узким хватом в кроссовере с дополнительной рукоятью',
+              kind: 'strength',
+              session_count: 3,
+              changes: [{ metric: 'max_weight', from: 50, to: 68, change_percent: 36, favorable: true }],
+            }],
+          },
+          generated_at: '2026-08-20T08:00:00Z',
+          published_at: '2026-08-20T08:05:00Z',
+        }]),
+      })
+    })
+
+    await page.goto('/me/progress')
+    const summary = page.locator('.client-progress-card')
+    await expect(summary.getByText('Тяга верхнего блока обратным узким хватом в кроссовере с дополнительной рукоятью')).toBeVisible()
+    await expect(summary.getByText('Рабочий вес вырос на 17%.')).toBeVisible()
+    await expect(summary.getByRole('button', { name: '1 месяц' })).toBeVisible()
+    await expect(summary.getByRole('button', { name: '3 месяца' })).toHaveCount(0)
+    await expectNoHorizontalOverflow(page)
+  })
+}
+
 test('iPhone: ручной выбор начинает с недавних, а не с разминки на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.route('**/exercises/base-bench-press.jpg', (route) => route.abort())
