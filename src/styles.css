@@ -1726,6 +1726,25 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .clients-search-empty { font-size:var(--type-body-size); line-height:var(--leading-body) }
 .client-card > div > strong { font-size:var(--type-body-size); line-height:var(--leading-snug) }
 .client-card p { font-size:var(--type-caption-size); line-height:var(--leading-snug) }
+/* ── Пилотное оформление поиска по клиентам. Раскатывается тем же default-off
+   allowlist, что и тёмная палитра (`isDarkThemePilotEnabled`), поэтому вне
+   пилота выше остаются прежние правила `.clients-search`, а committed visual
+   baselines не меняются. Блок сгруппирован и удаляется целиком вместе с веткой
+   в `ClientsListPage`. */
+.clients-search-pilot { display:flex; align-items:center; gap:var(--space-2); min-height:var(--control-height-primary); margin:0 0 var(--space-3); padding:0 var(--space-2) 0 var(--space-3); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--input); color:var(--fg-on-surface) }
+.clients-search-pilot:focus-within { border-color:var(--accent-focus); box-shadow:0 0 0 3px var(--accent-ring) }
+.clients-search-pilot > svg { flex:0 0 auto; width:20px; height:20px; color:var(--secondary-label-fg) }
+.clients-search-pilot input { flex:1; min-width:0; padding:0; border:0; border-radius:0; background:transparent; color:inherit; font-size:var(--type-body-size); line-height:var(--leading-body); outline:none }
+/* Плейсхолдер здесь — осмысленный текст, а не декорация, поэтому берём
+   --secondary-label-fg, а не --muted: на --input последний даёт всего 4.3:1
+   в пилотной тёмной палитре и 4.2:1 в светлой, то есть ниже порога AA. */
+.clients-search-pilot input::placeholder { color:var(--secondary-label-fg); opacity:1 }
+/* У type=search свой нативный крестик: он дублировал бы кнопку очистки и не
+   имеет доступного имени. */
+.clients-search-pilot input::-webkit-search-cancel-button, .clients-search-pilot input::-webkit-search-decoration { -webkit-appearance:none; appearance:none }
+.clients-search-clear { flex:0 0 auto; width:var(--control-height-standard); height:var(--control-height-standard); display:grid; place-items:center; padding:0; border:0; border-radius:50%; background:transparent; color:var(--secondary-label-fg); box-shadow:none }
+.clients-search-clear svg { width:18px; height:18px }
+.clients-search-clear:focus-visible { outline:3px solid var(--accent-ring); outline-offset:-3px }
 /* Профиль клиента продолжает визуальный язык стартового экрана: один чистый
    маршрут, крупная иерархия, спокойные белые секции и единственная CTA внизу. */
 .client-profile-form { gap: 16px; padding-bottom: 8px }

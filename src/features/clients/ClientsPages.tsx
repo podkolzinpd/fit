@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm } from 'react-hook-form'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { goalsRepository } from '../../data/repositories/goals.repository'
@@ -17,30 +17,7 @@ import { VoiceNoteField } from '../voice-input'
 import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
-import { AddIcon, ProfileIcon } from '../../shared/icons'
-
-export function ClientsPage() {
-  const showArchived = localStorage.getItem('fit.showArchivedClients') === 'true'
-  // Список — рабочая очередь тренера, поэтому при каждом входе показываем
-  // актуальную активность, а не данные из короткого SPA-кэша.
-  const query = useQuery({ queryKey: ['clients', showArchived], queryFn: () => clientsRepository.list(showArchived), refetchOnMount: 'always' })
-  const [search, setSearch] = useState('')
-  const clients = useMemo(() => {
-    const normalizedSearch = search.trim().toLocaleLowerCase('ru')
-    return query.data
-      ?.filter((client) => !normalizedSearch || client.fullName.toLocaleLowerCase('ru').includes(normalizedSearch))
-      .sort((left, right) => (right.lastActivityAt ?? '').localeCompare(left.lastActivityAt ?? '')) ?? []
-  }, [query.data, search])
-  return <Page title="Клиенты" className="clients-page" action={query.data?.length ? <Link className="button" to="/clients/new">Добавить</Link> : undefined}>
-    <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}
-      emptyTitle="Клиентов пока нет"
-      emptyDescription="Добавьте первого клиента, чтобы планировать тренировки и отслеживать прогресс."
-      emptyAction={<Link className="button" to="/clients/new">Добавить клиента</Link>}>
-      <label className="clients-search"><span className="sr-only">Поиск клиента</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Поиск по имени" autoComplete="off" /></label>
-      {clients.length > 0 ? <div className="cards clients-list">{clients.map((client) => <Link className="card client-card" key={client.id} to={`/clients/${client.id}`}><span className="client-avatar" aria-hidden="true"><ProfileIcon /></span><div><strong>{client.fullName}</strong><p>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</p></div>{client.archivedAt && <span className="badge">Архив</span>}<span className="client-card-arrow" aria-hidden="true">›</span></Link>)}</div> : <p className="clients-search-empty">По этому имени клиентов не найдено.</p>}
-    </AsyncView>
-  </Page>
-}
+import { AddIcon } from '../../shared/icons'
 
 export function MyClientPage() {
   const { actor, refresh } = useAuth()
