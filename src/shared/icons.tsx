@@ -46,6 +46,10 @@ export function SettingsIcon(props: IconProps) {
   return <Icon data-icon="settings" {...props}><circle cx="12" cy="12" r="3.2" /><path d="M19.2 12c0-.5-.05-.98-.14-1.45l2.04-1.6-2-3.46-2.4.97a7.2 7.2 0 0 0-2.5-1.45L13.83 2.5h-4l-.37 2.5c-.92.32-1.77.82-2.5 1.46l-2.4-.97-2 3.46 2.04 1.6a7.4 7.4 0 0 0 0 2.9l-2.04 1.6 2 3.46 2.4-.97c.73.64 1.58 1.14 2.5 1.46l.37 2.5h4l.37-2.51c.92-.32 1.77-.82 2.5-1.45l2.4.97 2-3.46-2.04-1.6c.09-.47.14-.95.14-1.45Z" /></Icon>
 }
 
+export function SearchIcon(props: IconProps) {
+  return <Icon data-icon="search" {...props}><circle cx="11" cy="11" r="6.5" /><path d="m15.8 15.8 4.7 4.7" /></Icon>
+}
+
 export function CloseIcon(props: IconProps) {
   return <Icon data-icon="close" {...props}><path d="M6 6l12 12M18 6 6 18" /></Icon>
 }

@@ -208,6 +208,22 @@ Exercise media uses one `ExerciseImage` contract in the picker and exercise
 detail: a square Fit surface, `object-fit: contain` so technique is not cropped,
 and the same neutral exercise placeholder for missing or failed media.
 
+A list filter field spans the full column on `--input`, carries `SearchIcon`
+inside the field, and moves the focus ring to the wrapper through
+`:focus-within` so icon and control share one outline. Its placeholder is real
+copy, so it uses `--secondary-label-fg`; `--muted` on `--input` falls to about
+4.2:1 in light and 4.3:1 in the dark pilot, below the AA threshold. The native
+`type="search"` clear button is suppressed in favor of a labeled button with a
+standard touch target. The field appears only when the list is long enough to
+need it — Clients shows it from six entries.
+
+This field ships behind the same default-off allowlist as the dark palette
+(`isDarkThemePilotEnabled`), so it is a `.clients-search-pilot` block beside the
+untouched `.clients-search` rules rather than a replacement. Outside the pilot
+the screen renders exactly as before, which is why the committed visual
+baselines do not move. Both the CSS block and the branch in `ClientsListPage`
+are removed together when the pilot ends or ships to everyone.
+
 Positive result emphasis is shared across secondary product surfaces:
 
 - a confirmed personal record uses `RecordIcon`, a visible Russian label, and
