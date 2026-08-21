@@ -99,26 +99,18 @@ function NextActionCard({ next, today }: { next: NextWorkout; today: LocalDate }
 function WeekCard({ week, loading }: { week: WorkoutRegularity | undefined; loading: boolean }) {
   if (loading) return <section className="client-home-week client-home-loading" role="status">Загружаем прогресс недели…</section>
   const completed = week?.completedCount ?? 0
+  if (completed === 0) return null
   const completedPlanned = week?.completedPlannedCount ?? 0
   const independent = Math.max(0, completed - completedPlanned)
-  const title = completed > 0 ? `${completed} ${workoutCountLabel(completed)}` : 'Пока без тренировок'
-  const description = completed > 0
-    ? completedPlanned === completed
-      ? completed === 1 ? 'По плану тренера' : completed === 2 ? 'Обе — по плану тренера' : 'Все — по плану тренера'
-      : independent === completed
-        ? completed === 1 ? 'Самостоятельно' : completed === 2 ? 'Обе — самостоятельно' : 'Все — самостоятельно'
-        : `${completedPlanned} по плану · ${independent} самостоятельно`
-    : week?.plannedCount
-      ? `План тренера: 0 из ${week.plannedCount} выполнено`
-      : 'Здесь появится первая завершённая тренировка'
-  const alerts = [
-    week?.partialCount ? partialWorkoutLabel(week.partialCount) : null,
-    week?.skippedCount ? `Пропущено: ${week.skippedCount}` : null,
-  ].filter(Boolean).join(' · ')
+  const title = `${completed} ${workoutCountLabel(completed)}`
+  const description = completedPlanned === completed
+    ? completed === 1 ? 'По плану тренера' : completed === 2 ? 'Обе — по плану тренера' : 'Все — по плану тренера'
+    : independent === completed
+      ? completed === 1 ? 'Самостоятельно' : completed === 2 ? 'Обе — самостоятельно' : 'Все — самостоятельно'
+      : `${completedPlanned} по плану · ${independent} самостоятельно`
   return <section className="client-home-week" aria-labelledby="client-home-week-title">
     <div className="client-home-section-head"><div><p className="eyebrow">ЭТА НЕДЕЛЯ</p><h2 id="client-home-week-title">{title}</h2></div><Link to="/me/progress">Прогресс ›</Link></div>
     <p>{description}</p>
-    {alerts && <small className="client-home-week-alerts">{alerts}</small>}
   </section>
 }
 
@@ -129,10 +121,6 @@ function workoutCountLabel(count: number): string {
   if (mod10 === 1) return 'тренировка'
   if (mod10 >= 2 && mod10 <= 4) return 'тренировки'
   return 'тренировок'
-}
-
-function partialWorkoutLabel(count: number): string {
-  return `В ${count} ${count === 1 ? 'тренировке' : 'тренировках'} часть упражнений не выполнена`
 }
 
 function HighlightCard({ highlight, today }: { highlight: HomeHighlight; today: LocalDate }) {

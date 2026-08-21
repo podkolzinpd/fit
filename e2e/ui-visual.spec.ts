@@ -46,7 +46,12 @@ async function createStandaloneLiveWorkout(page: import('@playwright/test').Page
   await page.getByRole('button', { name: 'Создать карточку' }).click()
 
   await page.goto('/me/workouts')
-  await page.getByRole('link', { name: 'Добавить тренировку' }).click()
+  const emptyAction = page.getByRole('link', { name: 'Добавить тренировку' })
+  await expect(emptyAction).toHaveCount(1)
+  await expect(page.getByText('БЛИЖАЙШЕЕ')).toHaveCount(0)
+  await expect(page.getByText('РЕЗУЛЬТАТЫ')).toHaveCount(0)
+  await expect(page.locator('.empty')).toHaveCount(0)
+  await emptyAction.click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
@@ -71,6 +76,7 @@ test('current role home keeps its visual baseline', async ({ page }, testInfo) =
   await page.goto(trainer ? '/today' : '/me')
 
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  if (!trainer) await expect(page.getByText('Загружаем прогресс недели…')).toHaveCount(0)
   await expect(page.locator('.phone-frame')).toBeVisible()
   await expectVisualBaseline(page, 'role-home.png', [], true)
 })
@@ -102,6 +108,7 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
 
   await page.goto('/me/workouts')
   await expect(page.getByRole('heading', { name: 'Мои тренировки' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Добавить тренировку' })).toBeVisible()
   await expectVisualBaseline(page, `client-workouts-${process.platform}.png`)
 })
 
@@ -135,7 +142,7 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await expectVisualBaseline(page, 'trainer-schedule.png')
 
   await page.goto(`/progress/${demoClientId}`)
-  await expect(page.getByRole('heading', { name: 'Прогресс' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Прогресс', exact: true })).toBeVisible()
   await expect(page.getByText('Анна Смирнова', { exact: true })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Тренировки за неделю' })).toBeVisible()
   await expect(page.getByLabel('ИИ-анализ тренировок')).toBeVisible()

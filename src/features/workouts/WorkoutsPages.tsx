@@ -231,12 +231,12 @@ export function WorkoutChronicleCard({ workout, contextLabel }: { workout: Worko
       {exercisePreview.visible.length > 0 ? exercisePreview.visible.map((exercise) => {
         const result = done
           ? compactCompletedSetSummary(exercise.sets)
-          : compactPlannedSetSummary(exercise.sets) ?? 'План без числовых значений'
+          : compactPlannedSetSummary(exercise.sets)
         return <div className="workout-chronicle-exercise" key={exercise.id}>
           <span className="workout-chronicle-exercise-name">{exercise.name}
             {exercise.trainerComment && <small className="workout-exercise-comment">💬 {exercise.trainerComment}</small>}
           </span>
-          <strong>{result}</strong>
+          {result && <strong>{result}</strong>}
         </div>
       }) : <p className="muted">Без упражнений</p>}
       {exercisePreview.hiddenCount > 0 && <p className="workout-chronicle-more">Ещё {exercisePreview.hiddenCount} {exerciseCountLabel(exercisePreview.hiddenCount)}</p>}
@@ -268,13 +268,12 @@ export function ClientWorkoutsPage() {
   })
   const items = query.data?.pages.flatMap((page) => page.items) ?? []
   const history = splitClientWorkouts(items, today).history
-  return <Page title="История тренировок" back={`/clients/${clientId}`} action={<Link className="button" to={`/workouts/new?client=${clientId}`}>Добавить</Link>}><AsyncView loading={query.isLoading} error={query.error} empty={!history.length} onRetry={() => void query.refetch()}
-    emptyTitle="История пока пуста"
-    emptyDescription="Завершённые тренировки появятся здесь вместе с результатами."
-    emptyAction={<Link className="button" to={`/workouts/new?client=${clientId}`}>Запланировать тренировку</Link>}><div className="cards workout-chronicle-list">{history.map((workout) => {
+  return <Page title="История тренировок" back={`/clients/${clientId}`} action={history.length > 0 && <Link className="button" to={`/workouts/new?client=${clientId}`}>Запланировать</Link>}><AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
+    {history.length > 0 ? <><div className="cards workout-chronicle-list">{history.map((workout) => {
     const clientAuthored = Boolean(workout.createdBy && workout.createdBy !== actor?.userId)
     return <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientAuthored ? 'Создано клиентом' : null} />
-  })}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></AsyncView></Page>
+  })}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></> : <Link className="button wide trainer-history-plan" to={`/workouts/new?client=${clientId}`}>Запланировать тренировку</Link>}
+  </AsyncView></Page>
 }
 
 export function WorkoutFormPage() {

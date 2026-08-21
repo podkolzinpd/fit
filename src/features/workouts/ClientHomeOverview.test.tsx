@@ -76,7 +76,8 @@ describe('ClientHomeOverview', () => {
     expect(screen.getByRole('link', { name: 'Открыть план' })).toBeVisible()
     expect(screen.getByRole('heading', { name: '3 тренировки' })).toBeVisible()
     expect(screen.getByText('1 по плану · 2 самостоятельно')).toBeVisible()
-    expect(screen.getByText('В 2 тренировках часть упражнений не выполнена')).toBeVisible()
+    expect(screen.queryByText(/часть упражнений не выполнена/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/пропущено/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Вернуться к бегу' })).toBeVisible()
     expect(screen.queryByText('—')).not.toBeInTheDocument()
@@ -94,10 +95,9 @@ describe('ClientHomeOverview', () => {
 
   it('keeps the empty state useful and puts self-training first', () => {
     render(<MemoryRouter><ClientHomeOverview today={today} workouts={[]} regularity={[]} goal={null} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Начать свою тренировку</button>} /></MemoryRouter>)
-    const selfAction = screen.getByRole('button', { name: 'Начать свою тренировку' })
-    const weekTitle = screen.getByRole('heading', { name: 'Пока без тренировок' })
-    expect(selfAction.compareDocumentPosition(weekTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(screen.getByText('Здесь появится первая завершённая тренировка')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Начать свою тренировку' })).toBeVisible()
+    expect(screen.queryByText('ЭТА НЕДЕЛЯ')).not.toBeInTheDocument()
+    expect(screen.queryByText('Пока без тренировок')).not.toBeInTheDocument()
     expect(screen.queryByText('—')).not.toBeInTheDocument()
   })
 

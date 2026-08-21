@@ -147,7 +147,8 @@ describe('ExercisePicker', () => {
     expect(screen.queryByLabelText('Группа мышц')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Фильтры 1' })).toBeInTheDocument()
     await user.type(searchInput, 'жим')
-    expect(screen.getByText('Совпадений нет')).toBeInTheDocument()
+    expect(screen.getByText('Ничего не найдено')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Сбросить фильтры' })).toBeInTheDocument()
   })
 
   it('blurs search before opening filters so the keyboard does not cover the panel', async () => {
@@ -225,7 +226,19 @@ describe('ExercisePicker', () => {
     await user.click(screen.getByRole('button', { name: 'Повторить' }))
     expect(retry).toHaveBeenCalledOnce()
     rerender(<ExercisePicker catalog={catalog({ exercises: [] })} onPick={vi.fn()} onClose={vi.fn()} />)
-    expect(screen.getByText('Ничего не найдено')).toBeInTheDocument()
+    expect(screen.queryByText('Ничего не найдено')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Создать упражнение' })).toBeInTheDocument()
+  })
+
+  it('offers one clear recovery action when search has no results', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+
+    await user.type(screen.getByLabelText('Поиск упражнения'), 'Новое движение')
+
+    expect(screen.getAllByText('Ничего не найдено')).toHaveLength(1)
+    await user.click(screen.getByRole('button', { name: 'Создать упражнение' }))
+    expect(screen.getByLabelText('Название')).toHaveValue('Новое движение')
   })
 
   it('closes from the overlay and close button', async () => {
