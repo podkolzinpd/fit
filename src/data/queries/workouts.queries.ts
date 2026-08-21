@@ -1,4 +1,4 @@
-import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, WorkoutDraft, WorkoutFeedbackDraft, WorkoutTrainerResponseDraft } from '../../shared/domain'
+import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, WorkoutDraft, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutTrainerResponseDraft } from '../../shared/domain'
 import { supabase } from './client'
 import { toJson } from './json'
 
@@ -86,8 +86,8 @@ export const workoutQueries = {
   askQuestion: (workoutId: string, question: string, version: number) => supabase.rpc('ask_workout_question', {
     p_workout_id: workoutId, p_question: question, p_expected_version: version,
   }),
-  answerQuestion: (workoutId: string, response: WorkoutTrainerResponseDraft, version: number) => supabase.rpc('answer_workout_question', {
-    p_workout_id: workoutId, p_reaction: response.reaction, p_review: response.review, p_expected_version: version,
+  answerQuestion: (workoutId: string, response: WorkoutQuestionAnswerDraft, version: number) => supabase.rpc('answer_workout_question', {
+    p_workout_id: workoutId, p_reaction: response.reaction ?? null, p_review: response.review, p_expected_version: version,
   }),
   resolveQuestion: (workoutId: string, version: number) => supabase.rpc('resolve_workout_question', {
     p_workout_id: workoutId, p_expected_version: version,

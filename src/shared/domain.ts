@@ -316,6 +316,11 @@ export interface WorkoutTrainerResponseDraft {
   review: string
 }
 
+export interface WorkoutQuestionAnswerDraft {
+  reaction?: TrainerReaction
+  review: string
+}
+
 export interface WorkoutSummary {
   id: UUID
   workoutDate: LocalDate

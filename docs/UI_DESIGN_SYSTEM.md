@@ -288,9 +288,10 @@ accessible names remain mandatory.
 
 - Client acceptance widths are 390 and 430 px; legacy WebKit smoke also covers
   375 and 360 px for overflow regressions.
-- The frame uses dynamic viewport units and iOS safe-area insets. Keyboard state
-  is derived from Visual Viewport so fixed navigation/actions do not cover
-  fields.
+- The frame uses CSS dynamic viewport units and iOS safe-area insets; JavaScript
+  never caches the app-shell height. Keyboard state alone is derived from Visual
+  Viewport so fixed navigation/actions do not cover fields and the shell cannot
+  remain shortened after the keyboard closes.
 - Horizontal overflow is forbidden at the document level. Intentional tab rows
   may scroll horizontally and hide the scrollbar.
 - Trainer desktop is now captured at 1440×1000 as a visual baseline; it records
