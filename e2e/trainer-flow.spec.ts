@@ -303,7 +303,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // История и карточка используют один префикс ключа кэша, но разной формы —
   // переход туда-обратно не должен ронять приложение (регресс e.filter).
   await page.getByRole('link', { name: 'История тренировок', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'История тренировок' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировки клиента' })).toBeVisible()
   await expect(page.locator('.card').first()).toBeVisible()
   // На карточке истории — список упражнений (а не группы мышц) и тоннаж.
   await expect(page.locator('.cards .card').first()).toContainText('Болгарский присед')
