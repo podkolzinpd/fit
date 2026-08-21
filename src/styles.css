@@ -308,7 +308,7 @@ h3, .type-body-strong { font-size: var(--type-body-size); font-weight: var(--wei
 .type-caption { font-size: var(--type-caption-size); font-weight: var(--weight-medium); line-height: var(--leading-snug) }
 .type-numeric { font-size: var(--type-numeric-size); font-weight: var(--weight-bold); line-height: var(--leading-tight); font-variant-numeric: tabular-nums }
 p { margin: 6px 0 }
-.phone-frame { width: min(calc(100% - 32px), 440px); height: calc(var(--app-viewport-height, 100dvh) - 32px); min-height: 0; margin: 16px auto; overflow: hidden; background: var(--frame-bg, radial-gradient(circle at 86% -12%, #3a2418 0, transparent 36%), linear-gradient(180deg, #1d1a24, #17151c)); display: flex; flex-direction: column; border: 1px solid var(--frame-border, #3a3544); border-radius: 26px; box-shadow: 0 18px 54px #17131f2b }
+.phone-frame { width: min(calc(100% - 32px), 440px); height: calc(100dvh - 32px); min-height: 0; margin: 16px auto; overflow: hidden; background: var(--frame-bg, radial-gradient(circle at 86% -12%, #3a2418 0, transparent 36%), linear-gradient(180deg, #1d1a24, #17151c)); display: flex; flex-direction: column; border: 1px solid var(--frame-border, #3a3544); border-radius: 26px; box-shadow: 0 18px 54px #17131f2b }
 .content { flex: 1; min-height: 0; margin-top: env(safe-area-inset-top); overflow-y: auto; overflow-x: hidden; padding-bottom: 94px; scrollbar-width: none }.content::-webkit-scrollbar { display: none }
 /* Верхняя safe-area находится снаружи scroll-container: при прокрутке она не
    уезжает, и контент не оказывается под статус-баром iPhone. */
@@ -887,10 +887,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-trainer-reactions .workout-feedback-option { font-size:22px }
 .workout-response-limit { margin:-8px 0 0; text-align:right; font-size:var(--text-caption) }
 .workout-response-body { display:grid; grid-template-columns:42px minmax(0,1fr); align-items:start; gap:4px 10px; min-width:0 }
+.workout-response-body.without-reaction { grid-template-columns:minmax(0,1fr) }
 .workout-response-reaction { display:grid; flex:0 0 auto; place-items:center; width:42px; height:42px; border-radius:14px; background:var(--surface-sunken); font-size:23px }
 .workout-response-body .workout-review-text { min-width:0; padding-top:2px; overflow-wrap:anywhere }
 .workout-response-meta { margin:-4px 0 0 52px; color:var(--muted); font-size:var(--text-caption) }
 .workout-response-body .workout-response-meta { grid-column:2; margin:0 }
+.workout-response-body.without-reaction .workout-response-meta { grid-column:1 }
 .workout-feedback-fieldset { min-width:0; margin:0; padding:0; border:0 }
 .workout-feedback-fieldset legend { margin-bottom:5px; color:var(--fg-on-surface); font-weight:var(--weight-semibold) }
 .workout-feedback-fieldset > .muted { margin:0 0 9px; font-size:var(--text-caption) }
@@ -1965,7 +1967,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Старт — утилитарный экран: обычный iOS-tabbar вплотную к низу, без плавающей
    капсулы и перекрытия поля. На клавиатуре он скрывается через VisualViewport. */
 .today-start-shell .tab-bar { left:50%; bottom:0; width:min(100%, 440px); transform:translateX(-50%); border:0; border-top:1px solid var(--border); border-radius:0; box-shadow:none; }.today-start-shell .content { padding-bottom:calc(86px + env(safe-area-inset-bottom)); }.today-start-shell.keyboard-open .tab-bar { display:none; }.today-start-shell.keyboard-open .content { padding-bottom:20px; }
-@media (max-width: 480px) { .phone-frame { width: 100%; height: var(--app-viewport-height, 100dvh); margin: 0; border: 0; border-radius: 0 }.auth-screen { width: 100%; min-height: 100dvh; margin: 0; border: 0; border-radius: 0 }.content:not(.content-immersive) { padding-bottom:0 }.tab-bar { position:static; flex:0 0 auto; bottom:auto; width:100%; border-width:1px 0 0; border-radius:0; box-shadow:none; backdrop-filter:none }.today-start-shell .tab-bar { left:auto; width:100%; transform:none }.today-start-shell .content { padding-bottom:0 } }
+@media (max-width: 480px) { html, body, #root { width:100%; height:100%; overflow:hidden }.phone-frame { width: 100%; height: 100dvh; margin: 0; border: 0; border-radius: 0 }.auth-screen { width: 100%; min-height: 100dvh; margin: 0; border: 0; border-radius: 0 }.content:not(.content-immersive) { padding-bottom:0 }.tab-bar { position:static; flex:0 0 auto; bottom:auto; width:100%; border-width:1px 0 0; border-radius:0; box-shadow:none; backdrop-filter:none }.today-start-shell .tab-bar { left:auto; width:100%; transform:none }.today-start-shell .content { padding-bottom:0 } }
 @media (max-width: 480px) { .measurement-actions { grid-template-columns:repeat(2,minmax(0,1fr)) }.measurement-actions .measurement-primary-action { grid-column:1 / -1 }.trainer-measurements-workspace { gap:var(--space-3) } }
 @media (max-width: 480px) { .client-progress-measurement .measurement-actions { grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr) }.client-progress-measurement .measurement-actions .measurement-primary-action { grid-column:auto } }
 @media (max-width: 360px) { .measure-grid { grid-template-columns: 1fr }.inline-form { grid-template-columns: 1fr }.inline-form button { grid-column: 1 }.tab-bar a { font-size: 11px } }

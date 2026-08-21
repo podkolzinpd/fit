@@ -10,7 +10,7 @@ import { exercisesRepository } from '../../data/repositories/exercises.repositor
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
 import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
-import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
+import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
   addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayInTimeZone, weekdayShort,
@@ -632,9 +632,10 @@ export function WorkoutDetailPage() {
     onSuccess: async () => { setDecisionSheet(null); await invalidateWorkoutSurfaces() },
   })
   const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['workouts'] }), queryClient.invalidateQueries({ queryKey: ['clients'] })]); navigate(actor?.role === 'client' ? '/me/workouts' : '/schedule') } })
-  const review = useMutation({ mutationFn: (value: WorkoutTrainerResponseDraft) => query.data!.clientQuestion && !query.data!.clientQuestionResolvedAt
-    ? workoutsRepository.answerQuestion(query.data!, value)
-    : workoutsRepository.setWorkoutReview(query.data!, value), onSuccess: async () => {
+  const review = useMutation({ mutationFn: (value: WorkoutTrainerResponseDraft) => workoutsRepository.setWorkoutReview(query.data!, value), onSuccess: async () => {
+    await invalidateWorkoutSurfaces()
+  } })
+  const questionAnswer = useMutation({ mutationFn: (value: WorkoutQuestionAnswerDraft) => workoutsRepository.answerQuestion(query.data!, value), onSuccess: async () => {
     await invalidateWorkoutSurfaces()
   } })
   const feedback = useMutation({ mutationFn: (value: WorkoutFeedbackDraft) => workoutsRepository.submitFeedback(query.data!, value), onSuccess: async () => {
@@ -718,7 +719,7 @@ export function WorkoutDetailPage() {
       </section>}
       {done && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
       {done && clientMode && <WorkoutClientQuestion workout={workout} saving={question.isPending} error={question.error} onSave={(value) => question.mutateAsync(value)} />}
-      {done && !clientMode && workout.clientQuestion && <WorkoutTrainerQuestion workout={workout} canReply={canReview} startEditing={new URLSearchParams(location.search).get('reply') === '1'} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
+      {done && !clientMode && workout.clientQuestion && <WorkoutTrainerQuestion workout={workout} canReply={canReview} startEditing={new URLSearchParams(location.search).get('reply') === '1'} authorName={responseAuthorName} saving={questionAnswer.isPending} error={questionAnswer.error} onSave={(value) => questionAnswer.mutateAsync(value)} />}
       {done && (clientMode || !workout.clientQuestion) && <WorkoutTrainerReview workout={workout} canEdit={canReview} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
       {!clientMode && workout.clientComment && workout.sessionRpe === undefined && <WorkoutClientComment workout={workout} />}
       {!done && <div className="workout-detail-exercise-overview"><p>ПЛАН ТРЕНИРОВКИ</p><span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)} · {sets.length} {setCountLabel(sets.length)}</span></div>}
@@ -939,7 +940,7 @@ function WorkoutTrainerQuestion({ workout, canReply, startEditing = false, autho
   authorName: string | null
   saving: boolean
   error: Error | null
-  onSave: (value: WorkoutTrainerResponseDraft) => Promise<unknown>
+  onSave: (value: WorkoutQuestionAnswerDraft) => Promise<unknown>
 }) {
   const unresolved = !workout.clientQuestionResolvedAt
   const responseBelongsToQuestion = Boolean(
@@ -952,7 +953,7 @@ function WorkoutTrainerQuestion({ workout, canReply, startEditing = false, autho
   const [editing, setEditing] = useState(Boolean(startEditing && canReply && unresolved))
   const [value, setValue] = useState(currentReview)
   const [reaction, setReaction] = useState<TrainerReaction | undefined>(currentReaction)
-  const valid = Boolean(reaction && value.trim().length > 0 && value.trim().length <= 500)
+  const valid = value.trim().length > 0 && value.trim().length <= 500
 
   useEffect(() => {
     if (startEditing && canReply && unresolved) setEditing(true)
@@ -978,10 +979,20 @@ function WorkoutTrainerQuestion({ workout, canReply, startEditing = false, autho
     {editing ? <form className="workout-question-answer" onFocusCapture={(event) => {
       const target = event.target
       if (!(target instanceof HTMLTextAreaElement)) return
-      window.setTimeout(() => target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 180)
+      // iOS can scroll the root document together with scrollIntoView and keep
+      // that offset after the keyboard closes. Move only the app content: the
+      // shell itself must stay pinned to the viewport without a grey tail.
+      window.setTimeout(() => {
+        const content = target.closest('.content')
+        if (!(content instanceof HTMLElement)) return
+        const targetRect = target.getBoundingClientRect()
+        const contentRect = content.getBoundingClientRect()
+        const centeredTop = content.scrollTop + targetRect.top - contentRect.top - Math.max(16, (content.clientHeight - targetRect.height) / 2)
+        content.scrollTo({ top: Math.max(0, centeredTop), behavior: 'smooth' })
+      }, 180)
     }} onSubmit={async (event) => {
       event.preventDefault()
-      if (!reaction || !valid) return
+      if (!valid) return
       try {
         const textarea = event.currentTarget.querySelector('textarea')
         await onSave({ reaction, review: value })
@@ -992,9 +1003,9 @@ function WorkoutTrainerQuestion({ workout, canReply, startEditing = false, autho
       }
     }}>
       <fieldset className="workout-feedback-fieldset workout-trainer-reactions">
-        <legend>Реакция</legend>
+        <legend>Реакция <span className="muted">· необязательно</span></legend>
         <div className="workout-feedback-options">
-          {(Object.keys(trainerReactionLabels) as TrainerReaction[]).map((item) => <WorkoutChoice key={item} className="workout-feedback-option" selected={reaction === item} disabled={saving} aria-label={trainerReactionLabels[item]} onClick={() => setReaction(item)}>{trainerReactionLabels[item]}</WorkoutChoice>)}
+          {(Object.keys(trainerReactionLabels) as TrainerReaction[]).map((item) => <WorkoutChoice key={item} className="workout-feedback-option" selected={reaction === item} disabled={saving} aria-label={trainerReactionLabels[item]} onClick={() => setReaction((current) => current === item ? undefined : item)}>{trainerReactionLabels[item]}</WorkoutChoice>)}
         </div>
       </fieldset>
       <VoiceNoteField name="trainerQuestionAnswer" source="workout_question_answer" label="Ответ клиенту" placeholder="Коротко ответьте на вопрос" value={value} onValueChange={(next) => setValue(next.slice(0, 500))} autoResize />
@@ -1007,7 +1018,7 @@ function WorkoutTrainerQuestion({ workout, canReply, startEditing = false, autho
     </form> : <>
       {unresolved && <p className="workout-response-meta">Ждёт ответа</p>}
       {!unresolved && <p className="workout-response-meta">Вопрос закрыт</p>}
-      {!unresolved && responseBelongsToQuestion && currentReview && <div className="workout-response-body">
+      {!unresolved && responseBelongsToQuestion && currentReview && <div className={`workout-response-body${currentReaction ? '' : ' without-reaction'}`}>
         {currentReaction && <span className="workout-response-reaction" aria-label={`Реакция ${trainerReactionLabels[currentReaction]}`}>{trainerReactionLabels[currentReaction]}</span>}
         <p className="workout-review-text">{currentReview}</p>
         {(authorName || workout.trainerReviewedAt) && <p className="workout-response-meta">{[authorName || 'Тренер', trainerResponseTime(workout.trainerReviewedAt)].filter(Boolean).join(' · ')}</p>}

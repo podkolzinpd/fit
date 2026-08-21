@@ -1,4 +1,4 @@
-// schema-sha256: 85984ced6993cd9785e9a5aee0c70708824c9928afd7b15c0fe9374bc9f74d4b
+// schema-sha256: 052262fd468f8b593bbb626c9305687f4c5370bc192e5a9d758ea70b10452bda
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1110,7 +1110,7 @@ export type Database = {
       answer_workout_question: {
         Args: {
           p_expected_version: number
-          p_reaction: string
+          p_reaction: string | null
           p_review: string
           p_workout_id: string
         }
