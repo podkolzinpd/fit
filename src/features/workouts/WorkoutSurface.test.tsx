@@ -21,11 +21,13 @@ describe('workout surface contract', () => {
     ['upcoming', 'neutral'],
     ['completed', 'success'],
     ['partial', 'warning'],
+    ['decision', 'neutral'],
+    ['cancelled', 'neutral'],
     ['skipped', 'neutral'],
     ['history', 'neutral'],
   ] as const)('maps %s to the %s color tone', (state, tone) => {
     render(<WorkoutStatus state={state} />)
-    expect(screen.getByText(/Планируется|Выполняется|Далее|Завершена|Пропущена|Результат/)).toHaveAttribute('data-tone', tone)
+    expect(screen.getByText(/Планируется|Выполняется|Далее|Завершена|План|Не состоялась|Не выполнено|Результат/)).toHaveAttribute('data-tone', tone)
   })
 
   it('keeps pending CTA disabled and exposes a compact completed exercise', () => {

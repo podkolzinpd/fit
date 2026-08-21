@@ -1,7 +1,7 @@
 import type { LocalDate } from './local-date'
 
 export type UUID = string
-export type WorkoutStatus = 'planned' | 'in_progress' | 'done'
+export type WorkoutStatus = 'planned' | 'in_progress' | 'done' | 'cancelled'
 export type Gender = 'male' | 'female'
 export type MuscleGroup = 'legs' | 'glutes' | 'chest' | 'back' | 'shoulders' | 'arms' | 'core' | 'cardio' | 'other'
 export type InputKind = 'strength' | 'distance' | 'reps' | 'duration'

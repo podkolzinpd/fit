@@ -538,6 +538,13 @@ p { margin: 6px 0 }
 .today-assignment-self { margin: 0; padding: 13px 14px; border: 1px solid var(--accent-border); border-radius: 14px; background: var(--accent-soft); color: var(--accent-strong); font-weight: var(--weight-medium) }
 .client-onboarding { display:grid; gap:18px; max-width:640px; margin:0 auto; }.client-onboarding-hero { padding:8px 0 2px; }.client-onboarding-hero .eyebrow { margin:0 0 8px; }.client-onboarding-hero h2 { margin:0; font-size:clamp(30px, 8.2vw, 36px); line-height:1.08; letter-spacing:var(--tracking-tight); }.client-onboarding-hero > p:last-child { max-width:350px; margin:10px 0 0; color:var(--muted); font-size:16px; line-height:1.42; }
 .client-workouts-page .page-header, .client-progress-page .page-header { margin-bottom:var(--section-gap); }.client-workouts-stack, .client-progress-stack { display:grid; gap:var(--section-gap); }.client-workout-section, .client-progress-form, .client-progress-history { display:grid; gap:var(--space-2); }.client-workout-section-head, .client-progress-section-head { display:grid; gap:var(--space-1); }.client-workout-section-head .eyebrow, .client-progress-section-head .eyebrow { margin:0; }.client-workout-section-head h2, .client-progress-section-head h2 { margin:0; font-size:var(--type-title-size); letter-spacing:var(--tracking-tight); }.client-workout-cards { gap:var(--space-2); }.client-workout-card { min-height:78px; padding:var(--card-padding); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); }.client-workout-card strong { font-size:var(--type-body-size); }.client-workout-card p { margin:var(--space-1) 0 0; }.client-section-empty { margin:0; padding:var(--card-padding); border:1px dashed var(--border); border-radius:var(--radius-lg); color:var(--muted); background:var(--surface-raised); font-size:var(--type-body-size); line-height:var(--leading-body); }.client-progress-form, .client-progress-history { padding:var(--card-padding); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); box-shadow:var(--shadow-card); }.client-progress-form .compact { padding:0; border:0; background:transparent; }.client-progress-form .measure-grid input { background:var(--surface-sunken); }.client-progress-form .compact button { min-height:var(--control-height-primary); border-radius:var(--radius-lg); font-size:var(--type-body-size); font-weight:var(--weight-bold); }.client-progress-history .cards { gap:var(--space-2); }.client-progress-history .card { border-radius:var(--radius-lg); box-shadow:none; }
+.past-workout-plan-card { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:var(--space-3); padding:var(--space-3) var(--card-padding); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); color:var(--fg); text-decoration:none; box-shadow:var(--shadow-soft) }
+.past-workout-plan-copy { min-width:0; display:grid; gap:3px }
+.past-workout-plan-copy > strong { font-size:var(--type-body-size); line-height:var(--leading-snug) }
+.past-workout-plan-copy > small { color:var(--muted); font-size:var(--type-caption-size) }
+.past-workout-plan-card .workout-exercise-list { margin:var(--space-1) 0 0 }
+.past-workout-plan-action { display:flex; align-items:center; gap:var(--space-1); color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); white-space:nowrap }
+.past-workout-plan-action b { font-size:20px; font-weight:var(--weight-regular) }
 .client-progress-measurement { display:grid; gap:var(--space-3); overflow:hidden; padding:var(--card-padding); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); box-shadow:var(--shadow-card); }
 .client-progress-measurement-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
 .client-progress-measurement-head > div { display:grid; gap:3px; min-width:0; }
@@ -855,6 +862,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-page > .wide { min-height: 50px; margin-top: -3px; border-radius: 16px; font-size: 17px; font-weight: 800 }
 .workout-detail-primary-actions { display:grid; gap:var(--space-2); margin-top:-3px }
 .workout-detail-primary-actions > .wide { width:100%; min-height:var(--control-height-primary); margin:0 }
+.workout-detail-primary-actions > .coachmark-anchor, .workout-detail-primary-actions > .coachmark-anchor > .wide { width:100% }
+.workout-decision-sheet { width:min(100%, 440px); max-height:min(88dvh, 680px); overflow-y:auto; display:grid; gap:var(--space-4); padding:var(--space-5) var(--card-padding) calc(var(--space-5) + env(safe-area-inset-bottom)); border:1px solid var(--border); border-bottom:0; border-radius:28px 28px 0 0; background:var(--surface-elevated); box-shadow:0 -24px 70px #00000055 }
+.workout-decision-sheet .picker-header { align-items:flex-start }
+.workout-decision-sheet .picker-header .eyebrow { margin:0 0 var(--space-1); font-size:var(--type-caption-size) }
+.workout-decision-sheet .picker-header h2 { margin:0; font-size:var(--type-title-size); line-height:var(--leading-tight) }
+.workout-decision-actions { display:grid; gap:var(--space-2) }
+.workout-decision-actions .workout-cta { width:100% }
 .workout-fact-summary { display:flex; flex-wrap:wrap; align-items:baseline; gap:5px 14px; margin:0 0 14px; padding:9px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border) }
 .workout-fact-summary p { display:flex; align-items:baseline; gap:5px; margin:0; min-width:0 }
 .workout-fact-summary span { color:var(--muted); font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase }
@@ -1125,7 +1139,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .today-context small { color:var(--voice-copy); font-size:12px; }
 .today-context b { grid-column:2; grid-row:1 / span 2; color:var(--voice-context-arrow); font-size:25px; font-weight:400; }
 .client-home-overview { min-width:0; display:grid; gap:13px; }
-.client-home-next, .client-home-week, .client-home-highlight, .client-home-self-training.compact, .client-home-error { padding:16px; border:1px solid var(--voice-context-border); border-radius:20px; background:var(--voice-surface); box-shadow:var(--voice-context-shadow); }
+.client-home-next, .client-home-past-plan, .client-home-week, .client-home-highlight, .client-home-self-training.compact, .client-home-error { padding:16px; border:1px solid var(--voice-context-border); border-radius:20px; background:var(--voice-surface); box-shadow:var(--voice-context-shadow); }
 .client-home-next, .client-home-week, .client-home-highlight, .client-home-self-training { min-width:0; }
 .client-home-next { display:grid; gap:7px; overflow:hidden; }
 .client-home-next.assigned { border-color:var(--voice-context-border); background:var(--voice-surface); }
@@ -1142,6 +1156,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-home-next-link small { color:var(--voice-copy); font-size:12px; line-height:1.35; }
 .client-home-next-link strong { display:-webkit-box; overflow:hidden; color:var(--voice-title); font-size:13px; line-height:1.35; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
 .client-home-next-link b { color:var(--voice-context-arrow); font-size:25px; font-weight:400; }
+.client-home-past-plan { display:grid; gap:6px; box-shadow:none }
+.client-home-past-plan .eyebrow { margin:0 }
+.client-home-past-plan > a { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:var(--space-3); color:var(--voice-title); text-decoration:none }
+.client-home-past-plan > a > span { min-width:0; display:grid; gap:3px }
+.client-home-past-plan h2 { margin:0; display:-webkit-box; overflow:hidden; font-size:var(--type-body-size); line-height:var(--leading-snug); -webkit-box-orient:vertical; -webkit-line-clamp:2 }
+.client-home-past-plan small { color:var(--voice-copy); font-size:var(--type-caption-size) }
+.client-home-past-plan b { color:var(--accent-strong); font-size:var(--type-caption-size); white-space:nowrap }
 .client-home-section-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
 .client-home-section-head > div { display:grid; gap:3px; }
 .client-home-section-head > a { flex:0 0 auto; min-height:44px; display:flex; align-items:flex-start; padding:1px 0 0 12px; color:var(--accent-strong); font-size:13px; font-weight:700; text-decoration:none; }

@@ -20,7 +20,7 @@ export function ClientsPage() {
   // аудитория закрытого пилота у этих изменений одна и та же. Вне пилота поле
   // остаётся прежним — и по виду, и по правилу показа.
   const searchPilot = Boolean(actor && isDarkThemePilotEnabled(actor.userId))
-  const showArchived = localStorage.getItem('fit.showArchivedClients') === 'true'
+  const showArchived = window.localStorage?.getItem('fit.showArchivedClients') === 'true'
   // Список — рабочая очередь тренера, поэтому при каждом входе показываем
   // актуальную активность, а не данные из короткого SPA-кэша.
   const query = useQuery({ queryKey: ['clients', showArchived], queryFn: () => clientsRepository.list(showArchived), refetchOnMount: 'always' })

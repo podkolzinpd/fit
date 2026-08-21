@@ -16,7 +16,7 @@ import {
   addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayInTimeZone, weekdayShort,
   type LocalDate,
 } from '../../shared/local-date'
-import { AsyncView, Field, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
+import { AsyncView, Coachmark, Field, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
 import { ExerciseImage, ExercisePicker, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { clientWorkoutAuthorLabel, ClientPicker, type ClientPickerSelection } from '../clients'
 import { VoiceNoteField } from '../voice-input'
@@ -42,7 +42,7 @@ import { RunMetricsFields } from './RunMetricsFields'
 import { parseRunDurationInput, runDistanceKmFromInput, runDistanceLabel, runPaceLabel, type RunDistanceUnit } from '../../shared/run-metrics'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
-import { AddIcon, HistoryIcon, RecordIcon } from '../../shared/icons'
+import { AddIcon, CloseIcon, HistoryIcon, RecordIcon } from '../../shared/icons'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
 import { chronicleExercisePreview } from './workout-chronicle'
@@ -162,7 +162,8 @@ export function WorkoutStatusBadge({ workout }: { workout: Workout }) {
   const state: WorkoutUiState = status.tone === 'done' ? 'completed'
     : status.tone === 'in_progress' ? 'current'
       : status.tone === 'partial' ? 'partial'
-        : status.tone === 'skipped' ? 'skipped'
+        : status.tone === 'decision' ? 'decision'
+          : status.tone === 'cancelled' ? 'cancelled'
           : 'planned'
   return <WorkoutStatus state={state} label={status.label} />
 }
@@ -196,6 +197,17 @@ export function WorkoutExercisesSummary({ workout, maxItems }: { workout: Workou
     <span className="workout-exercise-name">{item.name}{item.comment && ' 💬'}</span>
     {item.comment && <span className="workout-exercise-comment">💬 {item.comment}</span>}
   </li>)}{maxItems !== undefined && items.length > maxItems && <li className="workout-exercise-more">Ещё {items.length - maxItems} {exerciseCountLabel(items.length - maxItems)}</li>}</ul>
+}
+
+export function PastWorkoutPlanCard({ workout, contextLabel, returnTo }: { workout: Workout; contextLabel?: string | null; returnTo?: string }) {
+  return <Link className="past-workout-plan-card" to={`/workouts/${workout.id}`} state={returnTo ? { returnTo } : undefined}>
+    <span className="past-workout-plan-copy">
+      <strong>План на {formatLocalDate(workout.workoutDate)}</strong>
+      {contextLabel && <small>{contextLabel}</small>}
+      <WorkoutExercisesSummary workout={workout} maxItems={2} />
+    </span>
+    <span className="past-workout-plan-action">Выбрать действие <b aria-hidden="true">›</b></span>
+  </Link>
 }
 
 const chronicleWellbeingLabels: Record<WorkoutWellbeing, string> = {
@@ -267,12 +279,17 @@ export function ClientWorkoutsPage() {
     getNextPageParam: (page) => page.nextOffset,
   })
   const items = query.data?.pages.flatMap((page) => page.items) ?? []
-  const history = splitClientWorkouts(items, today).history
-  return <Page title="История тренировок" back={`/clients/${clientId}`} action={history.length > 0 && <Link className="button" to={`/workouts/new?client=${clientId}`}>Запланировать</Link>}><AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
-    {history.length > 0 ? <><div className="cards workout-chronicle-list">{history.map((workout) => {
+  const split = splitClientWorkouts(items, today)
+  const hasWorkouts = split.needsDecision.length > 0 || split.history.length > 0
+  return <Page title="Тренировки клиента" back={`/clients/${clientId}`} action={hasWorkouts && <Link className="button" to={`/workouts/new?client=${clientId}`}>Запланировать</Link>}><AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
+    {hasWorkouts ? <div className="client-workouts-stack">
+      {split.needsDecision.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РАНЕЕ ЗАПЛАНИРОВАНО</p><h2>Выберите действие</h2></div><div className="cards client-workout-cards">{split.needsDecision.map((workout) => <PastWorkoutPlanCard key={workout.id} workout={workout} returnTo={`/clients/${clientId}/workouts`} />)}</div></section>}
+      {split.history.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div><div className="cards workout-chronicle-list">{split.history.map((workout) => {
     const clientAuthored = Boolean(workout.createdBy && workout.createdBy !== actor?.userId)
     return <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientAuthored ? 'Создано клиентом' : null} />
-  })}</div><LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} /></> : <Link className="button wide trainer-history-plan" to={`/workouts/new?client=${clientId}`}>Запланировать тренировку</Link>}
+  })}</div></section>}
+      <LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} />
+    </div> : <Link className="button wide trainer-history-plan" to={`/workouts/new?client=${clientId}`}>Запланировать тренировку</Link>}
   </AsyncView></Page>
 }
 
@@ -554,6 +571,9 @@ export function WorkoutDetailPage() {
   const showRpe = useRpeDisplay(actor?.userId)
   const [confirm, confirmDialog] = useConfirm()
   const [askActiveWorkoutRecovery, activeWorkoutRecoveryDialog] = useConfirm()
+  const [decisionSheet, setDecisionSheet] = useState<'actions' | 'reschedule' | null>(null)
+  const [rescheduleDate, setRescheduleDate] = useState<LocalDate>(() => todayInTimeZone(actor?.timezone))
+  const [rescheduleTime, setRescheduleTime] = useState('')
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   useClientRealtime(query.data?.clientId)
   // Этап тренировки: get() отдаёт stageId, название берём из цели клиента.
@@ -592,6 +612,23 @@ export function WorkoutDetailPage() {
         }
       }
     },
+  })
+  const invalidateWorkoutSurfaces = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }),
+      queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+      queryClient.invalidateQueries({ queryKey: ['today-workouts'] }),
+      queryClient.invalidateQueries({ queryKey: ['workout-regularity'] }),
+      queryClient.invalidateQueries({ queryKey: ['clients'] }),
+    ])
+  }
+  const cancelPlanned = useMutation({
+    mutationFn: () => workoutsRepository.cancelPlanned(query.data!),
+    onSuccess: async () => { setDecisionSheet(null); await invalidateWorkoutSurfaces() },
+  })
+  const reschedule = useMutation({
+    mutationFn: () => workoutsRepository.reschedule(query.data!, rescheduleDate, rescheduleTime || null),
+    onSuccess: async () => { setDecisionSheet(null); await invalidateWorkoutSurfaces() },
   })
   const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['workouts'] }), queryClient.invalidateQueries({ queryKey: ['clients'] })]); navigate(actor?.role === 'client' ? '/me/workouts' : '/schedule') } })
   const review = useMutation({ mutationFn: (value: WorkoutTrainerResponseDraft) => workoutsRepository.setWorkoutReview(query.data!, value), onSuccess: async () => {
@@ -638,11 +675,24 @@ export function WorkoutDetailPage() {
   const detailState: WorkoutUiState = statusPresentation?.tone === 'done' ? 'completed'
     : statusPresentation?.tone === 'partial' ? 'partial'
       : statusPresentation?.tone === 'in_progress' ? 'current'
-        : statusPresentation?.tone === 'skipped' ? 'skipped'
+        : statusPresentation?.tone === 'decision' ? 'decision'
+          : statusPresentation?.tone === 'cancelled' ? 'cancelled'
           : 'planned'
   const plannedActions = workout?.status === 'planned' ? plannedWorkoutActionLabels(workout.workoutDate, today) : null
   const requestWorkoutRemoval = async () => {
     if (await confirm({ message: 'Удалить тренировку?', confirmLabel: 'Удалить', danger: true })) remove.mutate()
+  }
+  const requestCancelPlanned = async () => {
+    setDecisionSheet(null)
+    if (await confirm({
+      message: 'Сохранить как «Не состоялась»? План останется в истории и не будет учитываться как выполненная тренировка.',
+      confirmLabel: 'Сохранить',
+    })) cancelPlanned.mutate()
+  }
+  const openReschedule = () => {
+    setRescheduleDate(today)
+    setRescheduleTime(workout?.startTime?.slice(0, 5) ?? '')
+    setDecisionSheet('reschedule')
   }
   return <Page title="Тренировка" hideTitle className="workout-detail-page" back={backTo}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
@@ -658,9 +708,11 @@ export function WorkoutDetailPage() {
         statusLabel={statusPresentation?.label}
         meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span>{clientMode && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · только просмотр</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />
       {plannedActions && canExecute && <div className="workout-detail-primary-actions">
-        <WorkoutCta className="wide" pending={start.isPending} pendingLabel={plannedActions.pending} onClick={() => start.mutate()}>{plannedActions.primary}</WorkoutCta>
-        {plannedActions.secondary && <Link className="button secondary wide" to={`/workouts/${workoutId}/edit`}>{plannedActions.secondary}</Link>}
+        {workout.workoutDate < today ? <Coachmark id="missed-workout-actions-2026-08" userId={actor?.userId} title="План можно закрыть спокойно" description="Запишите результат, перенесите тренировку или сохраните, что она не состоялась.">
+          <WorkoutCta className="wide" pending={start.isPending || cancelPlanned.isPending || reschedule.isPending} pendingLabel="Сохраняем…" onClick={() => setDecisionSheet('actions')}>{plannedActions.primary}</WorkoutCta>
+        </Coachmark> : <WorkoutCta className="wide" pending={start.isPending} pendingLabel={plannedActions.pending} onClick={() => start.mutate()}>{plannedActions.primary}</WorkoutCta>}
       </div>}
+      {workout.status === 'cancelled' && canExecute && <div className="workout-detail-primary-actions"><WorkoutCta className="wide" variant="secondary" onClick={openReschedule}>Вернуть в план</WorkoutCta></div>}
       {start.error && !(start.error instanceof Error && 'code' in start.error && start.error.code === 'active_workout_exists') && <p className="error">{start.error.message}</p>}
       {workout.status === 'in_progress' && canExecute && <Link className="button wide" to={`/workouts/${workoutId}/live`}>Продолжить тренировку</Link>}
       {done && <section className="workout-fact-summary" aria-label="Сводка тренировки">
@@ -705,6 +757,22 @@ export function WorkoutDetailPage() {
       {clientAuthoredReadOnly && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Скопировать и отправить план</Link></div>}
       {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Создать свою копию</Link></div>}
       {remove.error && <p className="error">{remove.error.message}</p>}
+      {cancelPlanned.error && <p className="error" role="alert">{cancelPlanned.error.message}</p>}
+      {reschedule.error && <p className="error" role="alert">{reschedule.error.message}</p>}
+      {decisionSheet && <div className="sheet-overlay" onClick={() => !cancelPlanned.isPending && !reschedule.isPending && setDecisionSheet(null)}>
+        <section className="workout-decision-sheet" role="dialog" aria-modal="true" aria-label={decisionSheet === 'actions' ? 'Действия с планом' : workout.status === 'cancelled' ? 'Вернуть тренировку в план' : 'Перенести тренировку'} onClick={(event) => event.stopPropagation()}>
+          <header className="picker-header"><div><p className="eyebrow">ПЛАН НА {formatLocalDate(workout.workoutDate)}</p><h2>{decisionSheet === 'actions' ? 'Что сделать с планом?' : workout.status === 'cancelled' ? 'Вернуть в план' : 'Перенести тренировку'}</h2></div><button type="button" className="picker-close" aria-label="Закрыть" disabled={cancelPlanned.isPending || reschedule.isPending} onClick={() => setDecisionSheet(null)}><CloseIcon /></button></header>
+          {decisionSheet === 'actions' ? <div className="workout-decision-actions">
+            <WorkoutCta pending={start.isPending} pendingLabel="Открываем…" onClick={() => { setDecisionSheet(null); start.mutate() }}>Записать результат</WorkoutCta>
+            <WorkoutCta variant="secondary" onClick={openReschedule}>Перенести тренировку</WorkoutCta>
+            <WorkoutCta variant="tertiary" pending={cancelPlanned.isPending} pendingLabel="Сохраняем…" onClick={() => void requestCancelPlanned()}>Тренировка не состоялась</WorkoutCta>
+          </div> : <form className="stack compact" onSubmit={(event) => { event.preventDefault(); reschedule.mutate() }}>
+            <Field label="Новая дата"><input type="date" min={today} value={rescheduleDate} onChange={(event) => setRescheduleDate(localDate(event.target.value))} required /></Field>
+            <Field label="Время"><input type="time" value={rescheduleTime} onChange={(event) => setRescheduleTime(event.target.value)} /></Field>
+            <div className="actions workout-action-row"><WorkoutCta type="button" variant="tertiary" disabled={reschedule.isPending} onClick={() => workout.status === 'cancelled' ? setDecisionSheet(null) : setDecisionSheet('actions')}>Назад</WorkoutCta><WorkoutCta type="submit" pending={reschedule.isPending} pendingLabel="Сохраняем…">{workout.status === 'cancelled' ? 'Вернуть в план' : 'Перенести'}</WorkoutCta></div>
+          </form>}
+        </section>
+      </div>}
       {confirmDialog}{activeWorkoutRecoveryDialog}
     </>}</AsyncView>
   </Page>

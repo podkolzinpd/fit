@@ -229,6 +229,16 @@ export const workoutsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
+  async cancelPlanned(workout: Workout): Promise<number> {
+    const result = await workoutQueries.cancelPlanned(workout.id, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
+  async reschedule(workout: Workout, workoutDate: ReturnType<typeof localDate>, startTime: string | null): Promise<number> {
+    const result = await workoutQueries.reschedule(workout.id, workoutDate, startTime, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
   async saveLiveSet(id: string, draft: LiveSetDraft, version: number): Promise<number> {
     const result = await workoutQueries.saveLiveSet(id, draft, version)
     if (result.error) throw repositoryError(result.error)
