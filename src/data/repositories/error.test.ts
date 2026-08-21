@@ -3,6 +3,7 @@ import { isRepositoryConflict, isRepositoryNetworkError, repositoryError } from 
 
 describe('repositoryError', () => {
   it.each([
+    ['PT403', 'Ответить может тренер, назначенный на эту тренировку.'],
     ['PT404', 'Запись не найдена или больше недоступна.'],
     ['PT409', 'Данные уже изменились. Обновите страницу и повторите.'],
     ['PT422', 'Операцию нельзя выполнить с текущими данными.'],

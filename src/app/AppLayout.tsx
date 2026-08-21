@@ -7,7 +7,9 @@ import { isAssistantNavPilotEnabled, isDarkThemePilotEnabled, isTodayStartRedesi
 
 export function appViewportMetrics(innerHeight: number, visualHeight: number) {
   return {
-    height: Math.round(visualHeight),
+    // VisualViewport shrinks to the area above the iOS keyboard. It is useful
+    // for detecting the keyboard, but must not become the app-shell height.
+    height: Math.round(innerHeight),
     keyboardOpen: innerHeight - visualHeight > 160,
   }
 }
@@ -47,9 +49,8 @@ export function AppLayout() {
     const update = () => {
       const metrics = appViewportMetrics(window.innerHeight, viewport.height)
       setKeyboardOpen(metrics.keyboardOpen)
-      // В iOS WKWebView 100dvh иногда остаётся равным высоте с клавиатурой
-      // уже после blur. VisualViewport при этом возвращает правильную высоту,
-      // поэтому передаём её оболочке явно и не оставляем серую область снизу.
+      // Оболочка сохраняет layout viewport. VisualViewport используется лишь
+      // как сигнал клавиатуры, иначе нижняя навигация поднимается над ней.
       setViewportHeight(metrics.height)
     }
     update()
