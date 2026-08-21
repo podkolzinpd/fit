@@ -50,7 +50,7 @@ afterEach(() => {
 
 describe('AppLayout navigation', () => {
   it('восстанавливает полную высоту оболочки после закрытия iOS-клавиатуры', () => {
-    expect(appViewportMetrics(844, 508)).toEqual({ height: 508, keyboardOpen: true })
+    expect(appViewportMetrics(844, 508)).toEqual({ height: 844, keyboardOpen: true })
     expect(appViewportMetrics(844, 843.6)).toEqual({ height: 844, keyboardOpen: false })
   })
 

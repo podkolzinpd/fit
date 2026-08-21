@@ -975,7 +975,11 @@ function WorkoutTrainerQuestion({ workout, canReply, startEditing = false, autho
   return <section className="workout-review workout-question workout-review-readonly" aria-labelledby="trainer-workout-question-title">
     <div className="workout-review-head"><div><p className="eyebrow">ВОПРОС КЛИЕНТА</p><h2 id="trainer-workout-question-title">По этой тренировке</h2></div>{canReply && unresolved && !editing && <button type="button" className="secondary" disabled={saving} onClick={() => setEditing(true)}>Ответить</button>}</div>
     <p className="workout-review-text">{workout.clientQuestion}</p>
-    {editing ? <form className="workout-question-answer" onSubmit={async (event) => {
+    {editing ? <form className="workout-question-answer" onFocusCapture={(event) => {
+      const target = event.target
+      if (!(target instanceof HTMLTextAreaElement)) return
+      window.setTimeout(() => target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 180)
+    }} onSubmit={async (event) => {
       event.preventDefault()
       if (!reaction || !valid) return
       try {

@@ -61,6 +61,9 @@ export function repositoryError(error: unknown): RepositoryError {
   if (code === 'PT404') {
     return new RepositoryError(code, 'Запись не найдена или больше недоступна.')
   }
+  if (code === 'PT403') {
+    return new RepositoryError(code, 'Ответить может тренер, назначенный на эту тренировку.')
+  }
   if (code === 'PT422') {
     return new RepositoryError(code, 'Операцию нельзя выполнить с текущими данными.')
   }
