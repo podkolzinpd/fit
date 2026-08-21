@@ -1138,6 +1138,32 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .today-context strong { font-size:14px; }
 .today-context small { color:var(--voice-copy); font-size:12px; }
 .today-context b { grid-column:2; grid-row:1 / span 2; color:var(--voice-context-arrow); font-size:25px; font-weight:400; }
+.trainer-attention { min-width:0; display:grid; gap:10px; margin-top:4px; padding:14px; border:1px solid var(--voice-context-border); border-radius:18px; background:var(--voice-surface); box-shadow:var(--voice-context-shadow) }
+.trainer-attention-heading { display:grid; gap:2px }
+.trainer-attention-heading .eyebrow, .trainer-attention-heading h2, .trainer-attention-clear .eyebrow { margin:0 }
+.trainer-attention-heading h2 { color:var(--voice-title); font-size:18px; line-height:1.2 }
+.trainer-attention-list, .trainer-planning-list { display:grid }
+.trainer-attention-row { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; padding:11px 0; border-top:1px solid var(--voice-context-divider); color:var(--voice-title); text-decoration:none }
+.trainer-attention-row:first-child { border-top:0 }
+.trainer-attention-row > span, .trainer-planning-row > span { min-width:0; display:grid; gap:2px }
+.trainer-attention-row strong, .trainer-planning-row strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px }
+.trainer-attention-row small, .trainer-planning-row small { color:var(--voice-title); font-size:13px; font-weight:var(--weight-semibold) }
+.trainer-attention-row em, .trainer-planning-row em { display:-webkit-box; overflow:hidden; color:var(--voice-copy); font-size:12px; font-style:normal; line-height:1.35; -webkit-box-orient:vertical; -webkit-line-clamp:2 }
+.trainer-attention-row > b { color:var(--accent-strong); font-size:13px; white-space:nowrap }
+.trainer-planning { border-top:1px solid var(--voice-context-divider) }
+.trainer-planning > summary { min-height:48px; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; padding-top:9px; color:var(--voice-title); list-style:none; cursor:pointer }
+.trainer-planning > summary::-webkit-details-marker { display:none }
+.trainer-planning > summary > span { display:flex; align-items:baseline; justify-content:space-between; gap:12px }
+.trainer-planning > summary small { color:var(--voice-copy); font-size:12px; font-weight:var(--weight-medium) }
+.trainer-planning > summary i { width:9px; height:9px; border-right:2px solid var(--voice-context-arrow); border-bottom:2px solid var(--voice-context-arrow); transform:rotate(45deg); transition:transform .16s ease }
+.trainer-planning[open] > summary i { transform:rotate(225deg) }
+.trainer-planning-row { display:grid; gap:8px; padding:12px 0; border-top:1px solid var(--voice-context-divider) }
+.trainer-planning-row > div { display:flex; flex-wrap:wrap; gap:8px 16px }
+.trainer-planning-row .link { min-height:34px; padding:3px 0; font-size:12px }
+.trainer-attention-clear { gap:3px }
+.trainer-attention-clear strong { color:var(--voice-title); font-size:14px }
+.trainer-attention-loading { min-height:88px; align-content:center }
+.workout-question .workout-response-meta { margin-top:-4px }
 .client-home-overview { min-width:0; display:grid; gap:13px; }
 .client-home-next, .client-home-past-plan, .client-home-week, .client-home-highlight, .client-home-self-training.compact, .client-home-error { padding:16px; border:1px solid var(--voice-context-border); border-radius:20px; background:var(--voice-surface); box-shadow:var(--voice-context-shadow); }
 .client-home-next, .client-home-week, .client-home-highlight, .client-home-self-training { min-width:0; }

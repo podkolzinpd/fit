@@ -112,6 +112,7 @@ describe('client realtime', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['workouts'] })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['workout', 'workout-1'] })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['workout-regularity', 'client-1'] })
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['trainer-attention'] })
 
     view.rerender(<Probe clientId="client-2" />)
     expect(realtime.unsubscribe).toHaveBeenCalledOnce()

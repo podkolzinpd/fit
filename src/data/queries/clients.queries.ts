@@ -7,6 +7,8 @@ const clientColumns = 'id,auth_user_id,full_name,gender,age_years,age_updated_at
 export const clientQueries = {
   getMine: () => supabase.rpc('get_my_client'),
   list: (includeArchived = false) => supabase.rpc('list_clients', { p_include_archived: includeArchived }),
+  listAttentionPreferences: (trainerId: string) => supabase.from('client_trainers')
+    .select('client_id,attention_snoozed_until').eq('trainer_id', trainerId),
   get: (id: string) => supabase.from('clients').select(clientColumns).eq('id', id).single(),
   getNote: (id: string) => supabase.from('client_private_details').select('note').eq('client_id', id).maybeSingle(),
   getLatestWeight: (id: string) => supabase.from('client_progress').select('weight_kg')

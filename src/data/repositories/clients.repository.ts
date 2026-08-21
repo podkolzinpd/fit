@@ -1,4 +1,4 @@
-import type { Client, CreateClientInput, Gender, UpdateClientInput, UpdateClientTrainerPreferencesInput } from '../../shared/domain'
+import type { Client, ClientAttentionPreference, CreateClientInput, Gender, UpdateClientInput, UpdateClientTrainerPreferencesInput } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { clientQueries } from '../queries/clients.queries'
 import { repositoryError } from './error'
@@ -49,6 +49,14 @@ export const clientsRepository = {
     const result = await clientQueries.list(includeArchived)
     if (result.error) throw repositoryError(result.error)
     return result.data.map(fromListRow)
+  },
+  async listAttentionPreferences(trainerId: string): Promise<ClientAttentionPreference[]> {
+    const result = await clientQueries.listAttentionPreferences(trainerId)
+    if (result.error) throw repositoryError(result.error)
+    return result.data.map((row) => ({
+      clientId: row.client_id,
+      snoozedUntil: row.attention_snoozed_until ?? undefined,
+    }))
   },
   async get(id: string): Promise<Client> {
     const ownResult = await clientQueries.getMine()
