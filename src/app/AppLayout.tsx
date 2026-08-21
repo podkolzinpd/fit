@@ -1,9 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnalyticsIcon, ClientsIcon, HomeIcon, ProfileIcon, ScheduleIcon, SettingsIcon, TodayIcon } from '../shared/icons'
 import { useAuth } from './auth-context'
 import { applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from './theme'
 import { isAssistantNavPilotEnabled, isDarkThemePilotEnabled, isTodayStartRedesignEnabled } from './feature-flags'
+
+export function appViewportMetrics(innerHeight: number, visualHeight: number) {
+  return {
+    height: Math.round(visualHeight),
+    keyboardOpen: innerHeight - visualHeight > 160,
+  }
+}
 
 export function AppLayout() {
   const { actor } = useAuth()
@@ -12,6 +19,7 @@ export function AppLayout() {
   const { pathname, search } = useLocation()
   const redesignedStart = isTodayStartRedesignEnabled()
   const [keyboardOpen, setKeyboardOpen] = useState(false)
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null)
   // main.tsx применяет тему до первого render, когда аккаунт ещё неизвестен.
   // Пилотный вариант подключается здесь — как только auth вернул actor и
   // allowlist можно проверить; вне allowlist вариант остаётся прежним тёмным.
@@ -36,13 +44,22 @@ export function AppLayout() {
   useEffect(() => {
     const viewport = window.visualViewport
     if (!viewport) return
-    const update = () => setKeyboardOpen(window.innerHeight - viewport.height > 160)
+    const update = () => {
+      const metrics = appViewportMetrics(window.innerHeight, viewport.height)
+      setKeyboardOpen(metrics.keyboardOpen)
+      // В iOS WKWebView 100dvh иногда остаётся равным высоте с клавиатурой
+      // уже после blur. VisualViewport при этом возвращает правильную высоту,
+      // поэтому передаём её оболочке явно и не оставляем серую область снизу.
+      setViewportHeight(metrics.height)
+    }
     update()
     viewport.addEventListener('resize', update)
     viewport.addEventListener('scroll', update)
+    window.addEventListener('resize', update)
     return () => {
       viewport.removeEventListener('resize', update)
       viewport.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
     }
   }, [])
 
@@ -63,8 +80,11 @@ export function AppLayout() {
     workoutForm ? 'workout-form-shell' : '',
     keyboardOpen ? 'keyboard-open' : '',
   ].filter(Boolean).join(' ')
+  const frameStyle = viewportHeight === null ? undefined : {
+    '--app-viewport-height': `${viewportHeight}px`,
+  } as CSSProperties
 
-  if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
+  if (actor?.role === 'client') return <div className={frameClass} style={frameStyle}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
     <NavLink to="/me" end><HomeIcon />Кабинет</NavLink>
     <NavLink to="/me/workouts"><ScheduleIcon />Тренировки</NavLink>
     <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
@@ -73,13 +93,13 @@ export function AppLayout() {
   // Пилот YAFIT-317: у allowlisted-тренеров навигация — текстовые табы сверху
   // (ассистент в центре, как в Figma-макете), профиль — шестерёнка в той же
   // строке. Вне пилота тренерский рендер ниже не меняется ни на байт.
-  if (actor && isAssistantNavPilotEnabled(actor.userId)) return <div className={`${frameClass} trainer-top-shell`}>{!immersive && <nav className="top-tab-bar" aria-label="Основная навигация">
+  if (actor && isAssistantNavPilotEnabled(actor.userId)) return <div className={`${frameClass} trainer-top-shell`} style={frameStyle}>{!immersive && <nav className="top-tab-bar" aria-label="Основная навигация">
     <NavLink to="/clients" data-label="Клиенты">Клиенты</NavLink>
     <NavLink to="/today" data-label="Ассистент">Ассистент</NavLink>
     <NavLink to="/schedule" data-label="Расписание">Расписание</NavLink>
     <NavLink to="/profile" className="top-tab-settings" aria-label="Открыть профиль"><SettingsIcon /></NavLink>
   </nav>}<div className={contentClass} ref={contentRef}><Outlet /></div></div>
-  return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
+  return <div className={frameClass} style={frameStyle}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
     <NavLink to="/today"><TodayIcon />Сегодня</NavLink>
     {redesignedStart && <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>}
     <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>

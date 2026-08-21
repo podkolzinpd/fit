@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AppLayout } from './AppLayout'
+import { AppLayout, appViewportMetrics } from './AppLayout'
 
 const authState = vi.hoisted(() => ({
   role: 'client' as 'client' | 'trainer',
@@ -49,6 +49,11 @@ afterEach(() => {
 })
 
 describe('AppLayout navigation', () => {
+  it('восстанавливает полную высоту оболочки после закрытия iOS-клавиатуры', () => {
+    expect(appViewportMetrics(844, 508)).toEqual({ height: 508, keyboardOpen: true })
+    expect(appViewportMetrics(844, 843.6)).toEqual({ height: 844, keyboardOpen: false })
+  })
+
   it('показывает Кабинет клиента как домашний раздел', () => {
     renderLayout('/me')
     const navigation = screen.getByRole('navigation', { name: 'Основная навигация' })

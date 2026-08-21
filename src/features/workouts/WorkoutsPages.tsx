@@ -641,7 +641,6 @@ export function WorkoutDetailPage() {
     await invalidateWorkoutSurfaces()
   } })
   const question = useMutation({ mutationFn: (value: string) => workoutsRepository.askQuestion(query.data!, value), onSuccess: invalidateWorkoutSurfaces })
-  const resolveQuestion = useMutation({ mutationFn: () => workoutsRepository.resolveQuestion(query.data!), onSuccess: invalidateWorkoutSurfaces })
   const workout = query.data
   const done = workout?.status === 'done'
   const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt) : null
@@ -719,8 +718,8 @@ export function WorkoutDetailPage() {
       </section>}
       {done && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
       {done && clientMode && <WorkoutClientQuestion workout={workout} saving={question.isPending} error={question.error} onSave={(value) => question.mutateAsync(value)} />}
-      {done && !clientMode && workout.clientQuestion && <WorkoutTrainerQuestion workout={workout} canResolve={canReview} saving={resolveQuestion.isPending} error={resolveQuestion.error} onResolve={() => resolveQuestion.mutateAsync()} />}
-      {done && <WorkoutTrainerReview workout={workout} canEdit={canReview} startEditing={new URLSearchParams(location.search).get('reply') === '1' && Boolean(workout.clientQuestion && !workout.clientQuestionResolvedAt)} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
+      {done && !clientMode && workout.clientQuestion && <WorkoutTrainerQuestion workout={workout} canReply={canReview} startEditing={new URLSearchParams(location.search).get('reply') === '1'} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
+      {done && (clientMode || !workout.clientQuestion) && <WorkoutTrainerReview workout={workout} canEdit={canReview} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
       {!clientMode && workout.clientComment && workout.sessionRpe === undefined && <WorkoutClientComment workout={workout} />}
       {!done && <div className="workout-detail-exercise-overview"><p>ПЛАН ТРЕНИРОВКИ</p><span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)} · {sets.length} {setCountLabel(sets.length)}</span></div>}
       <div className={`cards ${done ? 'completed-exercise-list' : 'planned-exercise-list'}`}>{groupIntoBlocks(workout.exercises).map((block) => {
@@ -896,6 +895,10 @@ function WorkoutClientQuestion({ workout, saving, error, onSave }: {
     setValue(unresolved ? workout.clientQuestion ?? '' : '')
     setEditing(true)
   }
+  const closeEditor = () => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    setEditing(false)
+  }
 
   if (!editing) return <section className="workout-review workout-question workout-review-readonly" aria-labelledby="workout-question-title">
     <div className="workout-review-head">
@@ -912,7 +915,9 @@ function WorkoutClientQuestion({ workout, saving, error, onSave }: {
     event.preventDefault()
     if (!valid) return
     try {
+      const textarea = event.currentTarget.querySelector('textarea')
       await onSave(value)
+      textarea?.blur()
       setSent(true)
       setEditing(false)
     } catch {
@@ -923,23 +928,88 @@ function WorkoutClientQuestion({ workout, saving, error, onSave }: {
     <Field label="Напишите, что хотите уточнить по тренировке"><textarea rows={3} maxLength={500} placeholder="Например: правильно ли я выбрал вес?" value={value} onChange={(event) => setValue(event.target.value)} autoFocus /></Field>
     <p className="workout-response-limit muted">{value.length}/500</p>
     {error && <p className="error">{error.message}</p>}
-    <div className="actions workout-review-actions workout-action-row"><WorkoutCta type="button" variant="tertiary" disabled={saving} onClick={() => setEditing(false)}>Отмена</WorkoutCta><WorkoutCta type="submit" pending={saving} pendingLabel="Отправляем…" disabled={!valid}>Отправить вопрос</WorkoutCta></div>
+    <div className="actions workout-review-actions workout-action-row"><WorkoutCta type="button" variant="tertiary" disabled={saving} onClick={closeEditor}>Отмена</WorkoutCta><WorkoutCta type="submit" pending={saving} pendingLabel="Отправляем…" disabled={!valid}>Отправить вопрос</WorkoutCta></div>
   </form>
 }
 
-function WorkoutTrainerQuestion({ workout, canResolve, saving, error, onResolve }: {
+function WorkoutTrainerQuestion({ workout, canReply, startEditing = false, authorName, saving, error, onSave }: {
   workout: Workout
-  canResolve: boolean
+  canReply: boolean
+  startEditing?: boolean
+  authorName: string | null
   saving: boolean
   error: Error | null
-  onResolve: () => Promise<unknown>
+  onSave: (value: WorkoutTrainerResponseDraft) => Promise<unknown>
 }) {
   const unresolved = !workout.clientQuestionResolvedAt
+  const responseBelongsToQuestion = Boolean(
+    workout.trainerReviewedAt
+    && workout.clientQuestionAskedAt
+    && new Date(workout.trainerReviewedAt).getTime() >= new Date(workout.clientQuestionAskedAt).getTime(),
+  )
+  const currentReview = responseBelongsToQuestion ? workout.trainerReview ?? '' : ''
+  const currentReaction = responseBelongsToQuestion ? workout.trainerReaction : undefined
+  const [editing, setEditing] = useState(Boolean(startEditing && canReply && unresolved))
+  const [value, setValue] = useState(currentReview)
+  const [reaction, setReaction] = useState<TrainerReaction | undefined>(currentReaction)
+  const valid = Boolean(reaction && value.trim().length > 0 && value.trim().length <= 500)
+
+  useEffect(() => {
+    if (startEditing && canReply && unresolved) setEditing(true)
+  }, [canReply, startEditing, unresolved])
+
+  useEffect(() => {
+    if (!editing) {
+      setValue(currentReview)
+      setReaction(currentReaction)
+    }
+  }, [currentReaction, currentReview, editing, workout.id])
+
+  const closeEditor = () => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    setValue(currentReview)
+    setReaction(currentReaction)
+    setEditing(false)
+  }
+
   return <section className="workout-review workout-question workout-review-readonly" aria-labelledby="trainer-workout-question-title">
-    <div className="workout-review-head"><div><p className="eyebrow">ВОПРОС КЛИЕНТА</p><h2 id="trainer-workout-question-title">По этой тренировке</h2></div>{canResolve && unresolved && <button type="button" className="secondary" disabled={saving} onClick={() => void onResolve()}>Вопрос решён</button>}</div>
+    <div className="workout-review-head"><div><p className="eyebrow">ВОПРОС КЛИЕНТА</p><h2 id="trainer-workout-question-title">По этой тренировке</h2></div>{canReply && unresolved && !editing && <button type="button" className="secondary" disabled={saving} onClick={() => setEditing(true)}>Ответить</button>}</div>
     <p className="workout-review-text">{workout.clientQuestion}</p>
-    {!unresolved && <p className="workout-response-meta">Вопрос закрыт</p>}
-    {error && <p className="error">{error.message}</p>}
+    {editing ? <form className="workout-question-answer" onSubmit={async (event) => {
+      event.preventDefault()
+      if (!reaction || !valid) return
+      try {
+        const textarea = event.currentTarget.querySelector('textarea')
+        await onSave({ reaction, review: value })
+        textarea?.blur()
+        setEditing(false)
+      } catch {
+        // Ошибка остаётся в этой карточке; повтор ответа безопасен в RPC.
+      }
+    }}>
+      <fieldset className="workout-feedback-fieldset workout-trainer-reactions">
+        <legend>Реакция</legend>
+        <div className="workout-feedback-options">
+          {(Object.keys(trainerReactionLabels) as TrainerReaction[]).map((item) => <WorkoutChoice key={item} className="workout-feedback-option" selected={reaction === item} disabled={saving} aria-label={trainerReactionLabels[item]} onClick={() => setReaction(item)}>{trainerReactionLabels[item]}</WorkoutChoice>)}
+        </div>
+      </fieldset>
+      <VoiceNoteField name="trainerQuestionAnswer" source="workout_question_answer" label="Ответ клиенту" placeholder="Коротко ответьте на вопрос" value={value} onValueChange={(next) => setValue(next.slice(0, 500))} autoResize />
+      <p className="workout-response-limit muted">{value.length}/500</p>
+      {error && <p className="error" role="alert">{error.message}</p>}
+      <div className="actions workout-review-actions workout-action-row">
+        <WorkoutCta type="button" variant="tertiary" disabled={saving} onClick={closeEditor}>Отмена</WorkoutCta>
+        <WorkoutCta type="submit" pending={saving} pendingLabel="Отправляем…" disabled={!valid}>Отправить ответ</WorkoutCta>
+      </div>
+    </form> : <>
+      {unresolved && <p className="workout-response-meta">Ждёт ответа</p>}
+      {!unresolved && <p className="workout-response-meta">Вопрос закрыт</p>}
+      {!unresolved && responseBelongsToQuestion && currentReview && <div className="workout-response-body">
+        {currentReaction && <span className="workout-response-reaction" aria-label={`Реакция ${trainerReactionLabels[currentReaction]}`}>{trainerReactionLabels[currentReaction]}</span>}
+        <p className="workout-review-text">{currentReview}</p>
+        {(authorName || workout.trainerReviewedAt) && <p className="workout-response-meta">{[authorName || 'Тренер', trainerResponseTime(workout.trainerReviewedAt)].filter(Boolean).join(' · ')}</p>}
+      </div>}
+      {error && <p className="error" role="alert">{error.message}</p>}
+    </>}
   </section>
 }
 
