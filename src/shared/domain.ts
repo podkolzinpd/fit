@@ -148,6 +148,8 @@ export interface ExerciseSnapshot {
   secondaryMuscles?: string[]
   level?: string | null
   imageUrl?: string
+  /** Второй локальный кадр техники: конечное положение упражнения. */
+  motionImageUrl?: string
   instructions?: string[]
 }
 

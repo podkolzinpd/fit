@@ -1669,9 +1669,12 @@ export function ExerciseHistoryPage() {
 
       {tab === 'history' && <ExerciseProgressHistory items={items} showRpe={showRpe} />}
 
-      {tab === 'how' && (instructions.length
-        ? <ol className="how-steps">{instructions.map((step, index) => <li key={index}>{step}</li>)}</ol>
-        : <p className="muted empty-hint">Описание техники пока не добавлено.</p>)}
+      {tab === 'how' && <section className="exercise-technique">
+        <ExerciseImage src={meta?.imageUrl} motionSrc={meta?.motionImageUrl} alt={`Техника: ${name}`} variant="technique" />
+        {instructions.length
+          ? <ol className="how-steps">{instructions.map((step, index) => <li key={index}>{step}</li>)}</ol>
+          : <p className="muted empty-hint">Описание техники пока не добавлено.</p>}
+      </section>}
       {tab !== 'how' && <LoadMoreButton hasMore={history.hasNextPage} loading={history.isFetchingNextPage} onLoadMore={() => void history.fetchNextPage()} />}
     </AsyncView>
   </Page>

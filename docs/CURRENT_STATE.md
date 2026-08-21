@@ -5,10 +5,14 @@
 > хронологию: полная история уже хранится в Git и Tracker.
 
 Обновлено: 2026-08-21
-Проверенный базовый `main`: `f0aa1b0` (`YAFIT-319: open manual exercise picker directly (#497)`)
+Проверенный базовый `main`: `e74a0e8` (`YAFIT-320: streamline exercise picker ergonomics (#498)`)
 
 ## Активная работа
 
+- `YAFIT-321` добавляет второй локальный public-domain кадр для системного
+  каталога: список остаётся статичным, а крупная карточка упражнения показывает
+  спокойную смену начального и конечного положения с поддержкой системного
+  уменьшения движения. Внешний медиасервис, LLM и workout-логика не меняются.
 - Yandex ID/profile, tenant-allowlist и автоматическая stage delivery находятся
   в `main`: GitHub OIDC без JSON-ключа, immutable image, forward-only миграции,
   private migration runner, smoke и rollback. Автоматический run `32381263395`
@@ -84,6 +88,10 @@
 
 ## Последние проверки
 
+- `YAFIT-321`: 500 локальных пар кадров сопоставлены без пропущенных файлов;
+  целевые component/catalog tests и Playwright-карточка на 390/430/1440 px
+  зелёные, reduced motion проверен. Полный `npm run check`: 606 frontend tests,
+  API, infra policy, lint, typecheck и production build зелёные.
 - Поиск клиентов: `npm run check` зелёный; Playwright проверил 390/430/1440 px,
   светлую и пилотную тёмную тему, ввод, фильтрацию, empty, focus и reset без
   переполнения и ошибок консоли.
