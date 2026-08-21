@@ -29,7 +29,7 @@ export function clientHomeNextWorkout(workouts: readonly Workout[], today: Local
   if (active) return { kind: 'active', workout: active }
 
   const assigned = workouts
-    .filter((workout) => workout.status === 'planned' && Boolean(workout.trainerId) && workout.workoutDate >= today)
+    .filter((workout) => workout.status === 'planned' && workout.workoutDate >= today)
     .sort((a, b) => workoutOrder(a).localeCompare(workoutOrder(b)))[0]
   return assigned ? { kind: 'assigned', workout: assigned } : null
 }
@@ -85,6 +85,20 @@ function nextWorkoutLabel(next: NextWorkout, today: LocalDate): string {
 
 function NextActionCard({ next, today }: { next: NextWorkout; today: LocalDate }) {
   const active = next.kind === 'active'
+  const future = !active && next.workout.workoutDate > today
+  if (future) {
+    return <section className="client-home-next assigned compact" aria-labelledby="client-home-next-title">
+      <p className="eyebrow">{nextWorkoutLabel(next, today)}</p>
+      <Link className="client-home-next-link" to={`/workouts/${next.workout.id}`} state={{ returnTo: '/me' }}>
+        <span>
+          <h2 id="client-home-next-title">Следующая тренировка</h2>
+          <small>{workoutTiming(next.workout, today)}</small>
+          <strong>{exerciseSummary(next.workout)}</strong>
+        </span>
+        <b aria-hidden="true">›</b>
+      </Link>
+    </section>
+  }
   return <section className={`client-home-next ${active ? 'active' : 'assigned'}`} aria-labelledby="client-home-next-title">
     <p className="eyebrow">{nextWorkoutLabel(next, today)}</p>
     <h2 id="client-home-next-title">{active ? 'Продолжите тренировку' : 'Тренировка по плану'}</h2>

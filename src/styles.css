@@ -1135,6 +1135,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-home-next-time { margin:1px 0 0; color:var(--voice-copy); font-size:13px; }
 .client-home-next-exercises { display:-webkit-box; overflow:hidden; color:var(--voice-title); font-size:14px; line-height:1.35; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
 .client-home-next .button { min-height:50px; margin-top:7px; border-radius:15px; }
+.client-home-next.compact { gap:5px; padding:14px 16px; box-shadow:none; }
+.client-home-next-link { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; color:var(--voice-title); text-decoration:none; }
+.client-home-next-link > span { min-width:0; display:grid; gap:3px; }
+.client-home-next.compact h2 { font-size:17px; }
+.client-home-next-link small { color:var(--voice-copy); font-size:12px; line-height:1.35; }
+.client-home-next-link strong { display:-webkit-box; overflow:hidden; color:var(--voice-title); font-size:13px; line-height:1.35; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+.client-home-next-link b { color:var(--voice-context-arrow); font-size:25px; font-weight:400; }
 .client-home-section-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
 .client-home-section-head > div { display:grid; gap:3px; }
 .client-home-section-head > a { flex:0 0 auto; min-height:44px; display:flex; align-items:flex-start; padding:1px 0 0 12px; color:var(--accent-strong); font-size:13px; font-weight:700; text-decoration:none; }

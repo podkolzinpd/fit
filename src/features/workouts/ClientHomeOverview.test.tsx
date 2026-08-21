@@ -38,12 +38,11 @@ describe('ClientHomeOverview', () => {
     expect(clientHomeNextWorkout([assigned, active], today)).toEqual({ kind: 'active', workout: active })
   })
 
-  it('uses only the nearest future trainer assignment', () => {
-    const own = workout({ id: 'own', createdBy: 'client-1' })
+  it('uses the nearest saved plan regardless of who created it', () => {
+    const own = workout({ id: 'own', createdBy: 'client-1', workoutDate: localDate('2026-08-17') })
     const past = workout({ id: 'past', trainerId: 'trainer-1', workoutDate: localDate('2026-08-15') })
-    const nearest = workout({ id: 'nearest', trainerId: 'trainer-1', workoutDate: localDate('2026-08-17') })
     const later = workout({ id: 'later', trainerId: 'trainer-1', workoutDate: localDate('2026-08-20') })
-    expect(clientHomeNextWorkout([own, past, later, nearest], today)?.workout.id).toBe('nearest')
+    expect(clientHomeNextWorkout([past, later, own], today)?.workout.id).toBe('own')
   })
 
   it('shows no more than one highlight and prefers feedback on the latest workout', () => {
@@ -88,7 +87,9 @@ describe('ClientHomeOverview', () => {
     const assigned = workout({ id: 'tomorrow', trainerId: 'trainer-1', workoutDate: localDate('2026-08-17'), startTime: '07:20' })
     render(<MemoryRouter><ClientHomeOverview today={today} workouts={[assigned]} regularity={[{ ...week, completedCount: 2, completedPlannedCount: 0 }]} goal={null} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Своя тренировка</button>} /></MemoryRouter>)
     expect(screen.getByText('ЗАВТРА')).toBeVisible()
-    expect(screen.getByText('Завтра, 07:20')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Следующая тренировка' })).toBeVisible()
+    expect(screen.getByRole('link', { name: /Следующая тренировка Завтра, 07:20/ })).toHaveAttribute('href', '/workouts/tomorrow')
+    expect(screen.queryByRole('link', { name: 'Открыть план' })).not.toBeInTheDocument()
     expect(screen.getByText('Обе — самостоятельно')).toBeVisible()
     expect(screen.getByRole('link', { name: 'Прогресс ›' })).toHaveAttribute('href', '/me/progress')
   })
