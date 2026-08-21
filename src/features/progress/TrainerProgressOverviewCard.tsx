@@ -22,7 +22,7 @@ function plannedBreakdown(week: WorkoutRegularity): string {
   const parts = [
     completedFully > 0 ? `${completedFully} полностью` : null,
     week.partialCount > 0 ? `${week.partialCount} частично` : null,
-    week.skippedCount > 0 ? `${week.skippedCount} пропущено` : null,
+    week.skippedCount > 0 ? `${week.skippedCount} ${week.skippedCount === 1 ? 'не состоялась' : 'не состоялись'}` : null,
     independent > 0 ? `${independent} самостоятельно` : null,
   ].filter((part): part is string => part !== null)
   return `Из ${week.plannedCount} по плану${parts.length > 0 ? `: ${parts.join(' · ')}` : ''}`

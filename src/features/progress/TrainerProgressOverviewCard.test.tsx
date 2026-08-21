@@ -32,7 +32,7 @@ describe('TrainerProgressOverviewContent', () => {
     render(<TrainerProgressOverviewContent week={week} />)
 
     expect(screen.getByText('3 тренировки состоялось')).toBeVisible()
-    expect(screen.getByText('Из 4 по плану: 1 полностью · 1 частично · 2 пропущено · 1 самостоятельно')).toBeVisible()
+    expect(screen.getByText('Из 4 по плану: 1 полностью · 1 частично · 2 не состоялись · 1 самостоятельно')).toBeVisible()
     expect(screen.getByText('Эта неделя').closest('article')).toHaveClass('is-positive')
   })
 
@@ -41,6 +41,12 @@ describe('TrainerProgressOverviewContent', () => {
 
     expect(screen.getByText('Тренировок пока не было')).toBeVisible()
     expect(screen.getByText('Эта неделя').closest('article')).not.toHaveClass('is-positive')
+  })
+
+  it('uses the singular neutral wording for one workout that did not happen', () => {
+    render(<TrainerProgressOverviewContent week={{ ...week, skippedCount: 1 }} />)
+
+    expect(screen.getByText('Из 4 по плану: 1 полностью · 1 частично · 1 не состоялась · 1 самостоятельно')).toBeVisible()
   })
 })
 

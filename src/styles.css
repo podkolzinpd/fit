@@ -1140,7 +1140,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-home-section-head > a { flex:0 0 auto; min-height:44px; display:flex; align-items:flex-start; padding:1px 0 0 12px; color:var(--accent-strong); font-size:13px; font-weight:700; text-decoration:none; }
 .client-home-week { display:grid; gap:8px; box-shadow:none; }
 .client-home-week > p { margin:0; color:var(--voice-copy); font-size:13px; line-height:1.35; }
-.client-home-week-alerts { color:var(--warning-fg); font-size:12px; line-height:1.35; }
 .client-home-highlight { display:grid; gap:7px; box-shadow:none; }
 .client-home-highlight.record { border-color:var(--success-border); }
 .client-home-highlight.record .eyebrow { display:flex; align-items:center; gap:6px; color:var(--success); }
@@ -1590,6 +1589,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .picker-filter-actions .link { flex:0 0 auto; min-height:40px; padding:6px 2px }
 .picker-list-meta { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -2px 2px 0; color: var(--muted); font-size: var(--text-caption); font-weight: var(--weight-medium) }
 .picker-list-meta .link { font-size: var(--text-caption); white-space: nowrap }
+.picker-empty-state { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: var(--control-height-standard); margin: 0 2px; padding: var(--space-2) 0; color: var(--muted); }
+.picker-empty-state p { margin: 0; font-size: var(--type-body-size); }
+.picker-empty-state .link { flex: 0 0 auto; min-height: var(--control-height-standard); white-space: nowrap; }
 .picker-categories { flex: 0 0 auto; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none }.picker-categories::-webkit-scrollbar { display: none }
 .picker-category { flex: 0 0 auto; padding: 9px 14px; border: 1px solid var(--border); border-radius: 99px; background: #1b1921; color: #d9d5df; font-weight: 500; box-shadow: none }.picker-category.active { border-color: var(--accent); background: var(--accent); color: var(--on-accent) }
 /* Второй уровень: детальные мышцы выбранной группы (компактнее и приглушённее). */
@@ -1804,6 +1806,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-workouts-page .page-header, .client-progress-page .page-header, .client-profile-page .page-header { margin-bottom: 20px; }
 .client-workouts-page .page-header h1, .client-progress-page .page-header h1, .client-profile-page .page-header h1 { font-size: var(--type-display-fluid); }
 .client-workouts-page .page-header .button { min-height: var(--control-height-standard); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); }
+.client-workouts-start, .trainer-history-plan { display: block; width: 100%; margin: 0; }
 .client-workouts-stack, .client-progress-stack { gap: var(--section-gap); }
 .client-workout-section, .client-progress-form, .client-progress-history { gap: 8px; }
 .client-workout-section-head, .client-progress-section-head { gap: 1px; }

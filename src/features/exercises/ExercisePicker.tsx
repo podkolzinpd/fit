@@ -171,6 +171,11 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     },
     [filtered, hasFilters, promotedClient, recent, search],
   )
+  const hasVisibleExercises = promotedClient.length > 0 || recent.length > 0 || listExercises.length > 0
+  function openCreate() {
+    setName(search.trim())
+    setCreating(true)
+  }
   function pick(exercise: ExerciseSnapshot) {
     if (!multiple) {
       recordRecent(exercise)
@@ -280,14 +285,20 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
           {!runningExercise && !catalog.loading && <p className="state">Базовое упражнение «Бег» не найдено</p>}
           {multiple && selected.size > 0 && <div className="picker-selection-bar"><span>Выбрано: {selected.size}</span><button type="button" onClick={addSelected}>Добавить {selected.size}</button></div>}
         </div> : <>
-          <div className="picker-list-meta"><span>{filtered.length ? exerciseCountLabel(filtered.length) : 'Совпадений нет'}</span><button type="button" className="link" onClick={() => { setName(search.trim()); setCreating(true) }}>Создать упражнение</button></div>
+          {hasVisibleExercises && <div className="picker-list-meta"><span>{exerciseCountLabel(filtered.length)}</span><button type="button" className="link" onClick={openCreate}>Создать упражнение</button></div>}
           {catalog.loading && <p className="state">Загрузка…</p>}
           {catalog.error && <div className="state"><p className="error">{catalog.error.message}</p><button type="button" className="secondary" onClick={catalog.retry}>Повторить</button></div>}
-          {!catalog.loading && <div className="picker-list">
+          {!catalog.loading && !catalog.error && hasVisibleExercises && <div className="picker-list">
             {promotedClient.length > 0 && <><p className="picker-section-label">Последние у клиента</p>{promotedClient.map((exercise) => item(exercise, 'client-recent'))}</>}
             {recent.length > 0 && <><p className="picker-section-label">Недавние</p>{recent.map((exercise) => item(exercise, 'recent'))}</>}
             {(promotedClient.length > 0 || recent.length > 0) && listExercises.length > 0 && <p className="picker-section-label">Все упражнения</p>}
-            {listExercises.length ? listExercises.map((exercise) => item(exercise, 'all')) : <p className="state">Ничего не найдено</p>}
+            {listExercises.map((exercise) => item(exercise, 'all'))}
+          </div>}
+          {!catalog.loading && !catalog.error && !hasVisibleExercises && <div className="picker-empty-state" role="status">
+            {(hasFilters || search.trim()) && <p>Ничего не найдено</p>}
+            {hasFilters
+              ? <button type="button" className="link" onClick={resetFilters}>Сбросить фильтры</button>
+              : <button type="button" className="link" onClick={openCreate}>Создать упражнение</button>}
           </div>}
           {multiple && selected.size > 0 && <div className="picker-selection-bar"><span>Выбрано: {selected.size}</span><button type="button" onClick={addSelected}>Добавить {selected.size}</button></div>}
         </>}
