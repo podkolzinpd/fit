@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import type { ClientGoal, Workout, WorkoutPersonalRecord, WorkoutRegularity } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
-import { ClientHomeOverview, clientHomeHighlight, clientHomeNextWorkout } from './ClientHomeOverview'
+import { ClientHomeOverview, clientHomeHighlight, clientHomeNextWorkout, clientHomePastPlans } from './ClientHomeOverview'
 
 const today = localDate('2026-08-16')
 
@@ -43,6 +43,23 @@ describe('ClientHomeOverview', () => {
     const past = workout({ id: 'past', trainerId: 'trainer-1', workoutDate: localDate('2026-08-15') })
     const later = workout({ id: 'later', trainerId: 'trainer-1', workoutDate: localDate('2026-08-20') })
     expect(clientHomeNextWorkout([past, later, own], today)?.workout.id).toBe('own')
+  })
+
+  it('keeps past plans in a newest-first action queue', () => {
+    const older = workout({ id: 'older', workoutDate: localDate('2026-08-10') })
+    const newer = workout({ id: 'newer', workoutDate: localDate('2026-08-15') })
+    const cancelled = workout({ id: 'cancelled', status: 'cancelled', workoutDate: localDate('2026-08-14') })
+    expect(clientHomePastPlans([older, cancelled, newer], today).map((item) => item.id)).toEqual(['newer', 'older'])
+  })
+
+  it('shows one neutral past-plan action when there is no active or today plan', () => {
+    const past = workout({ id: 'past', workoutDate: localDate('2026-08-15') })
+    const older = workout({ id: 'older', workoutDate: localDate('2026-08-10') })
+    render(<MemoryRouter><ClientHomeOverview today={today} workouts={[older, past]} regularity={[]} goal={null} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Своя тренировка</button>} /></MemoryRouter>)
+    expect(screen.getByText('ПЛАН НА 15 августа 2026 г.')).toBeVisible()
+    expect(screen.getByRole('link', { name: /Выбрать действие/ })).toHaveAttribute('href', '/workouts/past')
+    expect(screen.getByText('Ещё планов: 1')).toBeVisible()
+    expect(screen.queryByText(/пропущ/i)).not.toBeInTheDocument()
   })
 
   it('shows no more than one highlight and prefers feedback on the latest workout', () => {

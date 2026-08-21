@@ -21,11 +21,10 @@ describe('workoutDateForRecordMode', () => {
 describe('plannedWorkoutActionLabels', () => {
   const today = localDate('2026-08-19')
 
-  it('offers to record a result or reschedule a missed plan', () => {
+  it('opens one calm action choice for a past plan', () => {
     expect(plannedWorkoutActionLabels(localDate('2026-08-11'), today)).toEqual({
-      primary: 'Записать результат',
+      primary: 'Выбрать действие',
       pending: 'Открываем…',
-      secondary: 'Перенести тренировку',
     })
   })
 

@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, CSSProperties, InputHTMLAttributes, PropsWithChildren, ReactNode } from 'react'
 
-export type WorkoutUiState = 'planned' | 'current' | 'upcoming' | 'completed' | 'partial' | 'skipped' | 'history'
+export type WorkoutUiState = 'planned' | 'current' | 'upcoming' | 'completed' | 'partial' | 'decision' | 'cancelled' | 'skipped' | 'history'
 export type WorkoutUiTone = 'accent' | 'success' | 'warning' | 'neutral'
 export type WorkoutActionVariant = 'primary' | 'secondary' | 'tertiary' | 'destructive'
 export type WorkoutChoiceTone = 'neutral' | 'destructive'
@@ -11,7 +11,9 @@ const STATUS_LABELS: Record<WorkoutUiState, string> = {
   upcoming: 'Далее',
   completed: 'Завершена',
   partial: 'Завершена частично',
-  skipped: 'Пропущена',
+  decision: 'План',
+  cancelled: 'Не состоялась',
+  skipped: 'Не выполнено',
   history: 'Результат',
 }
 
@@ -21,6 +23,8 @@ const STATUS_TONES: Record<WorkoutUiState, WorkoutUiTone> = {
   upcoming: 'neutral',
   completed: 'success',
   partial: 'warning',
+  decision: 'neutral',
+  cancelled: 'neutral',
   skipped: 'neutral',
   history: 'neutral',
 }

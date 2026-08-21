@@ -1,4 +1,4 @@
-// schema-sha256: f58ac461b31cc4a156b9e85e40311f4102f02218a5d1131817f35a7abe2ca5ae
+// schema-sha256: 2d506f485767c9dc8274b8a662ffb22c13237075ec87832d312d7fb8c5142ce0
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1094,6 +1094,10 @@ export type Database = {
       }
       can_access_client: { Args: { p_client_id: string }; Returns: boolean }
       can_read_workout: { Args: { p_workout_id: string }; Returns: boolean }
+      cancel_planned_workout: {
+        Args: { p_expected_version: number; p_workout_id: string }
+        Returns: number
+      }
       claim_client_invitation: { Args: { p_code: string }; Returns: string }
       confirm_live_set: {
         Args: { p_expected_version: number; p_set_id: string }
@@ -1332,6 +1336,15 @@ export type Database = {
           p_exercise: Json
           p_exercise_id: string
           p_expected_version: number
+          p_workout_id: string
+        }
+        Returns: number
+      }
+      reschedule_workout: {
+        Args: {
+          p_expected_version: number
+          p_start_time: string | null
+          p_workout_date: string
           p_workout_id: string
         }
         Returns: number

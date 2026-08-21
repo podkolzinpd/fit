@@ -402,30 +402,34 @@ export interface ExerciseChartPoint {
   value: number
 }
 
-// Upcoming = not yet done and dated today or later, nearest first.
-// History = everything else (done, or planned in the past), most recent first.
-export function splitClientWorkouts(workouts: Workout[], today: LocalDate): { upcoming: Workout[]; history: Workout[] } {
+// Past plans still awaiting a decision are neither a completed result nor a
+// warning. They get their own calm action queue for both roles.
+export function splitClientWorkouts(workouts: Workout[], today: LocalDate): { upcoming: Workout[]; needsDecision: Workout[]; history: Workout[] } {
   const upcoming = workouts
-    .filter((workout) => workout.status !== 'done' && workout.workoutDate >= today)
+    .filter((workout) => (workout.status === 'planned' || workout.status === 'in_progress') && workout.workoutDate >= today)
     .sort((a, b) => (a.workoutDate < b.workoutDate ? -1 : a.workoutDate > b.workoutDate ? 1 : 0))
-  const history = workouts
-    .filter((workout) => workout.status === 'done' || workout.workoutDate < today)
+  const needsDecision = workouts
+    .filter((workout) => workout.status === 'planned' && workout.workoutDate < today)
     .sort((a, b) => (a.workoutDate > b.workoutDate ? -1 : a.workoutDate < b.workoutDate ? 1 : 0))
-  return { upcoming, history }
+  const history = workouts
+    .filter((workout) => workout.status === 'done' || workout.status === 'cancelled' || (workout.status === 'in_progress' && workout.workoutDate < today))
+    .sort((a, b) => (a.workoutDate > b.workoutDate ? -1 : a.workoutDate < b.workoutDate ? 1 : 0))
+  return { upcoming, needsDecision, history }
 }
 
-// «Отменена» пока не является отдельным состоянием в модели: удалённые
-// тренировки намеренно не показываются. Просроченный план не выдаём за факт.
-export type WorkoutStatusTone = 'planned' | 'in_progress' | 'done' | 'partial' | 'skipped'
+// «Не состоялась» — сохранённое решение по плану, а удалённые тренировки
+// по-прежнему не показываются. Просроченный план не выдаём за факт.
+export type WorkoutStatusTone = 'planned' | 'in_progress' | 'done' | 'partial' | 'decision' | 'cancelled'
 
 export interface WorkoutStatusPresentation {
   label: string
   tone: WorkoutStatusTone
 }
 
-// Статус в карточке — производное представление, а не новый статус БД:
-// частичное завершение определяется только по подтверждённым подходам.
+// Частичное завершение остаётся производным представлением по подтверждённым
+// подходам. «Не состоялась» — отдельное сохранённое решение по прошлому плану.
 export function workoutStatusPresentation(workout: Workout, today: LocalDate): WorkoutStatusPresentation {
+  if (workout.status === 'cancelled') return { label: 'Не состоялась', tone: 'cancelled' }
   if (workout.status === 'done') {
     const sets = workout.exercises.flatMap((exercise) => exercise.sets)
     const confirmed = sets.filter((set) => set.confirmedAt).length
@@ -437,7 +441,7 @@ export function workoutStatusPresentation(workout: Workout, today: LocalDate): W
     : { label: 'Не завершена', tone: 'in_progress' }
   return workout.workoutDate >= today
     ? { label: 'План', tone: 'planned' }
-    : { label: 'Пропущена', tone: 'skipped' }
+    : { label: 'План', tone: 'decision' }
 }
 
 export function clientWorkoutStatusLabel(workout: Workout, today: LocalDate): string {
@@ -457,7 +461,8 @@ function daysBetween(from: LocalDate, to: LocalDate): number {
 export function computeClientStats(summaries: WorkoutSummary[], today: LocalDate): ClientStats {
   const done = summaries.filter((workout) => workout.status === 'done')
   const missed = summaries.filter(
-    (workout) => workout.status === 'planned' && workout.workoutDate < today,
+    (workout) => workout.status === 'cancelled'
+      || (workout.status === 'planned' && workout.workoutDate < today),
   )
 
   const lastWorkoutDate = done.reduce<LocalDate | null>(

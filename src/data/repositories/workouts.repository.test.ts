@@ -261,17 +261,19 @@ describe('chartUnitFor', () => {
 })
 
 describe('splitClientWorkouts', () => {
-  it('предстоящие — ближайшая сверху, история — недавняя сверху', () => {
+  it('разделяет предстоящие, планы с выбором действия и историю', () => {
     const workouts = [
       bareWorkout('2026-07-30', 'planned'),
       bareWorkout('2026-07-24', 'planned'),
       bareWorkout('2026-07-10', 'done'),
       bareWorkout('2026-07-18', 'done'),
-      bareWorkout('2026-07-20', 'planned'), // прошлое planned → пропущено → история
+      bareWorkout('2026-07-20', 'planned'),
+      bareWorkout('2026-07-19', 'cancelled'),
     ]
-    const { upcoming, history } = splitClientWorkouts(workouts, TODAY)
+    const { upcoming, needsDecision, history } = splitClientWorkouts(workouts, TODAY)
     expect(upcoming.map((w) => w.workoutDate)).toEqual(['2026-07-24', '2026-07-30'])
-    expect(history.map((w) => w.workoutDate)).toEqual(['2026-07-20', '2026-07-18', '2026-07-10'])
+    expect(needsDecision.map((w) => w.workoutDate)).toEqual(['2026-07-20'])
+    expect(history.map((w) => w.workoutDate)).toEqual(['2026-07-19', '2026-07-18', '2026-07-10'])
   })
 
   it('выполненная сегодня уходит в историю, не в предстоящие', () => {
@@ -289,10 +291,11 @@ describe('splitClientWorkouts', () => {
 describe('clientWorkoutStatusLabel', () => {
   it('does not call a past plan or stale live workout completed', () => {
     expect(clientWorkoutStatusLabel(bareWorkout('2026-07-30', 'planned'), TODAY)).toBe('План')
-    expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'planned'), TODAY)).toBe('Пропущена')
+    expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'planned'), TODAY)).toBe('План')
     expect(clientWorkoutStatusLabel(bareWorkout('2026-07-22', 'in_progress'), TODAY)).toBe('Идёт')
     expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'in_progress'), TODAY)).toBe('Не завершена')
     expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'done'), TODAY)).toBe('Готово')
+    expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'cancelled'), TODAY)).toBe('Не состоялась')
   })
 
   it('marks a completed workout with unconfirmed sets as partial', () => {

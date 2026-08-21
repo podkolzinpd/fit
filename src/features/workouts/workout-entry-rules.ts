@@ -19,9 +19,8 @@ export interface PlannedWorkoutActionLabels {
 // результата и отдельно предлагаем перенести план на другую дату.
 export function plannedWorkoutActionLabels(workoutDate: LocalDate, today: LocalDate): PlannedWorkoutActionLabels {
   if (workoutDate < today) return {
-    primary: 'Записать результат',
+    primary: 'Выбрать действие',
     pending: 'Открываем…',
-    secondary: 'Перенести тренировку',
   }
   return {
     primary: 'Начать тренировку',

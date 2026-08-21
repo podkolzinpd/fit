@@ -69,7 +69,8 @@ route/page → feature UI/hooks → repository → query → Supabase Data API/R
   `WorkoutHeader`, `WorkoutExercise`, `WorkoutSetRow`, `WorkoutStatus` и
   `WorkoutCta`; отдельные копии этих компонентов внутри экранов запрещены.
 - Визуальное различие задаёт состояние компонента, а не маршрут: `planned`,
-  `current`, `upcoming`, `completed`, `partial`, `skipped`, `history`.
+  `current`, `upcoming`, `completed`, `partial`, `decision`, `cancelled`,
+  `skipped`, `history`.
 - Состояния передаются явно через `state` и остаются одинаковыми для тренера и
   клиента. Экран может менять состав данных и доступные действия, но не
   семантику цвета, статуса или основной кнопки.
