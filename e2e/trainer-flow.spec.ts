@@ -558,6 +558,7 @@ test('замена упражнения: в форме плана и в live', a
 })
 
 test('карточка упражнения: шапка с оборудованием/мышцами и табы', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -603,6 +604,25 @@ test('карточка упражнения: шапка с оборудован�
   await expect(page.getByRole('tab', { name: 'Статистика' })).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('tab', { name: 'Техника' }).click()
   await expect(page.getByRole('tab', { name: 'Техника' })).toHaveAttribute('aria-selected', 'true')
+  // Каталог остаётся статичным, а второй кадр загружается только в крупной
+  // демонстрации техники.
+  const techniqueImage = page.locator('.exercise-image-technique')
+  await expect(techniqueImage.locator('img')).toHaveCount(2)
+  await expect(techniqueImage).toHaveClass(/exercise-image-motion/)
+  await expect(techniqueImage.locator('.exercise-image-frame-end')).not.toHaveCSS('animation-name', 'none')
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(techniqueImage.locator('.exercise-image-frame-end')).toHaveCSS('animation-name', 'none')
+  await expect(techniqueImage.locator('.exercise-image-frame-end')).toHaveCSS('opacity', '0')
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  const techniqueImageBox = await techniqueImage.boundingBox()
+  if (techniqueImageBox === null) throw new Error('Technique image is not visible')
+  expect(Math.abs(techniqueImageBox.width / techniqueImageBox.height - 1.5)).toBeLessThan(0.02)
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('exercise-technique-390.png'), fullPage: true, animations: 'disabled' })
+  await page.setViewportSize({ width: 430, height: 932 })
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
   // Инструкции техники присутствуют (нумерованный список).
   await expect(page.locator('.how-steps li').first()).toBeVisible()
 })

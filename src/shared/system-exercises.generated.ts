@@ -20,6 +20,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-machine-bent-over-row.jpg",
+    "motionImageUrl": "/exercises/fedb-smith-machine-bent-over-row-end.jpg",
     "instructions": [
       "Встаньте в наклоне, гриф Смита в опущенных руках хватом на ширине плеч.",
       "Подтяните гриф к животу, сводя лопатки.",
@@ -41,6 +42,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-step-up-with-knee-raise.jpg",
+    "motionImageUrl": "/exercises/fedb-step-up-with-knee-raise-end.jpg",
     "instructions": [
       "Встаньте перед тумбой, поставьте на неё одну стопу целиком.",
       "Поднимитесь на тумбу силой опорной ноги, вынося колено второй ноги вверх.",
@@ -62,6 +64,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-stiff-legged-dumbbell-deadlift.jpg",
+    "motionImageUrl": "/exercises/fedb-stiff-legged-dumbbell-deadlift-end.jpg",
     "instructions": [
       "Встаньте, гантели перед бёдрами, ноги почти прямые, спина нейтральна.",
       "Наклонитесь вперёд в тазобедренном суставе, опуская гантели вдоль ног.",
@@ -83,6 +86,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-straight-bar-bench-mid-rows.jpg",
+    "motionImageUrl": "/exercises/fedb-straight-bar-bench-mid-rows-end.jpg",
     "instructions": [
       "Сядьте у скамьи, прямой гриф под ней, тяните к нижней части груди.",
       "Подтяните гриф, сводя лопатки, локти вдоль корпуса.",
@@ -105,6 +109,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-underhand-cable-pulldowns.jpg",
+    "motionImageUrl": "/exercises/fedb-underhand-cable-pulldowns-end.jpg",
     "instructions": [
       "Сядьте у верхнего блока, рукоять обратным хватом на ширине плеч.",
       "Подтяните рукоять к верху груди, сводя лопатки.",
@@ -126,6 +131,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-barbell-glute-bridge.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-glute-bridge-end.jpg",
     "instructions": [
       "Лягте на спину, согните колени, стопы на полу. Штангу разместите на тазу (на валике/подушке).",
       "На выдохе поднимите таз, полностью выпрямляя корпус и сжимая ягодицы вверху.",
@@ -147,6 +153,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-barbell-hip-thrust.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-hip-thrust-end.jpg",
     "instructions": [
       "Обопритесь верхом спины (лопатками) о скамью, штанга на тазу, стопы на полу.",
       "На выдохе поднимите таз до параллели корпуса полу, максимально сжимая ягодицы.",
@@ -173,6 +180,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-dumbbell-clean.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-clean-end.jpg",
     "instructions": [
       "Гантели у пола между стоп, спина прямая, таз отведён.",
       "Мощно разогнитесь, подрывая гантели вверх, и подсядьте под них к плечам.",
@@ -197,6 +205,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-kettlebell-dead-clean.jpg",
+    "motionImageUrl": "/exercises/fedb-kettlebell-dead-clean-end.jpg",
     "instructions": [
       "Гиря на полу между стоп, возьмите за дужку, спина прямая.",
       "Взрывно разогните таз, забрасывая гирю к плечу, «прошивая» кистью.",
@@ -218,6 +227,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-kettlebell-one-legged-deadlift.jpg",
+    "motionImageUrl": "/exercises/fedb-kettlebell-one-legged-deadlift-end.jpg",
     "instructions": [
       "Встаньте на одну ногу, гиря в руке, вторая нога уходит назад.",
       "Наклонитесь вперёд, опуская гирю, свободная нога поднимается назад в линию.",
@@ -240,6 +250,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-kneeling-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-kneeling-squat-end.jpg",
     "instructions": [
       "Встаньте на колени (на мягкую опору), штанга на трапециях, корпус прямой.",
       "Отведите таз назад и опуститесь к пяткам, сохраняя нейтральную спину.",
@@ -260,6 +271,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-alternate-hammer-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-alternate-hammer-curl-end.jpg",
     "instructions": [
       "Встаньте, гантели в опущенных руках нейтральным хватом (ладони внутрь).",
       "Поочерёдно сгибайте руки, поднимая гантель к плечу, локоть у корпуса.",
@@ -280,6 +292,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-alternate-incline-dumbbell-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-alternate-incline-dumbbell-curl-end.jpg",
     "instructions": [
       "Сядьте на наклонную скамью, руки с гантелями свободно свисают.",
       "Поочерёдно сгибайте руку, поднимая гантель, локоть неподвижен.",
@@ -298,6 +311,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-curls-lying-against-an-incline.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-curls-lying-against-an-incline-end.jpg",
     "instructions": [
       "Лягте грудью на наклонную скамью, руки со штангой свисают вниз.",
       "Согните руки, поднимая штангу к плечам без раскачки.",
@@ -316,6 +330,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-seated-calf-raise.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-seated-calf-raise-end.jpg",
     "instructions": [
       "Сядьте, штангу разместите на бёдрах у колен, носки на возвышении, пятки свободны.",
       "Поднимитесь максимально высоко на носках, сжимая икры.",
@@ -334,6 +349,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-shrug.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-shrug-end.jpg",
     "instructions": [
       "Встаньте, штанга в опущенных руках перед бёдрами, хват на ширине плеч.",
       "Поднимите плечи к ушам, не сгибая руки.",
@@ -355,6 +371,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-shrug-behind-the-back.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-shrug-behind-the-back-end.jpg",
     "instructions": [
       "Штанга за спиной в опущенных руках, хват на ширине плеч.",
       "Поднимите плечи вверх, сжимая трапеции.",
@@ -375,6 +392,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-butt-lift-bridge.jpg",
+    "motionImageUrl": "/exercises/fedb-butt-lift-bridge-end.jpg",
     "instructions": [
       "Лягте на спину, колени согнуты, стопы на ширине таза, руки вдоль тела.",
       "Поднимите таз вверх за счёт ягодиц, выпрямляя корпус в линию.",
@@ -393,6 +411,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-hammer-curls-rope-attachment.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-hammer-curls-rope-attachment-end.jpg",
     "instructions": [
       "Встаньте у нижнего блока с канатом, хват нейтральный.",
       "Согните руки, подтягивая канат к плечам, локти у корпуса.",
@@ -411,6 +430,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-incline-pushdown.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-incline-pushdown-end.jpg",
     "instructions": [
       "Встаньте у верхнего блока, наклонитесь вперёд, руки почти прямые на рукояти.",
       "Опустите рукоять к бёдрам прямыми руками за счёт широчайших.",
@@ -431,6 +451,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-preacher-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-preacher-curl-end.jpg",
     "instructions": [
       "Сядьте у скамьи Скотта, руки со штангой/рукоятью блока на подушке.",
       "Согните руки, поднимая вес, не отрывая локти от подушки.",
@@ -449,6 +470,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-shrugs.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-shrugs-end.jpg",
     "instructions": [
       "Встаньте у нижнего блока, рукоять в опущенных руках.",
       "Поднимите плечи к ушам против веса блока.",
@@ -467,6 +489,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-wrist-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-wrist-curl-end.jpg",
     "instructions": [
       "Сядьте, предплечья на бёдрах, кисти с рукоятью блока свисают ладонями вверх.",
       "Согните кисти вверх, поднимая рукоять только запястьями.",
@@ -485,6 +508,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-calf-press.jpg",
+    "motionImageUrl": "/exercises/fedb-calf-press-end.jpg",
     "instructions": [
       "Сядьте в тренажёр, упритесь носками в платформу, пятки свисают.",
       "Выжмите платформу носками, полностью выпрямляя стопы.",
@@ -503,6 +527,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-calf-press-on-the-leg-press-machine.jpg",
+    "motionImageUrl": "/exercises/fedb-calf-press-on-the-leg-press-machine-end.jpg",
     "instructions": [
       "В жиме ногами поставьте носки на нижний край платформы, пятки свободны.",
       "Выжмите платформу носками, разгибая стопы; колени держите слегка согнутыми.",
@@ -521,6 +546,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-calf-machine-shoulder-shrug.jpg",
+    "motionImageUrl": "/exercises/fedb-calf-machine-shoulder-shrug-end.jpg",
     "instructions": [
       "Встаньте в тренажёр для икр, плечи под упорами.",
       "Поднимите плечи вверх, сжимая трапеции.",
@@ -541,6 +567,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-close-grip-ez-bar-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-close-grip-ez-bar-curl-end.jpg",
     "instructions": [
       "Встаньте, EZ-гриф узким хватом снизу, руки опущены.",
       "Согните руки, поднимая гриф к плечам, локти неподвижны.",
@@ -559,6 +586,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-seated-one-leg-calf-raise.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-seated-one-leg-calf-raise-end.jpg",
     "instructions": [
       "Сядьте, гантель на бедре у колена, носок рабочей ноги на возвышении.",
       "Поднимите пятку максимально высоко, сжимая икру.",
@@ -577,6 +605,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-shrug.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-shrug-end.jpg",
     "instructions": [
       "Встаньте, гантели в опущенных руках вдоль тела.",
       "Поднимите плечи к ушам, не сгибая руки.",
@@ -595,6 +624,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-finger-curls.jpg",
+    "motionImageUrl": "/exercises/fedb-finger-curls-end.jpg",
     "instructions": [
       "Сядьте, предплечья на бёдрах, штанга на раскрытых пальцах ладонями вверх.",
       "Скрутите штангу пальцами и подсогните кисти вверх.",
@@ -615,6 +645,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-hip-extension-with-bands.jpg",
+    "motionImageUrl": "/exercises/fedb-hip-extension-with-bands-end.jpg",
     "instructions": [
       "Закрепите резину на лодыжке и неподвижной опоре впереди, встаньте, держась за поддержку.",
       "Отведите прямую ногу назад, преодолевая сопротивление резины, сжимая ягодицу.",
@@ -636,6 +667,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-hip-lift-with-band.jpg",
+    "motionImageUrl": "/exercises/fedb-hip-lift-with-band-end.jpg",
     "instructions": [
       "Лягте на спину, резину накиньте на бёдра, стопы на полу, колени согнуты.",
       "Поднимите таз вверх против сопротивления резины, разводя колени наружу.",
@@ -657,6 +689,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-bench-pull.jpg",
+    "motionImageUrl": "/exercises/fedb-incline-bench-pull-end.jpg",
     "instructions": [
       "Лягте грудью на наклонную скамью, штанга в свисающих руках.",
       "Подтяните штангу к скамье, сводя лопатки, локти вдоль корпуса.",
@@ -677,6 +710,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-leg-lift.jpg",
+    "motionImageUrl": "/exercises/fedb-leg-lift-end.jpg",
     "instructions": [
       "Встаньте на четвереньки (или обопритесь о опору), спина нейтральна.",
       "Поднимите прямую ногу назад до линии корпуса за счёт ягодицы.",
@@ -699,6 +733,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-lying-cambered-barbell-row.jpg",
+    "motionImageUrl": "/exercises/fedb-lying-cambered-barbell-row-end.jpg",
     "instructions": [
       "Лягте на скамью лицом вниз, изогнутый гриф под скамьёй в руках.",
       "Подтяните гриф к скамье, сводя лопатки.",
@@ -717,6 +752,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-lying-leg-curls.jpg",
+    "motionImageUrl": "/exercises/fedb-lying-leg-curls-end.jpg",
     "instructions": [
       "Лягте на тренажёр лицом вниз, валик над пятками.",
       "Согните ноги, подтягивая валик к ягодицам за счёт бицепса бедра.",
@@ -735,6 +771,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-palms-down-dumbbell-wrist-curl-over-a-bench.jpg",
+    "motionImageUrl": "/exercises/fedb-palms-down-dumbbell-wrist-curl-over-a-bench-end.jpg",
     "instructions": [
       "Предплечья на скамье, кисти с гантелями свисают ладонями вниз.",
       "Разогните кисти вверх, поднимая гантели только запястьями.",
@@ -753,6 +790,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-palms-down-wrist-curl-over-a-bench.jpg",
+    "motionImageUrl": "/exercises/fedb-palms-down-wrist-curl-over-a-bench-end.jpg",
     "instructions": [
       "Предплечья на скамье, штанга в кистях ладонями вниз, гриф свисает.",
       "Разогните запястья вверх, поднимая штангу.",
@@ -771,6 +809,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-palms-up-barbell-wrist-curl-over-a-bench.jpg",
+    "motionImageUrl": "/exercises/fedb-palms-up-barbell-wrist-curl-over-a-bench-end.jpg",
     "instructions": [
       "Предплечья на скамье, штанга в кистях ладонями вверх, гриф свисает.",
       "Согните запястья вверх, поднимая штангу.",
@@ -789,6 +828,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-palms-up-dumbbell-wrist-curl-over-a-bench.jpg",
+    "motionImageUrl": "/exercises/fedb-palms-up-dumbbell-wrist-curl-over-a-bench-end.jpg",
     "instructions": [
       "Предплечья на скамье, гантели в кистях ладонями вверх, свисают.",
       "Согните запястья вверх, поднимая гантели.",
@@ -809,6 +849,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-physioball-hip-bridge.jpg",
+    "motionImageUrl": "/exercises/fedb-physioball-hip-bridge-end.jpg",
     "instructions": [
       "Лягте на спину, пятки на фитболе, руки вдоль тела для устойчивости.",
       "Поднимите таз, сжимая ягодицы, удерживая баланс на мяче.",
@@ -827,6 +868,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-rocking-standing-calf-raise.jpg",
+    "motionImageUrl": "/exercises/fedb-rocking-standing-calf-raise-end.jpg",
     "instructions": [
       "Штанга на трапециях, носки на возвышении, пятки свисают.",
       "Поднимитесь на носки как можно выше, задержитесь.",
@@ -845,6 +887,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-rope-straight-arm-pulldown.jpg",
+    "motionImageUrl": "/exercises/fedb-rope-straight-arm-pulldown-end.jpg",
     "instructions": [
       "Встаньте у верхнего блока с канатом, руки почти прямые перед собой.",
       "Опустите канат к бёдрам прямыми руками, разводя концы внизу.",
@@ -863,6 +906,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-seated-calf-raise.jpg",
+    "motionImageUrl": "/exercises/fedb-seated-calf-raise-end.jpg",
     "instructions": [
       "Сядьте в тренажёр, валик на бёдрах у колен, носки на платформе.",
       "Поднимитесь на носки, преодолевая вес, сжимая икры.",
@@ -881,6 +925,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-seated-leg-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-seated-leg-curl-end.jpg",
     "instructions": [
       "Сядьте в тренажёр, валик над щиколотками, бёдра зафиксированы.",
       "Согните ноги под себя, преодолевая вес.",
@@ -901,6 +946,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-single-leg-glute-bridge.jpg",
+    "motionImageUrl": "/exercises/fedb-single-leg-glute-bridge-end.jpg",
     "instructions": [
       "Лягте на спину, одну ногу согните (стопа на полу), вторую выпрямите вверх.",
       "Поднимите таз силой опорной ягодицы, удерживая вторую ногу на весу.",
@@ -919,6 +965,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-machine-calf-raise.jpg",
+    "motionImageUrl": "/exercises/fedb-smith-machine-calf-raise-end.jpg",
     "instructions": [
       "Гриф Смита на трапециях, носки на возвышении, пятки свободны.",
       "Поднимитесь на носки, разгибая стопы полностью.",
@@ -937,6 +984,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-standing-leg-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-standing-leg-curl-end.jpg",
     "instructions": [
       "Встаньте в тренажёр, валик над пяткой одной ноги.",
       "Согните ногу, подтягивая пятку к ягодице.",
@@ -955,6 +1003,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-straight-arm-pulldown.jpg",
+    "motionImageUrl": "/exercises/fedb-straight-arm-pulldown-end.jpg",
     "instructions": [
       "Встаньте у верхнего блока, прямая рукоять в почти прямых руках.",
       "Опустите рукоять к бёдрам прямыми руками за счёт широчайших.",
@@ -975,6 +1024,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-thigh-abductor.jpg",
+    "motionImageUrl": "/exercises/fedb-thigh-abductor-end.jpg",
     "instructions": [
       "Сядьте в тренажёр, валики с внешней стороны бёдер, ноги вместе.",
       "Разведите бёдра в стороны, преодолевая сопротивление.",
@@ -996,6 +1046,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-thigh-adductor.jpg",
+    "motionImageUrl": "/exercises/fedb-thigh-adductor-end.jpg",
     "instructions": [
       "Сядьте в тренажёр, валики с внутренней стороны бёдер, ноги разведены.",
       "Сведите бёдра вместе, преодолевая сопротивление.",
@@ -1016,6 +1067,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-one-legged-cable-kickback.jpg",
+    "motionImageUrl": "/exercises/fedb-one-legged-cable-kickback-end.jpg",
     "instructions": [
       "Закрепите манжету на лодыжке, встаньте лицом к блоку, слегка наклонитесь, держась за опору.",
       "Отведите прямую ногу назад за счёт ягодицы, не прогибаясь в пояснице.",
@@ -1037,6 +1089,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-ball-leg-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-ball-leg-curl-end.jpg",
     "instructions": [
       "Лягте на спину, пятки на фитболе, таз поднят в линию с корпусом.",
       "Согните ноги, подкатывая мяч пятками к себе, удерживая таз вверху.",
@@ -1055,6 +1108,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-band-hip-adductions.jpg",
+    "motionImageUrl": "/exercises/fedb-band-hip-adductions-end.jpg",
     "instructions": [
       "Закрепите резину сбоку на лодыжке, встаньте боком, держась за опору.",
       "Приведите ногу к центру и за опорную, преодолевая резину.",
@@ -1073,6 +1127,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-calf-raises-with-bands.jpg",
+    "motionImageUrl": "/exercises/fedb-calf-raises-with-bands-end.jpg",
     "instructions": [
       "Встаньте на резину носками, концы держите в руках у плеч.",
       "Поднимитесь на носки против сопротивления резины.",
@@ -1093,6 +1148,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-close-grip-ez-bar-curl-with-band.jpg",
+    "motionImageUrl": "/exercises/fedb-close-grip-ez-bar-curl-with-band-end.jpg",
     "instructions": [
       "Встаньте на резину, EZ-гриф с резиной узким хватом снизу.",
       "Согните руки, преодолевая вес и натяжение резины.",
@@ -1111,6 +1167,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-3-4-sit-up.jpg",
+    "motionImageUrl": "/exercises/fedb-3-4-sit-up-end.jpg",
     "instructions": [
       "Лягте на спину, колени согнуты, руки у висков.",
       "Поднимите корпус на 3/4 амплитуды, не касаясь спиной пола внизу.",
@@ -1131,6 +1188,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-alternating-cable-shoulder-press.jpg",
+    "motionImageUrl": "/exercises/fedb-alternating-cable-shoulder-press-end.jpg",
     "instructions": [
       "Встаньте между блоков, рукояти у плеч.",
       "Поочерёдно выжимайте одну рукоять над головой.",
@@ -1153,6 +1211,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-alternating-floor-press.jpg",
+    "motionImageUrl": "/exercises/fedb-alternating-floor-press-end.jpg",
     "instructions": [
       "Лягте на пол, гири у груди, ладони вперёд.",
       "Поочерёдно выжимайте одну гирю вверх, вторая остаётся у груди.",
@@ -1175,6 +1234,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-side-split-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-side-split-squat-end.jpg",
     "instructions": [
       "Штанга на трапециях, ноги широко. Перенесите вес на одну ногу.",
       "Присядьте на рабочей ноге, вторая прямая, — до параллели бедра с полом.",
@@ -1196,6 +1256,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bench-dips.jpg",
+    "motionImageUrl": "/exercises/fedb-bench-dips-end.jpg",
     "instructions": [
       "Ладони на краю скамьи позади, ноги на полу или на второй скамье.",
       "На вдохе опуститесь, сгибая локти назад, до угла ~90°.",
@@ -1218,6 +1279,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bent-over-barbell-row.jpg",
+    "motionImageUrl": "/exercises/fedb-bent-over-barbell-row-end.jpg",
     "instructions": [
       "Наклонитесь от таза, спина прямая, штанга в прямом хвате.",
       "На выдохе подтяните штангу к низу живота, сводя лопатки.",
@@ -1238,6 +1300,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-flutter-kicks.jpg",
+    "motionImageUrl": "/exercises/fedb-flutter-kicks-end.jpg",
     "instructions": [
       "Лягте на спину, руки вдоль тела, ноги подняты и выпрямлены.",
       "Попеременно опускайте и поднимайте прямые ноги короткими движениями.",
@@ -1256,6 +1319,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-air-bike.jpg",
+    "motionImageUrl": "/exercises/fedb-air-bike-end.jpg",
     "instructions": [
       "Лягте на спину, руки у висков, ноги на весу.",
       "Поочерёдно тяните локоть к противоположному колену, второе колено выпрямляя.",
@@ -1278,6 +1342,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-anti-gravity-press.jpg",
+    "motionImageUrl": "/exercises/fedb-anti-gravity-press-end.jpg",
     "instructions": [
       "Штанга у плеч, корпус прямой, ноги на ширине плеч.",
       "Взрывным усилием выжмите штангу над головой.",
@@ -1299,6 +1364,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-bench-press-medium-grip.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-bench-press-medium-grip-end.jpg",
     "instructions": [
       "Лягте на скамью, штанга средним хватом (предплечья вертикально в нижней точке).",
       "На вдохе опустите штангу к середине груди.",
@@ -1321,6 +1387,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-walking-lunge.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-walking-lunge-end.jpg",
     "instructions": [
       "Штанга на трапециях. Сделайте шаг вперёд и опуститесь в выпад, заднее колено к полу.",
       "Оттолкнитесь передней ногой и шагните вперёд другой ногой в следующий выпад.",
@@ -1342,6 +1409,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-close-grip-barbell-bench-press.jpg",
+    "motionImageUrl": "/exercises/fedb-close-grip-barbell-bench-press-end.jpg",
     "instructions": [
       "Лягте на скамью, штанга узким хватом (уже плеч), локти вдоль корпуса.",
       "На вдохе опустите штангу к низу груди.",
@@ -1365,6 +1433,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bent-over-one-arm-long-bar-row.jpg",
+    "motionImageUrl": "/exercises/fedb-bent-over-one-arm-long-bar-row-end.jpg",
     "instructions": [
       "Т-гриф между ног, наклон вперёд, одна рука на грифе, спина прямая.",
       "На выдохе подтяните гриф к поясу, отводя локоть назад.",
@@ -1385,6 +1454,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-glute-kickback.jpg",
+    "motionImageUrl": "/exercises/fedb-glute-kickback-end.jpg",
     "instructions": [
       "Встаньте на четвереньки, опора на предплечья и колени, спина прямая.",
       "На выдохе отведите одну ногу назад-вверх, сжимая ягодицу, до прямой линии с корпусом.",
@@ -1403,6 +1473,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bent-knee-hip-raise.jpg",
+    "motionImageUrl": "/exercises/fedb-bent-knee-hip-raise-end.jpg",
     "instructions": [
       "Лягте на спину, колени согнуты и подтянуты, руки вдоль тела.",
       "На выдохе оторвите таз от пола, подтягивая колени к груди усилием низа пресса.",
@@ -1423,6 +1494,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-incline-shoulder-raise.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-incline-shoulder-raise-end.jpg",
     "instructions": [
       "Лягте грудью на наклонную скамью, штанга в опущенных руках.",
       "Поднимите плечи, сводя лопатки и приподнимая штангу.",
@@ -1444,6 +1516,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-incline-bench-press-medium-grip.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-incline-bench-press-medium-grip-end.jpg",
     "instructions": [
       "Скамья под наклоном, штанга средним хватом.",
       "На вдохе опустите штангу к верху груди.",
@@ -1465,6 +1538,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bodyweight-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-bodyweight-squat-end.jpg",
     "instructions": [
       "Стопы на ширине плеч, носки чуть врозь, руки вперёд для баланса.",
       "На вдохе присядьте, отводя таз назад, спина прямая — до параллели бёдер.",
@@ -1486,6 +1560,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-close-grip-dumbbell-press.jpg",
+    "motionImageUrl": "/exercises/fedb-close-grip-dumbbell-press-end.jpg",
     "instructions": [
       "Лягте на скамью, гантели сведены над грудью, ладони внутрь.",
       "На вдохе опустите гантели к груди, локти вдоль корпуса.",
@@ -1508,6 +1583,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bent-over-two-dumbbell-row.jpg",
+    "motionImageUrl": "/exercises/fedb-bent-over-two-dumbbell-row-end.jpg",
     "instructions": [
       "Наклонитесь от таза, спина прямая, гантели в опущенных руках.",
       "На выдохе подтяните обе гантели к поясу, сводя лопатки.",
@@ -1529,6 +1605,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-pull-through.jpg",
+    "motionImageUrl": "/exercises/fedb-pull-through-end.jpg",
     "instructions": [
       "Встаньте спиной к нижнему блоку, канат между ног, шаг вперёд. Наклонитесь, отводя таз назад.",
       "Выпрямитесь, протягивая канат вперёд усилием ягодиц.",
@@ -1547,6 +1624,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bottoms-up.jpg",
+    "motionImageUrl": "/exercises/fedb-bottoms-up-end.jpg",
     "instructions": [
       "Лягте на спину, ноги подняты вверх, руки вдоль тела.",
       "На выдохе оторвите таз, толкая стопы к потолку усилием пресса.",
@@ -1569,6 +1647,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-rear-delt-row.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-rear-delt-row-end.jpg",
     "instructions": [
       "Наклонитесь вперёд, спина прямая, штанга широким хватом.",
       "На выдохе подтяните штангу к груди, разводя локти в стороны (задние дельты).",
@@ -1590,6 +1669,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-chest-press.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-chest-press-end.jpg",
     "instructions": [
       "Встаньте между блоков, рукояти у груди, шаг вперёд.",
       "На выдохе выжмите рукояти вперёд, сводя грудные.",
@@ -1613,6 +1693,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-deadlifts.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-deadlifts-end.jpg",
     "instructions": [
       "Встаньте лицом к нижнему блоку, возьмите рукоять, колени слегка согнуты, спина прямая.",
       "Отводя таз назад, наклонитесь до растяжения задней поверхности бедра.",
@@ -1634,6 +1715,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dip-machine.jpg",
+    "motionImageUrl": "/exercises/fedb-dip-machine-end.jpg",
     "instructions": [
       "Сядьте в тренажёр, возьмите рукояти, локти согнуты.",
       "На выдохе разогните руки вниз усилием трицепса.",
@@ -1655,6 +1737,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bent-over-two-dumbbell-row-with-palms-in.jpg",
+    "motionImageUrl": "/exercises/fedb-bent-over-two-dumbbell-row-with-palms-in-end.jpg",
     "instructions": [
       "Наклон вперёд, спина прямая, гантели нейтральным хватом (ладони внутрь).",
       "На выдохе подтяните гантели к поясу, локти вдоль тела.",
@@ -1673,6 +1756,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-butt-ups.jpg",
+    "motionImageUrl": "/exercises/fedb-butt-ups-end.jpg",
     "instructions": [
       "Упор на предплечья, ноги прямые (как в планке).",
       "Поднимите таз вверх, складываясь в тазобедренных суставах.",
@@ -1693,6 +1777,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bradford-rocky-presses.jpg",
+    "motionImageUrl": "/exercises/fedb-bradford-rocky-presses-end.jpg",
     "instructions": [
       "Штанга у передних дельт, хват чуть шире плеч.",
       "Выжмите штангу над головой и опустите за голову.",
@@ -1714,6 +1799,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-decline-barbell-bench-press.jpg",
+    "motionImageUrl": "/exercises/fedb-decline-barbell-bench-press-end.jpg",
     "instructions": [
       "Скамья с отрицательным наклоном, штанга хватом чуть шире плеч.",
       "На вдохе опустите штангу к низу груди.",
@@ -1736,6 +1822,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-chair-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-chair-squat-end.jpg",
     "instructions": [
       "Встаньте перед стулом, стопы на ширине плеч, руки вперёд для баланса.",
       "Отводя таз назад, присядьте до лёгкого касания стула.",
@@ -1757,6 +1844,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dips-triceps-version.jpg",
+    "motionImageUrl": "/exercises/fedb-dips-triceps-version-end.jpg",
     "instructions": [
       "На брусьях, руки прямые, корпус вертикально (акцент на трицепс).",
       "На вдохе опуститесь, локти вдоль корпуса, до угла ~90°.",
@@ -1779,6 +1867,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-close-grip-front-lat-pulldown.jpg",
+    "motionImageUrl": "/exercises/fedb-close-grip-front-lat-pulldown-end.jpg",
     "instructions": [
       "Сядьте в тренажёр, узкий параллельный хват рукояти.",
       "На выдохе притяните рукоять к верху груди, сводя лопатки.",
@@ -1797,6 +1886,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-judo-flip.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-judo-flip-end.jpg",
     "instructions": [
       "Встаните спиной к блоку, рукоять через плечо обеими руками.",
       "Скручивая корпус, протяните рукоять вниз-вперёд, как бросок через плечо.",
@@ -1815,6 +1905,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-internal-rotation.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-internal-rotation-end.jpg",
     "instructions": [
       "Встаньте боком к блоку, локоть прижат к корпусу, предплечье наружу.",
       "На выдохе поверните предплечье внутрь к животу, локоть неподвижен.",
@@ -1836,6 +1927,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-decline-dumbbell-bench-press.jpg",
+    "motionImageUrl": "/exercises/fedb-decline-dumbbell-bench-press-end.jpg",
     "instructions": [
       "Скамья с отрицательным наклоном, гантели у низа груди.",
       "На вдохе опустите гантели по бокам груди.",
@@ -1858,6 +1950,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-lunges.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-lunges-end.jpg",
     "instructions": [
       "Гантели в руках вдоль тела, корпус прямой. Сделайте шаг вперёд.",
       "Опуститесь, сгибая оба колена до ~90°, заднее колено к полу.",
@@ -1879,6 +1972,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-push-up-close-grip.jpg",
+    "motionImageUrl": "/exercises/fedb-incline-push-up-close-grip-end.jpg",
     "instructions": [
       "Ладони узко на возвышении, тело прямая линия, ноги на полу.",
       "На вдохе опуститесь, локти вдоль корпуса, до касания грудью опоры.",
@@ -1902,6 +1996,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-incline-row.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-incline-row-end.jpg",
     "instructions": [
       "Лягте грудью на наклонную скамью, гантели в опущенных руках.",
       "На выдохе подтяните гантели к поясу, сводя лопатки.",
@@ -1920,6 +2015,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-russian-twists.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-russian-twists-end.jpg",
     "instructions": [
       "Сядьте боком к блоку, рукоять в вытянутых руках.",
       "Поворачивайте корпус от блока, руки прямые, усилием косых.",
@@ -1941,6 +2037,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-rope-rear-delt-rows.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-rope-rear-delt-rows-end.jpg",
     "instructions": [
       "Встаньте у верхнего блока, канат в руках.",
       "На выдохе притяните канат к лицу, разводя локти в стороны (задние дельты).",
@@ -1959,6 +2056,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-decline-dumbbell-flyes.jpg",
+    "motionImageUrl": "/exercises/fedb-decline-dumbbell-flyes-end.jpg",
     "instructions": [
       "Скамья с отрицательным наклоном, гантели над грудью, локти слегка согнуты.",
       "На вдохе разведите руки по дуге до растяжения грудных.",
@@ -1982,6 +2080,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-squat-end.jpg",
     "instructions": [
       "Гантели в руках вдоль тела, стопы на ширине плеч, носки чуть врозь.",
       "На вдохе присядьте, сгибая колени и таз, спина прямая — до параллели бёдер.",
@@ -2003,6 +2102,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-jm-press.jpg",
+    "motionImageUrl": "/exercises/fedb-jm-press-end.jpg",
     "instructions": [
       "Лягте на скамью, штанга узким хватом над грудью.",
       "Опустите штангу к верху груди, сгибая локти как гибрид жима и французского.",
@@ -2024,6 +2124,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-kneeling-high-pulley-row.jpg",
+    "motionImageUrl": "/exercises/fedb-kneeling-high-pulley-row-end.jpg",
     "instructions": [
       "Встаньте на колени лицом к верхнему блоку, возьмите рукоять.",
       "На выдохе притяните рукоять к груди, сводя лопатки и отводя локти назад.",
@@ -2042,6 +2143,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cocoons.jpg",
+    "motionImageUrl": "/exercises/fedb-cocoons-end.jpg",
     "instructions": [
       "Лягте на спину, руки за головой, ноги прямые.",
       "Одновременно подтяните колени к груди и оторвите плечи от пола, складываясь.",
@@ -2062,6 +2164,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-shoulder-press.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-shoulder-press-end.jpg",
     "instructions": [
       "Встаньте между блоков, рукояти у плеч.",
       "На выдохе выжмите рукояти над головой до прямых рук.",
@@ -2083,6 +2186,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-decline-smith-press.jpg",
+    "motionImageUrl": "/exercises/fedb-decline-smith-press-end.jpg",
     "instructions": [
       "Скамья с отрицательным наклоном под грифом Смита.",
       "На вдохе опустите гриф к низу груди.",
@@ -2106,6 +2210,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-goblet-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-goblet-squat-end.jpg",
     "instructions": [
       "Держите гирю у груди обеими руками, стопы чуть шире плеч.",
       "На вдохе присядьте между бёдер, локти внутри коленей, спина прямая.",
@@ -2127,6 +2232,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-machine-close-grip-bench-press.jpg",
+    "motionImageUrl": "/exercises/fedb-smith-machine-close-grip-bench-press-end.jpg",
     "instructions": [
       "Лягте под гриф Смита, узкий хват, локти вдоль корпуса.",
       "На вдохе опустите гриф к низу груди.",
@@ -2148,6 +2254,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-kneeling-single-arm-high-pulley-row.jpg",
+    "motionImageUrl": "/exercises/fedb-kneeling-single-arm-high-pulley-row-end.jpg",
     "instructions": [
       "На колене лицом к верхнему блоку, рукоять в одной руке.",
       "На выдохе притяните рукоять к плечу, отводя локоть назад.",
@@ -2166,6 +2273,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cross-body-crunch.jpg",
+    "motionImageUrl": "/exercises/fedb-cross-body-crunch-end.jpg",
     "instructions": [
       "Лягте на спину, руки у висков, колени согнуты.",
       "Тяните локоть к противоположному колену, скручивая корпус (косые).",
@@ -2186,6 +2294,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-raise.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-raise-end.jpg",
     "instructions": [
       "Гантели в опущенных руках перед бёдрами, ладони назад.",
       "На выдохе поднимите гантели вперёд до уровня плеч.",
@@ -2207,6 +2316,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-bench-press-with-neutral-grip.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-bench-press-with-neutral-grip-end.jpg",
     "instructions": [
       "Лягте на скамью, гантели у груди нейтральным хватом (ладони друг к другу).",
       "На вдохе опустите гантели по бокам груди.",
@@ -2229,6 +2339,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-hack-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-hack-squat-end.jpg",
     "instructions": [
       "Встаньте в гакк-тренажёр, спина к платформе, стопы на ширине плеч.",
       "На вдохе присядьте, сгибая колени до ~90°.",
@@ -2252,6 +2363,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-bench-press-powerlifting.jpg",
+    "motionImageUrl": "/exercises/fedb-bench-press-powerlifting-end.jpg",
     "instructions": [
       "Лягте на скамью с прогибом, лопатки сведены, штанга широким хватом.",
       "На вдохе опустите штангу к низу груди, локти под контролем.",
@@ -2272,6 +2384,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-leverage-high-row.jpg",
+    "motionImageUrl": "/exercises/fedb-leverage-high-row-end.jpg",
     "instructions": [
       "Сядьте в рычажный тренажёр грудью к упору, возьмите верхние рукояти.",
       "На выдохе притяните рукояти вниз-назад, сводя лопатки.",
@@ -2290,6 +2403,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dead-bug.jpg",
+    "motionImageUrl": "/exercises/fedb-dead-bug-end.jpg",
     "instructions": [
       "Лягте на спину, руки вверх, колени согнуты под 90°.",
       "Опускайте противоположные руку и ногу к полу, поясница прижата.",
@@ -2310,6 +2424,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-kettlebell-pirate-ships.jpg",
+    "motionImageUrl": "/exercises/fedb-kettlebell-pirate-ships-end.jpg",
     "instructions": [
       "Гиря в двух руках перед собой, ноги на ширине плеч.",
       "Переносите гирю по дуге из стороны в сторону над плечами.",
@@ -2331,6 +2446,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-extended-range-one-arm-kettlebell-floor-press.jpg",
+    "motionImageUrl": "/exercises/fedb-extended-range-one-arm-kettlebell-floor-press-end.jpg",
     "instructions": [
       "Лягте на пол, гиря у груди одной рукой.",
       "На выдохе выжмите гирю вверх до прямой руки.",
@@ -2352,6 +2468,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-leverage-deadlift.jpg",
+    "motionImageUrl": "/exercises/fedb-leverage-deadlift-end.jpg",
     "instructions": [
       "Встаньте в рычажный тренажёр, возьмите рукояти, спина прямая, колени согнуты.",
       "Выпрямитесь усилием ног и спины, выводя таз вперёд.",
@@ -2374,6 +2491,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-bench-press-with-chains.jpg",
+    "motionImageUrl": "/exercises/fedb-bench-press-with-chains-end.jpg",
     "instructions": [
       "Лягте на скамью, на гриф навешены цепи, хват чуть шире плеч.",
       "На вдохе опустите штангу к груди (цепи ложатся на пол, вес падает).",
@@ -2395,6 +2513,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-leverage-iso-row.jpg",
+    "motionImageUrl": "/exercises/fedb-leverage-iso-row-end.jpg",
     "instructions": [
       "Сядьте в рычажный тренажёр грудью к упору, возьмите рукояти.",
       "На выдохе притяните рукояти к корпусу, сводя лопатки.",
@@ -2413,6 +2532,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-decline-oblique-crunch.jpg",
+    "motionImageUrl": "/exercises/fedb-decline-oblique-crunch-end.jpg",
     "instructions": [
       "Лягте на наклонной скамье головой вниз, руки у висков.",
       "Скручивайте корпус, тянув локоть к противоположному колену (косые).",
@@ -2433,6 +2553,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-leverage-shoulder-press.jpg",
+    "motionImageUrl": "/exercises/fedb-leverage-shoulder-press-end.jpg",
     "instructions": [
       "Сядьте в рычажный тренажёр, рукояти у плеч.",
       "На выдохе выжмите рукояти над головой.",
@@ -2455,6 +2576,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-front-raise-and-pullover.jpg",
+    "motionImageUrl": "/exercises/fedb-front-raise-and-pullover-end.jpg",
     "instructions": [
       "Лягте на скамью, штанга над грудью на прямых руках.",
       "Отведите штангу за голову по дуге до растяжения груди и широчайших.",
@@ -2478,6 +2600,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-plie-dumbbell-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-plie-dumbbell-squat-end.jpg",
     "instructions": [
       "Ноги шире плеч, носки развёрнуты наружу, гантель держите обеими руками перед собой.",
       "На вдохе присядьте, колени в стороны по линии носков, спина прямая.",
@@ -2501,6 +2624,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-board-press.jpg",
+    "motionImageUrl": "/exercises/fedb-board-press-end.jpg",
     "instructions": [
       "Лягте на скамью, на грудь положен брусок, штанга хватом чуть шире плеч.",
       "На вдохе опустите штангу до касания бруска.",
@@ -2522,6 +2646,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-one-arm-lat-pulldown.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-lat-pulldown-end.jpg",
     "instructions": [
       "Сядьте у верхнего блока, рукоять в одной руке.",
       "На выдохе притяните рукоять к плечу, отводя локоть вниз-назад.",
@@ -2540,6 +2665,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-decline-reverse-crunch.jpg",
+    "motionImageUrl": "/exercises/fedb-decline-reverse-crunch-end.jpg",
     "instructions": [
       "Лягте на наклонной скамье головой вверх, держитесь руками сверху.",
       "Подтяните колени к груди, отрывая таз от скамьи усилием низа пресса.",
@@ -2562,6 +2688,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-low-pulley-row-to-neck.jpg",
+    "motionImageUrl": "/exercises/fedb-low-pulley-row-to-neck-end.jpg",
     "instructions": [
       "Сядьте у нижнего блока, канат/рукоять в руках.",
       "На выдохе притяните рукоять к шее, разводя локти вверх-в стороны.",
@@ -2583,6 +2710,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-hammer-grip-incline-db-bench-press.jpg",
+    "motionImageUrl": "/exercises/fedb-hammer-grip-incline-db-bench-press-end.jpg",
     "instructions": [
       "Скамья под наклоном, гантели у верха груди нейтральным хватом.",
       "На вдохе опустите гантели по бокам груди.",
@@ -2606,6 +2734,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-machine-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-smith-machine-squat-end.jpg",
     "instructions": [
       "Гриф Смита на трапециях, стопы чуть впереди проекции грифа.",
       "На вдохе присядьте до параллели бёдер, спина прямая.",
@@ -2627,6 +2756,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-bottoms-up-clean-from-the-hang-position.jpg",
+    "motionImageUrl": "/exercises/fedb-bottoms-up-clean-from-the-hang-position-end.jpg",
     "instructions": [
       "Гиря в опущенной руке, донышком вверх удерживается в кулаке.",
       "Взрывным движением бёдер поднимите гирю к плечу, удерживая донышко вверху.",
@@ -2649,6 +2779,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-one-arm-dumbbell-row.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-dumbbell-row-end.jpg",
     "instructions": [
       "Колено и рука на скамье, спина прямая, гантель в свободной руке.",
       "На выдохе подтяните гантель к поясу, отводя локоть назад.",
@@ -2667,6 +2798,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-elbow-to-knee.jpg",
+    "motionImageUrl": "/exercises/fedb-elbow-to-knee-end.jpg",
     "instructions": [
       "Лягте на спину, руки у висков, ноги согнуты.",
       "Тяните локоть к противоположному колену, скручивая корпус.",
@@ -2687,6 +2819,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-machine-shoulder-military-press.jpg",
+    "motionImageUrl": "/exercises/fedb-machine-shoulder-military-press-end.jpg",
     "instructions": [
       "Сядьте в тренажёр, рукояти у плеч, спина прижата.",
       "На выдохе выжмите рукояти над головой.",
@@ -2708,6 +2841,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-cable-chest-press.jpg",
+    "motionImageUrl": "/exercises/fedb-incline-cable-chest-press-end.jpg",
     "instructions": [
       "Наклонная скамья между блоков, рукояти у верха груди.",
       "На выдохе выжмите рукояти вперёд-вверх, сводя грудные.",
@@ -2729,6 +2863,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-machine-stiff-legged-deadlift.jpg",
+    "motionImageUrl": "/exercises/fedb-smith-machine-stiff-legged-deadlift-end.jpg",
     "instructions": [
       "Гриф Смита в руках прямым хватом, ноги на ширине плеч, колени почти прямые.",
       "Наклонитесь от таза, опуская гриф вдоль ног, до растяжения задней поверхности бедра.",
@@ -2751,6 +2886,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-close-grip-push-up-off-of-a-dumbbell.jpg",
+    "motionImageUrl": "/exercises/fedb-close-grip-push-up-off-of-a-dumbbell-end.jpg",
     "instructions": [
       "Упор лёжа, ладони на гантелях узко под грудью.",
       "На вдохе опуститесь, локти вдоль корпуса.",
@@ -2772,6 +2908,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-one-arm-long-bar-row.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-long-bar-row-end.jpg",
     "instructions": [
       "Т-гриф между ног, стоя в наклоне, одна рука на конце грифа.",
       "На выдохе подтяните гриф к поясу, отводя локоть назад.",
@@ -2790,6 +2927,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-flat-bench-leg-pull-in.jpg",
+    "motionImageUrl": "/exercises/fedb-flat-bench-leg-pull-in-end.jpg",
     "instructions": [
       "Сядьте на край скамьи, руками держитесь сзади, ноги на весу.",
       "Подтяните колени к груди усилием пресса.",
@@ -2810,6 +2948,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-seated-cable-shoulder-press.jpg",
+    "motionImageUrl": "/exercises/fedb-seated-cable-shoulder-press-end.jpg",
     "instructions": [
       "Сядьте между блоков, рукояти у плеч.",
       "На выдохе выжмите рукояти над головой.",
@@ -2831,6 +2970,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-dumbbell-bench-with-palms-facing-in.jpg",
+    "motionImageUrl": "/exercises/fedb-incline-dumbbell-bench-with-palms-facing-in-end.jpg",
     "instructions": [
       "Наклонная скамья, гантели у верха груди ладонями внутрь.",
       "На вдохе опустите гантели по бокам груди.",
@@ -2853,6 +2993,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-single-leg-split-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-smith-single-leg-split-squat-end.jpg",
     "instructions": [
       "Гриф Смита на трапециях, одна нога впереди, другая позади на носке.",
       "Опуститесь на передней ноге, сгибая колено до ~90°.",
@@ -2874,6 +3015,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-decline-close-grip-bench-to-skull-crusher.jpg",
+    "motionImageUrl": "/exercises/fedb-decline-close-grip-bench-to-skull-crusher-end.jpg",
     "instructions": [
       "Скамья с отрицательным наклоном, штанга узким хватом над грудью.",
       "Опустите штангу ко лбу, сгибая локти (французский жим).",
@@ -2895,6 +3037,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-shotgun-row.jpg",
+    "motionImageUrl": "/exercises/fedb-shotgun-row-end.jpg",
     "instructions": [
       "Встаньте лицом к блоку, рукоять в одной руке, шаг назад.",
       "На выдохе притяните рукоять к боку, отводя локоть назад и разворачивая корпус.",
@@ -2913,6 +3056,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-jackknife-sit-up.jpg",
+    "motionImageUrl": "/exercises/fedb-jackknife-sit-up-end.jpg",
     "instructions": [
       "Лягте на спину, руки вверх за головой, ноги прямые.",
       "Одновременно поднимите прямые руки и ноги, тянясь пальцами к стопам.",
@@ -2934,6 +3078,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-machine-one-arm-upright-row.jpg",
+    "motionImageUrl": "/exercises/fedb-smith-machine-one-arm-upright-row-end.jpg",
     "instructions": [
       "Гриф Смита в одной руке у бедра.",
       "На выдохе подтяните гриф к подбородку, локоть выше кисти.",
@@ -2954,6 +3099,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-dumbbell-flyes.jpg",
+    "motionImageUrl": "/exercises/fedb-incline-dumbbell-flyes-end.jpg",
     "instructions": [
       "Наклонная скамья, гантели над грудью, локти слегка согнуты.",
       "На вдохе разведите руки по дуге до растяжения верха груди.",
@@ -2975,6 +3121,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-split-squat-with-dumbbells.jpg",
+    "motionImageUrl": "/exercises/fedb-split-squat-with-dumbbells-end.jpg",
     "instructions": [
       "Гантели в руках, одна нога впереди, другая позади на носке.",
       "Опуститесь, сгибая переднее колено до ~90°, корпус вертикально.",
@@ -2995,6 +3142,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-drag-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-drag-curl-end.jpg",
     "instructions": [
       "Штанга в опущенных руках, локти отводятся назад по мере подъёма.",
       "Поднимите штангу вдоль корпуса, «протягивая» её к груди, локти назад.",
@@ -3017,6 +3165,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-kneeling-jump-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-kneeling-jump-squat-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Прыжок из приседа с колен».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3038,6 +3187,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-landmine-180s.jpg",
+    "motionImageUrl": "/exercises/fedb-landmine-180s-end.jpg",
     "instructions": [
       "Возьмите конец грифа обеими руками перед собой на прямых руках.",
       "Поворачивайте гриф по дуге из стороны в сторону усилием корпуса.",
@@ -3058,6 +3208,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-machine-overhead-shoulder-press.jpg",
+    "motionImageUrl": "/exercises/fedb-smith-machine-overhead-shoulder-press-end.jpg",
     "instructions": [
       "Сядьте/встаньте под гриф Смита, гриф у плеч.",
       "На выдохе выжмите гриф над головой.",
@@ -3078,6 +3229,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-dumbbell-flyes-with-a-twist.jpg",
+    "motionImageUrl": "/exercises/fedb-incline-dumbbell-flyes-with-a-twist-end.jpg",
     "instructions": [
       "Наклонная скамья, гантели над грудью нейтральным хватом.",
       "На вдохе разведите руки по дуге до растяжения груди.",
@@ -3099,6 +3251,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-dumbbell-floor-press.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-floor-press-end.jpg",
     "instructions": [
       "Лягте на пол, гантели у груди, ладони вперёд.",
       "На вдохе опустите гантели до касания локтями пола.",
@@ -3120,6 +3273,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-stiff-leg-barbell-good-morning.jpg",
+    "motionImageUrl": "/exercises/fedb-stiff-leg-barbell-good-morning-end.jpg",
     "instructions": [
       "Штанга на трапециях, ноги прямые (колени фиксированы).",
       "Наклонитесь от таза вперёд, спина прямая, до растяжения задней поверхности бедра.",
@@ -3141,6 +3295,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-downward-facing-balance.jpg",
+    "motionImageUrl": "/exercises/fedb-downward-facing-balance-end.jpg",
     "instructions": [
       "Подготовьте оборудование («фитбол») и примите устойчивое исходное положение для упражнения «Баланс лицом вниз на фитболе».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3158,6 +3313,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-leg-pull-in.jpg",
+    "motionImageUrl": "/exercises/fedb-leg-pull-in-end.jpg",
     "instructions": [
       "Лягте на спину, руки вдоль тела, ноги прямые на весу.",
       "Подтяните колени к груди усилием низа пресса.",
@@ -3180,6 +3336,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-machine-upright-row.jpg",
+    "motionImageUrl": "/exercises/fedb-smith-machine-upright-row-end.jpg",
     "instructions": [
       "Гриф Смита в опущенных руках узким хватом у бёдер.",
       "На выдохе подтяните гриф к подбородку, локти выше кистей.",
@@ -3201,6 +3358,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-dumbbell-press.jpg",
+    "motionImageUrl": "/exercises/fedb-incline-dumbbell-press-end.jpg",
     "instructions": [
       "Наклонная скамья, гантели у верха груди, ладони вперёд.",
       "На вдохе опустите гантели по бокам груди.",
@@ -3226,6 +3384,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-alternating-hang-clean.jpg",
+    "motionImageUrl": "/exercises/fedb-alternating-hang-clean-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Попеременное взятие гирь с виса».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3246,6 +3405,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-floor-press.jpg",
+    "motionImageUrl": "/exercises/fedb-floor-press-end.jpg",
     "instructions": [
       "Лягте на пол, штанга над грудью хватом чуть шире плеч.",
       "На вдохе опустите штангу до касания локтями пола.",
@@ -3266,6 +3426,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-lying-glute.jpg",
+    "motionImageUrl": "/exercises/fedb-lying-glute-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Растяжка ягодичных лёжа».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3287,6 +3448,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-pallof-press-with-rotation.jpg",
+    "motionImageUrl": "/exercises/fedb-pallof-press-with-rotation-end.jpg",
     "instructions": [
       "Встаньте боком к блоку, рукоять у груди обеими руками.",
       "Выжмите рукоять прямо перед собой, сопротивляясь развороту корпуса.",
@@ -3307,6 +3469,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-standing-alternating-dumbbell-press.jpg",
+    "motionImageUrl": "/exercises/fedb-standing-alternating-dumbbell-press-end.jpg",
     "instructions": [
       "Гантели у плеч, корпус прямой.",
       "Поочерёдно выжимайте одну гантель над головой.",
@@ -3328,6 +3491,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-push-up.jpg",
+    "motionImageUrl": "/exercises/fedb-incline-push-up-end.jpg",
     "instructions": [
       "Ладони на возвышении (скамья), тело прямая линия, ноги на полу.",
       "На вдохе опуститесь, сгибая локти, до касания грудью опоры.",
@@ -3351,6 +3515,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-barbell-full-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-full-squat-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Глубокий присед со штангой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3371,6 +3536,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-floor-press-with-chains.jpg",
+    "motionImageUrl": "/exercises/fedb-floor-press-with-chains-end.jpg",
     "instructions": [
       "Лягте на пол, на грифе цепи, хват чуть шире плеч.",
       "На вдохе опустите штангу до касания локтями пола.",
@@ -3392,6 +3558,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-t-bar-row-with-handle.jpg",
+    "motionImageUrl": "/exercises/fedb-t-bar-row-with-handle-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Тяга Т-грифа с рукоятью».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3411,6 +3578,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-seated-glute.jpg",
+    "motionImageUrl": "/exercises/fedb-seated-glute-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Растяжка ягодичных сидя».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3428,6 +3596,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-seated-flat-bench-leg-pull-in.jpg",
+    "motionImageUrl": "/exercises/fedb-seated-flat-bench-leg-pull-in-end.jpg",
     "instructions": [
       "Сядьте на скамью, откиньтесь назад с опорой на руки, ноги на весу.",
       "Подтяните колени к груди усилием пресса.",
@@ -3448,6 +3617,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-standing-bradford-press.jpg",
+    "motionImageUrl": "/exercises/fedb-standing-bradford-press-end.jpg",
     "instructions": [
       "Штанга у передних дельт стоя, хват чуть шире плеч.",
       "Выжмите штангу над головой и опустите за голову.",
@@ -3470,6 +3640,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-push-up-medium.jpg",
+    "motionImageUrl": "/exercises/fedb-incline-push-up-medium-end.jpg",
     "instructions": [
       "Ладони на невысоком возвышении чуть шире плеч, тело прямое.",
       "На вдохе опуститесь до касания грудью опоры.",
@@ -3492,6 +3663,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-barbell-hack-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-hack-squat-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Гакк-присед со штангой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3509,6 +3681,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-high-cable-curls.jpg",
+    "motionImageUrl": "/exercises/fedb-high-cable-curls-end.jpg",
     "instructions": [
       "Встаньте между блоков, рукояти в верхних руках, ладони вверх.",
       "На выдохе согните руки к голове, сжимая бицепсы, плечи неподвижны.",
@@ -3527,6 +3700,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-piriformis-smr.jpg",
+    "motionImageUrl": "/exercises/fedb-piriformis-smr-end.jpg",
     "instructions": [
       "Подготовьте оборудование («валик») и примите устойчивое исходное положение для упражнения «Массаж грушевидной мышцы на валике».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3544,6 +3718,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-side-jackknife.jpg",
+    "motionImageUrl": "/exercises/fedb-side-jackknife-end.jpg",
     "instructions": [
       "Лягте на бок, нижняя рука на полу, верхняя у виска, ноги вытянуты.",
       "Одновременно поднимите верхнюю ногу и корпус, сводя локоть и бедро (косые).",
@@ -3564,6 +3739,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-standing-dumbbell-press.jpg",
+    "motionImageUrl": "/exercises/fedb-standing-dumbbell-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Жим гантелей стоя».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3585,6 +3761,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-push-up-reverse-grip.jpg",
+    "motionImageUrl": "/exercises/fedb-incline-push-up-reverse-grip-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Отжимания на возвышении обратным хватом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3607,6 +3784,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-barbell-squat-to-a-bench.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-squat-to-a-bench-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Присед со штангой на скамью».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3627,6 +3805,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-one-arm-floor-press.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-floor-press-end.jpg",
     "instructions": [
       "Лягте на пол, гантель у груди в одной руке.",
       "На выдохе выжмите гантель вверх до прямой руки.",
@@ -3649,6 +3828,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-v-bar-pullup.jpg",
+    "motionImageUrl": "/exercises/fedb-v-bar-pullup-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Подтягивания с треугольной рукоятью».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3669,6 +3849,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-spell-caster.jpg",
+    "motionImageUrl": "/exercises/fedb-spell-caster-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Повороты корпуса с гантелью».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3689,6 +3870,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-standing-dumbbell-upright-row.jpg",
+    "motionImageUrl": "/exercises/fedb-standing-dumbbell-upright-row-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Тяга гантелей к подбородку стоя».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3710,6 +3892,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-push-up-wide.jpg",
+    "motionImageUrl": "/exercises/fedb-incline-push-up-wide-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Широкие отжимания на возвышении».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3732,6 +3915,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-barbell-step-ups.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-step-ups-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Зашагивания со штангой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3755,6 +3939,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-pin-presses.jpg",
+    "motionImageUrl": "/exercises/fedb-pin-presses-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Жим со стоек с ограниченной амплитудой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3776,6 +3961,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-wide-grip-lat-pulldown.jpg",
+    "motionImageUrl": "/exercises/fedb-wide-grip-lat-pulldown-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Тяга верхнего блока широким хватом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3797,6 +3983,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-spider-crawl.jpg",
+    "motionImageUrl": "/exercises/fedb-spider-crawl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Шаги в планке «паук»».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3816,6 +4003,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-standing-palm-in-one-arm-dumbbell-press.jpg",
+    "motionImageUrl": "/exercises/fedb-standing-palm-in-one-arm-dumbbell-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Жим гантели одной рукой нейтральным хватом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3837,6 +4025,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-isometric-wipers.jpg",
+    "motionImageUrl": "/exercises/fedb-isometric-wipers-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Изометрические разведения рук лёжа».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3860,6 +4049,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-box-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-box-squat-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Присед на тумбу».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3883,6 +4073,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-reverse-band-bench-press.jpg",
+    "motionImageUrl": "/exercises/fedb-reverse-band-bench-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Жим лёжа с обратной резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3906,6 +4097,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-alternating-renegade-row.jpg",
+    "motionImageUrl": "/exercises/fedb-alternating-renegade-row-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Попеременная тяга гирь в планке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3925,6 +4117,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-standing-cable-lift.jpg",
+    "motionImageUrl": "/exercises/fedb-standing-cable-lift-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Диагональная тяга блока стоя».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3944,6 +4137,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-alternating-kettlebell-press.jpg",
+    "motionImageUrl": "/exercises/fedb-alternating-kettlebell-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Попеременный жим гирь».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3964,6 +4158,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-leverage-chest-press.jpg",
+    "motionImageUrl": "/exercises/fedb-leverage-chest-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Жим от груди в рычажном тренажёре».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -3988,6 +4183,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-box-squat-with-bands.jpg",
+    "motionImageUrl": "/exercises/fedb-box-squat-with-bands-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Присед на тумбу с резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4008,6 +4204,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-reverse-triceps-bench-press.jpg",
+    "motionImageUrl": "/exercises/fedb-reverse-triceps-bench-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Жим лёжа обратным хватом на трицепс».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4028,6 +4225,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-bent-over-two-arm-long-bar-row.jpg",
+    "motionImageUrl": "/exercises/fedb-bent-over-two-arm-long-bar-row-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Тяга Т-грифа двумя руками».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4047,6 +4245,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-standing-cable-wood-chop.jpg",
+    "motionImageUrl": "/exercises/fedb-standing-cable-wood-chop-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения ««Дровосек» в блоке стоя».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4066,6 +4265,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-arnold-dumbbell-press.jpg",
+    "motionImageUrl": "/exercises/fedb-arnold-dumbbell-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Жим Арнольда».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4086,6 +4286,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-leverage-decline-chest-press.jpg",
+    "motionImageUrl": "/exercises/fedb-leverage-decline-chest-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Жим от груди вниз в рычажном тренажёре».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4110,6 +4311,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-box-squat-with-chains.jpg",
+    "motionImageUrl": "/exercises/fedb-box-squat-with-chains-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Присед на тумбу с цепями».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4132,6 +4334,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-bent-arm-barbell-pullover.jpg",
+    "motionImageUrl": "/exercises/fedb-bent-arm-barbell-pullover-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Пуловер со штангой с согнутыми руками».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4149,6 +4352,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-wind-sprints.jpg",
+    "motionImageUrl": "/exercises/fedb-wind-sprints-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Спринтерские выпады».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4169,6 +4373,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-barbell-shoulder-press.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-shoulder-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Жим штанги от плеч».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4189,6 +4394,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-leverage-incline-chest-press.jpg",
+    "motionImageUrl": "/exercises/fedb-leverage-incline-chest-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Наклонный жим в рычажном тренажёре».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4214,6 +4420,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-double-kettlebell-alternating-hang-clean.jpg",
+    "motionImageUrl": "/exercises/fedb-double-kettlebell-alternating-hang-clean-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Попеременное взятие двух гирь с виса».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4238,6 +4445,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-deadlift-with-bands.jpg",
+    "motionImageUrl": "/exercises/fedb-deadlift-with-bands-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Становая тяга с резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4258,6 +4466,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-barbell-ab-rollout.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-ab-rollout-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Выкат со штангой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4286,6 +4495,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-clean-and-press.jpg",
+    "motionImageUrl": "/exercises/fedb-clean-and-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Взятие штанги на грудь и жим».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4306,6 +4516,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-machine-bench-press.jpg",
+    "motionImageUrl": "/exercises/fedb-machine-bench-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Жим лёжа в тренажёре».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4330,6 +4541,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-deadlift-with-chains.jpg",
+    "motionImageUrl": "/exercises/fedb-deadlift-with-chains-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Становая тяга с цепями».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4350,6 +4562,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-barbell-ab-rollout-on-knees.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-ab-rollout-on-knees-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Выкат со штангой с колен».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4369,6 +4582,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-cuban-press.jpg",
+    "motionImageUrl": "/exercises/fedb-cuban-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Кубинский жим».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4389,6 +4603,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-one-arm-dumbbell-bench-press.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-dumbbell-bench-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Жим гантели лёжа одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4410,6 +4625,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-dumbbell-rear-lunge.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-rear-lunge-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Обратные выпады с гантелями».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4427,6 +4643,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-body-tricep-press.jpg",
+    "motionImageUrl": "/exercises/fedb-body-tricep-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Разгибание на трицепс с весом тела».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4451,6 +4668,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-deficit-deadlift.jpg",
+    "motionImageUrl": "/exercises/fedb-deficit-deadlift-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Становая тяга с дефицита».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4473,6 +4691,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-barbell-rollout-from-bench.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-rollout-from-bench-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Выкат со штангой со скамьи».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4494,6 +4713,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-double-kettlebell-jerk.jpg",
+    "motionImageUrl": "/exercises/fedb-double-kettlebell-jerk-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Толчок двух гирь».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4515,6 +4735,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-push-up-to-side-plank.jpg",
+    "motionImageUrl": "/exercises/fedb-push-up-to-side-plank-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Отжимание с переходом в боковую планку».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4537,6 +4758,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-dumbbell-squat-to-a-bench.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-squat-to-a-bench-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Присед с гантелями на скамью».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4557,6 +4779,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-elevated-cable-rows.jpg",
+    "motionImageUrl": "/exercises/fedb-elevated-cable-rows-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Тяга блока с возвышения».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4581,6 +4804,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-bent-press.jpg",
+    "motionImageUrl": "/exercises/fedb-bent-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Жим гири в наклоне».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4602,6 +4826,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-double-kettlebell-push-press.jpg",
+    "motionImageUrl": "/exercises/fedb-double-kettlebell-push-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Швунг жимовой с двумя гирями».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4623,6 +4848,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-push-up-wide.jpg",
+    "motionImageUrl": "/exercises/fedb-push-up-wide-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Отжимания широким хватом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4644,6 +4870,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-dumbbell-step-ups.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-step-ups-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Зашагивания с гантелями».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4661,6 +4888,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-incline-triceps-extension.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-incline-triceps-extension-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разгибание на трицепс в наклоне в блоке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4682,6 +4910,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-full-range-of-motion-lat-pulldown.jpg",
+    "motionImageUrl": "/exercises/fedb-full-range-of-motion-lat-pulldown-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Тяга верхнего блока в полной амплитуде».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4702,6 +4931,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-gorilla-chin-crunch.jpg",
+    "motionImageUrl": "/exercises/fedb-gorilla-chin-crunch-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Подтягивание со скручиванием».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4723,6 +4953,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-double-kettlebell-snatch.jpg",
+    "motionImageUrl": "/exercises/fedb-double-kettlebell-snatch-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Рывок двух гирь».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4743,6 +4974,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-push-ups-with-feet-elevated.jpg",
+    "motionImageUrl": "/exercises/fedb-push-ups-with-feet-elevated-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Отжимания с ногами на возвышении».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4763,6 +4995,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-elevated-back-lunge.jpg",
+    "motionImageUrl": "/exercises/fedb-elevated-back-lunge-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Обратный выпад с возвышения».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4780,6 +5013,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-lying-triceps-extension.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-lying-triceps-extension-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разгибание на трицепс лёжа в блоке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4800,6 +5034,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-hyperextensions-with-no-hyperextension-bench.jpg",
+    "motionImageUrl": "/exercises/fedb-hyperextensions-with-no-hyperextension-bench-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Гиперэкстензия без скамьи».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4817,6 +5052,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "expert",
     "imageUrl": "/exercises/fedb-hanging-pike.jpg",
+    "motionImageUrl": "/exercises/fedb-hanging-pike-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Подъём прямых ног в висе».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4836,6 +5072,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-dumbbell-one-arm-shoulder-press.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-one-arm-shoulder-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Жим гантели над головой одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4856,6 +5093,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-pushups-close-and-wide-hand-positions.jpg",
+    "motionImageUrl": "/exercises/fedb-pushups-close-and-wide-hand-positions-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Отжимания со сменой узкой и широкой постановки».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4877,6 +5115,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-freehand-jump-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-freehand-jump-squat-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Приседания с выпрыгиванием».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4894,6 +5133,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-one-arm-tricep-extension.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-one-arm-tricep-extension-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разгибание руки на трицепс в блоке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4914,6 +5154,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-lying-t-bar-row.jpg",
+    "motionImageUrl": "/exercises/fedb-lying-t-bar-row-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Тяга Т-грифа лёжа».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4935,6 +5176,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-kettlebell-pass-between-the-legs.jpg",
+    "motionImageUrl": "/exercises/fedb-kettlebell-pass-between-the-legs-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Передача гири между ног».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4955,6 +5197,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-dumbbell-one-arm-upright-row.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-one-arm-upright-row-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Тяга гантели к подбородку одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4975,6 +5218,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-machine-bench-press.jpg",
+    "motionImageUrl": "/exercises/fedb-smith-machine-bench-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Жим лёжа в Смите».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -4996,6 +5240,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-front-barbell-squat-to-a-bench.jpg",
+    "motionImageUrl": "/exercises/fedb-front-barbell-squat-to-a-bench-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Фронтальный присед на скамью».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5016,6 +5261,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-one-arm-kettlebell-row.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-kettlebell-row-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Тяга гири одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5038,6 +5284,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-kettlebell-windmill.jpg",
+    "motionImageUrl": "/exercises/fedb-kettlebell-windmill-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения ««Мельница» с гирей».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5057,6 +5304,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-face-pull.jpg",
+    "motionImageUrl": "/exercises/fedb-face-pull-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Тяга каната к лицу».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5077,6 +5325,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-machine-decline-press.jpg",
+    "motionImageUrl": "/exercises/fedb-smith-machine-decline-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Жим вниз в Смите».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5098,6 +5347,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-front-squat-clean-grip.jpg",
+    "motionImageUrl": "/exercises/fedb-front-squat-clean-grip-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Фронтальный присед тяжелоатлетическим хватом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5115,6 +5365,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-rope-overhead-triceps-extension.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-rope-overhead-triceps-extension-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разгибание на трицепс из-за головы с канатом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5138,6 +5389,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-rack-pull-with-bands.jpg",
+    "motionImageUrl": "/exercises/fedb-rack-pull-with-bands-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Тяга с плинтов с резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5159,6 +5411,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-press-sit-up.jpg",
+    "motionImageUrl": "/exercises/fedb-press-sit-up-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Подъём корпуса с жимом штанги».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5178,6 +5431,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-handstand-push-ups.jpg",
+    "motionImageUrl": "/exercises/fedb-handstand-push-ups-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Отжимания в стойке на руках».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5198,6 +5452,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-machine-incline-bench-press.jpg",
+    "motionImageUrl": "/exercises/fedb-smith-machine-incline-bench-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Наклонный жим в Смите».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5218,6 +5473,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-front-squats-with-two-kettlebells.jpg",
+    "motionImageUrl": "/exercises/fedb-front-squats-with-two-kettlebells-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Фронтальный присед с двумя гирями».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5240,6 +5496,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-rack-pulls.jpg",
+    "motionImageUrl": "/exercises/fedb-rack-pulls-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Тяга с плинтов».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5257,6 +5514,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-alternate-heel-touchers.jpg",
+    "motionImageUrl": "/exercises/fedb-alternate-heel-touchers-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Попеременные касания пяток».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5281,6 +5539,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-iron-cross.jpg",
+    "motionImageUrl": "/exercises/fedb-iron-cross-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения ««Железный крест» с гантелями».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5301,6 +5560,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-standing-cable-chest-press.jpg",
+    "motionImageUrl": "/exercises/fedb-standing-cable-chest-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Жим от груди в блоке стоя».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5321,6 +5581,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-glute-ham-raise.jpg",
+    "motionImageUrl": "/exercises/fedb-glute-ham-raise-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Подъём корпуса на бицепс бедра».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5345,6 +5606,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-reverse-band-deadlift.jpg",
+    "motionImageUrl": "/exercises/fedb-reverse-band-deadlift-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Становая тяга с обратной резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5364,6 +5626,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-barbell-side-bend.jpg",
+    "motionImageUrl": "/exercises/fedb-barbell-side-bend-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Наклоны в сторону со штангой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5383,6 +5646,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-kettlebell-arnold-press.jpg",
+    "motionImageUrl": "/exercises/fedb-kettlebell-arnold-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Жим Арнольда с гирями».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5402,6 +5666,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-around-the-worlds.jpg",
+    "motionImageUrl": "/exercises/fedb-around-the-worlds-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Круговые разведения гантелей лёжа».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5423,6 +5688,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-good-morning-off-pins.jpg",
+    "motionImageUrl": "/exercises/fedb-good-morning-off-pins-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Гудмонинг со стоек».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5443,6 +5709,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-close-grip-ez-bar-press.jpg",
+    "motionImageUrl": "/exercises/fedb-close-grip-ez-bar-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («ez-гриф») и примите устойчивое исходное положение для упражнения «Жим EZ-грифа узким хватом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5464,6 +5731,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-reverse-grip-bent-over-rows.jpg",
+    "motionImageUrl": "/exercises/fedb-reverse-grip-bent-over-rows-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Тяга штанги в наклоне обратным хватом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5481,6 +5749,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bosu-ball-cable-crunch-with-side-bends.jpg",
+    "motionImageUrl": "/exercises/fedb-bosu-ball-cable-crunch-with-side-bends-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Скручивания в блоке на босу с наклонами».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5500,6 +5769,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-kettlebell-seated-press.jpg",
+    "motionImageUrl": "/exercises/fedb-kettlebell-seated-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Жим гирь сидя».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5521,6 +5791,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-bent-arm-dumbbell-pullover.jpg",
+    "motionImageUrl": "/exercises/fedb-bent-arm-dumbbell-pullover-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Пуловер с гантелью с согнутыми руками».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5544,6 +5815,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-jefferson-squats.jpg",
+    "motionImageUrl": "/exercises/fedb-jefferson-squats-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Присед Джефферсона».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5563,6 +5835,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-close-grip-standing-barbell-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-close-grip-standing-barbell-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Подъём штанги на бицепс узким хватом стоя».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5582,6 +5855,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-seated-good-mornings.jpg",
+    "motionImageUrl": "/exercises/fedb-seated-good-mornings-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Гудмонинг сидя».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5599,6 +5873,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-crunch.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-crunch-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Скручивания в блоке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5618,6 +5893,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-kettlebell-seesaw-press.jpg",
+    "motionImageUrl": "/exercises/fedb-kettlebell-seesaw-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Попеременный жим гирь «качели»».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5638,6 +5914,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-clock-push-up.jpg",
+    "motionImageUrl": "/exercises/fedb-clock-push-up-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Отжимания «по часам»».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5657,6 +5934,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-concentration-curls.jpg",
+    "motionImageUrl": "/exercises/fedb-concentration-curls-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Концентрированный подъём на бицепс».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5678,6 +5956,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-seated-one-arm-cable-pulley-rows.jpg",
+    "motionImageUrl": "/exercises/fedb-seated-one-arm-cable-pulley-rows-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Тяга нижнего блока одной рукой сидя».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5695,6 +5974,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-reverse-crunch.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-reverse-crunch-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Обратные скручивания в блоке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5718,6 +5998,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-kettlebell-sumo-high-pull.jpg",
+    "motionImageUrl": "/exercises/fedb-kettlebell-sumo-high-pull-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Тяга гири сумо к подбородку».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5738,6 +6019,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-leg-over-floor-press.jpg",
+    "motionImageUrl": "/exercises/fedb-leg-over-floor-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Жим гири с пола с переносом ноги».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5761,6 +6043,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-kettlebell-hang-clean.jpg",
+    "motionImageUrl": "/exercises/fedb-kettlebell-hang-clean-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Взятие гири с виса».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5780,6 +6063,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cross-body-hammer-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-cross-body-hammer-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Молоток к противоположному плечу».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5800,6 +6084,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-two-arm-kettlebell-row.jpg",
+    "motionImageUrl": "/exercises/fedb-two-arm-kettlebell-row-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Тяга двух гирь в наклоне».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5817,6 +6102,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-seated-crunch.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-seated-crunch-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Скручивания сидя в блоке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5837,6 +6123,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-kettlebell-thruster.jpg",
+    "motionImageUrl": "/exercises/fedb-kettlebell-thruster-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Трастер с гирями».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5856,6 +6143,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-one-arm-kettlebell-floor-press.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-kettlebell-floor-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Жим гири с пола одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5873,6 +6161,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-decline-dumbbell-triceps-extension.jpg",
+    "motionImageUrl": "/exercises/fedb-decline-dumbbell-triceps-extension-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разгибание гантелей на трицепс вниз головой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5894,6 +6183,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-v-bar-pulldown.jpg",
+    "motionImageUrl": "/exercises/fedb-v-bar-pulldown-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Тяга верхнего блока с треугольной рукоятью».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5911,6 +6201,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-crunch-hands-overhead.jpg",
+    "motionImageUrl": "/exercises/fedb-crunch-hands-overhead-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Скручивания с руками над головой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5933,6 +6224,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-kettlebell-turkish-get-up-lunge-style.jpg",
+    "motionImageUrl": "/exercises/fedb-kettlebell-turkish-get-up-lunge-style-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Турецкий подъём с гирей через выпад».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5953,6 +6245,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-plyo-kettlebell-pushups.jpg",
+    "motionImageUrl": "/exercises/fedb-plyo-kettlebell-pushups-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Плиометрические отжимания на гирях».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5975,6 +6268,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-kettlebell-pistol-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-kettlebell-pistol-squat-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Присед «пистолет» с гирей».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -5992,6 +6286,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-decline-ez-bar-triceps-extension.jpg",
+    "motionImageUrl": "/exercises/fedb-decline-ez-bar-triceps-extension-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Разгибание EZ-грифа на трицепс вниз головой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6013,6 +6308,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-band-assisted-pull-up.jpg",
+    "motionImageUrl": "/exercises/fedb-band-assisted-pull-up-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Подтягивания с резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6030,6 +6326,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-crunch-legs-on-exercise-ball.jpg",
+    "motionImageUrl": "/exercises/fedb-crunch-legs-on-exercise-ball-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Скручивания с ногами на фитболе».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6053,6 +6350,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-kettlebell-turkish-get-up-squat-style.jpg",
+    "motionImageUrl": "/exercises/fedb-kettlebell-turkish-get-up-squat-style-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Турецкий подъём с гирей через присед».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6073,6 +6371,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-single-arm-push-up.jpg",
+    "motionImageUrl": "/exercises/fedb-single-arm-push-up-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Отжимания на одной руке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6094,6 +6393,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-lunge-pass-through.jpg",
+    "motionImageUrl": "/exercises/fedb-lunge-pass-through-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Выпад с передачей гири под ногой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6113,6 +6413,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-alternate-bicep-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-alternate-bicep-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Попеременный подъём гантелей на бицепс».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6130,6 +6431,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-side-bend.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-side-bend-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Наклоны в сторону с гантелью».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6154,6 +6456,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-landmine-linear-jammer.jpg",
+    "motionImageUrl": "/exercises/fedb-landmine-linear-jammer-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Линейный жим грифа из угла».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6175,6 +6478,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-straight-arm-dumbbell-pullover.jpg",
+    "motionImageUrl": "/exercises/fedb-straight-arm-dumbbell-pullover-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Пуловер с гантелью прямыми руками».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6196,6 +6500,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-lunge-sprint.jpg",
+    "motionImageUrl": "/exercises/fedb-lunge-sprint-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Спринтерский выпад в тренажёре».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6213,6 +6518,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-tricep-extension-pronated-grip.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-tricep-extension-pronated-grip-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разгибание гантели на трицепс прямым хватом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6230,6 +6536,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-exercise-ball-pull-in.jpg",
+    "motionImageUrl": "/exercises/fedb-exercise-ball-pull-in-end.jpg",
     "instructions": [
       "Подготовьте оборудование («фитбол») и примите устойчивое исходное положение для упражнения «Подтягивание коленей на фитболе».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6247,6 +6554,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-one-arm-kettlebell-clean-and-jerk.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-kettlebell-clean-and-jerk-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Взятие и толчок гири одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6267,6 +6575,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-wide-grip-barbell-bench-press.jpg",
+    "motionImageUrl": "/exercises/fedb-wide-grip-barbell-bench-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Жим лёжа широким хватом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6288,6 +6597,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-lying-machine-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-lying-machine-squat-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Присед лёжа в тренажёре».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6308,6 +6618,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-inverted-row-with-straps.jpg",
+    "motionImageUrl": "/exercises/fedb-inverted-row-with-straps-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Горизонтальные подтягивания на петлях».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6325,6 +6636,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-janda-sit-up.jpg",
+    "motionImageUrl": "/exercises/fedb-janda-sit-up-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Подъём корпуса по Янде».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6346,6 +6658,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-one-arm-kettlebell-jerk.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-kettlebell-jerk-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Толчок гири одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6366,6 +6679,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-wide-grip-decline-barbell-bench-press.jpg",
+    "motionImageUrl": "/exercises/fedb-wide-grip-decline-barbell-bench-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Жим вниз широким хватом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6387,6 +6701,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-narrow-stance-hack-squats.jpg",
+    "motionImageUrl": "/exercises/fedb-narrow-stance-hack-squats-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Гакк-присед с узкой постановкой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6404,6 +6719,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-flexor-incline-dumbbell-curls.jpg",
+    "motionImageUrl": "/exercises/fedb-flexor-incline-dumbbell-curls-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Подъём гантелей на бицепс на наклонной с супинацией».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6421,6 +6737,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-kneeling-cable-crunch-with-alternating-oblique-twists.jpg",
+    "motionImageUrl": "/exercises/fedb-kneeling-cable-crunch-with-alternating-oblique-twists-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Скручивания в блоке с колен с поворотом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6440,6 +6757,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-one-arm-kettlebell-military-press-to-the-side.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-kettlebell-military-press-to-the-side-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Жим гири одной рукой в сторону».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6460,6 +6778,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-wide-grip-decline-barbell-pullover.jpg",
+    "motionImageUrl": "/exercises/fedb-wide-grip-decline-barbell-pullover-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Пуловер со штангой широким хватом вниз головой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6481,6 +6800,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-narrow-stance-leg-press.jpg",
+    "motionImageUrl": "/exercises/fedb-narrow-stance-leg-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Жим ногами с узкой постановкой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6498,6 +6818,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-dumbbell-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-incline-dumbbell-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Подъём гантелей на бицепс на наклонной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6515,6 +6836,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-oblique-crunches.jpg",
+    "motionImageUrl": "/exercises/fedb-oblique-crunches-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Косые скручивания лёжа».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6534,6 +6856,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-one-arm-kettlebell-para-press.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-kettlebell-para-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Пара-жим гири одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6554,6 +6877,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bench-press-with-bands.jpg",
+    "motionImageUrl": "/exercises/fedb-bench-press-with-bands-end.jpg",
     "instructions": [
       "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Жим лёжа с резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6576,6 +6900,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-narrow-stance-squats.jpg",
+    "motionImageUrl": "/exercises/fedb-narrow-stance-squats-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Присед со штангой с узкой постановкой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6593,6 +6918,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-hammer-curls.jpg",
+    "motionImageUrl": "/exercises/fedb-incline-hammer-curls-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Молоток на наклонной скамье».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6613,6 +6939,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-sled-row.jpg",
+    "motionImageUrl": "/exercises/fedb-sled-row-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Тяга саней к корпусу».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6630,6 +6957,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-oblique-crunches-on-the-floor.jpg",
+    "motionImageUrl": "/exercises/fedb-oblique-crunches-on-the-floor-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Косые скручивания на полу».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6651,6 +6979,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-one-arm-kettlebell-push-press.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-kettlebell-push-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Швунг жимовой с гирей одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6670,6 +6999,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-crossover.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-crossover-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Сведение рук в кроссовере».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6691,6 +7021,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-natural-glute-ham-raise.jpg",
+    "motionImageUrl": "/exercises/fedb-natural-glute-ham-raise-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Сгибание корпуса на бицепс бедра с колен».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6708,6 +7039,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-incline-inner-biceps-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-incline-inner-biceps-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Подъём гантелей на внутренний пучок бицепса».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6725,6 +7057,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-one-arm-high-pulley-cable-side-bends.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-high-pulley-cable-side-bends-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Боковые наклоны одной рукой в верхнем блоке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6749,6 +7082,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-one-arm-kettlebell-snatch.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-kettlebell-snatch-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Рывок гири одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6769,6 +7103,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cross-over-with-bands.jpg",
+    "motionImageUrl": "/exercises/fedb-cross-over-with-bands-end.jpg",
     "instructions": [
       "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Сведение рук с резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6790,6 +7125,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-one-leg-barbell-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-one-leg-barbell-squat-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Присед на одной ноге со штангой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6807,6 +7143,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-low-cable-triceps-extension.jpg",
+    "motionImageUrl": "/exercises/fedb-low-cable-triceps-extension-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разгибание на трицепс в нижнем блоке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6827,6 +7164,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-suspended-row.jpg",
+    "motionImageUrl": "/exercises/fedb-suspended-row-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Горизонтальная тяга на петлях».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6847,6 +7185,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-one-arm-medicine-ball-slam.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-medicine-ball-slam-end.jpg",
     "instructions": [
       "Подготовьте оборудование («медбол») и примите устойчивое исходное положение для упражнения «Бросок медбола в пол одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6869,6 +7208,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-one-arm-kettlebell-split-jerk.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-kettlebell-split-jerk-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Толчок гири в разножку».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6886,6 +7226,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-dumbbell-flyes.jpg",
+    "motionImageUrl": "/exercises/fedb-dumbbell-flyes-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разводка гантелей лёжа».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6908,6 +7249,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-one-arm-kettlebell-clean.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-kettlebell-clean-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Взятие гири на грудь одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6925,6 +7267,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-lying-close-grip-bar-curl-on-high-pulley.jpg",
+    "motionImageUrl": "/exercises/fedb-lying-close-grip-bar-curl-on-high-pulley-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Подъём на бицепс лёжа в верхнем блоке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6945,6 +7288,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-alternating-kettlebell-row.jpg",
+    "motionImageUrl": "/exercises/fedb-alternating-kettlebell-row-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Попеременная тяга гирь в наклоне».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6966,6 +7310,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-pallof-press.jpg",
+    "motionImageUrl": "/exercises/fedb-pallof-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Жим Паллоффа».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -6986,6 +7331,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-one-arm-kettlebell-split-snatch.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-kettlebell-split-snatch-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Рывок гири в разножку».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7005,6 +7351,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-low-cable-crossover.jpg",
+    "motionImageUrl": "/exercises/fedb-low-cable-crossover-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Сведение рук снизу в кроссовере».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7027,6 +7374,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-one-arm-kettlebell-swings.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-kettlebell-swings-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Мах гири одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7044,6 +7392,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-lying-supine-dumbbell-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-lying-supine-dumbbell-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Подъём гантелей на бицепс лёжа».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7064,6 +7413,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-bodyweight-mid-row.jpg",
+    "motionImageUrl": "/exercises/fedb-bodyweight-mid-row-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Горизонтальная тяга с весом тела».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7081,6 +7431,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-reverse-crunch.jpg",
+    "motionImageUrl": "/exercises/fedb-reverse-crunch-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Обратные скручивания».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7100,6 +7451,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-seated-barbell-military-press.jpg",
+    "motionImageUrl": "/exercises/fedb-seated-barbell-military-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Армейский жим сидя».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7117,6 +7469,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-one-arm-flat-bench-dumbbell-flye.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-flat-bench-dumbbell-flye-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разводка гантели лёжа одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7140,6 +7493,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-one-arm-open-palm-kettlebell-clean.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-open-palm-kettlebell-clean-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Взятие гири открытой ладонью одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7157,6 +7511,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-machine-bicep-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-machine-bicep-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Подъём на бицепс в тренажёре».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7177,6 +7532,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-gironda-sternum-chins.jpg",
+    "motionImageUrl": "/exercises/fedb-gironda-sternum-chins-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Подтягивания Жиронды к груди».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7194,6 +7550,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-rope-crunch.jpg",
+    "motionImageUrl": "/exercises/fedb-rope-crunch-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Скручивания с канатом в блоке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7214,6 +7571,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-see-saw-press-alternating-side-press.jpg",
+    "motionImageUrl": "/exercises/fedb-see-saw-press-alternating-side-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Попеременный жим гантелей «качели»».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7231,6 +7589,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-single-arm-cable-crossover.jpg",
+    "motionImageUrl": "/exercises/fedb-single-arm-cable-crossover-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Сведение одной рукой в кроссовере».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7253,6 +7612,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-one-arm-overhead-kettlebell-squats.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-overhead-kettlebell-squats-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Присед с гирей над головой одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7270,6 +7630,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-machine-preacher-curls.jpg",
+    "motionImageUrl": "/exercises/fedb-machine-preacher-curls-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Подъём на бицепс на скамье Скотта в тренажёре».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7287,6 +7648,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-middle-back-shrug.jpg",
+    "motionImageUrl": "/exercises/fedb-middle-back-shrug-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Шраги лёжа на середину спины».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7304,6 +7666,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-seated-barbell-twist.jpg",
+    "motionImageUrl": "/exercises/fedb-seated-barbell-twist-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Повороты корпуса сидя со штангой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7324,6 +7687,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-single-arm-linear-jammer.jpg",
+    "motionImageUrl": "/exercises/fedb-single-arm-linear-jammer-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Линейный жим грифа одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7344,6 +7708,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-suspended-push-up.jpg",
+    "motionImageUrl": "/exercises/fedb-suspended-push-up-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Отжимания на петлях».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7368,6 +7733,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-one-arm-side-deadlift.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-side-deadlift-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Боковая становая тяга одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7385,6 +7751,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-machine-triceps-extension.jpg",
+    "motionImageUrl": "/exercises/fedb-machine-triceps-extension-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Разгибание на трицепс в тренажёре».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7405,6 +7772,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-mixed-grip-chin.jpg",
+    "motionImageUrl": "/exercises/fedb-mixed-grip-chin-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Подтягивания смешанным хватом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7422,6 +7790,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-seated-leg-tucks.jpg",
+    "motionImageUrl": "/exercises/fedb-seated-leg-tucks-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Подтягивание коленей сидя».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7441,6 +7810,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-standing-palms-in-dumbbell-press.jpg",
+    "motionImageUrl": "/exercises/fedb-standing-palms-in-dumbbell-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Жим гантелей стоя нейтральным хватом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7462,6 +7832,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-svend-press.jpg",
+    "motionImageUrl": "/exercises/fedb-svend-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Жим Свенда».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7484,6 +7855,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-open-palm-kettlebell-clean.jpg",
+    "motionImageUrl": "/exercises/fedb-open-palm-kettlebell-clean-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Взятие гири открытой ладонью».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7501,6 +7873,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-one-arm-dumbbell-preacher-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-dumbbell-preacher-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Подъём гантели на скамье Скотта одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7522,6 +7895,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-one-arm-chin-up.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-chin-up-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Подтягивания на одной руке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7541,6 +7915,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-side-bridge.jpg",
+    "motionImageUrl": "/exercises/fedb-side-bridge-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Боковой мост».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7564,6 +7939,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-two-arm-kettlebell-clean.jpg",
+    "motionImageUrl": "/exercises/fedb-two-arm-kettlebell-clean-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Взятие двух гирь на грудь».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7584,6 +7960,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-dips-chest-version.jpg",
+    "motionImageUrl": "/exercises/fedb-dips-chest-version-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Отжимания на брусьях с акцентом на грудь».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7611,6 +7988,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-power-clean.jpg",
+    "motionImageUrl": "/exercises/fedb-power-clean-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Силовое взятие штанги на грудь».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7628,6 +8006,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-one-arm-pronated-dumbbell-triceps-extension.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-pronated-dumbbell-triceps-extension-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разгибание гантели на трицепс прямым хватом одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7650,6 +8029,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-rope-climb.jpg",
+    "motionImageUrl": "/exercises/fedb-rope-climb-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Лазание по канату».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7667,6 +8047,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-sit-up.jpg",
+    "motionImageUrl": "/exercises/fedb-sit-up-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Подъём корпуса лёжа».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7688,6 +8069,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-two-arm-kettlebell-jerk.jpg",
+    "motionImageUrl": "/exercises/fedb-two-arm-kettlebell-jerk-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Толчок гири двумя руками».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7705,6 +8087,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-flat-bench-cable-flyes.jpg",
+    "motionImageUrl": "/exercises/fedb-flat-bench-cable-flyes-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разводка рук в блоке лёжа».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7730,6 +8113,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-reverse-band-box-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-reverse-band-box-squat-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Присед на тумбу с обратной резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7747,6 +8131,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-one-arm-supinated-dumbbell-triceps-extension.jpg",
+    "motionImageUrl": "/exercises/fedb-one-arm-supinated-dumbbell-triceps-extension-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разгибание гантели на трицепс обратным хватом одной рукой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7767,6 +8152,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-superman.jpg",
+    "motionImageUrl": "/exercises/fedb-superman-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения ««Супермен» лёжа».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7784,6 +8170,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-smith-machine-hip-raise.jpg",
+    "motionImageUrl": "/exercises/fedb-smith-machine-hip-raise-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Подъём таза в Смите».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7803,6 +8190,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-two-arm-kettlebell-military-press.jpg",
+    "motionImageUrl": "/exercises/fedb-two-arm-kettlebell-military-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Армейский жим двух гирь».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7822,6 +8210,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-incline-cable-flye.jpg",
+    "motionImageUrl": "/exercises/fedb-incline-cable-flye-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разводка рук в блоке на наклонной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7845,6 +8234,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-reverse-band-power-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-reverse-band-power-squat-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Силовой присед с обратной резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7866,6 +8256,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-weighted-ball-hyperextension.jpg",
+    "motionImageUrl": "/exercises/fedb-weighted-ball-hyperextension-end.jpg",
     "instructions": [
       "Подготовьте оборудование («фитбол») и примите устойчивое исходное положение для упражнения «Гиперэкстензия на фитболе с весом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7883,6 +8274,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-standing-rope-crunch.jpg",
+    "motionImageUrl": "/exercises/fedb-standing-rope-crunch-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Скручивания стоя с канатом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7902,6 +8294,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-upright-cable-row.jpg",
+    "motionImageUrl": "/exercises/fedb-upright-cable-row-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Тяга нижнего блока к подбородку».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7922,6 +8315,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-isometric-chest-squeezes.jpg",
+    "motionImageUrl": "/exercises/fedb-isometric-chest-squeezes-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Изометрическое сжатие ладоней перед грудью».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7948,6 +8342,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "expert",
     "imageUrl": "/exercises/fedb-reverse-band-sumo-deadlift.jpg",
+    "motionImageUrl": "/exercises/fedb-reverse-band-sumo-deadlift-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Становая тяга сумо с обратной резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7968,6 +8363,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-weighted-pull-ups.jpg",
+    "motionImageUrl": "/exercises/fedb-weighted-pull-ups-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Подтягивания с дополнительным весом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -7985,6 +8381,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-tuck-crunch.jpg",
+    "motionImageUrl": "/exercises/fedb-tuck-crunch-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Скручивания с подтягиванием коленей».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8002,6 +8399,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-alternating-deltoid-raise.jpg",
+    "motionImageUrl": "/exercises/fedb-alternating-deltoid-raise-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Попеременный подъём гантелей на дельты».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8022,6 +8420,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-plyo-push-up.jpg",
+    "motionImageUrl": "/exercises/fedb-plyo-push-up-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Плиометрические отжимания».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8043,6 +8442,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-romanian-deadlift.jpg",
+    "motionImageUrl": "/exercises/fedb-romanian-deadlift-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Румынская тяга со штангой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8063,6 +8463,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-hyperextensions-back-extensions.jpg",
+    "motionImageUrl": "/exercises/fedb-hyperextensions-back-extensions-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Гиперэкстензия для спины».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8080,6 +8481,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-ab-crunch-machine.jpg",
+    "motionImageUrl": "/exercises/fedb-ab-crunch-machine-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Скручивания в тренажёре».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8100,6 +8502,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-back-flyes-with-bands.jpg",
+    "motionImageUrl": "/exercises/fedb-back-flyes-with-bands-end.jpg",
     "instructions": [
       "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Разведения на заднюю дельту с резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8120,6 +8523,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-push-ups-with-feet-on-an-exercise-ball.jpg",
+    "motionImageUrl": "/exercises/fedb-push-ups-with-feet-on-an-exercise-ball-end.jpg",
     "instructions": [
       "Подготовьте оборудование («фитбол») и примите устойчивое исходное положение для упражнения «Отжимания с ногами на фитболе».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8143,6 +8547,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-smith-machine-hang-power-clean.jpg",
+    "motionImageUrl": "/exercises/fedb-smith-machine-hang-power-clean-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Силовое взятие с виса в Смите».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8164,6 +8569,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-catch-and-overhead-throw.jpg",
+    "motionImageUrl": "/exercises/fedb-catch-and-overhead-throw-end.jpg",
     "instructions": [
       "Подготовьте оборудование («медбол») и примите устойчивое исходное положение для упражнения «Ловля и бросок медбола над головой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8183,6 +8589,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-ab-roller.jpg",
+    "motionImageUrl": "/exercises/fedb-ab-roller-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Выкат с роликом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8203,6 +8610,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-medicine-ball-chest-pass.jpg",
+    "motionImageUrl": "/exercises/fedb-medicine-ball-chest-pass-end.jpg",
     "instructions": [
       "Подготовьте оборудование («медбол») и примите устойчивое исходное положение для упражнения «Передача медбола от груди».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8224,6 +8632,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-smith-machine-leg-press.jpg",
+    "motionImageUrl": "/exercises/fedb-smith-machine-leg-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Жим ногами в Смите».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8244,6 +8653,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-parallel-bar-dip.jpg",
+    "motionImageUrl": "/exercises/fedb-parallel-bar-dip-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Отжимания на параллельных брусьях».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8261,6 +8671,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-overhead-slam.jpg",
+    "motionImageUrl": "/exercises/fedb-overhead-slam-end.jpg",
     "instructions": [
       "Подготовьте оборудование («медбол») и примите устойчивое исходное положение для упражнения «Бросок медбола в пол над головой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8282,6 +8693,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-advanced-kettlebell-windmill.jpg",
+    "motionImageUrl": "/exercises/fedb-advanced-kettlebell-windmill-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения «Продвинутая «мельница» с гирей».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8299,6 +8711,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-chest-stretch-on-stability-ball.jpg",
+    "motionImageUrl": "/exercises/fedb-chest-stretch-on-stability-ball-end.jpg",
     "instructions": [
       "Подготовьте оборудование («фитбол») и примите устойчивое исходное положение для упражнения «Растяжка груди на фитболе».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8320,6 +8733,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-smith-machine-pistol-squat.jpg",
+    "motionImageUrl": "/exercises/fedb-smith-machine-pistol-squat-end.jpg",
     "instructions": [
       "Подготовьте оборудование («тренажёр») и примите устойчивое исходное положение для упражнения «Присед «пистолет» в Смите».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8337,6 +8751,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-preacher-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-preacher-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Подъём штанги на скамье Скотта».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8354,6 +8769,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-decline-crunch.jpg",
+    "motionImageUrl": "/exercises/fedb-decline-crunch-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Скручивания на скамье с отрицательным наклоном».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8374,6 +8790,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-battling-ropes.jpg",
+    "motionImageUrl": "/exercises/fedb-battling-ropes-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Волны с канатами».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8397,6 +8814,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-snatch-pull.jpg",
+    "motionImageUrl": "/exercises/fedb-snatch-pull-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Рывковая тяга».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8416,6 +8834,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-preacher-hammer-dumbbell-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-preacher-hammer-dumbbell-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Молоток на скамье Скотта».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8438,6 +8857,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-double-kettlebell-windmill.jpg",
+    "motionImageUrl": "/exercises/fedb-double-kettlebell-windmill-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гири») и примите устойчивое исходное положение для упражнения ««Мельница» с двумя гирями».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8455,6 +8875,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bent-over-dumbbell-rear-delt-raise-with-head-on-bench.jpg",
+    "motionImageUrl": "/exercises/fedb-bent-over-dumbbell-rear-delt-raise-with-head-on-bench-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разводка гантелей на заднюю дельту с опорой головой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8475,6 +8896,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-balance-board.jpg",
+    "motionImageUrl": "/exercises/fedb-balance-board-end.jpg",
     "instructions": [
       "Подготовьте оборудование («другое») и примите устойчивое исходное положение для упражнения «Баланс на балансировочной доске».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8494,6 +8916,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-reverse-barbell-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-reverse-barbell-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Подъём штанги на бицепс обратным хватом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8511,6 +8934,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-frog-sit-ups.jpg",
+    "motionImageUrl": "/exercises/fedb-frog-sit-ups-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Подъём корпуса «лягушка»».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8532,6 +8956,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-bent-over-low-pulley-side-lateral.jpg",
+    "motionImageUrl": "/exercises/fedb-bent-over-low-pulley-side-lateral-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разведение руки в наклоне в нижнем блоке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8552,6 +8977,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-band-good-morning.jpg",
+    "motionImageUrl": "/exercises/fedb-band-good-morning-end.jpg",
     "instructions": [
       "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Гудмонинг с резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8571,6 +8997,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-reverse-cable-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-reverse-cable-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Подъём на бицепс обратным хватом в блоке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8588,6 +9015,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "expert",
     "imageUrl": "/exercises/fedb-hanging-leg-raise.jpg",
+    "motionImageUrl": "/exercises/fedb-hanging-leg-raise-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Подъём ног в висе».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8605,6 +9033,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-rear-delt-fly.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-rear-delt-fly-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разводка на заднюю дельту в блоке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8625,6 +9054,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-band-good-morning-pull-through.jpg",
+    "motionImageUrl": "/exercises/fedb-band-good-morning-pull-through-end.jpg",
     "instructions": [
       "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Гудмонинг с протяжкой резины».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8642,6 +9072,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-reverse-grip-triceps-pushdown.jpg",
+    "motionImageUrl": "/exercises/fedb-reverse-grip-triceps-pushdown-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разгибание на трицепс обратным хватом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8659,6 +9090,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-exercise-ball-crunch.jpg",
+    "motionImageUrl": "/exercises/fedb-exercise-ball-crunch-end.jpg",
     "instructions": [
       "Подготовьте оборудование («фитбол») и примите устойчивое исходное положение для упражнения «Скручивания на фитболе».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8679,6 +9111,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-seated-lateral-raise.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-seated-lateral-raise-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Разведение рук сидя в блоке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8696,6 +9129,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-seated-bent-over-one-arm-dumbbell-triceps-extension.jpg",
+    "motionImageUrl": "/exercises/fedb-seated-bent-over-one-arm-dumbbell-triceps-extension-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разгибание гантели на трицепс сидя в наклоне».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8713,6 +9147,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-weighted-crunches.jpg",
+    "motionImageUrl": "/exercises/fedb-weighted-crunches-end.jpg",
     "instructions": [
       "Подготовьте оборудование («медбол») и примите устойчивое исходное положение для упражнения «Скручивания с медболом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8730,6 +9165,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-cable-hip-adduction.jpg",
+    "motionImageUrl": "/exercises/fedb-cable-hip-adduction-end.jpg",
     "instructions": [
       "Подготовьте оборудование («блок») и примите устойчивое исходное положение для упражнения «Приведение бедра в блоке».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8747,6 +9183,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-seated-dumbbell-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-seated-dumbbell-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Подъём гантелей на бицепс сидя».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8764,6 +9201,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-seated-dumbbell-inner-biceps-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-seated-dumbbell-inner-biceps-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Подъём гантелей на внутренний пучок бицепса сидя».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8783,6 +9221,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-car-drivers.jpg",
+    "motionImageUrl": "/exercises/fedb-car-drivers-end.jpg",
     "instructions": [
       "Подготовьте оборудование («штанга») и примите устойчивое исходное положение для упражнения «Вращение блина перед собой».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8800,6 +9239,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-seated-dumbbell-palms-down-wrist-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-seated-dumbbell-palms-down-wrist-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («гантели») и примите устойчивое исходное положение для упражнения «Разгибание запястий с гантелями сидя».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8820,6 +9260,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-body-up.jpg",
+    "motionImageUrl": "/exercises/fedb-body-up-end.jpg",
     "instructions": [
       "Подготовьте оборудование («своё тело») и примите устойчивое исходное положение для упражнения «Разгибание рук с весом тела».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8837,6 +9278,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-external-rotation-with-band.jpg",
+    "motionImageUrl": "/exercises/fedb-external-rotation-with-band-end.jpg",
     "instructions": [
       "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Наружная ротация плеча с резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8854,6 +9296,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-hip-flexion-with-band.jpg",
+    "motionImageUrl": "/exercises/fedb-hip-flexion-with-band-end.jpg",
     "instructions": [
       "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Сгибание бедра с резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8871,6 +9314,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-band-skull-crusher.jpg",
+    "motionImageUrl": "/exercises/fedb-band-skull-crusher-end.jpg",
     "instructions": [
       "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Разгибание на трицепс с резиной лёжа».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8890,6 +9334,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-shoulder-press-with-bands.jpg",
+    "motionImageUrl": "/exercises/fedb-shoulder-press-with-bands-end.jpg",
     "instructions": [
       "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Жим над головой с резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8909,6 +9354,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-upright-row-with-bands.jpg",
+    "motionImageUrl": "/exercises/fedb-upright-row-with-bands-end.jpg",
     "instructions": [
       "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Тяга к подбородку с резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8926,6 +9372,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-monster-walk.jpg",
+    "motionImageUrl": "/exercises/fedb-monster-walk-end.jpg",
     "instructions": [
       "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Боковая ходьба с резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8943,6 +9390,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-ez-bar-curl.jpg",
+    "motionImageUrl": "/exercises/fedb-ez-bar-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование («ez-гриф») и примите устойчивое исходное положение для упражнения «Подъём EZ-грифа на бицепс».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8963,6 +9411,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-band-pull-apart.jpg",
+    "motionImageUrl": "/exercises/fedb-band-pull-apart-end.jpg",
     "instructions": [
       "Подготовьте оборудование («резина») и примите устойчивое исходное положение для упражнения «Разведение рук с резиной».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8982,6 +9431,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     ],
     "level": "beginner",
     "imageUrl": "/exercises/fedb-ez-bar-skullcrusher.jpg",
+    "motionImageUrl": "/exercises/fedb-ez-bar-skullcrusher-end.jpg",
     "instructions": [
       "Подготовьте оборудование («ez-гриф») и примите устойчивое исходное положение для упражнения «Французский жим с EZ-грифом».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."
@@ -8999,6 +9449,7 @@ export const IMPORTED_EXERCISES: readonly ImportedExercise[] = [
     "secondaryMuscles": [],
     "level": "intermediate",
     "imageUrl": "/exercises/fedb-brachialis-smr.jpg",
+    "motionImageUrl": "/exercises/fedb-brachialis-smr-end.jpg",
     "instructions": [
       "Подготовьте оборудование («валик») и примите устойчивое исходное положение для упражнения «Массаж плечевой мышцы на валике».",
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса и не допуская рывков."

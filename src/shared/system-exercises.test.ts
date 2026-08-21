@@ -3,9 +3,14 @@ import { SYSTEM_EXERCISES, SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISE_CATALOG_VERS
 import { IMPORTED_EXERCISES } from './system-exercises.generated'
 import { BASE_EXERCISES } from './system-exercises.base.generated'
 
+const EXERCISE_MEDIA_PATHS = new Set(
+  Object.keys(import.meta.glob('../../public/exercises/*.jpg', { query: '?url', import: 'default' }))
+    .map((path) => path.replace('../../public', '')),
+)
+
 describe('system exercise catalog', () => {
   it('matches the V1 baseline catalog', () => {
-    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(1)
+    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(2)
     expect(SYSTEM_EXERCISES).toHaveLength(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.ref)).size).toBe(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.name)).size).toBe(49)
@@ -120,12 +125,19 @@ describe('system exercise catalog', () => {
       expect(exercise.equipment).toBeTruthy()
       expect(exercise.primaryMuscleDetail).toBeTruthy()
     }
-    // Все базовые получили картинку (кардио/берпи — из близкого аналога).
+    // Все базовые получили оба кадра (кардио/берпи — из близкого аналога).
     expect(BASE_EXERCISES.every((exercise) => exercise.imageUrl)).toBe(true)
+    expect(BASE_EXERCISES.every((exercise) => exercise.motionImageUrl)).toBe(true)
   })
 
-  it('весь каталог имеет картинку', () => {
+  it('весь каталог имеет обложку и второй кадр техники', () => {
     expect(SYSTEM_EXERCISE_CATALOG.every((exercise) => exercise.imageUrl)).toBe(true)
+    expect(SYSTEM_EXERCISE_CATALOG.every((exercise) => exercise.motionImageUrl)).toBe(true)
+    for (const exercise of SYSTEM_EXERCISE_CATALOG) {
+      for (const url of [exercise.imageUrl, exercise.motionImageUrl]) {
+        expect(EXERCISE_MEDIA_PATHS.has(url!), `${exercise.name}: отсутствует ${url}`).toBe(true)
+      }
+    }
   })
 
   it('каталог = обогащённые базовые + импортированные без дублей', () => {
