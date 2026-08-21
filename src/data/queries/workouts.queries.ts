@@ -2,7 +2,7 @@ import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, WorkoutDra
 import { supabase } from './client'
 import { toJson } from './json'
 
-const rootColumns = 'id,trainer_id,client_id,created_by,workout_date,start_time,end_time,started_at,completed_at,status,notes,trainer_review,trainer_reaction,trainer_review_author_id,trainer_reviewed_at,client_comment,session_rpe,wellbeing,discomfort,version,stage_id'
+const rootColumns = 'id,trainer_id,client_id,created_by,workout_date,start_time,end_time,started_at,completed_at,status,notes,trainer_review,trainer_reaction,trainer_review_author_id,trainer_reviewed_at,client_comment,session_rpe,wellbeing,discomfort,feedback_submitted_at,client_question,client_question_asked_at,client_question_resolved_at,version,stage_id'
 
 export type { WorkoutListRow } from '../database.types'
 
@@ -83,6 +83,17 @@ export const workoutQueries = {
     p_comment: feedback.comment,
     p_expected_version: version,
   }),
+  askQuestion: (workoutId: string, question: string, version: number) => supabase.rpc('ask_workout_question', {
+    p_workout_id: workoutId, p_question: question, p_expected_version: version,
+  }),
+  answerQuestion: (workoutId: string, response: WorkoutTrainerResponseDraft, version: number) => supabase.rpc('answer_workout_question', {
+    p_workout_id: workoutId, p_reaction: response.reaction, p_review: response.review, p_expected_version: version,
+  }),
+  resolveQuestion: (workoutId: string, version: number) => supabase.rpc('resolve_workout_question', {
+    p_workout_id: workoutId, p_expected_version: version,
+  }),
+  listTrainerAttention: () => supabase.rpc('list_trainer_attention_workouts'),
+  snoozeClientAttention: (clientId: string) => supabase.rpc('snooze_client_attention', { p_client_id: clientId }),
   replaceLiveExercise: (workoutId: string, exerciseId: string, exercise: ExerciseSnapshot, version: number) => supabase.rpc('replace_live_exercise', {
     p_workout_id: workoutId, p_exercise_id: exerciseId, p_exercise: toJson(exercise), p_expected_version: version,
   }),

@@ -17,6 +17,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | History | Done workouts only, set list and max-value chart | Implemented: paginated confirmed-only exercise facts, transparent per-kind chart and computed strength PR; broader visual pending |
 | Post-workout feedback | Клиент после завершения фиксирует session RPE 1–10, самочувствие и дискомфорт; тренер видит сигнал без доступа посторонних аккаунтов | Implemented: assigned и client-authored workout, отдельный idempotent submit с version check, RLS/SQL и WebKit 390 px acceptance |
 | Trainer response | После завершения клиент видит реакцию 👍 / 🔥 / 💪 и короткий ответ ответственного тренера | Implemented: trainer-author для назначения, root trainer для client-authored workout, автор/время, idempotent versioned RPC, realtime/refetch и RLS matrix |
+| Trainer attention | Клиент явно задаёт вопрос по завершённой тренировке, а основной тренер видит одну приоритетную задачу на клиента | Implemented: question → discomfort → planning priority, reply/explicit resolution, two-week planning snooze, realtime, RLS/SQL and mobile WebKit acceptance |
 | Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; Trainer first shows current week and the shared AI card, with running and measurements on explicit subroutes; duplicate-date create opens the existing entry without a failing DB request; visual regression covers Trainer 390/430/1440 px |
 | Wearables | Клиент подключает системное health-хранилище и видит локальные показатели активности и восстановления | Prototype: iOS HealthKit read-only PoC for sleep, steps, active energy, resting HR and HRV; server sync, trainer visibility and real-device acceptance pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; acceptance matrix pending |
@@ -65,6 +66,27 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - Partial — `done` с частью подтверждённых подходов: подтверждённые строки остаются фактом, но вся тренировка не входит в completed. Неподтверждённый ввод фактом не считается.
 - Прошлый trainer-authored `planned` остаётся нейтральным планом до решения пользователя. Явное «Не состоялась» хранится как `cancelled`; оба состояния входят в невыполненные назначения, но не в факт, рекорды и тоннаж. Прошлый `in_progress` остаётся незавершённым.
 - Client, root trainer и connected trainer читают одни строки RPC; несвязанный аккаунт получает access denied. UI не загружает историю тренировок для пересчёта.
+
+## Trainer attention acceptance contract
+
+- Вопрос по завершённой тренировке создаётся только явным действием клиента
+  «Задать вопрос тренеру». Обычный факт, RPE, комментарий и частичное выполнение
+  не создают обязательного подтверждения тренером.
+- На текущем этапе адресат вопроса — основной тренер клиентской карточки. Выбор
+  между несколькими тренерами не выполняется скрыто и остаётся отдельным этапом.
+- На главной тренера показывается не больше одного действия на активного клиента
+  с приоритетом: незакрытый вопрос → дискомфорт → следующий план.
+- Будущий план снимает напоминание. При недавней истории без плана используется
+  нейтральная формулировка; после паузы в 30 дней показывается дата последней
+  тренировки; при пустой истории — «Тренировки ещё не добавлены».
+- Планирование можно отложить на две недели. Новый вопрос или дискомфорт важнее
+  отложенного напоминания. Архивные клиенты в очередь не попадают.
+- Ответ тренера автоматически закрывает вопрос; доступно и явное действие
+  «Вопрос решён». Повторное действие идемпотентно, optimistic locking не допускает
+  потери параллельного изменения.
+- Обязательные проверки: основной тренер/посторонний аккаунт, старый клиент без
+  membership-строки, повтор вопроса, ответ/закрытие, snooze и WebKit client ask →
+  trainer reply → client sees reply.
 
 ## Exercise acceptance contract
 

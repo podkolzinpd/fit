@@ -154,11 +154,32 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await expect(page.getByRole('textbox', { name: 'Пояснение о дискомфорте' })).toHaveCount(0)
   await ownFeedbackCard.getByRole('button', { name: 'Отправить отзыв', exact: true }).click()
   await expect(ownFeedbackCard.getByText('RPE 5/10', { exact: true })).toBeVisible()
+  const clientQuestion = 'Как лучше дышать во время планки?'
+  const ownQuestionCard = page.locator('.workout-question')
+  await ownQuestionCard.getByRole('button', { name: 'Задать вопрос тренеру', exact: true }).click()
+  await ownQuestionCard.getByLabel('Напишите, что хотите уточнить по тренировке').fill(clientQuestion)
+  await ownQuestionCard.getByRole('button', { name: 'Отправить вопрос', exact: true }).click()
+  await expect(ownQuestionCard.getByText('Вопрос отправлен', { exact: true })).toBeVisible()
+  await expect(ownQuestionCard.getByText(clientQuestion, { exact: true })).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 
   await page.goto('/me/profile')
   await page.getByRole('button', { name: 'Выйти' }).click()
   await login(page, 'trainer@fit.local')
+  await page.goto('/today')
+  const attentionRow = page.locator('.trainer-attention-row').filter({ hasText: clientQuestion })
+  await expect(attentionRow).toBeVisible()
+  await expect(attentionRow.getByText('Ответить', { exact: true })).toBeVisible()
+  await attentionRow.click()
+  await expect(page).toHaveURL(new RegExp(`${ownWorkoutUrl.split('?')[0]}\\?reply=1$`))
+  const ownTrainerReviewCard = page.locator('.workout-review').filter({ has: page.getByRole('heading', { name: 'Отзыв тренера' }) })
+  const ownTrainerReview = 'Дыши ровно и не задерживай дыхание: выдох на усилии.'
+  await ownTrainerReviewCard.getByRole('button', { name: '💪', exact: true }).click()
+  await ownTrainerReviewCard.getByRole('textbox', { name: 'Отзыв тренера', exact: true }).fill(ownTrainerReview)
+  await ownTrainerReviewCard.getByRole('button', { name: 'Отправить ответ', exact: true }).click()
+  await expect(page.locator('.workout-question').getByText('Вопрос закрыт', { exact: true })).toBeVisible()
+  await page.goto('/today')
+  await expect(page.locator('.trainer-attention-row').filter({ hasText: clientQuestion })).toHaveCount(0)
   await page.goto(`/clients/${demoClientId}/workouts`)
   const trainerChronicleCard = page.locator('.workout-chronicle-card').filter({ hasText: review }).first()
   await expect(trainerChronicleCard).toBeVisible()
@@ -175,19 +196,10 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await expect(page.locator('.workout-feedback').getByRole('button')).toHaveCount(0)
 
   // Для client-authored workout отвечает только основной тренер карточки.
-  // Сама тренировка остаётся read-only, но реакция и короткий ответ доступны.
+  // Сама тренировка остаётся read-only, а ответ на явный вопрос уже сохранён.
   await page.goto(ownWorkoutUrl)
   await expect(page.getByText('Создано клиентом · только просмотр', { exact: true })).toBeVisible()
-  const ownTrainerReviewCard = page.locator('.workout-review').filter({ has: page.getByRole('heading', { name: 'Отзыв тренера' }) })
   await expect(ownTrainerReviewCard).toHaveClass(/workout-review-readonly/)
-  await ownTrainerReviewCard.getByRole('button', { name: 'Добавить', exact: true }).click()
-  await expect(ownTrainerReviewCard).not.toHaveClass(/workout-review-readonly/)
-  await ownTrainerReviewCard.getByRole('button', { name: '💪', exact: true }).click()
-  const ownTrainerReview = 'Сильная самостоятельная работа — сохраняй этот темп.'
-  await ownTrainerReviewCard.getByRole('textbox', { name: 'Отзыв тренера', exact: true }).fill(ownTrainerReview)
-  await ownTrainerReviewCard.getByRole('button', { name: 'Отправить ответ', exact: true }).click()
-  await expect(ownTrainerReviewCard).toHaveClass(/workout-review-readonly/)
-  await expect(ownTrainerReviewCard.getByLabel('Реакция 💪', { exact: true })).toBeVisible()
   await expect(ownTrainerReviewCard.getByText(ownTrainerReview, { exact: true })).toBeVisible()
 
   await page.goto('/profile')

@@ -282,11 +282,33 @@ export interface Workout {
   sessionRpe?: number
   wellbeing?: WorkoutWellbeing
   discomfort?: boolean
+  feedbackSubmittedAt?: string
+  clientQuestion?: string
+  clientQuestionAskedAt?: string
+  clientQuestionResolvedAt?: string
   hasPr?: boolean
   stageId: UUID | null
   stageTitle: string | null
   version: number
   exercises: WorkoutExercise[]
+}
+
+export interface TrainerAttentionWorkout {
+  workoutId: UUID
+  clientId: UUID
+  clientName: string
+  workoutDate: LocalDate
+  clientQuestion?: string
+  clientQuestionAskedAt?: string
+  discomfort: boolean
+  clientComment?: string
+  feedbackSubmittedAt?: string
+  version: number
+}
+
+export interface ClientAttentionPreference {
+  clientId: UUID
+  snoozedUntil?: string
 }
 
 export interface WorkoutTrainerResponseDraft {
