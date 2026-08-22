@@ -207,6 +207,12 @@ reject an application token at the gateway before Fastify receives it. The
 custom header is allowed only for the exact pilot origins by the API CORS
 policy; it contains no Yandex token and is never persisted by the browser.
 
+The same session authorizes the read-only `GET /v1/clients` and
+`GET /v1/connections` endpoints. Connections include only memberships for
+clients accessible through PostgreSQL actor context and only active invitations
+created by that actor. Claimed, revoked and expired invitations are filtered in
+the database. Neither endpoint grants runtime writes.
+
 ## 8. Enroll a stage pilot account
 
 Enrollment is an explicit stage administration operation. It validates a

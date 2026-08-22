@@ -5,6 +5,7 @@ import { yandexPilotRepository } from './yandex-pilot.repository'
 const queries = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   listClients: vi.fn(),
+  listConnections: vi.fn(),
 }))
 vi.mock('../queries/yandex-pilot.queries', () => ({ yandexPilotQueries: queries }))
 
@@ -23,10 +24,12 @@ const session = {
   },
 }
 
+const CLIENT_ID = '6e577cc7-3b56-4a86-bc85-1ce2426ce249'
+
 const clients = {
   accessMode: 'read_only',
   clients: [{
-    id: '6e577cc7-3b56-4a86-bc85-1ce2426ce249',
+    id: CLIENT_ID,
     hasAccount: false,
     fullName: 'Анна Смирнова',
     canonicalFullName: 'Анна Смирнова',
@@ -44,10 +47,30 @@ const clients = {
   }],
 }
 
+const connections = {
+  accessMode: 'read_only',
+  memberships: [{
+    clientId: CLIENT_ID,
+    trainerId: session.profile.id,
+    firstName: 'Ирина',
+    lastName: null,
+    joinedAt: '2026-08-20T12:00:00.000Z',
+    isRoot: true,
+  }],
+  invitations: [{
+    id: 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b',
+    clientId: CLIENT_ID,
+    targetRole: 'client',
+    expiresAt: '2026-08-27T12:00:00.000Z',
+    createdAt: '2026-08-20T12:00:00.000Z',
+  }],
+}
+
 describe('yandexPilotRepository', () => {
   beforeEach(() => {
     queries.exchangeCodeForSession.mockReset()
     queries.listClients.mockReset()
+    queries.listConnections.mockReset()
   })
 
   it('accepts the explicit read-only session contract', async () => {
@@ -110,5 +133,32 @@ describe('yandexPilotRepository', () => {
       'https://stage.example.test',
       's'.repeat(43),
     )).rejects.toThrow('Stage вернул неподдерживаемый формат клиентов.')
+  })
+
+  it('reads memberships and active invitations with validated shapes', async () => {
+    queries.listConnections.mockResolvedValue(
+      new Response(JSON.stringify(connections), { status: 200 }),
+    )
+
+    await expect(yandexPilotRepository.listConnections(
+      'https://stage.example.test',
+      's'.repeat(43),
+    )).resolves.toEqual({
+      memberships: connections.memberships,
+      invitations: connections.invitations,
+    })
+  })
+
+  it('rejects malformed membership data', async () => {
+    queries.listConnections.mockResolvedValue(new Response(JSON.stringify({
+      accessMode: 'read_only',
+      memberships: [{ clientId: CLIENT_ID, trainerId: 'not-a-uuid' }],
+      invitations: [],
+    }), { status: 200 }))
+
+    await expect(yandexPilotRepository.listConnections(
+      'https://stage.example.test',
+      's'.repeat(43),
+    )).rejects.toThrow('Stage вернул неподдерживаемый формат связей.')
   })
 })

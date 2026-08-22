@@ -50,7 +50,9 @@ The following remain unchanged during the foundation phase:
 7. [In progress] Port the current domain contract in the dependency order below.
    The first slice adds a short-lived hashed pilot session and the trainer's
    tenant-scoped read-only client list without unlocking the main application.
-   The remaining scope
+   The next read-only slice reuses the existing memberships, adds the invitation
+   read model and exposes only accessible trainers plus active invitations
+   created by the actor. The remaining scope
    now includes timezone, optimistic concurrency, actor attribution, running
    metrics, feedback/reactions and the derived progress/chronicle reads added
    after the foundation migrations.
@@ -154,9 +156,11 @@ mapping and rollout assignment remain mandatory application gates.
 ## Current main parity impact
 
 The private stage readiness gate applied foundation migrations `000001` through
-`000003`. The auth/profile slice adds `000004_yandex_identity_rollout`; product
-work merged after the foundation still expands the contract required before a
-production tenant can be switched.
+`000003`. The auth/profile and session slices add
+`000004_yandex_identity_rollout` and `000005_yandex_pilot_sessions`; the
+read-only connections slice adds `000006_client_invitations_read_model`.
+Product work merged after the foundation still expands the contract required
+before a production tenant can be switched.
 
 Port the current `main` behavior in this order:
 

@@ -71,7 +71,7 @@ export async function readAccessibleClients(
     left join public.client_trainers membership
       on membership.client_id = client.id
      and membership.trainer_id = auth.uid()
-    where (client.trainer_id = auth.uid() or membership.trainer_id is not null)
+    where public.can_access_client(client.id)
       and client.archived_at is null
     order by client.updated_at desc, lower(coalesce(membership.alias, client.full_name))
   `)

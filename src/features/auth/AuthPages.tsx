@@ -4,11 +4,13 @@ import { authRepository } from '../../data/repositories/auth.repository'
 import {
   yandexPilotRepository,
   type YandexPilotClient,
+  type YandexPilotConnections,
   type YandexPilotSession,
 } from '../../data/repositories/yandex-pilot.repository'
 import { useAuth } from '../../app/auth-context'
 import { getYandexIdPilotConfig, trainerHomePath } from '../../app/feature-flags'
 import { ProfileIcon } from '../../shared/icons'
+import { normalizeTimeZone } from '../../shared/local-date'
 import { AsyncView, Field } from '../../shared/ui'
 import type { AccountRole } from '../../shared/domain'
 import { consumeYandexAuthorizationCallback, createYandexAuthorizationUrl } from './yandex-pilot-oauth'
@@ -76,6 +78,9 @@ export function YandexPilotCallbackPage() {
   const [clients, setClients] = useState<YandexPilotClient[] | null>(null)
   const [clientsLoading, setClientsLoading] = useState(false)
   const [clientsError, setClientsError] = useState<Error | null>(null)
+  const [connections, setConnections] = useState<YandexPilotConnections | null>(null)
+  const [connectionsLoading, setConnectionsLoading] = useState(false)
+  const [connectionsError, setConnectionsError] = useState<Error | null>(null)
   const [error, setError] = useState<string | null>(null)
   const sessionRequest = useRef<Promise<YandexPilotSession> | null>(null)
 
@@ -88,6 +93,18 @@ export function YandexPilotCallbackPage() {
       setClientsError(caught instanceof Error ? caught : new Error('Не удалось загрузить клиентов.'))
     } finally {
       setClientsLoading(false)
+    }
+  }
+
+  async function loadConnections(targetApiBaseUrl: string, sessionToken: string): Promise<void> {
+    setConnectionsLoading(true)
+    setConnectionsError(null)
+    try {
+      setConnections(await yandexPilotRepository.listConnections(targetApiBaseUrl, sessionToken))
+    } catch (caught) {
+      setConnectionsError(caught instanceof Error ? caught : new Error('Не удалось загрузить связи.'))
+    } finally {
+      setConnectionsLoading(false)
     }
   }
 
@@ -111,19 +128,22 @@ export function YandexPilotCallbackPage() {
         if (cancelled) return
         setSession(result)
         setClientsLoading(true)
-        try {
-          const resultClients = await yandexPilotRepository.listClients(
-            targetApiBaseUrl,
-            result.session.token,
-          )
-          if (!cancelled) setClients(resultClients)
-        } catch (caught) {
-          if (!cancelled) {
-            setClientsError(caught instanceof Error ? caught : new Error('Не удалось загрузить клиентов.'))
-          }
-        } finally {
-          if (!cancelled) setClientsLoading(false)
-        }
+        setConnectionsLoading(true)
+        const [clientsResult, connectionsResult] = await Promise.allSettled([
+          yandexPilotRepository.listClients(targetApiBaseUrl, result.session.token),
+          yandexPilotRepository.listConnections(targetApiBaseUrl, result.session.token),
+        ])
+        if (cancelled) return
+        if (clientsResult.status === 'fulfilled') setClients(clientsResult.value)
+        else setClientsError(clientsResult.reason instanceof Error
+          ? clientsResult.reason
+          : new Error('Не удалось загрузить клиентов.'))
+        if (connectionsResult.status === 'fulfilled') setConnections(connectionsResult.value)
+        else setConnectionsError(connectionsResult.reason instanceof Error
+          ? connectionsResult.reason
+          : new Error('Не удалось загрузить связи.'))
+        setClientsLoading(false)
+        setConnectionsLoading(false)
       } catch (caught) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : 'Не удалось проверить Yandex ID.')
       }
@@ -136,6 +156,12 @@ export function YandexPilotCallbackPage() {
   const fullName = session === null
     ? ''
     : [session.profile.firstName, session.profile.lastName].filter(Boolean).join(' ') || 'Пользователь FIT'
+  const connectionClientIds = connections === null
+    ? []
+    : [...new Set([
+        ...connections.memberships.map((membership) => membership.clientId),
+        ...connections.invitations.map((invitation) => invitation.clientId),
+      ])]
   return <main className="auth-screen auth-entry">
     <header className="auth-entry-head">
       <div className="brand" aria-hidden="true">FIT</div>
@@ -170,6 +196,40 @@ export function YandexPilotCallbackPage() {
               <p>{pilotClientSummary(client)}</p>
             </div>
           </article>)}
+        </div>
+      </AsyncView>
+    </section>}
+    {session && <section className="yandex-pilot-connections" aria-labelledby="yandex-pilot-connections-title">
+      <div className="yandex-pilot-section-head">
+        <h2 id="yandex-pilot-connections-title">Связи и приглашения</h2>
+      </div>
+      <AsyncView
+        loading={connectionsLoading}
+        error={connectionsError}
+        empty={connections !== null && connectionClientIds.length === 0}
+        onRetry={() => void loadConnections(config.apiBaseUrl, session.session.token)}
+        emptyTitle="В stage пока нет связей"
+        emptyDescription="Они появятся после переноса memberships и активных приглашений."
+      >
+        <div className="cards yandex-pilot-connections-list">
+          {connectionClientIds.map((clientId) => {
+            const client = clients?.find((candidate) => candidate.id === clientId)
+            const memberships = connections?.memberships.filter((item) => item.clientId === clientId) ?? []
+            const invitations = connections?.invitations.filter((item) => item.clientId === clientId) ?? []
+            return <article className="card yandex-pilot-connection" key={clientId}>
+              <div>
+                <strong>{client?.fullName ?? 'Клиент'}</strong>
+                <p>{memberships.length === 0 ? 'Подключённых тренеров нет' : memberships.map((membership) => {
+                  const trainerName = [membership.firstName, membership.lastName].filter(Boolean).join(' ') || 'Тренер'
+                  return `${trainerName} · ${membership.isRoot ? 'основной' : 'подключённый'}`
+                }).join('; ')}</p>
+              </div>
+              {invitations.map((invitation) => <p className="yandex-pilot-invitation" key={invitation.id}>
+                Активное приглашение для {invitation.targetRole === 'trainer' ? 'тренера' : 'клиента'} до{' '}
+                {new Date(invitation.expiresAt).toLocaleDateString('ru-RU', { timeZone: normalizeTimeZone(session.profile.timezone) })}
+              </p>)}
+            </article>
+          })}
         </div>
       </AsyncView>
     </section>}

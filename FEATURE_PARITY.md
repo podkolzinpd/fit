@@ -36,6 +36,18 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - Создатель видит только свои активные неиспользованные приглашения и может отозвать их; использованные, просроченные и отозванные приглашения в активном списке не показываются.
 - Обязательные проверки: owner/member/root/cross-tenant SQL matrix, подтверждение необратимых действий в UI и E2E invite → join → leave/remove.
 
+### Yandex Cloud migration checkpoint
+
+- Read-only Yandex ID pilot воспроизводит только безопасную часть контракта:
+  root trainer, connected trainer и client видят memberships доступного клиента,
+  а несвязанный аккаунт получает пустой результат.
+- Активные приглашения доступны только создавшему их actor-у; claimed, revoked
+  и expired строки не выдаются. Создание, принятие, отзыв и отключение
+  membership в этом checkpoint намеренно закрыты.
+- Checkpoint не считается полной parity: до неё остаются invite → join →
+  leave/remove mutations, подтверждения необратимых действий и end-to-end
+  перенос tenant-данных. Production продолжает использовать Supabase.
+
 ## Client self-service workout acceptance contract
 
 - Главная клиента всегда начинает с крупного голосового действия и отдельного

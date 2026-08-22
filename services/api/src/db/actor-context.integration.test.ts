@@ -5,7 +5,9 @@ import { Pool, type QueryResultRow } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { hashPilotSessionToken } from '../auth/pilot-session-token.js'
+import { readAccessibleConnections } from '../connections.js'
 import { DatabasePilotClientsReader } from '../pilot-clients-reader.js'
+import { DatabasePilotConnectionsReader } from '../pilot-connections-reader.js'
 import { DatabasePilotSessionIssuer } from '../pilot-session.js'
 import { withActorTransaction } from './actor-transaction.js'
 import { PgDatabasePool } from './pg-pool.js'
@@ -25,6 +27,11 @@ const OTHER_ACTOR_ID = '974f21af-f304-421f-81bd-050dbfabdd46'
 const MEMBER_TRAINER_ID = '8ffdb87b-078c-42d4-b6db-af8bc60f80f2'
 const OUTSIDE_TRAINER_ID = '3f520f21-0be4-4a38-bb2a-e25225e1e608'
 const CLIENT_ID = 'b3942b20-52a2-4d5d-9895-b3b63cf61442'
+const ROOT_INVITATION_ID = '76978725-d10e-4c52-9538-b28411706d38'
+const MEMBER_INVITATION_ID = '443850c1-ad40-4604-83c4-35e4111c7d88'
+const EXPIRED_INVITATION_ID = '8f371423-5120-4cee-9e5e-004878bcc870'
+const REVOKED_INVITATION_ID = '01587b1f-70ee-4541-b974-2e7a2b9344bb'
+const CLAIMED_INVITATION_ID = 'f1ce4a50-6863-499c-afde-2e124eb11e2f'
 const PILOT_SUBJECT_HASH = 'b'.repeat(64)
 const OUTSIDE_SUBJECT_HASH = 'c'.repeat(64)
 const ENROLLMENT_SUBJECT_HASH = 'e'.repeat(64)
@@ -172,6 +179,44 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       )
       await ownerPool.query(
         `
+          insert into public.client_invitations (
+            id, client_id, created_by, target_role, code_hash, expires_at,
+            claimed_by, claimed_at, revoked_at, created_at
+          ) values
+            ($1, $6, $7, 'client', $10, now() + interval '7 days', null, null, null, now()),
+            ($2, $6, $8, 'trainer', $11, now() + interval '7 days', null, null, null, now()),
+            ($3, $6, $7, 'client', $12, now() - interval '1 hour', null, null, null, now() - interval '8 days'),
+            ($4, $6, $7, 'client', $13, now() + interval '7 days', null, null, now(), now()),
+            ($5, $6, $7, 'client', $14, now() + interval '7 days', $9, now(), null, now())
+          on conflict (id) do update set
+            client_id = excluded.client_id,
+            created_by = excluded.created_by,
+            target_role = excluded.target_role,
+            code_hash = excluded.code_hash,
+            expires_at = excluded.expires_at,
+            claimed_by = excluded.claimed_by,
+            claimed_at = excluded.claimed_at,
+            revoked_at = excluded.revoked_at
+        `,
+        [
+          ROOT_INVITATION_ID,
+          MEMBER_INVITATION_ID,
+          EXPIRED_INVITATION_ID,
+          REVOKED_INVITATION_ID,
+          CLAIMED_INVITATION_ID,
+          CLIENT_ID,
+          ACTOR_ID,
+          MEMBER_TRAINER_ID,
+          OTHER_ACTOR_ID,
+          '1'.repeat(64),
+          '2'.repeat(64),
+          '3'.repeat(64),
+          '4'.repeat(64),
+          '5'.repeat(64),
+        ],
+      )
+      await ownerPool.query(
+        `
           insert into app_private.auth_identities (
             provider, provider_subject_sha256, profile_id
           ) values ('yandex', $1, $2)
@@ -259,6 +304,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
       const issuer = new DatabasePilotSessionIssuer(runtimePool)
       const clientsReader = new DatabasePilotClientsReader(runtimePool)
+      const connectionsReader = new DatabasePilotConnectionsReader(runtimePool)
       const session = await issuer.issue(PILOT_SUBJECT_HASH)
 
       expect(session?.profile.id).toBe(ACTOR_ID)
@@ -283,6 +329,16 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       ).resolves.toMatchObject({
         accessMode: 'read_only',
         clients: [{ id: CLIENT_ID, fullName: 'Root alias' }],
+      })
+      await expect(
+        connectionsReader.readConnections(session?.session.token ?? ''),
+      ).resolves.toMatchObject({
+        accessMode: 'read_only',
+        memberships: [
+          { clientId: CLIENT_ID, trainerId: ACTOR_ID, isRoot: true },
+          { clientId: CLIENT_ID, trainerId: MEMBER_TRAINER_ID, isRoot: false },
+        ],
+        invitations: [{ id: ROOT_INVITATION_ID, clientId: CLIENT_ID }],
       })
       expect(await readActor(runtimePool)).toBeNull()
 
@@ -467,6 +523,64 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(visibleMemberships).toHaveLength(2)
     })
 
+    it('shows memberships to the client cohort and active invitations only to their creator', async () => {
+      if (runtimePool === undefined) throw new Error('Runtime pool is not ready')
+
+      const clientConnections = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        readAccessibleConnections,
+      )
+      expect(clientConnections.memberships).toHaveLength(2)
+      expect(clientConnections.invitations).toEqual([])
+
+      const memberConnections = await withActorTransaction(
+        runtimePool,
+        MEMBER_TRAINER_ID,
+        readAccessibleConnections,
+      )
+      expect(memberConnections.memberships).toHaveLength(2)
+      expect(memberConnections.invitations).toMatchObject([
+        { id: MEMBER_INVITATION_ID, targetRole: 'trainer' },
+      ])
+
+      const outsideConnections = await withActorTransaction(
+        runtimePool,
+        OUTSIDE_TRAINER_ID,
+        readAccessibleConnections,
+      )
+      expect(outsideConnections).toEqual({
+        accessMode: 'read_only',
+        memberships: [],
+        invitations: [],
+      })
+    })
+
+    it('hides memberships and invitations for archived clients', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      await ownerPool.query(
+        'update public.clients set archived_at = now() where id = $1',
+        [CLIENT_ID],
+      )
+      try {
+        await expect(
+          withActorTransaction(runtimePool, ACTOR_ID, readAccessibleConnections),
+        ).resolves.toEqual({
+          accessMode: 'read_only',
+          memberships: [],
+          invitations: [],
+        })
+      } finally {
+        await ownerPool.query(
+          'update public.clients set archived_at = null where id = $1',
+          [CLIENT_ID],
+        )
+      }
+    })
+
     it('enforces relationship foreign keys and keeps runtime writes closed', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')
@@ -490,6 +604,19 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
               values ($1, 'Not allowed')
             `,
             [ACTOR_ID],
+          ),
+        ),
+      ).rejects.toMatchObject({ code: '42501' })
+
+      await expect(
+        withActorTransaction(runtimePool, ACTOR_ID, async (client) =>
+          client.query(
+            `
+              insert into public.client_invitations (
+                client_id, created_by, target_role, code_hash, expires_at
+              ) values ($1, $2, 'client', $3, now() + interval '7 days')
+            `,
+            [CLIENT_ID, ACTOR_ID, 'f'.repeat(64)],
           ),
         ),
       ).rejects.toMatchObject({ code: '42501' })
