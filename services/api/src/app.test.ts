@@ -19,6 +19,8 @@ import {
 import type { PilotClientsResponse } from './clients.js'
 import type { PilotClientsReader } from './pilot-clients-reader.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
+import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
+import { PilotConnectionCommandError } from './connection-commands.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer, PilotSessionResponse } from './pilot-session.js'
 import type { ProfileResponse } from './profile.js'
@@ -53,6 +55,7 @@ describe('browser pilot CORS', () => {
     })
     expect(preflight.statusCode).toBe(204)
     expect(preflight.headers['access-control-allow-origin']).toBe('http://localhost:5173')
+    expect(preflight.headers['access-control-allow-methods']).toContain('DELETE')
     expect(preflight.headers['access-control-allow-headers']).toContain('authorization')
     expect(preflight.headers['access-control-allow-headers']).toContain('x-fit-pilot-session')
 
@@ -263,6 +266,44 @@ function buildConnectionsReader(
     result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
   )
   return { pilotConnectionsReader: { readConnections }, readConnections }
+}
+
+function buildConnectionsWriter(error?: Error): {
+  pilotConnectionsWriter: PilotConnectionsWriter
+  claimInvitation: ReturnType<typeof vi.fn>
+  createInvitation: ReturnType<typeof vi.fn>
+  leaveClient: ReturnType<typeof vi.fn>
+  removeTrainer: ReturnType<typeof vi.fn>
+  revokeInvitation: ReturnType<typeof vi.fn>
+} {
+  const result = <Value>(value: Value) => error === undefined
+    ? Promise.resolve(value)
+    : Promise.reject(error)
+  const claimInvitation = vi.fn(() => result(CLIENTS_RESPONSE.clients[0]!.id))
+  const createInvitation = vi.fn(() => result({
+    id: CONNECTIONS_RESPONSE.invitations[0]!.id,
+    clientId: CLIENTS_RESPONSE.clients[0]!.id,
+    targetRole: 'client' as const,
+    code: 'ABCDEF123456',
+    expiresAt: '2026-08-27T12:00:00.000Z',
+  }))
+  const leaveClient = vi.fn(() => result(undefined))
+  const removeTrainer = vi.fn(() => result(undefined))
+  const revokeInvitation = vi.fn(() => result(undefined))
+  return {
+    pilotConnectionsWriter: {
+      claimInvitation,
+      createInvitation,
+      leaveClient,
+      removeTrainer,
+      revokeInvitation,
+    },
+    claimInvitation,
+    createInvitation,
+    leaveClient,
+    removeTrainer,
+    revokeInvitation,
+  }
 }
 
 describe('read-only Yandex profile endpoint', () => {
@@ -517,5 +558,158 @@ describe('read-only pilot connections endpoint', () => {
     expect(missing.statusCode).toBe(401)
     expect(expired.statusCode).toBe(401)
     expect(expired.json()).toEqual({ error: 'unauthorized' })
+  })
+})
+
+describe('pilot invitation and membership commands', () => {
+  const sessionToken = 's'.repeat(43)
+  const clientId = CLIENTS_RESPONSE.clients[0]!.id
+  const invitationId = CONNECTIONS_RESPONSE.invitations[0]!.id
+
+  it('creates and claims a single-use invitation without caching its code', async () => {
+    const writer = buildConnectionsWriter()
+    const app = buildApp({
+      pilotConnectionsWriter: writer.pilotConnectionsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/v1/invitations',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { clientId, targetRole: 'client' },
+    })
+    expect(created.statusCode).toBe(201)
+    expect(created.headers['cache-control']).toBe('no-store')
+    expect(created.json()).toMatchObject({
+      invitation: { clientId, code: 'ABCDEF123456' },
+    })
+    expect(writer.createInvitation).toHaveBeenCalledWith(
+      sessionToken,
+      clientId,
+      'client',
+    )
+
+    const claimed = await app.inject({
+      method: 'POST',
+      url: '/v1/invitations/claim',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { code: 'abcdef123456' },
+    })
+    expect(claimed.statusCode).toBe(200)
+    expect(claimed.headers['cache-control']).toBe('no-store')
+    expect(claimed.json()).toEqual({ clientId })
+    expect(writer.claimInvitation).toHaveBeenCalledWith(
+      sessionToken,
+      'ABCDEF123456',
+    )
+  })
+
+  it('revokes, removes and leaves through explicit destructive endpoints', async () => {
+    const writer = buildConnectionsWriter()
+    const app = buildApp({
+      pilotConnectionsWriter: writer.pilotConnectionsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const revoked = await app.inject({
+      method: 'DELETE',
+      url: `/v1/invitations/${invitationId}`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+    const removed = await app.inject({
+      method: 'DELETE',
+      url: `/v1/clients/${clientId}/trainers/${PROFILE_ID}`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+    const left = await app.inject({
+      method: 'DELETE',
+      url: `/v1/clients/${clientId}/memberships/me`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+
+    expect([revoked.statusCode, removed.statusCode, left.statusCode]).toEqual([
+      204,
+      204,
+      204,
+    ])
+    expect(writer.revokeInvitation).toHaveBeenCalledWith(sessionToken, invitationId)
+    expect(writer.removeTrainer).toHaveBeenCalledWith(sessionToken, clientId, PROFILE_ID)
+    expect(writer.leaveClient).toHaveBeenCalledWith(sessionToken, clientId)
+  })
+
+  it('validates identifiers and codes before calling the writer', async () => {
+    const writer = buildConnectionsWriter()
+    const app = buildApp({
+      pilotConnectionsWriter: writer.pilotConnectionsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const invalidClient = await app.inject({
+      method: 'POST',
+      url: '/v1/invitations',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { clientId: 'not-a-uuid', targetRole: 'client' },
+    })
+    const invalidCode = await app.inject({
+      method: 'POST',
+      url: '/v1/invitations/claim',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { code: 'short' },
+    })
+
+    expect(invalidClient.statusCode).toBe(400)
+    expect(invalidCode.statusCode).toBe(400)
+    expect(writer.createInvitation).not.toHaveBeenCalled()
+    expect(writer.claimInvitation).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['forbidden', 403, 'action_not_allowed'],
+    ['not_found', 404, 'resource_not_found'],
+    ['conflict', 409, 'conflict'],
+    ['invalid', 422, 'action_not_allowed'],
+  ] as const)('maps %s domain failures without exposing database details', async (
+    failure,
+    status,
+    responseError,
+  ) => {
+    const writer = buildConnectionsWriter(new PilotConnectionCommandError(failure))
+    const app = buildApp({
+      pilotConnectionsWriter: writer.pilotConnectionsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/invitations/claim',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { code: 'ABCDEF123456' },
+    })
+
+    expect(response.statusCode).toBe(status)
+    expect(response.json()).toEqual({ error: responseError })
+    expect(response.body).not.toContain('Pilot connection command failed')
+  })
+
+  it('requires the opaque pilot session for every write', async () => {
+    const writer = buildConnectionsWriter()
+    const app = buildApp({
+      pilotConnectionsWriter: writer.pilotConnectionsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: `/v1/invitations/${invitationId}`,
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(writer.revokeInvitation).not.toHaveBeenCalled()
   })
 })

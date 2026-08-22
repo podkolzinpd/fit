@@ -1,21 +1,32 @@
 import { StrictMode } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { YandexPilotCallbackPage } from './AuthPages'
+import { YandexPilotConnections } from './YandexPilotConnections'
 import { createYandexAuthorizationUrl } from './yandex-pilot-oauth'
 
 const pilot = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   listClients: vi.fn(),
   listConnections: vi.fn(),
+  claimInvitation: vi.fn(),
+  createInvitation: vi.fn(),
+  leaveClient: vi.fn(),
+  removeTrainer: vi.fn(),
+  revokeInvitation: vi.fn(),
 }))
 vi.mock('../../data/repositories/yandex-pilot.repository', () => ({
   yandexPilotRepository: {
     exchangeCodeForSession: pilot.exchangeCodeForSession,
     listClients: pilot.listClients,
     listConnections: pilot.listConnections,
+    claimInvitation: pilot.claimInvitation,
+    createInvitation: pilot.createInvitation,
+    leaveClient: pilot.leaveClient,
+    removeTrainer: pilot.removeTrainer,
+    revokeInvitation: pilot.revokeInvitation,
   },
 }))
 
@@ -32,6 +43,11 @@ describe('Yandex ID pilot callback page', () => {
     pilot.exchangeCodeForSession.mockReset()
     pilot.listClients.mockReset()
     pilot.listConnections.mockReset()
+    pilot.claimInvitation.mockReset()
+    pilot.createInvitation.mockReset()
+    pilot.leaveClient.mockReset()
+    pilot.removeTrainer.mockReset()
+    pilot.revokeInvitation.mockReset()
     pilot.listConnections.mockResolvedValue({ memberships: [], invitations: [] })
     vi.stubEnv('VITE_YANDEX_ID_PILOT_ENABLED', 'true')
     vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
@@ -90,7 +106,7 @@ describe('Yandex ID pilot callback page', () => {
     expect(window.location.search).toBe('')
     expect(await screen.findByRole('heading', { name: 'Доступ подтверждён' })).toBeVisible()
     expect(screen.getByText('Ирина')).toBeVisible()
-    expect(screen.getByText('Только чтение')).toBeVisible()
+    expect(screen.getByText('Ограниченный пилот')).toBeVisible()
     expect(await screen.findAllByText('Анна Смирнова')).toHaveLength(2)
     expect(screen.getByText('31 лет · 168 см · Подготовка к старту')).toBeVisible()
     expect(screen.queryByRole('link', { name: 'Анна Смирнова' })).not.toBeInTheDocument()
@@ -138,7 +154,7 @@ describe('Yandex ID pilot callback page', () => {
     expect(await screen.findByText('В stage пока нет клиентов')).toBeVisible()
     expect(screen.getByText('Список появится после переноса данных этого тренера.')).toBeVisible()
     expect(screen.getByText('В stage пока нет связей')).toBeVisible()
-    expect(screen.getByText('Они появятся после переноса memberships и активных приглашений.')).toBeVisible()
+    expect(screen.getByText('Введите код приглашения или дождитесь переноса клиентской карточки.')).toBeVisible()
   })
 
   it('keeps the profile visible and retries a failed client read', async () => {
@@ -202,6 +218,92 @@ describe('Yandex ID pilot callback page', () => {
     expect(pilot.listConnections).toHaveBeenCalledTimes(2)
   })
 
+  it('creates, claims and revokes invitations inside the isolated pilot', async () => {
+    const user = userEvent.setup()
+    const profileId = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
+    const clientId = '6e577cc7-3b56-4a86-bc85-1ce2426ce249'
+    const invitationId = 'a64d98d9-5b1d-4d4a-9028-2114fa361c0f'
+    pilot.exchangeCodeForSession.mockResolvedValue({
+      accessMode: 'read_only',
+      profile: {
+        id: profileId,
+        firstName: 'Ирина',
+        lastName: null,
+        timezone: 'Europe/Moscow',
+        accountRole: 'trainer',
+      },
+      session: {
+        token: 's'.repeat(43),
+        expiresAt: '2026-08-20T13:15:00.000Z',
+      },
+    })
+    pilot.listClients.mockResolvedValue([{
+      id: clientId,
+      hasAccount: false,
+      fullName: 'Анна Смирнова',
+      ageYears: 31,
+      heightCm: 168,
+      goal: null,
+    }])
+    pilot.listConnections.mockResolvedValue({
+      memberships: [{
+        clientId,
+        trainerId: profileId,
+        firstName: 'Ирина',
+        lastName: null,
+        joinedAt: '2026-08-20T12:00:00.000Z',
+        isRoot: true,
+      }],
+      invitations: [{
+        id: invitationId,
+        clientId,
+        targetRole: 'client',
+        expiresAt: '2026-08-27T12:00:00.000Z',
+        createdAt: '2026-08-20T12:00:00.000Z',
+      }],
+    })
+    pilot.createInvitation.mockResolvedValue({
+      id: invitationId,
+      clientId,
+      targetRole: 'client',
+      code: 'ABCDEF123456',
+      expiresAt: '2026-08-27T12:00:00.000Z',
+    })
+    pilot.claimInvitation.mockResolvedValue(clientId)
+    pilot.revokeInvitation.mockResolvedValue(undefined)
+    window.history.replaceState(null, '', `/auth/yandex/callback${await callbackSearch()}`)
+
+    render(<MemoryRouter><YandexPilotCallbackPage /></MemoryRouter>)
+
+    await user.click(await screen.findByRole('button', { name: 'Пригласить клиента' }))
+    expect(await screen.findByText('ABCDEF123456')).toBeVisible()
+    expect(pilot.createInvitation).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      's'.repeat(43),
+      clientId,
+      'client',
+    )
+
+    await user.type(screen.getByRole('textbox', { name: 'Код приглашения' }), 'abcdef123456')
+    await user.click(screen.getByRole('button', { name: 'Принять приглашение' }))
+    expect(await screen.findByText('Приглашение принято, связь добавлена.')).toBeVisible()
+    expect(pilot.claimInvitation).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      's'.repeat(43),
+      'ABCDEF123456',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Отозвать' }))
+    const dialog = await screen.findByRole('alertdialog')
+    await user.click(within(dialog).getByRole('button', { name: 'Отозвать' }))
+    expect(await screen.findByText('Приглашение отозвано.')).toBeVisible()
+    expect(pilot.revokeInvitation).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      's'.repeat(43),
+      invitationId,
+    )
+  })
+
   it('shows an allowlist error without exposing the pilot profile', async () => {
     pilot.exchangeCodeForSession.mockRejectedValue(new Error('Этот аккаунт пока не добавлен в пилот.'))
     window.history.replaceState(null, '', `/auth/yandex/callback${await callbackSearch()}`)
@@ -211,5 +313,127 @@ describe('Yandex ID pilot callback page', () => {
     expect(await screen.findByRole('heading', { name: 'Не удалось войти' })).toBeVisible()
     expect(screen.getByText('Этот аккаунт пока не добавлен в пилот.')).toBeVisible()
     await waitFor(() => expect(window.location.search).toBe(''))
+  })
+})
+
+describe('Yandex ID pilot membership controls', () => {
+  const apiBaseUrl = 'https://stage.example.test'
+  const clientId = '6e577cc7-3b56-4a86-bc85-1ce2426ce249'
+  const rootTrainerId = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
+  const memberTrainerId = '1c2c8c58-2903-4389-91ba-705f871ae712'
+  const clientActorId = '25cbe3d6-c291-4bef-8d3e-f210dbde6fa9'
+  const clients = [{
+    id: clientId,
+    hasAccount: true,
+    fullName: 'Анна Смирнова',
+    canonicalFullName: 'Анна Смирнова',
+    gender: 'female' as const,
+    ageYears: 31,
+    ageUpdatedAt: '2026-08-20',
+    heightCm: 168,
+    goal: null,
+    note: null,
+    currentWeightKg: null,
+    lastActivityAt: '2026-08-20T12:00:00.000Z',
+    archivedAt: null,
+    version: 1,
+    membershipVersion: 1,
+  }]
+  const connections = {
+    memberships: [{
+      clientId,
+      trainerId: rootTrainerId,
+      firstName: 'Ирина',
+      lastName: null,
+      joinedAt: '2026-08-19T12:00:00.000Z',
+      isRoot: true,
+    }, {
+      clientId,
+      trainerId: memberTrainerId,
+      firstName: 'Олег',
+      lastName: null,
+      joinedAt: '2026-08-20T12:00:00.000Z',
+      isRoot: false,
+    }],
+    invitations: [],
+  }
+
+  beforeEach(() => {
+    pilot.leaveClient.mockReset()
+    pilot.removeTrainer.mockReset()
+  })
+
+  it('confirms removal for a client and never offers removal of the root trainer', async () => {
+    const user = userEvent.setup()
+    const onRefresh = vi.fn().mockResolvedValue(undefined)
+    pilot.removeTrainer.mockResolvedValue(undefined)
+    render(<MemoryRouter><YandexPilotConnections
+      apiBaseUrl={apiBaseUrl}
+      clients={clients}
+      connections={connections}
+      error={null}
+      loading={false}
+      onRefresh={onRefresh}
+      session={{
+        accessMode: 'read_only',
+        profile: {
+          id: clientActorId,
+          firstName: 'Анна',
+          lastName: null,
+          timezone: 'Europe/Moscow',
+          accountRole: 'client',
+        },
+        session: { token: 's'.repeat(43), expiresAt: '2026-08-20T13:15:00.000Z' },
+      }}
+    /></MemoryRouter>)
+
+    expect(screen.getAllByRole('button', { name: 'Отключить тренера' })).toHaveLength(1)
+    await user.click(screen.getByRole('button', { name: 'Отключить тренера' }))
+    await user.click(within(await screen.findByRole('alertdialog'))
+      .getByRole('button', { name: 'Отключить' }))
+
+    expect(pilot.removeTrainer).toHaveBeenCalledWith(
+      apiBaseUrl,
+      's'.repeat(43),
+      clientId,
+      memberTrainerId,
+    )
+    expect(onRefresh).toHaveBeenCalledOnce()
+  })
+
+  it('lets only a connected non-root trainer leave the client space', async () => {
+    const user = userEvent.setup()
+    const onRefresh = vi.fn().mockResolvedValue(undefined)
+    pilot.leaveClient.mockResolvedValue(undefined)
+    render(<MemoryRouter><YandexPilotConnections
+      apiBaseUrl={apiBaseUrl}
+      clients={clients}
+      connections={connections}
+      error={null}
+      loading={false}
+      onRefresh={onRefresh}
+      session={{
+        accessMode: 'read_only',
+        profile: {
+          id: memberTrainerId,
+          firstName: 'Олег',
+          lastName: null,
+          timezone: 'Europe/Moscow',
+          accountRole: 'trainer',
+        },
+        session: { token: 's'.repeat(43), expiresAt: '2026-08-20T13:15:00.000Z' },
+      }}
+    /></MemoryRouter>)
+
+    await user.click(screen.getByRole('button', { name: 'Покинуть пространство' }))
+    await user.click(within(await screen.findByRole('alertdialog'))
+      .getByRole('button', { name: 'Покинуть' }))
+
+    expect(pilot.leaveClient).toHaveBeenCalledWith(
+      apiBaseUrl,
+      's'.repeat(43),
+      clientId,
+    )
+    expect(onRefresh).toHaveBeenCalledOnce()
   })
 })

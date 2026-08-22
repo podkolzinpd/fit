@@ -6,6 +6,11 @@ const queries = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   listClients: vi.fn(),
   listConnections: vi.fn(),
+  claimInvitation: vi.fn(),
+  createInvitation: vi.fn(),
+  leaveClient: vi.fn(),
+  removeTrainer: vi.fn(),
+  revokeInvitation: vi.fn(),
 }))
 vi.mock('../queries/yandex-pilot.queries', () => ({ yandexPilotQueries: queries }))
 
@@ -71,6 +76,11 @@ describe('yandexPilotRepository', () => {
     queries.exchangeCodeForSession.mockReset()
     queries.listClients.mockReset()
     queries.listConnections.mockReset()
+    queries.claimInvitation.mockReset()
+    queries.createInvitation.mockReset()
+    queries.leaveClient.mockReset()
+    queries.removeTrainer.mockReset()
+    queries.revokeInvitation.mockReset()
   })
 
   it('accepts the explicit read-only session contract', async () => {
@@ -160,5 +170,78 @@ describe('yandexPilotRepository', () => {
       'https://stage.example.test',
       's'.repeat(43),
     )).rejects.toThrow('Stage вернул неподдерживаемый формат связей.')
+  })
+
+  it('creates and claims invitations with validated one-time values', async () => {
+    const invitation = {
+      id: connections.invitations[0]!.id,
+      clientId: CLIENT_ID,
+      targetRole: 'client',
+      code: 'ABCDEF123456',
+      expiresAt: '2026-08-27T12:00:00.000Z',
+    }
+    queries.createInvitation.mockResolvedValue(new Response(JSON.stringify({
+      invitation,
+    }), { status: 201 }))
+    queries.claimInvitation.mockResolvedValue(new Response(JSON.stringify({
+      clientId: CLIENT_ID,
+    }), { status: 200 }))
+
+    await expect(yandexPilotRepository.createInvitation(
+      'https://stage.example.test',
+      's'.repeat(43),
+      CLIENT_ID,
+      'client',
+    )).resolves.toEqual(invitation)
+    await expect(yandexPilotRepository.claimInvitation(
+      'https://stage.example.test',
+      's'.repeat(43),
+      'abcdef123456',
+    )).resolves.toBe(CLIENT_ID)
+    expect(queries.claimInvitation).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      's'.repeat(43),
+      'ABCDEF123456',
+    )
+  })
+
+  it('maps guarded command failures to actionable messages', async () => {
+    queries.revokeInvitation.mockResolvedValue(new Response('{}', { status: 403 }))
+    queries.removeTrainer.mockResolvedValue(new Response('{}', { status: 422 }))
+
+    await expect(yandexPilotRepository.revokeInvitation(
+      'https://stage.example.test',
+      's'.repeat(43),
+      connections.invitations[0]!.id,
+    )).rejects.toThrow('Недостаточно прав')
+    await expect(yandexPilotRepository.removeTrainer(
+      'https://stage.example.test',
+      's'.repeat(43),
+      CLIENT_ID,
+      session.profile.id,
+    )).rejects.toThrow('Основного тренера нельзя отключить')
+  })
+
+  it('accepts no-content responses for revoke, remove and leave', async () => {
+    queries.revokeInvitation.mockResolvedValue(new Response(null, { status: 204 }))
+    queries.removeTrainer.mockResolvedValue(new Response(null, { status: 204 }))
+    queries.leaveClient.mockResolvedValue(new Response(null, { status: 204 }))
+
+    await expect(yandexPilotRepository.revokeInvitation(
+      'https://stage.example.test',
+      's'.repeat(43),
+      connections.invitations[0]!.id,
+    )).resolves.toBeUndefined()
+    await expect(yandexPilotRepository.removeTrainer(
+      'https://stage.example.test',
+      's'.repeat(43),
+      CLIENT_ID,
+      session.profile.id,
+    )).resolves.toBeUndefined()
+    await expect(yandexPilotRepository.leaveClient(
+      'https://stage.example.test',
+      's'.repeat(43),
+      CLIENT_ID,
+    )).resolves.toBeUndefined()
   })
 })

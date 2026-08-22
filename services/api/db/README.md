@@ -11,11 +11,9 @@ an internal profile UUID through `set_config` inside an explicit transaction.
 Provider subjects such as a Yandex ID `sub` must never be passed directly as
 this actor UUID.
 
-The third migration adds client cards and trainer memberships. Runtime access
-is read-only at this stage: a client owner, the partition owner and connected
-trainers can read the card, while an unrelated actor cannot. Invitations and
-membership commands are intentionally deferred until their API boundary is
-ported.
+The third migration adds client cards and trainer memberships. A client owner,
+the partition owner and connected trainers can read the card, while an
+unrelated actor cannot.
 
 The fourth migration adds the Yandex ID identity map and the server-side
 read-only pilot assignment. It stores only a SHA-256 digest of the app-specific
@@ -23,6 +21,13 @@ Yandex `psuid`; raw provider IDs, login, email and OAuth tokens are not stored.
 The runtime can resolve an internal profile UUID only when both the identity
 mapping and an enabled `yandex`/`read_only` assignment exist. The resulting UUID
 is then installed as transaction-local actor context before profile RLS runs.
+
+The sixth migration adds the creator-scoped invitation read model. The seventh
+adds five narrow security-definer commands for create, claim, revoke, remove
+and leave. Direct runtime writes remain revoked. Invitation codes are returned
+once, stored only as SHA-256, expire after seven days and are claimed under a
+row lock. Root memberships and archived clients are protected by the database,
+not only by the browser UI.
 
 ## Roles
 

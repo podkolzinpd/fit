@@ -39,4 +39,40 @@ describe('yandexPilotQueries', () => {
       },
     )
   })
+
+  it('uses explicit JSON and destructive endpoints for connection commands', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValue(new Response('{}', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const token = 's'.repeat(43)
+    const clientId = '6e577cc7-3b56-4a86-bc85-1ce2426ce249'
+    const trainerId = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
+    const invitationId = '81a1139a-1011-41be-a906-a9d3f8b70d8c'
+
+    await yandexPilotQueries.createInvitation(
+      'https://stage.example.test', token, clientId, 'trainer',
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://stage.example.test/v1/invitations',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ clientId, targetRole: 'trainer' }),
+      }),
+    )
+
+    await yandexPilotQueries.removeTrainer(
+      'https://stage.example.test', token, clientId, trainerId,
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `https://stage.example.test/v1/clients/${clientId}/trainers/${trainerId}`,
+      expect.objectContaining({ method: 'DELETE' }),
+    )
+    await yandexPilotQueries.revokeInvitation(
+      'https://stage.example.test', token, invitationId,
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `https://stage.example.test/v1/invitations/${invitationId}`,
+      expect.objectContaining({ method: 'DELETE' }),
+    )
+  })
 })

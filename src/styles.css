@@ -347,13 +347,24 @@ p { margin: 6px 0 }
 .yandex-pilot-connections { display: grid; gap: 12px }
 .yandex-pilot-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px }
 .yandex-pilot-section-head h2 { margin: 0 }
+.yandex-pilot-section-head p { margin: 4px 0 0; font-size: var(--text-ui) }
 .yandex-pilot-clients-list { gap: 10px }
 .yandex-pilot-client { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 12px }
 .yandex-pilot-client p { color: var(--muted); font-size: var(--text-ui); overflow-wrap: anywhere }
+.yandex-pilot-claim { gap: 12px }
+.yandex-pilot-claim p { margin: 4px 0 0; font-size: var(--text-ui) }
+.yandex-pilot-claim button { width: 100% }
+.yandex-pilot-created-invitation { border-color: color-mix(in srgb, var(--accent) 44%, var(--border)) }
+.yandex-pilot-created-invitation strong { display: grid; gap: 6px }
+.yandex-pilot-created-invitation strong span { font-size: var(--text-title); letter-spacing: .08em; overflow-wrap: anywhere }
+.yandex-pilot-created-invitation p { margin: 6px 0 0; color: var(--muted); font-size: var(--text-ui) }
 .yandex-pilot-connections-list { gap: 10px }
 .card.yandex-pilot-connection { display: grid; align-items: stretch; gap: 8px }
 .yandex-pilot-connection p { margin: 4px 0 0; color: var(--muted); font-size: var(--text-ui); overflow-wrap: anywhere }
-.yandex-pilot-connection .yandex-pilot-invitation { padding-top: 8px; border-top: 1px solid var(--border) }
+.yandex-pilot-connection > button.secondary { justify-self: start }
+.yandex-pilot-connection .yandex-pilot-invitation { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-top: 8px; border-top: 1px solid var(--border) }
+.yandex-pilot-connection .yandex-pilot-invitation p { margin: 0 }
+.yandex-pilot-connection .yandex-pilot-invitation button { flex: 0 0 auto }
 .auth-back-link { align-self: flex-start; margin-top: 2px; font-weight: 700 }
 .brand { width: 58px; height: 58px; display: grid; place-items: center; background: var(--accent-grad); border: 1px solid var(--accent-border); border-radius: 19px; box-shadow: 0 12px 28px var(--accent-shadow); color: var(--on-accent); font-size: 19px; font-weight: 900; letter-spacing: -.04em }
 .stack { display: flex; flex-direction: column; gap: 16px }

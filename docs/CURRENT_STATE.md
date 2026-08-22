@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-22
-Проверенный базовый `main`: `1702d95` (`YAFIT-346: восстановить отправку ответа и экран после клавиатуры (#506)`)
+Проверенный базовый `main`: `0d6be89` (`feat(yandex): add read-only membership connections (#507)`)
 
 ## Последнее продуктовое изменение
 
@@ -48,29 +48,33 @@
 - Yandex Cloud stage содержит Managed PostgreSQL 17 и Serverless Containers;
   миграции доставляются автоматически через GitHub OIDC, private runner и
   forward-only policy.
-- Read-only Yandex ID pilot и `/v1/clients` работают на stage. Production
+- Ограниченный Yandex ID pilot и `/v1/clients` работают на stage. Production
   frontend и основной tenant пока остаются на Supabase; полный cutover не
   выполнен.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен текущему browser-контракту; Supabase-сессия при пилотном входе не
   создаётся.
-- Активная ветка `codex/yandex-memberships-read-model` не дублирует уже
-  перенесённые memberships: migration `000006` добавляет invitation read model,
-  creator-only RLS и read-only `GET /v1/connections`. Pilot callback показывает
-  доступных тренеров и только активные приглашения actor-а; mutations закрыты.
+- Активная ветка `codex/yandex-invitation-lifecycle` добавляет migration `000007`
+  и узкие API-команды create/claim/revoke/remove/leave. Прямые runtime-записи
+  остаются закрыты; одноразовый код хранится только как SHA-256, claim выполняется
+  под row lock, root membership и cross-tenant доступ защищены в PostgreSQL.
+- Pilot callback позволяет обеим ролям принять код; тренер создаёт приглашение
+  несвязанному клиенту, клиент приглашает/отключает дополнительного тренера,
+  а дополнительный тренер может выйти сам. Остальные данные read-only.
 - Новая cost-sensitive, destructive или identity-инфраструктура требует
   отдельного решения и не добавляется в продуктовые UI-задачи.
 
 ## Проверки активной ветки
 
-- Migration `000006` локально применена к существующей PostgreSQL 17 без
-  скачивания образов; 9 actor/RLS/session tests зелёные.
+- Migration `000007` локально пере-применена к существующей PostgreSQL 17 без
+  скачивания образов; 10 actor/RLS/session/lifecycle tests зелёные.
 - Supabase `db:reset` воспроизвёл полную историю; 568 pgTAP SQL/RLS tests и
   migration safety зелёные.
-- Полный `npm run check` зелёный: 621 frontend test, coverage, lint, TypeScript,
-  DB types, iOS permissions, infra policy, 43 API tests и production build.
-- Yandex callback success с длинным русским текстом визуально принят на
-  390 WebKit, 430 Chromium и 1440 desktop; горизонтального overflow нет.
+- Полный `npm run check` зелёный: 628 frontend tests, coverage, lint, TypeScript,
+  DB types, iOS permissions, 32 infra policy tests, 51 API tests и production
+  build.
+- Yandex callback success/create, error/retry и empty-state визуально приняты на
+  390, 430 и 1440; длинный русский текст и код не дают horizontal overflow.
 
 ## Проверки последней продуктовой точки
 
@@ -87,12 +91,11 @@
 
 ## Ближайший порядок
 
-1. Завершить текущий read-only connections slice: проверки, visual QA, CI и PR.
-2. Отдельным решением реализовать invitation lifecycle mutations и сценарии
-   invite → join → leave/remove.
-3. Портировать exercises/workouts и остальные вертикали из
+1. Завершить текущий invitation lifecycle slice: PR, зелёный CI и stage smoke
+   invite → join → leave/remove на двух разрешённых Yandex ID.
+2. Портировать exercises/workouts и остальные вертикали из
    `docs/design/yandex-cloud-migration.md`.
-4. После полного tenant-контракта провести две миграционные репетиции; только
+3. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
 
 ## Отложено

@@ -65,11 +65,20 @@ const connectionsSchema = z.object({
   invitations: z.array(invitationSchema),
 })
 
+const createdInvitationSchema = z.object({
+  invitation: invitationSchema.extend({
+    code: z.string().regex(/^[A-F0-9]{12}$/),
+  }).omit({ createdAt: true }),
+})
+
+const claimedInvitationSchema = z.object({ clientId: z.uuid() })
+
 export type YandexPilotSession = z.infer<typeof sessionSchema>
 export type YandexPilotClient = z.infer<typeof clientSchema>
 export type YandexPilotMembership = z.infer<typeof membershipSchema>
 export type YandexPilotInvitation = z.infer<typeof invitationSchema>
 export type YandexPilotConnections = Omit<z.infer<typeof connectionsSchema>, 'accessMode'>
+export type YandexPilotCreatedInvitation = z.infer<typeof createdInvitationSchema>['invitation']
 
 function responseError(status: number): Error {
   if (status === 401) return new Error('Yandex ID не подтвердил вход. Начните заново.')
@@ -83,6 +92,27 @@ function clientsResponseError(status: number): Error {
   if (status === 401) return new Error('Сессия пилота истекла. Начните вход через Yandex ID заново.')
   if (status === 503) return new Error('Пилот временно недоступен. Попробуйте позднее.')
   return new Error('Не удалось загрузить клиентов из stage.')
+}
+
+function commandResponseError(status: number): Error {
+  if (status === 401) return new Error('Сессия пилота истекла. Начните вход через Yandex ID заново.')
+  if (status === 403) return new Error('Недостаточно прав для этого действия.')
+  if (status === 404) return new Error('Приглашение или связь уже недоступны. Обновите данные.')
+  if (status === 409) return new Error('Карточка клиента уже связана с другим аккаунтом.')
+  if (status === 422) return new Error('Основного тренера нельзя отключить или вывести из пространства.')
+  if (status === 503) return new Error('Пилот временно недоступен. Попробуйте позднее.')
+  return new Error('Не удалось изменить связи в stage.')
+}
+
+async function commandResponse(request: () => Promise<Response>): Promise<Response> {
+  let response: Response
+  try {
+    response = await request()
+  } catch {
+    throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+  }
+  if (!response.ok) throw commandResponseError(response.status)
+  return response
 }
 
 export const yandexPilotRepository = {
@@ -124,5 +154,70 @@ export const yandexPilotRepository = {
       memberships: result.data.memberships,
       invitations: result.data.invitations,
     }
+  },
+  async createInvitation(
+    apiBaseUrl: string,
+    sessionToken: string,
+    clientId: string,
+    targetRole: 'client' | 'trainer',
+  ): Promise<YandexPilotCreatedInvitation> {
+    const response = await commandResponse(() => yandexPilotQueries.createInvitation(
+      apiBaseUrl,
+      sessionToken,
+      clientId,
+      targetRole,
+    ))
+    const result = createdInvitationSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый формат приглашения.')
+    return result.data.invitation
+  },
+  async claimInvitation(
+    apiBaseUrl: string,
+    sessionToken: string,
+    code: string,
+  ): Promise<string> {
+    const response = await commandResponse(() => yandexPilotQueries.claimInvitation(
+      apiBaseUrl,
+      sessionToken,
+      code.trim().toUpperCase(),
+    ))
+    const result = claimedInvitationSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый результат приглашения.')
+    return result.data.clientId
+  },
+  async revokeInvitation(
+    apiBaseUrl: string,
+    sessionToken: string,
+    invitationId: string,
+  ): Promise<void> {
+    await commandResponse(() => yandexPilotQueries.revokeInvitation(
+      apiBaseUrl,
+      sessionToken,
+      invitationId,
+    ))
+  },
+  async removeTrainer(
+    apiBaseUrl: string,
+    sessionToken: string,
+    clientId: string,
+    trainerId: string,
+  ): Promise<void> {
+    await commandResponse(() => yandexPilotQueries.removeTrainer(
+      apiBaseUrl,
+      sessionToken,
+      clientId,
+      trainerId,
+    ))
+  },
+  async leaveClient(
+    apiBaseUrl: string,
+    sessionToken: string,
+    clientId: string,
+  ): Promise<void> {
+    await commandResponse(() => yandexPilotQueries.leaveClient(
+      apiBaseUrl,
+      sessionToken,
+      clientId,
+    ))
   },
 }

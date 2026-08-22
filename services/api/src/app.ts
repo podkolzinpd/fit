@@ -15,9 +15,11 @@ import {
   PilotAccessDeniedError,
   PilotSessionInvalidError,
 } from './db/yandex-pilot-transaction.js'
+import { PilotConnectionCommandError } from './connection-commands.js'
 import type { DatabaseConnection, DatabasePool } from './db/types.js'
 import type { PilotClientsReader } from './pilot-clients-reader.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
+import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer } from './pilot-session.js'
 
@@ -28,6 +30,7 @@ interface BuildAppOptions {
   oauthCodeProvider?: YandexOAuthCodeProvider
   pilotClientsReader?: PilotClientsReader
   pilotConnectionsReader?: PilotConnectionsReader
+  pilotConnectionsWriter?: PilotConnectionsWriter
   pilotProfileReader?: PilotProfileReader
   pilotSessionIssuer?: PilotSessionIssuer
   logger?: boolean
@@ -47,7 +50,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (origin !== undefined && allowedOrigins.has(origin)) {
       reply
         .header('access-control-allow-origin', origin)
-        .header('access-control-allow-methods', 'GET, POST, OPTIONS')
+        .header('access-control-allow-methods', 'GET, POST, DELETE, OPTIONS')
         .header(
           'access-control-allow-headers',
           'authorization, content-type, x-fit-pilot-session',
@@ -226,6 +229,175 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       }
       return reply.code(503).send({ error: 'service_unavailable' })
     }
+  })
+
+  const uuidPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+  async function sendPilotCommand<Result>(
+    reply: FastifyReply,
+    work: () => Promise<Result>,
+    send: (result: Result) => unknown,
+  ) {
+    try {
+      return send(await work())
+    } catch (error) {
+      if (error instanceof PilotSessionInvalidError) {
+        return reply.code(401).send({ error: 'unauthorized' })
+      }
+      if (error instanceof PilotConnectionCommandError) {
+        if (error.failure === 'forbidden') {
+          return reply.code(403).send({ error: 'action_not_allowed' })
+        }
+        if (error.failure === 'not_found') {
+          return reply.code(404).send({ error: 'resource_not_found' })
+        }
+        if (error.failure === 'conflict') {
+          return reply.code(409).send({ error: 'conflict' })
+        }
+        return reply.code(422).send({ error: 'action_not_allowed' })
+      }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  }
+
+  app.post('/v1/invitations', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const body = request.body
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (
+      typeof body !== 'object'
+      || body === null
+      || !('clientId' in body)
+      || !('targetRole' in body)
+      || typeof body.clientId !== 'string'
+      || !uuidPattern.test(body.clientId)
+      || (body.targetRole !== 'client' && body.targetRole !== 'trainer')
+    ) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotConnectionsWriter
+    if (writer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    const clientId = body.clientId
+    const targetRole = body.targetRole
+
+    return sendPilotCommand(
+      reply,
+      () => writer.createInvitation(sessionToken, clientId, targetRole),
+      (invitation) => reply
+        .header('cache-control', 'no-store')
+        .code(201)
+        .send({ invitation }),
+    )
+  })
+
+  app.post('/v1/invitations/claim', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const body = request.body
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (
+      typeof body !== 'object'
+      || body === null
+      || !('code' in body)
+      || typeof body.code !== 'string'
+      || !/^[A-Za-z0-9]{12}$/.test(body.code.trim())
+    ) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotConnectionsWriter
+    if (writer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    const code = body.code.trim().toUpperCase()
+
+    return sendPilotCommand(
+      reply,
+      () => writer.claimInvitation(sessionToken, code),
+      (clientId) => reply
+        .header('cache-control', 'no-store')
+        .send({ clientId }),
+    )
+  })
+
+  app.delete('/v1/invitations/:invitationId', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { invitationId } = request.params as { invitationId?: unknown }
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof invitationId !== 'string' || !uuidPattern.test(invitationId)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotConnectionsWriter
+    if (writer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+
+    return sendPilotCommand(
+      reply,
+      () => writer.revokeInvitation(sessionToken, invitationId),
+      () => reply.code(204).send(),
+    )
+  })
+
+  app.delete('/v1/clients/:clientId/trainers/:trainerId', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { clientId, trainerId } = request.params as {
+      clientId?: unknown
+      trainerId?: unknown
+    }
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (
+      typeof clientId !== 'string'
+      || !uuidPattern.test(clientId)
+      || typeof trainerId !== 'string'
+      || !uuidPattern.test(trainerId)
+    ) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotConnectionsWriter
+    if (writer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+
+    return sendPilotCommand(
+      reply,
+      () => writer.removeTrainer(
+        sessionToken,
+        clientId,
+        trainerId,
+      ),
+      () => reply.code(204).send(),
+    )
+  })
+
+  app.delete('/v1/clients/:clientId/memberships/me', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { clientId } = request.params as { clientId?: unknown }
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotConnectionsWriter
+    if (writer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+
+    return sendPilotCommand(
+      reply,
+      () => writer.leaveClient(sessionToken, clientId),
+      () => reply.code(204).send(),
+    )
   })
 
   if (options.databasePool !== undefined) {
