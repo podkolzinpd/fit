@@ -251,6 +251,26 @@ jobs:
           jq -e '.status == "ok"' <<<"$health" >/dev/null
           jq -e '.status == "ready"' <<<"$ready" >/dev/null
           fixture_token=$(jq -er '.session.token' stage-workout-fixture-response.json)
+          clients=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/clients")
+          jq -e '
+            .accessMode == "read_only"
+            and (.clients | any(
+              .fullName == "Тестовый клиент Yandex stage"
+              and .canonicalFullName == "Тестовый клиент Yandex stage"
+            ))
+          ' <<<"$clients" >/dev/null
+          connections=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/connections")
+          jq -e '
+            .accessMode == "read_only"
+            and (.memberships | any(.isRoot == true))
+            and (.invitations | type == "array")
+          ' <<<"$connections" >/dev/null
           training=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Pilot-Session: $fixture_token" \
