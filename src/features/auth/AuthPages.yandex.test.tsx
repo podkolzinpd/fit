@@ -11,6 +11,7 @@ const pilot = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   listClients: vi.fn(),
   listConnections: vi.fn(),
+  listTrainingData: vi.fn(),
   claimInvitation: vi.fn(),
   createInvitation: vi.fn(),
   leaveClient: vi.fn(),
@@ -22,6 +23,7 @@ vi.mock('../../data/repositories/yandex-pilot.repository', () => ({
     exchangeCodeForSession: pilot.exchangeCodeForSession,
     listClients: pilot.listClients,
     listConnections: pilot.listConnections,
+    listTrainingData: pilot.listTrainingData,
     claimInvitation: pilot.claimInvitation,
     createInvitation: pilot.createInvitation,
     leaveClient: pilot.leaveClient,
@@ -43,12 +45,18 @@ describe('Yandex ID pilot callback page', () => {
     pilot.exchangeCodeForSession.mockReset()
     pilot.listClients.mockReset()
     pilot.listConnections.mockReset()
+    pilot.listTrainingData.mockReset()
     pilot.claimInvitation.mockReset()
     pilot.createInvitation.mockReset()
     pilot.leaveClient.mockReset()
     pilot.removeTrainer.mockReset()
     pilot.revokeInvitation.mockReset()
     pilot.listConnections.mockResolvedValue({ memberships: [], invitations: [] })
+    pilot.listTrainingData.mockResolvedValue({
+      customExercises: [],
+      workouts: [],
+      hasMoreWorkouts: false,
+    })
     vi.stubEnv('VITE_YANDEX_ID_PILOT_ENABLED', 'true')
     vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
     vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
@@ -99,6 +107,72 @@ describe('Yandex ID pilot callback page', () => {
         createdAt: '2026-08-20T12:00:00.000Z',
       }],
     })
+    pilot.listTrainingData.mockResolvedValue({
+      customExercises: [{
+        id: '8f3c305e-f206-40b3-a8f0-a8d8b3df34b9',
+        name: 'Тяга саней',
+        muscleGroup: 'legs',
+        inputKind: 'strength',
+        archivedAt: null,
+        version: 1,
+      }],
+      workouts: [{
+        id: 'be3b5576-1f5f-4db1-944b-cd78f06aa73b',
+        trainerId: 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b',
+        clientId: '6e577cc7-3b56-4a86-bc85-1ce2426ce249',
+        clientName: 'Анна Смирнова',
+        createdBy: 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b',
+        workoutDate: '2026-08-20',
+        startTime: '10:00:00',
+        endTime: null,
+        status: 'planned',
+        notes: null,
+        startedAt: null,
+        completedAt: null,
+        version: 1,
+        exercises: [{
+          id: '7e1bb6d7-7717-41ea-aea5-0d8d0ea50c35',
+          position: 0,
+          source: 'system',
+          ref: 'running',
+          customExerciseId: null,
+          name: 'Бег',
+          muscleGroup: 'cardio',
+          inputKind: 'distance',
+          blockId: '7d3b454b-933c-43a6-9331-ac4009644933',
+          blockType: 'single',
+          blockPreset: 'set',
+          blockRounds: 1,
+          restBetweenExercisesSec: 0,
+          restBetweenRoundsSec: 90,
+          restBetweenSetsSec: 90,
+          trainerComment: null,
+          sets: [{
+            id: '5f2a3b76-c149-43f2-a7ab-290b2dfdcd11',
+            position: 0,
+            plan: {
+              weightKg: null,
+              reps: null,
+              durationMin: null,
+              durationSec: 1800,
+              distanceKm: 5,
+              rpe: 7,
+            },
+            fact: {
+              weightKg: null,
+              reps: null,
+              durationMin: null,
+              durationSec: null,
+              distanceKm: null,
+              rpe: null,
+            },
+            confirmedAt: null,
+            version: 1,
+          }],
+        }],
+      }],
+      hasMoreWorkouts: false,
+    })
     window.history.replaceState(null, '', `/auth/yandex/callback${await callbackSearch()}`)
 
     render(<StrictMode><MemoryRouter><YandexPilotCallbackPage /></MemoryRouter></StrictMode>)
@@ -107,12 +181,16 @@ describe('Yandex ID pilot callback page', () => {
     expect(await screen.findByRole('heading', { name: 'Доступ подтверждён' })).toBeVisible()
     expect(screen.getByText('Ирина')).toBeVisible()
     expect(screen.getByText('Ограниченный пилот')).toBeVisible()
-    expect(await screen.findAllByText('Анна Смирнова')).toHaveLength(2)
+    expect(await screen.findAllByText('Анна Смирнова')).toHaveLength(3)
     expect(screen.getByText('31 лет · 168 см · Подготовка к старту')).toBeVisible()
     expect(screen.queryByRole('link', { name: 'Анна Смирнова' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Связи и приглашения' })).toBeVisible()
     expect(screen.getByText('Ирина · основной')).toBeVisible()
     expect(screen.getByText(/Активное приглашение для клиента до/)).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Тренировки в stage' })).toBeVisible()
+    expect(screen.getByText('Тяга саней')).toBeVisible()
+    expect(screen.getByText('Бег')).toBeVisible()
+    expect(screen.getByText('1800 сек. · 5 км · RPE 7')).toBeVisible()
     expect(pilot.exchangeCodeForSession).toHaveBeenCalledWith(
       'https://stage.example.test',
       'one-time-code',
@@ -129,6 +207,11 @@ describe('Yandex ID pilot callback page', () => {
       's'.repeat(43),
     )
     expect(pilot.listConnections).toHaveBeenCalledTimes(1)
+    expect(pilot.listTrainingData).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      's'.repeat(43),
+    )
+    expect(pilot.listTrainingData).toHaveBeenCalledTimes(1)
   })
 
   it('shows an explicit empty state before tenant data is migrated', async () => {
@@ -155,6 +238,7 @@ describe('Yandex ID pilot callback page', () => {
     expect(screen.getByText('Список появится после переноса данных этого тренера.')).toBeVisible()
     expect(screen.getByText('В stage пока нет связей')).toBeVisible()
     expect(screen.getByText('Введите код приглашения или дождитесь переноса клиентской карточки.')).toBeVisible()
+    expect(screen.getByText('В stage пока нет тренировок')).toBeVisible()
   })
 
   it('keeps the profile visible and retries a failed client read', async () => {

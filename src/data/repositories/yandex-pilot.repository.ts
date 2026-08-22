@@ -65,6 +65,76 @@ const connectionsSchema = z.object({
   invitations: z.array(invitationSchema),
 })
 
+const nullableMetricSchema = z.number().nonnegative().nullable()
+const workoutSetValuesSchema = z.object({
+  weightKg: nullableMetricSchema,
+  reps: z.number().int().nonnegative().nullable(),
+  durationMin: nullableMetricSchema,
+  durationSec: z.number().int().nonnegative().nullable(),
+  distanceKm: nullableMetricSchema,
+  rpe: z.number().min(6).max(10).nullable(),
+})
+const workoutSetSchema = z.object({
+  id: z.uuid(),
+  position: z.number().int().nonnegative(),
+  plan: workoutSetValuesSchema,
+  fact: workoutSetValuesSchema,
+  confirmedAt: z.iso.datetime().nullable(),
+  version: z.number().int().positive(),
+})
+const workoutExerciseSchema = z.object({
+  id: z.uuid(),
+  position: z.number().int().nonnegative(),
+  source: z.enum(['system', 'custom']),
+  ref: z.string().min(1),
+  customExerciseId: z.uuid().nullable(),
+  name: z.string().min(1),
+  muscleGroup: z.enum([
+    'legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core',
+    'cardio', 'other',
+  ]),
+  inputKind: z.enum(['strength', 'distance', 'reps', 'duration']),
+  blockId: z.uuid(),
+  blockType: z.enum(['single', 'group']),
+  blockPreset: z.enum(['set', 'circuit', 'interval']),
+  blockRounds: z.number().int().positive(),
+  restBetweenExercisesSec: z.number().int().nonnegative(),
+  restBetweenRoundsSec: z.number().int().nonnegative(),
+  restBetweenSetsSec: z.number().int().nonnegative(),
+  trainerComment: z.string().nullable(),
+  sets: z.array(workoutSetSchema),
+})
+const workoutSchema = z.object({
+  id: z.uuid(),
+  trainerId: z.uuid(),
+  clientId: z.uuid(),
+  clientName: z.string().min(1),
+  createdBy: z.uuid().nullable(),
+  workoutDate: z.iso.date(),
+  startTime: z.string().regex(/^\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/).nullable(),
+  endTime: z.string().regex(/^\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/).nullable(),
+  status: z.enum(['planned', 'in_progress', 'done', 'cancelled']),
+  notes: z.string().nullable(),
+  startedAt: z.iso.datetime().nullable(),
+  completedAt: z.iso.datetime().nullable(),
+  version: z.number().int().positive(),
+  exercises: z.array(workoutExerciseSchema),
+})
+const customExerciseSchema = z.object({
+  id: z.uuid(),
+  name: z.string().min(1),
+  muscleGroup: workoutExerciseSchema.shape.muscleGroup,
+  inputKind: workoutExerciseSchema.shape.inputKind,
+  archivedAt: z.iso.datetime().nullable(),
+  version: z.number().int().positive(),
+})
+const trainingDataSchema = z.object({
+  accessMode: z.literal('read_only'),
+  customExercises: z.array(customExerciseSchema),
+  workouts: z.array(workoutSchema),
+  hasMoreWorkouts: z.boolean(),
+})
+
 const createdInvitationSchema = z.object({
   invitation: invitationSchema.extend({
     code: z.string().regex(/^[A-F0-9]{12}$/),
@@ -79,6 +149,7 @@ export type YandexPilotMembership = z.infer<typeof membershipSchema>
 export type YandexPilotInvitation = z.infer<typeof invitationSchema>
 export type YandexPilotConnections = Omit<z.infer<typeof connectionsSchema>, 'accessMode'>
 export type YandexPilotCreatedInvitation = z.infer<typeof createdInvitationSchema>['invitation']
+export type YandexPilotTrainingData = Omit<z.infer<typeof trainingDataSchema>, 'accessMode'>
 
 function responseError(status: number): Error {
   if (status === 401) return new Error('Yandex ID не подтвердил вход. Начните заново.')
@@ -153,6 +224,22 @@ export const yandexPilotRepository = {
     return {
       memberships: result.data.memberships,
       invitations: result.data.invitations,
+    }
+  },
+  async listTrainingData(apiBaseUrl: string, sessionToken: string): Promise<YandexPilotTrainingData> {
+    let response: Response
+    try {
+      response = await yandexPilotQueries.listTrainingData(apiBaseUrl, sessionToken)
+    } catch {
+      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    }
+    if (!response.ok) throw clientsResponseError(response.status)
+    const result = trainingDataSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый формат тренировок.')
+    return {
+      customExercises: result.data.customExercises,
+      workouts: result.data.workouts,
+      hasMoreWorkouts: result.data.hasMoreWorkouts,
     }
   },
   async createInvitation(

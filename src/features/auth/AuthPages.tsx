@@ -6,6 +6,7 @@ import {
   type YandexPilotClient,
   type YandexPilotConnections as YandexPilotConnectionsData,
   type YandexPilotSession,
+  type YandexPilotTrainingData as YandexPilotTrainingDataState,
 } from '../../data/repositories/yandex-pilot.repository'
 import { useAuth } from '../../app/auth-context'
 import { getYandexIdPilotConfig, trainerHomePath } from '../../app/feature-flags'
@@ -14,6 +15,7 @@ import { AsyncView, Field } from '../../shared/ui'
 import type { AccountRole } from '../../shared/domain'
 import { consumeYandexAuthorizationCallback, createYandexAuthorizationUrl } from './yandex-pilot-oauth'
 import { YandexPilotConnections } from './YandexPilotConnections'
+import { YandexPilotTrainingData } from './YandexPilotTrainingData'
 
 type Mode = 'login' | 'register'
 
@@ -81,6 +83,9 @@ export function YandexPilotCallbackPage() {
   const [connections, setConnections] = useState<YandexPilotConnectionsData | null>(null)
   const [connectionsLoading, setConnectionsLoading] = useState(false)
   const [connectionsError, setConnectionsError] = useState<Error | null>(null)
+  const [trainingData, setTrainingData] = useState<YandexPilotTrainingDataState | null>(null)
+  const [trainingDataLoading, setTrainingDataLoading] = useState(false)
+  const [trainingDataError, setTrainingDataError] = useState<Error | null>(null)
   const [error, setError] = useState<string | null>(null)
   const sessionRequest = useRef<Promise<YandexPilotSession> | null>(null)
 
@@ -108,11 +113,24 @@ export function YandexPilotCallbackPage() {
     }
   }
 
+  async function loadTrainingData(targetApiBaseUrl: string, sessionToken: string): Promise<void> {
+    setTrainingDataLoading(true)
+    setTrainingDataError(null)
+    try {
+      setTrainingData(await yandexPilotRepository.listTrainingData(targetApiBaseUrl, sessionToken))
+    } catch (caught) {
+      setTrainingDataError(caught instanceof Error ? caught : new Error('Не удалось загрузить тренировки.'))
+    } finally {
+      setTrainingDataLoading(false)
+    }
+  }
+
   async function refreshPilotData(): Promise<void> {
     if (session === null || apiBaseUrl === null) return
     await Promise.all([
       loadClients(apiBaseUrl, session.session.token),
       loadConnections(apiBaseUrl, session.session.token),
+      loadTrainingData(apiBaseUrl, session.session.token),
     ])
   }
 
@@ -137,9 +155,11 @@ export function YandexPilotCallbackPage() {
         setSession(result)
         setClientsLoading(true)
         setConnectionsLoading(true)
-        const [clientsResult, connectionsResult] = await Promise.allSettled([
+        setTrainingDataLoading(true)
+        const [clientsResult, connectionsResult, trainingDataResult] = await Promise.allSettled([
           yandexPilotRepository.listClients(targetApiBaseUrl, result.session.token),
           yandexPilotRepository.listConnections(targetApiBaseUrl, result.session.token),
+          yandexPilotRepository.listTrainingData(targetApiBaseUrl, result.session.token),
         ])
         if (cancelled) return
         if (clientsResult.status === 'fulfilled') setClients(clientsResult.value)
@@ -150,8 +170,13 @@ export function YandexPilotCallbackPage() {
         else setConnectionsError(connectionsResult.reason instanceof Error
           ? connectionsResult.reason
           : new Error('Не удалось загрузить связи.'))
+        if (trainingDataResult.status === 'fulfilled') setTrainingData(trainingDataResult.value)
+        else setTrainingDataError(trainingDataResult.reason instanceof Error
+          ? trainingDataResult.reason
+          : new Error('Не удалось загрузить тренировки.'))
         setClientsLoading(false)
         setConnectionsLoading(false)
+        setTrainingDataLoading(false)
       } catch (caught) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : 'Не удалось проверить Yandex ID.')
       }
@@ -201,6 +226,12 @@ export function YandexPilotCallbackPage() {
         </div>
       </AsyncView>
     </section>}
+    {session && <YandexPilotTrainingData
+      data={trainingData}
+      error={trainingDataError}
+      loading={trainingDataLoading}
+      onRetry={() => void loadTrainingData(config.apiBaseUrl, session.session.token)}
+    />}
     {session && <YandexPilotConnections
       apiBaseUrl={config.apiBaseUrl}
       clients={clients}

@@ -29,6 +29,13 @@ once, stored only as SHA-256, expire after seven days and are claimed under a
 row lock. Root memberships and archived clients are protected by the database,
 not only by the browser UI.
 
+The eighth migration adds the read-only custom exercise and workout aggregate
+baseline. Workout exercises and sets use composite foreign keys so aggregate
+children cannot cross a trainer/client partition. RLS preserves author-scoped
+visibility: a client reads its own workouts, connected trainers read their own
+assignments plus completed client-authored history, and unrelated actors read
+nothing. Runtime insert, update and delete grants remain closed.
+
 ## Roles
 
 - `fit_owner` owns the `fit` database and runs migrations only;

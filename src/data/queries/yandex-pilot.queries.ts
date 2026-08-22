@@ -13,6 +13,10 @@ export const yandexPilotQueries = {
     cache: 'no-store',
     headers: { 'x-fit-pilot-session': sessionToken },
   }),
+  listTrainingData: (apiBaseUrl: string, sessionToken: string) => fetch(`${apiBaseUrl}/v1/training-data`, {
+    cache: 'no-store',
+    headers: { 'x-fit-pilot-session': sessionToken },
+  }),
   createInvitation: (
     apiBaseUrl: string,
     sessionToken: string,

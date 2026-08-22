@@ -22,6 +22,7 @@ import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer } from './pilot-session.js'
+import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
 
 interface BuildAppOptions {
   allowedOrigins?: readonly string[]
@@ -33,6 +34,7 @@ interface BuildAppOptions {
   pilotConnectionsWriter?: PilotConnectionsWriter
   pilotProfileReader?: PilotProfileReader
   pilotSessionIssuer?: PilotSessionIssuer
+  pilotTrainingDataReader?: PilotTrainingDataReader
   logger?: boolean
 }
 
@@ -223,6 +225,27 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return reply
         .header('cache-control', 'no-store')
         .send(await options.pilotConnectionsReader.readConnections(sessionToken))
+    } catch (error) {
+      if (error instanceof PilotSessionInvalidError) {
+        return reply.code(401).send({ error: 'unauthorized' })
+      }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.get('/v1/training-data', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (options.pilotTrainingDataReader === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+
+    try {
+      return reply
+        .header('cache-control', 'no-store')
+        .send(await options.pilotTrainingDataReader.readTrainingData(sessionToken))
     } catch (error) {
       if (error instanceof PilotSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })

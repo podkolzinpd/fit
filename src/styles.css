@@ -345,6 +345,7 @@ p { margin: 6px 0 }
 .yandex-pilot-profile strong { text-align: right }
 .yandex-pilot-clients { display: grid; gap: 12px }
 .yandex-pilot-connections { display: grid; gap: 12px }
+.yandex-pilot-training { display: grid; gap: 12px }
 .yandex-pilot-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px }
 .yandex-pilot-section-head h2 { margin: 0 }
 .yandex-pilot-section-head p { margin: 4px 0 0; font-size: var(--text-ui) }
@@ -365,6 +366,18 @@ p { margin: 6px 0 }
 .yandex-pilot-connection .yandex-pilot-invitation { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-top: 8px; border-top: 1px solid var(--border) }
 .yandex-pilot-connection .yandex-pilot-invitation p { margin: 0 }
 .yandex-pilot-connection .yandex-pilot-invitation button { flex: 0 0 auto }
+.yandex-pilot-training-content { gap: 10px }
+.card.yandex-pilot-custom-exercises { display: grid; align-items: stretch; gap: 4px }
+.yandex-pilot-custom-exercises p { margin: 0; color: var(--muted); font-size: var(--text-ui); overflow-wrap: anywhere }
+.yandex-pilot-workouts { gap: 10px }
+.card.yandex-pilot-workout { display: grid; align-items: stretch; gap: 12px }
+.yandex-pilot-workout-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px }
+.yandex-pilot-workout-head p { margin: 4px 0 0; color: var(--muted); font-size: var(--text-ui) }
+.yandex-pilot-workout-head > span { flex: 0 0 auto; color: var(--muted); font-variant-numeric: tabular-nums }
+.yandex-pilot-workout-exercises { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none }
+.yandex-pilot-workout-exercises li { display: grid; gap: 2px; padding-top: 9px; border-top: 1px solid var(--border) }
+.yandex-pilot-workout-exercises strong { font-size: var(--text-ui) }
+.yandex-pilot-workout-exercises span { color: var(--muted); font-size: var(--text-caption); line-height: var(--leading-snug); overflow-wrap: anywhere }
 .auth-back-link { align-self: flex-start; margin-top: 2px; font-weight: 700 }
 .brand { width: 58px; height: 58px; display: grid; place-items: center; background: var(--accent-grad); border: 1px solid var(--accent-border); border-radius: 19px; box-shadow: 0 12px 28px var(--accent-shadow); color: var(--on-accent); font-size: 19px; font-weight: 900; letter-spacing: -.04em }
 .stack { display: flex; flex-direction: column; gap: 16px }

@@ -38,6 +38,18 @@ describe('yandexPilotQueries', () => {
         headers: { 'x-fit-pilot-session': 's'.repeat(43) },
       },
     )
+
+    await yandexPilotQueries.listTrainingData(
+      'https://stage.example.test',
+      's'.repeat(43),
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://stage.example.test/v1/training-data',
+      {
+        cache: 'no-store',
+        headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+      },
+    )
   })
 
   it('uses explicit JSON and destructive endpoints for connection commands', async () => {

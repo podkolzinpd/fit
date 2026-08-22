@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-22
-Проверенный базовый `main`: `0d6be89` (`feat(yandex): add read-only membership connections (#507)`)
+Проверенный базовый `main`: `a53a1ef` (`feat(yandex): add invitation lifecycle (#508)`)
 
 ## Последнее продуктовое изменение
 
@@ -48,33 +48,34 @@
 - Yandex Cloud stage содержит Managed PostgreSQL 17 и Serverless Containers;
   миграции доставляются автоматически через GitHub OIDC, private runner и
   forward-only policy.
-- Ограниченный Yandex ID pilot и `/v1/clients` работают на stage. Production
+- Ограниченный Yandex ID pilot, `/v1/clients`, связи и invitation lifecycle
+  работают на stage; migration `000007` и API revision доставлены автоматически.
+  Production
   frontend и основной tenant пока остаются на Supabase; полный cutover не
   выполнен.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен текущему browser-контракту; Supabase-сессия при пилотном входе не
   создаётся.
-- Активная ветка `codex/yandex-invitation-lifecycle` добавляет migration `000007`
-  и узкие API-команды create/claim/revoke/remove/leave. Прямые runtime-записи
-  остаются закрыты; одноразовый код хранится только как SHA-256, claim выполняется
-  под row lock, root membership и cross-tenant доступ защищены в PostgreSQL.
-- Pilot callback позволяет обеим ролям принять код; тренер создаёт приглашение
-  несвязанному клиенту, клиент приглашает/отключает дополнительного тренера,
-  а дополнительный тренер может выйти сам. Остальные данные read-only.
+- Активная ветка `codex/yandex-workout-read-model` добавляет migration `000008`,
+  RLS и read-only API для custom exercises и aggregate
+  `workout → exercises → sets`, включая running duration/distance и RPE.
+- Pilot callback показывает доступные тренировки и собственные упражнения с
+  loading, empty, error/retry и success states. Production repositories и
+  основные страницы по-прежнему используют только Supabase.
+- Реальный invite → join → leave/remove smoke на двух разрешённых Yandex ID
+  остаётся внешней stage-проверкой; локальный lifecycle и его RLS-матрица зелёные.
 - Новая cost-sensitive, destructive или identity-инфраструктура требует
   отдельного решения и не добавляется в продуктовые UI-задачи.
 
 ## Проверки активной ветки
 
-- Migration `000007` локально пере-применена к существующей PostgreSQL 17 без
-  скачивания образов; 10 actor/RLS/session/lifecycle tests зелёные.
-- Supabase `db:reset` воспроизвёл полную историю; 568 pgTAP SQL/RLS tests и
-  migration safety зелёные.
-- Полный `npm run check` зелёный: 628 frontend tests, coverage, lint, TypeScript,
-  DB types, iOS permissions, 32 infra policy tests, 51 API tests и production
-  build.
-- Yandex callback success/create, error/retry и empty-state визуально приняты на
-  390, 430 и 1440; длинный русский текст и код не дают horizontal overflow.
+- Migration `000008` локально прошла down/up на существующей PostgreSQL 17 без
+  скачивания образов; 11 actor/RLS/session/domain tests зелёные.
+- Полный `npm run check` зелёный: 630 frontend tests, coverage, lint, TypeScript,
+  DB types, iOS permissions, 32 infra policy tests, 53 API tests и production
+  build. Supabase `db:reset` и 568 pgTAP SQL/RLS tests зелёные.
+- Yandex callback success, empty и error/retry визуально принят на 390, 430 и
+  1440; длинные русские названия не дают horizontal overflow.
 
 ## Проверки последней продуктовой точки
 
@@ -91,10 +92,10 @@
 
 ## Ближайший порядок
 
-1. Завершить текущий invitation lifecycle slice: PR, зелёный CI и stage smoke
-   invite → join → leave/remove на двух разрешённых Yandex ID.
-2. Портировать exercises/workouts и остальные вертикали из
-   `docs/design/yandex-cloud-migration.md`.
+1. Завершить workout read-model slice: полный quality gate, PR, автоматический
+   stage deploy и read-only smoke после тестового переноса fixture.
+2. Отдельно портировать versioned workout mutations и actor attribution, затем
+   Live conflict/retry semantics и остальные вертикали из migration design.
 3. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
 

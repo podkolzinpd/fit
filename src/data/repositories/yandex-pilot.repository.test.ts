@@ -6,6 +6,7 @@ const queries = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   listClients: vi.fn(),
   listConnections: vi.fn(),
+  listTrainingData: vi.fn(),
   claimInvitation: vi.fn(),
   createInvitation: vi.fn(),
   leaveClient: vi.fn(),
@@ -71,11 +72,34 @@ const connections = {
   }],
 }
 
+const trainingData = {
+  accessMode: 'read_only',
+  customExercises: [],
+  workouts: [{
+    id: 'be3b5576-1f5f-4db1-944b-cd78f06aa73b',
+    trainerId: session.profile.id,
+    clientId: CLIENT_ID,
+    clientName: 'Анна Смирнова',
+    createdBy: session.profile.id,
+    workoutDate: '2026-08-20',
+    startTime: null,
+    endTime: null,
+    status: 'done',
+    notes: null,
+    startedAt: '2026-08-20T12:00:00.000Z',
+    completedAt: '2026-08-20T13:00:00.000Z',
+    version: 1,
+    exercises: [],
+  }],
+  hasMoreWorkouts: false,
+}
+
 describe('yandexPilotRepository', () => {
   beforeEach(() => {
     queries.exchangeCodeForSession.mockReset()
     queries.listClients.mockReset()
     queries.listConnections.mockReset()
+    queries.listTrainingData.mockReset()
     queries.claimInvitation.mockReset()
     queries.createInvitation.mockReset()
     queries.leaveClient.mockReset()
@@ -170,6 +194,33 @@ describe('yandexPilotRepository', () => {
       'https://stage.example.test',
       's'.repeat(43),
     )).rejects.toThrow('Stage вернул неподдерживаемый формат связей.')
+  })
+
+  it('reads a validated read-only workout aggregate', async () => {
+    queries.listTrainingData.mockResolvedValue(
+      new Response(JSON.stringify(trainingData), { status: 200 }),
+    )
+
+    await expect(yandexPilotRepository.listTrainingData(
+      'https://stage.example.test',
+      's'.repeat(43),
+    )).resolves.toEqual({
+      customExercises: [],
+      workouts: trainingData.workouts,
+      hasMoreWorkouts: false,
+    })
+  })
+
+  it('rejects malformed workout data instead of rendering a partial aggregate', async () => {
+    queries.listTrainingData.mockResolvedValue(new Response(JSON.stringify({
+      ...trainingData,
+      workouts: [{ ...trainingData.workouts[0], workoutDate: '20.08.2026' }],
+    }), { status: 200 }))
+
+    await expect(yandexPilotRepository.listTrainingData(
+      'https://stage.example.test',
+      's'.repeat(43),
+    )).rejects.toThrow('Stage вернул неподдерживаемый формат тренировок.')
   })
 
   it('creates and claims invitations with validated one-time values', async () => {
