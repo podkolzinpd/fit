@@ -173,6 +173,27 @@ jobs:
           fi
           jq -e '.status == "migrated" and (.migrations | type == "array")' migration-response.json >/dev/null
           jq -r '"Applied migrations: " + ((.migrations | length) | tostring)' migration-response.json
+      - name: Prepare idempotent stage workout fixture
+        working-directory: infra/yandex
+        run: |
+          migration_url=$(terraform output -raw migration_container_url)
+          status=$(curl --silent --show-error \
+            --output stage-workout-fixture-response.json --write-out '%{http_code}' \
+            --request POST --header "Authorization: Bearer $YC_TOKEN" \
+            "${migration_url%/}/stage/fixtures/workout-read-model")
+          if test "$status" != 200; then
+            echo "Stage fixture runner returned HTTP $status; the API was not changed." >&2
+            exit 1
+          fi
+          chmod 600 stage-workout-fixture-response.json
+          jq -e '
+            .status == "fixture_ready"
+            and (.seededTrainerCount | type == "number" and . >= 1)
+            and (.session.token | test("^[A-Za-z0-9_-]{43}$"))
+            and (.session.expiresAt | type == "string")
+          ' stage-workout-fixture-response.json >/dev/null
+          jq -r '"Prepared synthetic fixtures for " + (.seededTrainerCount | tostring) + " stage trainer(s)."' \
+            stage-workout-fixture-response.json
       - name: Re-plan after migration and enforce policy
         working-directory: infra/yandex
         run: |
@@ -229,6 +250,34 @@ jobs:
             --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/ready")
           jq -e '.status == "ok"' <<<"$health" >/dev/null
           jq -e '.status == "ready"' <<<"$ready" >/dev/null
+          fixture_token=$(jq -er '.session.token' stage-workout-fixture-response.json)
+          training=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/training-data")
+          jq -e '
+            .accessMode == "read_only"
+            and (.customExercises | any(
+              .name == "Тестовая тяга Yandex stage"
+              and .inputKind == "strength"
+            ))
+            and (.workouts | any(
+              .notes == "Синтетическая проверка переноса Yandex stage"
+              and .status == "done"
+              and (.exercises | any(
+                .source == "custom"
+                and (.sets | any(
+                  .fact.weightKg == 42.5 and .fact.reps == 10
+                ))
+              ))
+              and (.exercises | any(
+                .ref == "running"
+                and (.sets | any(
+                  .fact.durationSec == 1740 and .fact.distanceKm == 5.2
+                ))
+              ))
+            ))
+          ' <<<"$training" >/dev/null
       - name: Roll back the API revision when readiness fails
         if: steps.smoke.outcome == 'failure' && steps.previous.outputs.revision_id != ''
         working-directory: infra/yandex

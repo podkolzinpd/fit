@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-22
-Проверенный базовый `main`: `a53a1ef` (`feat(yandex): add invitation lifecycle (#508)`)
+Проверенный базовый `main`: `711a56c` (`feat(yandex): add workout read model (#509)`)
 
 ## Последнее продуктовое изменение
 
@@ -48,17 +48,16 @@
 - Yandex Cloud stage содержит Managed PostgreSQL 17 и Serverless Containers;
   миграции доставляются автоматически через GitHub OIDC, private runner и
   forward-only policy.
-- Ограниченный Yandex ID pilot, `/v1/clients`, связи и invitation lifecycle
-  работают на stage; migration `000007` и API revision доставлены автоматически.
-  Production
-  frontend и основной tenant пока остаются на Supabase; полный cutover не
-  выполнен.
+- Ограниченный Yandex ID pilot, `/v1/clients`, связи, invitation lifecycle и
+  read-only workout aggregate работают на stage; migrations `000001–000008` и
+  API revision доставлены автоматически workflow `32587898881`. Production
+  frontend и основной tenant пока остаются на Supabase; полный cutover не выполнен.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен текущему browser-контракту; Supabase-сессия при пилотном входе не
   создаётся.
-- Активная ветка `codex/yandex-workout-read-model` добавляет migration `000008`,
-  RLS и read-only API для custom exercises и aggregate
-  `workout → exercises → sets`, включая running duration/distance и RPE.
+- Активная ветка `codex/yandex-stage-workout-fixture` добавляет stage-only
+  идемпотентный synthetic fixture и автоматический runtime/RLS smoke для
+  aggregate `workout → exercises → sets`; production и Supabase не читаются.
 - Pilot callback показывает доступные тренировки и собственные упражнения с
   loading, empty, error/retry и success states. Production repositories и
   основные страницы по-прежнему используют только Supabase.
@@ -69,13 +68,14 @@
 
 ## Проверки активной ветки
 
-- Migration `000008` локально прошла down/up на существующей PostgreSQL 17 без
-  скачивания образов; 11 actor/RLS/session/domain tests зелёные.
+- Существующая локальная PostgreSQL 17 в Podman приняла fixture дважды без
+  дубликатов; 12 actor/RLS/session/domain tests зелёные, новые образы не
+  скачивались.
 - Полный `npm run check` зелёный: 630 frontend tests, coverage, lint, TypeScript,
-  DB types, iOS permissions, 32 infra policy tests, 53 API tests и production
+  DB types, iOS permissions, 33 infra policy tests, 56 API tests и production
   build. Supabase `db:reset` и 568 pgTAP SQL/RLS tests зелёные.
-- Yandex callback success, empty и error/retry визуально принят на 390, 430 и
-  1440; длинные русские названия не дают horizontal overflow.
+- Локального Terraform binary нет; синтаксис и фактический plan/validate
+  дополнительно проверит обязательный GitHub workflow до stage deploy.
 
 ## Проверки последней продуктовой точки
 
@@ -93,7 +93,7 @@
 ## Ближайший порядок
 
 1. Завершить workout read-model slice: полный quality gate, PR, автоматический
-   stage deploy и read-only smoke после тестового переноса fixture.
+   stage fixture/runtime smoke и визуальная проверка под разрешённым Yandex ID.
 2. Отдельно портировать versioned workout mutations и actor attribution, затем
    Live conflict/retry semantics и остальные вертикали из migration design.
 3. После полного tenant-контракта провести две миграционные репетиции; только

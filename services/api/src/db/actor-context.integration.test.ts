@@ -16,9 +16,15 @@ import {
 import { DatabasePilotClientsReader } from '../pilot-clients-reader.js'
 import { DatabasePilotConnectionsReader } from '../pilot-connections-reader.js'
 import { DatabasePilotSessionIssuer } from '../pilot-session.js'
+import { DatabasePilotTrainingDataReader } from '../pilot-training-data-reader.js'
 import { readAccessibleTrainingData } from '../training-data.js'
 import { withActorTransaction } from './actor-transaction.js'
 import { PgDatabasePool } from './pg-pool.js'
+import {
+  DatabaseStageWorkoutFixtureLoader,
+  STAGE_SMOKE_PROFILE_ID,
+  stageWorkoutFixtureIds,
+} from './stage-workout-fixture.js'
 import type { DatabasePool } from './types.js'
 import {
   DatabasePilotEnroller,
@@ -82,6 +88,10 @@ interface InvitationSecretRow extends QueryResultRow {
   revoked_at: Date | null
 }
 
+interface CountRow extends QueryResultRow {
+  count: number
+}
+
 function requireLocalTestDatabaseUrl(): string {
   const value = process.env.TEST_DATABASE_URL
   if (value === undefined) throw new Error('TEST_DATABASE_URL is required')
@@ -143,6 +153,30 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         createMigrationsSchema: true,
         verbose: false,
       })
+
+      // The local PostgreSQL container is persistent. Remove only rows carrying
+      // the explicit synthetic marker so earlier assertions stay isolated
+      // across repeated test runs; stage intentionally keeps these rows.
+      await ownerPool.query(
+        `delete from public.workouts
+         where notes = 'Синтетическая проверка переноса Yandex stage'`,
+      )
+      await ownerPool.query(
+        `delete from public.custom_exercises
+         where name = 'Тестовая тяга Yandex stage'`,
+      )
+      await ownerPool.query(
+        `delete from public.clients
+         where full_name = 'Тестовый клиент Yandex stage'`,
+      )
+      await ownerPool.query(
+        'delete from public.trainers where profile_id = $1',
+        [STAGE_SMOKE_PROFILE_ID],
+      )
+      await ownerPool.query(
+        'delete from public.profiles where id = $1',
+        [STAGE_SMOKE_PROFILE_ID],
+      )
 
       // Keep the persistent local Podman database deterministic across reruns.
       // The lifecycle scenario recreates these fixtures later in the suite.
@@ -928,6 +962,114 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           ),
         ),
       ).rejects.toMatchObject({ code: '42501' })
+    })
+
+    it('loads the synthetic stage workout fixture idempotently and reads it through RLS', async () => {
+      if (
+        ownerPool === undefined
+        || enrollmentPool === undefined
+        || runtimePool === undefined
+      ) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const now = new Date()
+      const expectedExpiry = new Date(now.getTime() + 15 * 60 * 1_000)
+      const loader = new DatabaseStageWorkoutFixtureLoader(
+        enrollmentPool,
+        () => now,
+      )
+      const reader = new DatabasePilotTrainingDataReader(runtimePool)
+
+      const first = await loader.load()
+      expect(first.seededTrainerCount).toBeGreaterThanOrEqual(2)
+      expect(first.sessionToken).toMatch(/^[A-Za-z0-9_-]{43}$/)
+      expect(first.sessionExpiresAt).toBe(expectedExpiry.toISOString())
+
+      const smokeData = await reader.readTrainingData(first.sessionToken)
+      const smokeIds = stageWorkoutFixtureIds(STAGE_SMOKE_PROFILE_ID)
+      expect(smokeData).toMatchObject({
+        accessMode: 'read_only',
+        customExercises: [
+          {
+            id: smokeIds.customExerciseId,
+            name: 'Тестовая тяга Yandex stage',
+            inputKind: 'strength',
+          },
+        ],
+        workouts: [
+          {
+            id: smokeIds.workoutId,
+            notes: 'Синтетическая проверка переноса Yandex stage',
+            status: 'done',
+            exercises: [
+              {
+                id: smokeIds.strengthExerciseId,
+                sets: [
+                  {
+                    id: smokeIds.strengthSetId,
+                    fact: { weightKg: 42.5, reps: 10, rpe: 8 },
+                  },
+                ],
+              },
+              {
+                id: smokeIds.runningExerciseId,
+                sets: [
+                  {
+                    id: smokeIds.runningSetId,
+                    fact: { durationSec: 1740, distanceKm: 5.2, rpe: 8 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+
+      const actorIds = stageWorkoutFixtureIds(ACTOR_ID)
+      const actorData = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        readAccessibleTrainingData,
+      )
+      expect(actorData.workouts.some(
+        (workout) => workout.id === actorIds.workoutId,
+      )).toBe(true)
+      expect(actorData.workouts.some(
+        (workout) => workout.id === smokeIds.workoutId,
+      )).toBe(false)
+
+      const outsiderData = await withActorTransaction(
+        runtimePool,
+        OUTSIDE_TRAINER_ID,
+        readAccessibleTrainingData,
+      )
+      expect(outsiderData.workouts.some(
+        (workout) => workout.id === smokeIds.workoutId,
+      )).toBe(false)
+      expect(outsiderData.workouts.some(
+        (workout) => workout.id === actorIds.workoutId,
+      )).toBe(false)
+
+      const second = await loader.load()
+      expect(second.seededTrainerCount).toBe(first.seededTrainerCount)
+      expect(second.sessionToken).not.toBe(first.sessionToken)
+
+      for (const [table, id] of [
+        ['clients', smokeIds.clientId],
+        ['custom_exercises', smokeIds.customExerciseId],
+        ['workouts', smokeIds.workoutId],
+        ['workout_exercises', smokeIds.strengthExerciseId],
+        ['workout_exercises', smokeIds.runningExerciseId],
+        ['workout_sets', smokeIds.strengthSetId],
+        ['workout_sets', smokeIds.runningSetId],
+      ] as const) {
+        const rows = await ownerPool.query<CountRow>(
+          `select count(*)::integer as count from public.${table} where id = $1`,
+          [id],
+        )
+        expect(rows.rows).toEqual([{ count: 1 }])
+      }
     })
   },
 )
