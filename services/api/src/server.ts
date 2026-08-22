@@ -4,6 +4,7 @@ import { YandexOAuthCodeClient } from './auth/yandex-oauth-code.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
 import { DatabasePilotClientsReader } from './pilot-clients-reader.js'
+import { DatabasePilotConnectionsReader } from './pilot-connections-reader.js'
 import { DatabasePilotProfileReader } from './pilot-profile-reader.js'
 import { DatabasePilotSessionIssuer } from './pilot-session.js'
 
@@ -56,6 +57,10 @@ const pilotClientsReader =
   databasePool === undefined
     ? undefined
     : new DatabasePilotClientsReader(databasePool)
+const pilotConnectionsReader =
+  databasePool === undefined
+    ? undefined
+    : new DatabasePilotConnectionsReader(databasePool)
 const app = buildApp(
   {
     allowedOrigins: parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS),
@@ -63,6 +68,7 @@ const app = buildApp(
     ...(identityProvider === undefined ? {} : { identityProvider }),
     ...(oauthCodeProvider === undefined ? {} : { oauthCodeProvider }),
     ...(pilotClientsReader === undefined ? {} : { pilotClientsReader }),
+    ...(pilotConnectionsReader === undefined ? {} : { pilotConnectionsReader }),
     ...(pilotProfileReader === undefined ? {} : { pilotProfileReader }),
     ...(pilotSessionIssuer === undefined ? {} : { pilotSessionIssuer }),
   },

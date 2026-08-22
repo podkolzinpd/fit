@@ -42,8 +42,34 @@ const clientsSchema = z.object({
   clients: z.array(clientSchema),
 })
 
+const membershipSchema = z.object({
+  clientId: z.uuid(),
+  trainerId: z.uuid(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
+  joinedAt: z.iso.datetime(),
+  isRoot: z.boolean(),
+})
+
+const invitationSchema = z.object({
+  id: z.uuid(),
+  clientId: z.uuid(),
+  targetRole: z.enum(['trainer', 'client']),
+  expiresAt: z.iso.datetime(),
+  createdAt: z.iso.datetime(),
+})
+
+const connectionsSchema = z.object({
+  accessMode: z.literal('read_only'),
+  memberships: z.array(membershipSchema),
+  invitations: z.array(invitationSchema),
+})
+
 export type YandexPilotSession = z.infer<typeof sessionSchema>
 export type YandexPilotClient = z.infer<typeof clientSchema>
+export type YandexPilotMembership = z.infer<typeof membershipSchema>
+export type YandexPilotInvitation = z.infer<typeof invitationSchema>
+export type YandexPilotConnections = Omit<z.infer<typeof connectionsSchema>, 'accessMode'>
 
 function responseError(status: number): Error {
   if (status === 401) return new Error('Yandex ID не подтвердил вход. Начните заново.')
@@ -83,5 +109,20 @@ export const yandexPilotRepository = {
     const result = clientsSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат клиентов.')
     return result.data.clients
+  },
+  async listConnections(apiBaseUrl: string, sessionToken: string): Promise<YandexPilotConnections> {
+    let response: Response
+    try {
+      response = await yandexPilotQueries.listConnections(apiBaseUrl, sessionToken)
+    } catch {
+      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    }
+    if (!response.ok) throw clientsResponseError(response.status)
+    const result = connectionsSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый формат связей.')
+    return {
+      memberships: result.data.memberships,
+      invitations: result.data.invitations,
+    }
   },
 }

@@ -9,4 +9,8 @@ export const yandexPilotQueries = {
     cache: 'no-store',
     headers: { 'x-fit-pilot-session': sessionToken },
   }),
+  listConnections: (apiBaseUrl: string, sessionToken: string) => fetch(`${apiBaseUrl}/v1/connections`, {
+    cache: 'no-store',
+    headers: { 'x-fit-pilot-session': sessionToken },
+  }),
 }

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { DatabaseConnection, DatabasePool } from './db/types.js'
+import type { PilotConnectionsResponse } from './connections.js'
 import { buildApp } from './app.js'
 import {
   YandexIdentityRejectedError,
@@ -17,6 +18,7 @@ import {
 } from './db/yandex-pilot-transaction.js'
 import type { PilotClientsResponse } from './clients.js'
 import type { PilotClientsReader } from './pilot-clients-reader.js'
+import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer, PilotSessionResponse } from './pilot-session.js'
 import type { ProfileResponse } from './profile.js'
@@ -196,6 +198,25 @@ const CLIENTS_RESPONSE: PilotClientsResponse = {
   }],
 }
 
+const CONNECTIONS_RESPONSE: PilotConnectionsResponse = {
+  accessMode: 'read_only',
+  memberships: [{
+    clientId: '1a0c5295-0a0f-4ccb-a39a-e58090967245',
+    trainerId: PROFILE_ID,
+    firstName: 'Pilot',
+    lastName: null,
+    joinedAt: '2026-08-20T12:00:00.000Z',
+    isRoot: true,
+  }],
+  invitations: [{
+    id: 'a978da50-1aac-4eac-8df1-42a517766ffe',
+    clientId: '1a0c5295-0a0f-4ccb-a39a-e58090967245',
+    targetRole: 'client',
+    expiresAt: '2026-08-27T12:00:00.000Z',
+    createdAt: '2026-08-20T12:00:00.000Z',
+  }],
+}
+
 function buildProfileReader(
   result: ProfileResponse | undefined | Error = PROFILE_RESPONSE,
 ): {
@@ -230,6 +251,18 @@ function buildClientsReader(
     result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
   )
   return { pilotClientsReader: { readClients }, readClients }
+}
+
+function buildConnectionsReader(
+  result: PilotConnectionsResponse | Error = CONNECTIONS_RESPONSE,
+): {
+  pilotConnectionsReader: PilotConnectionsReader
+  readConnections: ReturnType<typeof vi.fn>
+} {
+  const readConnections = vi.fn(() =>
+    result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
+  )
+  return { pilotConnectionsReader: { readConnections }, readConnections }
 }
 
 describe('read-only Yandex profile endpoint', () => {
@@ -442,5 +475,47 @@ describe('read-only pilot clients endpoint', () => {
     expect(expired.statusCode).toBe(401)
     expect(expired.json()).toEqual({ error: 'unauthorized' })
     expect(reservedAuthorizationHeader.statusCode).toBe(401)
+  })
+})
+
+describe('read-only pilot connections endpoint', () => {
+  it('returns memberships and only active invitations resolved by the session', async () => {
+    const connections = buildConnectionsReader()
+    const app = buildApp({
+      pilotConnectionsReader: connections.pilotConnectionsReader,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/connections',
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(CONNECTIONS_RESPONSE)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(connections.readConnections).toHaveBeenCalledWith('s'.repeat(43))
+  })
+
+  it('rejects a missing or expired pilot session', async () => {
+    const connections = buildConnectionsReader(new PilotSessionInvalidError())
+    const app = buildApp({
+      pilotConnectionsReader: connections.pilotConnectionsReader,
+      logger: false,
+    })
+    apps.push(app)
+
+    const missing = await app.inject({ method: 'GET', url: '/v1/connections' })
+    const expired = await app.inject({
+      method: 'GET',
+      url: '/v1/connections',
+      headers: { 'x-fit-pilot-session': 'x'.repeat(43) },
+    })
+
+    expect(missing.statusCode).toBe(401)
+    expect(expired.statusCode).toBe(401)
+    expect(expired.json()).toEqual({ error: 'unauthorized' })
   })
 })

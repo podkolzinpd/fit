@@ -17,6 +17,7 @@ import {
 } from './db/yandex-pilot-transaction.js'
 import type { DatabaseConnection, DatabasePool } from './db/types.js'
 import type { PilotClientsReader } from './pilot-clients-reader.js'
+import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer } from './pilot-session.js'
 
@@ -26,6 +27,7 @@ interface BuildAppOptions {
   identityProvider?: YandexIdentityProvider
   oauthCodeProvider?: YandexOAuthCodeProvider
   pilotClientsReader?: PilotClientsReader
+  pilotConnectionsReader?: PilotConnectionsReader
   pilotProfileReader?: PilotProfileReader
   pilotSessionIssuer?: PilotSessionIssuer
   logger?: boolean
@@ -197,6 +199,27 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return reply
         .header('cache-control', 'no-store')
         .send(await options.pilotClientsReader.readClients(sessionToken))
+    } catch (error) {
+      if (error instanceof PilotSessionInvalidError) {
+        return reply.code(401).send({ error: 'unauthorized' })
+      }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.get('/v1/connections', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (options.pilotConnectionsReader === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+
+    try {
+      return reply
+        .header('cache-control', 'no-store')
+        .send(await options.pilotConnectionsReader.readConnections(sessionToken))
     } catch (error) {
       if (error instanceof PilotSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })

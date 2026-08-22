@@ -344,11 +344,16 @@ p { margin: 6px 0 }
 .yandex-pilot-profile span { color: var(--muted) }
 .yandex-pilot-profile strong { text-align: right }
 .yandex-pilot-clients { display: grid; gap: 12px }
+.yandex-pilot-connections { display: grid; gap: 12px }
 .yandex-pilot-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px }
 .yandex-pilot-section-head h2 { margin: 0 }
 .yandex-pilot-clients-list { gap: 10px }
 .yandex-pilot-client { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 12px }
 .yandex-pilot-client p { color: var(--muted); font-size: var(--text-ui); overflow-wrap: anywhere }
+.yandex-pilot-connections-list { gap: 10px }
+.card.yandex-pilot-connection { display: grid; align-items: stretch; gap: 8px }
+.yandex-pilot-connection p { margin: 4px 0 0; color: var(--muted); font-size: var(--text-ui); overflow-wrap: anywhere }
+.yandex-pilot-connection .yandex-pilot-invitation { padding-top: 8px; border-top: 1px solid var(--border) }
 .auth-back-link { align-self: flex-start; margin-top: 2px; font-weight: 700 }
 .brand { width: 58px; height: 58px; display: grid; place-items: center; background: var(--accent-grad); border: 1px solid var(--accent-border); border-radius: 19px; box-shadow: 0 12px 28px var(--accent-shadow); color: var(--on-accent); font-size: 19px; font-weight: 900; letter-spacing: -.04em }
 .stack { display: flex; flex-direction: column; gap: 16px }
