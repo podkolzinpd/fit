@@ -16,6 +16,7 @@ import {
 import { DatabasePilotClientsReader } from '../pilot-clients-reader.js'
 import { DatabasePilotConnectionsReader } from '../pilot-connections-reader.js'
 import { DatabasePilotSessionIssuer } from '../pilot-session.js'
+import { readAccessibleTrainingData } from '../training-data.js'
 import { withActorTransaction } from './actor-transaction.js'
 import { PgDatabasePool } from './pg-pool.js'
 import type { DatabasePool } from './types.js'
@@ -41,6 +42,13 @@ const REVOKED_INVITATION_ID = '01587b1f-70ee-4541-b974-2e7a2b9344bb'
 const CLAIMED_INVITATION_ID = 'f1ce4a50-6863-499c-afde-2e124eb11e2f'
 const LIFECYCLE_CLIENT_ID = 'e94770f7-369f-4c0d-a9ad-e18466469483'
 const LIFECYCLE_CLIENT_ACTOR_ID = '0237c0bf-5dc5-46cd-ab26-951ddfb49949'
+const ROOT_CUSTOM_EXERCISE_ID = 'b27d65d0-6221-47cb-91a0-8dfcc0a2ceba'
+const MEMBER_CUSTOM_EXERCISE_ID = '3127663e-4395-4100-8dd1-7b784d90917a'
+const ROOT_WORKOUT_ID = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
+const MEMBER_WORKOUT_ID = 'd3cff30a-7aa2-4407-b62d-0683167cf4c8'
+const CLIENT_WORKOUT_ID = '6e2d8d63-7c3a-4301-b9ba-76d875210f1f'
+const ROOT_WORKOUT_EXERCISE_ID = 'd40b742b-5d5b-41ab-91df-ed464414d034'
+const ROOT_WORKOUT_SET_ID = 'ea8efab5-0530-4660-9798-79901fcddfeb'
 const PILOT_SUBJECT_HASH = 'b'.repeat(64)
 const OUTSIDE_SUBJECT_HASH = 'c'.repeat(64)
 const ENROLLMENT_SUBJECT_HASH = 'e'.repeat(64)
@@ -201,6 +209,70 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           on conflict (client_id, trainer_id) do nothing
         `,
         [CLIENT_ID, ACTOR_ID, MEMBER_TRAINER_ID],
+      )
+      await ownerPool.query(
+        'delete from public.workouts where id = any($1::uuid[])',
+        [[ROOT_WORKOUT_ID, MEMBER_WORKOUT_ID, CLIENT_WORKOUT_ID]],
+      )
+      await ownerPool.query(
+        `
+          insert into public.custom_exercises (
+            id, trainer_id, name, muscle_group, input_kind
+          ) values
+            ($1, $3, 'Тяга саней', 'legs', 'strength'),
+            ($2, $4, 'Темповый бег', 'cardio', 'duration')
+          on conflict (id) do update set
+            trainer_id = excluded.trainer_id,
+            name = excluded.name,
+            muscle_group = excluded.muscle_group,
+            input_kind = excluded.input_kind,
+            archived_at = null
+        `,
+        [
+          ROOT_CUSTOM_EXERCISE_ID,
+          MEMBER_CUSTOM_EXERCISE_ID,
+          ACTOR_ID,
+          MEMBER_TRAINER_ID,
+        ],
+      )
+      await ownerPool.query(
+        `
+          insert into public.workouts (
+            id, trainer_id, client_id, created_by, workout_date, start_time,
+            status, completed_at
+          ) values
+            ($1, $4, $5, $4, date '2026-08-20', time '10:00', 'planned', null),
+            ($2, $4, $5, $6, date '2026-08-21', time '11:00', 'planned', null),
+            ($3, $4, $5, $7, date '2026-08-19', null, 'done', timestamptz '2026-08-19 12:00:00+00')
+        `,
+        [
+          ROOT_WORKOUT_ID,
+          MEMBER_WORKOUT_ID,
+          CLIENT_WORKOUT_ID,
+          ACTOR_ID,
+          CLIENT_ID,
+          MEMBER_TRAINER_ID,
+          OTHER_ACTOR_ID,
+        ],
+      )
+      await ownerPool.query(
+        `
+          insert into public.workout_exercises (
+            id, workout_id, trainer_id, client_id, position,
+            exercise_source, exercise_ref, exercise_name, muscle_group,
+            input_kind
+          ) values ($1, $2, $3, $4, 0, 'system', 'running', 'Бег', 'cardio', 'distance')
+        `,
+        [ROOT_WORKOUT_EXERCISE_ID, ROOT_WORKOUT_ID, ACTOR_ID, CLIENT_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into public.workout_sets (
+            id, workout_exercise_id, trainer_id, client_id, position,
+            plan_duration_sec, plan_distance_km, plan_rpe
+          ) values ($1, $2, $3, $4, 0, 1800, 5, 7)
+        `,
+        [ROOT_WORKOUT_SET_ID, ROOT_WORKOUT_EXERCISE_ID, ACTOR_ID, CLIENT_ID],
       )
       await ownerPool.query(
         `
@@ -548,6 +620,64 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(visibleMemberships).toHaveLength(2)
     })
 
+    it('keeps exercise catalogs and workout aggregates inside author-scoped access', async () => {
+      if (runtimePool === undefined) throw new Error('Runtime pool is not ready')
+
+      const rootData = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        readAccessibleTrainingData,
+      )
+      expect(rootData.customExercises).toMatchObject([
+        { id: ROOT_CUSTOM_EXERCISE_ID, name: 'Тяга саней' },
+      ])
+      expect(rootData.workouts.map((workout) => workout.id)).toEqual([
+        ROOT_WORKOUT_ID,
+        CLIENT_WORKOUT_ID,
+      ])
+      expect(rootData.workouts[0]?.exercises[0]).toMatchObject({
+        ref: 'running',
+        sets: [{ plan: { durationSec: 1800, distanceKm: 5, rpe: 7 } }],
+      })
+
+      const memberData = await withActorTransaction(
+        runtimePool,
+        MEMBER_TRAINER_ID,
+        readAccessibleTrainingData,
+      )
+      expect(memberData.customExercises).toMatchObject([
+        { id: MEMBER_CUSTOM_EXERCISE_ID, name: 'Темповый бег' },
+      ])
+      expect(memberData.workouts.map((workout) => workout.id)).toEqual([
+        MEMBER_WORKOUT_ID,
+        CLIENT_WORKOUT_ID,
+      ])
+
+      const clientData = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        readAccessibleTrainingData,
+      )
+      expect(clientData.customExercises).toEqual([])
+      expect(clientData.workouts.map((workout) => workout.id)).toEqual([
+        MEMBER_WORKOUT_ID,
+        ROOT_WORKOUT_ID,
+        CLIENT_WORKOUT_ID,
+      ])
+
+      const outsideData = await withActorTransaction(
+        runtimePool,
+        OUTSIDE_TRAINER_ID,
+        readAccessibleTrainingData,
+      )
+      expect(outsideData).toEqual({
+        accessMode: 'read_only',
+        customExercises: [],
+        workouts: [],
+        hasMoreWorkouts: false,
+      })
+    })
+
     it('shows memberships to the client cohort and active invitations only to their creator', async () => {
       if (runtimePool === undefined) throw new Error('Runtime pool is not ready')
 
@@ -761,6 +891,30 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           ),
         ),
       ).rejects.toMatchObject({ code: '42501' })
+
+      await expect(
+        withActorTransaction(runtimePool, ACTOR_ID, async (client) =>
+          client.query(
+            `
+              insert into public.custom_exercises (
+                trainer_id, name, muscle_group, input_kind
+              ) values ($1, 'Not allowed', 'other', 'reps')
+            `,
+            [ACTOR_ID],
+          ),
+        ),
+      ).rejects.toMatchObject({ code: '42501' })
+
+      await expect(
+        ownerPool.query(
+          `
+            insert into public.workout_sets (
+              workout_exercise_id, trainer_id, client_id, position
+            ) values ($1, $2, $3, 0)
+          `,
+          ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', ACTOR_ID, CLIENT_ID],
+        ),
+      ).rejects.toMatchObject({ code: '23503' })
 
       await expect(
         withActorTransaction(runtimePool, ACTOR_ID, async (client) =>

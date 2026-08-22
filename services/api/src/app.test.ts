@@ -23,7 +23,9 @@ import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import { PilotConnectionCommandError } from './connection-commands.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer, PilotSessionResponse } from './pilot-session.js'
+import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
 import type { ProfileResponse } from './profile.js'
+import type { PilotTrainingDataResponse } from './training-data.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
@@ -220,6 +222,74 @@ const CONNECTIONS_RESPONSE: PilotConnectionsResponse = {
   }],
 }
 
+const TRAINING_DATA_RESPONSE: PilotTrainingDataResponse = {
+  accessMode: 'read_only',
+  customExercises: [{
+    id: '8f3c305e-f206-40b3-a8f0-a8d8b3df34b9',
+    name: 'Тяга саней',
+    muscleGroup: 'legs',
+    inputKind: 'strength',
+    archivedAt: null,
+    version: 1,
+  }],
+  workouts: [{
+    id: 'be3b5576-1f5f-4db1-944b-cd78f06aa73b',
+    trainerId: PROFILE_ID,
+    clientId: CLIENTS_RESPONSE.clients[0]!.id,
+    clientName: 'Тестовый клиент',
+    createdBy: PROFILE_ID,
+    workoutDate: '2026-08-20',
+    startTime: '10:00:00',
+    endTime: null,
+    status: 'planned',
+    notes: null,
+    startedAt: null,
+    completedAt: null,
+    version: 1,
+    exercises: [{
+      id: '7e1bb6d7-7717-41ea-aea5-0d8d0ea50c35',
+      position: 0,
+      source: 'system',
+      ref: 'running',
+      customExerciseId: null,
+      name: 'Бег',
+      muscleGroup: 'cardio',
+      inputKind: 'distance',
+      blockId: '7d3b454b-933c-43a6-9331-ac4009644933',
+      blockType: 'single',
+      blockPreset: 'set',
+      blockRounds: 1,
+      restBetweenExercisesSec: 0,
+      restBetweenRoundsSec: 90,
+      restBetweenSetsSec: 90,
+      trainerComment: null,
+      sets: [{
+        id: '5f2a3b76-c149-43f2-a7ab-290b2dfdcd11',
+        position: 0,
+        plan: {
+          weightKg: null,
+          reps: null,
+          durationMin: null,
+          durationSec: 1_800,
+          distanceKm: 5,
+          rpe: 7,
+        },
+        fact: {
+          weightKg: null,
+          reps: null,
+          durationMin: null,
+          durationSec: null,
+          distanceKm: null,
+          rpe: null,
+        },
+        confirmedAt: null,
+        version: 1,
+      }],
+    }],
+  }],
+  hasMoreWorkouts: false,
+}
+
 function buildProfileReader(
   result: ProfileResponse | undefined | Error = PROFILE_RESPONSE,
 ): {
@@ -266,6 +336,18 @@ function buildConnectionsReader(
     result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
   )
   return { pilotConnectionsReader: { readConnections }, readConnections }
+}
+
+function buildTrainingDataReader(
+  result: PilotTrainingDataResponse | Error = TRAINING_DATA_RESPONSE,
+): {
+  pilotTrainingDataReader: PilotTrainingDataReader
+  readTrainingData: ReturnType<typeof vi.fn>
+} {
+  const readTrainingData = vi.fn(() =>
+    result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
+  )
+  return { pilotTrainingDataReader: { readTrainingData }, readTrainingData }
 }
 
 function buildConnectionsWriter(error?: Error): {
@@ -552,6 +634,48 @@ describe('read-only pilot connections endpoint', () => {
     const expired = await app.inject({
       method: 'GET',
       url: '/v1/connections',
+      headers: { 'x-fit-pilot-session': 'x'.repeat(43) },
+    })
+
+    expect(missing.statusCode).toBe(401)
+    expect(expired.statusCode).toBe(401)
+    expect(expired.json()).toEqual({ error: 'unauthorized' })
+  })
+})
+
+describe('read-only pilot training data endpoint', () => {
+  it('returns the exercise and workout aggregate resolved by the session', async () => {
+    const trainingData = buildTrainingDataReader()
+    const app = buildApp({
+      pilotTrainingDataReader: trainingData.pilotTrainingDataReader,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/training-data',
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(TRAINING_DATA_RESPONSE)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(trainingData.readTrainingData).toHaveBeenCalledWith('s'.repeat(43))
+  })
+
+  it('rejects a missing or expired pilot session', async () => {
+    const trainingData = buildTrainingDataReader(new PilotSessionInvalidError())
+    const app = buildApp({
+      pilotTrainingDataReader: trainingData.pilotTrainingDataReader,
+      logger: false,
+    })
+    apps.push(app)
+
+    const missing = await app.inject({ method: 'GET', url: '/v1/training-data' })
+    const expired = await app.inject({
+      method: 'GET',
+      url: '/v1/training-data',
       headers: { 'x-fit-pilot-session': 'x'.repeat(43) },
     })
 

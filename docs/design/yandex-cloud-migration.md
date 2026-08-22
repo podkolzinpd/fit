@@ -50,11 +50,12 @@ The following remain unchanged during the foundation phase:
 7. [In progress] Port the current domain contract in the dependency order below.
    The first slice adds a short-lived hashed pilot session and the trainer's
    tenant-scoped read-only client list without unlocking the main application.
-   The next read-only slice reuses the existing memberships, adds the invitation
-   read model and exposes only accessible trainers plus active invitations
-   created by the actor. The remaining scope
-   now includes timezone, optimistic concurrency, actor attribution, running
-   metrics, feedback/reactions and the derived progress/chronicle reads added
+   The membership and invitation slices expose guarded read/write lifecycle
+   commands without changing production routing. The current read-only workout
+   slice adds custom exercises and the nested workout/exercise/set aggregate,
+   including duration, distance and RPE, behind the same pilot session. The
+   remaining scope includes optimistic concurrency, actor attribution, Live
+   semantics, feedback/reactions and the derived progress/chronicle reads added
    after the foundation migrations.
 8. Rehearse full tenant migration at least twice. Cut over one isolated tenant
    cohort only after all data it can mutate is migrated and writes are frozen
