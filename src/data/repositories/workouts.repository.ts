@@ -1,4 +1,4 @@
-import type { BlockPreset, BlockType, ExerciseProgressCursor, ExerciseProgressPage, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutPersonalRecord, WorkoutPersonalRecordMetric, WorkoutSet, WorkoutSetDraft, WorkoutStatus, WorkoutSummary, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
+import type { BlockPreset, BlockType, ExerciseProgressCursor, ExerciseProgressPage, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, TrainerAttentionWorkout, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutPersonalRecord, WorkoutPersonalRecordMetric, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutSetDraft, WorkoutStatus, WorkoutSummary, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import type { WorkoutListRow } from '../database.types'
 import { clientsRepository } from './clients.repository'
@@ -77,6 +77,10 @@ async function get(id: string): Promise<Workout> {
     sessionRpe: root.data.session_rpe ?? undefined,
     wellbeing: root.data.wellbeing ? root.data.wellbeing as WorkoutWellbeing : undefined,
     discomfort: root.data.discomfort ?? undefined,
+    feedbackSubmittedAt: root.data.feedback_submitted_at ?? undefined,
+    clientQuestion: root.data.client_question ?? undefined,
+    clientQuestionAskedAt: root.data.client_question_asked_at ?? undefined,
+    clientQuestionResolvedAt: root.data.client_question_resolved_at ?? undefined,
     stageId: root.data.stage_id ?? null, stageTitle: null,
     version: root.data.version, exercises: mappedExercises,
   }
@@ -229,6 +233,16 @@ export const workoutsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
+  async cancelPlanned(workout: Workout): Promise<number> {
+    const result = await workoutQueries.cancelPlanned(workout.id, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
+  async reschedule(workout: Workout, workoutDate: ReturnType<typeof localDate>, startTime: string | null): Promise<number> {
+    const result = await workoutQueries.reschedule(workout.id, workoutDate, startTime, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
   async saveLiveSet(id: string, draft: LiveSetDraft, version: number): Promise<number> {
     const result = await workoutQueries.saveLiveSet(id, draft, version)
     if (result.error) throw repositoryError(result.error)
@@ -276,6 +290,42 @@ export const workoutsRepository = {
   },
   async submitFeedback(workout: Workout, feedback: WorkoutFeedbackDraft): Promise<number> {
     const result = await workoutQueries.submitFeedback(workout.id, feedback, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
+  async askQuestion(workout: Workout, question: string): Promise<number> {
+    const result = await workoutQueries.askQuestion(workout.id, question, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
+  async answerQuestion(workout: Workout, response: WorkoutQuestionAnswerDraft): Promise<number> {
+    const result = await workoutQueries.answerQuestion(workout.id, response, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
+  async resolveQuestion(workout: Workout): Promise<number> {
+    const result = await workoutQueries.resolveQuestion(workout.id, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
+  async listTrainerAttention(): Promise<TrainerAttentionWorkout[]> {
+    const result = await workoutQueries.listTrainerAttention()
+    if (result.error) throw repositoryError(result.error)
+    return result.data.map((row) => ({
+      workoutId: row.workout_id,
+      clientId: row.client_id,
+      clientName: row.client_name,
+      workoutDate: localDate(row.workout_date),
+      clientQuestion: row.client_question ?? undefined,
+      clientQuestionAskedAt: row.client_question_asked_at ?? undefined,
+      discomfort: row.discomfort ?? false,
+      clientComment: row.client_comment ?? undefined,
+      feedbackSubmittedAt: row.feedback_submitted_at ?? undefined,
+      version: row.version,
+    }))
+  },
+  async snoozeClientAttention(clientId: string): Promise<string> {
+    const result = await workoutQueries.snoozeClientAttention(clientId)
     if (result.error) throw repositoryError(result.error)
     return result.data
   },

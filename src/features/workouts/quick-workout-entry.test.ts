@@ -157,6 +157,44 @@ describe('parseQuickWorkoutEntry', () => {
     ])
   })
 
+  it.each([
+    ['Приседания с гирей 3 по 10 20кг', 20, 10],
+    ['Выпады с гантелями 3 по 20 20кг', 20, 20],
+    ['Становая с гантелями 20кг 3 по 15', 20, 15],
+    ['Гипержкстензия с блином 10 кг 3 по 10', 10, 10],
+    ['Сгибание ног в тренажере 20кг 3 по 20', 20, 20],
+  ])('не зависит от позиции веса во фразе «%s»', (text, weightKg, reps) => {
+    const result = parseQuickWorkoutEntry(text, SYSTEM_EXERCISE_CATALOG)
+
+    expect(result.unparsed, text).toEqual([])
+    expect(result.parsed, text).toHaveLength(1)
+    expect(result.parsed[0]?.sets, text).toEqual(Array.from({ length: 3 }, (_, position) => ({ position, weightKg, reps })))
+  })
+
+  it('разбирает всю пользовательскую диктовку построчно без потери weight-first упражнений', () => {
+    const result = parseQuickWorkoutEntry([
+      'Приседания с гирей 3 по 10 20кг',
+      'Выпады с гантелями 3 по 20 20кг',
+      'Становая с гантелями 20кг 3 по 15',
+      'Гипержкстензия с блином 10 кг 3 по 10',
+      'Сведение и разведение ног 20 кг 3 по 20',
+      'Сгибание ног в тренажере 20кг 3 по 20',
+    ].join('\n'), SYSTEM_EXERCISE_CATALOG)
+
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed.map((item) => item.exercise.ref)).toEqual([
+      'fedb-goblet-squat',
+      'fedb-dumbbell-lunges',
+      'fedb-stiff-legged-dumbbell-deadlift',
+      'hyperextension',
+      'fedb-thigh-adductor',
+      'fedb-thigh-abductor',
+      'leg-curl',
+    ])
+    expect(result.parsed.every((item) => item.sets.length === 3)).toBe(true)
+    expect(result.parsed.slice(4, 6).every((item) => item.sets.every((set) => set.weightKg === 20 && set.reps === 20))).toBe(true)
+  })
+
   it('не передаёт RPE, который не примет ограничение базы', () => {
     const result = parseQuickWorkoutEntry('Присед со штангой 3×8 80 кг RPE 5\nЖим лёжа 3×8 60 кг RPE 6.2', catalog)
     expect(result.parsed[0]?.sets).toEqual([

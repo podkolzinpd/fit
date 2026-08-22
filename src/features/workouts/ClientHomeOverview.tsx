@@ -29,7 +29,7 @@ export function clientHomeNextWorkout(workouts: readonly Workout[], today: Local
   if (active) return { kind: 'active', workout: active }
 
   const assigned = workouts
-    .filter((workout) => workout.status === 'planned' && Boolean(workout.trainerId) && workout.workoutDate >= today)
+    .filter((workout) => workout.status === 'planned' && workout.workoutDate >= today)
     .sort((a, b) => workoutOrder(a).localeCompare(workoutOrder(b)))[0]
   return assigned ? { kind: 'assigned', workout: assigned } : null
 }
@@ -38,6 +38,12 @@ export function clientHomeLatestDoneWorkout(workouts: readonly Workout[]): Worko
   return workouts
     .filter((workout) => workout.status === 'done')
     .sort((a, b) => workoutOrder(b).localeCompare(workoutOrder(a)))[0]
+}
+
+export function clientHomePastPlans(workouts: readonly Workout[], today: LocalDate): Workout[] {
+  return workouts
+    .filter((workout) => workout.status === 'planned' && workout.workoutDate < today)
+    .sort((a, b) => workoutOrder(b).localeCompare(workoutOrder(a)))
 }
 
 export function clientHomeHighlight(
@@ -85,6 +91,20 @@ function nextWorkoutLabel(next: NextWorkout, today: LocalDate): string {
 
 function NextActionCard({ next, today }: { next: NextWorkout; today: LocalDate }) {
   const active = next.kind === 'active'
+  const future = !active && next.workout.workoutDate > today
+  if (future) {
+    return <section className="client-home-next assigned compact" aria-labelledby="client-home-next-title">
+      <p className="eyebrow">{nextWorkoutLabel(next, today)}</p>
+      <Link className="client-home-next-link" to={`/workouts/${next.workout.id}`} state={{ returnTo: '/me' }}>
+        <span>
+          <h2 id="client-home-next-title">Следующая тренировка</h2>
+          <small>{workoutTiming(next.workout, today)}</small>
+          <strong>{exerciseSummary(next.workout)}</strong>
+        </span>
+        <b aria-hidden="true">›</b>
+      </Link>
+    </section>
+  }
   return <section className={`client-home-next ${active ? 'active' : 'assigned'}`} aria-labelledby="client-home-next-title">
     <p className="eyebrow">{nextWorkoutLabel(next, today)}</p>
     <h2 id="client-home-next-title">{active ? 'Продолжите тренировку' : 'Тренировка по плану'}</h2>
@@ -96,29 +116,33 @@ function NextActionCard({ next, today }: { next: NextWorkout; today: LocalDate }
   </section>
 }
 
+function PastPlanCard({ workouts }: { workouts: Workout[] }) {
+  const workout = workouts[0]
+  if (!workout) return null
+  return <section className="client-home-past-plan" aria-labelledby="client-home-past-plan-title">
+    <p className="eyebrow">ПЛАН НА {formatLocalDate(workout.workoutDate)}</p>
+    <Link to={`/workouts/${workout.id}`} state={{ returnTo: '/me' }}>
+      <span><h2 id="client-home-past-plan-title">{exerciseSummary(workout)}</h2>{workouts.length > 1 && <small>Ещё планов: {workouts.length - 1}</small>}</span>
+      <b>Выбрать действие ›</b>
+    </Link>
+  </section>
+}
+
 function WeekCard({ week, loading }: { week: WorkoutRegularity | undefined; loading: boolean }) {
   if (loading) return <section className="client-home-week client-home-loading" role="status">Загружаем прогресс недели…</section>
   const completed = week?.completedCount ?? 0
+  if (completed === 0) return null
   const completedPlanned = week?.completedPlannedCount ?? 0
   const independent = Math.max(0, completed - completedPlanned)
-  const title = completed > 0 ? `${completed} ${workoutCountLabel(completed)}` : 'Пока без тренировок'
-  const description = completed > 0
-    ? completedPlanned === completed
-      ? completed === 1 ? 'По плану тренера' : completed === 2 ? 'Обе — по плану тренера' : 'Все — по плану тренера'
-      : independent === completed
-        ? completed === 1 ? 'Самостоятельно' : completed === 2 ? 'Обе — самостоятельно' : 'Все — самостоятельно'
-        : `${completedPlanned} по плану · ${independent} самостоятельно`
-    : week?.plannedCount
-      ? `План тренера: 0 из ${week.plannedCount} выполнено`
-      : 'Здесь появится первая завершённая тренировка'
-  const alerts = [
-    week?.partialCount ? partialWorkoutLabel(week.partialCount) : null,
-    week?.skippedCount ? `Пропущено: ${week.skippedCount}` : null,
-  ].filter(Boolean).join(' · ')
+  const title = `${completed} ${workoutCountLabel(completed)}`
+  const description = completedPlanned === completed
+    ? completed === 1 ? 'По плану тренера' : completed === 2 ? 'Обе — по плану тренера' : 'Все — по плану тренера'
+    : independent === completed
+      ? completed === 1 ? 'Самостоятельно' : completed === 2 ? 'Обе — самостоятельно' : 'Все — самостоятельно'
+      : `${completedPlanned} по плану · ${independent} самостоятельно`
   return <section className="client-home-week" aria-labelledby="client-home-week-title">
     <div className="client-home-section-head"><div><p className="eyebrow">ЭТА НЕДЕЛЯ</p><h2 id="client-home-week-title">{title}</h2></div><Link to="/me/progress">Прогресс ›</Link></div>
     <p>{description}</p>
-    {alerts && <small className="client-home-week-alerts">{alerts}</small>}
   </section>
 }
 
@@ -129,10 +153,6 @@ function workoutCountLabel(count: number): string {
   if (mod10 === 1) return 'тренировка'
   if (mod10 >= 2 && mod10 <= 4) return 'тренировки'
   return 'тренировок'
-}
-
-function partialWorkoutLabel(count: number): string {
-  return `В ${count} ${count === 1 ? 'тренировке' : 'тренировках'} часть упражнений не выполнена`
 }
 
 function HighlightCard({ highlight, today }: { highlight: HomeHighlight; today: LocalDate }) {
@@ -173,11 +193,14 @@ interface ClientHomeOverviewProps {
 
 export function ClientHomeOverview({ today, workouts, regularity, goal, personalRecords = [], workoutsLoading, regularityLoading, error, onRetry, selfTraining, wearable }: ClientHomeOverviewProps) {
   const next = workouts ? clientHomeNextWorkout(workouts, today) : null
+  const pastPlans = workouts ? clientHomePastPlans(workouts, today) : []
+  const hasActiveOrTodayPlan = Boolean(next && (next.kind === 'active' || next.workout.workoutDate === today))
   const highlight = workouts ? clientHomeHighlight(workouts, goal, personalRecords) : goal ? { kind: 'goal' as const, goal } : null
   const week = regularity?.find((period) => period.period === 'week')
   return <div className="client-home-overview">
     {selfTraining}
     {workoutsLoading && !workouts && <section className="client-home-next client-home-loading" role="status">Загружаем следующую тренировку…</section>}
+    {!hasActiveOrTodayPlan && pastPlans.length > 0 && <PastPlanCard workouts={pastPlans} />}
     {next && <NextActionCard next={next} today={today} />}
     <WeekCard week={week} loading={regularityLoading} />
     {highlight && <HighlightCard highlight={highlight} today={today} />}

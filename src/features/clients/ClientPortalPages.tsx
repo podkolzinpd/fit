@@ -9,10 +9,10 @@ import { progressRepository } from '../../data/repositories/progress.repository'
 import { splitClientWorkouts, workoutsRepository } from '../../data/repositories/workouts.repository'
 import type { CustomMetric, ProgressEntry } from '../../shared/domain'
 import { formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
-import { AsyncView, EmptyState, Field, Page, useConfirm } from '../../shared/ui'
+import { AsyncView, Field, Page, useConfirm } from '../../shared/ui'
 import { ClientTrainingSummaryCard, groupMetricRows, ProgressChart, RunningProgressCard } from '../progress'
 import { measurementSummaryItems, measurementSummaryText } from '../progress/measurement-summary'
-import { LoadMoreButton, WorkoutChronicleCard, WorkoutExercisesSummary, WorkoutStatusBadge, WORKOUT_HISTORY_PAGE_SIZE } from '../workouts'
+import { LoadMoreButton, PastWorkoutPlanCard, WorkoutChronicleCard, WorkoutExercisesSummary, WorkoutStatusBadge, WORKOUT_HISTORY_PAGE_SIZE } from '../workouts'
 import { clientWorkoutAuthorLabel } from './workout-author'
 
 function useMine() {
@@ -39,11 +39,16 @@ export function MyWorkoutsPage() {
     enabled: Boolean(mine.data),
   })
   const upcomingItems = upcoming.data ? splitClientWorkouts(upcoming.data, today).upcoming : []
-  const historyItems = splitClientWorkouts(history.data?.pages.flatMap((page) => page.items) ?? [], today).history
-  return <Page className="client-workouts-page" title="Мои тренировки" action={mine.data && (upcomingItems.length > 0 || historyItems.length > 0) && <Link className="button" to="/workouts/new">Добавить</Link>}><AsyncView loading={mine.isLoading || upcoming.isLoading || history.isLoading || trainers.isLoading} error={mine.error ?? upcoming.error ?? history.error ?? trainers.error} empty={!mine.data} onRetry={() => { void mine.refetch(); void upcoming.refetch(); void history.refetch(); void trainers.refetch() }}
+  const pastItems = splitClientWorkouts(history.data?.pages.flatMap((page) => page.items) ?? [], today)
+  const historyItems = pastItems.history
+  const hasWorkouts = upcomingItems.length > 0 || pastItems.needsDecision.length > 0 || historyItems.length > 0
+  return <Page className="client-workouts-page" title="Мои тренировки" action={mine.data && hasWorkouts && <Link className="button" to="/workouts/new">Добавить</Link>}><AsyncView loading={mine.isLoading || upcoming.isLoading || history.isLoading || trainers.isLoading} error={mine.error ?? upcoming.error ?? history.error ?? trainers.error} empty={!mine.data} onRetry={() => { void mine.refetch(); void upcoming.refetch(); void history.refetch(); void trainers.refetch() }}
     emptyTitle="Сначала создайте личную карточку" emptyDescription="Она нужна, чтобы добавлять самостоятельные тренировки и получать назначения тренера." emptyAction={<Link className="button" to="/me">Создать карточку</Link>}>
-    {mine.data && <div className="client-workouts-stack"><section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div>{upcomingItems.length ? <div className="cards client-workout-cards">{upcomingItems.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p className="muted">{clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)}</p><WorkoutExercisesSummary workout={workout} maxItems={2} /></div><WorkoutStatusBadge workout={workout} /></Link>)}</div> : <EmptyState compact title="Нет запланированных тренировок" description="Добавьте самостоятельную тренировку или дождитесь назначения тренера." action={<Link className="button" to="/workouts/new">Добавить тренировку</Link>} />}</section>
-    <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div>{historyItems.length ? <div className="cards client-workout-cards workout-chronicle-list">{historyItems.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)} />)}</div> : <EmptyState compact title="История пока пуста" description="Завершённые и частично выполненные тренировки появятся здесь." />}<LoadMoreButton hasMore={history.hasNextPage} loading={history.isFetchingNextPage} onLoadMore={() => void history.fetchNextPage()} /></section></div>}
+    {mine.data && (hasWorkouts ? <div className="client-workouts-stack">
+      {upcomingItems.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div><div className="cards client-workout-cards">{upcomingItems.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p className="muted">{clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)}</p><WorkoutExercisesSummary workout={workout} maxItems={2} /></div><WorkoutStatusBadge workout={workout} /></Link>)}</div></section>}
+      {pastItems.needsDecision.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РАНЕЕ ЗАПЛАНИРОВАНО</p><h2>Выберите действие</h2></div><div className="cards client-workout-cards">{pastItems.needsDecision.map((workout) => <PastWorkoutPlanCard key={workout.id} workout={workout} contextLabel={clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)} returnTo="/me/workouts" />)}</div></section>}
+      {historyItems.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div><div className="cards client-workout-cards workout-chronicle-list">{historyItems.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)} />)}</div><LoadMoreButton hasMore={history.hasNextPage} loading={history.isFetchingNextPage} onLoadMore={() => void history.fetchNextPage()} /></section>}
+    </div> : <Link className="button secondary wide client-workouts-start" to="/workouts/new">Добавить тренировку</Link>)}
   </AsyncView></Page>
 }
 

@@ -17,7 +17,6 @@ import { VoiceNoteField } from '../voice-input'
 import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
-import { AddIcon } from '../../shared/icons'
 
 export function MyClientPage() {
   const { actor, refresh } = useAuth()
@@ -287,7 +286,7 @@ export function ClientDetailPage() {
       </section>
       {stats.data?.needsAttention && <p className="attention">Давно не тренировался</p>}
       <div className="client-detail-actions">
-        <Link className="button wide client-detail-plan" to={`/workouts/new?client=${clientId}`}><AddIcon />Запланировать тренировку</Link>
+        <Link className="button wide client-detail-plan" to={`/workouts/new?client=${clientId}`}>Запланировать тренировку</Link>
         <nav className="client-detail-routes" aria-label="Разделы спортсмена">
           <Link to={`/clients/${clientId}/workouts`}>История тренировок</Link>
           <Link to={`/progress/${clientId}`}>Прогресс и замеры</Link>

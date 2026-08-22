@@ -105,6 +105,7 @@ resource "yandex_serverless_container" "migration" {
         MIGRATION_DATABASE_USER          = yandex_mdb_postgresql_user.owner.name
         MIGRATION_DATABASE_SSL_ROOT_CERT = "/app/certs/yandex-cloud-ca.pem"
         YANDEX_PILOT_ENROLLMENT_ENABLED  = var.environment == "stage" && var.yandex_oauth_client_id != null ? "true" : "false"
+        STAGE_WORKOUT_FIXTURES_ENABLED   = var.environment == "stage" ? "true" : "false"
       },
       var.yandex_oauth_client_id == null ? {} : {
         YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id

@@ -6,7 +6,7 @@ import { goalsRepository } from '../../data/repositories/goals.repository'
 import { progressRepository } from '../../data/repositories/progress.repository'
 import { createRunningFormatDrafts, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, Workout, WorkoutDraft, WorkoutSetDraft } from '../../shared/domain'
-import { localDate, todayInTimeZone } from '../../shared/local-date'
+import { formatLocalDate, localDate, todayInTimeZone } from '../../shared/local-date'
 import { isValidRpe } from '../../shared/rpe'
 import type { RunningFormat } from '../../shared/running-formats'
 import { trackGoal } from '../../shared/yandex-metrika'
@@ -32,6 +32,7 @@ import { todayHeaderProps } from './today-header'
 import { ClientHomeOverview, clientHomeLatestDoneWorkout } from './ClientHomeOverview'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { WorkoutCta, WorkoutExercise, WorkoutHeader, WorkoutSetRow } from './WorkoutSurface'
+import { trainerActionItems, trainerPlanningItems, type TrainerActionItem, type TrainerPlanningItem } from './trainer-attention'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
@@ -56,6 +57,10 @@ function setSummary(item: ParsedWorkoutExercise): string {
   if (first.distanceKm !== undefined) return `${item.sets.length} × ${first.distanceKm} км`
   const value = [first.weightKg !== undefined ? `${first.weightKg} кг` : '', first.reps !== undefined ? `${first.reps} повт.` : ''].filter(Boolean).join(' × ')
   return `${item.sets.length} × ${value || 'значения'}`
+}
+
+function trainerPlanningDetail(value: string): string {
+  return value.replace(/\d{4}-\d{2}-\d{2}/g, (date) => formatLocalDate(localDate(date)))
 }
 
 function appendVoiceText(previous: string, addition: string): string {
@@ -127,6 +132,13 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const today = todayInTimeZone(actor?.timezone)
   const todayWorkouts = useQuery({ queryKey: ['today-workouts', today], queryFn: () => workoutsRepository.list(today, today), enabled: !clientMode })
   const workouts = useQuery({ queryKey: ['workouts', mine.data?.id], queryFn: () => workoutsRepository.list(undefined, undefined, clientMode ? mine.data!.id : undefined), enabled: !clientMode || Boolean(mine.data) })
+  const trainerAttention = useQuery({
+    queryKey: ['trainer-attention', actor?.userId],
+    queryFn: () => workoutsRepository.listTrainerAttention(),
+    enabled: !clientMode && Boolean(actor?.userId),
+    refetchInterval: 60_000,
+  })
+  const attentionPreferences = useQuery({ queryKey: ['trainer-attention-preferences', actor?.userId], queryFn: () => clientsRepository.listAttentionPreferences(actor!.userId), enabled: !clientMode && Boolean(actor?.userId) })
   const goal = useQuery({ queryKey: ['client-goal', mine.data?.id], queryFn: () => goalsRepository.get(mine.data!.id), enabled: clientMode && Boolean(mine.data) })
   const regularity = useQuery({ queryKey: ['workout-regularity', mine.data?.id], queryFn: () => progressRepository.regularity(mine.data!.id), enabled: clientMode && Boolean(mine.data) })
   const latestClientWorkout = workouts.data ? clientHomeLatestDoneWorkout(workouts.data) : undefined
@@ -142,6 +154,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const showRpeByDefault = useRpeDisplay(actor?.userId)
   const [rpeOverrides, setRpeOverrides] = useState<Map<number, boolean>>(() => new Map())
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerFromCompose, setPickerFromCompose] = useState(false)
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const [clientId, setClientId] = useState('')
   const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId), enabled: Boolean(clientId) })
@@ -276,6 +289,10 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       navigate(`/workouts/${id}`, { state: { returnTo: clientMode ? '/me' : '/today' } })
     }, onError: () => trackGoal('today_workout_save_error'),
   })
+  const snoozeAttention = useMutation({
+    mutationFn: (targetClientId: string) => workoutsRepository.snoozeClientAttention(targetClientId),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['trainer-attention-preferences'] }) },
+  })
   async function createQuickClient(fullName: string): Promise<ClientPickerSelection> {
     const id = await clientsRepository.createQuick(fullName)
     trackGoal('today_quick_client_created')
@@ -391,6 +408,10 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   }
 
   async function pickExercises(exercises: ExerciseSnapshot[], runningFormat?: RunningFormat) {
+    if (pickerFromCompose) {
+      setScreen('review')
+      setPickerFromCompose(false)
+    }
     if (runningFormat && exercises[0]) {
       const selectedItems = runningFormatItems(exercises[0], runningFormat)
       setItems((current) => {
@@ -503,6 +524,17 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const contextWorkout = currentWorkout ?? plannedWorkouts[0] ?? latestWorkout
   const contextTitle = currentWorkout ? 'Текущая тренировка' : plannedWorkouts[0] ? 'Ближайшая тренировка' : latestWorkout ? 'Последняя тренировка' : null
   const contextCard = !clientMode && contextWorkout && contextTitle && <section className="today-context"><p>{contextTitle}</p><Link to={currentWorkout ? `/workouts/${contextWorkout.id}/live` : `/workouts/${contextWorkout.id}`}><span><strong>{contextWorkout.clientName}</strong><small>{contextWorkout.workoutDate === today ? `Сегодня, ${workoutTime(contextWorkout)}` : contextWorkout.workoutDate}</small></span><span><strong>{contextWorkout.exercises.length ? contextWorkout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Тренировка'}</strong><small>{contextWorkout.exercises.length} упражнений</small></span><b>›</b></Link></section>
+  const actionItems = !clientMode ? trainerActionItems(clients.data ?? [], workouts.data ?? [], trainerAttention.data ?? [], today) : []
+  const actionClientIds = new Set(actionItems.map((item) => item.clientId))
+  const planningItems = !clientMode ? trainerPlanningItems(clients.data ?? [], workouts.data ?? [], attentionPreferences.data ?? [], actionClientIds, today) : []
+  const attentionSurface = !clientMode && <TrainerAttentionQueue
+    actions={actionItems}
+    planning={planningItems}
+    loading={clients.isLoading || workouts.isLoading || trainerAttention.isLoading || attentionPreferences.isLoading}
+    error={trainerAttention.error ?? attentionPreferences.error}
+    snoozingClientId={snoozeAttention.isPending ? snoozeAttention.variables : undefined}
+    onSnooze={(targetClientId) => snoozeAttention.mutate(targetClientId)}
+  />
   const clientHomeError = clientMode ? mine.error ?? workouts.error ?? regularity.error ?? goal.error ?? personalRecords.error : null
   const greetingName = clientMode ? mine.data?.fullName || actor?.firstName || 'спортсмен' : actor?.firstName || 'тренер'
   const greeting = `${new Date().getHours() < 12 ? 'Доброе утро' : new Date().getHours() < 18 ? 'Добрый день' : 'Добрый вечер'}, ${greetingName}`
@@ -540,7 +572,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       {!textComposerOpen && <VoiceInputButton variant="hero" source="today_workout" idleLabel="Надиктовать тренировку" onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }} onPhaseChange={setVoicePhase} onTranscript={handleHeroTranscript} />}
       {!textComposerOpen && voicePhase === 'idle' && <button type="button" className="link today-text-toggle" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}>Ввести текстом</button>}
       {restoredDraftScreen && !textComposerOpen && voicePhase === 'idle' && <section className="today-resume"><span><strong>Есть незавершённая тренировка</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
-      {textComposerOpen && <div className="today-text-fallback"><div className="today-text-fallback-head"><div><strong>Новая тренировка</strong><small>Введите упражнения, подходы и значения</small></div><button type="button" className="link" onClick={() => setTextComposerOpen(false)}>Скрыть</button></div><WorkoutComposer name="today-workout" source="today_workout" value={text} showVoice={false} onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="link wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setScreen('review') }}>Выбрать упражнения вручную</button>}>
+      {textComposerOpen && <div className="today-text-fallback"><div className="today-text-fallback-head"><div><strong>Новая тренировка</strong><small>Введите упражнения, подходы и значения</small></div><button type="button" className="link" onClick={() => setTextComposerOpen(false)}>Скрыть</button></div><WorkoutComposer name="today-workout" source="today_workout" value={text} showVoice={false} onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="link wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setPickerFromCompose(true); setPickerOpen(true) }}>Выбрать упражнения вручную</button>}>
       {voiceRefinement && voiceRefinement.state !== 'loading' && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
       {(resolved.length > 0 || clarification || displayedUnparsed.length > 0) && <div className="today-parse-preview" aria-live="polite">
         {resolved.length > 0 && <section className="today-recognized" aria-label="Распознанные упражнения">
@@ -556,7 +588,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
        {parseError && <WorkoutParseErrorNotice kind={parseError} onRetry={() => void review()} />}
       </WorkoutComposer></div>}
       {voiceRefinement?.state === 'error' && !textComposerOpen && <div className="voice-action-error" role="alert"><strong>{voiceRefinement.message}</strong><button type="button" className="link" onClick={() => setTextComposerOpen(true)}>Редактировать текст</button></div>}
-      {voicePhase === 'idle' && !restoredDraftScreen && contextCard}
+      {voicePhase === 'idle' && !restoredDraftScreen && <>{contextCard}{attentionSurface}</>}
       </>}
     </section> : <section className={`today-review workout-focused-page ${screen === 'save' ? 'today-save-step' : ''}`}>
       <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><WorkoutHeader eyebrow={screen === 'review' ? 'ПЛАН ТРЕНИРОВКИ' : 'ПОСЛЕДНИЙ ШАГ'} title={screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'} state="planned" meta={screen === 'review' ? (items.length > 0 ? `Распознано: ${items.length}` : undefined) : 'Выберите вариант и дату'} /></div>
@@ -586,6 +618,28 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </section></section>}
     </section>}
     {(catalog.error ?? (!clientMode ? todayWorkouts.error : null)) && <p className="error">{(catalog.error ?? (!clientMode ? todayWorkouts.error : null))?.message}</p>}
-    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null) }} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null); setPickerFromCompose(false) }} />}
   </Page>
+}
+
+function TrainerAttentionQueue({ actions, planning, loading, error, snoozingClientId, onSnooze }: {
+  actions: TrainerActionItem[]
+  planning: TrainerPlanningItem[]
+  loading: boolean
+  error: Error | null
+  snoozingClientId?: string
+  onSnooze: (clientId: string) => void
+}) {
+  if (loading) return <section className="trainer-attention trainer-attention-loading" aria-label="Задачи по клиентам"><span className="skeleton-line" /><span className="skeleton-line short" /></section>
+  if (error) return <p className="error">Не удалось загрузить задачи по клиентам.</p>
+  if (!actions.length && !planning.length) return <section className="trainer-attention trainer-attention-clear"><p className="eyebrow">ПО КЛИЕНТАМ</p><strong>Срочных действий нет</strong></section>
+  return <section className="trainer-attention" aria-labelledby="trainer-attention-title">
+    {actions.length > 0 && <><div className="trainer-attention-heading"><p className="eyebrow">ПО КЛИЕНТАМ</p><h2 id="trainer-attention-title">Требует действия</h2></div><div className="trainer-attention-list">{actions.map((item) => <Link className={`trainer-attention-row reason-${item.reason}`} key={item.clientId} to={`/workouts/${item.workoutId}${item.reason === 'question' ? '?reply=1' : ''}`}>
+      <span><strong>{item.clientName}</strong><small>{item.title}</small><em>{item.reason === 'past_plan' ? formatLocalDate(localDate(item.detail)) : item.detail}</em></span><b>{item.actionLabel}</b>
+    </Link>)}</div></>}
+    {planning.length > 0 && <details className="trainer-planning">
+      <summary><span><strong>Проверить планы</strong><small>{planning.length} {planning.length === 1 ? 'клиент' : planning.length < 5 ? 'клиента' : 'клиентов'}</small></span><i aria-hidden="true" /></summary>
+      <div className="trainer-planning-list">{planning.map((item) => <article className="trainer-planning-row" key={item.clientId}><span><strong>{item.clientName}</strong><small>{item.title}</small><em>{trainerPlanningDetail(item.detail)}</em></span><div><Link className="link" to={`/workouts/new?client=${item.clientId}`}>Запланировать</Link><button type="button" className="link muted" disabled={snoozingClientId === item.clientId} onClick={() => onSnooze(item.clientId)}>{snoozingClientId === item.clientId ? 'Сохраняем…' : 'Напомнить через 2 недели'}</button></div></article>)}</div>
+    </details>}
+  </section>
 }

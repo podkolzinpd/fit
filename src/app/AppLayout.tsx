@@ -5,6 +5,12 @@ import { useAuth } from './auth-context'
 import { applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from './theme'
 import { isAssistantNavPilotEnabled, isDarkThemePilotEnabled, isTodayStartRedesignEnabled } from './feature-flags'
 
+export function appViewportMetrics(innerHeight: number, visualHeight: number) {
+  return {
+    keyboardOpen: innerHeight - visualHeight > 160,
+  }
+}
+
 export function AppLayout() {
   const { actor } = useAuth()
   const theme = useAppTheme()
@@ -36,13 +42,18 @@ export function AppLayout() {
   useEffect(() => {
     const viewport = window.visualViewport
     if (!viewport) return
-    const update = () => setKeyboardOpen(window.innerHeight - viewport.height > 160)
+    const update = () => {
+      const metrics = appViewportMetrics(window.innerHeight, viewport.height)
+      setKeyboardOpen(metrics.keyboardOpen)
+    }
     update()
     viewport.addEventListener('resize', update)
     viewport.addEventListener('scroll', update)
+    window.addEventListener('resize', update)
     return () => {
       viewport.removeEventListener('resize', update)
       viewport.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
     }
   }, [])
 
@@ -63,7 +74,6 @@ export function AppLayout() {
     workoutForm ? 'workout-form-shell' : '',
     keyboardOpen ? 'keyboard-open' : '',
   ].filter(Boolean).join(' ')
-
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar" aria-label="Основная навигация">
     <NavLink to="/me" end><HomeIcon />Кабинет</NavLink>
     <NavLink to="/me/workouts"><ScheduleIcon />Тренировки</NavLink>

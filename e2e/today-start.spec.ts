@@ -62,6 +62,33 @@ test('today: voice-first запускает запись, отменяет её 
   await expect(page.locator('.today-exercise')).toHaveCount(1)
 })
 
+test('today: голосовой ввод сохраняет значения при любом порядке веса и подходов', async ({ page }) => {
+  const transcript = [
+    'Приседания с гирей 3 по 10 20кг',
+    'Выпады с гантелями 3 по 20 20кг',
+    'Становая с гантелями 20кг 3 по 15',
+    'Гипержкстензия с блином 10 кг 3 по 10',
+    'Сведение и разведение ног 20 кг 3 по 20',
+    'Сгибание ног в тренажере 20кг 3 по 20',
+  ].join('\n')
+  // Даже пустой ответ модели не должен терять безопасно найденные локально
+  // упражнения и явно продиктованные числовые значения.
+  await mockWorkoutParser(page, [])
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/(today|clients)$/)
+  await mockStreamingVoice(page, transcript)
+  await page.goto('/today')
+
+  await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
+  await page.getByRole('button', { name: 'Готово' }).click()
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('Распознано: 7', { exact: true })).toBeVisible()
+  await expect(page.locator('.today-exercise')).toHaveCount(7)
+})
+
 test('today: ошибка voice-разбора сохраняет transcript и раскрывает текстовый fallback', async ({ page }) => {
   await page.route('**/functions/v1/parse-workout', async (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporary' }) }))
   await page.goto('/auth')
@@ -170,7 +197,12 @@ test('today: беговая ветка сразу добавляет интер�
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения вручную' }).click()
   await expect(page.getByText('Выберите вариант и дату', { exact: true })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Добавить упражнение' }).click()
+  await expect(page.getByRole('heading', { name: 'Тип тренировки' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Закрыть' }).click()
+  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Выбрать упражнения вручную' }).click()
   await page.getByRole('button', { name: /^Бег/ }).click()
   await expect(page.getByRole('button', { name: /Темповый бег/ })).toBeVisible()
   await page.getByRole('button', { name: /^Интервалы/ }).click()

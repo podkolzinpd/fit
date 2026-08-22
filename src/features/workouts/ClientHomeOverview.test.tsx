@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import type { ClientGoal, Workout, WorkoutPersonalRecord, WorkoutRegularity } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
-import { ClientHomeOverview, clientHomeHighlight, clientHomeNextWorkout } from './ClientHomeOverview'
+import { ClientHomeOverview, clientHomeHighlight, clientHomeNextWorkout, clientHomePastPlans } from './ClientHomeOverview'
 
 const today = localDate('2026-08-16')
 
@@ -38,12 +38,28 @@ describe('ClientHomeOverview', () => {
     expect(clientHomeNextWorkout([assigned, active], today)).toEqual({ kind: 'active', workout: active })
   })
 
-  it('uses only the nearest future trainer assignment', () => {
-    const own = workout({ id: 'own', createdBy: 'client-1' })
+  it('uses the nearest saved plan regardless of who created it', () => {
+    const own = workout({ id: 'own', createdBy: 'client-1', workoutDate: localDate('2026-08-17') })
     const past = workout({ id: 'past', trainerId: 'trainer-1', workoutDate: localDate('2026-08-15') })
-    const nearest = workout({ id: 'nearest', trainerId: 'trainer-1', workoutDate: localDate('2026-08-17') })
     const later = workout({ id: 'later', trainerId: 'trainer-1', workoutDate: localDate('2026-08-20') })
-    expect(clientHomeNextWorkout([own, past, later, nearest], today)?.workout.id).toBe('nearest')
+    expect(clientHomeNextWorkout([past, later, own], today)?.workout.id).toBe('own')
+  })
+
+  it('keeps past plans in a newest-first action queue', () => {
+    const older = workout({ id: 'older', workoutDate: localDate('2026-08-10') })
+    const newer = workout({ id: 'newer', workoutDate: localDate('2026-08-15') })
+    const cancelled = workout({ id: 'cancelled', status: 'cancelled', workoutDate: localDate('2026-08-14') })
+    expect(clientHomePastPlans([older, cancelled, newer], today).map((item) => item.id)).toEqual(['newer', 'older'])
+  })
+
+  it('shows one neutral past-plan action when there is no active or today plan', () => {
+    const past = workout({ id: 'past', workoutDate: localDate('2026-08-15') })
+    const older = workout({ id: 'older', workoutDate: localDate('2026-08-10') })
+    render(<MemoryRouter><ClientHomeOverview today={today} workouts={[older, past]} regularity={[]} goal={null} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Своя тренировка</button>} /></MemoryRouter>)
+    expect(screen.getByText('ПЛАН НА 15 августа 2026 г.')).toBeVisible()
+    expect(screen.getByRole('link', { name: /Выбрать действие/ })).toHaveAttribute('href', '/workouts/past')
+    expect(screen.getByText('Ещё планов: 1')).toBeVisible()
+    expect(screen.queryByText(/пропущ/i)).not.toBeInTheDocument()
   })
 
   it('shows no more than one highlight and prefers feedback on the latest workout', () => {
@@ -76,7 +92,8 @@ describe('ClientHomeOverview', () => {
     expect(screen.getByRole('link', { name: 'Открыть план' })).toBeVisible()
     expect(screen.getByRole('heading', { name: '3 тренировки' })).toBeVisible()
     expect(screen.getByText('1 по плану · 2 самостоятельно')).toBeVisible()
-    expect(screen.getByText('В 2 тренировках часть упражнений не выполнена')).toBeVisible()
+    expect(screen.queryByText(/часть упражнений не выполнена/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/пропущено/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Вернуться к бегу' })).toBeVisible()
     expect(screen.queryByText('—')).not.toBeInTheDocument()
@@ -87,17 +104,18 @@ describe('ClientHomeOverview', () => {
     const assigned = workout({ id: 'tomorrow', trainerId: 'trainer-1', workoutDate: localDate('2026-08-17'), startTime: '07:20' })
     render(<MemoryRouter><ClientHomeOverview today={today} workouts={[assigned]} regularity={[{ ...week, completedCount: 2, completedPlannedCount: 0 }]} goal={null} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Своя тренировка</button>} /></MemoryRouter>)
     expect(screen.getByText('ЗАВТРА')).toBeVisible()
-    expect(screen.getByText('Завтра, 07:20')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Следующая тренировка' })).toBeVisible()
+    expect(screen.getByRole('link', { name: /Следующая тренировка Завтра, 07:20/ })).toHaveAttribute('href', '/workouts/tomorrow')
+    expect(screen.queryByRole('link', { name: 'Открыть план' })).not.toBeInTheDocument()
     expect(screen.getByText('Обе — самостоятельно')).toBeVisible()
     expect(screen.getByRole('link', { name: 'Прогресс ›' })).toHaveAttribute('href', '/me/progress')
   })
 
   it('keeps the empty state useful and puts self-training first', () => {
     render(<MemoryRouter><ClientHomeOverview today={today} workouts={[]} regularity={[]} goal={null} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Начать свою тренировку</button>} /></MemoryRouter>)
-    const selfAction = screen.getByRole('button', { name: 'Начать свою тренировку' })
-    const weekTitle = screen.getByRole('heading', { name: 'Пока без тренировок' })
-    expect(selfAction.compareDocumentPosition(weekTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(screen.getByText('Здесь появится первая завершённая тренировка')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Начать свою тренировку' })).toBeVisible()
+    expect(screen.queryByText('ЭТА НЕДЕЛЯ')).not.toBeInTheDocument()
+    expect(screen.queryByText('Пока без тренировок')).not.toBeInTheDocument()
     expect(screen.queryByText('—')).not.toBeInTheDocument()
   })
 

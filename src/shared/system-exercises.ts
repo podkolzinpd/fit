@@ -2,7 +2,7 @@ import type { ExerciseSnapshot, MuscleGroup } from './domain'
 import { IMPORTED_EXERCISES } from './system-exercises.generated'
 import { BASE_EXERCISES } from './system-exercises.base.generated'
 
-export const SYSTEM_EXERCISE_CATALOG_VERSION = 1
+export const SYSTEM_EXERCISE_CATALOG_VERSION = 2
 
 // Форма импортированного упражнения (генерируется scripts/import-exercises.mjs).
 export interface ImportedExercise extends ExerciseSnapshot {
@@ -13,6 +13,7 @@ export interface ImportedExercise extends ExerciseSnapshot {
   secondaryMuscles: string[]
   level: string | null
   imageUrl: string
+  motionImageUrl: string
   instructions: string[]
 }
 
@@ -144,10 +145,18 @@ const SEEN_REFS = new Set<string>(SYSTEM_EXERCISES.map((exercise) => exercise.re
 // Каталог: обогащённые базовые (картинки/оборудование/мышцы/инструкции) +
 // импортированные. SYSTEM_EXERCISES (рукописный литерал) остаётся источником
 // ref/name/muscleGroup/inputKind для генератора базовых и для тестов.
-export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = [
+const SYSTEM_EXERCISE_CATALOG_SOURCE: readonly ExerciseSnapshot[] = [
   ...BASE_EXERCISES,
   ...IMPORTED_EXERCISES.filter((exercise) => !SEEN_REFS.has(exercise.ref)),
   ...FUNCTIONAL_PROTOCOLS,
   ...RUNNING_DRILLS,
   ...WARMUP_AND_MOBILITY,
 ]
+
+// Составные протоколы и СБУ переиспользуют обложки базовых упражнений. Для
+// карточки техники им нужен тот же второй кадр, но дублировать его URL в каждом
+// литерале нет смысла.
+export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = SYSTEM_EXERCISE_CATALOG_SOURCE.map((exercise) => ({
+  ...exercise,
+  motionImageUrl: exercise.motionImageUrl ?? exercise.imageUrl?.replace(/\.jpg$/, '-end.jpg'),
+}))

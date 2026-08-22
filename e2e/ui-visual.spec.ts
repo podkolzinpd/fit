@@ -28,12 +28,17 @@ async function expectVisualBaseline(
   })
 }
 
-async function createStandaloneLiveWorkout(page: import('@playwright/test').Page, projectName: string) {
+async function createStandaloneClient(
+  page: import('@playwright/test').Page,
+  projectName: string,
+  name = 'Визуальный клиент',
+  emailPrefix = 'visual-client',
+) {
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Live клиент')
-  await page.getByLabel('Email').fill(`visual-live-${projectName}-${randomUUID()}@fit.local`)
+  await page.getByLabel('Имя').fill(name)
+  await page.getByLabel('Email').fill(`${emailPrefix}-${projectName}-${randomUUID()}@fit.local`)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await expect(page).toHaveURL(/\/me$/)
@@ -44,9 +49,18 @@ async function createStandaloneLiveWorkout(page: import('@playwright/test').Page
   await page.getByLabel('Начальный вес, кг').fill('65')
   await page.getByLabel('Цель').fill('Тренироваться регулярно')
   await page.getByRole('button', { name: 'Создать карточку' }).click()
+}
+
+async function createStandaloneLiveWorkout(page: import('@playwright/test').Page, projectName: string) {
+  await createStandaloneClient(page, projectName, 'Live клиент', 'visual-live')
 
   await page.goto('/me/workouts')
-  await page.getByRole('link', { name: 'Добавить тренировку' }).click()
+  const emptyAction = page.getByRole('link', { name: 'Добавить тренировку' })
+  await expect(emptyAction).toHaveCount(1)
+  await expect(page.getByText('БЛИЖАЙШЕЕ')).toHaveCount(0)
+  await expect(page.getByText('РЕЗУЛЬТАТЫ')).toHaveCount(0)
+  await expect(page.locator('.empty')).toHaveCount(0)
+  await emptyAction.click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
@@ -71,8 +85,31 @@ test('current role home keeps its visual baseline', async ({ page }, testInfo) =
   await page.goto(trainer ? '/today' : '/me')
 
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  if (!trainer) await expect(page.getByText('Загружаем прогресс недели…')).toHaveCount(0)
   await expect(page.locator('.phone-frame')).toBeVisible()
   await expectVisualBaseline(page, 'role-home.png', [], true)
+})
+
+test('future standalone plan stays compact on client home', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Home uses mobile visual profiles')
+  await createStandaloneClient(page, `future-${testInfo.project.name}`)
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+  await page.goto('/workouts/new?date=2026-08-17')
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
+  await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
+  await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.getByLabel('Вес, подход 1').fill('40')
+  await page.getByLabel('Повторы, подход 1').fill('10')
+  await page.getByRole('button', { name: 'Сохранить план' }).click()
+
+  await page.goto('/me')
+  await expect(page.getByRole('heading', { name: 'Следующая тренировка' })).toBeVisible()
+  await expect(page.getByText('Завтра · без времени')).toBeVisible()
+  await expect(page.getByRole('link', { name: /Следующая тренировка/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Открыть план' })).toHaveCount(0)
+  await expectVisualBaseline(page, 'client-home-future-plan.png', [], true)
 })
 
 test('client key routes keep their visual baselines', async ({ page }, testInfo) => {
@@ -102,6 +139,7 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
 
   await page.goto('/me/workouts')
   await expect(page.getByRole('heading', { name: 'Мои тренировки' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Добавить тренировку' })).toBeVisible()
   await expectVisualBaseline(page, `client-workouts-${process.platform}.png`)
 })
 
@@ -135,7 +173,7 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await expectVisualBaseline(page, 'trainer-schedule.png')
 
   await page.goto(`/progress/${demoClientId}`)
-  await expect(page.getByRole('heading', { name: 'Прогресс' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Прогресс', exact: true })).toBeVisible()
   await expect(page.getByText('Анна Смирнова', { exact: true })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Тренировки за неделю' })).toBeVisible()
   await expect(page.getByLabel('ИИ-анализ тренировок')).toBeVisible()

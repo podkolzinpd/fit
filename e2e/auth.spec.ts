@@ -230,6 +230,12 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
     page.getByRole('button', { name: 'Сохранить' }).click(),
   ])
   const clientDetailUrl = page.url()
+  await page.getByRole('link', { name: 'История тренировок', exact: true }).click()
+  const emptyHistoryAction = page.getByRole('link', { name: 'Запланировать тренировку' })
+  await expect(emptyHistoryAction).toHaveCount(1)
+  await expect(emptyHistoryAction.locator('svg')).toHaveCount(0)
+  await expect(page.getByText('История пока пуста')).toHaveCount(0)
+  await page.goto(clientDetailUrl)
   await page.getByRole('link', { name: 'Запланировать тренировку' }).click()
   await expect(page.locator('.workout-header-meta')).toContainText('Связанный клиент')
   await expect(page.locator('.client-picker-trigger')).toHaveCount(0)

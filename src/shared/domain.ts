@@ -1,7 +1,7 @@
 import type { LocalDate } from './local-date'
 
 export type UUID = string
-export type WorkoutStatus = 'planned' | 'in_progress' | 'done'
+export type WorkoutStatus = 'planned' | 'in_progress' | 'done' | 'cancelled'
 export type Gender = 'male' | 'female'
 export type MuscleGroup = 'legs' | 'glutes' | 'chest' | 'back' | 'shoulders' | 'arms' | 'core' | 'cardio' | 'other'
 export type InputKind = 'strength' | 'distance' | 'reps' | 'duration'
@@ -148,6 +148,8 @@ export interface ExerciseSnapshot {
   secondaryMuscles?: string[]
   level?: string | null
   imageUrl?: string
+  /** Второй локальный кадр техники: конечное положение упражнения. */
+  motionImageUrl?: string
   instructions?: string[]
 }
 
@@ -280,6 +282,10 @@ export interface Workout {
   sessionRpe?: number
   wellbeing?: WorkoutWellbeing
   discomfort?: boolean
+  feedbackSubmittedAt?: string
+  clientQuestion?: string
+  clientQuestionAskedAt?: string
+  clientQuestionResolvedAt?: string
   hasPr?: boolean
   stageId: UUID | null
   stageTitle: string | null
@@ -287,8 +293,31 @@ export interface Workout {
   exercises: WorkoutExercise[]
 }
 
+export interface TrainerAttentionWorkout {
+  workoutId: UUID
+  clientId: UUID
+  clientName: string
+  workoutDate: LocalDate
+  clientQuestion?: string
+  clientQuestionAskedAt?: string
+  discomfort: boolean
+  clientComment?: string
+  feedbackSubmittedAt?: string
+  version: number
+}
+
+export interface ClientAttentionPreference {
+  clientId: UUID
+  snoozedUntil?: string
+}
+
 export interface WorkoutTrainerResponseDraft {
   reaction: TrainerReaction
+  review: string
+}
+
+export interface WorkoutQuestionAnswerDraft {
+  reaction?: TrainerReaction
   review: string
 }
 

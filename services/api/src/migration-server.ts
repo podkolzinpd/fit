@@ -5,6 +5,7 @@ import { runner } from 'node-pg-migrate'
 import { YandexIdentityClient } from './auth/yandex-identity.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
+import { DatabaseStageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
 import { DatabasePilotEnroller } from './db/yandex-pilot-enrollment.js'
 import { buildMigrationApp } from './migration-app.js'
 
@@ -35,7 +36,12 @@ const pilotEnrollmentEnabled = process.env.YANDEX_PILOT_ENROLLMENT_ENABLED === '
 if (pilotEnrollmentEnabled && process.env.APP_ENV !== 'stage') {
   throw new Error('Pilot enrollment can be enabled only in stage')
 }
-const pilotEnrollmentPool = pilotEnrollmentEnabled
+const stageWorkoutFixtureEnabled =
+  process.env.STAGE_WORKOUT_FIXTURES_ENABLED === 'true'
+if (stageWorkoutFixtureEnabled && process.env.APP_ENV !== 'stage') {
+  throw new Error('Stage workout fixtures can be enabled only in stage')
+}
+const privateFeaturePool = pilotEnrollmentEnabled || stageWorkoutFixtureEnabled
   ? new PgDatabasePool(databaseConfig)
   : undefined
 const yandexClientId = process.env.YANDEX_OAUTH_CLIENT_ID
@@ -44,15 +50,22 @@ if (pilotEnrollmentEnabled && yandexClientId === undefined) {
 }
 
 const app = buildMigrationApp({
-  ...(pilotEnrollmentPool === undefined || yandexClientId === undefined
+  ...(privateFeaturePool === undefined || yandexClientId === undefined
     ? {}
     : {
         pilotEnrollment: {
-          enroller: new DatabasePilotEnroller(pilotEnrollmentPool),
+          enroller: new DatabasePilotEnroller(privateFeaturePool),
           identityProvider: new YandexIdentityClient({
             expectedClientId: yandexClientId,
           }),
         },
+      }),
+  ...(privateFeaturePool === undefined || !stageWorkoutFixtureEnabled
+    ? {}
+    : {
+        stageWorkoutFixture: new DatabaseStageWorkoutFixtureLoader(
+          privateFeaturePool,
+        ),
       }),
   runMigrations: async () => {
     const migrations = await runner({
@@ -70,8 +83,8 @@ const app = buildMigrationApp({
   },
 })
 
-if (pilotEnrollmentPool !== undefined) {
-  app.addHook('onClose', async () => pilotEnrollmentPool.end())
+if (privateFeaturePool !== undefined) {
+  app.addHook('onClose', async () => privateFeaturePool.end())
 }
 
 try {

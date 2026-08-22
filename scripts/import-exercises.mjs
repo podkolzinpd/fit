@@ -1,9 +1,9 @@
 // Импортёр библиотеки упражнений из Free Exercise DB (yuhonas), лицензия
 // Unlicense / public domain: https://github.com/yuhonas/free-exercise-db
 //
-// Отбирает ~120 популярных силовых упражнений с покрытием всех групп мышц,
-// маппит детальные мышцы/оборудование в нашу модель, скачивает по одной
-// картинке (JPG-фото позы) в public/exercises/ и генерирует
+// Отбирает 451 популярное силовое упражнение с покрытием всех групп мышц,
+// маппит детальные мышцы/оборудование в нашу модель, скачивает начальный и
+// конечный кадры техники (JPG-фото поз) в public/exercises/ и генерирует
 // src/shared/system-exercises.generated.ts.
 //
 // Запускать вручную: `node scripts/import-exercises.mjs`. Результат
@@ -60,6 +60,18 @@ const projectRoot = new URL('..', import.meta.url)
 const imagesDir = new URL('public/exercises/', projectRoot)
 const generatedFile = new URL('src/shared/system-exercises.generated.ts', projectRoot)
 const baseGeneratedFile = new URL('src/shared/system-exercises.base.generated.ts', projectRoot)
+
+async function mapConcurrent(items, concurrency, worker) {
+  const results = new Array(items.length)
+  let nextIndex = 0
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex++
+      results[index] = await worker(items[index])
+    }
+  }))
+  return results
+}
 
 // Наши 49 базовых упражнений: ref -> аналог в Free Exercise DB (id) + русское
 // имя в формате «Название (Оборудование)». Из аналога берём картинку,
@@ -823,26 +835,29 @@ async function main() {
   console.log(`Отобрано ${picked.length} упражнений. Скачиваю картинки...`)
   await mkdir(fileURLToPath(imagesDir), { recursive: true })
 
-  const rows = []
-  for (const ex of picked) {
+  const rows = (await mapConcurrent(picked, 10, async (ex) => {
     const ref = `fedb-${ex.id.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`
     // Дубли наших базовых — пропускаем. Названия берём из словаря перевода;
     // если перевода нет — это новое упражнение вне набора, пропускаем.
-    if (DEDUP_REFS.has(ref)) continue
+    if (DEDUP_REFS.has(ref)) return null
     const name = TRANSLATIONS[ref]
-    if (!name) { console.warn(`  нет перевода, пропуск: ${ref} (${ex.name})`); continue }
+    if (!name) { console.warn(`  нет перевода, пропуск: ${ref} (${ex.name})`); return null }
 
     const imageName = `${ref}.jpg`
+    const motionImageName = `${ref}-end.jpg`
     const response = await fetch(RAW_IMAGES + ex.images[0])
-    if (!response.ok) { console.warn(`  пропуск (нет картинки): ${ex.name}`); continue }
-    const buffer = Buffer.from(await response.arrayBuffer())
-    await writeFile(new URL(imageName, imagesDir), buffer)
+    const motionResponse = ex.images[1] && await fetch(RAW_IMAGES + ex.images[1])
+    if (!response.ok || !motionResponse?.ok) { console.warn(`  пропуск (нет двух кадров): ${ex.name}`); return null }
+    await Promise.all([
+      writeFile(new URL(imageName, imagesDir), Buffer.from(await response.arrayBuffer())),
+      writeFile(new URL(motionImageName, imagesDir), Buffer.from(await motionResponse.arrayBuffer())),
+    ])
 
     const detail = ex.primaryMuscles[0]
     const secondary = (ex.secondaryMuscles ?? []).map(muscleLabelFor)
     const fix = RECLASSIFY[ref] ?? {}
     const muscleGroup = fix.muscleGroup ?? muscleGroupFor(detail)
-    rows.push({
+    return {
       source: 'system',
       ref,
       name,
@@ -854,9 +869,10 @@ async function main() {
       secondaryMuscles: secondary,
       level: ex.level ?? null,
       imageUrl: `/exercises/${imageName}`,
+      motionImageUrl: `/exercises/${motionImageName}`,
       instructions: INSTRUCTIONS_RU[ref] ?? defaultRussianInstructions(name, ex),
-    })
-  }
+    }
+  })).filter(Boolean)
 
   const header = `// АВТОГЕНЕРАЦИЯ — не редактировать вручную.\n` +
     `// Источник: Free Exercise DB (yuhonas), лицензия Unlicense / public domain.\n` +
@@ -891,12 +907,18 @@ async function generateBase(byId) {
       const ex = byId[match.id]
       if (!ex) { console.warn(`  аналог не найден: ${base.ref} -> ${match.id}`); rows.push(base); continue }
       const imageName = `base-${base.ref}.jpg`
+      const motionImageName = `base-${base.ref}-end.jpg`
       const response = await fetch(RAW_IMAGES + ex.images[0])
-      if (response.ok) {
-        await writeFile(new URL(imageName, imagesDir), Buffer.from(await response.arrayBuffer()))
+      const motionResponse = ex.images[1] && await fetch(RAW_IMAGES + ex.images[1])
+      if (response.ok && motionResponse?.ok) {
+        await Promise.all([
+          writeFile(new URL(imageName, imagesDir), Buffer.from(await response.arrayBuffer())),
+          writeFile(new URL(motionImageName, imagesDir), Buffer.from(await motionResponse.arrayBuffer())),
+        ])
         row.imageUrl = `/exercises/${imageName}`
+        row.motionImageUrl = `/exercises/${motionImageName}`
       } else {
-        console.warn(`  нет картинки: ${base.ref}`)
+        console.warn(`  нет двух кадров: ${base.ref}`)
       }
       row.equipment = equipmentLabelFor(ex.equipment)
       row.equipmentRef = ex.equipment
@@ -916,12 +938,18 @@ async function generateBase(byId) {
       if (match.imageId) {
         const source = byId[match.imageId]
         const imageName = `base-${base.ref}.jpg`
+        const motionImageName = `base-${base.ref}-end.jpg`
         const response = source && await fetch(RAW_IMAGES + source.images[0])
-        if (response && response.ok) {
-          await writeFile(new URL(imageName, imagesDir), Buffer.from(await response.arrayBuffer()))
+        const motionResponse = source?.images[1] && await fetch(RAW_IMAGES + source.images[1])
+        if (response?.ok && motionResponse?.ok) {
+          await Promise.all([
+            writeFile(new URL(imageName, imagesDir), Buffer.from(await response.arrayBuffer())),
+            writeFile(new URL(motionImageName, imagesDir), Buffer.from(await motionResponse.arrayBuffer())),
+          ])
           row.imageUrl = `/exercises/${imageName}`
+          row.motionImageUrl = `/exercises/${motionImageName}`
         } else {
-          console.warn(`  нет картинки-аналога: ${base.ref} (${match.imageId})`)
+          console.warn(`  нет двух кадров аналога: ${base.ref} (${match.imageId})`)
         }
       }
     }

@@ -1,4 +1,4 @@
-// schema-sha256: f58ac461b31cc4a156b9e85e40311f4102f02218a5d1131817f35a7abe2ca5ae
+// schema-sha256: 052262fd468f8b593bbb626c9305687f4c5370bc192e5a9d758ea70b10452bda
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -440,6 +440,7 @@ export type Database = {
       client_trainers: {
         Row: {
           alias: string | null
+          attention_snoozed_until: string | null
           client_id: string
           joined_at: string
           note: string | null
@@ -448,6 +449,7 @@ export type Database = {
         }
         Insert: {
           alias?: string | null
+          attention_snoozed_until?: string | null
           client_id: string
           joined_at?: string
           note?: string | null
@@ -456,6 +458,7 @@ export type Database = {
         }
         Update: {
           alias?: string | null
+          attention_snoozed_until?: string | null
           client_id?: string
           joined_at?: string
           note?: string | null
@@ -947,12 +950,16 @@ export type Database = {
         Row: {
           client_comment: string | null
           client_id: string
+          client_question: string | null
+          client_question_asked_at: string | null
+          client_question_resolved_at: string | null
           completed_at: string | null
           created_at: string
           created_by: string | null
           deleted_at: string | null
           discomfort: boolean | null
           end_time: string | null
+          feedback_submitted_at: string | null
           id: string
           notes: string | null
           session_rpe: number | null
@@ -974,12 +981,16 @@ export type Database = {
         Insert: {
           client_comment?: string | null
           client_id: string
+          client_question?: string | null
+          client_question_asked_at?: string | null
+          client_question_resolved_at?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
           discomfort?: boolean | null
           end_time?: string | null
+          feedback_submitted_at?: string | null
           id?: string
           notes?: string | null
           session_rpe?: number | null
@@ -1001,12 +1012,16 @@ export type Database = {
         Update: {
           client_comment?: string | null
           client_id?: string
+          client_question?: string | null
+          client_question_asked_at?: string | null
+          client_question_resolved_at?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
           discomfort?: boolean | null
           end_time?: string | null
+          feedback_submitted_at?: string | null
           id?: string
           notes?: string | null
           session_rpe?: number | null
@@ -1084,6 +1099,23 @@ export type Database = {
         Args: { p_expected_version: number; p_goal_id: string }
         Returns: undefined
       }
+      ask_workout_question: {
+        Args: {
+          p_expected_version: number
+          p_question: string
+          p_workout_id: string
+        }
+        Returns: number
+      }
+      answer_workout_question: {
+        Args: {
+          p_expected_version: number
+          p_reaction: string | null
+          p_review: string
+          p_workout_id: string
+        }
+        Returns: number
+      }
       authorize_client_mutation: {
         Args: { p_allow_owner: boolean; p_client_id: string }
         Returns: string
@@ -1094,6 +1126,10 @@ export type Database = {
       }
       can_access_client: { Args: { p_client_id: string }; Returns: boolean }
       can_read_workout: { Args: { p_workout_id: string }; Returns: boolean }
+      cancel_planned_workout: {
+        Args: { p_expected_version: number; p_workout_id: string }
+        Returns: number
+      }
       claim_client_invitation: { Args: { p_code: string }; Returns: string }
       confirm_live_set: {
         Args: { p_expected_version: number; p_set_id: string }
@@ -1269,6 +1305,21 @@ export type Database = {
           workout_id: string
         }[]
       }
+      list_trainer_attention_workouts: {
+        Args: never
+        Returns: {
+          client_comment: string | null
+          client_id: string
+          client_name: string
+          client_question: string | null
+          client_question_asked_at: string | null
+          discomfort: boolean | null
+          feedback_submitted_at: string | null
+          version: number
+          workout_date: string
+          workout_id: string
+        }[]
+      }
       list_workout_personal_records: {
         Args: { p_workout_id: string }
         Returns: {
@@ -1336,6 +1387,19 @@ export type Database = {
         }
         Returns: number
       }
+      reschedule_workout: {
+        Args: {
+          p_expected_version: number
+          p_start_time: string | null
+          p_workout_date: string
+          p_workout_id: string
+        }
+        Returns: number
+      }
+      resolve_workout_question: {
+        Args: { p_expected_version: number; p_workout_id: string }
+        Returns: number
+      }
       revoke_client_invitation: {
         Args: { p_invitation_id: string }
         Returns: undefined
@@ -1388,6 +1452,10 @@ export type Database = {
           p_workout_id: string
         }
         Returns: number
+      }
+      snooze_client_attention: {
+        Args: { p_client_id: string }
+        Returns: string
       }
       soft_delete_progress: {
         Args: { p_expected_version: number; p_progress_id: string }

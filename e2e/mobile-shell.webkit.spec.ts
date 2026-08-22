@@ -49,6 +49,31 @@ async function expectOverflowMenuAboveBars(page: Page) {
   expect(await menu.evaluate((element) => window.getComputedStyle(element).opacity)).toBe('1')
 }
 
+test('iPhone: поиск и фильтры каталога не перекрывают друг друга', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await page.getByRole('button', { name: 'Выбрать упражнения вручную' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
+
+  const search = page.getByLabel('Поиск упражнения')
+  await search.focus()
+  await expect(search).toBeFocused()
+  await page.getByRole('button', { name: 'Фильтры' }).click()
+  await expect(search).not.toBeFocused()
+  await page.getByLabel('Группа мышц').selectOption('legs')
+  await expect(page.getByRole('button', { name: 'Фильтры 1' })).toBeVisible()
+
+  await search.focus()
+  await expect(page.getByLabel('Группа мышц')).toBeHidden()
+  await expect(page.getByRole('button', { name: 'Фильтры 1' })).toBeVisible()
+  await search.fill('присед')
+  await expect(page.locator('.picker-list-meta').getByText(/\d+ упражнени(?:е|я|й)/)).toBeVisible()
+  await expect(page.getByRole('button', { name: /Присед/ }).first()).toBeInViewport()
+  await expectNoHorizontalOverflow(page)
+})
+
 test('iPhone: поля бега не перекрываются в быстрой проверке тренера на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
@@ -1109,7 +1134,7 @@ test('iPhone: частично завершённая тренировка по�
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: пропущенный план предлагает записать результат или перенести тренировку', async ({ page }, testInfo) => {
+test('iPhone: прошлый план предлагает нейтральный выбор и сохраняет решение', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const clientName = await createIsolatedClient(page, testInfo)
   await page.goto('/workouts/new')
@@ -1120,20 +1145,38 @@ test('iPhone: пропущенный план предлагает записа�
   await page.getByLabel('Повторы, подход 1').fill('10')
   await page.getByRole('button', { name: 'Сохранить' }).click()
 
-  await expect(page.locator('.workout-detail-page .badge.skipped')).toHaveText('Пропущена')
+  await expect(page.locator('.workout-detail-page .workout-status-decision')).toHaveText('План')
   await expect(page.getByRole('button', { name: 'Начать тренировку' })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Записать результат' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Перенести тренировку' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Выбрать действие' })).toBeVisible()
   await expectNoHorizontalOverflow(page)
-  await page.screenshot({ path: testInfo.outputPath('missed-workout-actions-390.png'), fullPage: true })
+  const coachmark = page.getByRole('status').filter({ hasText: 'План можно закрыть спокойно' })
+  if (await coachmark.isVisible()) await coachmark.getByRole('button', { name: 'Понятно' }).click()
+  await page.getByRole('button', { name: 'Выбрать действие' }).click()
+  const actions = page.getByRole('dialog', { name: 'Действия с планом' })
+  await expect(actions.getByRole('button', { name: 'Записать результат' })).toBeVisible()
+  await expect(actions.getByRole('button', { name: 'Перенести тренировку' })).toBeVisible()
+  await expect(actions.getByRole('button', { name: 'Тренировка не состоялась' })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('past-workout-actions-390.png'), fullPage: true })
 
-  await page.getByRole('link', { name: 'Перенести тренировку' }).click()
-  await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]+\/edit$/)
-  await expect(page.getByLabel('Дата')).toHaveValue('2026-08-01')
-  await page.goBack()
+  await page.setViewportSize({ width: 430, height: 932 })
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('past-workout-actions-430.png'), fullPage: true })
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('past-workout-actions-trainer-1440.png'), fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
 
-  await page.getByRole('button', { name: 'Записать результат' }).click()
-  await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]+\/live$/)
+  await actions.getByRole('button', { name: 'Тренировка не состоялась' }).click()
+  await page.getByRole('alertdialog', { name: /Сохранить как «Не состоялась»/ }).getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.locator('.workout-detail-page .workout-status-cancelled')).toHaveText('Не состоялась')
+  await page.getByRole('button', { name: 'Вернуть в план' }).click()
+  const restore = page.getByRole('dialog', { name: 'Вернуть тренировку в план' })
+  const futureDate = new Date()
+  futureDate.setDate(futureDate.getDate() + 7)
+  await restore.getByLabel('Новая дата').fill(futureDate.toISOString().slice(0, 10))
+  await restore.getByLabel('Время').fill('09:30')
+  await restore.getByRole('button', { name: 'Вернуть в план' }).click()
+  await expect(page.locator('.workout-detail-page .workout-status-planned')).toHaveText('План')
 })
 
 test('iPhone: разные плановые подходы не выдаются за результат', async ({ page }, testInfo) => {

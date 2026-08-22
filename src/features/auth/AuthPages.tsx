@@ -4,7 +4,9 @@ import { authRepository } from '../../data/repositories/auth.repository'
 import {
   yandexPilotRepository,
   type YandexPilotClient,
+  type YandexPilotConnections as YandexPilotConnectionsData,
   type YandexPilotSession,
+  type YandexPilotTrainingData as YandexPilotTrainingDataState,
 } from '../../data/repositories/yandex-pilot.repository'
 import { useAuth } from '../../app/auth-context'
 import { getYandexIdPilotConfig, trainerHomePath } from '../../app/feature-flags'
@@ -12,6 +14,8 @@ import { ProfileIcon } from '../../shared/icons'
 import { AsyncView, Field } from '../../shared/ui'
 import type { AccountRole } from '../../shared/domain'
 import { consumeYandexAuthorizationCallback, createYandexAuthorizationUrl } from './yandex-pilot-oauth'
+import { YandexPilotConnections } from './YandexPilotConnections'
+import { YandexPilotTrainingData } from './YandexPilotTrainingData'
 
 type Mode = 'login' | 'register'
 
@@ -76,6 +80,12 @@ export function YandexPilotCallbackPage() {
   const [clients, setClients] = useState<YandexPilotClient[] | null>(null)
   const [clientsLoading, setClientsLoading] = useState(false)
   const [clientsError, setClientsError] = useState<Error | null>(null)
+  const [connections, setConnections] = useState<YandexPilotConnectionsData | null>(null)
+  const [connectionsLoading, setConnectionsLoading] = useState(false)
+  const [connectionsError, setConnectionsError] = useState<Error | null>(null)
+  const [trainingData, setTrainingData] = useState<YandexPilotTrainingDataState | null>(null)
+  const [trainingDataLoading, setTrainingDataLoading] = useState(false)
+  const [trainingDataError, setTrainingDataError] = useState<Error | null>(null)
   const [error, setError] = useState<string | null>(null)
   const sessionRequest = useRef<Promise<YandexPilotSession> | null>(null)
 
@@ -89,6 +99,39 @@ export function YandexPilotCallbackPage() {
     } finally {
       setClientsLoading(false)
     }
+  }
+
+  async function loadConnections(targetApiBaseUrl: string, sessionToken: string): Promise<void> {
+    setConnectionsLoading(true)
+    setConnectionsError(null)
+    try {
+      setConnections(await yandexPilotRepository.listConnections(targetApiBaseUrl, sessionToken))
+    } catch (caught) {
+      setConnectionsError(caught instanceof Error ? caught : new Error('Не удалось загрузить связи.'))
+    } finally {
+      setConnectionsLoading(false)
+    }
+  }
+
+  async function loadTrainingData(targetApiBaseUrl: string, sessionToken: string): Promise<void> {
+    setTrainingDataLoading(true)
+    setTrainingDataError(null)
+    try {
+      setTrainingData(await yandexPilotRepository.listTrainingData(targetApiBaseUrl, sessionToken))
+    } catch (caught) {
+      setTrainingDataError(caught instanceof Error ? caught : new Error('Не удалось загрузить тренировки.'))
+    } finally {
+      setTrainingDataLoading(false)
+    }
+  }
+
+  async function refreshPilotData(): Promise<void> {
+    if (session === null || apiBaseUrl === null) return
+    await Promise.all([
+      loadClients(apiBaseUrl, session.session.token),
+      loadConnections(apiBaseUrl, session.session.token),
+      loadTrainingData(apiBaseUrl, session.session.token),
+    ])
   }
 
   useEffect(() => {
@@ -111,19 +154,29 @@ export function YandexPilotCallbackPage() {
         if (cancelled) return
         setSession(result)
         setClientsLoading(true)
-        try {
-          const resultClients = await yandexPilotRepository.listClients(
-            targetApiBaseUrl,
-            result.session.token,
-          )
-          if (!cancelled) setClients(resultClients)
-        } catch (caught) {
-          if (!cancelled) {
-            setClientsError(caught instanceof Error ? caught : new Error('Не удалось загрузить клиентов.'))
-          }
-        } finally {
-          if (!cancelled) setClientsLoading(false)
-        }
+        setConnectionsLoading(true)
+        setTrainingDataLoading(true)
+        const [clientsResult, connectionsResult, trainingDataResult] = await Promise.allSettled([
+          yandexPilotRepository.listClients(targetApiBaseUrl, result.session.token),
+          yandexPilotRepository.listConnections(targetApiBaseUrl, result.session.token),
+          yandexPilotRepository.listTrainingData(targetApiBaseUrl, result.session.token),
+        ])
+        if (cancelled) return
+        if (clientsResult.status === 'fulfilled') setClients(clientsResult.value)
+        else setClientsError(clientsResult.reason instanceof Error
+          ? clientsResult.reason
+          : new Error('Не удалось загрузить клиентов.'))
+        if (connectionsResult.status === 'fulfilled') setConnections(connectionsResult.value)
+        else setConnectionsError(connectionsResult.reason instanceof Error
+          ? connectionsResult.reason
+          : new Error('Не удалось загрузить связи.'))
+        if (trainingDataResult.status === 'fulfilled') setTrainingData(trainingDataResult.value)
+        else setTrainingDataError(trainingDataResult.reason instanceof Error
+          ? trainingDataResult.reason
+          : new Error('Не удалось загрузить тренировки.'))
+        setClientsLoading(false)
+        setConnectionsLoading(false)
+        setTrainingDataLoading(false)
       } catch (caught) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : 'Не удалось проверить Yandex ID.')
       }
@@ -142,13 +195,13 @@ export function YandexPilotCallbackPage() {
       <p className="eyebrow">YANDEX ID · ПИЛОТ</p>
       <h1>{session ? 'Доступ подтверждён' : error ? 'Не удалось войти' : 'Проверяем доступ'}</h1>
       <p className="muted">{session
-        ? 'Yandex ID связан с тестовым профилем. Данные открыты только для чтения.'
+        ? 'Yandex ID связан с тестовым профилем. В пилоте можно управлять связями и приглашениями.'
         : error ?? 'Проверяем Yandex ID и доступ к изолированному stage…'}</p>
     </header>
     {session && <section className="compact stack yandex-pilot-profile" aria-label="Профиль пилота">
       <div><span>Профиль</span><strong>{fullName}</strong></div>
       <div><span>Роль</span><strong>{session.profile.accountRole === 'trainer' ? 'Тренер' : 'Клиент'}</strong></div>
-      <div><span>Режим</span><strong>Только чтение</strong></div>
+      <div><span>Режим</span><strong>Ограниченный пилот</strong></div>
     </section>}
     {session?.profile.accountRole === 'trainer' && <section className="yandex-pilot-clients" aria-labelledby="yandex-pilot-clients-title">
       <div className="yandex-pilot-section-head">
@@ -173,6 +226,21 @@ export function YandexPilotCallbackPage() {
         </div>
       </AsyncView>
     </section>}
+    {session && <YandexPilotTrainingData
+      data={trainingData}
+      error={trainingDataError}
+      loading={trainingDataLoading}
+      onRetry={() => void loadTrainingData(config.apiBaseUrl, session.session.token)}
+    />}
+    {session && <YandexPilotConnections
+      apiBaseUrl={config.apiBaseUrl}
+      clients={clients}
+      connections={connections}
+      error={connectionsError}
+      loading={connectionsLoading}
+      onRefresh={refreshPilotData}
+      session={session}
+    />}
     <Link className="auth-back-link" to="/auth">Вернуться ко входу</Link>
   </main>
 }

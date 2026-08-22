@@ -50,9 +50,16 @@ The following remain unchanged during the foundation phase:
 7. [In progress] Port the current domain contract in the dependency order below.
    The first slice adds a short-lived hashed pilot session and the trainer's
    tenant-scoped read-only client list without unlocking the main application.
-   The remaining scope
-   now includes timezone, optimistic concurrency, actor attribution, running
-   metrics, feedback/reactions and the derived progress/chronicle reads added
+   The membership and invitation slices expose guarded read/write lifecycle
+   commands without changing production routing. The current read-only workout
+   slice adds custom exercises and the nested workout/exercise/set aggregate,
+   including duration, distance and RPE, behind the same pilot session. Its
+   stage gate loads deterministic synthetic rows through the private runner,
+   issues a 15-minute smoke session and verifies the nested response through
+   the deployed runtime role. Repeated deploys do not duplicate fixtures, no
+   production or Supabase data is read, and the token is not printed. The
+   remaining scope includes optimistic concurrency, actor attribution, Live
+   semantics, feedback/reactions and the derived progress/chronicle reads added
    after the foundation migrations.
 8. Rehearse full tenant migration at least twice. Cut over one isolated tenant
    cohort only after all data it can mutate is migrated and writes are frozen
@@ -154,9 +161,11 @@ mapping and rollout assignment remain mandatory application gates.
 ## Current main parity impact
 
 The private stage readiness gate applied foundation migrations `000001` through
-`000003`. The auth/profile slice adds `000004_yandex_identity_rollout`; product
-work merged after the foundation still expands the contract required before a
-production tenant can be switched.
+`000003`. The auth/profile and session slices add
+`000004_yandex_identity_rollout` and `000005_yandex_pilot_sessions`; the
+read-only connections slice adds `000006_client_invitations_read_model`.
+Product work merged after the foundation still expands the contract required
+before a production tenant can be switched.
 
 Port the current `main` behavior in this order:
 
@@ -186,6 +195,10 @@ lock, and the API revision changes only after migration success. Connection
 Manager supplies the separate owner/runtime passwords directly; application
 database URL secrets are not recreated for each release. A failed API readiness
 check restores the previous image, while migration history remains forward-only.
+For the workout read model, the same gate also loads a bounded stage-only
+synthetic fixture after migration and calls `/v1/training-data` with an
+ephemeral session after the candidate revision is deployed. A failed nested
+aggregate or RLS check follows the existing API rollback path.
 
 A production pilot cannot start after only profiles and memberships have been
 ported. Every mutable and shared domain reachable by that tenant cohort must
