@@ -187,7 +187,7 @@ export async function readAccessibleTrainingData(
         workout.client_id,
         client.full_name as client_name,
         workout.created_by,
-        workout.workout_date,
+        workout.workout_date::text as workout_date,
         workout.start_time,
         workout.end_time,
         workout.status,

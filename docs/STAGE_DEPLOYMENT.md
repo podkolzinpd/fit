@@ -200,6 +200,13 @@ Only that preview branch receives the three pilot build variables:
 `VITE_YANDEX_OAUTH_CLIENT_ID`, and `VITE_YANDEX_API_BASE_URL` pointing to the
 stage API. Do not add them to Production or to every Preview deployment.
 
+`.github/workflows/sync-yandex-stage-preview.yml` merges every verified `main`
+push into `codex/yandex-id-stage-pilot`. Vercel therefore rebuilds the same
+branch-scoped origin automatically; the OAuth callback and CORS allowlist do
+not need to change after normal merges. The workflow never force-pushes. A
+merge conflict stops synchronization visibly instead of replacing either
+branch.
+
 The browser sends the short-lived Fit pilot session in
 `X-Fit-Pilot-Session`, not in `Authorization`. Yandex Serverless Containers
 reserves `Authorization: Bearer ...` for Yandex IAM invocation tokens and can
@@ -211,7 +218,10 @@ The same session authorizes the read-only `GET /v1/clients` and
 `GET /v1/connections` endpoints. Connections include only memberships for
 clients accessible through PostgreSQL actor context and only active invitations
 created by that actor. Claimed, revoked and expired invitations are filtered in
-the database. Neither endpoint grants runtime writes.
+the database. Neither endpoint grants runtime writes. The stage delivery smoke
+calls both endpoints with the short-lived synthetic fixture session before a
+revision is accepted, so an unavailable clients or connections read model
+causes the automatic rollback path.
 
 ## 8. Enroll a stage pilot account
 

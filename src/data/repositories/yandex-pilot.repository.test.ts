@@ -31,6 +31,7 @@ const session = {
 }
 
 const CLIENT_ID = '6e577cc7-3b56-4a86-bc85-1ce2426ce249'
+const CUSTOM_EXERCISE_ID = 'b27d65d0-6221-47cb-91a0-8dfcc0a2ceba'
 
 const clients = {
   accessMode: 'read_only',
@@ -74,7 +75,14 @@ const connections = {
 
 const trainingData = {
   accessMode: 'read_only',
-  customExercises: [],
+  customExercises: [{
+    id: CUSTOM_EXERCISE_ID,
+    name: 'Тестовая тяга Yandex stage',
+    muscleGroup: 'back',
+    inputKind: 'strength',
+    archivedAt: null,
+    version: 1,
+  }],
   workouts: [{
     id: 'be3b5576-1f5f-4db1-944b-cd78f06aa73b',
     trainerId: session.profile.id,
@@ -89,7 +97,46 @@ const trainingData = {
     startedAt: '2026-08-20T12:00:00.000Z',
     completedAt: '2026-08-20T13:00:00.000Z',
     version: 1,
-    exercises: [],
+    exercises: [{
+      id: 'd40b742b-5d5b-41ab-91df-ed464414d034',
+      position: 0,
+      source: 'custom',
+      ref: `custom:${CUSTOM_EXERCISE_ID}`,
+      customExerciseId: CUSTOM_EXERCISE_ID,
+      name: 'Тестовая тяга Yandex stage',
+      muscleGroup: 'back',
+      inputKind: 'strength',
+      blockId: '8ffdb87b-078c-42d4-b6db-af8bc60f80f2',
+      blockType: 'single',
+      blockPreset: 'set',
+      blockRounds: 1,
+      restBetweenExercisesSec: 0,
+      restBetweenRoundsSec: 90,
+      restBetweenSetsSec: 90,
+      trainerComment: 'Проверка весов и повторов',
+      sets: [{
+        id: 'ea8efab5-0530-4660-9798-79901fcddfeb',
+        position: 0,
+        plan: {
+          weightKg: 40,
+          reps: 10,
+          durationMin: null,
+          durationSec: null,
+          distanceKm: null,
+          rpe: 7,
+        },
+        fact: {
+          weightKg: 42.5,
+          reps: 10,
+          durationMin: null,
+          durationSec: null,
+          distanceKm: null,
+          rpe: 8,
+        },
+        confirmedAt: '2026-08-20T12:30:00.000Z',
+        version: 1,
+      }],
+    }],
   }],
   hasMoreWorkouts: false,
 }
@@ -205,7 +252,7 @@ describe('yandexPilotRepository', () => {
       'https://stage.example.test',
       's'.repeat(43),
     )).resolves.toEqual({
-      customExercises: [],
+      customExercises: trainingData.customExercises,
       workouts: trainingData.workouts,
       hasMoreWorkouts: false,
     })
