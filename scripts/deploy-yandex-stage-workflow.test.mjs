@@ -7,6 +7,10 @@ const workflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-yandex-stage.yml'),
   'utf8',
 )
+const previewSyncWorkflow = readFileSync(
+  join(import.meta.dirname, '..', '.github', 'workflows', 'sync-yandex-stage-preview.yml'),
+  'utf8',
+)
 
 test('publishes the final yandex-stage result without restoring an approval gate', () => {
   assert.match(workflow, /^  publish_deployment:$/m)
@@ -22,7 +26,7 @@ test('publishes the final yandex-stage result without restoring an approval gate
   assert.doesNotMatch(workflow, /^    environment: yandex-stage$/m)
 })
 
-test('loads synthetic workout fixtures and verifies them through the runtime API', () => {
+test('loads synthetic fixtures and verifies every read model through the runtime API', () => {
   const migrationIndex = workflow.indexOf('- name: Apply all pending migrations')
   const fixtureIndex = workflow.indexOf('- name: Prepare idempotent stage workout fixture')
   const deployIndex = workflow.indexOf('- name: Deploy the API revision')
@@ -35,7 +39,24 @@ test('loads synthetic workout fixtures and verifies them through the runtime API
   assert.match(workflow, /\/stage\/fixtures\/workout-read-model/)
   assert.match(workflow, /chmod 600 stage-workout-fixture-response\.json/)
   assert.match(workflow, /X-Fit-Pilot-Session: \$fixture_token/)
+  assert.match(workflow, /\/v1\/clients/)
+  assert.match(workflow, /Тестовый клиент Yandex stage/)
+  assert.match(workflow, /\/v1\/connections/)
+  assert.match(workflow, /\.memberships \| any\(\.isRoot == true\)/)
   assert.match(workflow, /\/v1\/training-data/)
   assert.match(workflow, /\.accessMode == "read_only"/)
+  assert.match(workflow, /\.workoutDate == "2026-08-22"/)
   assert.doesNotMatch(workflow, /jq -r '\.session\.token'/)
+})
+
+test('syncs the stable Yandex preview from main without rewriting history', () => {
+  assert.match(previewSyncWorkflow, /^  push:\n    branches: \[main\]$/m)
+  assert.match(previewSyncWorkflow, /^  contents: write$/m)
+  assert.match(
+    previewSyncWorkflow,
+    /^  STAGE_PREVIEW_BRANCH: codex\/yandex-id-stage-pilot$/m,
+  )
+  assert.match(previewSyncWorkflow, /git merge --no-edit origin\/main/)
+  assert.match(previewSyncWorkflow, /git push origin "HEAD:\$STAGE_PREVIEW_BRANCH"/)
+  assert.doesNotMatch(previewSyncWorkflow, /--force(?:-with-lease)?/)
 })
