@@ -17,7 +17,12 @@ import { DatabasePilotClientsReader } from '../pilot-clients-reader.js'
 import { DatabasePilotConnectionsReader } from '../pilot-connections-reader.js'
 import { DatabasePilotSessionIssuer } from '../pilot-session.js'
 import { DatabasePilotTrainingDataReader } from '../pilot-training-data-reader.js'
+import type { PlannedWorkoutDraft } from '../planned-workout-request.js'
 import { readAccessibleTrainingData } from '../training-data.js'
+import {
+  savePlannedWorkout,
+  softDeletePlannedWorkout,
+} from '../workout-commands.js'
 import { withActorTransaction } from './actor-transaction.js'
 import { PgDatabasePool } from './pg-pool.js'
 import {
@@ -90,6 +95,23 @@ interface InvitationSecretRow extends QueryResultRow {
 
 interface CountRow extends QueryResultRow {
   count: number
+}
+
+interface WorkoutAuditRow extends QueryResultRow {
+  created_by: string | null
+  deleted_at: Date | null
+  notes: string | null
+  updated_by: string | null
+  version: string
+}
+
+interface ChildAuditRow extends QueryResultRow {
+  updated_by: string | null
+}
+
+interface WorkoutPrivilegeRow extends QueryResultRow {
+  direct_writes: boolean
+  mutation_execute: boolean
 }
 
 function requireLocalTestDatabaseUrl(): string {
@@ -1150,6 +1172,235 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         )
         expect(rows.rows).toEqual([{ count: 1 }])
       }
+    })
+
+    it('saves planned aggregates atomically with versions and actor attribution', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const draft: PlannedWorkoutDraft = {
+        id: null,
+        clientId: CLIENT_ID,
+        workoutDate: '2026-08-25',
+        startTime: '10:00',
+        endTime: '11:00',
+        notes: 'Первый versioned план',
+        exercises: [{
+          position: 0,
+          source: 'custom',
+          ref: `custom:${ROOT_CUSTOM_EXERCISE_ID}`,
+          customExerciseId: ROOT_CUSTOM_EXERCISE_ID,
+          name: 'Тяга саней',
+          muscleGroup: 'legs',
+          inputKind: 'strength',
+          blockId: 'ad2c5ddb-5dc8-4cdb-b463-8b0f03f8f2cb',
+          blockType: 'single',
+          blockPreset: 'set',
+          blockRounds: 1,
+          restBetweenExercisesSec: 0,
+          restBetweenRoundsSec: 90,
+          restBetweenSetsSec: 90,
+          trainerComment: 'Контроль техники',
+          sets: [{
+            position: 0,
+            weightKg: 40,
+            reps: 10,
+            durationMin: null,
+            durationSec: null,
+            distanceKm: null,
+            rpe: 7,
+          }],
+        }],
+      }
+
+      const privileges = await ownerPool.query<WorkoutPrivilegeRow>(`
+        select
+          has_table_privilege(
+            'fit_api',
+            'public.workouts',
+            'INSERT, UPDATE, DELETE'
+          ) as direct_writes,
+          has_function_privilege(
+            'fit_api',
+            'public.save_planned_workout(jsonb,bigint)',
+            'EXECUTE'
+          ) as mutation_execute
+      `)
+      expect(privileges.rows).toEqual([{
+        direct_writes: false,
+        mutation_execute: true,
+      }])
+
+      const created = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => savePlannedWorkout(client, draft, null),
+      )
+      expect(created.version).toBe(1)
+
+      const updatedDraft: PlannedWorkoutDraft = {
+        ...draft,
+        id: created.id,
+        notes: 'Обновлённый versioned план',
+        exercises: [{
+          ...draft.exercises[0]!,
+          sets: [{ ...draft.exercises[0]!.sets[0]!, weightKg: 42.5 }],
+        }],
+      }
+      const updated = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => savePlannedWorkout(client, updatedDraft, created.version),
+      )
+      expect(updated).toEqual({ id: created.id, version: 2 })
+
+      const invalidDraft: PlannedWorkoutDraft = {
+        ...updatedDraft,
+        notes: 'Эта запись должна откатиться',
+        exercises: [{
+          ...updatedDraft.exercises[0]!,
+          customExerciseId: OUTSIDE_TRAINER_ID,
+        }],
+      }
+      await expect(withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => savePlannedWorkout(client, invalidDraft, updated.version),
+      )).rejects.toMatchObject({ failure: 'invalid' })
+
+      await expect(withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => savePlannedWorkout(
+          client,
+          { ...updatedDraft, notes: 'Устаревшая запись' },
+          created.version,
+        ),
+      )).rejects.toMatchObject({ failure: 'conflict' })
+
+      await expect(withActorTransaction(
+        runtimePool,
+        OUTSIDE_TRAINER_ID,
+        (client) => savePlannedWorkout(client, updatedDraft, updated.version),
+      )).rejects.toMatchObject({ failure: 'forbidden' })
+      await expect(withActorTransaction(
+        runtimePool,
+        MEMBER_TRAINER_ID,
+        (client) => savePlannedWorkout(client, updatedDraft, updated.version),
+      )).rejects.toMatchObject({ failure: 'not_found' })
+
+      const workoutRows = await ownerPool.query<WorkoutAuditRow>(
+        `
+          select created_by, deleted_at, notes, updated_by, version
+          from public.workouts
+          where id = $1
+        `,
+        [created.id],
+      )
+      expect(workoutRows.rows).toEqual([{
+        created_by: ACTOR_ID,
+        deleted_at: null,
+        notes: 'Обновлённый versioned план',
+        updated_by: ACTOR_ID,
+        version: '2',
+      }])
+
+      const exerciseRows = await ownerPool.query<ChildAuditRow>(
+        'select updated_by from public.workout_exercises where workout_id = $1',
+        [created.id],
+      )
+      expect(exerciseRows.rows).toEqual([{ updated_by: ACTOR_ID }])
+      const setRows = await ownerPool.query<ChildAuditRow>(
+        `
+          select workout_set.updated_by
+          from public.workout_sets workout_set
+          join public.workout_exercises exercise
+            on exercise.id = workout_set.workout_exercise_id
+          where exercise.workout_id = $1
+        `,
+        [created.id],
+      )
+      expect(setRows.rows).toEqual([{ updated_by: ACTOR_ID }])
+
+      const deletedVersion = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => softDeletePlannedWorkout(client, created.id, updated.version),
+      )
+      expect(deletedVersion).toBe(3)
+
+      const actorData = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        readAccessibleTrainingData,
+      )
+      expect(actorData.workouts.some((workout) => workout.id === created.id)).toBe(false)
+      await ownerPool.query('delete from public.workouts where id = $1', [created.id])
+    })
+
+    it('attributes a self-managed client write and strips trainer-only comments', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const created = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => savePlannedWorkout(client, {
+          id: null,
+          clientId: CLIENT_ID,
+          workoutDate: '2026-08-26',
+          startTime: null,
+          endTime: null,
+          notes: 'Самостоятельная тренировка',
+          exercises: [{
+            position: 0,
+            source: 'system',
+            ref: 'running',
+            customExerciseId: null,
+            name: 'Бег',
+            muscleGroup: 'cardio',
+            inputKind: 'distance',
+            blockId: 'bd3c6eec-6ed9-4dec-8348-48c43c6acb48',
+            blockType: 'single',
+            blockPreset: 'set',
+            blockRounds: 1,
+            restBetweenExercisesSec: 0,
+            restBetweenRoundsSec: 90,
+            restBetweenSetsSec: 60,
+            trainerComment: 'Клиент не может назначить комментарий тренера',
+            sets: [],
+          }],
+        }, null),
+      )
+
+      const workoutRows = await ownerPool.query<WorkoutAuditRow & {
+        trainer_id: string
+      }>(
+        `
+          select created_by, deleted_at, notes, trainer_id, updated_by, version
+          from public.workouts
+          where id = $1
+        `,
+        [created.id],
+      )
+      expect(workoutRows.rows).toEqual([{
+        created_by: OTHER_ACTOR_ID,
+        deleted_at: null,
+        notes: 'Самостоятельная тренировка',
+        trainer_id: ACTOR_ID,
+        updated_by: OTHER_ACTOR_ID,
+        version: '1',
+      }])
+      const comments = await ownerPool.query<QueryResultRow & {
+        trainer_comment: string | null
+      }>(
+        'select trainer_comment from public.workout_exercises where workout_id = $1',
+        [created.id],
+      )
+      expect(comments.rows).toEqual([{ trainer_comment: null }])
+      await ownerPool.query('delete from public.workouts where id = $1', [created.id])
     })
   },
 )

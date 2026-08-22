@@ -76,6 +76,15 @@ async function seedTrainerFixture(
 
   await client.query(
     `
+      delete from public.workouts
+      where client_id = $1
+        and notes like 'Синтетическая проверка versioned mutation%'
+    `,
+    [ids.clientId],
+  )
+
+  await client.query(
+    `
       insert into public.clients (
         id, trainer_id, full_name, gender, age_years, height_cm, goal
       ) values (
