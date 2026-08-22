@@ -48,12 +48,14 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - Клиент с подтверждением отключает только дополнительного тренера;
   дополнительный тренер с подтверждением выходит сам. Root membership защищён,
   а cross-tenant actor не может выполнить ни одну mutation.
-- Следующий read-only checkpoint переносит custom exercises и workout aggregate
+- Read-only checkpoint переносит custom exercises и workout aggregate
   `workout → exercises → sets`, включая duration, distance и RPE. Клиент видит
   собственную историю, а подключённый тренер — только свои назначения и
   завершённые самостоятельные тренировки клиента; посторонний actor не видит
   строки. Callback показывает loading, empty, error/retry и success без перехода
-  в основной интерфейс.
+  в основной интерфейс. Stage delivery идемпотентно добавляет ограниченный
+  синтетический fixture без пользовательских данных и проверяет его через
+  короткоживущую сессию, runtime API и RLS до принятия новой revision.
 - Checkpoint не считается полной миграционной parity: упражнения, тренировки и
   подходы пока перенесены только как read model; mutations, Live и остальные
   tenant-данные ещё не перенесены. Production продолжает использовать Supabase,

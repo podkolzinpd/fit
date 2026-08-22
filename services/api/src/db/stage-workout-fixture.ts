@@ -1,0 +1,290 @@
+import { createHash } from 'node:crypto'
+
+import type { QueryResultRow } from 'pg'
+
+import { createPilotSessionToken } from '../auth/pilot-session-token.js'
+import type { DatabaseClient, DatabasePool } from './types.js'
+
+const FIXTURE_NAMESPACE = 'fit-yandex-stage-workout-read-model-v1'
+const MAX_STAGE_TRAINERS = 25
+const PILOT_SESSION_TTL_MS = 15 * 60 * 1_000
+
+interface TrainerRow extends QueryResultRow {
+  profile_id: string
+}
+
+export interface StageWorkoutFixtureIds {
+  clientId: string
+  customExerciseId: string
+  workoutId: string
+  strengthExerciseId: string
+  runningExerciseId: string
+  strengthSetId: string
+  runningSetId: string
+}
+
+export interface StageWorkoutFixtureResult {
+  seededTrainerCount: number
+  sessionToken: string
+  sessionExpiresAt: string
+}
+
+export interface StageWorkoutFixtureLoader {
+  load(): Promise<StageWorkoutFixtureResult>
+}
+
+function deterministicUuid(seed: string): string {
+  const hex = createHash('sha256')
+    .update(`${FIXTURE_NAMESPACE}:${seed}`, 'utf8')
+    .digest('hex')
+  const variant = ((Number.parseInt(hex[16] ?? '0', 16) & 0x3) | 0x8)
+    .toString(16)
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    `5${hex.slice(13, 16)}`,
+    `${variant}${hex.slice(17, 20)}`,
+    hex.slice(20, 32),
+  ].join('-')
+}
+
+export const STAGE_SMOKE_PROFILE_ID = deterministicUuid('smoke-profile')
+
+export function stageWorkoutFixtureIds(
+  trainerId: string,
+): StageWorkoutFixtureIds {
+  return {
+    clientId: deterministicUuid(`${trainerId}:client`),
+    customExerciseId: deterministicUuid(`${trainerId}:custom-exercise`),
+    workoutId: deterministicUuid(`${trainerId}:workout`),
+    strengthExerciseId: deterministicUuid(`${trainerId}:strength-exercise`),
+    runningExerciseId: deterministicUuid(`${trainerId}:running-exercise`),
+    strengthSetId: deterministicUuid(`${trainerId}:strength-set`),
+    runningSetId: deterministicUuid(`${trainerId}:running-set`),
+  }
+}
+
+async function seedTrainerFixture(
+  client: DatabaseClient,
+  trainerId: string,
+): Promise<void> {
+  const ids = stageWorkoutFixtureIds(trainerId)
+
+  await client.query(
+    `
+      insert into public.clients (
+        id, trainer_id, full_name, gender, age_years, height_cm, goal
+      ) values (
+        $1, $2, 'Тестовый клиент Yandex stage', 'female', 30, 170,
+        'Проверка read-only переноса'
+      )
+      on conflict (id) do nothing
+    `,
+    [ids.clientId, trainerId],
+  )
+  await client.query(
+    `
+      insert into public.client_trainers (client_id, trainer_id, alias)
+      values ($1, $2, 'Тестовый клиент Yandex stage')
+      on conflict (client_id, trainer_id) do nothing
+    `,
+    [ids.clientId, trainerId],
+  )
+  await client.query(
+    `
+      insert into public.custom_exercises (
+        id, trainer_id, name, muscle_group, input_kind
+      ) values (
+        $1, $2, 'Тестовая тяга Yandex stage', 'back', 'strength'
+      )
+      on conflict (id) do nothing
+    `,
+    [ids.customExerciseId, trainerId],
+  )
+  await client.query(
+    `
+      insert into public.workouts (
+        id, trainer_id, client_id, created_by, workout_date, start_time,
+        end_time, status, notes, started_at, completed_at
+      ) values (
+        $1, $2, $3, $2, date '2026-08-22', time '10:00', time '11:00',
+        'done', 'Синтетическая проверка переноса Yandex stage',
+        timestamptz '2026-08-22 07:00:00+00',
+        timestamptz '2026-08-22 08:00:00+00'
+      )
+      on conflict (id) do nothing
+    `,
+    [ids.workoutId, trainerId, ids.clientId],
+  )
+  await client.query(
+    `
+      insert into public.workout_exercises (
+        id, workout_id, trainer_id, client_id, position, exercise_source,
+        exercise_ref, custom_exercise_id, exercise_name, muscle_group,
+        input_kind, block_id, block_type, block_preset, block_rounds,
+        rest_between_sets_sec, trainer_comment
+      ) values (
+        $1, $3, $4, $5, 0, 'custom', $6, $2,
+        'Тестовая тяга Yandex stage', 'back', 'strength', $7,
+        'single', 'set', 1, 90, 'Проверка весов и повторов'
+      ), (
+        $8, $3, $4, $5, 1, 'system', 'running', null,
+        'Бег', 'cardio', 'distance', $9,
+        'single', 'interval', 1, 60, 'Проверка времени и дистанции'
+      )
+      on conflict (id) do nothing
+    `,
+    [
+      ids.strengthExerciseId,
+      ids.customExerciseId,
+      ids.workoutId,
+      trainerId,
+      ids.clientId,
+      `custom:${ids.customExerciseId}`,
+      deterministicUuid(`${trainerId}:strength-block`),
+      ids.runningExerciseId,
+      deterministicUuid(`${trainerId}:running-block`),
+    ],
+  )
+  await client.query(
+    `
+      insert into public.workout_sets (
+        id, workout_exercise_id, trainer_id, client_id, position,
+        plan_weight_kg, plan_reps, plan_rpe,
+        fact_weight_kg, fact_reps, fact_rpe, confirmed_at
+      ) values (
+        $1, $2, $3, $4, 0, 40, 10, 7, 42.5, 10, 8,
+        timestamptz '2026-08-22 07:30:00+00'
+      )
+      on conflict (id) do nothing
+    `,
+    [ids.strengthSetId, ids.strengthExerciseId, trainerId, ids.clientId],
+  )
+  await client.query(
+    `
+      insert into public.workout_sets (
+        id, workout_exercise_id, trainer_id, client_id, position,
+        plan_duration_sec, plan_distance_km, plan_rpe,
+        fact_duration_sec, fact_distance_km, fact_rpe, confirmed_at
+      ) values (
+        $1, $2, $3, $4, 0, 1800, 5, 7, 1740, 5.2, 8,
+        timestamptz '2026-08-22 08:00:00+00'
+      )
+      on conflict (id) do nothing
+    `,
+    [ids.runningSetId, ids.runningExerciseId, trainerId, ids.clientId],
+  )
+}
+
+export class DatabaseStageWorkoutFixtureLoader
+implements StageWorkoutFixtureLoader {
+  constructor(
+    private readonly pool: DatabasePool,
+    private readonly now: () => Date = () => new Date(),
+  ) {}
+
+  async load(): Promise<StageWorkoutFixtureResult> {
+    const connection = await this.pool.connect()
+    let transactionStarted = false
+
+    try {
+      await connection.query('begin')
+      transactionStarted = true
+      await connection.query(
+        'select pg_advisory_xact_lock(hashtextextended($1, 0))',
+        [FIXTURE_NAMESPACE],
+      )
+
+      await connection.query(
+        `
+          insert into public.profiles (id, first_name, account_role)
+          values ($1, 'Stage smoke', 'trainer')
+          on conflict (id) do nothing
+        `,
+        [STAGE_SMOKE_PROFILE_ID],
+      )
+      await connection.query(
+        `
+          insert into public.trainers (profile_id)
+          values ($1)
+          on conflict (profile_id) do nothing
+        `,
+        [STAGE_SMOKE_PROFILE_ID],
+      )
+      await connection.query(
+        `
+          insert into app_private.profile_rollout_assignments (
+            profile_id, target_backend, access_mode, enabled
+          ) values ($1, 'yandex', 'read_only', true)
+          on conflict (profile_id) do update set
+            target_backend = excluded.target_backend,
+            access_mode = excluded.access_mode,
+            enabled = excluded.enabled
+        `,
+        [STAGE_SMOKE_PROFILE_ID],
+      )
+
+      const trainers = await connection.query<TrainerRow>(
+        `
+          select trainer.profile_id
+          from public.trainers trainer
+          join app_private.profile_rollout_assignments rollout
+            on rollout.profile_id = trainer.profile_id
+          where rollout.target_backend = 'yandex'
+            and rollout.access_mode = 'read_only'
+            and rollout.enabled
+          order by trainer.profile_id
+          limit $1
+        `,
+        [MAX_STAGE_TRAINERS + 1],
+      )
+      if (trainers.length > MAX_STAGE_TRAINERS) {
+        throw new Error('Stage fixture trainer limit exceeded')
+      }
+
+      for (const trainer of trainers) {
+        await seedTrainerFixture(connection, trainer.profile_id)
+      }
+
+      const session = createPilotSessionToken()
+      const expiresAt = new Date(this.now().getTime() + PILOT_SESSION_TTL_MS)
+      await connection.query(
+        `
+          delete from app_private.yandex_pilot_sessions
+          where profile_id = $1 and expires_at <= now()
+        `,
+        [STAGE_SMOKE_PROFILE_ID],
+      )
+      await connection.query(
+        `
+          insert into app_private.yandex_pilot_sessions (
+            token_sha256, profile_id, expires_at
+          ) values ($1, $2, $3)
+        `,
+        [session.sha256, STAGE_SMOKE_PROFILE_ID, expiresAt],
+      )
+
+      await connection.query('commit')
+      return {
+        seededTrainerCount: trainers.length,
+        sessionToken: session.raw,
+        sessionExpiresAt: expiresAt.toISOString(),
+      }
+    } catch (error) {
+      if (transactionStarted) {
+        try {
+          await connection.query('rollback')
+        } catch (rollbackError) {
+          throw new AggregateError(
+            [error, rollbackError],
+            'Stage fixture transaction and rollback both failed',
+            { cause: rollbackError },
+          )
+        }
+      }
+      throw error
+    } finally {
+      connection.release()
+    }
+  }
+}

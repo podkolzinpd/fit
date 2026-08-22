@@ -10,6 +10,7 @@ import {
   type PilotAccountRole,
   type PilotEnroller,
 } from './db/yandex-pilot-enrollment.js'
+import type { StageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
 
 interface PilotEnrollmentOptions {
   enroller: PilotEnroller
@@ -20,6 +21,7 @@ interface BuildMigrationAppOptions {
   logger?: boolean
   pilotEnrollment?: PilotEnrollmentOptions
   runMigrations: () => Promise<readonly string[]>
+  stageWorkoutFixture?: StageWorkoutFixtureLoader
 }
 
 function readEnrollmentRequest(body: unknown): {
@@ -86,6 +88,25 @@ export function buildMigrationApp(
           return reply.code(503).send({ status: 'enrollment_unavailable' })
         }
         return reply.code(500).send({ status: 'enrollment_failed' })
+      }
+    })
+  }
+
+  if (options.stageWorkoutFixture !== undefined) {
+    const fixture = options.stageWorkoutFixture
+    app.post('/stage/fixtures/workout-read-model', async (_request, reply) => {
+      try {
+        const result = await fixture.load()
+        return {
+          status: 'fixture_ready',
+          seededTrainerCount: result.seededTrainerCount,
+          session: {
+            token: result.sessionToken,
+            expiresAt: result.sessionExpiresAt,
+          },
+        }
+      } catch {
+        return reply.code(500).send({ status: 'fixture_failed' })
       }
     })
   }

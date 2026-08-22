@@ -48,6 +48,75 @@ describe('migration endpoint', () => {
   })
 })
 
+describe('stage workout fixture', () => {
+  it('does not expose the fixture route unless explicitly enabled', async () => {
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/fixtures/workout-read-model',
+    })
+
+    expect(response.statusCode).toBe(404)
+  })
+
+  it('returns an ephemeral session without exposing database details', async () => {
+    const load = vi.fn().mockResolvedValue({
+      seededTrainerCount: 2,
+      sessionToken: 's'.repeat(43),
+      sessionExpiresAt: '2026-08-22T12:15:00.000Z',
+    })
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+      stageWorkoutFixture: { load },
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/fixtures/workout-read-model',
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      status: 'fixture_ready',
+      seededTrainerCount: 2,
+      session: {
+        token: 's'.repeat(43),
+        expiresAt: '2026-08-22T12:15:00.000Z',
+      },
+    })
+    expect(load).toHaveBeenCalledOnce()
+  })
+
+  it('keeps fixture failures generic', async () => {
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+      stageWorkoutFixture: {
+        load: () => Promise.reject(
+          new Error('postgresql://owner:secret@database'),
+        ),
+      },
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/fixtures/workout-read-model',
+    })
+
+    expect(response.statusCode).toBe(500)
+    expect(response.json()).toEqual({ status: 'fixture_failed' })
+    expect(response.body).not.toContain('secret')
+  })
+})
+
 describe('stage Yandex ID pilot enrollment', () => {
   const subjectHash = 'd'.repeat(64)
 

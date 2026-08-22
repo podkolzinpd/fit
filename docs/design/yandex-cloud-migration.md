@@ -53,7 +53,11 @@ The following remain unchanged during the foundation phase:
    The membership and invitation slices expose guarded read/write lifecycle
    commands without changing production routing. The current read-only workout
    slice adds custom exercises and the nested workout/exercise/set aggregate,
-   including duration, distance and RPE, behind the same pilot session. The
+   including duration, distance and RPE, behind the same pilot session. Its
+   stage gate loads deterministic synthetic rows through the private runner,
+   issues a 15-minute smoke session and verifies the nested response through
+   the deployed runtime role. Repeated deploys do not duplicate fixtures, no
+   production or Supabase data is read, and the token is not printed. The
    remaining scope includes optimistic concurrency, actor attribution, Live
    semantics, feedback/reactions and the derived progress/chronicle reads added
    after the foundation migrations.
@@ -191,6 +195,10 @@ lock, and the API revision changes only after migration success. Connection
 Manager supplies the separate owner/runtime passwords directly; application
 database URL secrets are not recreated for each release. A failed API readiness
 check restores the previous image, while migration history remains forward-only.
+For the workout read model, the same gate also loads a bounded stage-only
+synthetic fixture after migration and calls `/v1/training-data` with an
+ephemeral session after the candidate revision is deployed. A failed nested
+aggregate or RLS check follows the existing API rollback path.
 
 A production pilot cannot start after only profiles and memberships have been
 ported. Every mutable and shared domain reachable by that tenant cohort must

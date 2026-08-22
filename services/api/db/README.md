@@ -36,6 +36,15 @@ visibility: a client reads its own workouts, connected trainers read their own
 assignments plus completed client-authored history, and unrelated actors read
 nothing. Runtime insert, update and delete grants remain closed.
 
+Stage delivery uses the private migration runner to load one deterministic,
+synthetic workout fixture for each enabled read-only trainer plus an isolated
+smoke actor. This route is disabled outside `APP_ENV=stage`, accepts no user
+data and is unreachable without the runner IAM binding. Repeated delivery does
+not duplicate domain rows. It returns one 15-minute session only to the current
+CI job; CI keeps the response file private and verifies the nested aggregate
+through the public runtime API and its `fit_api` RLS role before accepting the
+new revision.
+
 ## Roles
 
 - `fit_owner` owns the `fit` database and runs migrations only;
