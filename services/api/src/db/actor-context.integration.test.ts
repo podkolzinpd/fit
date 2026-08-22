@@ -6,6 +6,13 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { hashPilotSessionToken } from '../auth/pilot-session-token.js'
 import { readAccessibleConnections } from '../connections.js'
+import {
+  claimClientInvitation,
+  createClientInvitation,
+  leaveClientSpace,
+  removeClientTrainer,
+  revokeClientInvitation,
+} from '../connection-commands.js'
 import { DatabasePilotClientsReader } from '../pilot-clients-reader.js'
 import { DatabasePilotConnectionsReader } from '../pilot-connections-reader.js'
 import { DatabasePilotSessionIssuer } from '../pilot-session.js'
@@ -32,6 +39,8 @@ const MEMBER_INVITATION_ID = '443850c1-ad40-4604-83c4-35e4111c7d88'
 const EXPIRED_INVITATION_ID = '8f371423-5120-4cee-9e5e-004878bcc870'
 const REVOKED_INVITATION_ID = '01587b1f-70ee-4541-b974-2e7a2b9344bb'
 const CLAIMED_INVITATION_ID = 'f1ce4a50-6863-499c-afde-2e124eb11e2f'
+const LIFECYCLE_CLIENT_ID = 'e94770f7-369f-4c0d-a9ad-e18466469483'
+const LIFECYCLE_CLIENT_ACTOR_ID = '0237c0bf-5dc5-46cd-ab26-951ddfb49949'
 const PILOT_SUBJECT_HASH = 'b'.repeat(64)
 const OUTSIDE_SUBJECT_HASH = 'c'.repeat(64)
 const ENROLLMENT_SUBJECT_HASH = 'e'.repeat(64)
@@ -58,6 +67,11 @@ interface ClientRow extends QueryResultRow {
 
 interface SessionDigestRow extends QueryResultRow {
   token_sha256: string
+}
+
+interface InvitationSecretRow extends QueryResultRow {
+  code_hash: string
+  revoked_at: Date | null
 }
 
 function requireLocalTestDatabaseUrl(): string {
@@ -121,6 +135,17 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         createMigrationsSchema: true,
         verbose: false,
       })
+
+      // Keep the persistent local Podman database deterministic across reruns.
+      // The lifecycle scenario recreates these fixtures later in the suite.
+      await ownerPool.query(
+        'delete from public.clients where id = $1',
+        [LIFECYCLE_CLIENT_ID],
+      )
+      await ownerPool.query(
+        'delete from public.profiles where id = $1',
+        [LIFECYCLE_CLIENT_ACTOR_ID],
+      )
 
       await ownerPool.query(
         `
@@ -579,6 +604,135 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           [CLIENT_ID],
         )
       }
+    })
+
+    it('runs the invitation lifecycle through guarded database commands', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      await ownerPool.query(
+        `
+          insert into public.profiles (id, first_name, account_role)
+          values ($1, 'Lifecycle client', 'client')
+          on conflict (id) do update set
+            first_name = excluded.first_name,
+            account_role = excluded.account_role
+        `,
+        [LIFECYCLE_CLIENT_ACTOR_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into public.clients (id, trainer_id, full_name)
+          values ($1, $2, 'Lifecycle card')
+          on conflict (id) do update set
+            trainer_id = excluded.trainer_id,
+            auth_user_id = null,
+            archived_at = null
+        `,
+        [LIFECYCLE_CLIENT_ID, ACTOR_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into public.client_trainers (client_id, trainer_id)
+          values ($1, $2)
+          on conflict (client_id, trainer_id) do nothing
+        `,
+        [LIFECYCLE_CLIENT_ID, ACTOR_ID],
+      )
+
+      const firstInvitation = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => createClientInvitation(client, LIFECYCLE_CLIENT_ID, 'client'),
+      )
+      const secondInvitation = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => createClientInvitation(client, LIFECYCLE_CLIENT_ID, 'client'),
+      )
+
+      expect(firstInvitation.code).toMatch(/^[A-F0-9]{12}$/)
+      expect(secondInvitation.code).toMatch(/^[A-F0-9]{12}$/)
+      const storedInvitations = await ownerPool.query<InvitationSecretRow>(
+        `
+          select code_hash, revoked_at
+          from public.client_invitations
+          where id in ($1, $2)
+          order by created_at, id
+        `,
+        [firstInvitation.id, secondInvitation.id],
+      )
+      expect(storedInvitations.rows).toHaveLength(2)
+      expect(storedInvitations.rows.every((row) => /^[0-9a-f]{64}$/.test(row.code_hash))).toBe(true)
+      expect(storedInvitations.rows.some((row) => row.code_hash === firstInvitation.code)).toBe(false)
+      expect(storedInvitations.rows.filter((row) => row.revoked_at !== null)).toHaveLength(1)
+
+      await expect(
+        withActorTransaction(runtimePool, MEMBER_TRAINER_ID, (client) =>
+          claimClientInvitation(client, secondInvitation.code)),
+      ).rejects.toMatchObject({ failure: 'forbidden' })
+
+      await expect(
+        withActorTransaction(runtimePool, LIFECYCLE_CLIENT_ACTOR_ID, (client) =>
+          claimClientInvitation(client, secondInvitation.code)),
+      ).resolves.toBe(LIFECYCLE_CLIENT_ID)
+      await expect(
+        withActorTransaction(runtimePool, LIFECYCLE_CLIENT_ACTOR_ID, (client) =>
+          claimClientInvitation(client, secondInvitation.code)),
+      ).rejects.toMatchObject({ failure: 'not_found' })
+
+      const trainerInvitation = await withActorTransaction(
+        runtimePool,
+        LIFECYCLE_CLIENT_ACTOR_ID,
+        (client) => createClientInvitation(client, LIFECYCLE_CLIENT_ID, 'trainer'),
+      )
+      await expect(
+        withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+          revokeClientInvitation(client, trainerInvitation.id)),
+      ).rejects.toMatchObject({ failure: 'not_found' })
+      await expect(
+        withActorTransaction(runtimePool, LIFECYCLE_CLIENT_ACTOR_ID, (client) =>
+          revokeClientInvitation(client, trainerInvitation.id)),
+      ).resolves.toBeUndefined()
+      await expect(
+        withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
+          claimClientInvitation(client, trainerInvitation.code)),
+      ).rejects.toMatchObject({ failure: 'not_found' })
+
+      const claimableTrainerInvitation = await withActorTransaction(
+        runtimePool,
+        LIFECYCLE_CLIENT_ACTOR_ID,
+        (client) => createClientInvitation(client, LIFECYCLE_CLIENT_ID, 'trainer'),
+      )
+      await expect(
+        withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
+          claimClientInvitation(client, claimableTrainerInvitation.code)),
+      ).resolves.toBe(LIFECYCLE_CLIENT_ID)
+
+      await expect(
+        withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+          removeClientTrainer(client, LIFECYCLE_CLIENT_ID, OUTSIDE_TRAINER_ID)),
+      ).rejects.toMatchObject({ failure: 'forbidden' })
+      await expect(
+        withActorTransaction(runtimePool, LIFECYCLE_CLIENT_ACTOR_ID, (client) =>
+          removeClientTrainer(client, LIFECYCLE_CLIENT_ID, ACTOR_ID)),
+      ).rejects.toMatchObject({ failure: 'invalid' })
+      await expect(
+        withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          leaveClientSpace(client, LIFECYCLE_CLIENT_ID)),
+      ).rejects.toMatchObject({ failure: 'invalid' })
+      await expect(
+        withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
+          leaveClientSpace(client, LIFECYCLE_CLIENT_ID)),
+      ).resolves.toBeUndefined()
+
+      const outsideAccess = await withActorTransaction(
+        runtimePool,
+        OUTSIDE_TRAINER_ID,
+        (client) => client.query('select id from public.clients where id = $1', [LIFECYCLE_CLIENT_ID]),
+      )
+      expect(outsideAccess).toEqual([])
     })
 
     it('enforces relationship foreign keys and keeps runtime writes closed', async () => {

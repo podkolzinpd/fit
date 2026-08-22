@@ -5,6 +5,7 @@ import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
 import { DatabasePilotClientsReader } from './pilot-clients-reader.js'
 import { DatabasePilotConnectionsReader } from './pilot-connections-reader.js'
+import { DatabasePilotConnectionsWriter } from './pilot-connections-writer.js'
 import { DatabasePilotProfileReader } from './pilot-profile-reader.js'
 import { DatabasePilotSessionIssuer } from './pilot-session.js'
 
@@ -61,6 +62,10 @@ const pilotConnectionsReader =
   databasePool === undefined
     ? undefined
     : new DatabasePilotConnectionsReader(databasePool)
+const pilotConnectionsWriter =
+  databasePool === undefined
+    ? undefined
+    : new DatabasePilotConnectionsWriter(databasePool)
 const app = buildApp(
   {
     allowedOrigins: parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS),
@@ -69,6 +74,7 @@ const app = buildApp(
     ...(oauthCodeProvider === undefined ? {} : { oauthCodeProvider }),
     ...(pilotClientsReader === undefined ? {} : { pilotClientsReader }),
     ...(pilotConnectionsReader === undefined ? {} : { pilotConnectionsReader }),
+    ...(pilotConnectionsWriter === undefined ? {} : { pilotConnectionsWriter }),
     ...(pilotProfileReader === undefined ? {} : { pilotProfileReader }),
     ...(pilotSessionIssuer === undefined ? {} : { pilotSessionIssuer }),
   },
