@@ -283,6 +283,7 @@ jobs:
             ))
             and (.workouts | any(
               .notes == "Синтетическая проверка переноса Yandex stage"
+              and .workoutDate == "2026-08-22"
               and .status == "done"
               and (.exercises | any(
                 .source == "custom"

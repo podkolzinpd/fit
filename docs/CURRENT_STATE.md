@@ -64,6 +64,9 @@
 - Pilot callback показывает доступные тренировки и собственные упражнения с
   loading, empty, error/retry и success states. Production repositories и
   основные страницы по-прежнему используют только Supabase.
+- Workout read model сериализует PostgreSQL `date` явно как `YYYY-MM-DD`, без
+  timezone-сдвига. Полный synthetic aggregate и stage smoke проверяют это поле
+  вместе со всеми вложенными упражнениями и подходами.
 - Реальный invite → join → leave/remove smoke на двух разрешённых Yandex ID
   остаётся внешней stage-проверкой; локальный lifecycle и его RLS-матрица зелёные.
 - Новая cost-sensitive, destructive или identity-инфраструктура требует
@@ -72,8 +75,8 @@
 ## Проверки активной ветки
 
 - Существующая локальная PostgreSQL 17 в Podman приняла fixture дважды без
-  дубликатов; 12 actor/RLS/session/domain tests зелёные, новые образы не
-  скачивались.
+  дубликатов; 12 actor/RLS/session/domain tests проверяют полный training
+  contract и зелёные, новые образы не скачивались.
 - Полный `npm run check` зелёный: 630 frontend tests, coverage, lint, TypeScript,
   DB types, iOS permissions, 34 infra policy tests, 56 API tests и production
   build. Supabase `db:reset` и 568 pgTAP SQL/RLS tests зелёные.

@@ -19,6 +19,8 @@ export interface StageWorkoutFixtureIds {
   workoutId: string
   strengthExerciseId: string
   runningExerciseId: string
+  strengthBlockId: string
+  runningBlockId: string
   strengthSetId: string
   runningSetId: string
 }
@@ -59,6 +61,8 @@ export function stageWorkoutFixtureIds(
     workoutId: deterministicUuid(`${trainerId}:workout`),
     strengthExerciseId: deterministicUuid(`${trainerId}:strength-exercise`),
     runningExerciseId: deterministicUuid(`${trainerId}:running-exercise`),
+    strengthBlockId: deterministicUuid(`${trainerId}:strength-block`),
+    runningBlockId: deterministicUuid(`${trainerId}:running-block`),
     strengthSetId: deterministicUuid(`${trainerId}:strength-set`),
     runningSetId: deterministicUuid(`${trainerId}:running-set`),
   }
@@ -141,9 +145,9 @@ async function seedTrainerFixture(
       trainerId,
       ids.clientId,
       `custom:${ids.customExerciseId}`,
-      deterministicUuid(`${trainerId}:strength-block`),
+      ids.strengthBlockId,
       ids.runningExerciseId,
-      deterministicUuid(`${trainerId}:running-block`),
+      ids.runningBlockId,
     ],
   )
   await client.query(

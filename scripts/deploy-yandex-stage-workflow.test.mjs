@@ -45,6 +45,7 @@ test('loads synthetic fixtures and verifies every read model through the runtime
   assert.match(workflow, /\.memberships \| any\(\.isRoot == true\)/)
   assert.match(workflow, /\/v1\/training-data/)
   assert.match(workflow, /\.accessMode == "read_only"/)
+  assert.match(workflow, /\.workoutDate == "2026-08-22"/)
   assert.doesNotMatch(workflow, /jq -r '\.session\.token'/)
 })
 
