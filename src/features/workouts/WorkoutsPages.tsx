@@ -574,6 +574,7 @@ export function WorkoutDetailPage() {
   const [decisionSheet, setDecisionSheet] = useState<'actions' | 'reschedule' | null>(null)
   const [rescheduleDate, setRescheduleDate] = useState<LocalDate>(() => todayInTimeZone(actor?.timezone))
   const [rescheduleTime, setRescheduleTime] = useState('')
+  const [firstPlanInviteCode, setFirstPlanInviteCode] = useState<string | null>(null)
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   useClientRealtime(query.data?.clientId)
   // Этап тренировки: get() отдаёт stageId, название берём из цели клиента.
@@ -642,6 +643,10 @@ export function WorkoutDetailPage() {
     await invalidateWorkoutSurfaces()
   } })
   const question = useMutation({ mutationFn: (value: string) => workoutsRepository.askQuestion(query.data!, value), onSuccess: invalidateWorkoutSurfaces })
+  const firstPlanInvite = useMutation({
+    mutationFn: () => invitationsRepository.create(query.data!.clientId, 'client'),
+    onSuccess: setFirstPlanInviteCode,
+  })
   const workout = query.data
   const done = workout?.status === 'done'
   const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt) : null
@@ -649,7 +654,7 @@ export function WorkoutDetailPage() {
   const tonnage = workout ? workoutTonnage(workout) : 0
   const sets = workout?.exercises.flatMap((exercise) => exercise.sets) ?? []
   const completedSets = sets.filter((set) => set.confirmedAt).length
-  const navigationState = location.state as { justCompleted?: boolean; returnTo?: string } | null
+  const navigationState = location.state as { justCompleted?: boolean; returnTo?: string; firstPlanClient?: { id: string; fullName: string } } | null
   const justCompleted = done && navigationState?.justCompleted === true
   const clientMode = actor?.role === 'client'
   const clientOwned = clientMode && workout?.createdBy === actor.userId
@@ -693,6 +698,14 @@ export function WorkoutDetailPage() {
   }
   return <Page title="Тренировка" hideTitle className="workout-detail-page" back={backTo}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
+      {!clientMode && navigationState?.firstPlanClient && <section className="first-plan-success" aria-labelledby="first-plan-success-title">
+        <div><p className="eyebrow">ГОТОВО</p><h2 id="first-plan-success-title">Тренировка запланирована</h2><p>Первый план для {navigationState.firstPlanClient.fullName} готов.</p></div>
+        {firstPlanInviteCode ? <div className="first-plan-invite-code" role="status">
+          <span>Код приглашения</span><strong>{firstPlanInviteCode}</strong><small>Отправьте код спортсмену — после подключения он сразу увидит план.</small>
+        </div> : <button className="wide" disabled={firstPlanInvite.isPending} onClick={() => firstPlanInvite.mutate()}>{firstPlanInvite.isPending ? 'Создаём приглашение…' : 'Пригласить спортсмена'}</button>}
+        {firstPlanInvite.error && <p className="error" role="alert">{firstPlanInvite.error.message}</p>}
+        <Link className="button secondary wide" to="/today">Перейти на главную</Link>
+      </section>}
       {justCompleted && <section className="workout-completion" aria-labelledby="workout-completion-title">
         <span className="workout-completion-mark" aria-hidden="true">✓</span>
         <div>

@@ -1,4 +1,4 @@
-// schema-sha256: 052262fd468f8b593bbb626c9305687f4c5370bc192e5a9d758ea70b10452bda
+// schema-sha256: 7afb215558e801dcaf38bd8cddbfa122fe63e23c1667a8bc42ddc7d36b8fb8c0
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1142,6 +1142,10 @@ export type Database = {
       }
       create_own_client: { Args: { p_client: Json }; Returns: string }
       create_quick_client: { Args: { p_full_name: string }; Returns: string }
+      create_quick_own_client: {
+        Args: { p_full_name: string }
+        Returns: string
+      }
       delete_goal_stage: { Args: { p_stage_id: string }; Returns: undefined }
       finish_workout: {
         Args: { p_expected_version: number; p_workout_id: string }
