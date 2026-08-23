@@ -1,0 +1,162 @@
+name: Deploy production Yandex summary function
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-yandex-summary-function.yml'
+      - 'services/api/package.json'
+      - 'services/api/package-lock.json'
+      - 'services/api/src/legacy-summary/**'
+      - 'services/api/src/yandex-summary-function.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: production-yandex-summary-function
+  cancel-in-progress: false
+
+env:
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  SUMMARY_FUNCTION_NAME: fit-summarize-client-training
+  SUMMARY_RUNTIME_SA_NAME: fit-summarize-client-training
+  SUMMARY_LOCKBOX_NAME: fit-summarize-client-training-supabase
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+
+      - name: Build the Node function package
+        run: |
+          npm ci --prefix services/api
+          npm --prefix services/api run typecheck
+          npm --prefix services/api run test
+          npm --prefix services/api run build
+          rm -rf .yandex-summary-package
+          mkdir -p .yandex-summary-package
+          cp services/api/package.json services/api/package-lock.json .yandex-summary-package/
+          cp -R services/api/dist .yandex-summary-package/dist
+
+      - name: Install Yandex Cloud CLI
+        run: |
+          curl --fail --silent --show-error --location \
+            https://storage.yandexcloud.net/yandexcloud-yc/install.sh \
+            --output /tmp/install-yc.sh
+          bash /tmp/install-yc.sh -i "$HOME/yandex-cloud" -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Exchange GitHub OIDC token for Yandex Cloud IAM token
+        run: scripts/yandex-github-oidc.sh
+
+      - name: Copy current Supabase runtime credentials into Lockbox
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          yc config set token "$YC_TOKEN"
+          yc config set folder-id "$YC_FOLDER_ID"
+
+          api_keys=$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_ID/api-keys?reveal=true")
+          edge_secrets=$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_ID/secrets")
+
+          publishable_key=$(jq -er '[.[] | select(.type == "publishable" or .name == "anon") | .api_key] | first // empty' <<<"$api_keys")
+          service_role_key=$(jq -er '[.[] | select(.type == "secret" or .name == "service_role") | .api_key] | first // empty' <<<"$api_keys")
+          yandex_api_key=$(jq -er '.[] | select(.name == "YANDEX_CLOUD_API_KEY") | .value' <<<"$edge_secrets")
+          yandex_folder_id=$(jq -er '.[] | select(.name == "YANDEX_CLOUD_FOLDER_ID") | .value' <<<"$edge_secrets")
+          yandex_model_id=$(jq -er '[.[] | select(.name == "YANDEX_CLOUD_MODEL_ID") | .value] | first // "yandexgpt"' <<<"$edge_secrets")
+
+          for value in "$publishable_key" "$service_role_key" "$yandex_api_key"; do
+            echo "::add-mask::$value"
+          done
+          payload=$(jq -cn \
+            --arg supabase_url "https://$SUPABASE_PROJECT_ID.supabase.co" \
+            --arg publishable_key "$publishable_key" \
+            --arg service_role_key "$service_role_key" \
+            --arg yandex_api_key "$yandex_api_key" \
+            --arg yandex_folder_id "$yandex_folder_id" \
+            --arg yandex_model_id "$yandex_model_id" \
+            '[
+              {key:"SUPABASE_URL", text_value:$supabase_url},
+              {key:"SUPABASE_PUBLISHABLE_KEY", text_value:$publishable_key},
+              {key:"SUPABASE_SERVICE_ROLE_KEY", text_value:$service_role_key},
+              {key:"YANDEX_CLOUD_API_KEY", text_value:$yandex_api_key},
+              {key:"YANDEX_CLOUD_FOLDER_ID", text_value:$yandex_folder_id},
+              {key:"YANDEX_CLOUD_MODEL_ID", text_value:$yandex_model_id}
+            ]')
+
+          if lockbox_id=$(yc lockbox secret get --name "$SUMMARY_LOCKBOX_NAME" --format json | jq -er '.id' 2>/dev/null); then
+            printf '%s' "$payload" | yc lockbox secret add-version "$lockbox_id" --payload - >/dev/null
+          else
+            lockbox_id=$(printf '%s' "$payload" | yc lockbox secret create --name "$SUMMARY_LOCKBOX_NAME" --payload - --format json | jq -er '.id')
+          fi
+          echo "SUMMARY_LOCKBOX_ID=$lockbox_id" >> "$GITHUB_ENV"
+
+      - name: Create runtime identity and grant only required access
+        run: |
+          set -euo pipefail
+          if runtime_sa_id=$(yc iam service-account get --name "$SUMMARY_RUNTIME_SA_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id' 2>/dev/null); then
+            :
+          else
+            runtime_sa_id=$(yc iam service-account create --name "$SUMMARY_RUNTIME_SA_NAME" \
+              --description 'Runtime identity for production Fit training summaries' \
+              --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
+          fi
+          yc resource-manager folder add-access-binding "$YC_FOLDER_ID" \
+            --role ai.languageModels.user --service-account-id "$runtime_sa_id"
+          yc lockbox secret add-access-binding "$SUMMARY_LOCKBOX_ID" \
+            --role lockbox.payloadViewer --service-account-id "$runtime_sa_id"
+          echo "SUMMARY_RUNTIME_SA_ID=$runtime_sa_id" >> "$GITHUB_ENV"
+
+      - name: Create or update the public summary function
+        run: |
+          set -euo pipefail
+          if ! yc serverless function get --name "$SUMMARY_FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
+            yc serverless function create "$SUMMARY_FUNCTION_NAME" \
+              --description 'Production Fit training summary, backed by Supabase Auth and data' \
+              --folder-id "$YC_FOLDER_ID"
+          fi
+          yc serverless function version create \
+            --function-name "$SUMMARY_FUNCTION_NAME" \
+            --runtime nodejs22 \
+            --entrypoint dist/yandex-summary-function.handler \
+            --memory 1GB \
+            --execution-timeout 120s \
+            --service-account-id "$SUMMARY_RUNTIME_SA_ID" \
+            --source-path .yandex-summary-package \
+            --secret id="$SUMMARY_LOCKBOX_ID",key=SUPABASE_URL,environment-variable=SUPABASE_URL \
+            --secret id="$SUMMARY_LOCKBOX_ID",key=SUPABASE_PUBLISHABLE_KEY,environment-variable=SUPABASE_PUBLISHABLE_KEY \
+            --secret id="$SUMMARY_LOCKBOX_ID",key=SUPABASE_SERVICE_ROLE_KEY,environment-variable=SUPABASE_SERVICE_ROLE_KEY \
+            --secret id="$SUMMARY_LOCKBOX_ID",key=YANDEX_CLOUD_API_KEY,environment-variable=YANDEX_CLOUD_API_KEY \
+            --secret id="$SUMMARY_LOCKBOX_ID",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID \
+            --secret id="$SUMMARY_LOCKBOX_ID",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID
+          yc serverless function add-access-binding "$SUMMARY_FUNCTION_NAME" \
+            --role serverless.functions.invoker --all-users
+          function_url=$(yc serverless function get --name "$SUMMARY_FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.http_invoke_url')
+          echo "SUMMARY_FUNCTION_URL=$function_url" >> "$GITHUB_ENV"
+
+      - name: Smoke the deployed authentication gate
+        run: |
+          set -euo pipefail
+          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --request POST --header 'content-type: application/json' --data '{}' \
+            "$SUMMARY_FUNCTION_URL")
+          test "$status" = 401
+          printf '### Yandex summary function\n\n%s\n' "$SUMMARY_FUNCTION_URL" >> "$GITHUB_STEP_SUMMARY"
