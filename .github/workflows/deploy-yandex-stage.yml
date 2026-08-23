@@ -299,6 +299,122 @@ jobs:
               ))
             ))
           ' <<<"$training" >/dev/null
+          client_id=$(jq -er '
+            .clients[]
+            | select(.fullName == "Тестовый клиент Yandex stage")
+            | .id
+          ' <<<"$clients")
+          custom_exercise_id=$(jq -er '
+            .customExercises[]
+            | select(.name == "Тестовая тяга Yandex stage")
+            | .id
+          ' <<<"$training")
+          create_payload=$(jq -cn \
+            --arg client_id "$client_id" \
+            --arg custom_exercise_id "$custom_exercise_id" \
+            '{
+              clientId: $client_id,
+              workoutDate: "2026-08-25",
+              startTime: "10:00",
+              endTime: "11:00",
+              notes: "Синтетическая проверка versioned mutation",
+              exercises: [{
+                position: 0,
+                source: "custom",
+                ref: ("custom:" + $custom_exercise_id),
+                customExerciseId: $custom_exercise_id,
+                name: "Тестовая тяга Yandex stage",
+                muscleGroup: "back",
+                inputKind: "strength",
+                blockId: "11111111-1111-4111-8111-111111111111",
+                blockType: "single",
+                blockPreset: "set",
+                blockRounds: 1,
+                restBetweenExercisesSec: 0,
+                restBetweenRoundsSec: 90,
+                restBetweenSetsSec: 90,
+                trainerComment: "Stage mutation smoke",
+                sets: [{
+                  position: 0,
+                  weightKg: 40,
+                  reps: 10,
+                  durationMin: null,
+                  durationSec: null,
+                  distanceKm: null,
+                  rpe: 7
+                }]
+              }]
+            }')
+          created_file=$(mktemp)
+          created_status=$(curl --silent --show-error \
+            --output "$created_file" --write-out '%{http_code}' \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$create_payload" \
+            "${api_url%/}/v1/workouts")
+          test "$created_status" = 201
+          workout_id=$(jq -er '.workout.id' "$created_file")
+          created_version=$(jq -er '.workout.version' "$created_file")
+          test "$created_version" = 1
+          updated_payload=$(jq -c \
+            --argjson expected_version "$created_version" \
+            '.notes = "Синтетическая проверка versioned mutation updated"
+              | .expectedVersion = $expected_version' \
+            <<<"$create_payload")
+          updated_file=$(mktemp)
+          updated_status=$(curl --silent --show-error \
+            --output "$updated_file" --write-out '%{http_code}' \
+            --request PUT \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$updated_payload" \
+            "${api_url%/}/v1/workouts/$workout_id")
+          test "$updated_status" = 200
+          updated_version=$(jq -er '.workout.version' "$updated_file")
+          test "$updated_version" = 2
+          after_update=$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/training-data")
+          jq -e --arg workout_id "$workout_id" '
+            .workouts | any(
+              .id == $workout_id
+              and .version == 2
+              and .notes == "Синтетическая проверка versioned mutation updated"
+              and (.exercises | any(
+                .sets | any(.plan.weightKg == 40 and .plan.reps == 10)
+              ))
+            )
+          ' <<<"$after_update" >/dev/null
+          stale_status=$(curl --silent --show-error \
+            --output /dev/null --write-out '%{http_code}' \
+            --request PUT \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$updated_payload" \
+            "${api_url%/}/v1/workouts/$workout_id")
+          test "$stale_status" = 409
+          deleted=$(curl --fail --silent --show-error \
+            --request DELETE \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "{\"expectedVersion\":$updated_version}" \
+            "${api_url%/}/v1/workouts/$workout_id")
+          jq -e --arg workout_id "$workout_id" '
+            .workout.id == $workout_id and .workout.version == 3
+          ' <<<"$deleted" >/dev/null
+          after_delete=$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/training-data")
+          jq -e --arg workout_id "$workout_id" '
+            all(.workouts[]; .id != $workout_id)
+          ' <<<"$after_delete" >/dev/null
       - name: Roll back the API revision when readiness fails
         if: steps.smoke.outcome == 'failure' && steps.previous.outputs.revision_id != ''
         working-directory: infra/yandex

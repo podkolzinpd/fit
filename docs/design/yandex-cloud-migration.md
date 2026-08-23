@@ -56,11 +56,14 @@ The following remain unchanged during the foundation phase:
    including duration, distance and RPE, behind the same pilot session. Its
    stage gate loads deterministic synthetic rows through the private runner,
    issues a 15-minute smoke session and verifies the nested response through
-   the deployed runtime role. Repeated deploys do not duplicate fixtures, no
-   production or Supabase data is read, and the token is not printed. The
-   remaining scope includes optimistic concurrency, actor attribution, Live
-   semantics, feedback/reactions and the derived progress/chronicle reads added
-   after the foundation migrations.
+   the deployed runtime role. The planned-workout write slice adds atomic
+   create/update/soft-delete commands, optimistic versions and `created_by` /
+   `updated_by` attribution without granting the runtime direct table writes.
+   Its smoke verifies create, update, a stale-version conflict, delete and the
+   final read model. Repeated deploys do not duplicate fixtures, no production
+   or Supabase data is read, and the token is not printed. The remaining scope
+   includes Live conflict/retry semantics, feedback/reactions and the derived
+   progress/chronicle reads added after the foundation migrations.
 8. Rehearse full tenant migration at least twice. Cut over one isolated tenant
    cohort only after all data it can mutate is migrated and writes are frozen
    for the cutover window.

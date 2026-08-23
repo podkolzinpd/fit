@@ -24,8 +24,11 @@ import { PilotConnectionCommandError } from './connection-commands.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer, PilotSessionResponse } from './pilot-session.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
+import type { PilotWorkoutsWriter } from './pilot-workouts-writer.js'
+import type { PlannedWorkoutDraft } from './planned-workout-request.js'
 import type { ProfileResponse } from './profile.js'
 import type { PilotTrainingDataResponse } from './training-data.js'
+import { PilotWorkoutCommandError } from './workout-commands.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
@@ -58,6 +61,7 @@ describe('browser pilot CORS', () => {
     expect(preflight.statusCode).toBe(204)
     expect(preflight.headers['access-control-allow-origin']).toBe('http://localhost:5173')
     expect(preflight.headers['access-control-allow-methods']).toContain('DELETE')
+    expect(preflight.headers['access-control-allow-methods']).toContain('PUT')
     expect(preflight.headers['access-control-allow-headers']).toContain('authorization')
     expect(preflight.headers['access-control-allow-headers']).toContain('x-fit-pilot-session')
 
@@ -388,6 +392,25 @@ function buildConnectionsWriter(error?: Error): {
   }
 }
 
+const WORKOUT_ID = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
+
+function buildWorkoutsWriter(error?: Error): {
+  pilotWorkoutsWriter: PilotWorkoutsWriter
+  deletePlanned: ReturnType<typeof vi.fn>
+  savePlanned: ReturnType<typeof vi.fn>
+} {
+  const result = <Value>(value: Value) => error === undefined
+    ? Promise.resolve(value)
+    : Promise.reject(error)
+  const deletePlanned = vi.fn(() => result(3))
+  const savePlanned = vi.fn(() => result({ id: WORKOUT_ID, version: 1 }))
+  return {
+    pilotWorkoutsWriter: { deletePlanned, savePlanned },
+    deletePlanned,
+    savePlanned,
+  }
+}
+
 describe('read-only Yandex profile endpoint', () => {
   it('requires a bearer token before calling Yandex ID', async () => {
     const identity = buildIdentityProvider()
@@ -682,6 +705,138 @@ describe('read-only pilot training data endpoint', () => {
     expect(missing.statusCode).toBe(401)
     expect(expired.statusCode).toBe(401)
     expect(expired.json()).toEqual({ error: 'unauthorized' })
+  })
+})
+
+describe('pilot planned workout commands', () => {
+  const sessionToken = 's'.repeat(43)
+  const clientId = CLIENTS_RESPONSE.clients[0]!.id
+  const draft = {
+    clientId,
+    workoutDate: '2026-08-25',
+    startTime: '10:00',
+    endTime: '11:00',
+    notes: 'План на вторник',
+    exercises: [],
+  }
+
+  it('creates, updates and soft-deletes with explicit versions', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({
+      pilotWorkoutsWriter: writer.pilotWorkoutsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/v1/workouts',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: draft,
+    })
+    const updated = await app.inject({
+      method: 'PUT',
+      url: `/v1/workouts/${WORKOUT_ID}`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { ...draft, notes: 'Обновлённый план', expectedVersion: 1 },
+    })
+    const deleted = await app.inject({
+      method: 'DELETE',
+      url: `/v1/workouts/${WORKOUT_ID}`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 2 },
+    })
+
+    expect(created.statusCode).toBe(201)
+    expect(created.json()).toEqual({ workout: { id: WORKOUT_ID, version: 1 } })
+    expect(updated.statusCode).toBe(200)
+    expect(deleted.statusCode).toBe(200)
+    expect(deleted.json()).toEqual({ workout: { id: WORKOUT_ID, version: 3 } })
+    expect(created.headers['cache-control']).toBe('no-store')
+    expect(writer.savePlanned).toHaveBeenNthCalledWith(
+      1,
+      sessionToken,
+      { ...draft, id: null } satisfies PlannedWorkoutDraft,
+      null,
+    )
+    expect(writer.savePlanned).toHaveBeenNthCalledWith(
+      2,
+      sessionToken,
+      { ...draft, id: WORKOUT_ID, notes: 'Обновлённый план' } satisfies PlannedWorkoutDraft,
+      1,
+    )
+    expect(writer.deletePlanned).toHaveBeenCalledWith(
+      sessionToken,
+      WORKOUT_ID,
+      2,
+    )
+  })
+
+  it('rejects malformed aggregates before calling the writer', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({
+      pilotWorkoutsWriter: writer.pilotWorkoutsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/workouts',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { ...draft, workoutDate: '25.08.2026' },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_request' })
+    expect(writer.savePlanned).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['forbidden', 403, 'action_not_allowed'],
+    ['not_found', 404, 'resource_not_found'],
+    ['conflict', 409, 'version_conflict'],
+    ['invalid', 422, 'invalid_workout'],
+  ] as const)('maps %s failures without exposing database details', async (
+    failure,
+    status,
+    responseError,
+  ) => {
+    const writer = buildWorkoutsWriter(new PilotWorkoutCommandError(failure))
+    const app = buildApp({
+      pilotWorkoutsWriter: writer.pilotWorkoutsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: `/v1/workouts/${WORKOUT_ID}`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { ...draft, expectedVersion: 1 },
+    })
+
+    expect(response.statusCode).toBe(status)
+    expect(response.json()).toEqual({ error: responseError })
+    expect(response.body).not.toContain('Pilot workout command failed')
+  })
+
+  it('requires the opaque pilot session for every workout write', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({
+      pilotWorkoutsWriter: writer.pilotWorkoutsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: `/v1/workouts/${WORKOUT_ID}`,
+      payload: { expectedVersion: 1 },
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(writer.deletePlanned).not.toHaveBeenCalled()
   })
 })
 

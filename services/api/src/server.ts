@@ -9,6 +9,7 @@ import { DatabasePilotConnectionsWriter } from './pilot-connections-writer.js'
 import { DatabasePilotProfileReader } from './pilot-profile-reader.js'
 import { DatabasePilotSessionIssuer } from './pilot-session.js'
 import { DatabasePilotTrainingDataReader } from './pilot-training-data-reader.js'
+import { DatabasePilotWorkoutsWriter } from './pilot-workouts-writer.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -71,6 +72,10 @@ const pilotTrainingDataReader =
   databasePool === undefined
     ? undefined
     : new DatabasePilotTrainingDataReader(databasePool)
+const pilotWorkoutsWriter =
+  databasePool === undefined
+    ? undefined
+    : new DatabasePilotWorkoutsWriter(databasePool)
 const app = buildApp(
   {
     allowedOrigins: parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS),
@@ -83,6 +88,7 @@ const app = buildApp(
     ...(pilotProfileReader === undefined ? {} : { pilotProfileReader }),
     ...(pilotSessionIssuer === undefined ? {} : { pilotSessionIssuer }),
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),
+    ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),
   },
 )
 

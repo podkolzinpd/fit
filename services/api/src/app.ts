@@ -23,6 +23,12 @@ import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer } from './pilot-session.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
+import type { PilotWorkoutsWriter } from './pilot-workouts-writer.js'
+import {
+  readExpectedVersion,
+  readSavePlannedWorkoutRequest,
+} from './planned-workout-request.js'
+import { PilotWorkoutCommandError } from './workout-commands.js'
 
 interface BuildAppOptions {
   allowedOrigins?: readonly string[]
@@ -35,6 +41,7 @@ interface BuildAppOptions {
   pilotProfileReader?: PilotProfileReader
   pilotSessionIssuer?: PilotSessionIssuer
   pilotTrainingDataReader?: PilotTrainingDataReader
+  pilotWorkoutsWriter?: PilotWorkoutsWriter
   logger?: boolean
 }
 
@@ -52,7 +59,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (origin !== undefined && allowedOrigins.has(origin)) {
       reply
         .header('access-control-allow-origin', origin)
-        .header('access-control-allow-methods', 'GET, POST, DELETE, OPTIONS')
+        .header('access-control-allow-methods', 'GET, POST, PUT, DELETE, OPTIONS')
         .header(
           'access-control-allow-headers',
           'authorization, content-type, x-fit-pilot-session',
@@ -280,9 +287,105 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         }
         return reply.code(422).send({ error: 'action_not_allowed' })
       }
+      if (error instanceof PilotWorkoutCommandError) {
+        if (error.failure === 'forbidden') {
+          return reply.code(403).send({ error: 'action_not_allowed' })
+        }
+        if (error.failure === 'not_found') {
+          return reply.code(404).send({ error: 'resource_not_found' })
+        }
+        if (error.failure === 'conflict') {
+          return reply.code(409).send({ error: 'version_conflict' })
+        }
+        return reply.code(422).send({ error: 'invalid_workout' })
+      }
       return reply.code(503).send({ error: 'service_unavailable' })
     }
   }
+
+  app.post('/v1/workouts', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    const command = readSavePlannedWorkoutRequest(request.body, null)
+    if (command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return sendPilotCommand(
+      reply,
+      () => writer.savePlanned(
+        sessionToken,
+        command.draft,
+        command.expectedVersion,
+      ),
+      (saved) => reply
+        .header('cache-control', 'no-store')
+        .code(201)
+        .send({ workout: saved }),
+    )
+  })
+
+  app.put('/v1/workouts/:workoutId', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { workoutId } = request.params as { workoutId?: unknown }
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof workoutId !== 'string' || !uuidPattern.test(workoutId)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const command = readSavePlannedWorkoutRequest(request.body, workoutId)
+    if (command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return sendPilotCommand(
+      reply,
+      () => writer.savePlanned(
+        sessionToken,
+        command.draft,
+        command.expectedVersion,
+      ),
+      (saved) => reply
+        .header('cache-control', 'no-store')
+        .send({ workout: saved }),
+    )
+  })
+
+  app.delete('/v1/workouts/:workoutId', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { workoutId } = request.params as { workoutId?: unknown }
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    const expectedVersion = readExpectedVersion(request.body)
+    if (
+      typeof workoutId !== 'string'
+      || !uuidPattern.test(workoutId)
+      || expectedVersion === undefined
+    ) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return sendPilotCommand(
+      reply,
+      () => writer.deletePlanned(sessionToken, workoutId, expectedVersion),
+      (version) => reply
+        .header('cache-control', 'no-store')
+        .send({ workout: { id: workoutId, version } }),
+    )
+  })
 
   app.post('/v1/invitations', async (request, reply) => {
     const sessionToken = request.headers['x-fit-pilot-session']
