@@ -43,3 +43,4 @@ fi
 
 echo "::add-mask::$iam_token"
 printf 'YC_TOKEN=%s\n' "$iam_token" >>"$GITHUB_ENV"
+printf 'YC_IAM_TOKEN=%s\n' "$iam_token" >>"$GITHUB_ENV"
