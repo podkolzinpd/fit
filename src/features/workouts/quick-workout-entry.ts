@@ -1,6 +1,7 @@
 import type { BlockPreset, BlockType, ExerciseSnapshot, WorkoutSetDraft } from '../../shared/domain'
 import { isValidRpe } from '../../shared/rpe'
 import { isExerciseSearchAlias, rankExerciseSearch, SEARCH_ALIASES } from '../exercises/exercise-search'
+import { normalizeWorkoutSpeech, parseWorkoutNumber, WORKOUT_NUMBER_SOURCE } from './workout-speech-normalizer'
 
 export interface ParsedWorkoutExercise {
   line: string
@@ -114,13 +115,17 @@ function normalizedExerciseName(value: string): string {
 }
 
 function number(value: string | undefined): number | undefined {
-  if (!value) return undefined
-  const parsed = Number(value.replace(',', '.'))
-  return Number.isFinite(parsed) ? parsed : undefined
+  return parseWorkoutNumber(value)
+}
+
+function boundedCount(value: string | undefined, fallback = 1): number {
+  const parsed = number(value)
+  if (parsed === undefined) return fallback
+  return Math.min(Math.max(Math.trunc(parsed), 1), 20)
 }
 
 function distanceKilometers(line: string): number | undefined {
-  const match = /(\d+(?:[.,]\d+)?)\s*(км|km|километр(?:а|ов|ы)?|м\b|метр(?:а|ов|ы)?)/iu.exec(line)
+  const match = new RegExp(`(${WORKOUT_NUMBER_SOURCE})\\s*(км|km|километр(?:а|ов|ы)?|м\\b|метр(?:а|ов|ы)?)`, 'iu').exec(line)
   const value = number(match?.[1])
   if (value === undefined) return undefined
   return match?.[2]?.toLocaleLowerCase('ru').startsWith('к') ? value : value / 1000
@@ -138,16 +143,19 @@ function clockDurationSeconds(line: string): number | undefined {
 
 function isImplicitRunningLine(line: string): boolean {
   const value = normalize(line)
-  return /^(?:\d+\s*(?:x|х|по)\s*)?\d+(?:[.,]\d+)?\s*(?:км|km|километр|м\b|метр)/u.test(value)
-    || /^(?:между\s+)?интервал/u.test(value) && /\d+(?:[.,]\d+)?\s*(?:км|километр|м\b|метр)/u.test(value)
+  const distance = new RegExp(`${WORKOUT_NUMBER_SOURCE}\\s*(?:км|km|километр|м\\b|метр)`, 'iu')
+  const interval = new RegExp(`^(?:${WORKOUT_NUMBER_SOURCE}\\s*(?:x|х|по)\\s*)?${WORKOUT_NUMBER_SOURCE}\\s*(?:км|km|километр|м\\b|метр)`, 'iu')
+  return interval.test(value) || /^(?:между\s+)?интервал/u.test(value) && distance.test(value)
 }
 
 export function quickWorkoutExerciseName(line: string): string {
   if (isImplicitRunningLine(line)) return 'Бег'
-  const leadingCount = /^\s*\d+\s+([\p{L}][\p{L}\s-]*)$/u.exec(line)
+  const leadingCount = new RegExp(`^\\s*${WORKOUT_NUMBER_SOURCE}\\s+([\\p{L}][\\p{L}\\s-]*)$`, 'iu').exec(line)
   if (leadingCount?.[1]) return leadingCount[1].trim()
-  const metric = /\d+\s*(?:[xх×]|кг|kg|килограмм(?:а|ов)?|сек|мин|км|km|повт|раз\b|на\s*\d|(?:(?:подход(?:а|ов)?|сет(?:а|ов)?)(?:\s+по)?|по)\s*\d)/iu.exec(line)
-  return (metric ? line.slice(0, metric.index) : line).trim()
+  const metric = new RegExp(`${WORKOUT_NUMBER_SOURCE}\\s*(?:[xх×]|кг|kg|кило|килограмм(?:а|ов|ы)?|сек|мин|км|km|повт|раз\\b|на\\s*${WORKOUT_NUMBER_SOURCE}|(?:(?:подход(?:а|ов)?|сет(?:а|ов)?)(?:\\s+по)?|по)\\s*${WORKOUT_NUMBER_SOURCE})`, 'iu').exec(line)
+  return (metric ? line.slice(0, metric.index) : line)
+    .replace(/\s+(?:вес|весом)\s*$/iu, '')
+    .trim()
 }
 
 function prioritizePreferred(matches: readonly ExerciseSnapshot[], preferredExerciseRefs: readonly string[]): ExerciseSnapshot[] {
@@ -204,9 +212,9 @@ function needsTrainerChoice(name: string, catalog: readonly ExerciseSnapshot[]):
 export function splitWorkoutText(text: string, catalog: readonly ExerciseSnapshot[]): string[] {
   // Whisper обычно сохраняет слова-связки, а не переносы. Разделяем только
   // явные «затем/потом» и найденные по каталогу начала упражнений.
-  return formatWorkoutText(expandPairedExerciseShorthand(text), catalog)
+  return formatWorkoutText(expandPairedExerciseShorthand(normalizeWorkoutSpeech(text)), catalog)
     .split(/[\n;]+/)
-    .flatMap((line) => line.split(/\s+(?:затем|потом|далее|после\s+этого)\s+/iu))
+    .flatMap((line) => line.split(/\s+(?:затем|потом|далее|дальше|после\s+этого)\s*,?\s*/iu))
     .flatMap((line) => line.split(/\s*\+\s*/u))
     .map((line) => line.trim())
     .filter(Boolean)
@@ -218,17 +226,17 @@ export function workoutCandidates(line: string, catalog: readonly ExerciseSnapsh
 }
 
 function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { sets: WorkoutSetDraft[]; hasValues: boolean } {
-  const rpe = number(/\brpe\s*(\d+(?:[.,]\d+)?)/iu.exec(line)?.[1])
+  const rpe = number(new RegExp(`\\brpe\\s*(${WORKOUT_NUMBER_SOURCE})`, 'iu').exec(line)?.[1])
   const validRpe = isValidRpe(rpe) ? rpe : undefined
   if (inputKind === 'distance') {
-    const interval = /(\d+)\s*(?:[xх×]|по)\s*(\d+(?:[.,]\d+)?)\s*(км|km|километр(?:а|ов|ы)?|м\b|метр(?:а|ов|ы)?)/iu.exec(line)
-    const count = interval ? Math.min(Math.max(Number(interval[1]), 1), 20) : 1
+    const interval = new RegExp(`(${WORKOUT_NUMBER_SOURCE})\\s*(?:[xх×]|по)\\s*(${WORKOUT_NUMBER_SOURCE})\\s*(км|km|километр(?:а|ов|ы)?|м\\b|метр(?:а|ов|ы)?)`, 'iu').exec(line)
+    const count = interval ? boundedCount(interval[1]) : 1
     const intervalDistance = interval
       ? number(interval[2])! * (interval[3]?.toLocaleLowerCase('ru').startsWith('к') ? 1 : 0.001)
       : undefined
     const distanceKm = intervalDistance ?? distanceKilometers(line)
     const clockDuration = clockDurationSeconds(line)
-    const durationMatch = /(\d+(?:[.,]\d+)?)\s*(секунд(?:а|ы)?|сек|минут(?:а|ы)?|мин|час(?:а|ов)?|ч\b)/iu.exec(line)
+    const durationMatch = new RegExp(`(${WORKOUT_NUMBER_SOURCE})\\s*(секунд(?:а|ы)?|сек|минут(?:а|ы)?|мин|час(?:а|ов)?|ч\\b)`, 'iu').exec(line)
     const durationValue = number(durationMatch?.[1])
     const durationUnit = durationMatch?.[2]?.toLocaleLowerCase('ru')
     const durationSec = clockDuration ?? (durationValue === undefined ? undefined
@@ -248,11 +256,10 @@ function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { se
   // Отдельные пары веса и повторов — естественная запись факта после зала:
   // «80×8, 85×6, 90×5». Берём её только при двух и более парах, чтобы
   // обычное «3×8 80 кг» по-прежнему означало три одинаковых подхода.
-  const variableStrengthSets = [...line.matchAll(/(\d+(?:[.,]\d+)?)\s*(?:кг|kg|килограмм(?:а|ов)?)?\s*(?:[xх×]|на)\s*(\d+)/giu)]
+  const variableStrengthSets = [...line.matchAll(new RegExp(`(${WORKOUT_NUMBER_SOURCE})\\s*(?:кг|kg|кило|килограмм(?:а|ов|ы)?)?\\s*(?:[xх×]|на)\\s*(${WORKOUT_NUMBER_SOURCE})`, 'giu'))]
     .map((match) => ({ weightKg: number(match[1]), reps: number(match[2]) }))
     .filter((set): set is { weightKg: number; reps: number } => set.weightKg !== undefined && set.reps !== undefined)
-  const spokenWeightReps = /\d+(?:[.,]\d+)?\s*на\s*\d+/iu.test(line)
-  if (inputKind === 'strength' && (variableStrengthSets.length >= 2 || spokenWeightReps)) {
+  if (inputKind === 'strength' && variableStrengthSets.length >= 2) {
     return {
       hasValues: true,
       sets: variableStrengthSets.slice(0, 20).map((set, position) => ({ position, ...set, ...(validRpe !== undefined ? { rpe: validRpe } : {}) })),
@@ -260,23 +267,30 @@ function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { se
   }
   // Тренеры записывают и «3×8», и «3 подхода по 8». В тройной записи
   // «80×8×3» порядок привычный для зала: вес × повторы × подходы.
-  const weightRepsSetsMatch = /(\d+(?:[.,]\d+)?)\s*[xх×]\s*(\d+(?:[.,]\d+)?)\s*[xх×]\s*(\d+)/iu.exec(line)
-  const setsByWordsMatch = /(\d+)\s*(?:(?:подход(?:а|ов)?|сет(?:а|ов)?)(?:\s+по)?|по)\s*(\d+(?:[.,]\d+)?)\s*(сек|с|мин|м)?\b/iu.exec(line)
-  const setMatch = /(\d+)\s*[xх×]\s*(\d+(?:[.,]\d+)?)\s*(сек|с|мин|м)?\b/iu.exec(line)
-  const count = weightRepsSetsMatch ? Number(weightRepsSetsMatch[3]) : setsByWordsMatch ? Number(setsByWordsMatch[1]) : setMatch ? Number(setMatch[1]) : 1
+  const weightRepsSetsMatch = new RegExp(`(${WORKOUT_NUMBER_SOURCE})\\s*[xх×]\\s*(${WORKOUT_NUMBER_SOURCE})\\s*[xх×]\\s*(${WORKOUT_NUMBER_SOURCE})`, 'iu').exec(line)
+  const metricBoundary = '(?=$|[\\s,.;:!?—-])'
+  const setsByWordsMatch = new RegExp(`(${WORKOUT_NUMBER_SOURCE})\\s*(?:(?:подход(?:а|ов)?|сет(?:а|ов)?)\\s+по|по)\\s*(${WORKOUT_NUMBER_SOURCE})\\s*(сек|с|мин|м)?${metricBoundary}`, 'iu').exec(line)
+  const setMatch = new RegExp(`(${WORKOUT_NUMBER_SOURCE})\\s*[xх×]\\s*(${WORKOUT_NUMBER_SOURCE})\\s*(сек|с|мин|м)?${metricBoundary}`, 'iu').exec(line)
+  const explicitCountMatch = new RegExp(`(${WORKOUT_NUMBER_SOURCE})\\s*(?:подход(?:а|ов)?|сет(?:а|ов)?)${metricBoundary}`, 'iu').exec(line)
+  const singleWeightRepsMatch = new RegExp(`(${WORKOUT_NUMBER_SOURCE})\\s*(?:кг|kg|кило|килограмм(?:а|ов|ы)?)?\\s+на\\s+(${WORKOUT_NUMBER_SOURCE})`, 'iu').exec(line)
+  const count = weightRepsSetsMatch ? boundedCount(weightRepsSetsMatch[3])
+    : setsByWordsMatch ? boundedCount(setsByWordsMatch[1])
+      : setMatch ? boundedCount(setMatch[1])
+        : boundedCount(explicitCountMatch?.[1])
   const repeatedValue = number(weightRepsSetsMatch?.[2] ?? setsByWordsMatch?.[2] ?? setMatch?.[2])
   const repeatedUnit = (setsByWordsMatch?.[3] ?? setMatch?.[3])?.toLocaleLowerCase('ru')
-  const weight = number(/(\d+(?:[.,]\d+)?)\s*(?:кг|kg|килограмм(?:а|ов)?)/iu.exec(line)?.[1])
+  const weight = number(new RegExp(`(${WORKOUT_NUMBER_SOURCE})\\s*(?:кг|kg|кило|килограмм(?:а|ов|ы)?)`, 'iu').exec(line)?.[1])
     ?? number(weightRepsSetsMatch?.[1])
-  const durationMatch = /(\d+(?:[.,]\d+)?)\s*(сек|с|мин|м)/iu.exec(line)
+    ?? number(singleWeightRepsMatch?.[1])
+  const durationMatch = new RegExp(`(${WORKOUT_NUMBER_SOURCE})\\s*(сек|с|мин|м)`, 'iu').exec(line)
   const durationValue = number(durationMatch?.[1])
   const durationUnit = durationMatch?.[2]?.toLocaleLowerCase('ru')
   const durationSec = repeatedUnit
     ? repeatedValue! * (repeatedUnit.startsWith('м') ? 60 : 1)
     : durationValue === undefined ? undefined : durationValue * (durationUnit?.startsWith('м') ? 60 : 1)
-  const explicitReps = number(/(\d+)\s*(?:повт|повтор|раз\b)/iu.exec(line)?.[1])
-    ?? (inputKind === 'reps' ? number(/^\s*(\d+)\s+[\p{L}]/u.exec(line)?.[1]) : undefined)
-  const reps = repeatedUnit ? explicitReps : (repeatedValue ?? explicitReps)
+  const explicitReps = number(new RegExp(`(${WORKOUT_NUMBER_SOURCE})\\s*(?:повт|повтор(?:а|ов|ение|ения|ений)?|раз(?:а|ов)?)${metricBoundary}`, 'iu').exec(line)?.[1])
+    ?? (inputKind === 'reps' ? number(new RegExp(`^\\s*(${WORKOUT_NUMBER_SOURCE})\\s+[\\p{L}]`, 'iu').exec(line)?.[1]) : undefined)
+  const reps = repeatedUnit ? explicitReps : (repeatedValue ?? explicitReps ?? number(singleWeightRepsMatch?.[2]))
   const hasValues = weight !== undefined || reps !== undefined || durationSec !== undefined || validRpe !== undefined
   return {
     hasValues,
@@ -295,8 +309,8 @@ function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { se
 function activeRunningIntervalDrafts(line: string, catalog: readonly ExerciseSnapshot[]): ParsedWorkoutExercise[] | undefined {
   const divider = /,?\s*(?:между\s+интервалами|восстановление)/iu.exec(line)
   if (!divider || divider.index <= 0) return undefined
-  const count = Number(/(\d+)\s*(?:[xх×]|по)\s*\d+(?:[.,]\d+)?\s*(?:км|km|километр|м\b|метр)/iu.exec(line.slice(0, divider.index))?.[1])
-  if (!Number.isFinite(count) || count < 1 || count > 20) return undefined
+  const count = number(new RegExp(`(${WORKOUT_NUMBER_SOURCE})\\s*(?:[xх×]|по)\\s*${WORKOUT_NUMBER_SOURCE}\\s*(?:км|km|километр|м\\b|метр)`, 'iu').exec(line.slice(0, divider.index))?.[1])
+  if (count === undefined || !Number.isFinite(count) || count < 1 || count > 20) return undefined
   const running = catalog.find((exercise) => exercise.ref === 'running' && exercise.inputKind === 'distance')
   if (!running) return undefined
   const workValues = setDrafts(line.slice(0, divider.index), 'distance')
@@ -332,7 +346,7 @@ function activeRunningIntervalDrafts(line: string, catalog: readonly ExerciseSna
 export function resolveQuickWorkoutLine(line: string, exercise: ExerciseSnapshot): ParsedWorkoutExercise {
   const values = setDrafts(line, exercise.inputKind)
   if (exercise.ref !== 'running') return { line, exercise, ...values }
-  if (/\d+\s*(?:[xх×]|по)\s*\d+(?:[.,]\d+)?\s*(?:км|km|километр|м\b|метр)/iu.test(line)) {
+  if (new RegExp(`${WORKOUT_NUMBER_SOURCE}\\s*(?:[xх×]|по)\\s*${WORKOUT_NUMBER_SOURCE}\\s*(?:км|km|километр|м\\b|метр)`, 'iu').test(line)) {
     return {
       line,
       exercise: { ...exercise, name: 'Бег — интервалы' },
