@@ -55,13 +55,14 @@ describe('ExercisePicker', () => {
     expect(filterExercises(SYSTEM_EXERCISES, 'cardio', '')).toHaveLength(7)
   })
 
-  // Полный каталог содержит 500+ упражнений: в CI его первичный рендер
-  // периодически дольше общего лимита unit-тестов, хотя сценарий корректен.
+  // Полный каталог содержит 500+ упражнений: его первичный рендер
+  // с покрытием медленнее общего лимита unit-тестов. Сценарий остаётся полным:
+  // тест не использует урезанный fixture и не ослабляет ожидания.
   it('не поднимает разминку и мобилити над остальным каталогом', () => {
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={vi.fn()} onClose={vi.fn()} />)
     expect(screen.queryByText('Разминка и мобилити')).not.toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /Суставная разминка/ })).toHaveLength(1)
-  }, 10_000)
+  }, 45_000)
 
   it('ставит упражнения клиента по времени последнего использования, а не по частоте', () => {
     const workouts = [
@@ -215,7 +216,7 @@ describe('ExercisePicker', () => {
     expect(screen.getByRole('heading', { name: 'Выберите упражнения' })).toBeInTheDocument()
     expect(document.querySelector('[data-exercise-ref="bench-press"]')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Свободный бег/ })).not.toBeInTheDocument()
-  }, 10_000)
+  }, 45_000)
 
   it('shows loading, error with retry, and empty states', async () => {
     const user = userEvent.setup()

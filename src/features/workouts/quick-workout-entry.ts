@@ -54,6 +54,36 @@ const sportSpeechAliases: Record<string, string> = {
   'разводка': 'разведение рук',
   'бицепс': 'сгибание рук',
   'жим гантелей в наклонной скамье': 'жим гантелей на наклонной',
+  'жим гантелей на наклонной скамье': 'жим гантелей на наклонной',
+  'жим на наклонной со штангой': 'жим на наклонной',
+  'жим штанги на наклонной скамье': 'жим на наклонной',
+}
+
+function explicitEquipmentRefs(value: string): string[] {
+  const tokens = normalize(value).split(/\s+/).filter(Boolean)
+  const hasStem = (stem: string) => tokens.some((token) => token.startsWith(stem))
+  return [
+    ...(hasStem('гантел') ? ['dumbbell'] : []),
+    ...(hasStem('штанг') ? ['barbell'] : []),
+    ...(hasStem('гир') ? ['kettlebells'] : []),
+    ...(tokens.some((token) => token.startsWith('блок') || token.startsWith('кроссовер') || token.startsWith('трос')) ? ['cable'] : []),
+    ...(hasStem('смит') || tokens.some((token, index) => token.startsWith('тренажер') && (tokens[index - 1] === 'в' || tokens[index - 1] === 'на')) ? ['machine'] : []),
+  ]
+}
+
+/**
+ * Явно названное оборудование — строгая часть намерения пользователя.
+ * Если сказано «гантели», вариант со штангой нельзя подставлять даже при
+ * высокой текстовой похожести или уверенности LLM.
+ */
+export function matchesExplicitWorkoutEquipment(value: string, exercise: ExerciseSnapshot): boolean {
+  const requested = explicitEquipmentRefs(value)
+  if (!requested.length) return true
+  const exerciseRefs = new Set([
+    ...(exercise.equipmentRef ? [exercise.equipmentRef] : []),
+    ...explicitEquipmentRefs(`${exercise.equipment ?? ''} ${exercise.name}`),
+  ])
+  return requested.every((ref) => exerciseRefs.has(ref))
 }
 
 function exerciseStartPhrases(catalog: readonly ExerciseSnapshot[]): string[] {
@@ -174,29 +204,30 @@ function prioritizePreferred(matches: readonly ExerciseSnapshot[], preferredExer
 function matchingExercises(name: string, catalog: readonly ExerciseSnapshot[], preferredExerciseRefs: readonly string[]): ExerciseSnapshot[] {
   const query = normalize(normalizeSportSpeech(name))
   if (!query) return []
-  const exact = catalog.filter((exercise) => normalizedExerciseName(exercise.name) === query)
+  const scopedCatalog = catalog.filter((exercise) => matchesExplicitWorkoutEquipment(name, exercise))
+  const exact = scopedCatalog.filter((exercise) => normalizedExerciseName(exercise.name) === query)
   if (exact.length === 1) return exact
   // Своё упражнение иногда повторяет системное по имени. Для записи без явного
   // уточнения берём единственный встроенный вариант: его тип ввода стабилен.
   // Несколько системных совпадений по-прежнему считаем неоднозначностью.
   const exactSystem = exact.filter((exercise) => exercise.source === 'system')
   if (exactSystem.length === 1) return exactSystem
-  const aliases = catalog.filter((exercise) => isExerciseSearchAlias(exercise, query))
+  const aliases = scopedCatalog.filter((exercise) => isExerciseSearchAlias(exercise, query))
   if (aliases.length === 1) return aliases
   // Одно короткое слово («присед») почти всегда скрывает вариацию. Не делаем
   // вид, что знаем намерение тренера: точные «Планка»/«Бег» уже прошли exact.
   // Но для вариантов вроде «биц», «гакк» и «смит» учитываем алиасы, чтобы
   // тренер хотя бы получил релевантные варианты, а не пустой результат.
   if (query.split(' ').length < 2) {
-    return prioritizePreferred(rankExerciseSearch(catalog, name).map(({ exercise }) => exercise), preferredExerciseRefs)
+    return prioritizePreferred(rankExerciseSearch(scopedCatalog, name).map(({ exercise }) => exercise), preferredExerciseRefs)
   }
-  return prioritizePreferred(rankExerciseSearch(catalog, name).map(({ exercise }) => exercise), preferredExerciseRefs)
+  return prioritizePreferred(rankExerciseSearch(scopedCatalog, name).map(({ exercise }) => exercise), preferredExerciseRefs)
 }
 
 function canResolveSafely(name: string, matches: readonly ExerciseSnapshot[], catalog: readonly ExerciseSnapshot[]): boolean {
   if (matches.length !== 1 && name.trim().split(/\s+/).length < 2) return false
   if (matches.length === 1) return true
-  const ranked = rankExerciseSearch(catalog, name)
+  const ranked = rankExerciseSearch(catalog.filter((exercise) => matchesExplicitWorkoutEquipment(name, exercise)), name)
   const [first, second] = ranked
   // Для фразы из нескольких слов авто-выбор допустим, когда лучший вариант
   // явно опережает следующий. Тренер всё равно видит итог и может его заменить.

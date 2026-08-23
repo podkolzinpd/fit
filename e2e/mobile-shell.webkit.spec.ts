@@ -81,19 +81,27 @@ test('iPhone: поля бега не перекрываются в быстро�
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
-        items: [{
-          sourceText: 'Бег',
-          exerciseRef: 'running',
-          confidence: 1,
-          sets: [],
-        }],
+        items: [
+          {
+            sourceText: 'Бег',
+            exerciseRef: 'running',
+            confidence: 1,
+            sets: [],
+          },
+          {
+            sourceText: 'Жим лёжа 3×8 — 80 кг',
+            exerciseRef: 'bench-press',
+            confidence: 1,
+            sets: [{ weightKg: 80, reps: 8 }],
+          },
+        ],
         unmatched: [],
       }),
     })
   })
 
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
-  await page.getByLabel('Тренировка').fill('Бег')
+  await page.getByLabel('Тренировка').fill('Бег\nЖим лёжа 3×8 — 80 кг')
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
   await page.getByText('Добавить значения', { exact: true }).click()
@@ -129,6 +137,13 @@ test('iPhone: поля бега не перекрываются в быстро�
   await expect(unit.locator('option:checked')).toHaveText('м')
   await unit.selectOption('km')
   await expect(unit.locator('option:checked')).toHaveText('км')
+  await expectNoHorizontalOverflow(page)
+  await page.getByRole('button', { name: 'Изменить порядок' }).click()
+  await page.getByRole('button', { name: /Переместить блок «Жим лёжа.*вверх/ }).click()
+  await expect(page.locator('.today-exercise-title strong').first()).toContainText('Жим лёжа')
+  await expect(page.getByRole('button', { name: 'Далее' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Готово' }).click()
+  await expect(page.getByRole('button', { name: 'Далее' })).toBeVisible()
   await expectNoHorizontalOverflow(page)
   await page.screenshot({ path: testInfo.outputPath('running-review.png'), fullPage: true })
 })
