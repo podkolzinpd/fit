@@ -148,7 +148,7 @@ jobs:
             --secret id="$SUMMARY_LOCKBOX_ID",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID
           yc serverless function add-access-binding "$SUMMARY_FUNCTION_NAME" \
             --folder-id "$YC_FOLDER_ID" \
-            --role serverless.functions.invoker --all-users
+            --role serverless.functions.invoker --subject system:allUsers
           function_url=$(yc serverless function get --name "$SUMMARY_FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.http_invoke_url')
           echo "SUMMARY_FUNCTION_URL=$function_url" >> "$GITHUB_ENV"
 
