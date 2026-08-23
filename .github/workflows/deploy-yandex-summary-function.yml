@@ -20,8 +20,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
-  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
+  YC_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
   YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
   SUMMARY_FUNCTION_NAME: fit-summarize-client-training
   SUMMARY_RUNTIME_SA_NAME: fit-summarize-client-training
