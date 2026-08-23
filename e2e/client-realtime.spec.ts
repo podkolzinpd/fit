@@ -68,7 +68,7 @@ test('client and trainer receive progress and workout changes without reload', a
       email: `realtime-client-${suffix}@fit.local`,
       role: 'client',
     })
-    await expect(client.getByRole('heading', { name: 'Создайте личную карточку' })).toBeVisible()
+    await expect(client.getByRole('heading', { name: 'Тренируйтесь и следите за прогрессом' })).toBeVisible()
     await client.goto('/join')
     await client.getByLabel('Код приглашения').fill(code!)
     await client.getByRole('button', { name: 'Присоединиться' }).click()

@@ -16,6 +16,7 @@ export const clientQueries = {
     .order('recorded_on', { ascending: false }).limit(1).maybeSingle(),
   create: (input: CreateClientInput) => supabase.rpc('create_client', { p_client: toJson(input) }),
   createQuick: (fullName: string) => supabase.rpc('create_quick_client', { p_full_name: fullName }),
+  createQuickOwn: (fullName: string) => supabase.rpc('create_quick_own_client', { p_full_name: fullName }),
   createOwn: (input: CreateClientInput) => supabase.rpc('create_own_client', { p_client: toJson(input) }),
   update: (input: UpdateClientInput) => supabase.rpc('update_client', {
     p_client: toJson(input), p_expected_version: input.version,

@@ -42,13 +42,9 @@ async function createStandaloneClient(
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await expect(page).toHaveURL(/\/me$/)
-
-  await page.getByLabel('Пол').selectOption('female')
-  await page.getByLabel('Возраст').fill('30')
-  await page.getByLabel('Рост, см').fill('170')
-  await page.getByLabel('Начальный вес, кг').fill('65')
-  await page.getByLabel('Цель').fill('Тренироваться регулярно')
-  await page.getByRole('button', { name: 'Создать карточку' }).click()
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Скрыть' }).click()
 }
 
 async function createStandaloneLiveWorkout(page: import('@playwright/test').Page, projectName: string) {

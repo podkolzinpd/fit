@@ -173,7 +173,7 @@ test('iPhone: тренер назначает интервалы, спортсм
     expect(code).toBeTruthy()
 
     await register(client, 'Интервальный спортсмен', `interval-client-${suffix}@fit.local`, 'client')
-    await expect(client.getByRole('heading', { name: 'Создайте личную карточку' })).toBeVisible()
+    await expect(client.getByRole('heading', { name: 'Тренируйтесь и следите за прогрессом' })).toBeVisible()
     await client.goto('/join')
     await client.getByLabel('Код приглашения').fill(code!)
     await client.getByRole('button', { name: 'Присоединиться' }).click()
@@ -278,12 +278,9 @@ test('iPhone: client voice-first home сохраняет тренировку т
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
 
-  await page.getByLabel('Пол').selectOption('female')
-  await page.getByLabel('Возраст').fill('30')
-  await page.getByLabel('Рост, см').fill('170')
-  await page.getByLabel('Начальный вес, кг').fill('65')
-  await page.getByLabel('Цель').fill('Тренироваться регулярно')
-  await page.getByRole('button', { name: 'Создать карточку' }).click()
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Скрыть' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeInViewport()
   await page.evaluate(() => Object.keys(localStorage)
@@ -316,6 +313,9 @@ test('iPhone: client voice-first home сохраняет тренировку т
   await expect(page).toHaveURL(/\/me\/profile$/)
   await page.getByRole('link', { name: 'Изменить данные' }).click()
   await page.getByLabel('Имя').fill('Клиент Обновлённый')
+  await page.getByLabel('Пол').selectOption('female')
+  await page.getByLabel('Возраст').fill('30')
+  await page.getByLabel('Рост, см').fill('170')
   await Promise.all([
     page.waitForURL(/\/me$/),
     page.getByRole('button', { name: 'Сохранить' }).click(),
@@ -347,12 +347,9 @@ test('iPhone: в live клиент видит те же действия с тр
   await page.getByLabel('Email').fill(`client-live-${testInfo.workerIndex}-${Date.now()}@fit.local`)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Пол').selectOption('female')
-  await page.getByLabel('Возраст').fill('30')
-  await page.getByLabel('Рост, см').fill('170')
-  await page.getByLabel('Начальный вес, кг').fill('65')
-  await page.getByLabel('Цель').fill('Тренироваться регулярно')
-  await page.getByRole('button', { name: 'Создать карточку' }).click()
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Скрыть' }).click()
 
   await page.goto('/me/workouts')
   await page.getByRole('link', { name: 'Добавить' }).click()

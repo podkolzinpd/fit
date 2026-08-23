@@ -111,9 +111,12 @@ describe('ClientHomeOverview', () => {
     expect(screen.getByRole('link', { name: 'Прогресс ›' })).toHaveAttribute('href', '/me/progress')
   })
 
-  it('keeps the empty state useful and puts self-training first', () => {
+  it('explains the value on first run without hiding the main action', () => {
     render(<MemoryRouter><ClientHomeOverview today={today} workouts={[]} regularity={[]} goal={null} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Начать свою тренировку</button>} /></MemoryRouter>)
+    expect(screen.getByRole('heading', { name: 'Тренируйтесь и следите за прогрессом' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Начать свою тренировку' })).toBeVisible()
+    expect(screen.getByText('Fit поможет увидеть')).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Подключиться по приглашению' })).toHaveAttribute('href', '/join')
     expect(screen.queryByText('ЭТА НЕДЕЛЯ')).not.toBeInTheDocument()
     expect(screen.queryByText('Пока без тренировок')).not.toBeInTheDocument()
     expect(screen.queryByText('—')).not.toBeInTheDocument()

@@ -7,13 +7,13 @@ import { clientsRepository } from '../../data/repositories/clients.repository'
 import { goalsRepository } from '../../data/repositories/goals.repository'
 import { invitationsRepository } from '../../data/repositories/invitations.repository'
 import { bmiLabel, computeClientStats, splitClientWorkouts, workoutsRepository } from '../../data/repositories/workouts.repository'
-import { TodayPage, WorkoutExercisesSummary, workoutCountLabel } from '../workouts'
+import { ClientFirstRunIntro, TodayPage, WorkoutExercisesSummary, storeFirstWorkoutIntent, workoutCountLabel } from '../workouts'
 import type { Client, Gender } from '../../shared/domain'
 import { currentStage, daysToTarget, stageProgress } from '../../shared/goal-rules'
 import { formatLocalDate, formatLocalDateShort, localDate, normalizeTimeZone, todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Field, OverflowMenu, Page, useConfirm } from '../../shared/ui'
 import { clientSchema } from '../../shared/validation'
-import { VoiceNoteField } from '../voice-input'
+import { VoiceInputButton, VoiceNoteField, type VoiceInputPhase } from '../voice-input'
 import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
@@ -21,27 +21,29 @@ import { useAuth } from '../../app/auth-context'
 export function MyClientPage() {
   const { actor, refresh } = useAuth()
   const queryClient = useQueryClient()
+  const [voicePhase, setVoicePhase] = useState<VoiceInputPhase>('idle')
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
+  const quickStart = useMutation({
+    mutationFn: async (intent: { mode: 'voice'; transcript: string } | { mode: 'text' }) => {
+      if (!actor) throw new Error('Профиль пользователя не найден')
+      const fullName = [actor.firstName, actor.lastName].filter(Boolean).join(' ').trim()
+      await clientsRepository.createQuickOwn(fullName)
+      storeFirstWorkoutIntent(actor.userId, intent)
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['my-client'] })
+      await refresh()
+    },
+  })
   useClientRealtime(query.data?.id)
   if (query.data) return <TodayPage clientMode />
   return <Page title="Кабинет" className="client-home-page">
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
-      <div className="client-onboarding">
-        <section className="client-onboarding-hero">
-          <p className="eyebrow">ЛИЧНЫЙ ПРОФИЛЬ</p>
-          <h2>Создайте личную карточку</h2>
-          <p>Она нужна для самостоятельных тренировок и замеров. Тренера можно пригласить позже.</p>
-        </section>
-        <ClientForm
-          createMode="self"
-          initialFullName={[actor?.firstName, actor?.lastName].filter(Boolean).join(' ')}
-          embedded
-          onSaved={async () => {
-            await queryClient.invalidateQueries({ queryKey: ['my-client'] })
-            await refresh()
-          }}
-        />
-      </div>
+      <ClientFirstRunIntro actions={<section className="client-home-self-training primary">
+        <VoiceInputButton variant="hero" source="today_workout" idleLabel="Надиктовать тренировку" onPhaseChange={setVoicePhase} onTranscript={(transcript) => quickStart.mutateAsync({ mode: 'voice', transcript })} />
+        {voicePhase === 'idle' && <button type="button" className="link today-text-toggle" disabled={quickStart.isPending} onClick={() => quickStart.mutate({ mode: 'text' })}>Ввести текстом</button>}
+        {quickStart.error && <p className="error" role="alert">{quickStart.error.message}</p>}
+      </section>} />
     </AsyncView>
   </Page>
 }

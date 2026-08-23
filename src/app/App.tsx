@@ -13,7 +13,7 @@ import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage,
 function Protected() {
   const { actor, loading, error } = useAuth(); const location = useLocation()
   if (loading) return <main className="state">Восстанавливаем сессию…</main>
-  if (!actor) return <Navigate to="/auth" state={{ from: location.pathname }} replace />
+  if (!actor) return <Navigate to="/auth" state={{ from: `${location.pathname}${location.search}` }} replace />
   if (error) return <main className="state error">{error}</main>
   return <Outlet />
 }
