@@ -67,8 +67,6 @@ jobs:
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
-          yc config set token "$YC_TOKEN"
-          yc config set folder-id "$YC_FOLDER_ID"
 
           api_keys=$(curl --fail --silent --show-error \
             --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
