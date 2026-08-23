@@ -1,4 +1,4 @@
-// schema-sha256: 7afb215558e801dcaf38bd8cddbfa122fe63e23c1667a8bc42ddc7d36b8fb8c0
+// schema-sha256: 7bcb00c21e5a8ce399c1dbc0ad960fa54f0dcd9b689c7d1614993db0b00e71a3
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -56,6 +56,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_feedback: {
+        Row: {
+          account_role: string
+          app_version: string
+          created_at: string
+          display_mode: string
+          id: string
+          kind: string
+          message: string
+          screen_path: string
+          user_agent: string
+          user_id: string
+        }
+        Insert: {
+          account_role: string
+          app_version: string
+          created_at?: string
+          display_mode: string
+          id?: string
+          kind: string
+          message: string
+          screen_path: string
+          user_agent: string
+          user_id: string
+        }
+        Update: {
+          account_role?: string
+          app_version?: string
+          created_at?: string
+          display_mode?: string
+          id?: string
+          kind?: string
+          message?: string
+          screen_path?: string
+          user_agent?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_custom_metrics: {
         Row: {
           archived_at: string | null
@@ -1472,6 +1519,17 @@ export type Database = {
       start_workout: {
         Args: { p_expected_version: number; p_workout_id: string }
         Returns: number
+      }
+      submit_app_feedback: {
+        Args: {
+          p_app_version: string
+          p_display_mode: string
+          p_kind: string
+          p_message: string
+          p_screen_path: string
+          p_user_agent: string
+        }
+        Returns: string
       }
       submit_workout_feedback: {
         Args: {

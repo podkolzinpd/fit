@@ -655,8 +655,23 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .stage-hint { font-size: 12px; margin: 0 }
 .stage-tag { font-size: 12px; font-weight: 600; color: var(--accent-weak); margin-top: 4px }
 .menu { display: flex; flex-direction: column; margin: 22px 0; border-block: 1px solid var(--border) }
-.menu a { padding: 15px 4px; text-decoration: none; border-bottom: 1px solid var(--border) }.menu a:last-child { border-bottom: 0 }
+.menu a, .menu > button { min-height: 52px; display: flex; align-items: center; justify-content: flex-start; padding: 15px 4px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; color: var(--fg); font: inherit; text-align: left; text-decoration: none; box-shadow: none }.menu > :last-child { border-bottom: 0 }
 .profile-settings { margin: 20px 0 22px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-card) }
+.app-feedback-card { display: grid; gap: var(--space-4); margin: 0 0 var(--space-4); padding: var(--card-padding); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-card) }
+.app-feedback-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3) }
+.app-feedback-head .eyebrow, .app-feedback-sent .eyebrow { margin: 0 0 var(--space-1) }
+.app-feedback-head h2, .app-feedback-sent h2 { margin: 0; font-size: var(--type-section-size); line-height: var(--leading-snug) }
+.app-feedback-head .link { min-height: 40px; flex: 0 0 auto; padding: var(--space-2) 0 }
+.app-feedback-kinds { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-sunken) }
+.app-feedback-kinds button { min-height: 42px; padding: var(--space-2); border: 0; border-radius: calc(var(--radius-md) - 4px); background: transparent; color: var(--muted); font-size: var(--type-caption-size); font-weight: var(--weight-bold); box-shadow: none }
+.app-feedback-kinds button.active { background: var(--surface-raised); color: var(--fg); box-shadow: var(--shadow-soft) }
+.app-feedback-card textarea { min-height: 122px; resize: vertical; background: var(--surface-sunken) }
+.app-feedback-card .field { position: relative }
+.app-feedback-counter { justify-self: end; margin-top: calc(-1 * var(--space-1)); color: var(--muted); font-size: var(--type-caption-size) }
+.app-feedback-context, .app-feedback-sent > p:not(.eyebrow) { margin: 0; color: var(--muted); font-size: var(--type-caption-size); line-height: var(--leading-body) }
+.app-feedback-card .save-status { margin: 0 }
+.app-feedback-card .actions { margin: 0 }
+.app-feedback-sent .secondary { justify-self: start; min-height: var(--control-height-standard) }
 .join-page .page-header { margin-bottom:18px; }.join-card { display:grid; gap:20px; max-width:520px; margin:4px auto 0; padding:20px; border:1px solid var(--border); border-radius:22px; background:var(--surface-raised); box-shadow:var(--shadow-card); }.join-card-head { display:grid; gap:7px; }.join-card-head .eyebrow { margin:0; }.join-card-head h2 { margin:0; font-size:26px; line-height:1.13; letter-spacing:var(--tracking-tight); }.join-card-head > p:last-child { margin:0; color:var(--muted); font-size:15px; line-height:1.42; }.join-form { padding:0; border:0; background:transparent; }.join-form input { min-height:52px; border-radius:15px; background:var(--surface-sunken); font-size:18px; letter-spacing:.06em; text-transform:uppercase; }.join-form button { min-height:52px; border-radius:16px; font-size:17px; font-weight:800; }.join-state { min-height:220px; }
 .switch-row { position: relative; min-height: 58px; display: flex; align-items: center; gap: 14px; padding: 13px 14px; cursor: pointer; -webkit-tap-highlight-color: transparent }
 .switch-row + .switch-row { border-top: 1px solid var(--border) }
