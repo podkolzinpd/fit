@@ -8,12 +8,14 @@ import { AsyncView, Page, Switch } from '../../shared/ui'
 import { ClientTrainerConnections } from './ClientTrainerConnections'
 import { AppFeedbackForm } from '../profile/AppFeedbackForm'
 import { useState } from 'react'
+import { AppInstallPanel } from '../install'
 
 export function ClientProfilePage() {
   const { actor } = useAuth()
   const navigate = useNavigate()
   const theme = useAppTheme()
   const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [installOpen, setInstallOpen] = useState(false)
   const client = useQuery({
     queryKey: ['my-client'],
     queryFn: () => clientsRepository.getMine(),
@@ -44,7 +46,8 @@ export function ClientProfilePage() {
     <section className="profile-settings" aria-label="Настройки">
       <Switch label="Тёмная тема" checked={theme === 'dark'} onChange={(checked) => setAppTheme(checked ? 'dark' : 'light')} />
     </section>
-    <div className="menu"><Link to="/join">Ввести код приглашения</Link><button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button></div>
+    <div className="menu"><Link to="/join">Ввести код приглашения</Link><button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button><button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button></div>
+    {installOpen && <AppInstallPanel onClose={() => setInstallOpen(false)} />}
     {feedbackOpen && <AppFeedbackForm onClose={() => setFeedbackOpen(false)} />}
     <button className="danger secondary wide" onClick={() => void logout()}>Выйти</button>
   </Page>
