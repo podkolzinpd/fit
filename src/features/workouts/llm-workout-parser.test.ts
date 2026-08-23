@@ -86,4 +86,19 @@ describe('formatLlmWorkoutText', () => {
     expect(result.items.map((item) => item.exerciseRef)).toEqual(['fedb-thigh-adductor', 'fedb-thigh-abductor'])
     expect(result.items.every((item) => item.sets.length === 3)).toBe(true)
   })
+
+  it('передаёт модели очищенную копию диктовки и сохраняет локальные числа словами', async () => {
+    const parse = vi.spyOn(exercisesRepository, 'parseWorkout').mockResolvedValue({ items: [], unmatched: [] })
+    const localCatalog: ExerciseSnapshot[] = [
+      { source: 'system', ref: 'bench', name: 'Жим лёжа', muscleGroup: 'chest', inputKind: 'strength' },
+    ]
+
+    const result = await parseWorkoutWithLlm('Ну, эээ, жим лёжа три по десять восемьдесят килограмм', localCatalog)
+
+    expect(parse).toHaveBeenCalledWith('жим лёжа три по десять восемьдесят килограмм', localCatalog)
+    expect(result.items[0]).toMatchObject({
+      exerciseRef: 'bench',
+      sets: Array.from({ length: 3 }, () => ({ weightKg: 80, reps: 10 })),
+    })
+  })
 })
