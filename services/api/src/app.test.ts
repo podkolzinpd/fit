@@ -393,21 +393,47 @@ function buildConnectionsWriter(error?: Error): {
 }
 
 const WORKOUT_ID = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
+const WORKOUT_SET_ID = 'ea8efab5-0530-4660-9798-79901fcddfeb'
+const OPERATION_IDS = {
+  start: '723fa5d1-d3f0-4daa-b080-8fd354b89b86',
+  save: '305a5b42-8b8b-44a9-a1e3-7c188511b25f',
+  confirm: '3c6c84f1-80e6-4ba5-94cc-550fca410dbd',
+  finish: '65331570-913c-4faa-9771-4a60d7a5e9f0',
+} as const
 
 function buildWorkoutsWriter(error?: Error): {
   pilotWorkoutsWriter: PilotWorkoutsWriter
+  confirmLiveSet: ReturnType<typeof vi.fn>
   deletePlanned: ReturnType<typeof vi.fn>
+  finishLive: ReturnType<typeof vi.fn>
+  saveLiveSet: ReturnType<typeof vi.fn>
   savePlanned: ReturnType<typeof vi.fn>
+  startLive: ReturnType<typeof vi.fn>
 } {
   const result = <Value>(value: Value) => error === undefined
     ? Promise.resolve(value)
     : Promise.reject(error)
   const deletePlanned = vi.fn(() => result(3))
   const savePlanned = vi.fn(() => result({ id: WORKOUT_ID, version: 1 }))
+  const startLive = vi.fn(() => result({ version: 2, replayed: false }))
+  const saveLiveSet = vi.fn(() => result({ version: 2, replayed: false }))
+  const confirmLiveSet = vi.fn(() => result({ version: 3, replayed: false }))
+  const finishLive = vi.fn(() => result({ version: 3, replayed: false }))
   return {
-    pilotWorkoutsWriter: { deletePlanned, savePlanned },
+    pilotWorkoutsWriter: {
+      confirmLiveSet,
+      deletePlanned,
+      finishLive,
+      saveLiveSet,
+      savePlanned,
+      startLive,
+    },
+    confirmLiveSet,
     deletePlanned,
+    finishLive,
+    saveLiveSet,
     savePlanned,
+    startLive,
   }
 }
 
@@ -793,6 +819,7 @@ describe('pilot planned workout commands', () => {
   })
 
   it.each([
+    ['active', 409, 'active_workout_exists'],
     ['forbidden', 403, 'action_not_allowed'],
     ['not_found', 404, 'resource_not_found'],
     ['conflict', 409, 'version_conflict'],
@@ -837,6 +864,145 @@ describe('pilot planned workout commands', () => {
 
     expect(response.statusCode).toBe(401)
     expect(writer.deletePlanned).not.toHaveBeenCalled()
+  })
+})
+
+describe('pilot live workout core commands', () => {
+  const sessionToken = 's'.repeat(43)
+
+  it('starts, records, confirms and finishes with operation identities', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({
+      pilotWorkoutsWriter: writer.pilotWorkoutsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const started = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/start`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 1, operationId: OPERATION_IDS.start },
+    })
+    const draft = {
+      weightKg: 42.5,
+      reps: 10,
+      durationMin: null,
+      durationSec: null,
+      distanceKm: null,
+      rpe: 7.5,
+    }
+    const saved = await app.inject({
+      method: 'PUT',
+      url: `/v1/workout-sets/${WORKOUT_SET_ID}/draft`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        expectedVersion: 1,
+        operationId: OPERATION_IDS.save,
+        draft,
+      },
+    })
+    const confirmed = await app.inject({
+      method: 'POST',
+      url: `/v1/workout-sets/${WORKOUT_SET_ID}/confirm`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 2, operationId: OPERATION_IDS.confirm },
+    })
+    const finished = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/finish`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 2, operationId: OPERATION_IDS.finish },
+    })
+
+    expect(started.statusCode).toBe(200)
+    expect(started.json()).toEqual({
+      workout: { id: WORKOUT_ID, version: 2, replayed: false },
+    })
+    expect(saved.json()).toEqual({
+      set: { id: WORKOUT_SET_ID, version: 2, replayed: false },
+    })
+    expect(confirmed.json()).toEqual({
+      set: { id: WORKOUT_SET_ID, version: 3, replayed: false },
+    })
+    expect(finished.json()).toEqual({
+      workout: { id: WORKOUT_ID, version: 3, replayed: false },
+    })
+    expect(finished.headers['cache-control']).toBe('no-store')
+    expect(writer.startLive).toHaveBeenCalledWith(
+      sessionToken,
+      WORKOUT_ID,
+      1,
+      OPERATION_IDS.start,
+    )
+    expect(writer.saveLiveSet).toHaveBeenCalledWith(
+      sessionToken,
+      WORKOUT_SET_ID,
+      draft,
+      1,
+      OPERATION_IDS.save,
+    )
+    expect(writer.confirmLiveSet).toHaveBeenCalledWith(
+      sessionToken,
+      WORKOUT_SET_ID,
+      2,
+      OPERATION_IDS.confirm,
+    )
+    expect(writer.finishLive).toHaveBeenCalledWith(
+      sessionToken,
+      WORKOUT_ID,
+      2,
+      OPERATION_IDS.finish,
+    )
+  })
+
+  it('rejects malformed operation and set inputs before calling the writer', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({
+      pilotWorkoutsWriter: writer.pilotWorkoutsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const invalidOperation = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/start`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 1, operationId: 'not-a-uuid' },
+    })
+    const invalidSet = await app.inject({
+      method: 'PUT',
+      url: `/v1/workout-sets/${WORKOUT_SET_ID}/draft`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        expectedVersion: 1,
+        operationId: OPERATION_IDS.save,
+        draft: { reps: -1 },
+      },
+    })
+
+    expect(invalidOperation.statusCode).toBe(400)
+    expect(invalidSet.statusCode).toBe(400)
+    expect(writer.startLive).not.toHaveBeenCalled()
+    expect(writer.saveLiveSet).not.toHaveBeenCalled()
+  })
+
+  it('requires the opaque session for live commands', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({
+      pilotWorkoutsWriter: writer.pilotWorkoutsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/finish`,
+      payload: { expectedVersion: 2, operationId: OPERATION_IDS.finish },
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(writer.finishLive).not.toHaveBeenCalled()
   })
 })
 
