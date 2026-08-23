@@ -53,6 +53,25 @@ describe('formatLlmWorkoutText', () => {
     })
   })
 
+  it('не принимает от модели штангу, когда пользователь явно назвал гантели', () => {
+    const equipmentCatalog: ExerciseSnapshot[] = [
+      { source: 'system', ref: 'incline-barbell', name: 'Жим на наклонной (Штанга)', muscleGroup: 'chest', inputKind: 'strength', equipment: 'Штанга', equipmentRef: 'barbell' },
+      { source: 'system', ref: 'incline-dumbbell', name: 'Жим гантелей на наклонной (Гантели)', muscleGroup: 'chest', inputKind: 'strength', equipment: 'Гантели', equipmentRef: 'dumbbell' },
+    ]
+
+    expect(mergeWorkoutParse({
+      items: [{ sourceText: 'Жим гантелей на наклонной скамье 3 по 10 70 кг', exerciseRef: 'incline-barbell', confidence: 0.95, sets: [{ weightKg: 70, reps: 10 }] }],
+      unmatched: [],
+    }, { items: [], unmatched: [] }, equipmentCatalog)).toEqual({
+      items: [],
+      unmatched: [{
+        sourceText: 'Жим гантелей на наклонной скамье 3 по 10 70 кг',
+        reason: 'Нужно уточнить оборудование',
+        suggestedExerciseRefs: ['incline-dumbbell'],
+      }],
+    })
+  })
+
   it('не теряет безопасно найденное упражнение при временной ошибке LLM', async () => {
     vi.spyOn(exercisesRepository, 'parseWorkout').mockRejectedValue(new Error('network'))
     const localCatalog: ExerciseSnapshot[] = [
