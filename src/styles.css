@@ -672,6 +672,20 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .app-feedback-card .save-status { margin: 0 }
 .app-feedback-card .actions { margin: 0 }
 .app-feedback-sent .secondary { justify-self: start; min-height: var(--control-height-standard) }
+.app-install-card { display:grid; gap:var(--space-4); margin:0 0 var(--space-4); padding:var(--card-padding); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); box-shadow:var(--shadow-card) }
+.app-install-card.compact { gap:var(--space-3); margin:0; padding:16px; box-shadow:none }
+.app-install-card.compact > div:first-child { display:grid; gap:3px }
+.app-install-card .eyebrow { margin:0 0 var(--space-1) }
+.app-install-card h2 { margin:0; font-size:var(--type-section-size); line-height:var(--leading-snug) }
+.app-install-card p { margin:0 }
+.app-install-card.compact > div:first-child > p:last-child, .app-install-copy { color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.app-install-head { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-3) }
+.app-install-head .link { min-height:40px; flex:0 0 auto; padding:var(--space-2) 0 }
+.app-install-steps { display:grid; gap:var(--space-2); margin:0; padding-left:22px; color:var(--fg); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.app-install-actions { display:flex; align-items:center; gap:var(--space-3) }
+.app-install-actions .secondary { flex:1; min-height:var(--control-height-standard) }
+.app-install-actions .link { flex:0 0 auto; min-height:var(--control-height-standard) }
+.app-install-success { padding:var(--space-3); border:1px solid var(--success-border); border-radius:var(--radius-md); color:var(--success-fg); background:var(--success-surface); font-weight:var(--weight-semibold) }
 .join-page .page-header { margin-bottom:18px; }.join-card { display:grid; gap:20px; max-width:520px; margin:4px auto 0; padding:20px; border:1px solid var(--border); border-radius:22px; background:var(--surface-raised); box-shadow:var(--shadow-card); }.join-card-head { display:grid; gap:7px; }.join-card-head .eyebrow { margin:0; }.join-card-head h2 { margin:0; font-size:26px; line-height:1.13; letter-spacing:var(--tracking-tight); }.join-card-head > p:last-child { margin:0; color:var(--muted); font-size:15px; line-height:1.42; }.join-form { padding:0; border:0; background:transparent; }.join-form input { min-height:52px; border-radius:15px; background:var(--surface-sunken); font-size:18px; letter-spacing:.06em; text-transform:uppercase; }.join-form button { min-height:52px; border-radius:16px; font-size:17px; font-weight:800; }.join-state { min-height:220px; }
 .switch-row { position: relative; min-height: 58px; display: flex; align-items: center; gap: 14px; padding: 13px 14px; cursor: pointer; -webkit-tap-highlight-color: transparent }
 .switch-row + .switch-row { border-top: 1px solid var(--border) }
