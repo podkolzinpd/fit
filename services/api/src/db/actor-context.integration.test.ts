@@ -20,10 +20,16 @@ import { DatabasePilotTrainingDataReader } from '../pilot-training-data-reader.j
 import type { PlannedWorkoutDraft } from '../planned-workout-request.js'
 import { readAccessibleTrainingData } from '../training-data.js'
 import {
+  appendLiveExercise,
+  appendLiveSet,
   confirmLiveSet,
   finishLiveWorkout,
+  removeLiveSet,
+  reorderLiveBlock,
+  replaceLiveExercise,
   savePlannedWorkout,
   saveLiveSetDraft,
+  setLiveExerciseComment,
   softDeletePlannedWorkout,
   startLiveWorkout,
 } from '../workout-commands.js'
@@ -72,6 +78,20 @@ const LIVE_OPERATION_IDS = {
   confirm: '93c54052-ee01-409f-b782-b89231e233eb',
   finish: '609f7f16-c782-4bf3-8389-ef6b6f8ec8c5',
   outside: 'f6e49b82-ee88-46a5-8ccb-8abb00843336',
+} as const
+const LIVE_STRUCTURE_OPERATION_IDS = {
+  appendExercise: 'd700203f-acf6-43a5-a938-107a4f4e57d5',
+  appendSet: 'e40e8718-9b54-47af-9a4a-daf326d1cff4',
+  clientComment: 'f447d74d-c821-46a4-bae5-a3b99864a56e',
+  comment: '57b8b310-c604-46c9-8ef7-c29c772a8744',
+  lastSet: 'c4c92d19-bacd-49e2-b979-cb12380f2a2e',
+  outside: 'fbca8ce5-8b5f-4035-865c-cb6559566f40',
+  removeSet: 'b49323e3-713d-4b3d-af04-8a6067c67c9d',
+  reorder: '1b6079dc-4d73-4e4d-80f4-e3496d158d4e',
+  replace: '29157073-e963-4e02-85c7-62299757d2d9',
+  replaceStarted: '5da77812-96b8-4f06-9700-3dbcb47e28ae',
+  staleComment: 'c05c98ae-efc3-4c10-b12b-11862c30bd48',
+  start: '935d1c4f-f3bd-4d80-a76b-30dd4fe73814',
 } as const
 const PILOT_SUBJECT_HASH = 'b'.repeat(64)
 const OUTSIDE_SUBJECT_HASH = 'c'.repeat(64)
@@ -125,6 +145,8 @@ interface ChildAuditRow extends QueryResultRow {
 interface WorkoutPrivilegeRow extends QueryResultRow {
   direct_writes: boolean
   mutation_execute: boolean
+  private_receipt_execute: boolean
+  structure_execute: boolean
 }
 
 interface LiveSetAuditRow extends QueryResultRow {
@@ -139,6 +161,19 @@ interface LiveSetAuditRow extends QueryResultRow {
 interface LiveOperationAuditRow extends QueryResultRow {
   count: number
   hashes_valid: boolean
+}
+
+interface LiveStructureAuditRow extends QueryResultRow {
+  exercise_name: string
+  input_kind: string
+  position: number
+  trainer_comment: string | null
+  updated_by: string | null
+}
+
+interface LiveStructureReceiptRow extends QueryResultRow {
+  count: number
+  resource_ids_present: boolean
 }
 
 function requireLocalTestDatabaseUrl(): string {
@@ -1252,11 +1287,23 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             'fit_api',
             'public.save_planned_workout(jsonb,bigint)',
             'EXECUTE'
-          ) as mutation_execute
+          ) as mutation_execute,
+          has_function_privilege(
+            'fit_api',
+            'public.append_live_exercise(uuid,jsonb,bigint,uuid)',
+            'EXECUTE'
+          ) as structure_execute,
+          has_function_privilege(
+            'fit_api',
+            'app_private.complete_live_workout_operation(uuid,bigint,uuid)',
+            'EXECUTE'
+          ) as private_receipt_execute
       `)
       expect(privileges.rows).toEqual([{
         direct_writes: false,
         mutation_execute: true,
+        private_receipt_execute: false,
+        structure_execute: true,
       }])
 
       const created = await withActorTransaction(
@@ -1658,6 +1705,481 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             where id = $1
           `,
           [ROOT_WORKOUT_SET_ID],
+        )
+      }
+    })
+
+    it('applies idempotent live structural edits through the workout root', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const operationIds = Object.values(LIVE_STRUCTURE_OPERATION_IDS)
+      await ownerPool.query(
+        `
+          delete from app_private.live_workout_operations
+          where actor_id = any($1::uuid[])
+            and operation_id = any($2::uuid[])
+        `,
+        [[ACTOR_ID, OTHER_ACTOR_ID, OUTSIDE_TRAINER_ID], operationIds],
+      )
+      await ownerPool.query(
+        `
+          delete from public.workout_exercises
+          where workout_id = $1 and id <> $2
+        `,
+        [ROOT_WORKOUT_ID, ROOT_WORKOUT_EXERCISE_ID],
+      )
+      await ownerPool.query(
+        `
+          update public.workout_exercises
+          set
+            position = 0,
+            exercise_source = 'system',
+            exercise_ref = 'running',
+            custom_exercise_id = null,
+            exercise_name = 'Бег',
+            muscle_group = 'cardio',
+            input_kind = 'distance',
+            trainer_comment = null,
+            updated_by = null
+          where id = $1
+        `,
+        [ROOT_WORKOUT_EXERCISE_ID],
+      )
+      await ownerPool.query(
+        `
+          delete from public.workout_sets
+          where workout_exercise_id = $1 and id <> $2
+        `,
+        [ROOT_WORKOUT_EXERCISE_ID, ROOT_WORKOUT_SET_ID],
+      )
+      await ownerPool.query(
+        `
+          update public.workout_sets
+          set
+            position = 0,
+            plan_weight_kg = null,
+            plan_reps = null,
+            plan_duration_min = null,
+            plan_duration_sec = 1800,
+            plan_distance_km = 5,
+            plan_rpe = 7,
+            fact_weight_kg = null,
+            fact_reps = null,
+            fact_duration_min = null,
+            fact_duration_sec = null,
+            fact_distance_km = null,
+            fact_rpe = null,
+            confirmed_at = null,
+            updated_by = null,
+            version = 1
+          where id = $1
+        `,
+        [ROOT_WORKOUT_SET_ID],
+      )
+      await ownerPool.query(
+        `
+          update public.workouts
+          set
+            status = 'planned',
+            started_at = null,
+            completed_at = null,
+            updated_by = null,
+            version = 1
+          where id = $1
+        `,
+        [ROOT_WORKOUT_ID],
+      )
+
+      let appendedExerciseId: string | undefined
+      try {
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => startLiveWorkout(
+            client,
+            ROOT_WORKOUT_ID,
+            1,
+            LIVE_STRUCTURE_OPERATION_IDS.start,
+          ),
+        )).resolves.toEqual({ version: 2, replayed: false })
+
+        const exercise = {
+          source: 'system' as const,
+          ref: 'push-up',
+          customExerciseId: null,
+          name: 'Отжимания',
+          muscleGroup: 'chest' as const,
+          inputKind: 'reps' as const,
+        }
+        const appendedExercise = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => appendLiveExercise(
+            client,
+            ROOT_WORKOUT_ID,
+            exercise,
+            2,
+            LIVE_STRUCTURE_OPERATION_IDS.appendExercise,
+          ),
+        )
+        appendedExerciseId = appendedExercise.resourceId
+        expect(appendedExercise).toMatchObject({ version: 3, replayed: false })
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => appendLiveExercise(
+            client,
+            ROOT_WORKOUT_ID,
+            exercise,
+            2,
+            LIVE_STRUCTURE_OPERATION_IDS.appendExercise,
+          ),
+        )).resolves.toEqual({ ...appendedExercise, replayed: true })
+
+        const appendedSet = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => appendLiveSet(
+            client,
+            ROOT_WORKOUT_EXERCISE_ID,
+            3,
+            LIVE_STRUCTURE_OPERATION_IDS.appendSet,
+          ),
+        )
+        expect(appendedSet).toMatchObject({ version: 4, replayed: false })
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => removeLiveSet(
+            client,
+            appendedSet.resourceId,
+            4,
+            LIVE_STRUCTURE_OPERATION_IDS.removeSet,
+          ),
+        )).resolves.toEqual({
+          resourceId: appendedSet.resourceId,
+          version: 5,
+          replayed: false,
+        })
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => removeLiveSet(
+            client,
+            appendedSet.resourceId,
+            4,
+            LIVE_STRUCTURE_OPERATION_IDS.removeSet,
+          ),
+        )).resolves.toEqual({
+          resourceId: appendedSet.resourceId,
+          version: 5,
+          replayed: true,
+        })
+
+        const replacement = {
+          source: 'system' as const,
+          ref: 'deadlift',
+          customExerciseId: null,
+          name: 'Становая тяга',
+          muscleGroup: 'back' as const,
+          inputKind: 'strength' as const,
+        }
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => replaceLiveExercise(
+            client,
+            ROOT_WORKOUT_ID,
+            ROOT_WORKOUT_EXERCISE_ID,
+            replacement,
+            5,
+            LIVE_STRUCTURE_OPERATION_IDS.replace,
+          ),
+        )).resolves.toEqual({
+          resourceId: ROOT_WORKOUT_EXERCISE_ID,
+          version: 6,
+          replayed: false,
+        })
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => setLiveExerciseComment(
+            client,
+            ROOT_WORKOUT_EXERCISE_ID,
+            'Клиент не меняет комментарий тренера',
+            6,
+            LIVE_STRUCTURE_OPERATION_IDS.clientComment,
+          ),
+        )).rejects.toMatchObject({ failure: 'forbidden' })
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => setLiveExerciseComment(
+            client,
+            ROOT_WORKOUT_EXERCISE_ID,
+            'Держи спину прямо',
+            6,
+            LIVE_STRUCTURE_OPERATION_IDS.comment,
+          ),
+        )).resolves.toEqual({
+          resourceId: ROOT_WORKOUT_EXERCISE_ID,
+          version: 7,
+          replayed: false,
+        })
+
+        const appendedBlockRows = await ownerPool.query<{ block_id: string }>(
+          'select block_id from public.workout_exercises where id = $1',
+          [appendedExerciseId],
+        )
+        const appendedBlockId = appendedBlockRows.rows[0]?.block_id
+        if (appendedBlockId === undefined) {
+          throw new Error('Appended Live exercise block was not created')
+        }
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => reorderLiveBlock(
+            client,
+            ROOT_WORKOUT_ID,
+            appendedBlockId,
+            -1,
+            7,
+            LIVE_STRUCTURE_OPERATION_IDS.reorder,
+          ),
+        )).resolves.toEqual({
+          resourceId: appendedBlockId,
+          version: 8,
+          replayed: false,
+        })
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => reorderLiveBlock(
+            client,
+            ROOT_WORKOUT_ID,
+            appendedBlockId,
+            -1,
+            7,
+            LIVE_STRUCTURE_OPERATION_IDS.reorder,
+          ),
+        )).resolves.toEqual({
+          resourceId: appendedBlockId,
+          version: 8,
+          replayed: true,
+        })
+
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => setLiveExerciseComment(
+            client,
+            ROOT_WORKOUT_EXERCISE_ID,
+            'Устаревшая правка',
+            7,
+            LIVE_STRUCTURE_OPERATION_IDS.staleComment,
+          ),
+        )).rejects.toMatchObject({ failure: 'conflict' })
+        await ownerPool.query(
+          `
+            update public.workout_sets
+            set confirmed_at = now()
+            where id = $1
+          `,
+          [ROOT_WORKOUT_SET_ID],
+        )
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => replaceLiveExercise(
+            client,
+            ROOT_WORKOUT_ID,
+            ROOT_WORKOUT_EXERCISE_ID,
+            replacement,
+            8,
+            LIVE_STRUCTURE_OPERATION_IDS.replaceStarted,
+          ),
+        )).rejects.toMatchObject({ failure: 'conflict' })
+        await ownerPool.query(
+          `
+            update public.workout_sets
+            set confirmed_at = null
+            where id = $1
+          `,
+          [ROOT_WORKOUT_SET_ID],
+        )
+        await expect(withActorTransaction(
+          runtimePool,
+          OUTSIDE_TRAINER_ID,
+          (client) => appendLiveSet(
+            client,
+            ROOT_WORKOUT_EXERCISE_ID,
+            8,
+            LIVE_STRUCTURE_OPERATION_IDS.outside,
+          ),
+        )).rejects.toMatchObject({ failure: 'forbidden' })
+        const appendedSetRows = await ownerPool.query<{ id: string }>(
+          `
+            select id
+            from public.workout_sets
+            where workout_exercise_id = $1
+          `,
+          [appendedExerciseId],
+        )
+        const onlyAppendedSetId = appendedSetRows.rows[0]?.id
+        if (onlyAppendedSetId === undefined) {
+          throw new Error('Appended Live exercise set was not created')
+        }
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => removeLiveSet(
+            client,
+            onlyAppendedSetId,
+            8,
+            LIVE_STRUCTURE_OPERATION_IDS.lastSet,
+          ),
+        )).rejects.toMatchObject({ failure: 'invalid' })
+
+        const structureRows = await ownerPool.query<LiveStructureAuditRow>(
+          `
+            select
+              exercise_name, input_kind, position, trainer_comment, updated_by
+            from public.workout_exercises
+            where workout_id = $1
+            order by position
+          `,
+          [ROOT_WORKOUT_ID],
+        )
+        expect(structureRows.rows).toEqual([
+          {
+            exercise_name: 'Отжимания',
+            input_kind: 'reps',
+            position: 0,
+            trainer_comment: null,
+            updated_by: OTHER_ACTOR_ID,
+          },
+          {
+            exercise_name: 'Становая тяга',
+            input_kind: 'strength',
+            position: 1,
+            trainer_comment: 'Держи спину прямо',
+            updated_by: OTHER_ACTOR_ID,
+          },
+        ])
+        const rootSetRows = await ownerPool.query<LiveSetAuditRow>(
+          `
+            select
+              confirmed_at, fact_distance_km, fact_duration_sec, fact_rpe,
+              updated_by, version
+            from public.workout_sets
+            where workout_exercise_id = $1
+          `,
+          [ROOT_WORKOUT_EXERCISE_ID],
+        )
+        expect(rootSetRows.rows).toEqual([{
+          confirmed_at: null,
+          fact_distance_km: null,
+          fact_duration_sec: null,
+          fact_rpe: null,
+          updated_by: OTHER_ACTOR_ID,
+          version: '1',
+        }])
+
+        const receiptRows = await ownerPool.query<LiveStructureReceiptRow>(
+          `
+            select
+              count(*)::integer as count,
+              bool_and(result_resource_id is not null) as resource_ids_present
+            from app_private.live_workout_operations
+            where actor_id = any($1::uuid[])
+              and operation_id = any($2::uuid[])
+              and result_version is not null
+              and action <> 'start'
+          `,
+          [[ACTOR_ID, OTHER_ACTOR_ID], operationIds],
+        )
+        expect(receiptRows.rows).toEqual([{
+          count: 6,
+          resource_ids_present: true,
+        }])
+      } finally {
+        await ownerPool.query(
+          `
+            delete from app_private.live_workout_operations
+            where actor_id = any($1::uuid[])
+              and operation_id = any($2::uuid[])
+          `,
+          [[ACTOR_ID, OTHER_ACTOR_ID, OUTSIDE_TRAINER_ID], operationIds],
+        )
+        await ownerPool.query(
+          `
+            delete from public.workout_exercises
+            where workout_id = $1 and id <> $2
+          `,
+          [ROOT_WORKOUT_ID, ROOT_WORKOUT_EXERCISE_ID],
+        )
+        await ownerPool.query(
+          `
+            update public.workout_exercises
+            set
+              position = 0,
+              exercise_source = 'system',
+              exercise_ref = 'running',
+              custom_exercise_id = null,
+              exercise_name = 'Бег',
+              muscle_group = 'cardio',
+              input_kind = 'distance',
+              trainer_comment = null,
+              updated_by = null
+            where id = $1
+          `,
+          [ROOT_WORKOUT_EXERCISE_ID],
+        )
+        await ownerPool.query(
+          `
+            delete from public.workout_sets
+            where workout_exercise_id = $1 and id <> $2
+          `,
+          [ROOT_WORKOUT_EXERCISE_ID, ROOT_WORKOUT_SET_ID],
+        )
+        await ownerPool.query(
+          `
+            update public.workout_sets
+            set
+              position = 0,
+              plan_weight_kg = null,
+              plan_reps = null,
+              plan_duration_min = null,
+              plan_duration_sec = 1800,
+              plan_distance_km = 5,
+              plan_rpe = 7,
+              fact_weight_kg = null,
+              fact_reps = null,
+              fact_duration_min = null,
+              fact_duration_sec = null,
+              fact_distance_km = null,
+              fact_rpe = null,
+              confirmed_at = null,
+              updated_by = null,
+              version = 1
+            where id = $1
+          `,
+          [ROOT_WORKOUT_SET_ID],
+        )
+        await ownerPool.query(
+          `
+            update public.workouts
+            set
+              status = 'planned',
+              started_at = null,
+              completed_at = null,
+              updated_by = null,
+              version = 1
+            where id = $1
+          `,
+          [ROOT_WORKOUT_ID],
         )
       }
     })

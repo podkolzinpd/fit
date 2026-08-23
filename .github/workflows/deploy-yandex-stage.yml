@@ -439,6 +439,11 @@ jobs:
             | select(.id == $workout_id)
             | .exercises[0].sets[0].id
           ' <<<"$live_created_read")
+          live_exercise_id=$(jq -er --arg workout_id "$live_workout_id" '
+            .workouts[]
+            | select(.id == $workout_id)
+            | .exercises[0].id
+          ' <<<"$live_created_read")
           start_operation_id=$(cat /proc/sys/kernel/random/uuid)
           start_payload=$(jq -cn \
             --arg operation_id "$start_operation_id" \
@@ -465,6 +470,163 @@ jobs:
           jq -e '
             .workout.version == 2 and .workout.replayed == true
           ' <<<"$start_replayed" >/dev/null
+          append_exercise_operation_id=$(cat /proc/sys/kernel/random/uuid)
+          append_exercise_payload=$(jq -cn \
+            --arg operation_id "$append_exercise_operation_id" \
+            '{
+              expectedVersion: 2,
+              operationId: $operation_id,
+              exercise: {
+                source: "system",
+                ref: "push-up",
+                customExerciseId: null,
+                name: "Отжимания",
+                muscleGroup: "chest",
+                inputKind: "reps"
+              }
+            }')
+          appended_exercise=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$append_exercise_payload" \
+            "${api_url%/}/v1/workouts/$live_workout_id/exercises")
+          appended_exercise_id=$(jq -er '
+            select(.exercise.version == 3 and .exercise.replayed == false)
+            | .exercise.id
+          ' <<<"$appended_exercise")
+          appended_exercise_replayed=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$append_exercise_payload" \
+            "${api_url%/}/v1/workouts/$live_workout_id/exercises")
+          jq -e --arg exercise_id "$appended_exercise_id" '
+            .exercise.id == $exercise_id
+            and .exercise.version == 3
+            and .exercise.replayed == true
+          ' <<<"$appended_exercise_replayed" >/dev/null
+          append_set_operation_id=$(cat /proc/sys/kernel/random/uuid)
+          append_set_payload=$(jq -cn \
+            --arg operation_id "$append_set_operation_id" \
+            '{expectedVersion: 3, operationId: $operation_id}')
+          appended_set=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$append_set_payload" \
+            "${api_url%/}/v1/workout-exercises/$live_exercise_id/sets")
+          appended_set_id=$(jq -er '
+            select(.set.version == 4 and .set.replayed == false)
+            | .set.id
+          ' <<<"$appended_set")
+          remove_set_operation_id=$(cat /proc/sys/kernel/random/uuid)
+          remove_set_payload=$(jq -cn \
+            --arg operation_id "$remove_set_operation_id" \
+            '{expectedVersion: 4, operationId: $operation_id}')
+          removed_set=$(curl --fail --silent --show-error \
+            --request DELETE \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$remove_set_payload" \
+            "${api_url%/}/v1/workout-sets/$appended_set_id")
+          jq -e --arg set_id "$appended_set_id" '
+            .set.id == $set_id
+            and .set.version == 5
+            and .set.replayed == false
+          ' <<<"$removed_set" >/dev/null
+          removed_set_replayed=$(curl --fail --silent --show-error \
+            --request DELETE \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$remove_set_payload" \
+            "${api_url%/}/v1/workout-sets/$appended_set_id")
+          jq -e '
+            .set.version == 5 and .set.replayed == true
+          ' <<<"$removed_set_replayed" >/dev/null
+          replace_operation_id=$(cat /proc/sys/kernel/random/uuid)
+          replace_payload=$(jq -cn \
+            --arg operation_id "$replace_operation_id" \
+            '{
+              expectedVersion: 5,
+              operationId: $operation_id,
+              exercise: {
+                source: "system",
+                ref: "deadlift",
+                customExerciseId: null,
+                name: "Становая тяга",
+                muscleGroup: "back",
+                inputKind: "strength"
+              }
+            }')
+          replaced=$(curl --fail --silent --show-error \
+            --request PUT \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$replace_payload" \
+            "${api_url%/}/v1/workouts/$live_workout_id/exercises/$live_exercise_id")
+          jq -e --arg exercise_id "$live_exercise_id" '
+            .exercise.id == $exercise_id
+            and .exercise.version == 6
+            and .exercise.replayed == false
+          ' <<<"$replaced" >/dev/null
+          comment_operation_id=$(cat /proc/sys/kernel/random/uuid)
+          comment_payload=$(jq -cn \
+            --arg operation_id "$comment_operation_id" \
+            '{
+              expectedVersion: 6,
+              operationId: $operation_id,
+              comment: "Держи спину прямо"
+            }')
+          commented=$(curl --fail --silent --show-error \
+            --request PUT \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$comment_payload" \
+            "${api_url%/}/v1/workout-exercises/$live_exercise_id/comment")
+          jq -e '
+            .exercise.version == 7 and .exercise.replayed == false
+          ' <<<"$commented" >/dev/null
+          structure_read=$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/training-data")
+          appended_block_id=$(jq -er \
+            --arg workout_id "$live_workout_id" \
+            --arg exercise_id "$appended_exercise_id" '
+              .workouts[]
+              | select(.id == $workout_id)
+              | .exercises[]
+              | select(.id == $exercise_id)
+              | .blockId
+            ' <<<"$structure_read")
+          reorder_operation_id=$(cat /proc/sys/kernel/random/uuid)
+          reorder_payload=$(jq -cn \
+            --arg operation_id "$reorder_operation_id" \
+            '{
+              expectedVersion: 7,
+              operationId: $operation_id,
+              direction: -1
+            }')
+          reordered=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$reorder_payload" \
+            "${api_url%/}/v1/workouts/$live_workout_id/blocks/$appended_block_id/reorder")
+          jq -e --arg block_id "$appended_block_id" '
+            .block.id == $block_id
+            and .block.version == 8
+            and .block.replayed == false
+          ' <<<"$reordered" >/dev/null
           save_operation_id=$(cat /proc/sys/kernel/random/uuid)
           save_payload=$(jq -cn \
             --arg operation_id "$save_operation_id" \
@@ -519,7 +681,7 @@ jobs:
           finish_operation_id=$(cat /proc/sys/kernel/random/uuid)
           finish_payload=$(jq -cn \
             --arg operation_id "$finish_operation_id" \
-            '{expectedVersion: 2, operationId: $operation_id}')
+            '{expectedVersion: 8, operationId: $operation_id}')
           finished=$(curl --fail --silent --show-error \
             --request POST \
             --header "Authorization: Bearer $YC_TOKEN" \
@@ -528,12 +690,12 @@ jobs:
             --data "$finish_payload" \
             "${api_url%/}/v1/workouts/$live_workout_id/finish")
           jq -e '
-            .workout.version == 3 and .workout.replayed == false
+            .workout.version == 9 and .workout.replayed == false
           ' <<<"$finished" >/dev/null
           stale_finish_operation_id=$(cat /proc/sys/kernel/random/uuid)
           stale_finish_payload=$(jq -cn \
             --arg operation_id "$stale_finish_operation_id" \
-            '{expectedVersion: 2, operationId: $operation_id}')
+            '{expectedVersion: 8, operationId: $operation_id}')
           stale_finish_status=$(curl --silent --show-error \
             --output /dev/null --write-out '%{http_code}' \
             --request POST \
@@ -547,21 +709,27 @@ jobs:
             --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Pilot-Session: $fixture_token" \
             "${api_url%/}/v1/training-data")
-          jq -e --arg workout_id "$live_workout_id" --arg set_id "$live_set_id" '
+          jq -e \
+            --arg workout_id "$live_workout_id" \
+            --arg set_id "$live_set_id" \
+            --arg original_exercise_id "$live_exercise_id" \
+            --arg appended_exercise_id "$appended_exercise_id" '
             .workouts | any(
               .id == $workout_id
               and .status == "done"
-              and .version == 3
-              and (.exercises | any(
-                .sets | any(
+              and .version == 9
+              and .exercises[0].id == $appended_exercise_id
+              and .exercises[1].id == $original_exercise_id
+              and .exercises[1].name == "Становая тяга"
+              and .exercises[1].trainerComment == "Держи спину прямо"
+              and (.exercises[1].sets | any(
                   .id == $set_id
                   and .version == 3
                   and .fact.weightKg == 42.5
                   and .fact.reps == 9
                   and .fact.rpe == 7.5
                   and .confirmedAt != null
-                )
-              ))
+                ))
             )
           ' <<<"$live_finished_read" >/dev/null
       - name: Roll back the API revision when readiness fails

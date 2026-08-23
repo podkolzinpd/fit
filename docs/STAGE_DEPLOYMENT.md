@@ -235,10 +235,18 @@ An exact retry by the same actor returns the committed result with
 `replayed: true` instead of mutating twice; reusing the UUID for different input
 is rejected, and a new operation against a stale workout or set version returns
 `409`. Operation receipts contain no workout facts: only internal UUIDs, action,
-request SHA-256 and result version. They expire from the retry ledger after
-30 days and are not readable by `fit_api`. The smoke
-replays start and set-save requests, then confirms and finishes the aggregate,
-checks a stale finish conflict and reads the confirmed facts back.
+request SHA-256, result version and, for structural commands, the affected or
+created child UUID. They expire from the retry ledger after 30 days and are not
+readable by `fit_api`.
+
+The structural Live slice adds stage-only exercise append, set append/remove,
+exercise replacement, block reorder and exercise comment commands. They lock
+and version the workout root, preserve a single set when removing, inherit the
+previous set's plan/fact when appending, reject replacement after a confirmed
+set and keep positions contiguous. The smoke replays start, exercise append,
+set removal and set-save requests, then replaces and comments an exercise,
+reorders its block, confirms and finishes the aggregate, checks a stale finish
+conflict and reads the final structure and facts back.
 
 ## 8. Enroll a stage pilot account
 
