@@ -2,6 +2,8 @@ import type { ClientTrainingSummary } from '../../shared/domain'
 import { supabase } from './client'
 import { toJson } from './json'
 
+const summaryFunctionUrl = 'https://functions.yandexcloud.net/d4eq75uad5lps1chbidk'
+
 const internalColumns = 'id,client_id,period_start,period_end,trainer_summary,client_summary,display_metrics,generated_at,version'
 
 const publishedColumns = 'id,source_summary_id,client_id,period_start,period_end,summary,display_metrics,generated_at,published_at'
@@ -26,18 +28,35 @@ export const trainingSummaryQueries = {
     .order('period_end', { ascending: false }),
   generate: async (clientId: string, periodStart: string, periodEnd: string, force: boolean) => {
     const { data: { session } } = await supabase.auth.getSession()
-    return supabase.functions.invoke('summarize-client-training', {
-      timeout: 100_000,
-      headers: session?.access_token
-        ? { Authorization: `Bearer ${session.access_token}` }
-        : undefined,
-      body: {
-        client_id: clientId,
-        period_start: periodStart,
-        period_end: periodEnd,
-        force,
-      },
-    })
+    if (!session?.access_token) return { data: null, error: new Error('authentication_required') }
+
+    let response: Response
+    try {
+      response = await fetch(summaryFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-supabase-authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          client_id: clientId,
+          period_start: periodStart,
+          period_end: periodEnd,
+          force,
+        }),
+      })
+    } catch (error) {
+      return { data: null, error: error instanceof Error ? error : new Error('summary_function_request_failed') }
+    }
+    if (!response.ok) return { data: null, error: { context: response } }
+    try {
+      return {
+        data: await response.json() as { error?: string; cached?: boolean; data?: { generated_at?: string } },
+        error: null,
+      }
+    } catch {
+      return { data: null, error: new Error('invalid_json') }
+    }
   },
   publish: (
     summaryId: string,
