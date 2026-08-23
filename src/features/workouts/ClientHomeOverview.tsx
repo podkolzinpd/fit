@@ -5,6 +5,7 @@ import { currentStage } from '../../shared/goal-rules'
 import { addDays, formatLocalDate, type LocalDate } from '../../shared/local-date'
 import { RecordIcon } from '../../shared/icons'
 import { exerciseProgressValueLabel } from './ExerciseProgressSummary'
+import { ClientFirstRunIntro } from './FirstRunExperience'
 
 type NextWorkout = { kind: 'active' | 'assigned'; workout: Workout }
 type HomeHighlight =
@@ -189,16 +190,18 @@ interface ClientHomeOverviewProps {
   onRetry: () => void
   selfTraining: ReactNode
   wearable?: ReactNode
+  showFirstRunConnection?: boolean
 }
 
-export function ClientHomeOverview({ today, workouts, regularity, goal, personalRecords = [], workoutsLoading, regularityLoading, error, onRetry, selfTraining, wearable }: ClientHomeOverviewProps) {
+export function ClientHomeOverview({ today, workouts, regularity, goal, personalRecords = [], workoutsLoading, regularityLoading, error, onRetry, selfTraining, wearable, showFirstRunConnection = true }: ClientHomeOverviewProps) {
   const next = workouts ? clientHomeNextWorkout(workouts, today) : null
   const pastPlans = workouts ? clientHomePastPlans(workouts, today) : []
   const hasActiveOrTodayPlan = Boolean(next && (next.kind === 'active' || next.workout.workoutDate === today))
   const highlight = workouts ? clientHomeHighlight(workouts, goal, personalRecords) : goal ? { kind: 'goal' as const, goal } : null
   const week = regularity?.find((period) => period.period === 'week')
+  const firstRun = !workoutsLoading && workouts?.length === 0
   return <div className="client-home-overview">
-    {selfTraining}
+    {firstRun ? <ClientFirstRunIntro actions={selfTraining} showConnection={showFirstRunConnection} /> : selfTraining}
     {workoutsLoading && !workouts && <section className="client-home-next client-home-loading" role="status">Загружаем следующую тренировку…</section>}
     {!hasActiveOrTodayPlan && pastPlans.length > 0 && <PastPlanCard workouts={pastPlans} />}
     {next && <NextActionCard next={next} today={today} />}
