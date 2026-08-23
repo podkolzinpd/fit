@@ -36,6 +36,7 @@ import { trainerActionItems, trainerPlanningItems, type TrainerActionItem, type 
 import { TrainerFirstPlanPrompt, TrainerFirstRun } from './FirstRunExperience'
 import { takeFirstWorkoutIntent } from './first-workout-intent'
 import { groupParsedWorkoutReviewBlocks, moveParsedWorkoutReviewBlock } from './today-review-order'
+import { AppInstallPrompt } from '../install'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
@@ -593,7 +594,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   return <Page title={header.title} hideTitle={header.hideTitle} className="today-page today-start-page" action={header.showProfileAvatar ? <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link> : undefined}>
     {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase}`}>
       <p className="today-greeting">{greeting} 👋</p>
-      {clientMode && !textComposerOpen ? <ClientHomeOverview
+      {clientMode && !textComposerOpen ? <><ClientHomeOverview
         today={today}
         workouts={workouts.data}
         regularity={regularity.data}
@@ -619,7 +620,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         </section>}
         showFirstRunConnection={actor?.kind === 'client' && actor.trainerId === actor.userId}
         wearable={actor && isWearablesPilotEnabled(actor.userId) ? <WearableHealthCard /> : undefined}
-      /> : <>
+      />{actor && (workouts.data?.length ?? 0) > 0 && <AppInstallPrompt userId={actor.userId} />}</> : <>
       {!clientMode && trainerHasNoClients && !textComposerOpen && <TrainerFirstRun creating={firstClientCreating} error={firstClientError} onCreate={createFirstClient} />}
       {!clientMode && firstPlanClient && !textComposerOpen && <TrainerFirstPlanPrompt clientName={firstPlanClient.fullName} />}
       {!textComposerOpen && <VoiceInputButton variant="hero" source="today_workout" idleLabel="Надиктовать тренировку" onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }} onPhaseChange={setVoicePhase} onTranscript={handleHeroTranscript} />}
@@ -642,6 +643,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </WorkoutComposer></div>}
       {voiceRefinement?.state === 'error' && !textComposerOpen && <div className="voice-action-error" role="alert"><strong>{voiceRefinement.message}</strong><button type="button" className="link" onClick={() => setTextComposerOpen(true)}>Редактировать текст</button></div>}
       {voicePhase === 'idle' && !restoredDraftScreen && <>{contextCard}{attentionSurface}</>}
+      {voicePhase === 'idle' && !textComposerOpen && actor && (clients.data?.length ?? 0) > 0 && <AppInstallPrompt userId={actor.userId} />}
       </>}
     </section> : <section className={`today-review workout-focused-page ${screen === 'save' ? 'today-save-step' : ''}`}>
       <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { setReordering(false); if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><WorkoutHeader eyebrow={screen === 'review' ? 'ПЛАН ТРЕНИРОВКИ' : 'ПОСЛЕДНИЙ ШАГ'} title={screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'} state="planned" meta={screen === 'review' ? (items.length > 0 ? `Распознано: ${items.length}` : undefined) : 'Выберите вариант и дату'} /></div>
