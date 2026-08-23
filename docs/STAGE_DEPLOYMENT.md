@@ -184,8 +184,10 @@ The automatic workflow verifies:
    remains private.
 
 Until a separate cutover is reviewed, do not change the frontend API URL,
-production Vercel variables or the existing Supabase path. The Yandex ID pilot
-remains default-off and read-only.
+production Vercel variables or the existing Supabase path. The Yandex ID browser
+pilot remains default-off and its workout UI remains read-only; stage mutation
+endpoints are exercised only by automated smoke until a separate repository
+adapter and UI rollout are reviewed.
 
 The first browser pilot uses the existing branch-scoped Vercel Preview rather
 than a separate cloud frontend. Its exact origin is included in the stage CORS
@@ -214,14 +216,18 @@ reject an application token at the gateway before Fastify receives it. The
 custom header is allowed only for the exact pilot origins by the API CORS
 policy; it contains no Yandex token and is never persisted by the browser.
 
-The same session authorizes the read-only `GET /v1/clients` and
-`GET /v1/connections` endpoints. Connections include only memberships for
-clients accessible through PostgreSQL actor context and only active invitations
+The same session authorizes `GET /v1/clients`, `GET /v1/connections` and
+`GET /v1/training-data`. Connections include only memberships for clients
+accessible through PostgreSQL actor context and only active invitations
 created by that actor. Claimed, revoked and expired invitations are filtered in
-the database. Neither endpoint grants runtime writes. The stage delivery smoke
-calls both endpoints with the short-lived synthetic fixture session before a
-revision is accepted, so an unavailable clients or connections read model
-causes the automatic rollback path.
+the database. Planned-workout `POST`, `PUT` and `DELETE` commands are available
+only through the stage API and are not connected to production UI routing.
+They execute security-definer aggregate functions with actor checks, optimistic
+versions and full transaction rollback; `fit_api` still has no direct INSERT,
+UPDATE or DELETE grants on workout tables. The delivery smoke uses the
+short-lived synthetic fixture session to verify all three read models plus
+create, update, stale-version conflict, soft delete and the final filtered read
+before a revision is accepted.
 
 ## 8. Enroll a stage pilot account
 

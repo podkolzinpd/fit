@@ -46,6 +46,13 @@ test('loads synthetic fixtures and verifies every read model through the runtime
   assert.match(workflow, /\/v1\/training-data/)
   assert.match(workflow, /\.accessMode == "read_only"/)
   assert.match(workflow, /\.workoutDate == "2026-08-22"/)
+  assert.match(workflow, /--request POST[\s\S]*?\/v1\/workouts/)
+  assert.match(workflow, /--request PUT[\s\S]*?\/v1\/workouts\/\$workout_id/)
+  assert.match(workflow, /Синтетическая проверка versioned mutation updated/)
+  assert.match(workflow, /\.plan\.weightKg == 40 and \.plan\.reps == 10/)
+  assert.match(workflow, /test "\$stale_status" = 409/)
+  assert.match(workflow, /--request DELETE[\s\S]*?\/v1\/workouts\/\$workout_id/)
+  assert.match(workflow, /all\(\.workouts\[\]; \.id != \$workout_id\)/)
   assert.doesNotMatch(workflow, /jq -r '\.session\.token'/)
 })
 
