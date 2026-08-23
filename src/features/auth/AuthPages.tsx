@@ -20,15 +20,16 @@ import { YandexPilotTrainingData } from './YandexPilotTrainingData'
 type Mode = 'login' | 'register'
 
 export function AuthPage() {
+  const location = useLocation()
+  const returnTo = (location.state as { from?: string } | null)?.from
   const [mode, setMode] = useState<Mode>('login')
   const [busy, setBusy] = useState(false)
   const [yandexBusy, setYandexBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [role, setRole] = useState<AccountRole>('trainer')
+  const [role, setRole] = useState<AccountRole>(returnTo?.startsWith('/join') ? 'client' : 'trainer')
   const { actor } = useAuth()
-  const location = useLocation()
   const yandexPilotConfig = getYandexIdPilotConfig()
-  if (actor) return <Navigate to={(location.state as { from?: string } | null)?.from ?? (actor.role === 'client' ? '/me' : trainerHomePath())} replace />
+  if (actor) return <Navigate to={returnTo ?? (actor.role === 'client' ? '/me' : trainerHomePath())} replace />
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError(null)
@@ -54,7 +55,7 @@ export function AuthPage() {
         <Field label="Тип аккаунта"><select value={role} onChange={(event) => setRole(event.target.value as AccountRole)}>
           <option value="trainer">Я тренер</option><option value="client">Я клиент</option>
         </select></Field>
-        <Field label="Имя"><input name="firstName" autoComplete="given-name" required /></Field>
+        <Field label="Имя"><input name="firstName" minLength={2} autoComplete="given-name" required /></Field>
       </>}
       <Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>
       <Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required /></Field>

@@ -195,6 +195,70 @@ describe('parseQuickWorkoutEntry', () => {
     expect(result.parsed.slice(4, 6).every((item) => item.sets.every((set) => set.weightKg === 20 && set.reps === 20))).toBe(true)
   })
 
+  it('отбрасывает речевой мусор и понимает числа словами без специальной команды', () => {
+    const result = parseQuickWorkoutEntry([
+      'Так, эээ, приседания с гирей, ну, три по десять, двадцать килограмм',
+      'дальше, мэ, выпады с гантелями три подхода по двадцать, вес двадцать килограмм',
+      'потом, бэ, планка три по сорок пять секунд',
+    ].join(' '), SYSTEM_EXERCISE_CATALOG)
+
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed.map((item) => item.exercise.ref)).toEqual([
+      'fedb-goblet-squat',
+      'fedb-dumbbell-lunges',
+      'plank',
+    ])
+    expect(result.parsed[0]?.sets).toEqual(Array.from({ length: 3 }, (_, position) => ({ position, weightKg: 20, reps: 10 })))
+    expect(result.parsed[1]?.sets).toEqual(Array.from({ length: 3 }, (_, position) => ({ position, weightKg: 20, reps: 20 })))
+    expect(result.parsed[2]?.sets).toEqual(Array.from({ length: 3 }, (_, position) => ({ position, durationSec: 45 })))
+  })
+
+  it.each([
+    ['Приседания с гирей двадцать килограмм три по десять', 20, 10, 3],
+    ['Приседания с гирей вес двадцать килограмм, три подхода по десять', 20, 10, 3],
+    ['Приседания с гирей десять повторений три подхода двадцать килограмм', 20, 10, 3],
+    ['Приседания с гирей двадцать килограмм на десять три подхода', 20, 10, 3],
+    ['Приседания с гирей семь с половиной килограмм три по двенадцать', 7.5, 12, 3],
+  ])('понимает разговорный порядок «%s»', (text, weightKg, reps, sets) => {
+    const result = parseQuickWorkoutEntry(text, SYSTEM_EXERCISE_CATALOG)
+
+    expect(result.unparsed, text).toEqual([])
+    expect(result.parsed[0]?.sets, text).toEqual(Array.from({ length: sets }, (_, position) => ({ position, weightKg, reps })))
+  })
+
+  it('сохраняет разные подходы, продиктованные словами', () => {
+    const result = parseQuickWorkoutEntry(
+      'Приседания с гирей двадцать на десять, двадцать два на восемь, двадцать четыре на шесть',
+      SYSTEM_EXERCISE_CATALOG,
+    )
+
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed[0]?.sets).toEqual([
+      { position: 0, weightKg: 20, reps: 10 },
+      { position: 1, weightKg: 22, reps: 8 },
+      { position: 2, weightKg: 24, reps: 6 },
+    ])
+  })
+
+  it('понимает беговые интервалы и длительность, произнесённые словами', () => {
+    const result = parseQuickWorkoutEntry(
+      'шесть по четыреста метров затем бег пять километров сорок пять минут',
+      SYSTEM_EXERCISE_CATALOG,
+    )
+
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed[0]?.sets).toEqual(Array.from({ length: 6 }, (_, position) => ({ position, distanceKm: 0.4 })))
+    expect(result.parsed[1]?.sets).toEqual([{ position: 0, durationSec: 2700, distanceKm: 5 }])
+  })
+
+  it('не путает часть названия «одной рукой» с количеством подходов', () => {
+    const result = parseQuickWorkoutEntry('Тяга гантели одной рукой три по десять двадцать килограмм', SYSTEM_EXERCISE_CATALOG)
+
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed[0]?.exercise.ref).toBe('fedb-one-arm-dumbbell-row')
+    expect(result.parsed[0]?.sets).toEqual(Array.from({ length: 3 }, (_, position) => ({ position, weightKg: 20, reps: 10 })))
+  })
+
   it('не передаёт RPE, который не примет ограничение базы', () => {
     const result = parseQuickWorkoutEntry('Присед со штангой 3×8 80 кг RPE 5\nЖим лёжа 3×8 60 кг RPE 6.2', catalog)
     expect(result.parsed[0]?.sets).toEqual([

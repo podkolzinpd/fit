@@ -89,6 +89,27 @@ test('today: голосовой ввод сохраняет значения п�
   await expect(page.locator('.today-exercise')).toHaveCount(7)
 })
 
+test('today: живая диктовка с паузами и числами словами открывает готовую проверку', async ({ page }) => {
+  const transcript = 'Так, эээ, приседания с гирей, ну, три по десять, двадцать килограмм, дальше, эм, планка три по сорок пять секунд'
+  await mockWorkoutParser(page, [])
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/(today|clients)$/)
+  await mockStreamingVoice(page, transcript)
+  await page.goto('/today')
+
+  await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
+  await page.getByRole('button', { name: 'Готово' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('Распознано: 2', { exact: true })).toBeVisible()
+  await expect(page.getByText('Гоблет-присед (Гиря)', { exact: true })).toBeVisible()
+  await expect(page.getByText('Планка (Своё тело)', { exact: true })).toBeVisible()
+  await expect(page.locator('.today-exercise')).toHaveCount(2)
+})
+
 test('today: ошибка voice-разбора сохраняет transcript и раскрывает текстовый fallback', async ({ page }) => {
   await page.route('**/functions/v1/parse-workout', async (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporary' }) }))
   await page.goto('/auth')
@@ -96,13 +117,13 @@ test('today: ошибка voice-разбора сохраняет transcript и 
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
   await expect(page).toHaveURL(/\/(today|clients)$/)
-  await mockStreamingVoice(page)
+  await mockStreamingVoice(page, 'Неизвестное упражнение абракадабра')
   await page.goto('/today')
 
   await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
   await page.getByRole('button', { name: 'Готово' }).click()
   await expect(page.getByText('Не удалось обработать диктовку. Исходный текст сохранён.')).toBeVisible({ timeout: 10_000 })
-  await expect(page.getByLabel('Тренировка')).toHaveValue('Жим лёжа три подхода по десять 80 килограммов')
+  await expect(page.getByLabel('Тренировка')).toHaveValue('Неизвестное упражнение абракадабра')
   await expect(page.getByRole('button', { name: 'Разобрать тренировку' })).toBeEnabled()
 })
 

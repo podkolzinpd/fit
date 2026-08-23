@@ -33,6 +33,8 @@ import { ClientHomeOverview, clientHomeLatestDoneWorkout } from './ClientHomeOve
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { WorkoutCta, WorkoutExercise, WorkoutHeader, WorkoutSetRow } from './WorkoutSurface'
 import { trainerActionItems, trainerPlanningItems, type TrainerActionItem, type TrainerPlanningItem } from './trainer-attention'
+import { TrainerFirstPlanPrompt, TrainerFirstRun } from './FirstRunExperience'
+import { takeFirstWorkoutIntent } from './first-workout-intent'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
@@ -148,6 +150,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     enabled: clientMode && Boolean(latestClientWorkout?.hasPr),
   })
   const catalog = useExerciseCatalog()
+  const [firstWorkoutIntent] = useState(() => clientMode && actor ? takeFirstWorkoutIntent(actor.userId) : null)
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
   const [items, setItems] = useState<ParsedWorkoutExercise[]>([])
@@ -167,7 +170,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [removedItem, setRemovedItem] = useState<{ item: ParsedWorkoutExercise; index: number } | null>(null)
   const [draftReady, setDraftReady] = useState(false)
   const [restoredDraftScreen, setRestoredDraftScreen] = useState<Screen | null>(null)
-  const [textComposerOpen, setTextComposerOpen] = useState(false)
+  const [textComposerOpen, setTextComposerOpen] = useState(firstWorkoutIntent?.mode === 'text')
   const [voicePhase, setVoicePhase] = useState<VoiceInputPhase>('idle')
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState<WorkoutParseErrorKind | null>(null)
@@ -180,6 +183,9 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const openedTracked = useRef(false)
   const lastEmptyText = useRef('')
   const reviewRequest = useRef(0)
+  const firstIntentConsumed = useRef(false)
+  const [firstClientCreating, setFirstClientCreating] = useState(false)
+  const [firstClientError, setFirstClientError] = useState<Error | null>(null)
   const draftKey = todayDraftKey(actor!.userId)
   const todayPath = clientMode ? '/me' : '/today'
   const view = new URLSearchParams(location.search).get('view')
@@ -279,6 +285,11 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     },
     onMutate: (mode) => trackGoal(mode === 'planned' ? 'today_plan_save_started' : 'today_workout_save_started'),
     onSuccess: async (id, mode) => {
+      const selectedClient = clients.data?.find((client) => client.id === clientId)
+      const firstPlanClientState = !clientMode && mode === 'planned' && selectedClient
+        && !(workouts.data ?? []).some((workout) => workout.clientId === clientId)
+        ? { id: selectedClient.id, fullName: selectedClient.fullName }
+        : undefined
       trackGoal(mode === 'planned' ? 'today_plan_saved' : 'today_workout_saved')
       trackGoal('today_review_confirmed')
       setDraftReady(false)
@@ -286,7 +297,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       await queryClient.invalidateQueries({ queryKey: ['workouts'] })
       await queryClient.invalidateQueries({ queryKey: ['today-workouts'] })
       if (!clientMode) await queryClient.invalidateQueries({ queryKey: ['clients'] })
-      navigate(`/workouts/${id}`, { state: { returnTo: clientMode ? '/me' : '/today' } })
+      navigate(`/workouts/${id}`, { state: { returnTo: clientMode ? '/me' : '/today', firstPlanClient: firstPlanClientState } })
     }, onError: () => trackGoal('today_workout_save_error'),
   })
   const snoozeAttention = useMutation({
@@ -298,6 +309,19 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     trackGoal('today_quick_client_created')
     await queryClient.invalidateQueries({ queryKey: ['clients'] })
     return { id, fullName }
+  }
+
+  async function createFirstClient(fullName: string) {
+    setFirstClientCreating(true)
+    setFirstClientError(null)
+    try {
+      const created = await createQuickClient(fullName)
+      setClientId(created.id)
+    } catch (caught) {
+      setFirstClientError(caught instanceof Error ? caught : new Error('Не удалось добавить клиента'))
+    } finally {
+      setFirstClientCreating(false)
+    }
   }
 
   async function review() {
@@ -383,6 +407,12 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     setVoiceRefinement(null)
     await refineVoiceTranscript(previous, value, transcript, true)
   }
+
+  useEffect(() => {
+    if (firstIntentConsumed.current || firstWorkoutIntent?.mode !== 'voice') return
+    firstIntentConsumed.current = true
+    void handleHeroTranscript(firstWorkoutIntent.transcript)
+  }, [firstWorkoutIntent])
 
   async function previousResults(selected: ExerciseSnapshot[]): Promise<Map<string, PreviousExerciseResult>> {
     if (!clientId) return new Map()
@@ -527,7 +557,16 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const actionItems = !clientMode ? trainerActionItems(clients.data ?? [], workouts.data ?? [], trainerAttention.data ?? [], today) : []
   const actionClientIds = new Set(actionItems.map((item) => item.clientId))
   const planningItems = !clientMode ? trainerPlanningItems(clients.data ?? [], workouts.data ?? [], attentionPreferences.data ?? [], actionClientIds, today) : []
-  const attentionSurface = !clientMode && <TrainerAttentionQueue
+  const trainerHasNoClients = !clientMode && !clients.isLoading && clients.data?.length === 0
+  const onlyTrainerClient = clients.data?.length === 1 ? clients.data[0] : undefined
+  const firstPlanClient = !clientMode && !clients.isLoading && !workouts.isLoading && onlyTrainerClient
+    && !(workouts.data ?? []).some((workout) => workout.clientId === onlyTrainerClient.id)
+    ? onlyTrainerClient
+    : null
+  useEffect(() => {
+    if (firstPlanClient && !clientId) setClientId(firstPlanClient.id)
+  }, [clientId, firstPlanClient])
+  const attentionSurface = !clientMode && !trainerHasNoClients && <TrainerAttentionQueue
     actions={actionItems}
     planning={planningItems}
     loading={clients.isLoading || workouts.isLoading || trainerAttention.isLoading || attentionPreferences.isLoading}
@@ -567,8 +606,11 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
           {restoredDraftScreen && voicePhase === 'idle' && <section className="today-resume"><span><strong>Есть незавершённая тренировка</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
           {voiceRefinement?.state === 'error' && <div className="voice-action-error" role="alert"><strong>{voiceRefinement.message}</strong><button type="button" className="link" onClick={() => setTextComposerOpen(true)}>Редактировать текст</button></div>}
         </section>}
+        showFirstRunConnection={actor?.kind === 'client' && actor.trainerId === actor.userId}
         wearable={actor && isWearablesPilotEnabled(actor.userId) ? <WearableHealthCard /> : undefined}
       /> : <>
+      {!clientMode && trainerHasNoClients && !textComposerOpen && <TrainerFirstRun creating={firstClientCreating} error={firstClientError} onCreate={createFirstClient} />}
+      {!clientMode && firstPlanClient && !textComposerOpen && <TrainerFirstPlanPrompt clientName={firstPlanClient.fullName} />}
       {!textComposerOpen && <VoiceInputButton variant="hero" source="today_workout" idleLabel="Надиктовать тренировку" onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }} onPhaseChange={setVoicePhase} onTranscript={handleHeroTranscript} />}
       {!textComposerOpen && voicePhase === 'idle' && <button type="button" className="link today-text-toggle" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}>Ввести текстом</button>}
       {restoredDraftScreen && !textComposerOpen && voicePhase === 'idle' && <section className="today-resume"><span><strong>Есть незавершённая тренировка</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}

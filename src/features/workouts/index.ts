@@ -2,3 +2,5 @@ export { SchedulePage, ClientWorkoutsPage, WorkoutFormPage, WorkoutDetailPage, L
 export { TodayPage } from './TodayPage'
 export { LoadMoreButton } from './LoadMoreButton'
 export { workoutCountLabel } from './workout-count-label'
+export { ClientFirstRunIntro } from './FirstRunExperience'
+export { storeFirstWorkoutIntent } from './first-workout-intent'
