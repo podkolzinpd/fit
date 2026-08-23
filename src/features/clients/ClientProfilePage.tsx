@@ -6,11 +6,14 @@ import { authRepository } from '../../data/repositories/auth.repository'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { AsyncView, Page, Switch } from '../../shared/ui'
 import { ClientTrainerConnections } from './ClientTrainerConnections'
+import { AppFeedbackForm } from '../profile/AppFeedbackForm'
+import { useState } from 'react'
 
 export function ClientProfilePage() {
   const { actor } = useAuth()
   const navigate = useNavigate()
   const theme = useAppTheme()
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const client = useQuery({
     queryKey: ['my-client'],
     queryFn: () => clientsRepository.getMine(),
@@ -41,7 +44,8 @@ export function ClientProfilePage() {
     <section className="profile-settings" aria-label="Настройки">
       <Switch label="Тёмная тема" checked={theme === 'dark'} onChange={(checked) => setAppTheme(checked ? 'dark' : 'light')} />
     </section>
-    <div className="menu"><Link to="/join">Ввести код приглашения</Link></div>
+    <div className="menu"><Link to="/join">Ввести код приглашения</Link><button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button></div>
+    {feedbackOpen && <AppFeedbackForm onClose={() => setFeedbackOpen(false)} />}
     <button className="danger secondary wide" onClick={() => void logout()}>Выйти</button>
   </Page>
 }
