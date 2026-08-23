@@ -229,6 +229,17 @@ short-lived synthetic fixture session to verify all three read models plus
 create, update, stale-version conflict, soft delete and the final filtered read
 before a revision is accepted.
 
+The Live core adds stage-only start, set-draft, set-confirm and finish commands.
+Every request carries an `operationId` UUID in addition to its expected version.
+An exact retry by the same actor returns the committed result with
+`replayed: true` instead of mutating twice; reusing the UUID for different input
+is rejected, and a new operation against a stale workout or set version returns
+`409`. Operation receipts contain no workout facts: only internal UUIDs, action,
+request SHA-256 and result version. They expire from the retry ledger after
+30 days and are not readable by `fit_api`. The smoke
+replays start and set-save requests, then confirms and finishes the aggregate,
+checks a stale finish conflict and reads the confirmed facts back.
+
 ## 8. Enroll a stage pilot account
 
 Enrollment is an explicit stage administration operation. It validates a

@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-23
-Проверенный базовый `main`: `26031b4` (`YAFIT-335: понятный первый запуск для клиента и тренера (#514)`)
+Проверенный базовый `main`: `d196c8a` (`YAFIT-337: повысить надежность голосового ввода (#515)`)
 
 ## Активное продуктовое изменение
 
@@ -47,8 +47,8 @@
   миграции доставляются автоматически через GitHub OIDC, private runner и
   forward-only policy.
 - Ограниченный Yandex ID pilot, `/v1/clients`, связи, invitation lifecycle и
-  read-only workout aggregate работают на stage; migrations `000001–000008` и
-  API revision доставлены автоматически workflow `32593503470`. Production
+  read-only workout aggregate работают на stage; migrations `000001–000009` и
+  API revision доставлены автоматически workflow `32625943578`. Production
   frontend и основной tenant пока остаются на Supabase; полный cutover не выполнен.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен текущему browser-контракту; Supabase-сессия при пилотном входе не
@@ -65,11 +65,11 @@
 - Workout read model сериализует PostgreSQL `date` явно как `YYYY-MM-DD`, без
   timezone-сдвига. Полный synthetic aggregate и stage smoke проверяют это поле
   вместе со всеми вложенными упражнениями и подходами.
-- Активная ветка добавляет stage API для атомарных create/update/soft-delete
-  запланированного workout aggregate с optimistic version,
-  `created_by`/`updated_by` и полным rollback. Runtime получает только EXECUTE
-  на функции, без прямых table writes; stage apply ожидает merge PR, production
-  UI и Supabase-маршрутизация не изменены.
+- Stage API атомарно пишет запланированный workout aggregate с optimistic
+  version и attribution; smoke проверяет create/update/conflict/delete.
+- Активная ветка добавляет Live start/save-set/confirm-set/finish. `operationId`
+  безопасно повторяет потерянный ответ; новая устаревшая операция конфликтует.
+  Production UI и Supabase не изменены; stage apply ожидает merge PR.
 - Реальный invite → join → leave/remove smoke на двух разрешённых Yandex ID
   остаётся внешней stage-проверкой; локальный lifecycle и его RLS-матрица зелёные.
 - Новая cost-sensitive, destructive или identity-инфраструктура требует
@@ -77,13 +77,14 @@
 
 ## Проверки активной ветки
 
-- 55 целевых unit-тестов голосового разбора зелёные: пользовательские фразы,
-  речевой мусор, числа словами, дробный вес, порядок метрик, переменные подходы,
-  интервальный бег и безопасная неоднозначность.
+- 55 unit-тестов голосового разбора покрывают мусор, числа словами, дробный вес,
+  порядок метрик, переменные подходы, интервальный бег и неоднозначность.
 - Полный quality gate зелёный: 654 frontend-теста, coverage, lint, TypeScript,
-  DB types, iOS permissions, 34 infra policy tests, 72 API-теста и production build.
-- Podman-стенд зелёный: 575 Supabase SQL/RLS-тестов и 14 PostgreSQL 17
+  DB types, iOS permissions, 34 infra policy tests, 87 API-тестов и production build.
+- Podman-стенд зелёный: 575 Supabase SQL/RLS-тестов и 15 PostgreSQL 17
   actor/RLS-тестов. Today E2E — 9/9, WebKit iPhone 390 px — 2/2.
+- Yandex migrations `000001–000010` чисто переиграны без новых образов;
+  retry receipt хранит только SHA-256 запроса.
 - Визуально проверены 390, 430 и 1440 px: review и раскрытая коррекция подходов
   не выходят за ширину; ошибок браузера нет.
 
@@ -100,15 +101,14 @@
 
 ## Ближайший порядок
 
-1. Завершить PR planned-workout mutations: полный quality gate и автоматический
-   create/update/conflict/delete stage smoke.
-2. Отдельно портировать Live conflict/retry semantics и остальные вертикали из
-   migration design, не подключая неполный backend к production UI.
+1. Завершить PR Live core: полный quality gate и автоматический
+   start/save/replay/confirm/finish/conflict stage smoke.
+2. Отдельно портировать структурные Live-действия: add/remove set,
+   add/replace exercise, reorder block и exercise comment.
 3. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
-4. В продуктовом бэклоге `YAFIT-333` и `YAFIT-334` отложены; `YAFIT-335`
-   завершена, `YAFIT-337` доводится отдельным PR. Аналитика основного цикла
-   остаётся в конце программы.
+4. `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. Аналитика основного
+   цикла остаётся в конце программы.
 
 ## Отложено
 

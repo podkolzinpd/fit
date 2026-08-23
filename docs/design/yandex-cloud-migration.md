@@ -60,10 +60,13 @@ The following remain unchanged during the foundation phase:
    create/update/soft-delete commands, optimistic versions and `created_by` /
    `updated_by` attribution without granting the runtime direct table writes.
    Its smoke verifies create, update, a stale-version conflict, delete and the
-   final read model. Repeated deploys do not duplicate fixtures, no production
-   or Supabase data is read, and the token is not printed. The remaining scope
-   includes Live conflict/retry semantics, feedback/reactions and the derived
-   progress/chronicle reads added after the foundation migrations.
+   final read model. The Live core slice ports start, set draft, set
+   confirmation and finish with separate workout/set versions and a 30-day
+   operation receipt: an exact retry returns the original version, while a new
+   stale operation still conflicts. Repeated deploys do not duplicate fixtures,
+   no production or Supabase data is read, and the token is not printed. The
+   remaining scope includes Live structural editing, feedback/reactions and the
+   derived progress/chronicle reads added after the foundation migrations.
 8. Rehearse full tenant migration at least twice. Cut over one isolated tenant
    cohort only after all data it can mutate is migrated and writes are frozen
    for the cutover window.
