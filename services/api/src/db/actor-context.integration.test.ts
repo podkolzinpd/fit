@@ -20,8 +20,12 @@ import { DatabasePilotTrainingDataReader } from '../pilot-training-data-reader.j
 import type { PlannedWorkoutDraft } from '../planned-workout-request.js'
 import { readAccessibleTrainingData } from '../training-data.js'
 import {
+  confirmLiveSet,
+  finishLiveWorkout,
   savePlannedWorkout,
+  saveLiveSetDraft,
   softDeletePlannedWorkout,
+  startLiveWorkout,
 } from '../workout-commands.js'
 import { withActorTransaction } from './actor-transaction.js'
 import { PgDatabasePool } from './pg-pool.js'
@@ -60,6 +64,15 @@ const MEMBER_WORKOUT_ID = 'd3cff30a-7aa2-4407-b62d-0683167cf4c8'
 const CLIENT_WORKOUT_ID = '6e2d8d63-7c3a-4301-b9ba-76d875210f1f'
 const ROOT_WORKOUT_EXERCISE_ID = 'd40b742b-5d5b-41ab-91df-ed464414d034'
 const ROOT_WORKOUT_SET_ID = 'ea8efab5-0530-4660-9798-79901fcddfeb'
+const LIVE_OPERATION_IDS = {
+  start: '8bdf6402-7530-4a28-8f45-2b127414c56a',
+  startOther: 'f67041a0-baa2-45c8-9a92-2e7054f37afb',
+  save: '16db9e7f-764b-454d-aa10-04370ab43149',
+  staleSave: '315638e8-2052-4d13-9b3b-f4157102c9cb',
+  confirm: '93c54052-ee01-409f-b782-b89231e233eb',
+  finish: '609f7f16-c782-4bf3-8389-ef6b6f8ec8c5',
+  outside: 'f6e49b82-ee88-46a5-8ccb-8abb00843336',
+} as const
 const PILOT_SUBJECT_HASH = 'b'.repeat(64)
 const OUTSIDE_SUBJECT_HASH = 'c'.repeat(64)
 const ENROLLMENT_SUBJECT_HASH = 'e'.repeat(64)
@@ -112,6 +125,20 @@ interface ChildAuditRow extends QueryResultRow {
 interface WorkoutPrivilegeRow extends QueryResultRow {
   direct_writes: boolean
   mutation_execute: boolean
+}
+
+interface LiveSetAuditRow extends QueryResultRow {
+  confirmed_at: Date | null
+  fact_distance_km: string | null
+  fact_duration_sec: number | null
+  fact_rpe: string | null
+  updated_by: string | null
+  version: string
+}
+
+interface LiveOperationAuditRow extends QueryResultRow {
+  count: number
+  hashes_valid: boolean
 }
 
 function requireLocalTestDatabaseUrl(): string {
@@ -1337,6 +1364,302 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       )
       expect(actorData.workouts.some((workout) => workout.id === created.id)).toBe(false)
       await ownerPool.query('delete from public.workouts where id = $1', [created.id])
+    })
+
+    it('runs the idempotent live core lifecycle with conflicts and actor attribution', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      await ownerPool.query(
+        `
+          delete from app_private.live_workout_operations
+          where actor_id in ($1, $2)
+            and operation_id = any($3::uuid[])
+        `,
+        [OTHER_ACTOR_ID, OUTSIDE_TRAINER_ID, Object.values(LIVE_OPERATION_IDS)],
+      )
+      await ownerPool.query(
+        `
+          update public.workouts
+          set
+            status = 'planned',
+            started_at = null,
+            completed_at = null,
+            updated_by = null,
+            version = 1
+          where client_id = $1 and status = 'in_progress'
+        `,
+        [CLIENT_ID],
+      )
+      await ownerPool.query(
+        `
+          update public.workouts
+          set
+            status = 'planned',
+            started_at = null,
+            completed_at = null,
+            updated_by = null,
+            version = 1
+          where id in ($1, $2)
+        `,
+        [ROOT_WORKOUT_ID, MEMBER_WORKOUT_ID],
+      )
+      await ownerPool.query(
+        `
+          update public.workout_sets
+          set
+            fact_weight_kg = null,
+            fact_reps = null,
+            fact_duration_min = null,
+            fact_duration_sec = null,
+            fact_distance_km = null,
+            fact_rpe = null,
+            confirmed_at = null,
+            updated_by = null,
+            version = 1
+          where id = $1
+        `,
+        [ROOT_WORKOUT_SET_ID],
+      )
+
+      try {
+        const started = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => startLiveWorkout(
+            client,
+            ROOT_WORKOUT_ID,
+            1,
+            LIVE_OPERATION_IDS.start,
+          ),
+        )
+        expect(started).toEqual({ version: 2, replayed: false })
+
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => startLiveWorkout(
+            client,
+            ROOT_WORKOUT_ID,
+            1,
+            LIVE_OPERATION_IDS.start,
+          ),
+        )).resolves.toEqual({ version: 2, replayed: true })
+
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => startLiveWorkout(
+            client,
+            ROOT_WORKOUT_ID,
+            2,
+            LIVE_OPERATION_IDS.start,
+          ),
+        )).rejects.toMatchObject({ failure: 'invalid' })
+
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => startLiveWorkout(
+            client,
+            MEMBER_WORKOUT_ID,
+            1,
+            LIVE_OPERATION_IDS.startOther,
+          ),
+        )).rejects.toMatchObject({ failure: 'active' })
+
+        await expect(withActorTransaction(
+          runtimePool,
+          OUTSIDE_TRAINER_ID,
+          (client) => startLiveWorkout(
+            client,
+            ROOT_WORKOUT_ID,
+            2,
+            LIVE_OPERATION_IDS.outside,
+          ),
+        )).rejects.toMatchObject({ failure: 'forbidden' })
+
+        const draft = {
+          weightKg: null,
+          reps: null,
+          durationMin: null,
+          durationSec: 1_650,
+          distanceKm: 5.25,
+          rpe: 7.5,
+        }
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => saveLiveSetDraft(
+            client,
+            ROOT_WORKOUT_SET_ID,
+            draft,
+            1,
+            LIVE_OPERATION_IDS.save,
+          ),
+        )).resolves.toEqual({ version: 2, replayed: false })
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => saveLiveSetDraft(
+            client,
+            ROOT_WORKOUT_SET_ID,
+            draft,
+            1,
+            LIVE_OPERATION_IDS.save,
+          ),
+        )).resolves.toEqual({ version: 2, replayed: true })
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => saveLiveSetDraft(
+            client,
+            ROOT_WORKOUT_SET_ID,
+            { ...draft, distanceKm: 6 },
+            1,
+            LIVE_OPERATION_IDS.staleSave,
+          ),
+        )).rejects.toMatchObject({ failure: 'conflict' })
+
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => confirmLiveSet(
+            client,
+            ROOT_WORKOUT_SET_ID,
+            2,
+            LIVE_OPERATION_IDS.confirm,
+          ),
+        )).resolves.toEqual({ version: 3, replayed: false })
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => confirmLiveSet(
+            client,
+            ROOT_WORKOUT_SET_ID,
+            2,
+            LIVE_OPERATION_IDS.confirm,
+          ),
+        )).resolves.toEqual({ version: 3, replayed: true })
+
+        const setRows = await ownerPool.query<LiveSetAuditRow>(
+          `
+            select
+              confirmed_at, fact_distance_km, fact_duration_sec, fact_rpe,
+              updated_by, version
+            from public.workout_sets
+            where id = $1
+          `,
+          [ROOT_WORKOUT_SET_ID],
+        )
+        expect(setRows.rows).toMatchObject([{
+          fact_distance_km: '5.250',
+          fact_duration_sec: 1650,
+          fact_rpe: '7.5',
+          updated_by: OTHER_ACTOR_ID,
+          version: '3',
+        }])
+        expect(setRows.rows[0]?.confirmed_at).toBeInstanceOf(Date)
+
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => finishLiveWorkout(
+            client,
+            ROOT_WORKOUT_ID,
+            2,
+            LIVE_OPERATION_IDS.finish,
+          ),
+        )).resolves.toEqual({ version: 3, replayed: false })
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => finishLiveWorkout(
+            client,
+            ROOT_WORKOUT_ID,
+            2,
+            LIVE_OPERATION_IDS.finish,
+          ),
+        )).resolves.toEqual({ version: 3, replayed: true })
+
+        const completed = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          readAccessibleTrainingData,
+        )
+        expect(completed.workouts.find(
+          (workout) => workout.id === ROOT_WORKOUT_ID,
+        )).toMatchObject({
+          status: 'done',
+          version: 3,
+          exercises: [{
+            sets: [{
+              fact: { durationSec: 1650, distanceKm: 5.25, rpe: 7.5 },
+              version: 3,
+            }],
+          }],
+        })
+
+        const operationRows = await ownerPool.query<LiveOperationAuditRow>(
+          `
+            select
+              count(*)::integer as count,
+              bool_and(request_sha256 ~ '^[0-9a-f]{64}$') as hashes_valid
+            from app_private.live_workout_operations
+            where actor_id = $1 and result_version is not null
+          `,
+          [OTHER_ACTOR_ID],
+        )
+        expect(operationRows.rows).toEqual([{ count: 4, hashes_valid: true }])
+
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => client.query(
+            'select operation_id from app_private.live_workout_operations',
+          ),
+        )).rejects.toMatchObject({ code: '42501' })
+      } finally {
+        await ownerPool.query(
+          `
+            delete from app_private.live_workout_operations
+            where actor_id in ($1, $2)
+              and operation_id = any($3::uuid[])
+          `,
+          [OTHER_ACTOR_ID, OUTSIDE_TRAINER_ID, Object.values(LIVE_OPERATION_IDS)],
+        )
+        await ownerPool.query(
+          `
+            update public.workouts
+            set
+              status = 'planned',
+              started_at = null,
+              completed_at = null,
+              updated_by = null,
+              version = 1
+            where id in ($1, $2)
+          `,
+          [ROOT_WORKOUT_ID, MEMBER_WORKOUT_ID],
+        )
+        await ownerPool.query(
+          `
+            update public.workout_sets
+            set
+              fact_weight_kg = null,
+              fact_reps = null,
+              fact_duration_min = null,
+              fact_duration_sec = null,
+              fact_distance_km = null,
+              fact_rpe = null,
+              confirmed_at = null,
+              updated_by = null,
+              version = 1
+            where id = $1
+          `,
+          [ROOT_WORKOUT_SET_ID],
+        )
+      }
     })
 
     it('attributes a self-managed client write and strips trainer-only comments', async () => {

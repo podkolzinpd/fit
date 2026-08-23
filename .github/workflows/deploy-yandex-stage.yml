@@ -415,6 +415,155 @@ jobs:
           jq -e --arg workout_id "$workout_id" '
             all(.workouts[]; .id != $workout_id)
           ' <<<"$after_delete" >/dev/null
+          live_payload=$(jq -c '
+            .notes = "Синтетическая проверка versioned mutation live"
+          ' <<<"$create_payload")
+          live_created_file=$(mktemp)
+          live_created_status=$(curl --silent --show-error \
+            --output "$live_created_file" --write-out '%{http_code}' \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$live_payload" \
+            "${api_url%/}/v1/workouts")
+          test "$live_created_status" = 201
+          live_workout_id=$(jq -er '.workout.id' "$live_created_file")
+          test "$(jq -er '.workout.version' "$live_created_file")" = 1
+          live_created_read=$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/training-data")
+          live_set_id=$(jq -er --arg workout_id "$live_workout_id" '
+            .workouts[]
+            | select(.id == $workout_id)
+            | .exercises[0].sets[0].id
+          ' <<<"$live_created_read")
+          start_operation_id=$(cat /proc/sys/kernel/random/uuid)
+          start_payload=$(jq -cn \
+            --arg operation_id "$start_operation_id" \
+            '{expectedVersion: 1, operationId: $operation_id}')
+          started=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$start_payload" \
+            "${api_url%/}/v1/workouts/$live_workout_id/start")
+          jq -e --arg workout_id "$live_workout_id" '
+            .workout.id == $workout_id
+            and .workout.version == 2
+            and .workout.replayed == false
+          ' <<<"$started" >/dev/null
+          start_replayed=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$start_payload" \
+            "${api_url%/}/v1/workouts/$live_workout_id/start")
+          jq -e '
+            .workout.version == 2 and .workout.replayed == true
+          ' <<<"$start_replayed" >/dev/null
+          save_operation_id=$(cat /proc/sys/kernel/random/uuid)
+          save_payload=$(jq -cn \
+            --arg operation_id "$save_operation_id" \
+            '{
+              expectedVersion: 1,
+              operationId: $operation_id,
+              draft: {
+                weightKg: 42.5,
+                reps: 9,
+                durationMin: null,
+                durationSec: null,
+                distanceKm: null,
+                rpe: 7.5
+              }
+            }')
+          saved_live_set=$(curl --fail --silent --show-error \
+            --request PUT \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$save_payload" \
+            "${api_url%/}/v1/workout-sets/$live_set_id/draft")
+          jq -e --arg set_id "$live_set_id" '
+            .set.id == $set_id
+            and .set.version == 2
+            and .set.replayed == false
+          ' <<<"$saved_live_set" >/dev/null
+          saved_live_set_replayed=$(curl --fail --silent --show-error \
+            --request PUT \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$save_payload" \
+            "${api_url%/}/v1/workout-sets/$live_set_id/draft")
+          jq -e '
+            .set.version == 2 and .set.replayed == true
+          ' <<<"$saved_live_set_replayed" >/dev/null
+          confirm_operation_id=$(cat /proc/sys/kernel/random/uuid)
+          confirm_payload=$(jq -cn \
+            --arg operation_id "$confirm_operation_id" \
+            '{expectedVersion: 2, operationId: $operation_id}')
+          confirmed_live_set=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$confirm_payload" \
+            "${api_url%/}/v1/workout-sets/$live_set_id/confirm")
+          jq -e '
+            .set.version == 3 and .set.replayed == false
+          ' <<<"$confirmed_live_set" >/dev/null
+          finish_operation_id=$(cat /proc/sys/kernel/random/uuid)
+          finish_payload=$(jq -cn \
+            --arg operation_id "$finish_operation_id" \
+            '{expectedVersion: 2, operationId: $operation_id}')
+          finished=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$finish_payload" \
+            "${api_url%/}/v1/workouts/$live_workout_id/finish")
+          jq -e '
+            .workout.version == 3 and .workout.replayed == false
+          ' <<<"$finished" >/dev/null
+          stale_finish_operation_id=$(cat /proc/sys/kernel/random/uuid)
+          stale_finish_payload=$(jq -cn \
+            --arg operation_id "$stale_finish_operation_id" \
+            '{expectedVersion: 2, operationId: $operation_id}')
+          stale_finish_status=$(curl --silent --show-error \
+            --output /dev/null --write-out '%{http_code}' \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$stale_finish_payload" \
+            "${api_url%/}/v1/workouts/$live_workout_id/finish")
+          test "$stale_finish_status" = 409
+          live_finished_read=$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/training-data")
+          jq -e --arg workout_id "$live_workout_id" --arg set_id "$live_set_id" '
+            .workouts | any(
+              .id == $workout_id
+              and .status == "done"
+              and .version == 3
+              and (.exercises | any(
+                .sets | any(
+                  .id == $set_id
+                  and .version == 3
+                  and .fact.weightKg == 42.5
+                  and .fact.reps == 9
+                  and .fact.rpe == 7.5
+                  and .confirmedAt != null
+                )
+              ))
+            )
+          ' <<<"$live_finished_read" >/dev/null
       - name: Roll back the API revision when readiness fails
         if: steps.smoke.outcome == 'failure' && steps.previous.outputs.revision_id != ''
         working-directory: infra/yandex

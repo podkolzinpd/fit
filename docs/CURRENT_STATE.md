@@ -4,8 +4,8 @@
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
 
-Обновлено: 2026-08-22
-Проверенный базовый `main`: `fef4c56` (`fix(yandex): preserve workout calendar dates (#511)`)
+Обновлено: 2026-08-23
+Проверенный базовый `main`: `cdb94da` (`feat(yandex): add versioned planned workout writes (#512)`)
 
 ## Последнее продуктовое изменение
 
@@ -49,8 +49,8 @@
   миграции доставляются автоматически через GitHub OIDC, private runner и
   forward-only policy.
 - Ограниченный Yandex ID pilot, `/v1/clients`, связи, invitation lifecycle и
-  read-only workout aggregate работают на stage; migrations `000001–000008` и
-  API revision доставлены автоматически workflow `32593503470`. Production
+  read-only workout aggregate работают на stage; migrations `000001–000009` и
+  API revision доставлены автоматически workflow `32625943578`. Production
   frontend и основной tenant пока остаются на Supabase; полный cutover не выполнен.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен текущему browser-контракту; Supabase-сессия при пилотном входе не
@@ -67,11 +67,11 @@
 - Workout read model сериализует PostgreSQL `date` явно как `YYYY-MM-DD`, без
   timezone-сдвига. Полный synthetic aggregate и stage smoke проверяют это поле
   вместе со всеми вложенными упражнениями и подходами.
-- Активная ветка добавляет stage API для атомарных create/update/soft-delete
-  запланированного workout aggregate с optimistic version,
-  `created_by`/`updated_by` и полным rollback. Runtime получает только EXECUTE
-  на функции, без прямых table writes; stage apply ожидает merge PR, production
-  UI и Supabase-маршрутизация не изменены.
+- Stage API атомарно пишет запланированный workout aggregate с optimistic
+  version и attribution; smoke проверяет create/update/conflict/delete.
+- Активная ветка добавляет Live start/save-set/confirm-set/finish. `operationId`
+  безопасно повторяет потерянный ответ; новая устаревшая операция конфликтует.
+  Production UI и Supabase не изменены; stage apply ожидает merge PR.
 - Реальный invite → join → leave/remove smoke на двух разрешённых Yandex ID
   остаётся внешней stage-проверкой; локальный lifecycle и его RLS-матрица зелёные.
 - Новая cost-sensitive, destructive или identity-инфраструктура требует
@@ -80,10 +80,10 @@
 ## Проверки активной ветки
 
 - Существующая локальная PostgreSQL 17 в Podman приняла fixture дважды без
-  дубликатов; 14 actor/RLS/session/domain tests проверяют полный training/write
+  дубликатов; 15 actor/RLS/session/domain tests проверяют planned и Live write
   contract и зелёные, новые образы не скачивались.
 - Полный `npm run check` зелёный: 630 frontend tests, coverage, lint, TypeScript,
-  DB types, iOS permissions, 34 infra policy tests, 72 API tests и production
+  DB types, iOS permissions, 34 infra policy tests, 87 API tests и production
   build. Supabase `db:reset` и 568 pgTAP SQL/RLS tests зелёные.
 - Локального Terraform binary нет; синтаксис и фактический plan/validate
   дополнительно проверит обязательный GitHub workflow до stage deploy.
@@ -103,10 +103,10 @@
 
 ## Ближайший порядок
 
-1. Завершить PR planned-workout mutations: полный quality gate и автоматический
-   create/update/conflict/delete stage smoke.
-2. Отдельно портировать Live conflict/retry semantics и остальные вертикали из
-   migration design, не подключая неполный backend к production UI.
+1. Завершить PR Live core: полный quality gate и автоматический
+   start/save/replay/confirm/finish/conflict stage smoke.
+2. Отдельно портировать структурные Live-действия: add/remove set,
+   add/replace exercise, reorder block и exercise comment.
 3. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
 

@@ -1,6 +1,7 @@
 import type { QueryResultRow } from 'pg'
 
 import type { DatabaseClient } from './db/types.js'
+import type { LiveSetDraft } from './live-workout-request.js'
 import type { PlannedWorkoutDraft } from './planned-workout-request.js'
 
 interface SavedWorkoutRow extends QueryResultRow {
@@ -12,7 +13,13 @@ interface DeletedWorkoutRow extends QueryResultRow {
   version: string
 }
 
+interface LiveCommandRow extends QueryResultRow {
+  replayed: boolean
+  version: string
+}
+
 export type PilotWorkoutCommandFailure =
+  | 'active'
   | 'conflict'
   | 'forbidden'
   | 'invalid'
@@ -30,6 +37,11 @@ export interface SavedPilotWorkout {
   version: number
 }
 
+export interface PilotLiveCommandResult {
+  replayed: boolean
+  version: number
+}
+
 function commandError(error: unknown): PilotWorkoutCommandError | undefined {
   if (typeof error !== 'object' || error === null || !('message' in error)) {
     return undefined
@@ -44,7 +56,16 @@ function commandError(error: unknown): PilotWorkoutCommandError | undefined {
   if (message === 'workout_conflict') {
     return new PilotWorkoutCommandError('conflict')
   }
+  if (message === 'live_set_conflict') {
+    return new PilotWorkoutCommandError('conflict')
+  }
+  if (message === 'active_workout_exists') {
+    return new PilotWorkoutCommandError('active')
+  }
   if (message === 'workout_invalid') {
+    return new PilotWorkoutCommandError('invalid')
+  }
+  if (message === 'live_set_empty' || message === 'operation_reused') {
     return new PilotWorkoutCommandError('invalid')
   }
   return undefined
@@ -64,6 +85,22 @@ async function runCommand<Result>(work: () => Promise<Result>): Promise<Result> 
   } catch (error) {
     throw commandError(error) ?? error
   }
+}
+
+function runLiveCommand(
+  client: DatabaseClient,
+  query: string,
+  values: readonly unknown[],
+): Promise<PilotLiveCommandResult> {
+  return runCommand(async () => {
+    const rows = await client.query<LiveCommandRow>(query, values)
+    const result = rows[0]
+    if (result === undefined) throw new Error('Live command returned no result')
+    return {
+      replayed: result.replayed,
+      version: safeVersion(result.version),
+    }
+  })
 }
 
 export function savePlannedWorkout(
@@ -99,4 +136,60 @@ export function softDeletePlannedWorkout(
     if (version === undefined) throw new Error('Workout was not deleted')
     return safeVersion(version)
   })
+}
+
+export function startLiveWorkout(
+  client: DatabaseClient,
+  workoutId: string,
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveCommandResult> {
+  return runLiveCommand(
+    client,
+    'select version, replayed from public.start_live_workout($1, $2, $3)',
+    [workoutId, expectedVersion, operationId],
+  )
+}
+
+export function saveLiveSetDraft(
+  client: DatabaseClient,
+  setId: string,
+  draft: LiveSetDraft,
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveCommandResult> {
+  return runLiveCommand(
+    client,
+    `
+      select version, replayed
+      from public.save_live_set_draft($1, $2::jsonb, $3, $4)
+    `,
+    [setId, JSON.stringify(draft), expectedVersion, operationId],
+  )
+}
+
+export function confirmLiveSet(
+  client: DatabaseClient,
+  setId: string,
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveCommandResult> {
+  return runLiveCommand(
+    client,
+    'select version, replayed from public.confirm_live_set($1, $2, $3)',
+    [setId, expectedVersion, operationId],
+  )
+}
+
+export function finishLiveWorkout(
+  client: DatabaseClient,
+  workoutId: string,
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveCommandResult> {
+  return runLiveCommand(
+    client,
+    'select version, replayed from public.finish_live_workout($1, $2, $3)',
+    [workoutId, expectedVersion, operationId],
+  )
 }
