@@ -58,6 +58,7 @@ jobs:
           set -euo pipefail
           lockbox_id=$(yc lockbox secret get --name "$LOCKBOX_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
           runtime_sa_id=$(yc iam service-account get --name "$RUNTIME_SA_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id' 2>/dev/null || yc iam service-account create --name "$RUNTIME_SA_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
+          yc resource-manager folder add-access-binding "$YC_FOLDER_ID" --role serverless.functions.admin --service-account-id "$YC_DEPLOY_SA_ID"
           yc resource-manager folder add-access-binding "$YC_FOLDER_ID" --role ai.languageModels.user --service-account-id "$runtime_sa_id"
           yc lockbox secret add-access-binding "$lockbox_id" --role lockbox.payloadViewer --service-account-id "$runtime_sa_id"
           if ! yc serverless function get --name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
