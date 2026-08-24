@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-24
-Проверенный базовый `main`: `a27d1e0` (`fix: keep workout deployment usable after access bootstrap (#531)`)
+Проверенный базовый `main`: `1c83dbe` (`feat(assistant): persistent production orchestrator (#533)`)
 
 ## Активное изменение
 
