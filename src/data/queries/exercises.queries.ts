@@ -7,7 +7,20 @@ export type WorkoutParseResponse = {
 }
 
 export const parseWorkout = (text: string, systemCatalog: readonly ExerciseSnapshot[]) =>
-  supabase.functions.invoke<WorkoutParseResponse>('parse-workout', { body: { text, systemCatalog } })
+  supabase.auth.getSession().then(async ({ data: { session } }) => {
+    if (!session?.access_token) return { data: null, error: new Error('authentication_required') }
+    try {
+      const response = await fetch('https://functions.yandexcloud.net/d4eicdja8le8ivq53u9f', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-supabase-authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ text, systemCatalog }),
+      })
+      if (!response.ok) return { data: null, error: { context: response } }
+      return { data: await response.json() as WorkoutParseResponse, error: null }
+    } catch (error) {
+      return { data: null, error: error instanceof Error ? error : new Error('parse_workout_request_failed') }
+    }
+  })
 
 const columns = 'id,name,muscle_group,input_kind,archived_at,version'
 

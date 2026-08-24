@@ -1,0 +1,56 @@
+name: Deploy production Yandex workout parser
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-yandex-workout-parser.yml'
+      - 'services/api/package.json'
+      - 'services/api/package-lock.json'
+      - 'services/api/src/legacy-workout-parser/**'
+      - 'services/api/src/yandex-workout-parser-function.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
+  YC_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  FUNCTION_NAME: fit-parse-workout
+  RUNTIME_SA_NAME: fit-parse-workout
+  LOCKBOX_NAME: fit-summarize-client-training-supabase
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - run: |
+          npm ci --prefix services/api
+          npm --prefix services/api run typecheck
+          npm --prefix services/api run test
+          npm --prefix services/api run build
+          mkdir -p .yandex-workout-parser-package
+          cp services/api/package.json services/api/package-lock.json .yandex-workout-parser-package/
+          cp -R services/api/dist .yandex-workout-parser-package/dist
+      - run: |
+          curl --fail --silent --show-error --location https://storage.yandexcloud.net/yandexcloud-yc/install.sh --output /tmp/install-yc.sh
+          bash /tmp/install-yc.sh -i "$HOME/yandex-cloud" -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+      - run: scripts/yandex-github-oidc.sh
+      - name: Publish function version
+        run: |
+          set -euo pipefail
+          lockbox_id=$(yc lockbox secret get --name "$LOCKBOX_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
+          runtime_sa_id=$(yc iam service-account get --name "$RUNTIME_SA_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id' 2>/dev/null || yc iam service-account create --name "$RUNTIME_SA_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
+          yc resource-manager folder add-access-binding "$YC_FOLDER_ID" --role ai.languageModels.user --service-account-id "$runtime_sa_id"
+          yc lockbox secret add-access-binding "$lockbox_id" --role lockbox.payloadViewer --service-account-id "$runtime_sa_id"
+          yc serverless function version create --function-name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --runtime nodejs22 --entrypoint dist/yandex-workout-parser-function.handler --memory 1GB --execution-timeout 120s --service-account-id "$runtime_sa_id" --source-path .yandex-workout-parser-package --secret id="$lockbox_id",key=SUPABASE_URL,environment-variable=SUPABASE_URL --secret id="$lockbox_id",key=SUPABASE_PUBLISHABLE_KEY,environment-variable=SUPABASE_PUBLISHABLE_KEY --secret id="$lockbox_id",key=YANDEX_CLOUD_API_KEY,environment-variable=YANDEX_CLOUD_API_KEY --secret id="$lockbox_id",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID --secret id="$lockbox_id",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID
