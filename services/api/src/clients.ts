@@ -50,6 +50,7 @@ function integer(value: string, field: string): number {
 
 export async function readAccessibleClients(
   client: DatabaseClient,
+  archived = false,
 ): Promise<PilotClientsResponse> {
   const rows = await client.query<ClientRow>(`
     select
@@ -72,9 +73,9 @@ export async function readAccessibleClients(
       on membership.client_id = client.id
      and membership.trainer_id = auth.uid()
     where public.can_access_client(client.id)
-      and client.archived_at is null
+      and (client.archived_at is not null) = $1
     order by client.updated_at desc, lower(coalesce(membership.alias, client.full_name))
-  `)
+  `, [archived])
 
   return {
     accessMode: 'read_only',

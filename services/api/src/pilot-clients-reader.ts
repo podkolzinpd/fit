@@ -7,20 +7,20 @@ import {
 import type { DatabasePool } from './db/types.js'
 
 export interface PilotClientsReader {
-  readClients(sessionToken: string): Promise<PilotClientsResponse>
+  readClients(sessionToken: string, archived?: boolean): Promise<PilotClientsResponse>
 }
 
 export class DatabasePilotClientsReader implements PilotClientsReader {
   constructor(private readonly pool: DatabasePool) {}
 
-  readClients(sessionToken: string): Promise<PilotClientsResponse> {
+  readClients(sessionToken: string, archived = false): Promise<PilotClientsResponse> {
     const tokenHash = hashPilotSessionToken(sessionToken)
     if (tokenHash === undefined) throw new PilotSessionInvalidError()
 
     return withYandexPilotSessionTransaction(
       this.pool,
       tokenHash,
-      readAccessibleClients,
+      (client) => readAccessibleClients(client, archived),
     )
   }
 }
