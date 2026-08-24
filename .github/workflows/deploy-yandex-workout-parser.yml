@@ -15,6 +15,10 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: production-yandex-workout-parser
+  cancel-in-progress: false
+
 env:
   YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
   YC_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
@@ -54,3 +58,8 @@ jobs:
           yc resource-manager folder add-access-binding "$YC_FOLDER_ID" --role ai.languageModels.user --service-account-id "$runtime_sa_id"
           yc lockbox secret add-access-binding "$lockbox_id" --role lockbox.payloadViewer --service-account-id "$runtime_sa_id"
           yc serverless function version create --function-name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --runtime nodejs22 --entrypoint dist/yandex-workout-parser-function.handler --memory 1GB --execution-timeout 120s --service-account-id "$runtime_sa_id" --source-path .yandex-workout-parser-package --secret id="$lockbox_id",key=SUPABASE_URL,environment-variable=SUPABASE_URL --secret id="$lockbox_id",key=SUPABASE_PUBLISHABLE_KEY,environment-variable=SUPABASE_PUBLISHABLE_KEY --secret id="$lockbox_id",key=YANDEX_CLOUD_API_KEY,environment-variable=YANDEX_CLOUD_API_KEY --secret id="$lockbox_id",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID --secret id="$lockbox_id",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID
+          yc serverless function add-access-binding "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --role serverless.functions.invoker --subject system:allUsers
+          function_url=$(yc serverless function get --name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.http_invoke_url')
+          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --request POST --header 'content-type: application/json' --data '{}' "$function_url")
+          test "$status" = 401
+          printf '### Yandex workout parser function\n\n%s\n' "$function_url" >> "$GITHUB_STEP_SUMMARY"
