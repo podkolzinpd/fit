@@ -120,9 +120,29 @@ export function validateAssistantTurnResponse(value: unknown): AssistantTurnResp
   return { reply: value.reply.trim(), action: { tool: tool as Tool, status, title: title.trim(), description: description.trim(), payload } }
 }
 
+export function allowsAssistantAction(message: string): boolean {
+  const normalized = message
+    .toLocaleLowerCase('ru-RU')
+    .replaceAll('ё', 'е')
+    .replace(/[^\p{L}\s]/gu, ' ')
+    .trim()
+    .replace(/\s+/g, ' ')
+  const words = normalized.split(' ')
+  const command = words.some((word) => [
+    'добавь', 'добавить', 'создай', 'создать', 'заведи', 'завести', 'составь', 'составить',
+    'запиши', 'записать', 'зафиксируй', 'зафиксировать', 'назначь', 'назначить',
+    'запланируй', 'запланировать', 'покажи', 'сформируй', 'сформировать', 'подготовь', 'подготовить',
+  ].includes(word))
+  const applicationObject = words.some((word) => [
+    'клиент', 'тренировк', 'программ', 'план', 'расписани', 'прогресс', 'сводк', 'подход', 'упражнен',
+  ].some((stem) => word.startsWith(stem)))
+  return command && applicationObject
+}
+
 function modelPrompt(history: readonly { author: string; content: string }[], clientContext: string, progressContext: string): string {
   return [
     'Ты ассистент фитнес-приложения. Отвечай по-русски, кратко и доброжелательно.',
+    'Возвращай action=null по умолчанию: для приветствий, разговорных реплик, вопросов о твоих возможностях и любых общих вопросов. Карточка действия допустима только когда пользователь явно просит выполнить или подготовить конкретную функцию приложения.',
     'Ты можешь только уточнить запрос или предложить одно типизированное действие из schema. Никогда не утверждай, что запись уже создана, тренировка сохранена или расписание изменено.',
     'Для программы сначала собери цель, опыт, ограничения и доступные дни. Не давай медицинских диагнозов; при рисках направляй к специалисту.',
     'Для write-действия верни status=needs_input или proposed. Сводка прогресса — read-only. Не выдумывай факты о клиенте.',
@@ -197,8 +217,12 @@ export async function runAssistantTurn(authorization: string, command: Assistant
   } catch {
     throw new HttpError(502, 'orchestrator_invalid_response')
   }
-  const result = validateAssistantTurnResponse(raw)
-  if (!result) throw new HttpError(502, 'orchestrator_invalid_response')
+  const modelResult = validateAssistantTurnResponse(raw)
+  if (!modelResult) throw new HttpError(502, 'orchestrator_invalid_response')
+  const result = allowsAssistantAction(command.message)
+    ? modelResult
+    : { ...modelResult, action: null }
+  if (modelResult.action !== null && result.action === null) console.info('assistant_action_suppressed_for_small_talk')
   const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({
     conversation_id: command.conversationId, author: 'assistant', content: result.reply, action: result.action,
   }).select('id').single()
