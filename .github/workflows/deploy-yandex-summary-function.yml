@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy-yandex-summary-function.yml'
+      - 'scripts/verify-yandex-function-release.mjs'
+      - 'scripts/verify-yandex-function-release.test.mjs'
       - 'services/api/package.json'
       - 'services/api/package-lock.json'
       - 'services/api/src/legacy-summary/**'
@@ -131,7 +133,12 @@ jobs:
               --description 'Production Fit training summary, backed by Supabase Auth and data' \
               --folder-id "$YC_FOLDER_ID"
           fi
-          yc serverless function version create \
+          previous_version_id=$(yc serverless function version get-by-tag \
+            --function-name "$SUMMARY_FUNCTION_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --tag '$latest' \
+            --format json 2>/dev/null | jq -r '.id // empty' || true)
+          version=$(yc serverless function version create \
             --function-name "$SUMMARY_FUNCTION_NAME" \
             --folder-id "$YC_FOLDER_ID" \
             --runtime nodejs22 \
@@ -145,18 +152,17 @@ jobs:
             --secret id="$SUMMARY_LOCKBOX_ID",key=SUPABASE_SERVICE_ROLE_KEY,environment-variable=SUPABASE_SERVICE_ROLE_KEY \
             --secret id="$SUMMARY_LOCKBOX_ID",key=YANDEX_CLOUD_API_KEY,environment-variable=YANDEX_CLOUD_API_KEY \
             --secret id="$SUMMARY_LOCKBOX_ID",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID \
-            --secret id="$SUMMARY_LOCKBOX_ID",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID
-          yc serverless function add-access-binding "$SUMMARY_FUNCTION_NAME" \
-            --folder-id "$YC_FOLDER_ID" \
-            --role serverless.functions.invoker --subject system:allUsers
-          function_url=$(yc serverless function get --name "$SUMMARY_FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.http_invoke_url')
-          echo "SUMMARY_FUNCTION_URL=$function_url" >> "$GITHUB_ENV"
+            --secret id="$SUMMARY_LOCKBOX_ID",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID \
+            --format json)
+          echo "SUMMARY_PREVIOUS_VERSION_ID=$previous_version_id" >> "$GITHUB_ENV"
+          echo "SUMMARY_CANDIDATE_VERSION_ID=$(jq -er '.id' <<<"$version")" >> "$GITHUB_ENV"
 
-      - name: Smoke the deployed authentication gate
+      - name: Verify the candidate and roll back on smoke failure
         run: |
           set -euo pipefail
-          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-            --request POST --header 'content-type: application/json' --data '{}' \
-            "$SUMMARY_FUNCTION_URL")
-          test "$status" = 401
-          printf '### Yandex summary function\n\n%s\n' "$SUMMARY_FUNCTION_URL" >> "$GITHUB_STEP_SUMMARY"
+          node scripts/verify-yandex-function-release.mjs \
+            --function-name "$SUMMARY_FUNCTION_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --expected-version-id "$SUMMARY_CANDIDATE_VERSION_ID" \
+            --previous-version-id "$SUMMARY_PREVIOUS_VERSION_ID" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
