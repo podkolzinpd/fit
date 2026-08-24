@@ -20,8 +20,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
-  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
+  YC_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
   YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
   SUMMARY_FUNCTION_NAME: fit-summarize-client-training
   SUMMARY_RUNTIME_SA_NAME: fit-summarize-client-training
@@ -100,10 +100,10 @@ jobs:
               {key:"YANDEX_CLOUD_MODEL_ID", text_value:$yandex_model_id}
             ]')
 
-          if lockbox_id=$(yc lockbox secret get --name "$SUMMARY_LOCKBOX_NAME" --format json | jq -er '.id' 2>/dev/null); then
+          if lockbox_id=$(yc lockbox secret get --name "$SUMMARY_LOCKBOX_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id' 2>/dev/null); then
             printf '%s' "$payload" | yc lockbox secret add-version "$lockbox_id" --payload - >/dev/null
           else
-            lockbox_id=$(printf '%s' "$payload" | yc lockbox secret create --name "$SUMMARY_LOCKBOX_NAME" --payload - --format json | jq -er '.id')
+            lockbox_id=$(printf '%s' "$payload" | yc lockbox secret create --name "$SUMMARY_LOCKBOX_NAME" --folder-id "$YC_FOLDER_ID" --payload - --format json | jq -er '.id')
           fi
           echo "SUMMARY_LOCKBOX_ID=$lockbox_id" >> "$GITHUB_ENV"
 
@@ -133,6 +133,7 @@ jobs:
           fi
           yc serverless function version create \
             --function-name "$SUMMARY_FUNCTION_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
             --runtime nodejs22 \
             --entrypoint dist/yandex-summary-function.handler \
             --memory 1GB \
@@ -146,7 +147,8 @@ jobs:
             --secret id="$SUMMARY_LOCKBOX_ID",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID \
             --secret id="$SUMMARY_LOCKBOX_ID",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID
           yc serverless function add-access-binding "$SUMMARY_FUNCTION_NAME" \
-            --role serverless.functions.invoker --all-users
+            --folder-id "$YC_FOLDER_ID" \
+            --role serverless.functions.invoker --subject system:allUsers
           function_url=$(yc serverless function get --name "$SUMMARY_FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.http_invoke_url')
           echo "SUMMARY_FUNCTION_URL=$function_url" >> "$GITHUB_ENV"
 
