@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allowsAssistantAction, assistantCapabilitiesReply, isAssistantCapabilityQuestion, readAssistantTurnRequest, validateAssistantTurnResponse } from './index.js'
+import { allowsAssistantAction, assistantCapabilitiesReply, isAssistantCapabilityQuestion, isSummaryRequest, readAssistantTurnRequest, summaryPeriodFromMessage, usesInformalAddress, validateAssistantTurnResponse } from './index.js'
 
 describe('assistant orchestrator contract', () => {
   it('accepts only bounded conversation turns', () => {
@@ -25,6 +25,13 @@ describe('assistant orchestrator contract', () => {
     expect(isAssistantCapabilityQuestion('что ты умеешь?')).toBe(true)
     expect(isAssistantCapabilityQuestion('какие функции вообще есть?')).toBe(true)
     expect(isAssistantCapabilityQuestion('привет')).toBe(false)
-    expect(assistantCapabilitiesReply()).toBe('Пока я не выполняю действий в приложении. Могу только коротко пообщаться.')
+    expect(assistantCapabilitiesReply()).toContain('Сформировать сводку прогресса')
+  })
+
+  it('recognizes summary requests, periods and informal address deterministically', () => {
+    expect(isSummaryRequest('Покажи динамику клиента')).toBe(true)
+    expect(summaryPeriodFromMessage('за последние 30 дней', new Date('2026-08-24T12:00:00Z'))).toEqual({ periodStart: '2026-07-26', periodEnd: '2026-08-24', label: 'последние 30 дней' })
+    expect(usesInformalAddress('Что ты умеешь?')).toBe(true)
+    expect(usesInformalAddress('Что вы умеете?')).toBe(false)
   })
 })
