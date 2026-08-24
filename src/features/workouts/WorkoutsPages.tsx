@@ -1883,12 +1883,13 @@ export function ExerciseHistoryPage() {
             const values = chart.map((point) => point.value)
             const minValue = Math.min(...values); const maxValue = Math.max(...values)
             const minIndex = values.indexOf(minValue); const maxIndex = values.indexOf(maxValue)
-            return <section className="chart"><h2>Динамика ({unit})</h2><ResponsiveContainer width="100%" height={260}><LineChart data={chart} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            const chartTitle = inputKind === 'reps' ? 'Динамика повторений' : `Динамика (${unit})`
+            return <section className="chart exercise-progress-chart"><h2>{chartTitle}</h2><ResponsiveContainer width="100%" height={260}><LineChart data={chart} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="date" stroke="var(--muted)" height={40} tick={AxisTick} interval={Math.max(0, Math.ceil(chart.length / 5) - 1)} />
               <YAxis stroke="var(--muted)" style={{ fontSize: '12px' }} domain={computeYDomain(values)} allowDecimals />
-              <Tooltip contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', borderRadius: 12 }} labelStyle={{ color: '#e9e4ed', fontWeight: 700 }} itemStyle={{ color: '#e9e4ed' }}
-                formatter={(value) => formatTooltipValue(Number(value), unit, name)} labelFormatter={(date) => formatTooltipLabel(String(date))} />
+              <Tooltip contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', borderRadius: 12, color: 'var(--fg)' }} labelStyle={{ color: 'var(--fg)', fontWeight: 700 }} itemStyle={{ color: 'var(--fg)' }}
+                formatter={(value) => formatTooltipValue(Number(value), unit, 'Результат')} labelFormatter={(date) => formatTooltipLabel(String(date))} />
               <Line type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={3}
                 dot={(dotProps: { cx?: number; cy?: number; index?: number }) => renderChartDot(dotProps, minIndex, maxIndex, chart.length)}
                 activeDot={{ r: 7 }} isAnimationActive={false} />
