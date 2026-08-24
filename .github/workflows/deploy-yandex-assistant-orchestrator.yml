@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy-yandex-assistant-orchestrator.yml'
+      - 'scripts/yandex-github-oidc.sh'
       - 'services/api/package.json'
       - 'services/api/package-lock.json'
       - 'services/api/src/assistant-orchestrator/**'
