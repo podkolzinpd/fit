@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ChevronRightIcon, MicIcon } from '../../shared/icons'
 import { useAuth } from '../../app/auth-context'
 import { assistantRepository, type AssistantOrchestratorAction } from '../../data/repositories/assistant.repository'
-import { trainingSummaryQueries } from '../../data/queries/training-summaries.queries'
+import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
 
 type Message = { id: string; author: string; content: string; action: AssistantOrchestratorAction | null }
 
@@ -61,12 +61,14 @@ export function AssistantHistoryPage() {
     if (payload === undefined || runningSummaryIds.includes(messageId) || completedSummaryIds.includes(messageId)) return
     setRunningSummaryIds((current) => [...current, messageId])
     setError(undefined)
-    const result = await trainingSummaryQueries.generate(payload.clientId, payload.periodStart, payload.periodEnd, false)
-    setRunningSummaryIds((current) => current.filter((id) => id !== messageId))
-    if (result.error || !result.data || result.data.error) {
+    try {
+      await trainingSummariesRepository.generate(payload.clientId, payload.periodStart, payload.periodEnd, false)
+    } catch {
+      setRunningSummaryIds((current) => current.filter((id) => id !== messageId))
       setError('Не удалось сформировать сводку. Попробуйте ещё раз.')
       return
     }
+    setRunningSummaryIds((current) => current.filter((id) => id !== messageId))
     setCompletedSummaryIds((current) => [...current, messageId])
   }
 
