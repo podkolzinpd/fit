@@ -5,15 +5,15 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-25
-Проверенный базовый `main`: `efc7a18` (`YAFIT-362: пересобрать карточку прогресса клиента (#552)`)
+Проверенный базовый `main`: `cdcf650` (`fix(vercel): exclude slash branches from previews (#558)`)
 
 ## Активное изменение
 
-- Ветка `codex/vercel-main-only` отключает автоматические Vercel Preview для
-  обычных feature- и PR-веток, чтобы они не расходовали build capacity.
-- Git deployments разрешены только для `main` и стабильной ветки
-  `codex/yandex-id-stage-pilot`; последняя обновляется только после push в
-  `main`, поэтому действующий Yandex ID callback и stage CORS сохраняются.
+- Ветка `codex/faster-e2e` сохраняет единый обязательный check `e2e`, но не
+  поднимает Supabase и браузеры для явно безопасных docs/deployment-only PR.
+- Полный browser gate не сокращён: Chromium и visual проходят в одной линии,
+  а восемь изолированных WebKit-шардов распределены между двумя параллельными
+  линиями с отдельной локальной БД. Новый push отменяет устаревший CI run PR.
 - Production routing, переменные окружения и пользовательский интерфейс не
   меняются.
 
@@ -64,12 +64,12 @@
 
 ## Проверки активной ветки
 
-- Целевой Vercel/stage policy-тест зелёный: 7 сценариев.
-- Root lint, TypeScript, 699 frontend-тестов с coverage, DB types, iOS
-  permissions и 44 infra policy теста зелёные.
-- Полный `npm run check` остановился на существующей в `main` API lint-ошибке
-  `no-unsafe-assignment` в `services/api/src/assistant-orchestrator/index.ts:334`;
-  ветка этот файл не меняет.
+- Целевые scope/workflow-тесты зелёные: 6 сценариев.
+- Все 49 infra policy тестов зелёные.
+- Root lint, TypeScript, 699 frontend-тестов с coverage, DB types и iOS
+  permissions зелёные. Полный `npm run check` дошёл до существующей в `main`
+  API lint-ошибки `no-unsafe-assignment` в
+  `services/api/src/assistant-orchestrator/index.ts:334`; ветка этот файл не меняет.
 
 ## Ближайший порядок
 
