@@ -21,6 +21,13 @@ import type { PilotClientsReader } from './pilot-clients-reader.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import { PilotConnectionCommandError } from './connection-commands.js'
+import { PilotDomainCommandError } from './domain-commands.js'
+import type {
+  ClientCardDraft,
+  CreateClientCardDraft,
+  CustomExerciseDraft,
+} from './domain-request.js'
+import type { PilotDomainWriter } from './pilot-domain-writer.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer, PilotSessionResponse } from './pilot-session.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
@@ -487,6 +494,62 @@ function buildConnectionsWriter(error?: Error): {
   }
 }
 
+function buildDomainWriter(error?: Error): {
+  pilotDomainWriter: PilotDomainWriter
+  createClient: ReturnType<typeof vi.fn>
+  createCustomExercise: ReturnType<typeof vi.fn>
+  setClientArchived: ReturnType<typeof vi.fn>
+  setCustomExerciseArchived: ReturnType<typeof vi.fn>
+  updateClient: ReturnType<typeof vi.fn>
+  updateClientPreferences: ReturnType<typeof vi.fn>
+  updateCustomExercise: ReturnType<typeof vi.fn>
+} {
+  const result = <Value>(value: Value) => error === undefined
+    ? Promise.resolve(value)
+    : Promise.reject(error)
+  const customExercise = {
+    id: TRAINING_DATA_RESPONSE.customExercises[0]!.id,
+    name: 'Тяга саней',
+    muscleGroup: 'legs' as const,
+    inputKind: 'strength' as const,
+    archivedAt: null,
+    version: 1,
+  }
+  const createClient = vi.fn(() => result({
+    id: CLIENTS_RESPONSE.clients[0]!.id,
+    version: 1,
+    membershipVersion: 1,
+  }))
+  const updateClient = vi.fn(() => result(2))
+  const setClientArchived = vi.fn(() => result(3))
+  const updateClientPreferences = vi.fn(() => result(2))
+  const createCustomExercise = vi.fn(() => result(customExercise))
+  const updateCustomExercise = vi.fn(() => result({ ...customExercise, version: 2 }))
+  const setCustomExerciseArchived = vi.fn(() => result({
+    ...customExercise,
+    archivedAt: '2026-08-24T12:00:00.000Z',
+    version: 3,
+  }))
+  return {
+    pilotDomainWriter: {
+      createClient,
+      createCustomExercise,
+      setClientArchived,
+      setCustomExerciseArchived,
+      updateClient,
+      updateClientPreferences,
+      updateCustomExercise,
+    },
+    createClient,
+    createCustomExercise,
+    setClientArchived,
+    setCustomExerciseArchived,
+    updateClient,
+    updateClientPreferences,
+    updateCustomExercise,
+  }
+}
+
 const WORKOUT_ID = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
 const WORKOUT_EXERCISE_ID = 'd40b742b-5d5b-41ab-91df-ed464414d034'
 const WORKOUT_SET_ID = 'ea8efab5-0530-4660-9798-79901fcddfeb'
@@ -771,7 +834,22 @@ describe('read-only pilot clients endpoint', () => {
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual(CLIENTS_RESPONSE)
     expect(response.headers['cache-control']).toBe('no-store')
-    expect(clients.readClients).toHaveBeenCalledWith('s'.repeat(43))
+    expect(clients.readClients).toHaveBeenCalledWith('s'.repeat(43), false)
+  })
+
+  it('selects archived clients explicitly so they can be restored', async () => {
+    const clients = buildClientsReader()
+    const app = buildApp({ pilotClientsReader: clients.pilotClientsReader, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/clients?archived=true',
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(clients.readClients).toHaveBeenCalledWith('s'.repeat(43), true)
   })
 
   it('rejects a missing or expired pilot session', async () => {
@@ -882,6 +960,157 @@ describe('read-only pilot training data endpoint', () => {
     expect(missing.statusCode).toBe(401)
     expect(expired.statusCode).toBe(401)
     expect(expired.json()).toEqual({ error: 'unauthorized' })
+  })
+})
+
+describe('pilot client and custom exercise domain commands', () => {
+  const sessionToken = 's'.repeat(43)
+  const clientId = CLIENTS_RESPONSE.clients[0]!.id
+  const exerciseId = TRAINING_DATA_RESPONSE.customExercises[0]!.id
+  const clientCardDraft: ClientCardDraft = {
+    fullName: 'Новый клиент',
+    gender: 'female',
+    ageYears: 31,
+    ageUpdatedAt: '2026-08-24',
+    heightCm: 168,
+    goal: 'Подготовиться к старту',
+  }
+  const clientDraft: CreateClientCardDraft = {
+    ...clientCardDraft,
+    note: 'Предпочитает утренние тренировки',
+  }
+  const exerciseDraft: CustomExerciseDraft = {
+    name: 'Тяга саней',
+    muscleGroup: 'legs',
+    inputKind: 'strength',
+  }
+
+  it('creates, updates and archives a client with separate private preferences', async () => {
+    const writer = buildDomainWriter()
+    const app = buildApp({ pilotDomainWriter: writer.pilotDomainWriter, logger: false })
+    apps.push(app)
+
+    const created = await app.inject({
+      method: 'POST', url: '/v1/clients',
+      headers: { 'x-fit-pilot-session': sessionToken }, payload: clientDraft,
+    })
+    const updated = await app.inject({
+      method: 'PUT', url: `/v1/clients/${clientId}`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { draft: clientCardDraft, expectedVersion: 1 },
+    })
+    const preferences = await app.inject({
+      method: 'PUT', url: `/v1/clients/${clientId}/preferences`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { alias: 'Лена', note: 'Только для тренера', expectedVersion: 1 },
+    })
+    const archived = await app.inject({
+      method: 'PUT', url: `/v1/clients/${clientId}/archive`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { archived: true, expectedVersion: 2 },
+    })
+    const restored = await app.inject({
+      method: 'PUT', url: `/v1/clients/${clientId}/archive`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { archived: false, expectedVersion: 3 },
+    })
+
+    expect([
+      created.statusCode, updated.statusCode, preferences.statusCode,
+      archived.statusCode, restored.statusCode,
+    ]).toEqual([201, 200, 200, 200, 200])
+    expect(created.headers['cache-control']).toBe('no-store')
+    expect(writer.createClient).toHaveBeenCalledWith(sessionToken, clientDraft)
+    expect(writer.updateClient).toHaveBeenCalledWith(
+      sessionToken, clientId, clientCardDraft, 1,
+    )
+    expect(writer.updateClientPreferences).toHaveBeenCalledWith(
+      sessionToken, clientId, 'Лена', 'Только для тренера', 1,
+    )
+    expect(writer.setClientArchived).toHaveBeenCalledWith(sessionToken, clientId, true, 2)
+    expect(writer.setClientArchived).toHaveBeenCalledWith(sessionToken, clientId, false, 3)
+  })
+
+  it('creates, updates and archives a trainer-owned custom exercise', async () => {
+    const writer = buildDomainWriter()
+    const app = buildApp({ pilotDomainWriter: writer.pilotDomainWriter, logger: false })
+    apps.push(app)
+
+    const created = await app.inject({
+      method: 'POST', url: '/v1/custom-exercises',
+      headers: { 'x-fit-pilot-session': sessionToken }, payload: exerciseDraft,
+    })
+    const updated = await app.inject({
+      method: 'PUT', url: `/v1/custom-exercises/${exerciseId}`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { draft: exerciseDraft, expectedVersion: 1 },
+    })
+    const archived = await app.inject({
+      method: 'PUT', url: `/v1/custom-exercises/${exerciseId}/archive`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { archived: true, expectedVersion: 2 },
+    })
+    const restored = await app.inject({
+      method: 'PUT', url: `/v1/custom-exercises/${exerciseId}/archive`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { archived: false, expectedVersion: 3 },
+    })
+
+    expect([created.statusCode, updated.statusCode, archived.statusCode, restored.statusCode])
+      .toEqual([201, 200, 200, 200])
+    expect(writer.createCustomExercise).toHaveBeenCalledWith(sessionToken, exerciseDraft)
+    expect(writer.updateCustomExercise).toHaveBeenCalledWith(
+      sessionToken, exerciseId, exerciseDraft, 1,
+    )
+    expect(writer.setCustomExerciseArchived).toHaveBeenCalledWith(
+      sessionToken, exerciseId, true, 2,
+    )
+    expect(writer.setCustomExerciseArchived).toHaveBeenCalledWith(
+      sessionToken, exerciseId, false, 3,
+    )
+  })
+
+  it('rejects malformed domain commands before invoking the writer', async () => {
+    const writer = buildDomainWriter()
+    const app = buildApp({ pilotDomainWriter: writer.pilotDomainWriter, logger: false })
+    apps.push(app)
+
+    const client = await app.inject({
+      method: 'POST', url: '/v1/clients',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { ...clientDraft, fullName: ' ' },
+    })
+    const exercise = await app.inject({
+      method: 'PUT', url: '/v1/custom-exercises/not-a-uuid',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { draft: exerciseDraft, expectedVersion: 1 },
+    })
+
+    expect([client.statusCode, exercise.statusCode]).toEqual([400, 400])
+    expect(writer.createClient).not.toHaveBeenCalled()
+    expect(writer.updateCustomExercise).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['forbidden', 403, 'action_not_allowed'],
+    ['not_found', 404, 'resource_not_found'],
+    ['conflict', 409, 'version_conflict'],
+    ['invalid', 422, 'invalid_domain_data'],
+  ] as const)('maps %s domain failures without exposing database details', async (
+    failure, status, responseError,
+  ) => {
+    const writer = buildDomainWriter(new PilotDomainCommandError(failure))
+    const app = buildApp({ pilotDomainWriter: writer.pilotDomainWriter, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST', url: '/v1/custom-exercises',
+      headers: { 'x-fit-pilot-session': sessionToken }, payload: exerciseDraft,
+    })
+
+    expect(response.statusCode).toBe(status)
+    expect(response.json()).toEqual({ error: responseError })
+    expect(response.body).not.toContain('Pilot domain command failed')
   })
 })
 

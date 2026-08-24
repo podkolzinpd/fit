@@ -82,6 +82,22 @@ async function seedTrainerFixture(
     `,
     [ids.clientId],
   )
+  await client.query(
+    `
+      delete from public.custom_exercises
+      where trainer_id = $1
+        and name like 'Синтетическое упражнение domain smoke%'
+    `,
+    [trainerId],
+  )
+  await client.query(
+    `
+      delete from public.clients
+      where trainer_id = $1
+        and full_name = 'Синтетический клиент domain smoke'
+    `,
+    [trainerId],
+  )
 
   await client.query(
     `

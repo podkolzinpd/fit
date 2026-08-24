@@ -229,6 +229,18 @@ short-lived synthetic fixture session to verify all three read models plus
 create, update, stale-version conflict, soft delete and the final filtered read
 before a revision is accepted.
 
+The base domain mutation slice adds stage-only client card and custom exercise
+commands. `POST /v1/clients` creates either a trainer-managed card or the
+caller's single self-managed card. `PUT /v1/clients/:id` and
+`PUT /v1/clients/:id/archive` are restricted to the root trainer or the linked
+client account; `GET /v1/clients?archived=true` exposes only accessible archived
+cards so restoration survives a reload. A connected trainer can only change that trainer's private
+alias and note through `PUT /v1/clients/:id/preferences`, using the independent
+membership version. `POST /v1/custom-exercises`, `PUT /v1/custom-exercises/:id`
+and `PUT /v1/custom-exercises/:id/archive` are owner-trainer only. Every update
+requires an expected version, tenant existence is not leaked to unauthorized
+actors, and the runtime role still has no direct domain-table write grants.
+
 The Live core adds stage-only start, set-draft, set-confirm and finish commands.
 Every request carries an `operationId` UUID in addition to its expected version.
 An exact retry by the same actor returns the committed result with
