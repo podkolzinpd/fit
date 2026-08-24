@@ -6,11 +6,16 @@ export type WorkoutParseResponse = {
   unmatched: Array<{ sourceText: string; reason: string; suggestedExerciseRefs: string[] }>
 }
 
-export const parseWorkout = (text: string, systemCatalog: readonly ExerciseSnapshot[]) =>
-  supabase.auth.getSession().then(async ({ data: { session } }) => {
+const parserUrl = 'https://functions.yandexcloud.net/d4eicdja8le8ivq53u9f'
+
+export const parseWorkout = (text: string, systemCatalog: readonly ExerciseSnapshot[]) => {
+  if (import.meta.env.VITE_SUPABASE_URL?.includes('127.0.0.1:54321')) {
+    return supabase.functions.invoke<WorkoutParseResponse>('parse-workout', { body: { text, systemCatalog } })
+  }
+  return supabase.auth.getSession().then(async ({ data: { session } }) => {
     if (!session?.access_token) return { data: null, error: new Error('authentication_required') }
     try {
-      const response = await fetch('https://functions.yandexcloud.net/d4eicdja8le8ivq53u9f', {
+      const response = await fetch(parserUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-supabase-authorization': `Bearer ${session.access_token}` },
         body: JSON.stringify({ text, systemCatalog }),
@@ -21,6 +26,7 @@ export const parseWorkout = (text: string, systemCatalog: readonly ExerciseSnaps
       return { data: null, error: error instanceof Error ? error : new Error('parse_workout_request_failed') }
     }
   })
+}
 
 const columns = 'id,name,muscle_group,input_kind,archived_at,version'
 
