@@ -12,14 +12,18 @@ export function trainerHomePath() {
 // Верхняя навигация тренера «Ассистент» (возврат YAFIT-276 после отката
 // YAFIT-279) открывается только участникам пилота. Флаг намеренно default-off;
 // allowlist не является границей авторизации и содержит только публичные UUID
-// аккаунтов — данные защищаются существующими RLS/ownership-проверками.
-export function isAssistantNavPilotEnabled(userId: string) {
+// или e-mail аккаунтов — данные защищаются существующими RLS/ownership-проверками.
+export function isAssistantNavPilotEnabled(userId: string, email?: string | null) {
   if (import.meta.env.VITE_ASSISTANT_NAV_ENABLED !== 'true') return false
   const allowedUserIds = String(import.meta.env.VITE_ASSISTANT_NAV_PILOT_USER_IDS ?? '')
     .split(',')
     .map((value) => value.trim())
     .filter(Boolean)
-  return allowedUserIds.includes(userId)
+  const allowedEmails = String(import.meta.env.VITE_ASSISTANT_NAV_PILOT_EMAILS ?? '')
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean)
+  return allowedUserIds.includes(userId) || (email ? allowedEmails.includes(email.toLowerCase()) : false)
 }
 
 // HealthKit поставляется в общем iOS-бинарнике, но permission flow открываем

@@ -41,6 +41,15 @@ describe('assistant nav pilot flag', () => {
     expect(isAssistantNavPilotEnabled('trainer-1')).toBe(true)
   })
 
+  it('is enabled only for an allowlisted email, case-insensitively', () => {
+    vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
+    vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', '')
+    vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_EMAILS', ' test@test.com ')
+    expect(isAssistantNavPilotEnabled('trainer-1', 'TEST@test.com')).toBe(true)
+    expect(isAssistantNavPilotEnabled('trainer-2', 'other@test.com')).toBe(false)
+    expect(isAssistantNavPilotEnabled('trainer-3')).toBe(false)
+  })
+
   it('is disabled for a user outside the allowlist', () => {
     vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
     vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'trainer-1,trainer-2')
