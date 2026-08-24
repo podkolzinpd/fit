@@ -90,8 +90,8 @@ describe('ClientHomeOverview', () => {
     expect(screen.getByRole('heading', { name: 'Тренировка по плану' })).toBeVisible()
     expect(screen.getByText('3 упражнения · Гребной тренажёр, Жим гантелей лёжа и ещё 1')).toBeVisible()
     expect(screen.getByRole('link', { name: 'Открыть план' })).toBeVisible()
-    expect(screen.getByRole('heading', { name: '3 тренировки' })).toBeVisible()
-    expect(screen.getByText('1 по плану · 2 самостоятельно')).toBeVisible()
+    expect(screen.getByRole('heading', { name: '1 из 1 по плану' })).toBeVisible()
+    expect(screen.getByText('Всего состоялось 3 тренировки · 2 самостоятельно')).toBeVisible()
     expect(screen.queryByText(/часть упражнений не выполнена/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/пропущено/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
@@ -107,8 +107,16 @@ describe('ClientHomeOverview', () => {
     expect(screen.getByRole('heading', { name: 'Следующая тренировка' })).toBeVisible()
     expect(screen.getByRole('link', { name: /Следующая тренировка Завтра, 07:20/ })).toHaveAttribute('href', '/workouts/tomorrow')
     expect(screen.queryByRole('link', { name: 'Открыть план' })).not.toBeInTheDocument()
-    expect(screen.getByText('Обе — самостоятельно')).toBeVisible()
+    expect(screen.getByRole('heading', { name: '0 из 1 по плану' })).toBeVisible()
+    expect(screen.getByText('Всего состоялось 2 тренировки · 2 самостоятельно')).toBeVisible()
     expect(screen.getByRole('link', { name: 'Прогресс ›' })).toHaveAttribute('href', '/me/progress')
+  })
+
+  it('counts a partially completed planned workout as an attended workout', () => {
+    render(<MemoryRouter><ClientHomeOverview today={today} workouts={[]} regularity={[{ ...week, plannedCount: 3, completedCount: 3, completedPlannedCount: 3, partialCount: 2 }]} goal={null} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Своя тренировка</button>} /></MemoryRouter>)
+    expect(screen.getByRole('heading', { name: '3 из 3 по плану' })).toBeVisible()
+    expect(screen.getByText('Все запланированные тренировки состоялись')).toBeVisible()
+    expect(screen.queryByText(/частично|не выполн/i)).not.toBeInTheDocument()
   })
 
   it('explains the value on first run without hiding the main action', () => {
