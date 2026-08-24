@@ -4,11 +4,11 @@ import { handler } from './yandex-summary-function.js'
 
 describe('production Yandex summary function adapter', () => {
   it('answers CORS preflight without touching Supabase', async () => {
-    await expect(handler({ httpMethod: 'OPTIONS', headers: { origin: 'https://fit.example.test' } })).resolves.toEqual({
-      statusCode: 204,
-      headers: expect.objectContaining({ 'access-control-allow-origin': 'https://fit.example.test' }),
-      body: '',
-    })
+    const result = await handler({ httpMethod: 'OPTIONS', headers: { origin: 'https://fit.example.test' } })
+
+    expect(result.statusCode).toBe(204)
+    expect(result.headers).toMatchObject({ 'access-control-allow-origin': 'https://fit.example.test' })
+    expect(result.body).toBe('')
   })
 
   it('requires the Supabase user JWT in the dedicated browser header', async () => {
