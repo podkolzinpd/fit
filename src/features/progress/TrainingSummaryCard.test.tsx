@@ -193,8 +193,11 @@ describe('Training summary card states', () => {
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
     expect(await screen.findByText(longExerciseName)).toBeVisible()
-    expect(screen.getByText('Рабочий вес вырос на 17%.')).toBeVisible()
-    expect(screen.getByText('1,1 в неделю')).toBeVisible()
+    expect(screen.getByText('+36%')).toBeVisible()
+    expect(screen.getByText('Рабочий вес: 50 → 68 кг')).toBeVisible()
+    expect(screen.getByText('3')).toBeVisible()
+    expect(screen.getByText('недели с тренировками')).toBeVisible()
+    expect(screen.queryByText('1,1 в неделю')).toBeNull()
     expect(screen.getByRole('button', { name: '1 месяц' })).toBeVisible()
     expect(screen.queryByRole('button', { name: '3 месяца' })).toBeNull()
     expect(screen.queryByRole('button', { name: '6 месяцев' })).toBeNull()
@@ -209,8 +212,11 @@ describe('Training summary card states', () => {
       metrics: { ...publishedSummary.metrics, progressFacts: [] },
     }])
 
+    const user = userEvent.setup()
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
+    await screen.findByText('Рабочий вес вырос на 17%.')
+    await user.click(screen.getByRole('button', { name: 'Подробный анализ' }))
     expect(await screen.findByText('Служебный показатель равен 1,3.')).toBeVisible()
     expect(document.body).not.toHaveTextContent('custom_metric_key')
   })
@@ -246,10 +252,10 @@ describe('Training summary card states', () => {
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    expect(await screen.findByText('Рабочий вес вырос на 17%.')).toBeVisible()
+    expect(await screen.findByText('+36%')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Обновить' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('YandexGPT временно недоступен')
     expect(screen.getByRole('button', { name: 'Обновить' })).toBeEnabled()
-    expect(screen.getByText('Рабочий вес вырос на 17%.')).toBeVisible()
+    expect(screen.getByText('+36%')).toBeVisible()
   })
 })
