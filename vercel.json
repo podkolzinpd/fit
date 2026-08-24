@@ -4,7 +4,7 @@
     "deploymentEnabled": {
       "main": true,
       "codex/yandex-id-stage-pilot": true,
-      "*": false
+      "**": false
     }
   },
   "rewrites": [
