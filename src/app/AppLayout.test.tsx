@@ -50,8 +50,9 @@ afterEach(() => {
 
 describe('AppLayout navigation', () => {
   it('восстанавливает полную высоту оболочки после закрытия iOS-клавиатуры', () => {
-    expect(appViewportMetrics(844, 508)).toEqual({ keyboardOpen: true })
-    expect(appViewportMetrics(844, 843.6)).toEqual({ keyboardOpen: false })
+    expect(appViewportMetrics(844, 508, 844)).toEqual({ height: 844, visibleHeight: 508, keyboardOpen: true })
+    expect(appViewportMetrics(844, 843.6, 844)).toEqual({ height: 844, visibleHeight: 844, keyboardOpen: false })
+    expect(appViewportMetrics(508, 508, 844)).toEqual({ height: 844, visibleHeight: 508, keyboardOpen: true })
     renderLayout('/today')
     expect(document.querySelector('.phone-frame')).not.toHaveAttribute('style')
   })

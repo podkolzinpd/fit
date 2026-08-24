@@ -5,10 +5,14 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-24
-Проверенный базовый `main`: `1c83dbe` (`feat(assistant): persistent production orchestrator (#533)`)
+Проверенный базовый `main`: `335942c` (`feat(assistant): enable one-user production pilot (#535)`)
 
 ## Активное изменение
 
+- `YAFIT-360` заменяет точечные исправления клавиатуры единым мобильным
+  viewport-контрактом для Trainer, Client и авторизации. Корневая оболочка
+  сохраняет высоту до ввода и восстанавливает полный экран после blur даже при
+  запоздавшем resize WebKit; внешняя прокрутка больше не оставляет серую полосу.
 - Ветка `codex/yandex-functions-safe-deploy` делает production-деплой двух
   Yandex Cloud Functions воспроизводимым после одноразового IAM bootstrap.
 - `parse-workout` и `summarize-client-training` больше не меняют публичный
@@ -70,6 +74,14 @@
 
 ## Проверки активной ветки
 
+- Unit-регрессия воспроизводит худший порядок событий iOS: клавиатура уменьшает
+  layout и visual viewport, blur приходит раньше последнего resize. Оболочка
+  возвращается к исходной высоте и сбрасывает только корневую прокрутку.
+- WebKit на 390/430 px подтверждает восстановление Client review и формы
+  тренера; ручная проверка основных экранов обеих ролей не нашла горизонтального
+  переполнения. Десктоп тренера 1440 px сохраняет прежнюю рамку и компоновку.
+- Полный локальный quality gate YAFIT-360 зелёный: 688 frontend-тестов, 109
+  API-тест, lint, typecheck, coverage, инфраструктурные политики и build.
 - PR `#530` прошёл app, Supabase DB, Yandex PostgreSQL 17, E2E и Vercel checks;
   `parse-workout` endpoint возвращает ожидаемый `401` без токена.
 - Последний stage delivery на `14d4ab9` зелёный; PostgreSQL, migration runner и
@@ -80,14 +92,15 @@
 
 ## Ближайший порядок
 
-1. Слить безопасный smoke/rollback и убедиться, что оба production Functions
+1. Завершить `YAFIT-360` отдельным PR, проверить CI, merge и production.
+2. Слить безопасный smoke/rollback и убедиться, что оба production Functions
    workflow зелёные без изменения IAM.
-2. Закрыть client/profile/custom-exercise mutations на Yandex API.
-3. Отдельно портировать feedback/reactions и вопросы/ответы после тренировки.
-4. Отдельно портировать progress/goals и derived progress/chronicle reads.
-5. После полного tenant-контракта провести две миграционные репетиции; только
+3. Закрыть client/profile/custom-exercise mutations на Yandex API.
+4. Отдельно портировать feedback/reactions и вопросы/ответы после тренировки.
+5. Отдельно портировать progress/goals и derived progress/chronicle reads.
+6. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
-6. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению
+7. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению
    программ и нового решения владельца продукта.
 
 ## Отложено
