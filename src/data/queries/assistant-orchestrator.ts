@@ -1,9 +1,9 @@
 import { supabase } from './client'
 
 // Public endpoint of the authenticated Cloud Function. The endpoint accepts
-// only a Supabase JWT; VITE_ASSISTANT_ORCHESTRATOR_URL can override it, while
-// this production fallback lets the one-user pilot ship without Vercel env
-// access.
+// only a Supabase JWT. Production deliberately does not use a Vercel runtime
+// override: a stale dashboard variable must not silently divert the pilot away
+// from the Cloud Function we deploy and observe.
 const productionAssistantOrchestratorUrl = 'https://functions.yandexcloud.net/d4emhmr9v0qist9dbcml'
 
 export type AssistantOrchestratorAction = {
@@ -16,17 +16,25 @@ export type AssistantOrchestratorAction = {
 
 export type AssistantOrchestratorReply = { reply: string; action: AssistantOrchestratorAction | null }
 
-export function assistantOrchestratorUrl(): string | undefined {
-  const configured = String((import.meta.env as { VITE_ASSISTANT_ORCHESTRATOR_URL?: unknown }).VITE_ASSISTANT_ORCHESTRATOR_URL ?? '').trim()
-  const value = (configured || (import.meta.env.PROD ? productionAssistantOrchestratorUrl : '')).replace(/\/$/, '')
+export function resolveAssistantOrchestratorUrl(production: boolean, configured: unknown): string | undefined {
+  const configuredValue = String(configured ?? '').trim()
+  const value = (production ? productionAssistantOrchestratorUrl : configuredValue).replace(/\/$/, '')
   if (!value) return undefined
   try {
     const url = new URL(value)
     const local = url.protocol === 'http:' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1')
-    return url.origin === value && (url.protocol === 'https:' || local) ? value : undefined
+    const hasNoEmbeddedCredentialsOrFragments = !url.username && !url.password && !url.search && !url.hash
+    return hasNoEmbeddedCredentialsOrFragments && (url.protocol === 'https:' || local) ? value : undefined
   } catch {
     return undefined
   }
+}
+
+export function assistantOrchestratorUrl(): string | undefined {
+  return resolveAssistantOrchestratorUrl(
+    import.meta.env.PROD,
+    (import.meta.env as { VITE_ASSISTANT_ORCHESTRATOR_URL?: unknown }).VITE_ASSISTANT_ORCHESTRATOR_URL,
+  )
 }
 
 export async function sendAssistantTurn(conversationId: string, message: string): Promise<AssistantOrchestratorReply> {
