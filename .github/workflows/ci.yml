@@ -121,16 +121,35 @@ jobs:
             --workdir /work \
             "$PLAYWRIGHT_IMAGE" \
             npx playwright test --project=mobile-chromium
-      - name: Run iPhone behavior scenarios
+      # WebKit can corrupt its long-lived browser process after an internal
+      # engine error and make unrelated later tests fail. Keep each process
+      # short-lived and retry only the affected shard in a fresh container.
+      - name: Run iPhone behavior scenarios in isolated shards
+        shell: bash
         run: |
-          docker run --rm --init --ipc=host --network host \
-            --env CI=true \
-            --env VITE_SUPABASE_URL \
-            --env VITE_SUPABASE_PUBLISHABLE_KEY \
-            --volume "${{ github.workspace }}:/work" \
-            --workdir /work \
-            "$PLAYWRIGHT_IMAGE" \
-            npx playwright test --project=iphone-13-webkit --workers=1
+          set -euo pipefail
+
+          run_webkit_shard() {
+            local shard="$1"
+            docker run --rm --init --ipc=host --network host \
+              --env CI=true \
+              --env VITE_SUPABASE_URL \
+              --env VITE_SUPABASE_PUBLISHABLE_KEY \
+              --volume "${{ github.workspace }}:/work" \
+              --workdir /work \
+              "$PLAYWRIGHT_IMAGE" \
+              npx playwright test \
+                --project=iphone-13-webkit \
+                --workers=1 \
+                --shard="${shard}/8"
+          }
+
+          for shard in {1..8}; do
+            if ! run_webkit_shard "$shard"; then
+              echo "::warning::WebKit shard ${shard}/8 crashed; retrying once in a fresh container"
+              run_webkit_shard "$shard"
+            fi
+          done
       # Поведенческие сценарии меняют общие seed-данные. Возвращаем эталонное
       # состояние перед снимками, иначе параллельные тренировки меняют главную.
       - name: Reset visual baseline data
