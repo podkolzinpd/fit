@@ -128,11 +128,11 @@ test('syncs the stable Yandex preview from main without rewriting history', () =
   assert.doesNotMatch(previewSyncWorkflow, /--force(?:-with-lease)?/)
 })
 
-test('deploys Vercel only from main and the stable Yandex preview branch', () => {
+test('deploys Vercel only from main and the stable Yandex preview branch, including slash branches', () => {
   assert.deepEqual(vercelConfig.git?.deploymentEnabled, {
     main: true,
     'codex/yandex-id-stage-pilot': true,
-    '*': false,
+    '**': false,
   })
 })
 
