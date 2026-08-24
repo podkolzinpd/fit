@@ -6,6 +6,7 @@ import { PgDatabasePool } from './db/pg-pool.js'
 import { DatabasePilotClientsReader } from './pilot-clients-reader.js'
 import { DatabasePilotConnectionsReader } from './pilot-connections-reader.js'
 import { DatabasePilotConnectionsWriter } from './pilot-connections-writer.js'
+import { DatabasePilotDomainWriter } from './pilot-domain-writer.js'
 import { DatabasePilotProfileReader } from './pilot-profile-reader.js'
 import { DatabasePilotSessionIssuer } from './pilot-session.js'
 import { DatabasePilotTrainingDataReader } from './pilot-training-data-reader.js'
@@ -71,6 +72,10 @@ const pilotConnectionsWriter =
   databasePool === undefined
     ? undefined
     : new DatabasePilotConnectionsWriter(databasePool)
+const pilotDomainWriter =
+  databasePool === undefined
+    ? undefined
+    : new DatabasePilotDomainWriter(databasePool)
 const pilotTrainingDataReader =
   databasePool === undefined
     ? undefined
@@ -106,6 +111,7 @@ const app = buildApp(
     ...(pilotClientsReader === undefined ? {} : { pilotClientsReader }),
     ...(pilotConnectionsReader === undefined ? {} : { pilotConnectionsReader }),
     ...(pilotConnectionsWriter === undefined ? {} : { pilotConnectionsWriter }),
+    ...(pilotDomainWriter === undefined ? {} : { pilotDomainWriter }),
     ...(pilotProfileReader === undefined ? {} : { pilotProfileReader }),
     ...(pilotSessionIssuer === undefined ? {} : { pilotSessionIssuer }),
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),

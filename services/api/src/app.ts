@@ -16,10 +16,20 @@ import {
   PilotSessionInvalidError,
 } from './db/yandex-pilot-transaction.js'
 import { PilotConnectionCommandError } from './connection-commands.js'
+import { PilotDomainCommandError } from './domain-commands.js'
+import {
+  readArchiveRequest,
+  readCreateClientCardDraft,
+  readClientPreferencesRequest,
+  readCustomExerciseDraft,
+  readVersionedClientCardRequest,
+  readVersionedCustomExerciseRequest,
+} from './domain-request.js'
 import type { DatabaseConnection, DatabasePool } from './db/types.js'
 import type { PilotClientsReader } from './pilot-clients-reader.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
+import type { PilotDomainWriter } from './pilot-domain-writer.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer } from './pilot-session.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
@@ -49,6 +59,7 @@ interface BuildAppOptions {
   pilotClientsReader?: PilotClientsReader
   pilotConnectionsReader?: PilotConnectionsReader
   pilotConnectionsWriter?: PilotConnectionsWriter
+  pilotDomainWriter?: PilotDomainWriter
   pilotProfileReader?: PilotProfileReader
   pilotSessionIssuer?: PilotSessionIssuer
   pilotTrainingDataReader?: PilotTrainingDataReader
@@ -293,17 +304,22 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   app.get('/v1/clients', async (request, reply) => {
     const sessionToken = request.headers['x-fit-pilot-session']
+    const { archived: archivedQuery } = request.query as { archived?: unknown }
     if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     if (options.pilotClientsReader === undefined) {
       return reply.code(503).send({ error: 'service_unavailable' })
     }
+    if (archivedQuery !== undefined && archivedQuery !== 'true' && archivedQuery !== 'false') {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const archived = archivedQuery === 'true'
 
     try {
       return reply
         .header('cache-control', 'no-store')
-        .send(await options.pilotClientsReader.readClients(sessionToken))
+        .send(await options.pilotClientsReader.readClients(sessionToken, archived))
     } catch (error) {
       if (error instanceof PilotSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })
@@ -380,6 +396,18 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         }
         return reply.code(422).send({ error: 'action_not_allowed' })
       }
+      if (error instanceof PilotDomainCommandError) {
+        if (error.failure === 'forbidden') {
+          return reply.code(403).send({ error: 'action_not_allowed' })
+        }
+        if (error.failure === 'not_found') {
+          return reply.code(404).send({ error: 'resource_not_found' })
+        }
+        if (error.failure === 'conflict') {
+          return reply.code(409).send({ error: 'version_conflict' })
+        }
+        return reply.code(422).send({ error: 'invalid_domain_data' })
+      }
       if (error instanceof PilotWorkoutCommandError) {
         if (error.failure === 'active') {
           return reply.code(409).send({ error: 'active_workout_exists' })
@@ -398,6 +426,164 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return reply.code(503).send({ error: 'service_unavailable' })
     }
   }
+
+  app.post('/v1/clients', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const draft = readCreateClientCardDraft(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (draft === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    const writer = options.pilotDomainWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.createClient(sessionToken, draft),
+      (client) => reply.header('cache-control', 'no-store').code(201).send({ client }),
+    )
+  })
+
+  app.put('/v1/clients/:clientId', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { clientId } = request.params as { clientId?: unknown }
+    const command = readVersionedClientCardRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId) || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotDomainWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.updateClient(
+        sessionToken,
+        clientId,
+        command.draft,
+        command.expectedVersion,
+      ),
+      (version) => reply.header('cache-control', 'no-store').send({ client: { id: clientId, version } }),
+    )
+  })
+
+  app.put('/v1/clients/:clientId/archive', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { clientId } = request.params as { clientId?: unknown }
+    const command = readArchiveRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId) || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotDomainWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.setClientArchived(
+        sessionToken,
+        clientId,
+        command.archived,
+        command.expectedVersion,
+      ),
+      (version) => reply.header('cache-control', 'no-store').send({ client: { id: clientId, version } }),
+    )
+  })
+
+  app.put('/v1/clients/:clientId/preferences', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { clientId } = request.params as { clientId?: unknown }
+    const command = readClientPreferencesRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId) || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotDomainWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.updateClientPreferences(
+        sessionToken,
+        clientId,
+        command.alias,
+        command.note,
+        command.expectedVersion,
+      ),
+      (membershipVersion) => reply
+        .header('cache-control', 'no-store')
+        .send({ client: { id: clientId, membershipVersion } }),
+    )
+  })
+
+  app.post('/v1/custom-exercises', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const draft = readCustomExerciseDraft(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (draft === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    const writer = options.pilotDomainWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.createCustomExercise(sessionToken, draft),
+      (exercise) => reply
+        .header('cache-control', 'no-store')
+        .code(201)
+        .send({ exercise }),
+    )
+  })
+
+  app.put('/v1/custom-exercises/:exerciseId', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { exerciseId } = request.params as { exerciseId?: unknown }
+    const command = readVersionedCustomExerciseRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof exerciseId !== 'string' || !uuidPattern.test(exerciseId) || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotDomainWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.updateCustomExercise(
+        sessionToken,
+        exerciseId,
+        command.draft,
+        command.expectedVersion,
+      ),
+      (exercise) => reply.header('cache-control', 'no-store').send({ exercise }),
+    )
+  })
+
+  app.put('/v1/custom-exercises/:exerciseId/archive', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { exerciseId } = request.params as { exerciseId?: unknown }
+    const command = readArchiveRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof exerciseId !== 'string' || !uuidPattern.test(exerciseId) || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotDomainWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.setCustomExerciseArchived(
+        sessionToken,
+        exerciseId,
+        command.archived,
+        command.expectedVersion,
+      ),
+      (exercise) => reply.header('cache-control', 'no-store').send({ exercise }),
+    )
+  })
 
   app.post('/v1/workouts', async (request, reply) => {
     const sessionToken = request.headers['x-fit-pilot-session']
