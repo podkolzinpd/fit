@@ -9,8 +9,7 @@ import { ClientDetailPage, ClientFormPage, ClientProfilePage, ClientsPage, GoalP
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
-import { AssistantHistoryPage, AssistantSandboxPage } from '../features/assistant'
-import { assistantRepository } from '../data/repositories/assistant.repository'
+import { AssistantHistoryPage } from '../features/assistant'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
 
 function Protected() {
@@ -44,7 +43,7 @@ function Home() {
 }
 
 function AssistantPage() {
-  return assistantRepository.isAvailable() ? <AssistantHistoryPage /> : <AssistantSandboxPage />
+  return <AssistantHistoryPage />
 }
 
 const router = createBrowserRouter([

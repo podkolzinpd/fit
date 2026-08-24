@@ -14,10 +14,17 @@ export function trainerHomePath() {
 // default — единственный тестовый e-mail; VITE_ASSISTANT_NAV_ENABLED=false
 // остаётся мгновенным kill switch. Allowlist не является границей авторизации:
 // данные защищаются существующими RLS/ownership-проверками.
+export function isProductionAssistantPilotEmail(email?: string | null) {
+  return email?.trim().toLowerCase() === 'test@test.com'
+}
+
 export function isAssistantNavPilotEnabled(userId: string, email?: string | null) {
   const enabledValue = String(import.meta.env.VITE_ASSISTANT_NAV_ENABLED ?? '').trim()
   const enabled = enabledValue === 'true' || (import.meta.env.PROD && enabledValue !== 'false')
   if (!enabled) return false
+  // Production must never inherit an old UUID allowlist from Vercel. The
+  // public pilot is deliberately one account wide until the next rollout.
+  if (import.meta.env.PROD) return isProductionAssistantPilotEmail(email)
   const allowedUserIds = String(import.meta.env.VITE_ASSISTANT_NAV_PILOT_USER_IDS ?? '')
     .split(',')
     .map((value) => value.trim())
@@ -26,9 +33,7 @@ export function isAssistantNavPilotEnabled(userId: string, email?: string | null
     .split(',')
     .map((value) => value.trim().toLowerCase())
     .filter(Boolean)
-  const productionPilotEmails = import.meta.env.PROD ? ['test@test.com'] : []
-  return allowedUserIds.includes(userId)
-    || (email ? [...allowedEmails, ...productionPilotEmails].includes(email.toLowerCase()) : false)
+  return allowedUserIds.includes(userId) || (email ? allowedEmails.includes(email.toLowerCase()) : false)
 }
 
 // HealthKit поставляется в общем iOS-бинарнике, но permission flow открываем
