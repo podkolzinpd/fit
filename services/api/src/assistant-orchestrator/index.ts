@@ -199,10 +199,11 @@ export async function runAssistantTurn(authorization: string, command: Assistant
   }
   const result = validateAssistantTurnResponse(raw)
   if (!result) throw new HttpError(502, 'orchestrator_invalid_response')
-  const assistantInsert = await service.from('assistant_messages').insert({
+  const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({
     conversation_id: command.conversationId, author: 'assistant', content: result.reply, action: result.action,
-  })
-  if (assistantInsert.error) throw new HttpError(503, 'history_unavailable')
+  }).select('id').single()
+  if (assistantInsertError || !assistantMessage?.id) throw new HttpError(503, 'history_unavailable')
+  console.info('assistant_turn_persisted', { hasAction: result.action !== null })
   return result
 }
 
@@ -212,7 +213,9 @@ export async function assistantOrchestrator(request: Request): Promise<Response>
     if (!authorization?.startsWith('Bearer ')) throw new HttpError(401, 'authentication_required')
     const command = readAssistantTurnRequest(await request.json())
     if (!command) throw new HttpError(400, 'invalid_assistant_request')
-    return Response.json(await runAssistantTurn(authorization, command))
+    const result = await runAssistantTurn(authorization, command)
+    console.info('assistant_orchestrator_succeeded', { hasAction: result.action !== null })
+    return Response.json(result)
   } catch (error) {
     const known = error instanceof HttpError ? error : new HttpError(502, 'orchestrator_failed')
     console.warn('assistant_orchestrator_failed', { status: known.status, code: known.code })
