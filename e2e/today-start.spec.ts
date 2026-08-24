@@ -137,7 +137,7 @@ test('today: быстрый старт ведёт к единому выбору
 
   await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
-  await expect(page.getByLabel('Тренировка')).toHaveCount(0)
+  await expect(page.getByRole('textbox', { name: 'Тренировка' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Разобрать тренировку' })).toBeDisabled()
