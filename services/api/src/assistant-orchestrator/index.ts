@@ -144,6 +144,7 @@ export async function assistantOrchestrator(request: Request): Promise<Response>
     return Response.json(await runAssistantTurn(authorization, command))
   } catch (error) {
     const known = error instanceof HttpError ? error : new HttpError(502, 'orchestrator_failed')
+    console.warn('assistant_orchestrator_failed', { status: known.status, code: known.code })
     return Response.json({ error: known.code }, { status: known.status })
   }
 }
