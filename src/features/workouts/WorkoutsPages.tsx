@@ -305,6 +305,7 @@ export function WorkoutFormPage() {
   const [confirmLeave, confirmLeaveDialog] = useConfirm()
   const sourceId = workoutId ?? params.get('copy') ?? undefined
   const copiedWorkout = params.has('copy')
+  const recordPlannedResult = Boolean(workoutId && params.get('result') === '1')
   const routeClientId = params.get('client') ?? ''
   const source = useQuery({ queryKey: ['workout', sourceId], queryFn: () => workoutsRepository.get(sourceId ?? ''), enabled: Boolean(sourceId) })
   const clientMode = actor?.role === 'client'
@@ -329,7 +330,7 @@ export function WorkoutFormPage() {
   const [pickerSearch, setPickerSearch] = useState('')
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
-  const initial = source.data ? (workoutId ? { ...(source.data.status === 'done' ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today)) : undefined
+  const initial = source.data ? (workoutId ? { ...(source.data.status === 'done' || recordPlannedResult ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today)) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
   const draftKey = workoutFormDraftKey(actor?.userId ?? 'anonymous', sourceId ?? `new-${params.get('client') ?? ''}-${params.get('date') ?? ''}`)
   // Клиент, для которого выбираем этап (реактивно — при смене в селекте).
@@ -347,7 +348,7 @@ export function WorkoutFormPage() {
   // Завершённой остаётся только редактируемая запись. Копия завершённой
   // тренировки — это новый план, который тренер при необходимости может
   // переключить в «Завершённую».
-  const completedMode = recordCompleted || Boolean(workoutId && source.data?.status === 'done')
+  const completedMode = recordCompleted || recordPlannedResult || Boolean(workoutId && source.data?.status === 'done')
   useEffect(() => {
     if (!actor || source.isLoading || (clientMode && mine.isLoading) || formDraftReady) return
     const saved = readWorkoutFormDraft(draftKey)
@@ -383,7 +384,7 @@ export function WorkoutFormPage() {
     if (!initial || formDraftReady) return
     setEntryDate(initial.workoutDate)
   }, [formDraftReady, initial, source.data?.status])
-  const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => completedMode ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: async (id) => {
+  const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => recordPlannedResult ? workoutsRepository.recordPlannedResult(draft) : completedMode ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: async (id) => {
     if (!workoutId) removeWorkoutFormDraft(draftKey)
     // Перед переходом карточка должна получить новую optimistic-concurrency
     // version. Иначе пользователь успевает запустить только что изменённую
@@ -510,8 +511,8 @@ export function WorkoutFormPage() {
   const editingDenied = Boolean(clientMode && workoutId && source.data && source.data.createdBy !== actor?.userId)
   const loading = source.isLoading || mine.isLoading
   const error = source.error ?? mine.error
-  const pageTitle = workoutId ? 'Редактировать тренировку' : 'Новая тренировка'
-  const documentTitle = workoutId ? 'Редактирование тренировки' : params.has('copy') ? 'Копирование тренировки' : 'Создание тренировки'
+  const pageTitle = recordPlannedResult ? 'Записать результат' : workoutId ? 'Редактировать тренировку' : 'Новая тренировка'
+  const documentTitle = recordPlannedResult ? 'Запись результата' : workoutId ? 'Редактирование тренировки' : params.has('copy') ? 'Копирование тренировки' : 'Создание тренировки'
   const exerciseMeta = exercises.length > 0 ? `${exercises.length} ${exerciseCountLabel(exercises.length)}` : 'Сначала добавьте упражнения'
   const headerMeta = [copiedWorkout ? 'Скопировано' : '', selectedClientName, exerciseMeta].filter(Boolean).join(' · ')
   const hasMeaningfulDraft = exercises.length > 0 || Boolean(notes.trim() || startTime || endTime || selectedClientId || recordCompleted || entryDate !== localDate(params.get('date') ?? today))
@@ -559,7 +560,7 @@ export function WorkoutFormPage() {
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions workout-action-row"><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0}>{recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить план'}</WorkoutCta></div>
+      <div className="actions workout-action-row"><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0}>{recordPlannedResult ? 'Сохранить результат' : recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить план'}</WorkoutCta></div>
     </form>}</AsyncView>
     {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
     {confirmLeaveDialog}
@@ -774,7 +775,7 @@ export function WorkoutDetailPage() {
         <section className="workout-decision-sheet" role="dialog" aria-modal="true" aria-label={decisionSheet === 'actions' ? 'Действия с планом' : workout.status === 'cancelled' ? 'Вернуть тренировку в план' : 'Перенести тренировку'} onClick={(event) => event.stopPropagation()}>
           <header className="picker-header"><div><p className="eyebrow">ПЛАН НА {formatLocalDate(workout.workoutDate)}</p><h2>{decisionSheet === 'actions' ? 'Что сделать с планом?' : workout.status === 'cancelled' ? 'Вернуть в план' : 'Перенести тренировку'}</h2></div><button type="button" className="picker-close" aria-label="Закрыть" disabled={cancelPlanned.isPending || reschedule.isPending} onClick={() => setDecisionSheet(null)}><CloseIcon /></button></header>
           {decisionSheet === 'actions' ? <div className="workout-decision-actions">
-            <WorkoutCta pending={start.isPending} pendingLabel="Открываем…" onClick={() => { setDecisionSheet(null); start.mutate() }}>Записать результат</WorkoutCta>
+            <WorkoutCta onClick={() => { setDecisionSheet(null); navigate(`/workouts/${workoutId}/edit?result=1`) }}>Записать результат</WorkoutCta>
             <WorkoutCta variant="secondary" onClick={openReschedule}>Перенести тренировку</WorkoutCta>
             <WorkoutCta variant="tertiary" pending={cancelPlanned.isPending} pendingLabel="Сохраняем…" onClick={() => void requestCancelPlanned()}>Тренировка не состоялась</WorkoutCta>
           </div> : <form className="stack compact" onSubmit={(event) => { event.preventDefault(); reschedule.mutate() }}>
