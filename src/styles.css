@@ -474,37 +474,63 @@ p { margin: 6px 0 }
 .theme-light .tab-bar a { color: #77717b }
 .theme-light .tab-bar a.active { color: var(--accent-strong); background: var(--accent-surface) }
 .trainer-tab-bar { grid-template-columns: repeat(3, 1fr) }
+.trainer-tab-bar:has(a[href="/assistant"]) { grid-template-columns: repeat(4, 1fr) }
+.trainer-tab-bar:has(a[href="/assistant"]):has(a[href="/profile"]) { grid-template-columns: repeat(5, 1fr) }
+.client-tab-bar:has(a[href="/assistant"]) { grid-template-columns: repeat(5, 1fr) }
 .client-shell .tab-bar { grid-template-columns: repeat(2, 1fr) }
-/* Пилот YAFIT-317: верхняя навигация тренера — текстовые табы без иконок,
-   активный выделен насыщенностью и акцентным подчёркиванием; шестерёнка
-   справа ведёт в профиль. Классы применяются только в пилотной ветке
-   AppLayout; вне пилота этот блок не участвует в рендере. Размеры выверены
-   под 320-390 px. */
-.top-tab-bar { flex: none; display: flex; align-items: center; gap: 14px; margin-top: env(safe-area-inset-top); padding: 8px var(--space-4) 4px }
-.top-tab-bar a { position: relative; display: inline-flex; flex-direction: column; align-items: center; text-decoration: none; color: var(--muted); font-size: 15px; line-height: 40px; font-weight: var(--weight-medium); transition: color var(--motion-fast) ease }
-/* Скрытый жирный дубликат текста резервирует ширину: при переключении
-   активного таба (600 → 700) соседи и шестерёнка не сдвигаются. */
-.top-tab-bar a:not(.top-tab-settings)::before { content: attr(data-label); height: 0; overflow: hidden; visibility: hidden; font-weight: var(--weight-semibold) }
-.top-tab-bar a.active { color: inherit; font-weight: var(--weight-semibold) }
-.top-tab-bar a.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 3px; height: 3px; border-radius: var(--radius-pill); background: var(--accent-strong) }
-.top-tab-bar a:focus-visible { outline: 3px solid var(--accent-strong); outline-offset: 2px; border-radius: var(--radius-sm) }
-.top-tab-settings { margin-left: auto; place-items: center; flex: none; width: var(--tap); height: var(--tap); border: 1px solid var(--border); border-radius: 50%; background: var(--accent-surface) }
-/* display и color заданы селектором с "a": иначе их перебивает .top-tab-bar a. */
-.top-tab-bar a.top-tab-settings { display: grid; color: var(--accent-strong) }
-.top-tab-bar a.top-tab-settings:focus-visible { border-radius: 50% }
-.top-tab-bar a.top-tab-settings.active { color: var(--accent-strong) }
-.top-tab-bar a.top-tab-settings.active::after { display: none }
-.top-tab-settings svg { width: 21px; height: 21px }
-@media (max-width: 355px) {
-  .top-tab-bar { gap: 10px; padding-left: var(--space-3); padding-right: var(--space-3) }
-  .top-tab-bar a { font-size: 14px }
-}
-/* В live-режиме верхний бар скрыт — сохраняем прежние отступы; прежние нижние
-   резервы страниц закладывались под нижний таб-бар, которого в пилоте нет. */
-.trainer-top-shell .content:not(.content-immersive) { margin-top: 0; padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-6)) }
-.trainer-top-shell .content:has(.schedule-page) { padding-bottom: 0 }
-.trainer-top-shell .schedule-page > .day-grid-scroll { padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-6)) }
-.trainer-top-shell .clients-page { padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-6)) }
+/* Локальный первый срез ассистента. Он использует только component state: здесь
+   намеренно нет queries, repository или сетевых вызовов. Карточки повторяют
+   Figma-паттерн «сообщение → структурированное действие», чтобы позднее тот же
+   renderer получил типизированный результат Yandex Cloud API. */
+.assistant-page { position:relative; display:grid; align-content:start; min-height:100%; gap:var(--space-4); padding:10px var(--space-4) calc(106px + env(safe-area-inset-bottom)); color:var(--fg); }
+.assistant-page::after { content:""; position:absolute; z-index:0; right:-24%; bottom:-10%; width:86%; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle, color-mix(in srgb, var(--accent) 45%, transparent) 0, var(--accent-ring) 43%, transparent 71%); pointer-events:none; filter:blur(12px); }
+.assistant-page > * { position:relative; z-index:1; }
+.assistant-local-note { margin:0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug); }
+.assistant-thread { display:grid; gap:var(--space-4); }
+.assistant-message { justify-self:end; width:min(100%, 252px); padding:var(--space-4); border:1px solid var(--accent-border); border-radius:24px 24px 6px 24px; background:var(--accent-grad); color:var(--on-accent); box-shadow:0 10px 26px var(--accent-shadow); }
+.assistant-message p { margin:0; font-size:17px; line-height:1.28; }
+.assistant-message-edit { min-height:auto; margin-top:var(--space-2); padding:0; border:0; background:transparent; color:inherit; box-shadow:none; font-size:var(--type-caption-size); text-decoration:underline; }
+.assistant-thinking { display:flex; align-items:center; gap:var(--space-2); margin:0; color:var(--muted); font-size:var(--type-body-size); }
+.assistant-thinking span { width:14px; height:14px; border-radius:50%; background:radial-gradient(circle at 35% 30%, var(--on-accent), var(--accent) 42%, var(--accent-surface) 72%); box-shadow:0 0 14px var(--accent-ring); }
+.assistant-workout-card { display:grid; gap:var(--space-3); padding:var(--space-4); border:1px solid var(--border); border-radius:var(--radius-lg); background:color-mix(in srgb, var(--surface-raised) 92%, var(--accent-surface)); box-shadow:var(--shadow-card); }
+.assistant-action-card { display:grid; gap:var(--space-3); padding:var(--space-4); border:1px solid var(--border); border-radius:var(--radius-lg); background:color-mix(in srgb, var(--surface-raised) 92%, var(--accent-surface)); box-shadow:var(--shadow-card); }
+.assistant-action-card > header { display:flex; align-items:baseline; justify-content:space-between; gap:var(--space-2); }
+.assistant-action-card > header span { color:var(--muted); font-size:var(--type-caption-size); }
+.assistant-action-card > p { margin:0; line-height:var(--leading-normal); }
+.assistant-action-card ul { display:grid; gap:var(--space-2); margin:0; padding-left:20px; color:var(--muted); }
+.assistant-action-card button { min-height:48px; }
+.assistant-action-card .assistant-action-cancel { min-height:38px; padding:6px 0; border:0; background:transparent; color:var(--muted); box-shadow:none; }
+.assistant-action-card .assistant-action-cancel:hover { color:var(--fg); }
+.assistant-progress-preview { display:grid; gap:var(--space-1); padding:var(--space-3); border-radius:var(--radius-md); background:var(--input); }
+.assistant-progress-preview span, .assistant-progress-preview small { color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug); }
+.assistant-progress-preview b { color:var(--accent-strong); }
+.assistant-program-draft { display:grid; gap:var(--space-2); padding:var(--space-3); border-radius:var(--radius-md); background:var(--input); }
+.assistant-program-draft label { display:grid; gap:4px; color:var(--muted); font-size:var(--type-caption-size); }
+.assistant-program-draft input { min-height:42px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); color:var(--fg); padding:8px 10px; font:inherit; }
+.assistant-program-draft strong { margin-top:var(--space-1); }
+.assistant-workout-card > header, .assistant-set-card > header { display:flex; align-items:baseline; justify-content:space-between; gap:var(--space-2); }
+.assistant-workout-card > header span, .assistant-set-card > header span { color:var(--muted); font-size:var(--type-caption-size); }
+.assistant-workout-card h2 { margin:0; font-size:var(--type-section-size); }
+.assistant-sets { display:grid; gap:var(--space-2); }
+.assistant-set-card { display:grid; gap:var(--space-2); padding:var(--space-3); border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); }
+.assistant-set-current { border-color:var(--accent-surface-border); background:var(--live-warm); }
+.assistant-set-fields { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:var(--space-2); }
+.assistant-set-card label { display:grid; gap:4px; color:var(--muted); font-size:12px; }
+.assistant-set-card input { width:100%; min-height:50px; border:1px solid transparent; border-radius:var(--radius-sm); background:var(--input); color:var(--fg); padding:8px 12px; font-size:var(--type-section-size); font-weight:var(--weight-semibold); }
+.assistant-set-card input:focus { outline:3px solid var(--accent-ring); border-color:var(--accent-strong); }
+.assistant-set-note input { min-height:44px; font-size:var(--type-body-size); font-weight:var(--weight-medium); }
+.assistant-add-set { justify-self:start; display:inline-flex; align-items:center; gap:var(--space-2); min-height:38px; padding:6px 0; border:0; background:transparent; color:var(--accent-strong); box-shadow:none; }
+.assistant-add-set svg { width:18px; height:18px; }
+.assistant-save-workout { min-height:48px; }
+.assistant-card-hint { margin:0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug); }
+.assistant-composer { position:sticky; bottom:calc(-1 * (var(--space-4) + env(safe-area-inset-bottom))); display:grid; grid-template-columns:minmax(0, 1fr) 46px 46px; gap:var(--space-2); margin-top:var(--space-2); padding:var(--space-3) 0 calc(var(--space-3) + env(safe-area-inset-bottom)); background:linear-gradient(180deg, transparent, var(--bg) 20%); }
+.assistant-composer input { min-width:0; min-height:52px; border:1px solid var(--border); border-radius:var(--radius-pill); background:var(--surface-raised); color:var(--fg); padding:0 var(--space-4); font-size:var(--type-body-size); }
+.assistant-composer input:focus { outline:3px solid var(--accent-ring); border-color:var(--accent-strong); }
+.assistant-icon-button { display:grid; place-items:center; width:46px; min-height:52px; padding:0; border-radius:50%; }
+.assistant-icon-button svg { width:22px; height:22px; }
+.assistant-reset { grid-column:1 / -1; justify-self:center; min-height:auto; padding:4px 8px; border:0; background:transparent; color:var(--muted); box-shadow:none; font-size:var(--type-caption-size); }
+.assistant-reset:hover { color:var(--fg); }
+@media (max-width: 480px) { .assistant-composer { bottom:calc(-1 * env(safe-area-inset-bottom)); } }
 .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px }
 .summary div { background: var(--surface-raised); border: 1px solid var(--border); padding: 13px 8px; border-radius: 14px; display: flex; flex-direction: column; gap: 3px; text-align: center }
 .summary span { color: var(--muted); font-size: var(--text-caption); font-weight: var(--weight-medium); line-height: 1.25 }

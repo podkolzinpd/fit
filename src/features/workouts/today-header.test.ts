@@ -7,15 +7,15 @@ const client = { role: 'client', userId: 'client-user' } as SessionActor
 
 afterEach(() => vi.unstubAllEnvs())
 
-describe('todayHeaderProps: шапка «Сегодня»/«Ассистент» (пилот YAFIT-317)', () => {
+describe('todayHeaderProps: шапка стартового экрана', () => {
   it('вне пилота тренер видит «Сегодня» с аватаром профиля', () => {
     expect(todayHeaderProps(false, trainer)).toEqual({ title: 'Сегодня', hideTitle: false, showProfileAvatar: true })
   })
 
-  it('тренер из allowlist получает sr-only «Ассистент» без аватара', () => {
+  it('тренер из allowlist сохраняет шапку «Сегодня»', () => {
     vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
     vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'trainer-user')
-    expect(todayHeaderProps(false, trainer)).toEqual({ title: 'Ассистент', hideTitle: true, showProfileAvatar: false })
+    expect(todayHeaderProps(false, trainer)).toEqual({ title: 'Сегодня', hideTitle: false, showProfileAvatar: true })
   })
 
   it('клиент из allowlist сохраняет прежнюю шапку — пилот тренерский', () => {

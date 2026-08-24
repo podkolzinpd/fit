@@ -10,6 +10,9 @@ import { DatabasePilotProfileReader } from './pilot-profile-reader.js'
 import { DatabasePilotSessionIssuer } from './pilot-session.js'
 import { DatabasePilotTrainingDataReader } from './pilot-training-data-reader.js'
 import { DatabasePilotWorkoutsWriter } from './pilot-workouts-writer.js'
+import { SupabaseWorkoutParser } from './legacy-workout-parser.js'
+import { readSupabaseBridgeConfig, SupabaseBridge } from './supabase-bridge.js'
+import { summarizeClientTraining } from './legacy-summary/index.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -76,6 +79,24 @@ const pilotWorkoutsWriter =
   databasePool === undefined
     ? undefined
     : new DatabasePilotWorkoutsWriter(databasePool)
+const supabaseBridgeConfig = readSupabaseBridgeConfig()
+const legacyWorkoutParser =
+  supabaseBridgeConfig === undefined
+    || process.env.YANDEX_CLOUD_API_KEY === undefined
+    || process.env.YANDEX_CLOUD_FOLDER_ID === undefined
+    ? undefined
+    : new SupabaseWorkoutParser(
+        new SupabaseBridge(supabaseBridgeConfig),
+        process.env.YANDEX_CLOUD_API_KEY,
+        process.env.YANDEX_CLOUD_FOLDER_ID,
+        process.env.YANDEX_CLOUD_MODEL_ID,
+      )
+const legacySummaryHandler =
+  supabaseBridgeConfig === undefined
+  || process.env.YANDEX_CLOUD_API_KEY === undefined
+  || process.env.YANDEX_CLOUD_FOLDER_ID === undefined
+    ? undefined
+    : summarizeClientTraining
 const app = buildApp(
   {
     allowedOrigins: parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS),
@@ -89,6 +110,8 @@ const app = buildApp(
     ...(pilotSessionIssuer === undefined ? {} : { pilotSessionIssuer }),
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),
     ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),
+    ...(legacyWorkoutParser === undefined ? {} : { legacyWorkoutParser }),
+    ...(legacySummaryHandler === undefined ? {} : { legacySummaryHandler }),
   },
 )
 

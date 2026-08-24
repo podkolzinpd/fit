@@ -1,4 +1,4 @@
-// schema-sha256: 816932d96eade9103f8cdb1792a7d47c67adb1adaa742269a5c25aa27cd9d9d3
+// schema-sha256: 7ad48a73c5668f82324e266a1fd4afe3da776bc3d1cef6933b67c372f15c1a08
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -99,6 +99,70 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assistant_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistant_conversations_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assistant_messages: {
+        Row: {
+          action: Json | null
+          author: string
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          action?: Json | null
+          author: string
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          action?: Json | null
+          author?: string
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistant_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "assistant_conversations"
             referencedColumns: ["id"]
           },
         ]

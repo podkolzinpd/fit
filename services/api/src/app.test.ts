@@ -29,6 +29,7 @@ import type { PlannedWorkoutDraft } from './planned-workout-request.js'
 import type { ProfileResponse } from './profile.js'
 import type { PilotTrainingDataResponse } from './training-data.js'
 import { PilotWorkoutCommandError } from './workout-commands.js'
+import type { LegacyWorkoutParser } from './legacy-workout-parser.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
@@ -45,6 +46,100 @@ describe('health endpoint', () => {
 
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual({ status: 'ok' })
+  })
+})
+
+describe('legacy Supabase function bridge', () => {
+  it('keeps the Supabase token out of the IAM Authorization header and returns the parser contract', async () => {
+    const parse = vi.fn().mockResolvedValue({ items: [], unmatched: [] })
+    const parser: LegacyWorkoutParser = { parse }
+    const app = buildApp({ legacyWorkoutParser: parser, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/legacy/parse-workout',
+      headers: { 'x-supabase-authorization': 'Bearer supabase-access-token' },
+      payload: { text: 'присед', systemCatalog: [] },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ items: [], unmatched: [] })
+    expect(parse).toHaveBeenCalledWith('supabase-access-token', { text: 'присед', systemCatalog: [] })
+  })
+
+  it('does not expose a bridge endpoint until its cloud secrets are configured', async () => {
+    const app = buildApp({ logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/legacy/parse-workout',
+      headers: { 'x-supabase-authorization': 'Bearer token' },
+      payload: { text: 'присед', systemCatalog: [] },
+    })
+
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual({ error: 'service_unavailable' })
+  })
+
+  it('forwards the legacy summary body and Supabase JWT without using Authorization at the cloud boundary', async () => {
+    const handler = vi.fn(async (request: Request) => {
+      expect(request.headers.get('authorization')).toBe('Bearer supabase-access-token')
+      await expect(request.json()).resolves.toEqual({ client_id: PROFILE_ID, period_start: '2026-08-01', period_end: '2026-08-20', force: false })
+      return new Response(JSON.stringify({ data: { id: 'summary-id' }, cached: false }), { headers: { 'content-type': 'application/json' } })
+    })
+    const app = buildApp({ legacySummaryHandler: handler, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/legacy/summarize-client-training',
+      headers: { 'x-supabase-authorization': 'Bearer supabase-access-token' },
+      payload: { client_id: PROFILE_ID, period_start: '2026-08-01', period_end: '2026-08-20', force: false },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ data: { id: 'summary-id' }, cached: false })
+    expect(handler).toHaveBeenCalledOnce()
+  })
+
+  it('exposes the assistant progress endpoint as a validated read-only wrapper', async () => {
+    const handler = vi.fn(async (request: Request) => {
+      expect(request.headers.get('authorization')).toBe('Bearer supabase-access-token')
+      await expect(request.json()).resolves.toEqual({ client_id: PROFILE_ID, period_start: '2026-08-01', period_end: '2026-08-20', force: false })
+      return new Response(JSON.stringify({ data: { id: 'summary-id' }, cached: false }), { headers: { 'content-type': 'application/json' } })
+    })
+    const app = buildApp({ legacySummaryHandler: handler, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/assistant/progress-summary',
+      headers: { 'x-supabase-authorization': 'Bearer supabase-access-token' },
+      payload: { client_id: PROFILE_ID, period_start: '2026-08-01', period_end: '2026-08-20' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ data: { id: 'summary-id' }, cached: false })
+    expect(handler).toHaveBeenCalledOnce()
+  })
+
+  it('rejects malformed assistant progress input before it reaches the summary tool', async () => {
+    const handler = vi.fn()
+    const app = buildApp({ legacySummaryHandler: handler, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/assistant/progress-summary',
+      headers: { 'x-supabase-authorization': 'Bearer supabase-access-token' },
+      payload: { client_id: PROFILE_ID, period_start: '2026-08-20', period_end: '2026-08-01', force: 'yes' },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_progress_request' })
+    expect(handler).not.toHaveBeenCalled()
   })
 })
 
