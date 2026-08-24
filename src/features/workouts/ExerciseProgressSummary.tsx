@@ -23,23 +23,44 @@ export function exerciseProgressValueLabel(value: number | null, inputKind: Inpu
 
 function exerciseProgressChangeLabel(value: number | null, inputKind: InputKind): string {
   if (value === null) return 'Первый результат'
+  if (value === 0) return 'Без изменений'
   const prefix = value > 0 ? '+' : ''
-  if (inputKind === 'duration') return `${prefix}${compactNumber(value)} сек`
+  if (inputKind === 'duration') return `${prefix}${compactNumber(value)} сек к прошлой тренировке`
   const unit = inputKind === 'strength' ? 'кг' : inputKind === 'reps' ? 'повт.' : 'км'
-  return `${prefix}${compactNumber(value)} ${unit}`
+  return `${prefix}${compactNumber(value)} ${unit} к прошлой тренировке`
 }
 
-function milestoneLabel(totalCount: number): string {
-  const next = [10, 25, 50, 100].find((milestone) => milestone > totalCount)
-  return next ? `${totalCount} из ${next} до следующей отметки` : `${totalCount} тренировок в истории`
+const EXERCISE_MILESTONES = [10, 25, 50, 100, 250, 500, 1000] as const
+
+function executionCountLabel(totalCount: number): string {
+  const mod10 = totalCount % 10
+  const mod100 = totalCount % 100
+  const noun = mod10 === 1 && mod100 !== 11
+    ? 'выполнение'
+    : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+      ? 'выполнения'
+      : 'выполнений'
+  return `${totalCount} ${noun}`
 }
 
-export function exerciseProgressSetLabel(set: ExerciseProgressSet, showRpe: boolean): string {
+function milestoneInfo(totalCount: number): { count: string; note: string } {
+  const next = EXERCISE_MILESTONES.find((milestone) => milestone > totalCount)
+  const achieved = [...EXERCISE_MILESTONES].reverse().find((milestone) => milestone <= totalCount)
+  if (achieved && next) return { count: executionCountLabel(totalCount), note: `Отметка ${achieved} · далее ${next}` }
+  if (next) return { count: executionCountLabel(totalCount), note: `Следующая отметка — ${next}` }
+  return { count: executionCountLabel(totalCount), note: 'Отметка 1000 достигнута' }
+}
+
+export function exerciseProgressSetLabel(set: ExerciseProgressSet, inputKind: InputKind, showRpe: boolean): string {
+  const values = inputKind === 'strength'
+    ? [set.weightKg === undefined ? null : `${compactNumber(set.weightKg)} кг`, set.reps === undefined ? null : `${compactNumber(set.reps)} повт.`]
+    : inputKind === 'reps'
+      ? [set.reps === undefined ? null : `${compactNumber(set.reps)} повт.`]
+      : inputKind === 'duration'
+        ? [set.durationSec === undefined ? null : durationValue(set.durationSec)]
+        : [set.distanceKm === undefined ? null : `${compactNumber(set.distanceKm)} км`, set.durationSec === undefined ? null : durationValue(set.durationSec)]
   return [
-    set.weightKg === undefined ? null : `${compactNumber(set.weightKg)} кг`,
-    set.reps === undefined ? null : `${compactNumber(set.reps)} повт.`,
-    set.distanceKm === undefined ? null : `${compactNumber(set.distanceKm)} км`,
-    set.durationSec === undefined ? null : durationValue(set.durationSec),
+    ...values,
     showRpe && set.rpe !== undefined ? `RPE ${compactNumber(set.rpe)}` : null,
   ].filter((value): value is string => value !== null).join(' × ') || 'Без числового результата'
 }
@@ -57,22 +78,30 @@ export function ExerciseProgressSummary({
   const currentWithReps = strength && latest.repsAtBestWeight !== null
     ? `${current} × ${latest.repsAtBestWeight} повт.`
     : current
+  const isLatestRecord = strength
+    ? latest.isWeightPr || latest.isWeightRepsPr
+    : latest.isPrimaryPr
+  const milestone = milestoneInfo(totalCount)
   return <section className="exercise-progress-proof card" aria-label="Доказательство прогресса">
-    <header><div><p className="eyebrow">ПОДТВЕРЖДЁННЫЙ ФАКТ</p><h2>Рост по упражнению</h2></div><span>{milestoneLabel(totalCount)}</span></header>
-    <div className="exercise-progress-current">
-      <div><span>Последний результат</span><strong>{currentWithReps}</strong></div>
-      <div><span>К прошлой тренировке</span><strong>{exerciseProgressChangeLabel(latest.primaryChange, latest.inputKind)}</strong></div>
-      <div><span>Подходов</span><strong>{latest.confirmedSetCount}</strong></div>
+    <header>
+      <p className="eyebrow">ПРОГРЕСС ПО УПРАЖНЕНИЮ</p>
+      <div className="exercise-progress-result"><h2>{currentWithReps}</h2>{isLatestRecord && <span><RecordIcon />Личный рекорд</span>}</div>
+    </header>
+    <div className="exercise-progress-details">
+      <strong>{exerciseProgressChangeLabel(latest.primaryChange, latest.inputKind)}</strong>
+      <span>{latest.confirmedSetCount} {latest.confirmedSetCount === 1 ? 'подход' : latest.confirmedSetCount < 5 ? 'подхода' : 'подходов'}</span>
     </div>
     {strength
       ? <div className="exercise-progress-records">
-          <div className={latest.isWeightPr ? 'is-new-record' : undefined}><span>{latest.isWeightPr && <RecordIcon />}Личный рекорд · рабочий вес</span><strong>{exerciseProgressValueLabel(latest.allTimeBestWeightKg, 'strength')}</strong></div>
-          <div className={latest.isWeightRepsPr ? 'is-new-record' : undefined}><span>{latest.isWeightRepsPr && <RecordIcon />}Личный рекорд · вес × повторы</span><strong>{latest.allTimeBestWeightReps === null ? '—' : `${compactNumber(latest.allTimeBestWeightReps)} кг·повт.`}</strong></div>
+          <span>Лучшие результаты</span>
+          <strong>{exerciseProgressValueLabel(latest.allTimeBestWeightKg, 'strength')} · {latest.allTimeBestWeightReps === null ? '—' : `${compactNumber(latest.allTimeBestWeightReps)} кг·повт.`}</strong>
         </div>
-      : <div className="exercise-progress-records single">
-          <div className={latest.isPrimaryPr ? 'is-new-record' : undefined}><span>{latest.isPrimaryPr && <RecordIcon />}Лучший результат</span><strong>{exerciseProgressValueLabel(latest.allTimePrimaryValue, latest.inputKind)}</strong></div>
+      : !latest.isPrimaryPr && <div className="exercise-progress-records">
+          <span>Лучший результат</span>
+          <strong>{exerciseProgressValueLabel(latest.allTimePrimaryValue, latest.inputKind)}</strong>
         </div>}
-    <p className="exercise-progress-method">Только подтверждённые подходы завершённых тренировок. План и черновой ввод не учитываются.{strength ? ' Рекорды основаны на выполненных подходах, без расчётных значений.' : ''}</p>
+    <div className="exercise-progress-milestone"><strong>{milestone.count}</strong><span>{milestone.note}</span></div>
+    <p className="exercise-progress-method">Учитываем только выполненные подходы.</p>
   </section>
 }
 
@@ -92,7 +121,7 @@ export function ExerciseProgressHistory({
     return <article key={item.workoutId} className="card">
       <div className="exercise-progress-row-head"><strong>{formatLocalDate(item.workoutDate)}</strong><span>{item.confirmedSetCount} подх.</span></div>
       {visibleBadges.length > 0 && <div className="exercise-progress-badges">{visibleBadges.map((badge) => <span key={badge}>{badge}</span>)}</div>}
-      <p>{item.sets.map((set) => exerciseProgressSetLabel(set, showRpe)).join(' · ')}</p>
+      <p>{item.sets.map((set) => exerciseProgressSetLabel(set, item.inputKind, showRpe)).join(' · ')}</p>
       {item.trainerComment && <p className="exercise-comment-note">💬 {item.trainerComment}</p>}
     </article>
   })}</div>

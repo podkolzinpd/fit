@@ -748,8 +748,9 @@ const DEDUP_REFS = new Set([
 ])
 
 // category Free Exercise DB -> наш inputKind.
-function inputKindFor(category) {
+function inputKindFor(category, equipment) {
   if (category === 'cardio') return 'distance'
+  if (equipment === 'body only') return 'reps'
   if (category === 'stretching') return 'reps'
   return 'strength'
 }
@@ -862,7 +863,7 @@ async function main() {
       ref,
       name,
       muscleGroup,
-      inputKind: inputKindFor(ex.category),
+      inputKind: inputKindFor(ex.category, ex.equipment),
       equipment: equipmentLabelFor(ex.equipment),
       equipmentRef: ex.equipment,
       primaryMuscleDetail: fix.primaryMuscleDetail ?? primaryMuscleLabelFor(muscleGroup, detail),
