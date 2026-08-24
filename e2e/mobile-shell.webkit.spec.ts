@@ -1099,7 +1099,7 @@ test('iPhone: live-меню остаётся непрозрачным и не у
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: частично завершённая тренировка помечена на 390 px', async ({ page }, testInfo) => {
+test('iPhone: частично завершённая тренировка помечена на 390 и 430 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const clientName = await createIsolatedClient(page, testInfo)
   await page.goto('/workouts/new')
@@ -1137,6 +1137,9 @@ test('iPhone: частично завершённая тренировка по�
   const deleteWorkout = page.getByRole('menuitem', { name: 'Удалить тренировку' })
   await expect(deleteWorkout).toHaveClass(/danger/)
   await page.screenshot({ path: testInfo.outputPath('workout-detail-overflow-390.png'), fullPage: true })
+  await page.setViewportSize({ width: 430, height: 932 })
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('workout-detail-overflow-430.png'), fullPage: true })
   await deleteWorkout.click()
   const deleteConfirmation = page.getByRole('alertdialog', { name: 'Удалить тренировку?' })
   await expect(deleteConfirmation).toBeVisible()
