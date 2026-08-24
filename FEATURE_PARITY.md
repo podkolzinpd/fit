@@ -56,10 +56,15 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
   в основной интерфейс. Stage delivery идемпотентно добавляет ограниченный
   синтетический fixture без пользовательских данных и проверяет его через
   короткоживущую сессию, runtime API и RLS до принятия новой revision.
-- Checkpoint не считается полной миграционной parity: упражнения, тренировки и
-  подходы пока перенесены только как read model; mutations, Live и остальные
-  tenant-данные ещё не перенесены. Production продолжает использовать Supabase,
-  а Yandex callback не открывает основное приложение.
+- Checkpoint не считается полной миграционной parity. Stage API уже покрывает
+  атомарные create/update/delete плана, Live start/save/confirm/finish и
+  структурные Live-действия: добавление упражнения и подхода, удаление подхода,
+  замену упражнения, перестановку блока и комментарий. Все Live-команды имеют
+  optimistic version и `operationId`; точный повтор не создаёт дубль, а новый
+  stale-запрос получает conflict. Callback по-прежнему показывает тренировки
+  только для чтения, feedback/reactions и остальные tenant-данные ещё не
+  перенесены. Production продолжает использовать Supabase, а Yandex callback
+  не открывает основное приложение.
 
 ## Client self-service workout acceptance contract
 

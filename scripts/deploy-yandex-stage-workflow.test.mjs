@@ -55,12 +55,28 @@ test('loads synthetic fixtures and verifies every read model through the runtime
   assert.match(workflow, /all\(\.workouts\[\]; \.id != \$workout_id\)/)
   assert.match(workflow, /\/v1\/workouts\/\$live_workout_id\/start/)
   assert.match(workflow, /\.workout\.replayed == true/)
+  assert.match(workflow, /\/v1\/workouts\/\$live_workout_id\/exercises/)
+  assert.match(workflow, /\/v1\/workout-exercises\/\$live_exercise_id\/sets/)
+  assert.match(workflow, /\/v1\/workout-sets\/\$appended_set_id/)
+  assert.match(workflow, /\.set\.version == 5 and \.set\.replayed == true/)
+  assert.match(
+    workflow,
+    /\/v1\/workouts\/\$live_workout_id\/exercises\/\$live_exercise_id/,
+  )
+  assert.match(workflow, /\/v1\/workout-exercises\/\$live_exercise_id\/comment/)
+  assert.match(
+    workflow,
+    /\/v1\/workouts\/\$live_workout_id\/blocks\/\$appended_block_id\/reorder/,
+  )
+  assert.match(workflow, /\.block\.version == 8/)
   assert.match(workflow, /\/v1\/workout-sets\/\$live_set_id\/draft/)
   assert.match(workflow, /\.set\.replayed == true/)
   assert.match(workflow, /\/v1\/workout-sets\/\$live_set_id\/confirm/)
   assert.match(workflow, /\/v1\/workouts\/\$live_workout_id\/finish/)
   assert.match(workflow, /test "\$stale_finish_status" = 409/)
   assert.match(workflow, /\.status == "done"/)
+  assert.match(workflow, /\.version == 9/)
+  assert.match(workflow, /\.trainerComment == "Держи спину прямо"/)
   assert.match(workflow, /\.confirmedAt != null/)
   assert.doesNotMatch(workflow, /jq -r '\.session\.token'/)
 })

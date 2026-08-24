@@ -1,7 +1,10 @@
 import type { QueryResultRow } from 'pg'
 
 import type { DatabaseClient } from './db/types.js'
-import type { LiveSetDraft } from './live-workout-request.js'
+import type {
+  LiveExerciseSnapshot,
+  LiveSetDraft,
+} from './live-workout-request.js'
 import type { PlannedWorkoutDraft } from './planned-workout-request.js'
 
 interface SavedWorkoutRow extends QueryResultRow {
@@ -16,6 +19,10 @@ interface DeletedWorkoutRow extends QueryResultRow {
 interface LiveCommandRow extends QueryResultRow {
   replayed: boolean
   version: string
+}
+
+interface LiveStructureRow extends LiveCommandRow {
+  resource_id: string | null
 }
 
 export type PilotWorkoutCommandFailure =
@@ -42,6 +49,10 @@ export interface PilotLiveCommandResult {
   version: number
 }
 
+export interface PilotLiveStructureResult extends PilotLiveCommandResult {
+  resourceId: string
+}
+
 function commandError(error: unknown): PilotWorkoutCommandError | undefined {
   if (typeof error !== 'object' || error === null || !('message' in error)) {
     return undefined
@@ -59,13 +70,27 @@ function commandError(error: unknown): PilotWorkoutCommandError | undefined {
   if (message === 'live_set_conflict') {
     return new PilotWorkoutCommandError('conflict')
   }
+  if (message === 'exercise_already_started') {
+    return new PilotWorkoutCommandError('conflict')
+  }
   if (message === 'active_workout_exists') {
     return new PilotWorkoutCommandError('active')
   }
   if (message === 'workout_invalid') {
     return new PilotWorkoutCommandError('invalid')
   }
-  if (message === 'live_set_empty' || message === 'operation_reused') {
+  if (
+    message === 'exercise_not_found'
+    || message === 'block_not_found'
+    || message === 'set_not_found'
+  ) {
+    return new PilotWorkoutCommandError('not_found')
+  }
+  if (
+    message === 'live_set_empty'
+    || message === 'last_set_cannot_be_removed'
+    || message === 'operation_reused'
+  ) {
     return new PilotWorkoutCommandError('invalid')
   }
   return undefined
@@ -98,6 +123,28 @@ function runLiveCommand(
     if (result === undefined) throw new Error('Live command returned no result')
     return {
       replayed: result.replayed,
+      version: safeVersion(result.version),
+    }
+  })
+}
+
+function runLiveStructureCommand(
+  client: DatabaseClient,
+  query: string,
+  values: readonly unknown[],
+): Promise<PilotLiveStructureResult> {
+  return runCommand(async () => {
+    const rows = await client.query<LiveStructureRow>(query, values)
+    const result = rows[0]
+    if (result === undefined) {
+      throw new Error('Live structure command returned no result')
+    }
+    if (result.resource_id === null) {
+      throw new Error('Live structure command returned no resource')
+    }
+    return {
+      replayed: result.replayed,
+      resourceId: result.resource_id,
       version: safeVersion(result.version),
     }
   })
@@ -191,5 +238,113 @@ export function finishLiveWorkout(
     client,
     'select version, replayed from public.finish_live_workout($1, $2, $3)',
     [workoutId, expectedVersion, operationId],
+  )
+}
+
+export function appendLiveExercise(
+  client: DatabaseClient,
+  workoutId: string,
+  exercise: LiveExerciseSnapshot,
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveStructureResult> {
+  return runLiveStructureCommand(
+    client,
+    `
+      select resource_id, version, replayed
+      from public.append_live_exercise($1, $2::jsonb, $3, $4)
+    `,
+    [workoutId, JSON.stringify(exercise), expectedVersion, operationId],
+  )
+}
+
+export function appendLiveSet(
+  client: DatabaseClient,
+  exerciseId: string,
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveStructureResult> {
+  return runLiveStructureCommand(
+    client,
+    `
+      select resource_id, version, replayed
+      from public.append_live_set($1, $2, $3)
+    `,
+    [exerciseId, expectedVersion, operationId],
+  )
+}
+
+export function removeLiveSet(
+  client: DatabaseClient,
+  setId: string,
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveStructureResult> {
+  return runLiveStructureCommand(
+    client,
+    `
+      select resource_id, version, replayed
+      from public.remove_live_set($1, $2, $3)
+    `,
+    [setId, expectedVersion, operationId],
+  )
+}
+
+export function reorderLiveBlock(
+  client: DatabaseClient,
+  workoutId: string,
+  blockId: string,
+  direction: -1 | 1,
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveStructureResult> {
+  return runLiveStructureCommand(
+    client,
+    `
+      select resource_id, version, replayed
+      from public.reorder_live_block($1, $2, $3, $4, $5)
+    `,
+    [workoutId, blockId, direction, expectedVersion, operationId],
+  )
+}
+
+export function replaceLiveExercise(
+  client: DatabaseClient,
+  workoutId: string,
+  exerciseId: string,
+  exercise: LiveExerciseSnapshot,
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveStructureResult> {
+  return runLiveStructureCommand(
+    client,
+    `
+      select resource_id, version, replayed
+      from public.replace_live_exercise($1, $2, $3::jsonb, $4, $5)
+    `,
+    [
+      workoutId,
+      exerciseId,
+      JSON.stringify(exercise),
+      expectedVersion,
+      operationId,
+    ],
+  )
+}
+
+export function setLiveExerciseComment(
+  client: DatabaseClient,
+  exerciseId: string,
+  comment: string,
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveStructureResult> {
+  return runLiveStructureCommand(
+    client,
+    `
+      select resource_id, version, replayed
+      from public.set_live_exercise_comment($1, $2, $3, $4)
+    `,
+    [exerciseId, comment, expectedVersion, operationId],
   )
 }

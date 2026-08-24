@@ -393,21 +393,35 @@ function buildConnectionsWriter(error?: Error): {
 }
 
 const WORKOUT_ID = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
+const WORKOUT_EXERCISE_ID = 'd40b742b-5d5b-41ab-91df-ed464414d034'
 const WORKOUT_SET_ID = 'ea8efab5-0530-4660-9798-79901fcddfeb'
+const WORKOUT_BLOCK_ID = '44c414cc-542b-4f29-a17f-b451e44fd778'
 const OPERATION_IDS = {
+  appendExercise: 'f516e6e8-c275-4ed5-9b5e-e40b7198bc0b',
+  appendSet: '4afaf90b-a2ba-45dd-bf97-73c7098c2cca',
+  comment: 'd9c05d5c-e868-40f2-8fab-df079adcfef7',
   start: '723fa5d1-d3f0-4daa-b080-8fd354b89b86',
   save: '305a5b42-8b8b-44a9-a1e3-7c188511b25f',
   confirm: '3c6c84f1-80e6-4ba5-94cc-550fca410dbd',
   finish: '65331570-913c-4faa-9771-4a60d7a5e9f0',
+  removeSet: '2fdba3b8-f688-40c9-955b-f84173970d31',
+  reorder: '20c4ab7a-1316-46bf-b5ce-699015a320e8',
+  replace: '9761cf15-f83d-423a-a241-8d0bffefb4e0',
 } as const
 
 function buildWorkoutsWriter(error?: Error): {
   pilotWorkoutsWriter: PilotWorkoutsWriter
+  appendLiveExercise: ReturnType<typeof vi.fn>
+  appendLiveSet: ReturnType<typeof vi.fn>
   confirmLiveSet: ReturnType<typeof vi.fn>
   deletePlanned: ReturnType<typeof vi.fn>
   finishLive: ReturnType<typeof vi.fn>
+  removeLiveSet: ReturnType<typeof vi.fn>
+  reorderLiveBlock: ReturnType<typeof vi.fn>
+  replaceLiveExercise: ReturnType<typeof vi.fn>
   saveLiveSet: ReturnType<typeof vi.fn>
   savePlanned: ReturnType<typeof vi.fn>
+  setLiveExerciseComment: ReturnType<typeof vi.fn>
   startLive: ReturnType<typeof vi.fn>
 } {
   const result = <Value>(value: Value) => error === undefined
@@ -415,24 +429,66 @@ function buildWorkoutsWriter(error?: Error): {
     : Promise.reject(error)
   const deletePlanned = vi.fn(() => result(3))
   const savePlanned = vi.fn(() => result({ id: WORKOUT_ID, version: 1 }))
+  const appendLiveExercise = vi.fn(() => result({
+    resourceId: WORKOUT_EXERCISE_ID,
+    version: 3,
+    replayed: false,
+  }))
+  const appendLiveSet = vi.fn(() => result({
+    resourceId: WORKOUT_SET_ID,
+    version: 4,
+    replayed: false,
+  }))
   const startLive = vi.fn(() => result({ version: 2, replayed: false }))
   const saveLiveSet = vi.fn(() => result({ version: 2, replayed: false }))
   const confirmLiveSet = vi.fn(() => result({ version: 3, replayed: false }))
   const finishLive = vi.fn(() => result({ version: 3, replayed: false }))
+  const removeLiveSet = vi.fn(() => result({
+    resourceId: WORKOUT_SET_ID,
+    version: 5,
+    replayed: false,
+  }))
+  const reorderLiveBlock = vi.fn(() => result({
+    resourceId: WORKOUT_BLOCK_ID,
+    version: 6,
+    replayed: false,
+  }))
+  const replaceLiveExercise = vi.fn(() => result({
+    resourceId: WORKOUT_EXERCISE_ID,
+    version: 7,
+    replayed: false,
+  }))
+  const setLiveExerciseComment = vi.fn(() => result({
+    resourceId: WORKOUT_EXERCISE_ID,
+    version: 8,
+    replayed: false,
+  }))
   return {
     pilotWorkoutsWriter: {
+      appendLiveExercise,
+      appendLiveSet,
       confirmLiveSet,
       deletePlanned,
       finishLive,
+      removeLiveSet,
+      reorderLiveBlock,
+      replaceLiveExercise,
       saveLiveSet,
       savePlanned,
+      setLiveExerciseComment,
       startLive,
     },
+    appendLiveExercise,
+    appendLiveSet,
     confirmLiveSet,
     deletePlanned,
     finishLive,
+    removeLiveSet,
+    reorderLiveBlock,
+    replaceLiveExercise,
     saveLiveSet,
     savePlanned,
+    setLiveExerciseComment,
     startLive,
   }
 }
@@ -1003,6 +1059,191 @@ describe('pilot live workout core commands', () => {
 
     expect(response.statusCode).toBe(401)
     expect(writer.finishLive).not.toHaveBeenCalled()
+  })
+})
+
+describe('pilot live workout structural commands', () => {
+  const sessionToken = 's'.repeat(43)
+  const exercise = {
+    source: 'system' as const,
+    ref: 'squat',
+    customExerciseId: null,
+    name: 'Приседание',
+    muscleGroup: 'legs' as const,
+    inputKind: 'strength' as const,
+  }
+
+  it('adds, removes, reorders, replaces and comments with operation identities', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({
+      pilotWorkoutsWriter: writer.pilotWorkoutsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const appendedExercise = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/exercises`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        expectedVersion: 2,
+        operationId: OPERATION_IDS.appendExercise,
+        exercise,
+      },
+    })
+    const appendedSet = await app.inject({
+      method: 'POST',
+      url: `/v1/workout-exercises/${WORKOUT_EXERCISE_ID}/sets`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 3, operationId: OPERATION_IDS.appendSet },
+    })
+    const removedSet = await app.inject({
+      method: 'DELETE',
+      url: `/v1/workout-sets/${WORKOUT_SET_ID}`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 4, operationId: OPERATION_IDS.removeSet },
+    })
+    const reordered = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/blocks/${WORKOUT_BLOCK_ID}/reorder`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        expectedVersion: 5,
+        operationId: OPERATION_IDS.reorder,
+        direction: -1,
+      },
+    })
+    const replaced = await app.inject({
+      method: 'PUT',
+      url: `/v1/workouts/${WORKOUT_ID}/exercises/${WORKOUT_EXERCISE_ID}`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        expectedVersion: 6,
+        operationId: OPERATION_IDS.replace,
+        exercise,
+      },
+    })
+    const commented = await app.inject({
+      method: 'PUT',
+      url: `/v1/workout-exercises/${WORKOUT_EXERCISE_ID}/comment`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        expectedVersion: 7,
+        operationId: OPERATION_IDS.comment,
+        comment: 'Держи спину',
+      },
+    })
+
+    expect(appendedExercise.statusCode).toBe(201)
+    expect(appendedExercise.json()).toEqual({
+      exercise: {
+        id: WORKOUT_EXERCISE_ID,
+        version: 3,
+        replayed: false,
+      },
+    })
+    expect(appendedSet.statusCode).toBe(201)
+    expect(appendedSet.json()).toEqual({
+      set: { id: WORKOUT_SET_ID, version: 4, replayed: false },
+    })
+    expect(removedSet.json()).toEqual({
+      set: { id: WORKOUT_SET_ID, version: 5, replayed: false },
+    })
+    expect(reordered.json()).toEqual({
+      block: { id: WORKOUT_BLOCK_ID, version: 6, replayed: false },
+    })
+    expect(replaced.json()).toEqual({
+      exercise: {
+        id: WORKOUT_EXERCISE_ID,
+        version: 7,
+        replayed: false,
+      },
+    })
+    expect(commented.json()).toEqual({
+      exercise: {
+        id: WORKOUT_EXERCISE_ID,
+        version: 8,
+        replayed: false,
+      },
+    })
+    expect(commented.headers['cache-control']).toBe('no-store')
+    expect(writer.appendLiveExercise).toHaveBeenCalledWith(
+      sessionToken,
+      WORKOUT_ID,
+      exercise,
+      2,
+      OPERATION_IDS.appendExercise,
+    )
+    expect(writer.appendLiveSet).toHaveBeenCalledWith(
+      sessionToken,
+      WORKOUT_EXERCISE_ID,
+      3,
+      OPERATION_IDS.appendSet,
+    )
+    expect(writer.removeLiveSet).toHaveBeenCalledWith(
+      sessionToken,
+      WORKOUT_SET_ID,
+      4,
+      OPERATION_IDS.removeSet,
+    )
+    expect(writer.reorderLiveBlock).toHaveBeenCalledWith(
+      sessionToken,
+      WORKOUT_ID,
+      WORKOUT_BLOCK_ID,
+      -1,
+      5,
+      OPERATION_IDS.reorder,
+    )
+    expect(writer.replaceLiveExercise).toHaveBeenCalledWith(
+      sessionToken,
+      WORKOUT_ID,
+      WORKOUT_EXERCISE_ID,
+      exercise,
+      6,
+      OPERATION_IDS.replace,
+    )
+    expect(writer.setLiveExerciseComment).toHaveBeenCalledWith(
+      sessionToken,
+      WORKOUT_EXERCISE_ID,
+      'Держи спину',
+      7,
+      OPERATION_IDS.comment,
+    )
+  })
+
+  it('rejects malformed structure commands before calling the writer', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({
+      pilotWorkoutsWriter: writer.pilotWorkoutsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const invalidExercise = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/exercises`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        expectedVersion: 2,
+        operationId: OPERATION_IDS.appendExercise,
+        exercise: { ...exercise, name: '' },
+      },
+    })
+    const invalidReorder = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/blocks/${WORKOUT_BLOCK_ID}/reorder`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        expectedVersion: 5,
+        operationId: OPERATION_IDS.reorder,
+        direction: 0,
+      },
+    })
+
+    expect(invalidExercise.statusCode).toBe(400)
+    expect(invalidReorder.statusCode).toBe(400)
+    expect(writer.appendLiveExercise).not.toHaveBeenCalled()
+    expect(writer.reorderLiveBlock).not.toHaveBeenCalled()
   })
 })
 
