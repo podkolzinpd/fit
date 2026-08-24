@@ -10,10 +10,14 @@ export type AssistantAction = { tool: Tool; status: 'needs_input' | 'proposed'; 
 export type AssistantTurnResponse = { reply: string; action: AssistantAction | null }
 
 type AssistantCapability = { title: string; description: string }
+type SummaryCandidate = { id: string; fullName: string }
+type SummaryPeriod = { periodStart: string; periodEnd: string; label: string }
 
 // Add a capability here only together with its implemented confirmation handler.
 // This list is the sole source for answers about what the assistant can do.
-const executableCapabilities: readonly AssistantCapability[] = []
+const executableCapabilities: readonly AssistantCapability[] = [
+  { title: 'Сформировать сводку прогресса', description: 'по завершённым тренировкам выбранного клиента за период' },
+]
 
 class HttpError extends Error {
   constructor(readonly status: number, readonly code: string) { super(code) }
@@ -109,6 +113,79 @@ function progressContextRows(value: unknown): ProgressContextRow[] {
   })
 }
 
+function actionRecord(value: unknown): Record<string, unknown> | undefined {
+  return record(value) ? value : undefined
+}
+
+function summaryCandidatesFromAction(value: unknown): SummaryCandidate[] {
+  const candidates = actionRecord(value)?.candidates
+  if (!Array.isArray(candidates)) return []
+  return candidates.flatMap((candidate): SummaryCandidate[] =>
+    record(candidate) && typeof candidate.id === 'string' && typeof candidate.fullName === 'string'
+      ? [{ id: candidate.id, fullName: candidate.fullName }]
+      : [])
+}
+
+function summaryClientFromAction(value: unknown, clients: readonly ClientContextRow[]): ClientContextRow | undefined {
+  const clientId = actionRecord(value)?.clientId
+  return typeof clientId === 'string' ? clients.find((client) => client.id === clientId) : undefined
+}
+
+function matchingSummaryClients(message: string, clients: readonly ClientContextRow[]): ClientContextRow[] {
+  const ignored = new Set(['сводка', 'прогресс', 'динамика', 'сделай', 'сделать', 'покажи', 'показать', 'за', 'для', 'клиента'])
+  const words = normalizeAssistantMessage(message).split(' ').filter((word) => word.length >= 3 && !ignored.has(word))
+  if (words.length === 0) return []
+  return clients.filter((client) => {
+    const clientWords = normalizeAssistantMessage(client.fullName).split(' ').filter((word) => word.length >= 3)
+    return clientWords.some((clientWord) => words.some((word) => word.startsWith(clientWord) || clientWord.startsWith(word)))
+  })
+}
+
+function summaryAction(title: string, description: string, status: AssistantAction['status'], payload: Record<string, unknown>): AssistantTurnResponse {
+  return { reply: description, action: { tool: 'summarize_progress', status, title, description, payload } }
+}
+
+function summaryTurn(
+  message: string,
+  clients: readonly ClientContextRow[],
+  latestAction: unknown,
+  now: Date,
+): AssistantTurnResponse | undefined {
+  const previousAction = actionRecord(latestAction)
+  const continuation = previousAction?.tool === 'summarize_progress'
+  if (!isSummaryRequest(message) && !continuation) return undefined
+
+  const previousCandidates = summaryCandidatesFromAction(latestAction)
+  const selectedByNumber = normalizeAssistantMessage(message).match(/^(?:выбрать )?(\d{1,2})$/u)
+  const numberedClient = selectedByNumber === null ? undefined : previousCandidates[Number(selectedByNumber[1]) - 1]
+  const matches = numberedClient === undefined
+    ? matchingSummaryClients(message, clients)
+    : clients.filter((client) => client.id === numberedClient.id)
+  const selectedClient = matches.length === 1
+    ? matches[0]
+    : summaryClientFromAction(latestAction, clients)
+
+  if (matches.length > 1) {
+    const candidates = matches.map(({ id, fullName }) => ({ id, fullName }))
+    return summaryAction('Выберите клиента', 'Нашла несколько клиентов с таким именем. Выберите одного из списка.', 'needs_input', { step: 'client', candidates })
+  }
+  if (!selectedClient) {
+    return summaryAction('Уточните клиента', 'Для кого сформировать сводку прогресса? Напишите имя или фамилию клиента.', 'needs_input', { step: 'client' })
+  }
+
+  const period = summaryPeriodFromMessage(message, now)
+  if (!period) {
+    return summaryAction('Выберите период', `Клиент: ${selectedClient.fullName}. За какой период сформировать сводку?`, 'needs_input', {
+      step: 'period', clientId: selectedClient.id, clientName: selectedClient.fullName,
+      options: ['последние 7 дней', 'последние 30 дней', 'последние 90 дней'],
+    })
+  }
+  return summaryAction('Сводка прогресса готова к запуску', `Сформирую сводку для ${selectedClient.fullName} за ${period.label}.`, 'proposed', {
+    step: 'confirm', clientId: selectedClient.id, clientName: selectedClient.fullName,
+    periodStart: period.periodStart, periodEnd: period.periodEnd, periodLabel: period.label, force: false,
+  })
+}
+
 export function readAssistantTurnRequest(value: unknown): AssistantTurnRequest | undefined {
   if (!record(value) || typeof value.conversation_id !== 'string' || typeof value.message !== 'string') return undefined
   const message = value.message.trim()
@@ -144,7 +221,7 @@ function normalizeAssistantMessage(message: string): string {
   return message
     .toLocaleLowerCase('ru-RU')
     .replaceAll('ё', 'е')
-    .replace(/[^\p{L}\s]/gu, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .trim()
     .replace(/\s+/g, ' ')
 }
@@ -156,19 +233,49 @@ export function isAssistantCapabilityQuestion(message: string): boolean {
   return asksQuestion && asksAboutCapabilities
 }
 
+export function isSummaryRequest(message: string): boolean {
+  const normalized = normalizeAssistantMessage(message)
+  return ['сводк', 'прогресс', 'динамик'].some((stem) => normalized.includes(stem))
+}
+
+export function usesInformalAddress(message: string): boolean {
+  const words = normalizeAssistantMessage(message).split(' ')
+  return words.some((word) => ['ты', 'тебя', 'тебе', 'тебя', 'твой', 'твоя', 'твое', 'твои'].includes(word))
+}
+
+export function summaryPeriodFromMessage(message: string, now = new Date()): SummaryPeriod | undefined {
+  const normalized = normalizeAssistantMessage(message)
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  const range = (days: number, label: string): SummaryPeriod => {
+    const start = new Date(end)
+    start.setUTCDate(start.getUTCDate() - (days - 1))
+    const date = (value: Date) => value.toISOString().slice(0, 10)
+    return { periodStart: date(start), periodEnd: date(end), label }
+  }
+  const exact = normalized.match(/с (\d{4} \d{2} \d{2}) по (\d{4} \d{2} \d{2})/u)
+  const [periodStartText, periodEndText] = exact?.slice(1) ?? []
+  if (periodStartText !== undefined && periodEndText !== undefined) return { periodStart: periodStartText.replaceAll(' ', '-'), periodEnd: periodEndText.replaceAll(' ', '-'), label: `${periodStartText.replaceAll(' ', '.')}—${periodEndText.replaceAll(' ', '.')}` }
+  if (normalized.includes('7 дней') || normalized.includes('недел')) return range(7, 'последние 7 дней')
+  if (normalized.includes('90 дней') || normalized.includes('квартал')) return range(90, 'последние 90 дней')
+  if (normalized.includes('30 дней') || normalized.includes('месяц')) return range(30, 'последние 30 дней')
+  return undefined
+}
+
 export function assistantCapabilitiesReply(): string {
   if (executableCapabilities.length === 0) return 'Пока я не выполняю действий в приложении. Могу только коротко пообщаться.'
   return `Сейчас я могу:\n${executableCapabilities.map((capability) => `• ${capability.title} — ${capability.description}`).join('\n')}`
 }
 
-function modelPrompt(history: readonly { author: string; content: string }[], clientContext: string, progressContext: string, shortChat: boolean): string {
+function modelPrompt(history: readonly { author: string; content: string }[], clientContext: string, progressContext: string, shortChat: boolean, informal: boolean): string {
   if (shortChat) return [
     'Ты дружелюбная, но очень краткая болталка фитнес-приложения. Отвечай по-русски не более чем двумя короткими предложениями.',
+    `Обращайся к пользователю на ${informal ? 'ты' : 'вы'}.`,
     'Всегда возвращай action=null. Не перечисляй функции приложения и не обещай выполнить действие.',
     `Недавняя история:\n${history.slice(-6).map((entry) => `${entry.author === 'user' ? 'Пользователь' : 'Ассистент'}: ${entry.content}`).join('\n')}`,
   ].join('\n\n')
   return [
     'Ты ассистент фитнес-приложения. Отвечай по-русски, кратко и доброжелательно.',
+    `Обращайся к пользователю на ${informal ? 'ты' : 'вы'}.`,
     'Возвращай action=null по умолчанию: для приветствий, разговорных реплик, вопросов о твоих возможностях и любых общих вопросов. Карточка действия допустима только когда пользователь явно просит выполнить или подготовить конкретную функцию приложения.',
     'Ты можешь только уточнить запрос или предложить одно типизированное действие из schema. Никогда не утверждай, что запись уже создана, тренировка сохранена или расписание изменено.',
     'Для программы сначала собери цель, опыт, ограничения и доступные дни. Не давай медицинских диагнозов; при рисках направляй к специалисту.',
@@ -222,8 +329,18 @@ export async function runAssistantTurn(authorization: string, command: Assistant
   ).join('\n')
 
   const { data: rows, error: historyError } = await service.from('assistant_messages')
-    .select('author,content').eq('conversation_id', command.conversationId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(20)
+    .select('author,content,action').eq('conversation_id', command.conversationId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(20)
   if (historyError) throw new HttpError(503, 'history_unavailable')
+  const latestAssistantAction = (rows ?? []).find((row) => row.author === 'assistant')?.action
+  const summary = summaryTurn(command.message, clientRows, latestAssistantAction, new Date())
+  if (summary !== undefined) {
+    const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({
+      conversation_id: command.conversationId, author: 'assistant', content: summary.reply, action: summary.action,
+    }).select('id').single()
+    if (assistantInsertError || !assistantMessage?.id) throw new HttpError(503, 'history_unavailable')
+    console.info('assistant_summary_flow_reply_persisted', { status: summary.action?.status })
+    return summary
+  }
   const history = [...(rows ?? [])].reverse().flatMap((row): { author: string; content: string }[] =>
     typeof row.author === 'string' && typeof row.content === 'string' ? [{ author: row.author, content: row.content.slice(0, 4_000) }] : [])
 
@@ -236,7 +353,7 @@ export async function runAssistantTurn(authorization: string, command: Assistant
       body: JSON.stringify({
         modelUri: `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`,
         completionOptions: { stream: false, temperature: 0.2, maxTokens: allowsAssistantAction(command.message) ? '1200' : '120' }, jsonSchema: { schema },
-        messages: [{ role: 'user', text: modelPrompt(history, clientContext, progressContext, !allowsAssistantAction(command.message)) }],
+        messages: [{ role: 'user', text: modelPrompt(history, clientContext, progressContext, !allowsAssistantAction(command.message), usesInformalAddress(command.message)) }],
       }),
     })
   } catch (error) {
