@@ -5,26 +5,22 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-24
-Проверенный базовый `main`: `ffd73bf` (`YAFIT-358: записывать факт прошлого плана без Live (#529)`)
+Проверенный базовый `main`: `a27d1e0` (`fix: keep workout deployment usable after access bootstrap (#531)`)
 
 ## Активное изменение
 
-- Ветка `codex/yandex-live-structure`, PR `#518`, переносит на Yandex stage
-  структурные Live-действия существующего приложения: добавление упражнения и
-  подхода, удаление подхода, замену упражнения, перестановку блока и комментарий.
-- Команды доступны только через pilot API и короткоживущую Fit-сессию. Они не
-  подключают production UI к Yandex Cloud и не меняют Supabase repositories.
-- Каждая команда блокирует и версионирует workout root, сохраняет `updated_by`
-  и использует `operationId`. Точный retry возвращает исходный version и UUID
-  созданного/затронутого child; новая stale-операция получает conflict.
-- Receipt хранит только внутренние UUID, действие, SHA-256 запроса и версию,
-  удаляется через 30 дней и не читается runtime-ролью.
-- Добавленный подход наследует последний план/факт. Последний подход удалить
-  нельзя; замена упражнения после подтверждённого подхода запрещена; позиции
-  после удаления и перестановки остаются непрерывными.
-- Новый платный ресурс, секрет, IAM-роль или ручное применение stage migration
-  не требуется. После merge существующий workflow применит `000011`, развернёт
-  immutable API revision и выполнит structural smoke автоматически.
+- Ветка `codex/yandex-functions-safe-deploy` делает production-деплой двух
+  Yandex Cloud Functions воспроизводимым после одноразового IAM bootstrap.
+- `parse-workout` и `summarize-client-training` больше не меняют публичный
+  invoker binding при каждом релизе. Перед публикацией запоминается предыдущая
+  версия `$latest`, новая версия проверяется как `ACTIVE`, а публичный endpoint
+  обязан вернуть `401` на запрос без пользовательского токена.
+- Если metadata или authentication smoke не проходит, `$latest` возвращается
+  на предыдущую активную версию и workflow остаётся красным. Первая версия без
+  rollback target безопасно завершается ошибкой.
+- Production deploy service account всё ещё нужно один раз выдать роль
+  `functions.editor` в каталоге функций; текущая browser-сессия не имеет доступа
+  к этому каталогу. Это не новый runtime-ресурс и не меняет интерфейс продукта.
 
 ## Последняя проверенная продуктовая точка
 
@@ -42,7 +38,8 @@
   не исправляется скрыто.
 - Сохранённые тренировки используют компактную хронику упражнений с раскрытием
   подходов и отдельной кнопкой истории; копирование и удаление находятся в меню.
-- Общая ИИ-сводка вызывается через Yandex Cloud Function. Форма обратной связи
+- Общая ИИ-сводка и production-разбор тренировки вызываются через Yandex Cloud
+  Functions. Локальный разбор остаётся в локальном Supabase. Форма обратной связи
   сохраняет сообщения в `app_feedback`; канал уведомлений решается отдельно.
 - PWA предлагает понятную установку на домашний экран. Ручной беговой MVP и
   локальный public-domain каталог упражнений работают без внешнего медиасервиса.
@@ -54,8 +51,8 @@
   доставляются автоматически через GitHub OIDC, private runner и forward-only
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
-  exercises и workout aggregate работают на stage. Миграции `000001–000010`,
-  API revision и Live core доставлены автоматически.
+  exercises и workout aggregate работают на stage. Миграции `000001–000011`,
+  API revision, Live core и структурные Live-команды доставлены автоматически.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
 - Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
@@ -70,22 +67,24 @@
 
 ## Проверки активной ветки
 
-- После merge `ffd73bf` полный local quality gate зелёный: 672 frontend-теста
-  с coverage, lint, TypeScript, DB types, iOS permissions, 34 infra policy
-  tests, 98 API-тестов и production build.
-- PostgreSQL 17 migrations `000001–000011` совместимы с новым `main`; 16/16
-  actor/RLS integration-тестов зелёные.
-- До синхронизации все проверки PR `#518` были зелёными; после push GitHub CI
-  проверит новый объединённый commit повторно.
+- PR `#530` прошёл app, Supabase DB, Yandex PostgreSQL 17, E2E и Vercel checks;
+  `parse-workout` endpoint возвращает ожидаемый `401` без токена.
+- Последний stage delivery на `14d4ab9` зелёный; PostgreSQL, migration runner и
+  API revision активны, ежедневные автоматические backup завершены успешно.
+- Полный `npm run check` зелёный: 672 frontend-теста с coverage, lint,
+  TypeScript, DB types, iOS permissions, 39 infra policy tests, 100 API-тестов
+  (ещё 16 пропущены по штатным условиям), API build и production app build.
 
 ## Ближайший порядок
 
-1. Завершить PR `#518`: проверить объединённый `main`, обновить ветку и CI.
-2. Отдельно портировать feedback/reactions и вопросы/ответы после тренировки.
-3. Отдельно портировать derived progress/chronicle reads.
-4. После полного tenant-контракта провести две миграционные репетиции; только
+1. Выдать production deploy service account роль `functions.editor`, слить
+   безопасный smoke/rollback и убедиться, что оба workflow зелёные.
+2. Закрыть client/profile/custom-exercise mutations на Yandex API.
+3. Отдельно портировать feedback/reactions и вопросы/ответы после тренировки.
+4. Отдельно портировать progress/goals и derived progress/chronicle reads.
+5. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
-5. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению
+6. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению
    программ и нового решения владельца продукта.
 
 ## Отложено
