@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-24
-Проверенный базовый `main`: `6edcf29` (`fix(deploy): allow assistant function public binding (#534)`)
+Проверенный базовый `main`: `335942c` (`feat(assistant): enable one-user production pilot (#535)`)
 
 ## Активное изменение
 
