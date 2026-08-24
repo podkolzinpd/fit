@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-25
-Проверенный базовый `main`: `efc7a18` (`YAFIT-362: пересобрать карточку прогресса клиента (#552)`)
+Проверенный базовый `main`: `d27eff8` (`ci(vercel): deploy only merged revisions (#557)`)
 
 ## Активное изменение
 
@@ -61,7 +61,8 @@
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
 - Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
-  `main` без force-push; callback URL и CORS origin не меняются.
+  `main` без force-push; callback URL и CORS origin не меняются. Все остальные
+  ветки исключены из Vercel Git deployments.
 - Callback показывает pilot profile, clients, connections и training data, но
   pilot UI остаётся read-only. Client/custom-exercise и Planned/Live writes уже
   доступны через stage API; активная ветка готовит non-Live lifecycle delivery.
@@ -76,7 +77,7 @@
 - Локальный Yandex PostgreSQL 17 применяет `000014`; 21 интеграционный
   actor/RLS-тест зелёный, включая cross-tenant и идемпотентность.
 - API gate зелёный: lint, TypeScript, 141 unit/API-тест и production build;
-  12 frontend repository tests и 43 infra/workflow policy tests зелёные.
+  12 frontend repository tests и 44 infra/workflow policy tests зелёные.
 - Полный root `npm run check`, `npm run db:reset` и `npm run db:test`
   зелёные; stage delivery `000014` ожидает merge.
 

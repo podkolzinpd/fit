@@ -11,6 +11,9 @@ const previewSyncWorkflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'sync-yandex-stage-preview.yml'),
   'utf8',
 )
+const vercelConfig = JSON.parse(
+  readFileSync(join(import.meta.dirname, '..', 'vercel.json'), 'utf8'),
+)
 const databaseAccessWorkflow = readFileSync(
   join(
     import.meta.dirname,
@@ -123,6 +126,14 @@ test('syncs the stable Yandex preview from main without rewriting history', () =
   assert.match(previewSyncWorkflow, /git merge --no-edit origin\/main/)
   assert.match(previewSyncWorkflow, /git push origin "HEAD:\$STAGE_PREVIEW_BRANCH"/)
   assert.doesNotMatch(previewSyncWorkflow, /--force(?:-with-lease)?/)
+})
+
+test('deploys Vercel only from main and the stable Yandex preview branch', () => {
+  assert.deepEqual(vercelConfig.git?.deploymentEnabled, {
+    main: true,
+    'codex/yandex-id-stage-pilot': true,
+    '*': false,
+  })
 })
 
 test('manages curated database readers only through an explicit private run', () => {

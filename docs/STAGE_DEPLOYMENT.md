@@ -212,6 +212,11 @@ not need to change after normal merges. The workflow never force-pushes. A
 merge conflict stops synchronization visibly instead of replacing either
 branch.
 
+`vercel.json` disables Git deployments for every other branch. Normal feature
+branches and pull requests therefore do not consume Preview build capacity;
+only a merged `main` revision and its automatically synchronized stable pilot
+branch trigger Vercel deployments.
+
 The browser sends the short-lived Fit pilot session in
 `X-Fit-Pilot-Session`, not in `Authorization`. Yandex Serverless Containers
 reserves `Authorization: Bearer ...` for Yandex IAM invocation tokens and can
