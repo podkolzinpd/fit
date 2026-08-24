@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ChevronRightIcon, MicIcon } from '../../shared/icons'
 import { useAuth } from '../../app/auth-context'
-import { assistantHistoryQueries } from '../../data/queries/assistant-history.queries'
-import { sendAssistantTurn, type AssistantOrchestratorAction } from '../../data/queries/assistant-orchestrator'
+import { assistantRepository, type AssistantOrchestratorAction } from '../../data/repositories/assistant.repository'
 
 type Message = { id: string; author: string; content: string; action: AssistantOrchestratorAction | null }
 
@@ -17,11 +16,11 @@ export function AssistantHistoryPage() {
   useEffect(() => {
     if (!actor) return
     void (async () => {
-      const { data: conversations } = await assistantHistoryQueries.listConversations()
-      const conversation = conversations?.[0] ?? (await assistantHistoryQueries.createConversation(actor.userId)).data
+      const { data: conversations } = await assistantRepository.listConversations()
+      const conversation = conversations?.[0] ?? (await assistantRepository.createConversation(actor.userId)).data
       if (!conversation) return
       setConversationId(conversation.id)
-      const { data } = await assistantHistoryQueries.listMessages(conversation.id)
+      const { data } = await assistantRepository.listMessages(conversation.id)
       setMessages((data ?? []).map((row) => ({ ...row, action: row.action as AssistantOrchestratorAction | null })))
     })()
   }, [actor])
@@ -33,8 +32,8 @@ export function AssistantHistoryPage() {
     setSending(true)
     setError(undefined)
     try {
-      await sendAssistantTurn(conversationId, message)
-      const { data, error: historyError } = await assistantHistoryQueries.listMessages(conversationId)
+      await assistantRepository.sendTurn(conversationId, message)
+      const { data, error: historyError } = await assistantRepository.listMessages(conversationId)
       if (historyError) throw historyError
       setMessages((data ?? []).map((row) => ({ ...row, action: row.action as AssistantOrchestratorAction | null })))
     } catch {

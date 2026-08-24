@@ -9,7 +9,7 @@ import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
 import { AssistantHistoryPage, AssistantSandboxPage } from '../features/assistant'
-import { assistantOrchestratorUrl } from '../data/queries/assistant-orchestrator'
+import { assistantRepository } from '../data/repositories/assistant.repository'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
 
 function Protected() {
@@ -43,7 +43,7 @@ function Home() {
 }
 
 function AssistantPage() {
-  return assistantOrchestratorUrl() === undefined ? <AssistantSandboxPage /> : <AssistantHistoryPage />
+  return assistantRepository.isAvailable() ? <AssistantHistoryPage /> : <AssistantSandboxPage />
 }
 
 const router = createBrowserRouter([
