@@ -612,7 +612,7 @@ async function confirmCurrentSet(page: Page) {
   await currentRound(page).getByRole('button', { name: 'Готово, отдых' }).first().click()
 }
 
-async function openReviewWithFixture(page: import('@playwright/test').Page) {
+async function openReviewWithFixture(page: import('@playwright/test').Page, pathname = '/today') {
   // Изолированная тестовая заглушка: не меняет LLM-клиент, промпт или обработку ошибок
   // в приложении, но стабильно создаёт самый плотный экран «Проверьте тренировку».
   await page.route('**/functions/v1/parse-workout', async (route) => {
@@ -633,11 +633,36 @@ async function openReviewWithFixture(page: import('@playwright/test').Page) {
       }),
     })
   })
-  await page.goto('/today')
+  await page.goto(pathname)
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await page.getByLabel('Тренировка').fill('Жим лёжа (Штанга) 3×8 — 80 кг')
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+}
+
+for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {
+  test(`iPhone: проверка тренировки клиента восстанавливает полную высоту после клавиатуры на ${viewport.width} px`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await login(page, 'client@fit.local')
+    await openReviewWithFixture(page, '/me')
+
+    const frame = page.locator('.phone-frame')
+    const content = page.locator('.content')
+    const firstWeight = page.getByLabel('Жим лёжа (Штанга): вес, подход 1')
+    await firstWeight.focus()
+    await frame.evaluate((element) => element.classList.add('keyboard-open'))
+    await firstWeight.blur()
+    await frame.evaluate((element) => element.classList.remove('keyboard-open'))
+
+    const frameBox = await frame.boundingBox()
+    expect(frameBox).not.toBeNull()
+    expect(frameBox!.y).toBe(0)
+    expect(frameBox!.height).toBe(viewport.height)
+    await page.getByRole('button', { name: 'Далее' }).scrollIntoViewIfNeeded()
+    await expect(page.getByRole('button', { name: 'Далее' })).toBeInViewport()
+    expect(await content.evaluate((element) => element.clientHeight > 0 && element.scrollHeight >= element.clientHeight)).toBe(true)
+    await expectNoHorizontalOverflow(page)
+  })
 }
 
 for (const viewport of mobileViewports) {
