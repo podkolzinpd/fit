@@ -11,6 +11,24 @@ const previewSyncWorkflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'sync-yandex-stage-preview.yml'),
   'utf8',
 )
+const databaseAccessWorkflow = readFileSync(
+  join(
+    import.meta.dirname,
+    '..',
+    '.github',
+    'workflows',
+    'manage-yandex-stage-database-access.yml',
+  ),
+  'utf8',
+)
+const containerTerraform = readFileSync(
+  join(import.meta.dirname, '..', 'infra', 'yandex', 'container.tf'),
+  'utf8',
+)
+const variablesTerraform = readFileSync(
+  join(import.meta.dirname, '..', 'infra', 'yandex', 'variables.tf'),
+  'utf8',
+)
 
 test('publishes the final yandex-stage result without restoring an approval gate', () => {
   assert.match(workflow, /^  publish_deployment:$/m)
@@ -24,6 +42,10 @@ test('publishes the final yandex-stage result without restoring an approval gate
   assert.match(workflow, /transient_environment: false/)
   assert.match(workflow, /state: succeeded \? 'success' : 'error'/)
   assert.doesNotMatch(workflow, /^    environment: yandex-stage$/m)
+})
+
+test('preserves the deployed stage API timeout unless a cost change is reviewed', () => {
+  assert.match(workflow, /^  TF_VAR_api_execution_timeout: '30s'$/m)
 })
 
 test('loads synthetic fixtures and verifies every read model through the runtime API', () => {
@@ -101,4 +123,37 @@ test('syncs the stable Yandex preview from main without rewriting history', () =
   assert.match(previewSyncWorkflow, /git merge --no-edit origin\/main/)
   assert.match(previewSyncWorkflow, /git push origin "HEAD:\$STAGE_PREVIEW_BRANCH"/)
   assert.doesNotMatch(previewSyncWorkflow, /--force(?:-with-lease)?/)
+})
+
+test('manages curated database readers only through an explicit private run', () => {
+  assert.match(databaseAccessWorkflow, /^  workflow_dispatch:$/m)
+  assert.doesNotMatch(databaseAccessWorkflow, /^  (?:push|pull_request):$/m)
+  assert.match(databaseAccessWorkflow, /^  id-token: write$/m)
+  assert.match(databaseAccessWorkflow, /^  group: yandex-stage$/m)
+  assert.match(databaseAccessWorkflow, /scripts\/yandex-github-oidc\.sh/)
+  assert.match(databaseAccessWorkflow, /GITHUB_REF.*refs\/heads\/main/)
+  assert.match(
+    databaseAccessWorkflow,
+    /Authorization: Bearer \$YC_TOKEN/,
+  )
+  assert.match(
+    databaseAccessWorkflow,
+    /\/stage\/database-access\/readers/,
+  )
+  assert.match(databaseAccessWorkflow, /access_granted/)
+  assert.match(databaseAccessWorkflow, /access_revoked/)
+  assert.doesNotMatch(databaseAccessWorkflow, /terraform apply/)
+  assert.doesNotMatch(databaseAccessWorkflow, /^    environment:/m)
+  assert.doesNotMatch(databaseAccessWorkflow, /fit_api|mdb_read_all_data/)
+})
+
+test('keeps the legacy bridge pair validation compatible with Terraform 1.8', () => {
+  assert.match(
+    containerTerraform,
+    /lifecycle \{[\s\S]*?precondition \{[\s\S]*?legacy_supabase_bridge_lockbox_secret_id[\s\S]*?legacy_supabase_bridge_lockbox_secret_version_id/,
+  )
+  assert.doesNotMatch(
+    variablesTerraform,
+    /variable "legacy_supabase_bridge_lockbox_secret_version_id" \{[\s\S]*?validation \{[\s\S]*?legacy_supabase_bridge_lockbox_secret_id/,
+  )
 })

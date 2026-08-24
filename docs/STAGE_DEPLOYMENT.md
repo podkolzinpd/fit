@@ -17,7 +17,10 @@ After the one-time bootstrap, a release is performed only by
 2. The plan policy allows only existing API and migration runner revisions,
    exact credential metadata and lifecycle updates, and the reviewed public API
    binding. A new resource, resize, identity change, delete or replacement stops
-   the workflow before any apply. Safe plans continue automatically.
+   the workflow before any apply. Safe plans continue automatically. The stage
+   API timeout is explicitly pinned to the deployed `30s`; changing it is a
+   separate cost-sensitive infrastructure decision and cannot happen through a
+   service or migration release by accident.
 3. GitHub exchanges its OIDC token for a short-lived Yandex Cloud IAM token.
    No authorized-key JSON is used by CI.
 4. Terraform applies the scoped runtime identity and secret access grants
@@ -295,7 +298,37 @@ Repeating the same role is idempotent. Changing an enrolled identity's role is
 rejected and requires a separately reviewed data correction. Never paste the
 OAuth token into a URL, a GitHub variable, logs or repository files.
 
-## 9. Legacy credential transition
+## 9. Human read-only database access
+
+Do not share `fit_owner` or `fit_api` and do not grant `mdb_read_all_data`.
+`fit_api` can install application actor context and execute mutations;
+`mdb_read_all_data` also reaches private application schemas. Neither is a
+human read-only profile.
+
+Onboard a stage reader once in Yandex Cloud:
+
+1. add the person's Yandex account to the stage folder with the reviewed
+   folder and cluster viewer/connector roles;
+2. create a Managed PostgreSQL IAM user and allow that user to connect to the
+   `fit` database, without an administrative or `mdb_*` data role;
+3. open GitHub Actions, select `Manage Yandex stage database access`, run it
+   from `main`, choose `grant`, and enter that PostgreSQL IAM username.
+
+The workflow is the explicit audit event; it requires no Git commit, PR,
+migration, database password or Cloud Shell command. It uses GitHub OIDC to
+invoke the existing private migration runner. A repeat grant is safe. To remove
+access, run the same workflow with `revoke` before removing the Cloud IAM and
+Managed PostgreSQL user bindings.
+
+Readers connect to the `fit` database and browse only the `ops_readonly`
+schema. Its views cover the domain tables but omit names, free-form personal
+fields, invitation hashes and every `app_private` object. The access function
+also removes direct grants left by manual experiments and rejects privileged
+roles. Existing readers automatically receive future views created by
+`fit_owner`; a new domain table must add its curated view as part of that
+table's normal migration, never as a per-person migration.
+
+## 10. Legacy credential transition
 
 The first deployment through this pipeline switches the containers from the
 manually created URL secrets to the managed Connection Manager secrets. Keep

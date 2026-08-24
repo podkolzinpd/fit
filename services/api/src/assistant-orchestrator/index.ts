@@ -34,8 +34,73 @@ function required(name: string): string {
   return value
 }
 
+async function yandexIamToken(): Promise<string> {
+  let response: Response
+  try {
+    response = await fetch('http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token', {
+      headers: { 'Metadata-Flavor': 'Google' },
+    })
+  } catch {
+    throw new HttpError(503, 'orchestrator_auth_unavailable')
+  }
+  if (!response.ok) throw new HttpError(503, 'orchestrator_auth_unavailable')
+  const body = await response.json() as { access_token?: unknown }
+  if (typeof body.access_token !== 'string' || !body.access_token) throw new HttpError(503, 'orchestrator_auth_unavailable')
+  return body.access_token
+}
+
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+type ClientContextRow = {
+  id: string
+  fullName: string
+  goal: string | null
+  ageYears: number | null
+  heightCm: number | string | null
+  gender: string | null
+}
+
+type ProgressContextRow = {
+  clientId: string
+  periodStart: string
+  periodEnd: string
+  summary: string
+}
+
+function clientContextRows(value: unknown): ClientContextRow[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((row): ClientContextRow[] => {
+    if (!record(row) || typeof row.id !== 'string' || typeof row.full_name !== 'string') return []
+    return [{
+      id: row.id,
+      fullName: row.full_name,
+      goal: typeof row.goal === 'string' ? row.goal : null,
+      ageYears: typeof row.age_years === 'number' ? row.age_years : null,
+      heightCm: typeof row.height_cm === 'number' || typeof row.height_cm === 'string' ? row.height_cm : null,
+      gender: typeof row.gender === 'string' ? row.gender : null,
+    }]
+  })
+}
+
+function progressContextRows(value: unknown): ProgressContextRow[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((row): ProgressContextRow[] => {
+    if (
+      !record(row)
+      || typeof row.client_id !== 'string'
+      || typeof row.period_start !== 'string'
+      || typeof row.period_end !== 'string'
+      || typeof row.summary !== 'string'
+    ) return []
+    return [{
+      clientId: row.client_id,
+      periodStart: row.period_start,
+      periodEnd: row.period_end,
+      summary: row.summary,
+    }]
+  })
 }
 
 export function readAssistantTurnRequest(value: unknown): AssistantTurnRequest | undefined {
@@ -80,10 +145,11 @@ export async function runAssistantTurn(authorization: string, command: Assistant
   const { data: clients, error: clientsError } = await service.from('clients')
     .select('id,full_name,goal,age_years,height_cm,gender').eq('trainer_id', user.id).is('archived_at', null).order('full_name').limit(50)
   if (clientsError) throw new HttpError(503, 'context_unavailable')
-  const clientContext = (clients ?? []).map((client) =>
-    `${client.full_name} (id: ${client.id}; цель: ${client.goal ?? 'не указана'}; возраст: ${client.age_years ?? 'не указан'}; рост: ${client.height_cm ?? 'не указан'}; пол: ${client.gender ?? 'не указан'})`,
+  const clientRows = clientContextRows(clients)
+  const clientContext = clientRows.map((client) =>
+    `${client.fullName} (id: ${client.id}; цель: ${client.goal ?? 'не указана'}; возраст: ${client.ageYears ?? 'не указан'}; рост: ${client.heightCm ?? 'не указан'}; пол: ${client.gender ?? 'не указан'})`,
   ).join('\n')
-  const clientIds = (clients ?? []).map((client) => client.id)
+  const clientIds = clientRows.map((client) => client.id)
   const { data: summaries, error: summariesError } = clientIds.length === 0
     ? { data: [], error: null }
     : await service.from('client_training_summaries')
@@ -91,9 +157,9 @@ export async function runAssistantTurn(authorization: string, command: Assistant
       .eq('trainer_id', user.id).in('client_id', clientIds)
       .order('generated_at', { ascending: false }).limit(20)
   if (summariesError) throw new HttpError(503, 'context_unavailable')
-  const namesById = new Map((clients ?? []).map((client) => [client.id, client.full_name]))
-  const progressContext = (summaries ?? []).map((summary) =>
-    `${namesById.get(summary.client_id) ?? summary.client_id}; ${summary.period_start}—${summary.period_end}: ${summary.summary.slice(0, 1_500)}`,
+  const namesById = new Map(clientRows.map((client) => [client.id, client.fullName]))
+  const progressContext = progressContextRows(summaries).map((summary) =>
+    `${namesById.get(summary.clientId) ?? summary.clientId}; ${summary.periodStart}—${summary.periodEnd}: ${summary.summary.slice(0, 1_500)}`,
   ).join('\n')
 
   const userInsert = await service.from('assistant_messages').insert({ conversation_id: command.conversationId, author: 'user', content: command.message })
@@ -106,19 +172,24 @@ export async function runAssistantTurn(authorization: string, command: Assistant
 
   let response: Response
   try {
+    const iamToken = await yandexIamToken()
     response = await fetch(completionUrl, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Api-Key ${required('YANDEX_CLOUD_API_KEY')}` },
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${iamToken}` },
       body: JSON.stringify({
         modelUri: `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`,
         completionOptions: { stream: false, temperature: 0.2, maxTokens: '1200' }, jsonSchema: { schema },
         messages: [{ role: 'user', text: modelPrompt(history, clientContext, progressContext) }],
       }),
     })
-  } catch {
+  } catch (error) {
+    if (error instanceof HttpError) throw error
     throw new HttpError(502, 'orchestrator_unavailable')
   }
-  if (!response.ok) throw new HttpError(502, 'orchestrator_unavailable')
+  if (!response.ok) {
+    console.warn('assistant_model_response_failed', { status: response.status })
+    throw new HttpError(502, 'orchestrator_unavailable')
+  }
   let raw: unknown
   try {
     const payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }> } }
@@ -144,6 +215,7 @@ export async function assistantOrchestrator(request: Request): Promise<Response>
     return Response.json(await runAssistantTurn(authorization, command))
   } catch (error) {
     const known = error instanceof HttpError ? error : new HttpError(502, 'orchestrator_failed')
+    console.warn('assistant_orchestrator_failed', { status: known.status, code: known.code })
     return Response.json({ error: known.code }, { status: known.status })
   }
 }

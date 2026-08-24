@@ -138,14 +138,6 @@ variable "legacy_supabase_bridge_lockbox_secret_version_id" {
   type        = string
   default     = null
   nullable    = true
-
-  validation {
-    condition = (
-      (var.legacy_supabase_bridge_lockbox_secret_id == null && var.legacy_supabase_bridge_lockbox_secret_version_id == null)
-      || (var.legacy_supabase_bridge_lockbox_secret_id != null && var.legacy_supabase_bridge_lockbox_secret_version_id != null)
-    )
-    error_message = "Legacy Supabase bridge Lockbox ID and version must be provided together."
-  }
 }
 
 variable "allow_unauthenticated_api" {
