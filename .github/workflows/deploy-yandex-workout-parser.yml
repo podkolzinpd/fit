@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy-yandex-workout-parser.yml'
+      - 'scripts/verify-yandex-function-release.mjs'
+      - 'scripts/verify-yandex-function-release.test.mjs'
       - 'services/api/package.json'
       - 'services/api/package-lock.json'
       - 'services/api/src/legacy-workout-parser/**'
@@ -50,17 +52,47 @@ jobs:
           bash /tmp/install-yc.sh -i "$HOME/yandex-cloud" -n
           echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
       - run: scripts/yandex-github-oidc.sh
-      - name: Publish function version
+      - name: Create or update the public workout parser
         run: |
           set -euo pipefail
           lockbox_id=$(yc lockbox secret get --name "$LOCKBOX_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
           runtime_sa_id=$(yc iam service-account get --name "$RUNTIME_SA_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id' 2>/dev/null || yc iam service-account create --name "$RUNTIME_SA_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
           yc resource-manager folder add-access-binding "$YC_FOLDER_ID" --role ai.languageModels.user --service-account-id "$runtime_sa_id"
           yc lockbox secret add-access-binding "$lockbox_id" --role lockbox.payloadViewer --service-account-id "$runtime_sa_id"
-          yc serverless function version create --function-name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --runtime nodejs22 --entrypoint dist/yandex-workout-parser-function.handler --memory 1GB --execution-timeout 120s --service-account-id "$runtime_sa_id" --source-path .yandex-workout-parser-package --secret id="$lockbox_id",key=SUPABASE_URL,environment-variable=SUPABASE_URL --secret id="$lockbox_id",key=SUPABASE_PUBLISHABLE_KEY,environment-variable=SUPABASE_PUBLISHABLE_KEY --secret id="$lockbox_id",key=YANDEX_CLOUD_API_KEY,environment-variable=YANDEX_CLOUD_API_KEY --secret id="$lockbox_id",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID --secret id="$lockbox_id",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID
-          # The public invoker is bootstrapped once by the folder administrator.
-          # The unauthenticated smoke request below keeps that prerequisite enforced.
-          function_url=$(yc serverless function get --name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.http_invoke_url')
-          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --request POST --header 'content-type: application/json' --data '{}' "$function_url")
-          test "$status" = 401
-          printf '### Yandex workout parser function\n\n%s\n' "$function_url" >> "$GITHUB_STEP_SUMMARY"
+          if ! yc serverless function get --name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
+            yc serverless function create "$FUNCTION_NAME" \
+              --description 'Production Fit workout parser, backed by Supabase Auth and data' \
+              --folder-id "$YC_FOLDER_ID"
+          fi
+          previous_version_id=$(yc serverless function version get-by-tag \
+            --function-name "$FUNCTION_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --tag '$latest' \
+            --format json 2>/dev/null | jq -r '.id // empty' || true)
+          version=$(yc serverless function version create \
+            --function-name "$FUNCTION_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --runtime nodejs22 \
+            --entrypoint dist/yandex-workout-parser-function.handler \
+            --memory 1GB \
+            --execution-timeout 120s \
+            --service-account-id "$runtime_sa_id" \
+            --source-path .yandex-workout-parser-package \
+            --secret id="$lockbox_id",key=SUPABASE_URL,environment-variable=SUPABASE_URL \
+            --secret id="$lockbox_id",key=SUPABASE_PUBLISHABLE_KEY,environment-variable=SUPABASE_PUBLISHABLE_KEY \
+            --secret id="$lockbox_id",key=YANDEX_CLOUD_API_KEY,environment-variable=YANDEX_CLOUD_API_KEY \
+            --secret id="$lockbox_id",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID \
+            --secret id="$lockbox_id",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID \
+            --format json)
+          echo "PARSER_PREVIOUS_VERSION_ID=$previous_version_id" >> "$GITHUB_ENV"
+          echo "PARSER_CANDIDATE_VERSION_ID=$(jq -er '.id' <<<"$version")" >> "$GITHUB_ENV"
+
+      - name: Verify the candidate and roll back on smoke failure
+        run: |
+          set -euo pipefail
+          node scripts/verify-yandex-function-release.mjs \
+            --function-name "$FUNCTION_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --expected-version-id "$PARSER_CANDIDATE_VERSION_ID" \
+            --previous-version-id "$PARSER_PREVIOUS_VERSION_ID" \
+            | tee -a "$GITHUB_STEP_SUMMARY"

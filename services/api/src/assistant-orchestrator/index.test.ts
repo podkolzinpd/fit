@@ -9,6 +9,7 @@ describe('assistant orchestrator contract', () => {
 
   it('rejects model output outside the proposed-action union', () => {
     expect(validateAssistantTurnResponse({ reply: 'Нужны уточнения', action: { tool: 'delete_everything', status: 'applied', title: 'x', description: 'x', payload: {} } })).toBeUndefined()
-    expect(validateAssistantTurnResponse({ reply: 'Нужны дни и ограничения', action: { tool: 'create_program_draft', status: 'needs_input', title: 'Черновик программы', description: 'Уточню данные', payload: { fields: ['Цель'] } } })).toEqual(expect.objectContaining({ action: expect.objectContaining({ tool: 'create_program_draft' }) }))
+    const validResponse = validateAssistantTurnResponse({ reply: 'Нужны дни и ограничения', action: { tool: 'create_program_draft', status: 'needs_input', title: 'Черновик программы', description: 'Уточню данные', payload: { fields: ['Цель'] } } })
+    expect(validResponse?.action?.tool).toBe('create_program_draft')
   })
 })
