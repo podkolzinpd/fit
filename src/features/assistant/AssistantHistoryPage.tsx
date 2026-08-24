@@ -31,11 +31,21 @@ export function AssistantHistoryPage() {
     setText('')
     setSending(true)
     setError(undefined)
+    const submittedAt = Date.now()
+    setMessages((current) => [...current, {
+      id: `pending-user-${submittedAt}`,
+      author: 'user',
+      content: message,
+      action: null,
+    }])
     try {
-      await assistantRepository.sendTurn(conversationId, message)
-      const { data, error: historyError } = await assistantRepository.listMessages(conversationId)
-      if (historyError) throw historyError
-      setMessages((data ?? []).map((row) => ({ ...row, action: row.action as AssistantOrchestratorAction | null })))
+      const turn = await assistantRepository.sendTurn(conversationId, message)
+      setMessages((current) => [...current, {
+        id: `pending-assistant-${submittedAt}`,
+        author: 'assistant',
+        content: turn.reply,
+        action: turn.action,
+      }])
     } catch {
       setError('Не удалось получить ответ ассистента. Попробуйте ещё раз.')
     } finally {
