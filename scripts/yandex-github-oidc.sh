@@ -25,7 +25,10 @@ oidc_claims=$(node -e '
 ' <<<"$github_token")
 printf 'GitHub OIDC claims: %s\n' "$oidc_claims"
 
-exchange_response=$(curl --silent --show-error \
+exchange_response=$(curl --fail --silent --show-error \
+  --retry 5 \
+  --retry-delay 2 \
+  --retry-all-errors \
   --request POST \
   --header 'Content-Type: application/x-www-form-urlencoded' \
   --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
