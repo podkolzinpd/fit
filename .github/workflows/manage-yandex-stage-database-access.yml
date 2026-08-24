@@ -1,0 +1,104 @@
+name: Manage Yandex stage database access
+
+run-name: ${{ inputs.access_action }} Yandex stage database reader
+
+on:
+  workflow_dispatch:
+    inputs:
+      access_action:
+        description: Access change
+        required: true
+        type: choice
+        options:
+          - grant
+          - revoke
+      database_username:
+        description: Existing Managed PostgreSQL IAM username
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: yandex-stage
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  TF_CLI_CONFIG_FILE: ${{ github.workspace }}/infra/yandex/terraform.rc.example
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-provider-cache
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_TFSTATE_SECRET_ACCESS_KEY }}
+
+jobs:
+  access:
+    name: Apply curated read-only access
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require the deployed main revision
+        run: |
+          if test "$GITHUB_REF" != 'refs/heads/main'; then
+            echo 'Run this workflow from main only.' >&2
+            exit 1
+          fi
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          terraform_wrapper: false
+      - uses: actions/cache@v4
+        with:
+          path: .terraform-provider-cache
+          key: terraform-yandex-${{ runner.os }}-${{ hashFiles('infra/yandex/.terraform.lock.hcl') }}
+      - name: Prepare Terraform provider cache
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+      - name: Exchange GitHub OIDC token for a short-lived IAM token
+        run: scripts/yandex-github-oidc.sh
+      - name: Read the private runner URL from remote state
+        working-directory: infra/yandex
+        run: >-
+          terraform init
+          -backend-config=backend.hcl.example
+          -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }}
+          -backend-config=key=fit/stage/terraform.tfstate
+      - name: Apply database reader access
+        working-directory: infra/yandex
+        env:
+          ACCESS_ACTION: ${{ inputs.access_action }}
+          DATABASE_USERNAME: ${{ inputs.database_username }}
+        run: |
+          umask 077
+          migration_url=$(terraform output -raw migration_container_url)
+          jq -n \
+            --arg action "$ACCESS_ACTION" \
+            --arg databaseUsername "$DATABASE_USERNAME" \
+            '{action: $action, databaseUsername: $databaseUsername}' \
+            > database-access-request.json
+          status=$(curl --silent --show-error \
+            --output database-access-response.json --write-out '%{http_code}' \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header 'Content-Type: application/json' \
+            --data-binary @database-access-request.json \
+            "${migration_url%/}/stage/database-access/readers")
+          if test "$status" = 409; then
+            echo 'Create a non-privileged Managed PostgreSQL IAM user with access to the fit database first.' >&2
+            exit 1
+          fi
+          if test "$status" != 200; then
+            echo "Database access runner returned HTTP $status." >&2
+            exit 1
+          fi
+          if test "$ACCESS_ACTION" = grant; then
+            expected_status=access_granted
+          else
+            expected_status=access_revoked
+          fi
+          jq -e --arg expected "$expected_status" \
+            '.status == $expected' database-access-response.json >/dev/null
+          echo 'Curated read-only access was updated.'

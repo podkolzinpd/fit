@@ -10,6 +10,16 @@ resource "yandex_serverless_container" "api" {
   service_account_id = yandex_iam_service_account.api.id
   labels             = local.labels
 
+  lifecycle {
+    precondition {
+      condition = (
+        (var.legacy_supabase_bridge_lockbox_secret_id == null && var.legacy_supabase_bridge_lockbox_secret_version_id == null)
+        || (var.legacy_supabase_bridge_lockbox_secret_id != null && var.legacy_supabase_bridge_lockbox_secret_version_id != null)
+      )
+      error_message = "Legacy Supabase bridge Lockbox ID and version must be provided together."
+    }
+  }
+
   runtime {
     type = "http"
   }
@@ -123,6 +133,7 @@ resource "yandex_serverless_container" "migration" {
         MIGRATION_DATABASE_SSL_ROOT_CERT = "/app/certs/yandex-cloud-ca.pem"
         YANDEX_PILOT_ENROLLMENT_ENABLED  = var.environment == "stage" && var.yandex_oauth_client_id != null ? "true" : "false"
         STAGE_WORKOUT_FIXTURES_ENABLED   = var.environment == "stage" ? "true" : "false"
+        STAGE_DATABASE_ACCESS_ENABLED    = var.environment == "stage" ? "true" : "false"
       },
       var.yandex_oauth_client_id == null ? {} : {
         YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id

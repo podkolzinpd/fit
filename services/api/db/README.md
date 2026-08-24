@@ -54,6 +54,22 @@ Both users are provisioned by Terraform with Connection Manager-generated
 passwords. Keeping the runtime user separate from the database owner is
 required for RLS to remain effective.
 
+Human stage readers never receive either role. Migration `000013` creates the
+`ops_readonly` schema with explicit security-definer views and a private,
+owner-only grant/revoke function. The views omit profile/client names, goals,
+membership notes, invitation hashes, workout notes and trainer comments. They
+never expose `app_private`. A direct `fit_api` grant would allow actor-context
+impersonation and is prohibited.
+
+The private migration runner exposes the access function only in stage. The
+manual `Manage Yandex stage database access` GitHub workflow calls it with an
+existing Managed PostgreSQL IAM username. Grant and revoke are idempotent,
+remove earlier direct grants on `public` and `app_private`, and reject
+administrative, `BYPASSRLS` and inherited `mdb_*` data roles. Adding or removing
+a person therefore requires no migration. A future domain table still needs a
+reviewed curated view in that table's normal migration; default privileges give
+existing readers access to the new view automatically.
+
 ## Commands
 
 - `npm run db:migrate:dry-run` prints pending SQL without applying it;
