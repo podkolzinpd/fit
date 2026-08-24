@@ -2,7 +2,7 @@ import type { ExerciseSnapshot, MuscleGroup } from './domain'
 import { IMPORTED_EXERCISES } from './system-exercises.generated'
 import { BASE_EXERCISES } from './system-exercises.base.generated'
 
-export const SYSTEM_EXERCISE_CATALOG_VERSION = 2
+export const SYSTEM_EXERCISE_CATALOG_VERSION = 3
 
 // Форма импортированного упражнения (генерируется scripts/import-exercises.mjs).
 export interface ImportedExercise extends ExerciseSnapshot {
@@ -50,13 +50,13 @@ export const SYSTEM_EXERCISES = [
   { source: 'system', ref: 'dumbbell-bench-press', name: 'Жим гантелей лёжа', muscleGroup: 'chest', inputKind: 'strength' },
   { source: 'system', ref: 'incline-bench-press', name: 'Жим на наклонной скамье', muscleGroup: 'chest', inputKind: 'strength' },
   { source: 'system', ref: 'dumbbell-fly', name: 'Разводка гантелей', muscleGroup: 'chest', inputKind: 'strength' },
-  { source: 'system', ref: 'push-ups', name: 'Отжимания', muscleGroup: 'chest', inputKind: 'strength' },
-  { source: 'system', ref: 'dips', name: 'Отжимания на брусьях', muscleGroup: 'chest', inputKind: 'strength' },
+  { source: 'system', ref: 'push-ups', name: 'Отжимания', muscleGroup: 'chest', inputKind: 'reps' },
+  { source: 'system', ref: 'dips', name: 'Отжимания на брусьях', muscleGroup: 'chest', inputKind: 'reps' },
   { source: 'system', ref: 'pec-deck', name: 'Сведение в тренажёре (бабочка)', muscleGroup: 'chest', inputKind: 'strength' },
 
   { source: 'system', ref: 'barbell-row', name: 'Тяга штанги в наклоне', muscleGroup: 'back', inputKind: 'strength' },
   { source: 'system', ref: 'dumbbell-row', name: 'Тяга гантели в наклоне', muscleGroup: 'back', inputKind: 'strength' },
-  { source: 'system', ref: 'pull-ups', name: 'Подтягивания', muscleGroup: 'back', inputKind: 'strength' },
+  { source: 'system', ref: 'pull-ups', name: 'Подтягивания', muscleGroup: 'back', inputKind: 'reps' },
   { source: 'system', ref: 'lat-pulldown', name: 'Тяга верхнего блока', muscleGroup: 'back', inputKind: 'strength' },
   { source: 'system', ref: 'seated-cable-row', name: 'Тяга нижнего блока', muscleGroup: 'back', inputKind: 'strength' },
   { source: 'system', ref: 'deadlift', name: 'Становая тяга', muscleGroup: 'back', inputKind: 'strength' },
@@ -74,12 +74,12 @@ export const SYSTEM_EXERCISES = [
   { source: 'system', ref: 'barbell-curl', name: 'Подъём штанги на бицепс', muscleGroup: 'arms', inputKind: 'strength' },
   { source: 'system', ref: 'french-press', name: 'Французский жим', muscleGroup: 'arms', inputKind: 'strength' },
   { source: 'system', ref: 'triceps-pushdown', name: 'Разгибание на трицепс', muscleGroup: 'arms', inputKind: 'strength' },
-  { source: 'system', ref: 'close-grip-push-up', name: 'Отжимания узким хватом', muscleGroup: 'arms', inputKind: 'strength' },
+  { source: 'system', ref: 'close-grip-push-up', name: 'Отжимания узким хватом', muscleGroup: 'arms', inputKind: 'reps' },
 
   { source: 'system', ref: 'plank', name: 'Планка', muscleGroup: 'core', inputKind: 'duration' },
-  { source: 'system', ref: 'crunches', name: 'Скручивания', muscleGroup: 'core', inputKind: 'strength' },
-  { source: 'system', ref: 'leg-raise', name: 'Подъём ног', muscleGroup: 'core', inputKind: 'strength' },
-  { source: 'system', ref: 'russian-twist', name: 'Русский твист', muscleGroup: 'core', inputKind: 'strength' },
+  { source: 'system', ref: 'crunches', name: 'Скручивания', muscleGroup: 'core', inputKind: 'reps' },
+  { source: 'system', ref: 'leg-raise', name: 'Подъём ног', muscleGroup: 'core', inputKind: 'reps' },
+  { source: 'system', ref: 'russian-twist', name: 'Русский твист', muscleGroup: 'core', inputKind: 'reps' },
   { source: 'system', ref: 'side-plank', name: 'Боковая планка', muscleGroup: 'core', inputKind: 'duration' },
 
   { source: 'system', ref: 'running', name: 'Бег', muscleGroup: 'cardio', inputKind: 'distance' },
@@ -147,7 +147,11 @@ const SEEN_REFS = new Set<string>(SYSTEM_EXERCISES.map((exercise) => exercise.re
 // ref/name/muscleGroup/inputKind для генератора базовых и для тестов.
 const SYSTEM_EXERCISE_CATALOG_SOURCE: readonly ExerciseSnapshot[] = [
   ...BASE_EXERCISES,
-  ...IMPORTED_EXERCISES.filter((exercise) => !SEEN_REFS.has(exercise.ref)),
+  ...IMPORTED_EXERCISES
+    .filter((exercise) => !SEEN_REFS.has(exercise.ref))
+    .map((exercise) => exercise.inputKind === 'strength' && exercise.equipmentRef === 'body only'
+      ? { ...exercise, inputKind: 'reps' as const }
+      : exercise),
   ...FUNCTIONAL_PROTOCOLS,
   ...RUNNING_DRILLS,
   ...WARMUP_AND_MOBILITY,

@@ -10,7 +10,7 @@ const EXERCISE_MEDIA_PATHS = new Set(
 
 describe('system exercise catalog', () => {
   it('matches the V1 baseline catalog', () => {
-    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(2)
+    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(3)
     expect(SYSTEM_EXERCISES).toHaveLength(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.ref)).size).toBe(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.name)).size).toBe(49)
@@ -27,9 +27,9 @@ describe('system exercise catalog', () => {
 
   it('keeps the cardio input semantics', () => {
     expect(SYSTEM_EXERCISES.filter((exercise) => exercise.inputKind === 'distance')).toHaveLength(5)
-    // reps = ввод по времени и повторам: кардио-интервалы.
+    // Упражнения с собственным весом считаются по повторам, без фиктивных 0 кг.
     expect(SYSTEM_EXERCISES.filter((exercise) => exercise.inputKind === 'reps').map((exercise) => exercise.name))
-      .toEqual(['Прыжки со скакалкой', 'Берпи'])
+      .toEqual(['Отжимания', 'Отжимания на брусьях', 'Подтягивания', 'Отжимания узким хватом', 'Скручивания', 'Подъём ног', 'Русский твист', 'Прыжки со скакалкой', 'Берпи'])
     expect(SYSTEM_EXERCISES.filter((exercise) => exercise.inputKind === 'duration').map((exercise) => exercise.name))
       .toEqual(['Планка', 'Боковая планка'])
   })
@@ -74,6 +74,12 @@ describe('system exercise catalog', () => {
       expect(exercise.primaryMuscleDetail).toBeTruthy()
       expect(exercise.imageUrl).toMatch(/^\/exercises\/fedb-.+\.jpg$/)
     }
+  })
+
+  it('считает импортированные упражнения с собственным весом по повторам', () => {
+    const bodyweightExercises = SYSTEM_EXERCISE_CATALOG.filter((exercise) => exercise.equipmentRef === 'body only')
+    expect(bodyweightExercises.length).toBeGreaterThan(0)
+    expect(bodyweightExercises.every((exercise) => exercise.inputKind !== 'strength')).toBe(true)
   })
 
   it('импортированные названия переведены на русский в формате «Упражнение (Оборудование)»', () => {
