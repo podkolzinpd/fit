@@ -45,6 +45,10 @@ import {
   readExpectedVersion,
   readSavePlannedWorkoutRequest,
 } from './planned-workout-request.js'
+import {
+  readRescheduleWorkoutRequest,
+  readWorkoutCommentRequest,
+} from './workout-lifecycle-request.js'
 import { PilotWorkoutCommandError } from './workout-commands.js'
 import { WorkoutParseError, type LegacyWorkoutParser } from './legacy-workout-parser.js'
 import { readAssistantProgressRequest } from './assistant-progress-request.js'
@@ -612,6 +616,33 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     )
   })
 
+  app.post('/v1/workouts/completed', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    const command = readSavePlannedWorkoutRequest(request.body, null)
+    if (command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return sendPilotCommand(
+      reply,
+      () => writer.saveCompleted(
+        sessionToken,
+        command.draft,
+        command.expectedVersion,
+      ),
+      (saved) => reply
+        .header('cache-control', 'no-store')
+        .code(201)
+        .send({ workout: saved }),
+    )
+  })
+
   app.put('/v1/workouts/:workoutId', async (request, reply) => {
     const sessionToken = request.headers['x-fit-pilot-session']
     const { workoutId } = request.params as { workoutId?: unknown }
@@ -642,6 +673,68 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     )
   })
 
+  app.put('/v1/workouts/:workoutId/completed', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { workoutId } = request.params as { workoutId?: unknown }
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof workoutId !== 'string' || !uuidPattern.test(workoutId)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const command = readSavePlannedWorkoutRequest(request.body, workoutId)
+    if (command === undefined || command.expectedVersion === null) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const expectedVersion = command.expectedVersion
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return sendPilotCommand(
+      reply,
+      () => writer.saveCompleted(
+        sessionToken,
+        command.draft,
+        expectedVersion,
+      ),
+      (saved) => reply
+        .header('cache-control', 'no-store')
+        .send({ workout: saved }),
+    )
+  })
+
+  app.post('/v1/workouts/:workoutId/result', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { workoutId } = request.params as { workoutId?: unknown }
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof workoutId !== 'string' || !uuidPattern.test(workoutId)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const command = readSavePlannedWorkoutRequest(request.body, workoutId)
+    if (command === undefined || command.expectedVersion === null) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const expectedVersion = command.expectedVersion
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return sendPilotCommand(
+      reply,
+      () => writer.recordPlannedResult(
+        sessionToken,
+        command.draft,
+        expectedVersion,
+      ),
+      (saved) => reply
+        .header('cache-control', 'no-store')
+        .send({ workout: saved }),
+    )
+  })
+
   app.delete('/v1/workouts/:workoutId', async (request, reply) => {
     const sessionToken = request.headers['x-fit-pilot-session']
     const { workoutId } = request.params as { workoutId?: unknown }
@@ -662,7 +755,99 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
     return sendPilotCommand(
       reply,
-      () => writer.deletePlanned(sessionToken, workoutId, expectedVersion),
+      () => writer.deleteWorkout(sessionToken, workoutId, expectedVersion),
+      (version) => reply
+        .header('cache-control', 'no-store')
+        .send({ workout: { id: workoutId, version } }),
+    )
+  })
+
+  app.post('/v1/workouts/:workoutId/cancel', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { workoutId } = request.params as { workoutId?: unknown }
+    const expectedVersion = readExpectedVersion(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (
+      typeof workoutId !== 'string'
+      || !uuidPattern.test(workoutId)
+      || expectedVersion === undefined
+    ) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return sendPilotCommand(
+      reply,
+      () => writer.cancelPlanned(sessionToken, workoutId, expectedVersion),
+      (version) => reply
+        .header('cache-control', 'no-store')
+        .send({ workout: { id: workoutId, version } }),
+    )
+  })
+
+  app.post('/v1/workouts/:workoutId/reschedule', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { workoutId } = request.params as { workoutId?: unknown }
+    const command = readRescheduleWorkoutRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (
+      typeof workoutId !== 'string'
+      || !uuidPattern.test(workoutId)
+      || command === undefined
+    ) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return sendPilotCommand(
+      reply,
+      () => writer.reschedule(
+        sessionToken,
+        workoutId,
+        command.workoutDate,
+        command.startTime,
+        command.expectedVersion,
+      ),
+      (version) => reply
+        .header('cache-control', 'no-store')
+        .send({ workout: { id: workoutId, version } }),
+    )
+  })
+
+  app.put('/v1/workouts/:workoutId/comment', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { workoutId } = request.params as { workoutId?: unknown }
+    const command = readWorkoutCommentRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (
+      typeof workoutId !== 'string'
+      || !uuidPattern.test(workoutId)
+      || command === undefined
+    ) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return sendPilotCommand(
+      reply,
+      () => writer.setClientComment(
+        sessionToken,
+        workoutId,
+        command.comment,
+        command.expectedVersion,
+      ),
       (version) => reply
         .header('cache-control', 'no-store')
         .send({ workout: { id: workoutId, version } }),

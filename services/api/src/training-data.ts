@@ -40,6 +40,7 @@ interface WorkoutRow extends QueryResultRow {
   end_time: string | null
   status: WorkoutStatus
   notes: string | null
+  client_comment: string | null
   started_at: Date | null
   completed_at: Date | null
   version: string
@@ -148,6 +149,7 @@ export interface PilotWorkout {
   endTime: string | null
   status: WorkoutStatus
   notes: string | null
+  clientComment: string | null
   startedAt: string | null
   completedAt: string | null
   version: number
@@ -192,6 +194,7 @@ export async function readAccessibleTrainingData(
         workout.end_time,
         workout.status,
         workout.notes,
+        workout.client_comment,
         workout.started_at,
         workout.completed_at,
         workout.version
@@ -307,6 +310,7 @@ export async function readAccessibleTrainingData(
       endTime: row.end_time,
       status: row.status,
       notes: row.notes,
+      clientComment: row.client_comment,
       startedAt: row.started_at?.toISOString() ?? null,
       completedAt: row.completed_at?.toISOString() ?? null,
       version: safeInteger(row.version, 'workout version'),

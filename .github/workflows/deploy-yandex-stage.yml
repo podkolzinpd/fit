@@ -551,6 +551,202 @@ jobs:
           jq -e --arg workout_id "$workout_id" '
             all(.workouts[]; .id != $workout_id)
           ' <<<"$after_delete" >/dev/null
+          completed_request_id=$(cat /proc/sys/kernel/random/uuid)
+          completed_payload=$(jq -c \
+            --arg request_id "$completed_request_id" '
+            .requestId = $request_id
+            | .workoutDate = "2026-08-20"
+            | .startTime = null
+            | .endTime = null
+            | .notes = "Синтетическая проверка completed lifecycle"
+          ' <<<"$create_payload")
+          completed_created=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$completed_payload" \
+            "${api_url%/}/v1/workouts/completed")
+          completed_workout_id=$(jq -er '
+            select(.workout.version == 2) | .workout.id
+          ' <<<"$completed_created")
+          completed_replayed=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$completed_payload" \
+            "${api_url%/}/v1/workouts/completed")
+          jq -e --arg workout_id "$completed_workout_id" '
+            .workout.id == $workout_id and .workout.version == 2
+          ' <<<"$completed_replayed" >/dev/null
+          completed_read=$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/training-data")
+          completed_exercise_id=$(jq -er --arg workout_id "$completed_workout_id" '
+            .workouts[] | select(.id == $workout_id) | .exercises[0].id
+          ' <<<"$completed_read")
+          completed_set_id=$(jq -er --arg workout_id "$completed_workout_id" '
+            .workouts[] | select(.id == $workout_id) | .exercises[0].sets[0].id
+          ' <<<"$completed_read")
+          completed_update_payload=$(jq -c \
+            --arg exercise_id "$completed_exercise_id" \
+            --arg set_id "$completed_set_id" '
+            del(.requestId)
+            | .expectedVersion = 2
+            | .notes = "Синтетическая проверка completed lifecycle updated"
+            | .exercises[0].sourceExerciseId = $exercise_id
+            | .exercises[0].sets[0].sourceSetId = $set_id
+            | .exercises[0].sets[0].weightKg = 42.5
+          ' <<<"$completed_payload")
+          completed_updated=$(curl --fail --silent --show-error \
+            --request PUT \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$completed_update_payload" \
+            "${api_url%/}/v1/workouts/$completed_workout_id/completed")
+          test "$(jq -er '.workout.version' <<<"$completed_updated")" = 3
+          completed_updated_read=$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/training-data")
+          jq -e --arg workout_id "$completed_workout_id" '
+            .workouts | any(
+              .id == $workout_id
+              and .status == "done"
+              and .version == 3
+              and .clientComment == null
+              and (.exercises[0].sets | any(
+                .plan.weightKg == 40
+                and .fact.weightKg == 42.5
+                and .confirmedAt != null
+              ))
+            )
+          ' <<<"$completed_updated_read" >/dev/null
+          curl --fail --silent --show-error \
+            --request DELETE \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data '{"expectedVersion":3}' \
+            "${api_url%/}/v1/workouts/$completed_workout_id" >/dev/null
+          missed_payload=$(jq -c '
+            .workoutDate = "2000-01-01"
+            | .startTime = "10:00"
+            | .endTime = null
+            | .notes = "Синтетическая проверка missed lifecycle"
+          ' <<<"$create_payload")
+          missed_created=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$missed_payload" \
+            "${api_url%/}/v1/workouts")
+          missed_workout_id=$(jq -er '.workout.id' <<<"$missed_created")
+          missed_cancelled=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data '{"expectedVersion":1}' \
+            "${api_url%/}/v1/workouts/$missed_workout_id/cancel")
+          test "$(jq -er '.workout.version' <<<"$missed_cancelled")" = 2
+          missed_rescheduled=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data '{
+              "expectedVersion": 2,
+              "workoutDate": "2099-01-01",
+              "startTime": "12:30"
+            }' \
+            "${api_url%/}/v1/workouts/$missed_workout_id/reschedule")
+          test "$(jq -er '.workout.version' <<<"$missed_rescheduled")" = 3
+          missed_read=$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/training-data")
+          jq -e --arg workout_id "$missed_workout_id" '
+            .workouts | any(
+              .id == $workout_id
+              and .status == "planned"
+              and .workoutDate == "2099-01-01"
+              and .startTime == "12:30:00"
+              and .endTime == null
+            )
+          ' <<<"$missed_read" >/dev/null
+          curl --fail --silent --show-error \
+            --request DELETE \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data '{"expectedVersion":3}' \
+            "${api_url%/}/v1/workouts/$missed_workout_id" >/dev/null
+          result_payload=$(jq -c '
+            .workoutDate = "2000-01-02"
+            | .startTime = null
+            | .endTime = null
+            | .notes = "Синтетическая проверка planned result"
+          ' <<<"$create_payload")
+          result_created=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$result_payload" \
+            "${api_url%/}/v1/workouts")
+          result_workout_id=$(jq -er '.workout.id' <<<"$result_created")
+          result_created_read=$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/training-data")
+          result_exercise_id=$(jq -er --arg workout_id "$result_workout_id" '
+            .workouts[] | select(.id == $workout_id) | .exercises[0].id
+          ' <<<"$result_created_read")
+          result_set_id=$(jq -er --arg workout_id "$result_workout_id" '
+            .workouts[] | select(.id == $workout_id) | .exercises[0].sets[0].id
+          ' <<<"$result_created_read")
+          result_completed_payload=$(jq -c \
+            --arg exercise_id "$result_exercise_id" \
+            --arg set_id "$result_set_id" '
+            .expectedVersion = 1
+            | .exercises[0].sourceExerciseId = $exercise_id
+            | .exercises[0].sets[0].sourceSetId = $set_id
+            | .exercises[0].sets[0].weightKg = 45
+          ' <<<"$result_payload")
+          result_completed=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$result_completed_payload" \
+            "${api_url%/}/v1/workouts/$result_workout_id/result")
+          test "$(jq -er '.workout.version' <<<"$result_completed")" = 3
+          result_read=$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/training-data")
+          jq -e --arg workout_id "$result_workout_id" '
+            .workouts | any(
+              .id == $workout_id
+              and .status == "done"
+              and .version == 3
+              and (.exercises[0].sets | any(
+                .plan.weightKg == 40 and .fact.weightKg == 45
+              ))
+            )
+          ' <<<"$result_read" >/dev/null
+          curl --fail --silent --show-error \
+            --request DELETE \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data '{"expectedVersion":3}' \
+            "${api_url%/}/v1/workouts/$result_workout_id" >/dev/null
           live_payload=$(jq -c '
             .notes = "Синтетическая проверка versioned mutation live"
           ' <<<"$create_payload")

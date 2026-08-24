@@ -5,27 +5,20 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-24
-Проверенный базовый `main`: `18a6973` (`fix(yandex): pin stage API timeout (#544)`)
+Проверенный базовый `main`: `df67b2b` (`YAFIT-361: исправить статистику упражнений с собственным весом (#541)`)
 
 ## Активное изменение
 
-- `YAFIT-361` исправляет статистику упражнений с собственным весом и упрощает
-  карточку прогресса упражнения для Client и Trainer.
-- Отжимания, подтягивания, брусья, скручивания и другие упражнения с собственным
-  весом используют повторы как основную метрику; старые снимки исправляет
-  forward-only миграция без изменения структуры базы.
-- Карточка показывает последний подтверждённый результат, изменение к прошлой
-  тренировке, подходы и отметки 10/25/50/100 выполнений. Фиктивные `0 кг` и
-  непонятный счётчик «до отметки» убраны.
-- График появляется со второго подтверждённого результата; его tooltip читаем
-  на мобильном экране и не повторяет длинное название упражнения.
-- Ветка `codex/yandex-stage-timeout-pin` явно сохраняет развёрнутый timeout
-  stage API `30s` в автоматической доставке.
-- Это устраняет случайный Terraform drift к модульному default `120s`, не
-  ослабляя plan policy, не создавая ресурсы и не увеличивая стоимость stage.
-- Управляемый доступ читателей из миграции `000013` уже в `main`; его первая
-  доставка на stage и выдача доступа пилотному читателю ждут только исправленного
-  автоматического deploy.
+- Ветка `codex/workout-lifecycle-completion` закрывает non-Live workout
+  lifecycle в изолированном Yandex API без изменения production routing и UI.
+- Миграция `000014` добавляет идемпотентное создание завершённого workout,
+  исправление факта с сохранением исходного плана, атомарную запись результата
+  прошлого назначения, cancel/reschedule, комментарий клиента и author-scoped
+  soft-delete.
+- Все команды используют optimistic version, actor context и tenant-проверки;
+  `fit_api` по-прежнему не получает прямых write-grants на domain tables.
+- Автоматический stage smoke проверяет completed create/replay/edit, planned
+  result, cancel/reschedule и итоговый read model до принятия новой revision.
 - WebKit behavior CI изолирует 40 сценариев в восьми короткоживущих browser
   shards. Упавший из-за internal engine error shard повторяется один раз в новом
   контейнере; детерминированный product fail остаётся блокирующим.
@@ -60,15 +53,16 @@
   доставляются автоматически через GitHub OIDC, private runner и forward-only
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
-  exercises и workout aggregate работают на stage. Миграции `000001–000012`,
+  exercises и workout aggregate работают на stage. Миграции `000001–000013`,
   API revision, Live core и структурные Live-команды доставлены автоматически.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
 - Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
   `main` без force-push; callback URL и CORS origin не меняются.
 - Callback показывает pilot profile, clients, connections и training data, но
-  pilot UI остаётся read-only. Client/custom-exercise и Planned/Live writes
-  доступны только через stage API и не затрагивают production routing.
+  pilot UI остаётся read-only. Client/custom-exercise и Planned/Live writes уже
+  доступны через stage API; активная ветка готовит non-Live lifecycle delivery.
+  Ни один из этих путей не затрагивает production routing.
 - Реальный invite → join → leave/remove smoke на двух разрешённых Yandex ID
   остаётся внешней stage-проверкой; локальный lifecycle и RLS-матрица зелёные.
 - Полный cutover не выполнен. Production frontend и основной tenant продолжают
@@ -76,28 +70,22 @@
 
 ## Проверки активной ветки
 
-- Целевые тесты карточки и каталога зелёные, включая отметки
-  10/25/50/100/250; полный frontend gate зелёный: 691 тест, lint, TypeScript,
-  coverage 82.04/75.12/81.6/85.91 и production build.
-- Локальная база полностью пересобрана через Podman; 596 SQL-тестов зелёные.
-- Client-карточка и график вручную проверены в WebKit на 390 и 430 px, включая
-  читаемую подсказку. Trainer проверен на 1440 px; горизонтального переполнения
-  нет.
-- Локальный Yandex PostgreSQL применяет `000012`; 18 интеграционных actor/RLS-
-  тестов зелёные. Общий gate также включает 39 infra policy и 117 API-тестов.
-- Актуальный `main` отдельно прошёл CI: 689 frontend-тестов, 42 infra policy,
-  128 API-тестов и оба production build.
+- Локальный Yandex PostgreSQL 17 применяет `000014`; 21 интеграционный
+  actor/RLS-тест зелёный, включая cross-tenant и идемпотентность.
+- API gate зелёный: lint, TypeScript, 138 unit/API-тестов и production build;
+  12 frontend repository tests и 43 infra/workflow policy tests зелёные.
+- Полный root `npm run check`, `npm run db:reset` и `npm run db:test`
+  зелёные; stage delivery `000014` ожидает merge.
 
 ## Ближайший порядок
 
-1. Завершить `YAFIT-361` отдельным PR, проверить CI, merge и production.
-2. Доставить client/profile/custom-exercise mutations на stage и расширить
-   автоматический delivery smoke на новые команды.
-3. Отдельно портировать feedback/reactions и вопросы/ответы после тренировки.
-4. Отдельно портировать progress/goals и derived progress/chronicle reads.
-5. После полного tenant-контракта провести две миграционные репетиции; только
+1. Завершить non-Live workout lifecycle PR, проверить CI и автоматическую
+   доставку `000014` на stage.
+2. Отдельно портировать feedback/reactions и вопросы/ответы после тренировки.
+3. Отдельно портировать progress/goals и derived progress/chronicle reads.
+4. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
-6. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению
+5. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению
    программ и нового решения владельца продукта.
 
 ## Отложено
