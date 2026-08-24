@@ -133,14 +133,17 @@ function WeekCard({ week, loading }: { week: WorkoutRegularity | undefined; load
   if (loading) return <section className="client-home-week client-home-loading" role="status">Загружаем прогресс недели…</section>
   const completed = week?.completedCount ?? 0
   if (completed === 0) return null
+  const planned = week?.plannedCount ?? 0
   const completedPlanned = week?.completedPlannedCount ?? 0
   const independent = Math.max(0, completed - completedPlanned)
-  const title = `${completed} ${workoutCountLabel(completed)}`
-  const description = completedPlanned === completed
-    ? completed === 1 ? 'По плану тренера' : completed === 2 ? 'Обе — по плану тренера' : 'Все — по плану тренера'
-    : independent === completed
-      ? completed === 1 ? 'Самостоятельно' : completed === 2 ? 'Обе — самостоятельно' : 'Все — самостоятельно'
-      : `${completedPlanned} по плану · ${independent} самостоятельно`
+  const title = planned > 0 ? `${completedPlanned} из ${planned} по плану` : `${completed} ${workoutCountLabel(completed)}`
+  const description = planned > 0
+    ? independent > 0
+      ? `Всего состоялось ${completed} ${workoutCountLabel(completed)} · ${independent} самостоятельно`
+      : completedPlanned === planned
+        ? 'Все запланированные тренировки состоялись'
+        : `Всего состоялось ${completed} ${workoutCountLabel(completed)}`
+    : completed === 1 ? 'Самостоятельно' : completed === 2 ? 'Обе — самостоятельно' : 'Все — самостоятельно'
   return <section className="client-home-week" aria-labelledby="client-home-week-title">
     <div className="client-home-section-head"><div><p className="eyebrow">ЭТА НЕДЕЛЯ</p><h2 id="client-home-week-title">{title}</h2></div><Link to="/me/progress">Прогресс ›</Link></div>
     <p>{description}</p>

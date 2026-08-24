@@ -191,7 +191,7 @@ test('client and trainer receive progress and workout changes without reload', a
     await expect(trainerRegularity).toBeVisible()
     await expect(clientWeek).toBeVisible()
     await expect(trainerRegularity.getByText(/трениров(?:ка|ки|ок) состоял/).first()).toBeVisible()
-    await expect(clientWeek.getByRole('heading', { name: /трениров/ })).toBeVisible()
+    await expect(clientWeek.getByRole('heading', { name: '1 из 1 по плану' })).toBeVisible()
     await expect(clientWeek.getByRole('link', { name: 'Прогресс ›' })).toHaveAttribute('href', '/me/progress')
   } finally {
     // Не маскируем исходное падение шага вторичной ошибкой teardown, если

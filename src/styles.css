@@ -515,11 +515,18 @@ p { margin: 6px 0 }
 .summary.done-summary strong { font-size: 15px }
 .summary.done-summary-3 { grid-template-columns: repeat(3, 1fr) }
 .summary.done-summary-3 strong { font-size: 14px }
-.workout-completion { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; padding: 17px; border: 1px solid var(--success-border); border-radius: 18px; background: var(--success-surface); box-shadow: var(--shadow-card) }
-.workout-completion-mark { flex: 0 0 auto; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 16px; color: var(--success-fg); background: var(--success-mark-surface); font-size: 27px; font-weight: var(--weight-bold) }
+.workout-completion { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 22px; padding: 17px; border: 1px solid var(--success-border); border-radius: 18px; background: var(--success-surface); box-shadow: var(--shadow-card) }
+.workout-completion-mark { flex: 0 0 auto; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 16px; color: var(--success-fg); background: var(--success-mark-surface) }
+.workout-completion-mark svg { width: 27px; height: 27px; stroke-width: 2 }
+.workout-completion-body { min-width: 0; display: grid; gap: 3px }
 .workout-completion-kicker { color: var(--success-fg); font-size: var(--text-caption); font-weight: var(--weight-bold); letter-spacing: var(--tracking-label); text-transform: uppercase }
 .workout-completion h2 { margin: 2px 0 3px; font-size: var(--text-section) }
 .workout-completion p { margin: 0; color: var(--muted); font-size: var(--text-ui) }
+.workout-completion-record { min-width: 0; display: grid; gap: 2px; margin-top: 3px }
+.workout-completion-record strong { color: var(--success-fg); font-size: var(--text-ui); line-height: var(--leading-snug) }
+.workout-completion-record span { color: var(--fg); font-size: var(--text-body); font-weight: var(--weight-bold) }
+.workout-completion-next { width: fit-content; min-height: 44px; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; color: var(--accent-strong); font-size: var(--text-ui); font-weight: var(--weight-bold); text-decoration: none }
+.workout-completion-next span { font-size: 20px; font-weight: 400 }
 .card-meta { color: var(--muted); font-size: var(--text-caption); margin-top: 2px }
 .card-author { margin: 3px 0 0; color: var(--accent-strong); font-size: var(--text-caption); font-weight: var(--weight-semibold); line-height: var(--leading-snug) }
 /* Список упражнений в карточке тренировки: каждое на строке, комментарий ниже. */

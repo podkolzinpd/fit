@@ -42,6 +42,7 @@ import { RunMetricsFields } from './RunMetricsFields'
 import { parseRunDurationInput, runDistanceKmFromInput, runDistanceLabel, runPaceLabel, type RunDistanceUnit } from '../../shared/run-metrics'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
+import { WorkoutCompletionCard } from './WorkoutCompletionCard'
 import { AddIcon, CloseIcon, HistoryIcon, RecordIcon } from '../../shared/icons'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
@@ -567,6 +568,7 @@ export function WorkoutFormPage() {
 
 export function WorkoutDetailPage() {
   const { workoutId = '' } = useParams(); const navigate = useNavigate(); const location = useLocation(); const queryClient = useQueryClient()
+  const navigationState = location.state as { justCompleted?: boolean; returnTo?: string; firstPlanClient?: { id: string; fullName: string } } | null
   const { actor } = useAuth()
   const showRpe = useRpeDisplay(actor?.userId)
   const [confirm, confirmDialog] = useConfirm()
@@ -576,6 +578,11 @@ export function WorkoutDetailPage() {
   const [rescheduleTime, setRescheduleTime] = useState('')
   const [firstPlanInviteCode, setFirstPlanInviteCode] = useState<string | null>(null)
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
+  const completionRecords = useQuery({
+    queryKey: ['workout-personal-records', workoutId],
+    queryFn: () => workoutsRepository.personalRecords(workoutId),
+    enabled: navigationState?.justCompleted === true && query.data?.status === 'done',
+  })
   useClientRealtime(query.data?.clientId)
   // Этап тренировки: get() отдаёт stageId, название берём из цели клиента.
   const goal = useQuery({ queryKey: ['client-goal', query.data?.clientId], queryFn: () => goalsRepository.get(query.data!.clientId), enabled: Boolean(query.data?.stageId && query.data?.clientId) })
@@ -654,7 +661,6 @@ export function WorkoutDetailPage() {
   const tonnage = workout ? workoutTonnage(workout) : 0
   const sets = workout?.exercises.flatMap((exercise) => exercise.sets) ?? []
   const completedSets = sets.filter((set) => set.confirmedAt).length
-  const navigationState = location.state as { justCompleted?: boolean; returnTo?: string; firstPlanClient?: { id: string; fullName: string } } | null
   const justCompleted = done && navigationState?.justCompleted === true
   const clientMode = actor?.role === 'client'
   const clientOwned = clientMode && workout?.createdBy === actor.userId
@@ -706,14 +712,7 @@ export function WorkoutDetailPage() {
         {firstPlanInvite.error && <p className="error" role="alert">{firstPlanInvite.error.message}</p>}
         <Link className="button secondary wide" to="/today">Перейти на главную</Link>
       </section>}
-      {justCompleted && <section className="workout-completion" aria-labelledby="workout-completion-title">
-        <span className="workout-completion-mark" aria-hidden="true">✓</span>
-        <div>
-          <span className="workout-completion-kicker">Результат сохранён</span>
-          <h2 id="workout-completion-title">Тренировка завершена</h2>
-          <p>{sets.length > 0 ? `Выполнено ${completedSets} из ${sets.length} подходов` : 'Результаты сохранены'}</p>
-        </div>
-      </section>}
+      {justCompleted && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={clientMode} clientId={workout.clientId} />}
       <WorkoutHeader eyebrow={clientMode ? 'ВАША ТРЕНИРОВКА' : 'ТРЕНИРОВКА КЛИЕНТА'} title={clientMode ? 'Ваша тренировка' : workout.clientName} state={detailState}
         statusLabel={statusPresentation?.label}
         meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span>{clientMode && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · только просмотр</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />
