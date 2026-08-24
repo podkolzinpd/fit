@@ -19,6 +19,40 @@ export interface LiveSetRequest extends LiveOperationRequest {
   draft: LiveSetDraft
 }
 
+type ExerciseSource = 'system' | 'custom'
+type MuscleGroup =
+  | 'legs'
+  | 'glutes'
+  | 'chest'
+  | 'back'
+  | 'shoulders'
+  | 'arms'
+  | 'core'
+  | 'cardio'
+  | 'other'
+type InputKind = 'strength' | 'distance' | 'reps' | 'duration'
+
+export interface LiveExerciseSnapshot {
+  customExerciseId: string | null
+  inputKind: InputKind
+  muscleGroup: MuscleGroup
+  name: string
+  ref: string
+  source: ExerciseSource
+}
+
+export interface LiveExerciseRequest extends LiveOperationRequest {
+  exercise: LiveExerciseSnapshot
+}
+
+export interface LiveReorderRequest extends LiveOperationRequest {
+  direction: -1 | 1
+}
+
+export interface LiveCommentRequest extends LiveOperationRequest {
+  comment: string
+}
+
 function record(value: unknown): Record<string, unknown> | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return undefined
@@ -33,6 +67,28 @@ function integer(value: unknown, min: number, max: number): number | undefined {
     && value <= max
     ? value
     : undefined
+}
+
+function enumValue<Value extends string>(
+  value: unknown,
+  allowed: readonly Value[],
+): Value | undefined {
+  return typeof value === 'string' && allowed.includes(value as Value)
+    ? value as Value
+    : undefined
+}
+
+function text(value: unknown, max: number, allowBlank = false): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const normalized = value.trim()
+  if ((!allowBlank && normalized.length === 0) || normalized.length > max) {
+    return undefined
+  }
+  return normalized
+}
+
+function uuid(value: unknown): string | undefined {
+  return typeof value === 'string' && UUID_PATTERN.test(value) ? value : undefined
 }
 
 function metric(
@@ -103,4 +159,73 @@ export function readLiveSetRequest(body: unknown): LiveSetRequest | undefined {
       rpe,
     },
   }
+}
+
+export function readLiveExerciseRequest(
+  body: unknown,
+): LiveExerciseRequest | undefined {
+  const operation = readLiveOperationRequest(body)
+  const input = record(body)
+  const exerciseInput = record(input?.exercise)
+  if (operation === undefined || exerciseInput === undefined) return undefined
+
+  const source = enumValue(exerciseInput.source, ['system', 'custom'] as const)
+  const ref = text(exerciseInput.ref, 300)
+  const name = text(exerciseInput.name, 300)
+  const muscleGroup = enumValue(exerciseInput.muscleGroup, [
+    'legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core',
+    'cardio', 'other',
+  ] as const)
+  const inputKind = enumValue(exerciseInput.inputKind, [
+    'strength', 'distance', 'reps', 'duration',
+  ] as const)
+  const customExerciseId = exerciseInput.customExerciseId === null
+    || exerciseInput.customExerciseId === undefined
+    ? null
+    : uuid(exerciseInput.customExerciseId)
+  if (
+    source === undefined
+    || ref === undefined
+    || name === undefined
+    || muscleGroup === undefined
+    || inputKind === undefined
+    || customExerciseId === undefined
+    || (source === 'custom' && customExerciseId === null)
+    || (source === 'system' && customExerciseId !== null)
+  ) return undefined
+
+  return {
+    ...operation,
+    exercise: {
+      customExerciseId,
+      inputKind,
+      muscleGroup,
+      name,
+      ref,
+      source,
+    },
+  }
+}
+
+export function readLiveReorderRequest(
+  body: unknown,
+): LiveReorderRequest | undefined {
+  const operation = readLiveOperationRequest(body)
+  const input = record(body)
+  if (
+    operation === undefined
+    || (input?.direction !== -1 && input?.direction !== 1)
+  ) return undefined
+  return { ...operation, direction: input.direction }
+}
+
+export function readLiveCommentRequest(
+  body: unknown,
+): LiveCommentRequest | undefined {
+  const operation = readLiveOperationRequest(body)
+  const input = record(body)
+  const comment = text(input?.comment, 5_000, true)
+  return operation === undefined || comment === undefined
+    ? undefined
+    : { ...operation, comment }
 }
