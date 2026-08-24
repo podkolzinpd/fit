@@ -9,6 +9,12 @@ export type AssistantTurnRequest = { conversationId: string; message: string }
 export type AssistantAction = { tool: Tool; status: 'needs_input' | 'proposed'; title: string; description: string; payload: Record<string, unknown> }
 export type AssistantTurnResponse = { reply: string; action: AssistantAction | null }
 
+type AssistantCapability = { title: string; description: string }
+
+// Add a capability here only together with its implemented confirmation handler.
+// This list is the sole source for answers about what the assistant can do.
+const executableCapabilities: readonly AssistantCapability[] = []
+
 class HttpError extends Error {
   constructor(readonly status: number, readonly code: string) { super(code) }
 }
@@ -120,9 +126,50 @@ export function validateAssistantTurnResponse(value: unknown): AssistantTurnResp
   return { reply: value.reply.trim(), action: { tool: tool as Tool, status, title: title.trim(), description: description.trim(), payload } }
 }
 
-function modelPrompt(history: readonly { author: string; content: string }[], clientContext: string, progressContext: string): string {
+export function allowsAssistantAction(message: string): boolean {
+  const normalized = normalizeAssistantMessage(message)
+  const words = normalized.split(' ')
+  const command = words.some((word) => [
+    'добавь', 'добавить', 'создай', 'создать', 'заведи', 'завести', 'составь', 'составить',
+    'запиши', 'записать', 'зафиксируй', 'зафиксировать', 'назначь', 'назначить',
+    'запланируй', 'запланировать', 'покажи', 'сформируй', 'сформировать', 'подготовь', 'подготовить',
+  ].includes(word))
+  const applicationObject = words.some((word) => [
+    'клиент', 'тренировк', 'программ', 'план', 'расписани', 'прогресс', 'сводк', 'подход', 'упражнен',
+  ].some((stem) => word.startsWith(stem)))
+  return command && applicationObject
+}
+
+function normalizeAssistantMessage(message: string): string {
+  return message
+    .toLocaleLowerCase('ru-RU')
+    .replaceAll('ё', 'е')
+    .replace(/[^\p{L}\s]/gu, ' ')
+    .trim()
+    .replace(/\s+/g, ' ')
+}
+
+export function isAssistantCapabilityQuestion(message: string): boolean {
+  const normalized = normalizeAssistantMessage(message)
+  const asksQuestion = normalized.includes('что') || normalized.includes('какие') || normalized.includes('чем') || normalized.includes('как')
+  const asksAboutCapabilities = ['уме', 'мож', 'функц', 'возможност', 'помощ'].some((stem) => normalized.includes(stem))
+  return asksQuestion && asksAboutCapabilities
+}
+
+export function assistantCapabilitiesReply(): string {
+  if (executableCapabilities.length === 0) return 'Пока я не выполняю действий в приложении. Могу только коротко пообщаться.'
+  return `Сейчас я могу:\n${executableCapabilities.map((capability) => `• ${capability.title} — ${capability.description}`).join('\n')}`
+}
+
+function modelPrompt(history: readonly { author: string; content: string }[], clientContext: string, progressContext: string, shortChat: boolean): string {
+  if (shortChat) return [
+    'Ты дружелюбная, но очень краткая болталка фитнес-приложения. Отвечай по-русски не более чем двумя короткими предложениями.',
+    'Всегда возвращай action=null. Не перечисляй функции приложения и не обещай выполнить действие.',
+    `Недавняя история:\n${history.slice(-6).map((entry) => `${entry.author === 'user' ? 'Пользователь' : 'Ассистент'}: ${entry.content}`).join('\n')}`,
+  ].join('\n\n')
   return [
     'Ты ассистент фитнес-приложения. Отвечай по-русски, кратко и доброжелательно.',
+    'Возвращай action=null по умолчанию: для приветствий, разговорных реплик, вопросов о твоих возможностях и любых общих вопросов. Карточка действия допустима только когда пользователь явно просит выполнить или подготовить конкретную функцию приложения.',
     'Ты можешь только уточнить запрос или предложить одно типизированное действие из schema. Никогда не утверждай, что запись уже создана, тренировка сохранена или расписание изменено.',
     'Для программы сначала собери цель, опыт, ограничения и доступные дни. Не давай медицинских диагнозов; при рисках направляй к специалисту.',
     'Для write-действия верни status=needs_input или proposed. Сводка прогресса — read-only. Не выдумывай факты о клиенте.',
@@ -141,6 +188,18 @@ export async function runAssistantTurn(authorization: string, command: Assistant
     .select('id,owner_id').eq('id', command.conversationId).maybeSingle()
   if (conversationError) throw new HttpError(503, 'history_unavailable')
   if (!conversation || conversation.owner_id !== user.id) throw new HttpError(404, 'conversation_not_found')
+
+  const userInsert = await service.from('assistant_messages').insert({ conversation_id: command.conversationId, author: 'user', content: command.message })
+  if (userInsert.error) throw new HttpError(503, 'history_unavailable')
+  if (isAssistantCapabilityQuestion(command.message)) {
+    const result: AssistantTurnResponse = { reply: assistantCapabilitiesReply(), action: null }
+    const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({
+      conversation_id: command.conversationId, author: 'assistant', content: result.reply, action: null,
+    }).select('id').single()
+    if (assistantInsertError || !assistantMessage?.id) throw new HttpError(503, 'history_unavailable')
+    console.info('assistant_capabilities_reply_persisted')
+    return result
+  }
 
   const { data: clients, error: clientsError } = await service.from('clients')
     .select('id,full_name,goal,age_years,height_cm,gender').eq('trainer_id', user.id).is('archived_at', null).order('full_name').limit(50)
@@ -162,8 +221,6 @@ export async function runAssistantTurn(authorization: string, command: Assistant
     `${namesById.get(summary.clientId) ?? summary.clientId}; ${summary.periodStart}—${summary.periodEnd}: ${summary.summary.slice(0, 1_500)}`,
   ).join('\n')
 
-  const userInsert = await service.from('assistant_messages').insert({ conversation_id: command.conversationId, author: 'user', content: command.message })
-  if (userInsert.error) throw new HttpError(503, 'history_unavailable')
   const { data: rows, error: historyError } = await service.from('assistant_messages')
     .select('author,content').eq('conversation_id', command.conversationId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(20)
   if (historyError) throw new HttpError(503, 'history_unavailable')
@@ -178,8 +235,8 @@ export async function runAssistantTurn(authorization: string, command: Assistant
       headers: { 'content-type': 'application/json', authorization: `Bearer ${iamToken}` },
       body: JSON.stringify({
         modelUri: `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`,
-        completionOptions: { stream: false, temperature: 0.2, maxTokens: '1200' }, jsonSchema: { schema },
-        messages: [{ role: 'user', text: modelPrompt(history, clientContext, progressContext) }],
+        completionOptions: { stream: false, temperature: 0.2, maxTokens: allowsAssistantAction(command.message) ? '1200' : '120' }, jsonSchema: { schema },
+        messages: [{ role: 'user', text: modelPrompt(history, clientContext, progressContext, !allowsAssistantAction(command.message)) }],
       }),
     })
   } catch (error) {
@@ -197,8 +254,12 @@ export async function runAssistantTurn(authorization: string, command: Assistant
   } catch {
     throw new HttpError(502, 'orchestrator_invalid_response')
   }
-  const result = validateAssistantTurnResponse(raw)
-  if (!result) throw new HttpError(502, 'orchestrator_invalid_response')
+  const modelResult = validateAssistantTurnResponse(raw)
+  if (!modelResult) throw new HttpError(502, 'orchestrator_invalid_response')
+  const result = allowsAssistantAction(command.message)
+    ? modelResult
+    : { ...modelResult, action: null }
+  if (modelResult.action !== null && result.action === null) console.info('assistant_action_suppressed_for_small_talk')
   const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({
     conversation_id: command.conversationId, author: 'assistant', content: result.reply, action: result.action,
   }).select('id').single()

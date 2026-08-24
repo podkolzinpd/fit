@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { readAssistantTurnRequest, validateAssistantTurnResponse } from './index.js'
+import { allowsAssistantAction, assistantCapabilitiesReply, isAssistantCapabilityQuestion, readAssistantTurnRequest, validateAssistantTurnResponse } from './index.js'
 
 describe('assistant orchestrator contract', () => {
   it('accepts only bounded conversation turns', () => {
@@ -11,5 +11,20 @@ describe('assistant orchestrator contract', () => {
     expect(validateAssistantTurnResponse({ reply: 'Нужны уточнения', action: { tool: 'delete_everything', status: 'applied', title: 'x', description: 'x', payload: {} } })).toBeUndefined()
     const validResponse = validateAssistantTurnResponse({ reply: 'Нужны дни и ограничения', action: { tool: 'create_program_draft', status: 'needs_input', title: 'Черновик программы', description: 'Уточню данные', payload: { fields: ['Цель'] } } })
     expect(validResponse?.action?.tool).toBe('create_program_draft')
+  })
+
+  it('allows action cards only for explicit application commands', () => {
+    expect(allowsAssistantAction('привет?')).toBe(false)
+    expect(allowsAssistantAction('Что ты умеешь')).toBe(false)
+    expect(allowsAssistantAction('какие функции вообще есть?')).toBe(false)
+    expect(allowsAssistantAction('Привет, составь программу')).toBe(true)
+    expect(allowsAssistantAction('Добавь нового клиента')).toBe(true)
+  })
+
+  it('answers capability questions from the executable capability registry', () => {
+    expect(isAssistantCapabilityQuestion('что ты умеешь?')).toBe(true)
+    expect(isAssistantCapabilityQuestion('какие функции вообще есть?')).toBe(true)
+    expect(isAssistantCapabilityQuestion('привет')).toBe(false)
+    expect(assistantCapabilitiesReply()).toBe('Пока я не выполняю действий в приложении. Могу только коротко пообщаться.')
   })
 })

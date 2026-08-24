@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-24
-Проверенный базовый `main`: `df67b2b` (`YAFIT-361: исправить статистику упражнений с собственным весом (#541)`)
+Проверенный базовый `main`: `ce5101c` (`fix(assistant): pin deployed Lockbox version (#550)`)
 
 ## Активное изменение
 
@@ -72,7 +72,7 @@
 
 - Локальный Yandex PostgreSQL 17 применяет `000014`; 21 интеграционный
   actor/RLS-тест зелёный, включая cross-tenant и идемпотентность.
-- API gate зелёный: lint, TypeScript, 138 unit/API-тестов и production build;
+- API gate зелёный: lint, TypeScript, 140 unit/API-тестов и production build;
   12 frontend repository tests и 43 infra/workflow policy tests зелёные.
 - Полный root `npm run check`, `npm run db:reset` и `npm run db:test`
   зелёные; stage delivery `000014` ожидает merge.
