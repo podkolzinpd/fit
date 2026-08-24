@@ -32,6 +32,23 @@ describe('parseQuickWorkoutEntry', () => {
     expect(result.parsed[0]?.sets).toHaveLength(3)
   })
 
+  it('распознаёт жим гантелей на наклонной скамье и сохраняет оборудование и значения', () => {
+    const result = parseQuickWorkoutEntry('Жим гантелей на наклонной скамье 3 по 10 70кг', SYSTEM_EXERCISE_CATALOG)
+
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed[0]).toMatchObject({ exercise: { ref: 'fedb-incline-dumbbell-press', equipmentRef: 'dumbbell' } })
+    expect(result.parsed[0]?.sets).toEqual(Array.from({ length: 3 }, (_, position) => ({ position, weightKg: 70, reps: 10 })))
+  })
+
+  it('не смешивает явно названные гантели и штангу в наклонном жиме', () => {
+    const dumbbells = parseQuickWorkoutEntry('Жим гантелей на наклонной скамье 3 по 10 70 кг', SYSTEM_EXERCISE_CATALOG)
+    const barbell = parseQuickWorkoutEntry('Жим на наклонной со штангой 3 по 10 70 кг', SYSTEM_EXERCISE_CATALOG)
+
+    expect(dumbbells.parsed[0]?.exercise.ref).toBe('fedb-incline-dumbbell-press')
+    expect(dumbbells.parsed[0]?.exercise.equipmentRef).toBe('dumbbell')
+    expect(barbell.parsed[0]?.exercise.equipmentRef).toBe('barbell')
+  })
+
   it('понимает разговорные названия тренажёров и не смешивает их с похожими движениями', () => {
     const cases = [
       ['хак присед 3×10 80 кг', 'fedb-hack-squat'],

@@ -1,6 +1,6 @@
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { exercisesRepository, type WorkoutParseResponse } from '../../data/repositories/exercises.repository'
-import { parseQuickWorkoutEntry, splitWorkoutText, type ParsedWorkoutExercise } from './quick-workout-entry'
+import { matchesExplicitWorkoutEquipment, parseQuickWorkoutEntry, splitWorkoutText, workoutCandidates, type ParsedWorkoutExercise } from './quick-workout-entry'
 
 export async function parseWorkoutWithLlm(text: string, catalog: readonly ExerciseSnapshot[]) {
   // Сначала отделяем однозначно найденные упражнения. Это даёт LLM и
@@ -10,7 +10,7 @@ export async function parseWorkoutWithLlm(text: string, catalog: readonly Exerci
   const local = localWorkoutParse(preparedText, catalog)
   try {
     const remote = await exercisesRepository.parseWorkout(preparedText, catalog.filter((exercise) => exercise.source === 'system'))
-    return mergeWorkoutParse(remote, local)
+    return mergeWorkoutParse(remote, local, catalog)
   } catch (error) {
     // Явные названия и числовые значения не должны пропадать только из-за
     // временной ошибки или нестандартного ответа модели. Не угадываем:
@@ -54,7 +54,7 @@ function localWorkoutParse(text: string, catalog: readonly ExerciseSnapshot[]): 
  * LLM выбирает упражнение и разбирает свободную речь, а локальный парсер
  * гарантирует явно названные числа независимо от их порядка во фразе.
  */
-export function mergeWorkoutParse(remote: WorkoutParseResponse, local: WorkoutParseResponse): WorkoutParseResponse {
+export function mergeWorkoutParse(remote: WorkoutParseResponse, local: WorkoutParseResponse, catalog?: readonly ExerciseSnapshot[]): WorkoutParseResponse {
   const remainingLocal = [...local.items]
   const items = remote.items.map((item) => {
     const key = sourceKey(item.sourceText)
@@ -73,14 +73,33 @@ export function mergeWorkoutParse(remote: WorkoutParseResponse, local: WorkoutPa
     }
   }).concat(remainingLocal)
 
-  const resolvedSources = new Set(items.map((item) => sourceKey(item.sourceText)))
+  const byRef = catalog ? new Map(catalog.map((exercise) => [exercise.ref, exercise])) : null
+  const rejectedItems = byRef ? items.filter((item) => {
+    const exercise = byRef.get(item.exerciseRef)
+    return Boolean(exercise && !matchesExplicitWorkoutEquipment(item.sourceText, exercise))
+  }) : []
+  const safeItems = rejectedItems.length ? items.filter((item) => !rejectedItems.includes(item)) : items
+  const resolvedSources = new Set(safeItems.map((item) => sourceKey(item.sourceText)))
   const unmatched = remote.unmatched
     .filter((item) => !resolvedSources.has(sourceKey(item.sourceText)))
     .concat(local.unmatched.filter((item) => {
       const key = sourceKey(item.sourceText)
       return !resolvedSources.has(key) && !remote.unmatched.some((candidate) => sourceKey(candidate.sourceText) === key)
     }))
-  return { items, unmatched }
+  const unmatchedSources = new Set(unmatched.map((item) => sourceKey(item.sourceText)))
+  for (const item of rejectedItems) {
+    const key = sourceKey(item.sourceText)
+    if (unmatchedSources.has(key)) continue
+    unmatched.push({
+      sourceText: item.sourceText,
+      reason: 'Нужно уточнить оборудование',
+      suggestedExerciseRefs: catalog
+        ? workoutCandidates(item.sourceText, catalog).filter((exercise) => matchesExplicitWorkoutEquipment(item.sourceText, exercise)).map((exercise) => exercise.ref).slice(0, 4)
+        : [],
+    })
+    unmatchedSources.add(key)
+  }
+  return { items: safeItems, unmatched }
 }
 
 function formatSet(set: WorkoutParseResponse['items'][number]['sets'][number]): string {

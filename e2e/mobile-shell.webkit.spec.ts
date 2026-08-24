@@ -81,19 +81,27 @@ test('iPhone: поля бега не перекрываются в быстро�
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
-        items: [{
-          sourceText: 'Бег',
-          exerciseRef: 'running',
-          confidence: 1,
-          sets: [],
-        }],
+        items: [
+          {
+            sourceText: 'Бег',
+            exerciseRef: 'running',
+            confidence: 1,
+            sets: [],
+          },
+          {
+            sourceText: 'Жим лёжа 3×8 — 80 кг',
+            exerciseRef: 'bench-press',
+            confidence: 1,
+            sets: [{ weightKg: 80, reps: 8 }],
+          },
+        ],
         unmatched: [],
       }),
     })
   })
 
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
-  await page.getByLabel('Тренировка').fill('Бег')
+  await page.getByLabel('Тренировка').fill('Бег\nЖим лёжа 3×8 — 80 кг')
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
   await page.getByText('Добавить значения', { exact: true }).click()
@@ -129,6 +137,13 @@ test('iPhone: поля бега не перекрываются в быстро�
   await expect(unit.locator('option:checked')).toHaveText('м')
   await unit.selectOption('km')
   await expect(unit.locator('option:checked')).toHaveText('км')
+  await expectNoHorizontalOverflow(page)
+  await page.getByRole('button', { name: 'Изменить порядок' }).click()
+  await page.getByRole('button', { name: /Переместить блок «Жим лёжа.*вверх/ }).click()
+  await expect(page.locator('.today-exercise-title strong').first()).toContainText('Жим лёжа')
+  await expect(page.getByRole('button', { name: 'Далее' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Готово' }).click()
+  await expect(page.getByRole('button', { name: 'Далее' })).toBeVisible()
   await expectNoHorizontalOverflow(page)
   await page.screenshot({ path: testInfo.outputPath('running-review.png'), fullPage: true })
 })
@@ -597,7 +612,7 @@ async function confirmCurrentSet(page: Page) {
   await currentRound(page).getByRole('button', { name: 'Готово, отдых' }).first().click()
 }
 
-async function openReviewWithFixture(page: import('@playwright/test').Page) {
+async function openReviewWithFixture(page: import('@playwright/test').Page, pathname = '/today') {
   // Изолированная тестовая заглушка: не меняет LLM-клиент, промпт или обработку ошибок
   // в приложении, но стабильно создаёт самый плотный экран «Проверьте тренировку».
   await page.route('**/functions/v1/parse-workout', async (route) => {
@@ -618,11 +633,36 @@ async function openReviewWithFixture(page: import('@playwright/test').Page) {
       }),
     })
   })
-  await page.goto('/today')
+  await page.goto(pathname)
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await page.getByLabel('Тренировка').fill('Жим лёжа (Штанга) 3×8 — 80 кг')
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+}
+
+for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {
+  test(`iPhone: проверка тренировки клиента восстанавливает полную высоту после клавиатуры на ${viewport.width} px`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await login(page, 'client@fit.local')
+    await openReviewWithFixture(page, '/me')
+
+    const frame = page.locator('.phone-frame')
+    const content = page.locator('.content')
+    const firstWeight = page.getByLabel('Жим лёжа (Штанга): вес, подход 1')
+    await firstWeight.focus()
+    await frame.evaluate((element) => element.classList.add('keyboard-open'))
+    await firstWeight.blur()
+    await frame.evaluate((element) => element.classList.remove('keyboard-open'))
+
+    const frameBox = await frame.boundingBox()
+    expect(frameBox).not.toBeNull()
+    expect(frameBox!.y).toBe(0)
+    expect(frameBox!.height).toBe(viewport.height)
+    await page.getByRole('button', { name: 'Далее' }).scrollIntoViewIfNeeded()
+    await expect(page.getByRole('button', { name: 'Далее' })).toBeInViewport()
+    expect(await content.evaluate((element) => element.clientHeight > 0 && element.scrollHeight >= element.clientHeight)).toBe(true)
+    await expectNoHorizontalOverflow(page)
+  })
 }
 
 for (const viewport of mobileViewports) {
@@ -849,9 +889,13 @@ test('iPhone: планирование из карточки спортсмен�
   await expect(page.locator('.workout-header-meta')).toContainText('Анна Смирнова')
   await expect(page.getByLabel('Клиент')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'План', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  const workoutDate = page.locator('input[name="date"]')
+  await workoutDate.fill('2026-09-15')
   await page.screenshot({ path: testInfo.outputPath('workout-planning-top-390.png') })
   await page.getByRole('button', { name: 'Завершённая', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Завершённая', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(workoutDate).toHaveValue('2026-09-15')
+  await expect(workoutDate).not.toHaveAttribute('max')
   await page.getByRole('button', { name: 'План', exact: true }).click()
   await expect(page.getByLabel('Окончание')).toHaveCount(0)
   await page.getByRole('button', { name: 'Добавить время окончания' }).click()
@@ -1084,7 +1128,7 @@ test('iPhone: live-меню остаётся непрозрачным и не у
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: частично завершённая тренировка помечена на 390 px', async ({ page }, testInfo) => {
+test('iPhone: частично завершённая тренировка помечена на 390 и 430 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const clientName = await createIsolatedClient(page, testInfo)
   await page.goto('/workouts/new')
@@ -1122,6 +1166,9 @@ test('iPhone: частично завершённая тренировка по�
   const deleteWorkout = page.getByRole('menuitem', { name: 'Удалить тренировку' })
   await expect(deleteWorkout).toHaveClass(/danger/)
   await page.screenshot({ path: testInfo.outputPath('workout-detail-overflow-390.png'), fullPage: true })
+  await page.setViewportSize({ width: 430, height: 932 })
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('workout-detail-overflow-430.png'), fullPage: true })
   await deleteWorkout.click()
   const deleteConfirmation = page.getByRole('alertdialog', { name: 'Удалить тренировку?' })
   await expect(deleteConfirmation).toBeVisible()

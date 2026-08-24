@@ -165,6 +165,15 @@ test('today: быстрый старт ведёт к единому выбору
   await expect(page.getByText('Упражнение удалено', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Отменить' }).click()
   await expect(page.locator('.today-exercise')).toHaveCount(2)
+  await page.getByRole('button', { name: 'Изменить порядок' }).click()
+  await expect(page.getByRole('button', { name: 'Добавить упражнение' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Далее' })).toHaveCount(0)
+  await page.getByRole('button', { name: /Переместить блок «Планка.*» вверх/ }).click()
+  await expect(page.locator('.today-exercise').first()).toContainText('Планка')
+  await page.getByRole('button', { name: /Переместить блок «Планка.*» вниз/ }).click()
+  await expect(page.locator('.today-exercise').first()).toContainText('Присед со штангой')
+  await page.getByRole('button', { name: 'Готово' }).click()
+  await expect(page.getByRole('button', { name: 'Далее' })).toBeVisible()
   await expect(page.getByLabel('Имя нового клиента')).toHaveCount(0)
   await page.getByRole('button', { name: 'Далее' }).click()
   await expect(page.getByRole('heading', { name: 'Сохраните тренировку' })).toBeVisible()
@@ -246,7 +255,7 @@ test('today: беговая ветка сразу добавляет интер�
   await expect(page.locator('.block-badge')).toContainText('Интервалы · 6 кр.')
 })
 
-test('создание из календаря: завершённая тренировка не остаётся в будущем', async ({ page }) => {
+test('создание из календаря: завершённая тренировка сохраняет выбранную будущую дату', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -257,9 +266,8 @@ test('создание из календаря: завершённая трен�
   const date = page.locator('input[name="date"]')
   await expect(date).toHaveValue('2099-01-01')
   await page.getByRole('button', { name: 'Завершённая' }).click()
-  const maxDate = await date.getAttribute('max')
-  expect(maxDate).not.toBeNull()
-  await expect(date).toHaveValue(maxDate!)
+  await expect(date).not.toHaveAttribute('max')
+  await expect(date).toHaveValue('2099-01-01')
 })
 
 test('today: quick review наследует настройку RPE тренера', async ({ page }) => {

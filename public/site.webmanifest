@@ -1,11 +1,14 @@
 {
   "name": "Fit",
   "short_name": "Fit",
-  "description": "Рабочее приложение тренера",
+  "description": "Тренировки, планы и прогресс для спортсмена и тренера",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#17151d",
-  "theme_color": "#7457ff",
+  "background_color": "#f7f4ef",
+  "theme_color": "#f7f4ef",
+  "scope": "/",
+  "lang": "ru",
+  "categories": ["fitness", "health", "sports"],
   "icons": [
     {
       "src": "/icon-192.png",

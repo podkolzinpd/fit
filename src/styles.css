@@ -515,11 +515,18 @@ p { margin: 6px 0 }
 .summary.done-summary strong { font-size: 15px }
 .summary.done-summary-3 { grid-template-columns: repeat(3, 1fr) }
 .summary.done-summary-3 strong { font-size: 14px }
-.workout-completion { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; padding: 17px; border: 1px solid var(--success-border); border-radius: 18px; background: var(--success-surface); box-shadow: var(--shadow-card) }
-.workout-completion-mark { flex: 0 0 auto; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 16px; color: var(--success-fg); background: var(--success-mark-surface); font-size: 27px; font-weight: var(--weight-bold) }
+.workout-completion { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 22px; padding: 17px; border: 1px solid var(--success-border); border-radius: 18px; background: var(--success-surface); box-shadow: var(--shadow-card) }
+.workout-completion-mark { flex: 0 0 auto; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 16px; color: var(--success-fg); background: var(--success-mark-surface) }
+.workout-completion-mark svg { width: 27px; height: 27px; stroke-width: 2 }
+.workout-completion-body { min-width: 0; display: grid; gap: 3px }
 .workout-completion-kicker { color: var(--success-fg); font-size: var(--text-caption); font-weight: var(--weight-bold); letter-spacing: var(--tracking-label); text-transform: uppercase }
 .workout-completion h2 { margin: 2px 0 3px; font-size: var(--text-section) }
 .workout-completion p { margin: 0; color: var(--muted); font-size: var(--text-ui) }
+.workout-completion-record { min-width: 0; display: grid; gap: 2px; margin-top: 3px }
+.workout-completion-record strong { color: var(--success-fg); font-size: var(--text-ui); line-height: var(--leading-snug) }
+.workout-completion-record span { color: var(--fg); font-size: var(--text-body); font-weight: var(--weight-bold) }
+.workout-completion-next { width: fit-content; min-height: 44px; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; color: var(--accent-strong); font-size: var(--text-ui); font-weight: var(--weight-bold); text-decoration: none }
+.workout-completion-next span { font-size: 20px; font-weight: 400 }
 .card-meta { color: var(--muted); font-size: var(--text-caption); margin-top: 2px }
 .card-author { margin: 3px 0 0; color: var(--accent-strong); font-size: var(--text-caption); font-weight: var(--weight-semibold); line-height: var(--leading-snug) }
 /* Список упражнений в карточке тренировки: каждое на строке, комментарий ниже. */
@@ -655,8 +662,37 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .stage-hint { font-size: 12px; margin: 0 }
 .stage-tag { font-size: 12px; font-weight: 600; color: var(--accent-weak); margin-top: 4px }
 .menu { display: flex; flex-direction: column; margin: 22px 0; border-block: 1px solid var(--border) }
-.menu a { padding: 15px 4px; text-decoration: none; border-bottom: 1px solid var(--border) }.menu a:last-child { border-bottom: 0 }
+.menu a, .menu > button { min-height: 52px; display: flex; align-items: center; justify-content: flex-start; padding: 15px 4px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; color: var(--fg); font: inherit; text-align: left; text-decoration: none; box-shadow: none }.menu > :last-child { border-bottom: 0 }
 .profile-settings { margin: 20px 0 22px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-card) }
+.app-feedback-card { display: grid; gap: var(--space-4); margin: 0 0 var(--space-4); padding: var(--card-padding); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-card) }
+.app-feedback-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3) }
+.app-feedback-head .eyebrow, .app-feedback-sent .eyebrow { margin: 0 0 var(--space-1) }
+.app-feedback-head h2, .app-feedback-sent h2 { margin: 0; font-size: var(--type-section-size); line-height: var(--leading-snug) }
+.app-feedback-head .link { min-height: 40px; flex: 0 0 auto; padding: var(--space-2) 0 }
+.app-feedback-kinds { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-sunken) }
+.app-feedback-kinds button { min-height: 42px; padding: var(--space-2); border: 0; border-radius: calc(var(--radius-md) - 4px); background: transparent; color: var(--muted); font-size: var(--type-caption-size); font-weight: var(--weight-bold); box-shadow: none }
+.app-feedback-kinds button.active { background: var(--surface-raised); color: var(--fg); box-shadow: var(--shadow-soft) }
+.app-feedback-card textarea { min-height: 122px; resize: vertical; background: var(--surface-sunken) }
+.app-feedback-card .field { position: relative }
+.app-feedback-counter { justify-self: end; margin-top: calc(-1 * var(--space-1)); color: var(--muted); font-size: var(--type-caption-size) }
+.app-feedback-context, .app-feedback-sent > p:not(.eyebrow) { margin: 0; color: var(--muted); font-size: var(--type-caption-size); line-height: var(--leading-body) }
+.app-feedback-card .save-status { margin: 0 }
+.app-feedback-card .actions { margin: 0 }
+.app-feedback-sent .secondary { justify-self: start; min-height: var(--control-height-standard) }
+.app-install-card { display:grid; gap:var(--space-4); margin:0 0 var(--space-4); padding:var(--card-padding); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); box-shadow:var(--shadow-card) }
+.app-install-card.compact { gap:var(--space-3); margin:0; padding:16px; box-shadow:none }
+.app-install-card.compact > div:first-child { display:grid; gap:3px }
+.app-install-card .eyebrow { margin:0 0 var(--space-1) }
+.app-install-card h2 { margin:0; font-size:var(--type-section-size); line-height:var(--leading-snug) }
+.app-install-card p { margin:0 }
+.app-install-card.compact > div:first-child > p:last-child, .app-install-copy { color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.app-install-head { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-3) }
+.app-install-head .link { min-height:40px; flex:0 0 auto; padding:var(--space-2) 0 }
+.app-install-steps { display:grid; gap:var(--space-2); margin:0; padding-left:22px; color:var(--fg); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.app-install-actions { display:flex; align-items:center; gap:var(--space-3) }
+.app-install-actions .secondary { flex:1; min-height:var(--control-height-standard) }
+.app-install-actions .link { flex:0 0 auto; min-height:var(--control-height-standard) }
+.app-install-success { padding:var(--space-3); border:1px solid var(--success-border); border-radius:var(--radius-md); color:var(--success-fg); background:var(--success-surface); font-weight:var(--weight-semibold) }
 .join-page .page-header { margin-bottom:18px; }.join-card { display:grid; gap:20px; max-width:520px; margin:4px auto 0; padding:20px; border:1px solid var(--border); border-radius:22px; background:var(--surface-raised); box-shadow:var(--shadow-card); }.join-card-head { display:grid; gap:7px; }.join-card-head .eyebrow { margin:0; }.join-card-head h2 { margin:0; font-size:26px; line-height:1.13; letter-spacing:var(--tracking-tight); }.join-card-head > p:last-child { margin:0; color:var(--muted); font-size:15px; line-height:1.42; }.join-form { padding:0; border:0; background:transparent; }.join-form input { min-height:52px; border-radius:15px; background:var(--surface-sunken); font-size:18px; letter-spacing:.06em; text-transform:uppercase; }.join-form button { min-height:52px; border-radius:16px; font-size:17px; font-weight:800; }.join-state { min-height:220px; }
 .switch-row { position: relative; min-height: 58px; display: flex; align-items: center; gap: 14px; padding: 13px 14px; cursor: pointer; -webkit-tap-highlight-color: transparent }
 .switch-row + .switch-row { border-top: 1px solid var(--border) }
@@ -2032,6 +2068,14 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .catalog-system-section .chips { max-height: 320px; overflow-y: auto; margin: 0; padding: 0 16px 16px; border-top: 1px solid var(--border) }
 .theme-light .catalog-custom-section, .theme-light .catalog-system-section { background: #fffefc }
 .today-exercise { display:grid; }.today-exercise.planned-exercise { padding:10px 0 12px; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none; }.today-exercise-title { display:flex; align-items:center; justify-content:space-between; gap:12px; }.today-exercise-editor { display:grid; gap:7px; padding-top:7px; }.today-exercise-editor summary { color:var(--accent-strong); font-weight:750; cursor:pointer; }.today-exercise-actions { display:flex; align-items:center; gap:12px; }.today-exercise-actions .link { min-height:30px; padding:2px 0; color:var(--muted); font-size:13px; }.today-exercise-actions .link:last-child { color:var(--accent-strong); }.today-set-list { display:grid; gap:0; }.today-set-editor { align-items:center; }.today-set-editor > label { display:contents; }.today-set-editor .planned-set-input, .today-set-editor .planned-set-rpe { width:100%; }.today-add-set { justify-self:start; }
+.today-review-order-toolbar { min-height:var(--tap); display:flex; align-items:center; justify-content:flex-end; margin-top:-4px; }
+.today-review-order-toolbar > .link { min-height:var(--tap); padding:6px 0; color:var(--accent-strong); font-size:14px; font-weight:750; }
+.today-review-order-toolbar .reorder-mode { width:100%; min-height:var(--tap); justify-content:space-between; padding:7px 12px; }
+.today-review-block { display:grid; gap:10px; }
+.today-exercise-list.is-reordering { gap:6px; }
+.today-exercise-list.is-reordering .today-review-block { gap:0; }
+.today-exercise-list.is-reordering .today-exercise.planned-exercise { min-height:68px; padding:10px 0; }
+.today-review-order-buttons .reorder-btn { width:var(--tap); height:var(--tap); border-radius:12px; font-size:18px; }
 .today-parse-error { display:grid; gap:5px; margin:12px 0; padding:12px 14px; border:1px solid var(--warning-border); border-radius:14px; background:var(--warning-surface); color:var(--fg); }.today-parse-error strong { color:var(--warning-fg); }.today-parse-error span { color:var(--muted); font-size:14px; line-height:1.35; }.today-parse-error .link { justify-self:start; min-height:36px; padding:3px 0; color:var(--accent-strong); font-weight:750; }
 .today-empty-parse { display:grid; gap:3px; padding:12px; border:1px solid var(--accent-surface-border); border-radius:12px; background:var(--accent-surface); }.today-empty-parse span { color:var(--text-muted); font-size:14px; }
 .today-llm-status { margin:8px 0 0; font-size:14px; font-weight:650; }.today-llm-status.loading { color:var(--text-muted); }.today-llm-status.success { color:var(--success-fg); }.today-llm-status.error { color:var(--warning-fg); }
@@ -2040,7 +2084,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Старт — утилитарный экран: обычный iOS-tabbar вплотную к низу, без плавающей
    капсулы и перекрытия поля. На клавиатуре он скрывается через VisualViewport. */
 .today-start-shell .tab-bar { left:50%; bottom:0; width:min(100%, 440px); transform:translateX(-50%); border:0; border-top:1px solid var(--border); border-radius:0; box-shadow:none; }.today-start-shell .content { padding-bottom:calc(86px + env(safe-area-inset-bottom)); }.today-start-shell.keyboard-open .tab-bar { display:none; }.today-start-shell.keyboard-open .content { padding-bottom:20px; }
-@media (max-width: 480px) { html, body, #root { width:100%; height:100%; overflow:hidden }.phone-frame { width: 100%; height: 100dvh; margin: 0; border: 0; border-radius: 0 }.auth-screen { width: 100%; min-height: 100dvh; margin: 0; border: 0; border-radius: 0 }.content:not(.content-immersive) { padding-bottom:0 }.tab-bar { position:static; flex:0 0 auto; bottom:auto; width:100%; border-width:1px 0 0; border-radius:0; box-shadow:none; backdrop-filter:none }.today-start-shell .tab-bar { left:auto; width:100%; transform:none }.today-start-shell .content { padding-bottom:0 } }
+@media (max-width: 480px) { html, body, #root { width:100%; height:100%; min-height:100%; overflow:hidden }.phone-frame { width:100%; height:100%; min-height:0; max-height:100%; margin:0; border:0; border-radius:0 }.auth-screen { width: 100%; min-height: 100%; margin: 0; border: 0; border-radius: 0 }.content:not(.content-immersive) { padding-bottom:0 }.tab-bar { position:static; flex:0 0 auto; bottom:auto; width:100%; border-width:1px 0 0; border-radius:0; box-shadow:none; backdrop-filter:none }.today-start-shell .tab-bar { left:auto; width:100%; transform:none }.today-start-shell .content { padding-bottom:0 } }
 @media (max-width: 480px) { .measurement-actions { grid-template-columns:repeat(2,minmax(0,1fr)) }.measurement-actions .measurement-primary-action { grid-column:1 / -1 }.trainer-measurements-workspace { gap:var(--space-3) } }
 @media (max-width: 480px) { .client-progress-measurement .measurement-actions { grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr) }.client-progress-measurement .measurement-actions .measurement-primary-action { grid-column:auto } }
 @media (max-width: 360px) { .measure-grid { grid-template-columns: 1fr }.inline-form { grid-template-columns: 1fr }.inline-form button { grid-column: 1 }.tab-bar a { font-size: 11px } }
