@@ -6,7 +6,7 @@ resource "yandex_serverless_container" "api" {
   cores              = 1
   core_fraction      = 100
   concurrency        = var.api_concurrency
-  execution_timeout  = "30s"
+  execution_timeout  = var.api_execution_timeout
   service_account_id = yandex_iam_service_account.api.id
   labels             = local.labels
 
@@ -46,6 +46,22 @@ resource "yandex_serverless_container" "api" {
     environment_variable = "DATABASE_PASSWORD"
   }
 
+  dynamic "secrets" {
+    for_each = var.legacy_supabase_bridge_lockbox_secret_id == null ? {} : {
+      SUPABASE_URL              = "SUPABASE_URL"
+      SUPABASE_PUBLISHABLE_KEY  = "SUPABASE_PUBLISHABLE_KEY"
+      SUPABASE_SERVICE_ROLE_KEY = "SUPABASE_SERVICE_ROLE_KEY"
+      YANDEX_CLOUD_API_KEY      = "YANDEX_CLOUD_API_KEY"
+    }
+
+    content {
+      id                   = var.legacy_supabase_bridge_lockbox_secret_id
+      version_id           = var.legacy_supabase_bridge_lockbox_secret_version_id
+      key                  = secrets.value
+      environment_variable = secrets.key
+    }
+  }
+
   log_options {
     folder_id = var.folder_id
     min_level = "INFO"
@@ -56,6 +72,7 @@ resource "yandex_serverless_container" "api" {
     yandex_iam_service_account_iam_member.deployer_self_use,
     yandex_iam_service_account_iam_member.api_deployer,
     yandex_lockbox_secret_iam_member.api_connection_secret_reader,
+    yandex_lockbox_secret_iam_member.legacy_supabase_bridge_reader,
   ]
 }
 

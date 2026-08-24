@@ -130,6 +130,14 @@ resource "yandex_lockbox_secret_iam_member" "api_connection_secret_reader" {
   member    = "serviceAccount:${yandex_iam_service_account.api.id}"
 }
 
+resource "yandex_lockbox_secret_iam_member" "legacy_supabase_bridge_reader" {
+  count = var.legacy_supabase_bridge_lockbox_secret_id == null ? 0 : 1
+
+  secret_id = var.legacy_supabase_bridge_lockbox_secret_id
+  role      = "lockbox.payloadViewer"
+  member    = "serviceAccount:${yandex_iam_service_account.api.id}"
+}
+
 resource "yandex_lockbox_secret_iam_member" "migration_connection_secret_reader" {
   count = var.migration_invoker_member == null ? 0 : 1
 

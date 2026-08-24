@@ -1,15 +1,13 @@
-import { isAssistantNavPilotEnabled } from '../../app/feature-flags'
 import type { SessionActor } from '../../shared/domain'
 
-// Шапка «Сегодня»/«Ассистент» (пилот YAFIT-317). У тренера из allowlist
-// активный верхний таб заменяет заголовок (h1 остаётся для скринридеров),
-// а вход в профиль переезжает в шестерёнку строки табов — аватар из шапки
-// убирается. Вне пилота и для клиента шапка не меняется.
+// Ассистент — дополнительный пункт существующего нижнего таб-бара. Шапка
+// стартового экрана остаётся неизменной для всех ролей и вариантов пилота.
 export function todayHeaderProps(clientMode: boolean, actor: SessionActor | null) {
-  const assistantNav = !clientMode && actor !== null && isAssistantNavPilotEnabled(actor.userId)
+  void clientMode
+  void actor
   return {
-    title: assistantNav ? 'Ассистент' : 'Сегодня',
-    hideTitle: assistantNav,
-    showProfileAvatar: !assistantNav,
+    title: 'Сегодня',
+    hideTitle: false,
+    showProfileAvatar: true,
   }
 }
