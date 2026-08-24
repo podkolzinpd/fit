@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
@@ -26,6 +26,44 @@ async function login(page: import('@playwright/test').Page, email: string) {
 
 async function expectNoHorizontalOverflow(page: import('@playwright/test').Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+}
+
+async function expectMobileShellFillsViewport(page: Page) {
+  const geometry = await page.evaluate(() => {
+    const frame = document.querySelector('.phone-frame')?.getBoundingClientRect()
+    const root = document.querySelector('#root')?.getBoundingClientRect()
+    return {
+      viewportHeight: window.innerHeight,
+      scrollY: window.scrollY,
+      frame: frame ? { top: frame.top, bottom: frame.bottom, height: frame.height } : null,
+      root: root ? { top: root.top, bottom: root.bottom, height: root.height } : null,
+      rootPosition: window.getComputedStyle(document.querySelector('#root')!).position,
+    }
+  })
+  expect(geometry.frame).not.toBeNull()
+  expect(geometry.root).not.toBeNull()
+  expect(geometry.rootPosition).toBe('fixed')
+  expect(Math.abs(geometry.root!.top)).toBeLessThanOrEqual(1)
+  expect(Math.abs(geometry.frame!.top)).toBeLessThanOrEqual(1)
+  expect(Math.abs(geometry.root!.bottom - geometry.viewportHeight)).toBeLessThanOrEqual(1)
+  expect(Math.abs(geometry.frame!.bottom - geometry.viewportHeight)).toBeLessThanOrEqual(1)
+  expect(Math.abs(geometry.frame!.height - geometry.viewportHeight)).toBeLessThanOrEqual(1)
+  expect(geometry.scrollY).toBe(0)
+}
+
+async function recoverMobileShellFromStaleKeyboard(page: Page, input: Locator) {
+  await input.focus()
+  await page.evaluate(() => {
+    document.documentElement.style.setProperty('--app-viewport-height', '508px')
+    document.documentElement.style.setProperty('--app-visible-height', '508px')
+    document.documentElement.classList.add('app-keyboard-open')
+  })
+  await input.blur()
+  await expect.poll(() => page.evaluate(() => ({
+    keyboardClass: document.documentElement.classList.contains('app-keyboard-open'),
+    height: document.documentElement.style.getPropertyValue('--app-viewport-height'),
+  }))).toEqual({ keyboardClass: false, height: `${await page.evaluate(() => window.innerHeight)}px` })
+  await expectMobileShellFillsViewport(page)
 }
 
 async function expectOverflowMenuAboveBars(page: Page) {
@@ -649,10 +687,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
     const frame = page.locator('.phone-frame')
     const content = page.locator('.content')
     const firstWeight = page.getByLabel('Жим лёжа (Штанга): вес, подход 1')
-    await firstWeight.focus()
-    await frame.evaluate((element) => element.classList.add('keyboard-open'))
-    await firstWeight.blur()
-    await frame.evaluate((element) => element.classList.remove('keyboard-open'))
+    await recoverMobileShellFromStaleKeyboard(page, firstWeight)
 
     const frameBox = await frame.boundingBox()
     expect(frameBox).not.toBeNull()
@@ -664,6 +699,16 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
     await expectNoHorizontalOverflow(page)
   })
 }
+
+test('iPhone: форма тренера также восстанавливает оболочку после клавиатуры', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+  await page.goto('/clients/new')
+  await recoverMobileShellFromStaleKeyboard(page, page.getByLabel('Имя'))
+  await page.getByRole('button', { name: 'Сохранить' }).scrollIntoViewIfNeeded()
+  await expect(page.getByRole('button', { name: 'Сохранить' })).toBeInViewport()
+  await expectNoHorizontalOverflow(page)
+})
 
 for (const viewport of mobileViewports) {
   test(`iPhone: основной сценарий не выходит за ширину ${viewport.width} px`, async ({ page }) => {
