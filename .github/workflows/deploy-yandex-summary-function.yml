@@ -107,7 +107,9 @@ jobs:
           else
             lockbox_id=$(printf '%s' "$payload" | yc lockbox secret create --name "$SUMMARY_LOCKBOX_NAME" --folder-id "$YC_FOLDER_ID" --payload - --format json | jq -er '.id')
           fi
+          lockbox_version_id=$(yc lockbox secret get --id "$lockbox_id" --format json | jq -er '.current_version.id')
           echo "SUMMARY_LOCKBOX_ID=$lockbox_id" >> "$GITHUB_ENV"
+          echo "SUMMARY_LOCKBOX_VERSION_ID=$lockbox_version_id" >> "$GITHUB_ENV"
 
       - name: Create runtime identity and grant only required access
         run: |
@@ -147,12 +149,12 @@ jobs:
             --execution-timeout 120s \
             --service-account-id "$SUMMARY_RUNTIME_SA_ID" \
             --source-path .yandex-summary-package \
-            --secret id="$SUMMARY_LOCKBOX_ID",key=SUPABASE_URL,environment-variable=SUPABASE_URL \
-            --secret id="$SUMMARY_LOCKBOX_ID",key=SUPABASE_PUBLISHABLE_KEY,environment-variable=SUPABASE_PUBLISHABLE_KEY \
-            --secret id="$SUMMARY_LOCKBOX_ID",key=SUPABASE_SERVICE_ROLE_KEY,environment-variable=SUPABASE_SERVICE_ROLE_KEY \
-            --secret id="$SUMMARY_LOCKBOX_ID",key=YANDEX_CLOUD_API_KEY,environment-variable=YANDEX_CLOUD_API_KEY \
-            --secret id="$SUMMARY_LOCKBOX_ID",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID \
-            --secret id="$SUMMARY_LOCKBOX_ID",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID \
+            --secret id="$SUMMARY_LOCKBOX_ID",version-id="$SUMMARY_LOCKBOX_VERSION_ID",key=SUPABASE_URL,environment-variable=SUPABASE_URL \
+            --secret id="$SUMMARY_LOCKBOX_ID",version-id="$SUMMARY_LOCKBOX_VERSION_ID",key=SUPABASE_PUBLISHABLE_KEY,environment-variable=SUPABASE_PUBLISHABLE_KEY \
+            --secret id="$SUMMARY_LOCKBOX_ID",version-id="$SUMMARY_LOCKBOX_VERSION_ID",key=SUPABASE_SERVICE_ROLE_KEY,environment-variable=SUPABASE_SERVICE_ROLE_KEY \
+            --secret id="$SUMMARY_LOCKBOX_ID",version-id="$SUMMARY_LOCKBOX_VERSION_ID",key=YANDEX_CLOUD_API_KEY,environment-variable=YANDEX_CLOUD_API_KEY \
+            --secret id="$SUMMARY_LOCKBOX_ID",version-id="$SUMMARY_LOCKBOX_VERSION_ID",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID \
+            --secret id="$SUMMARY_LOCKBOX_ID",version-id="$SUMMARY_LOCKBOX_VERSION_ID",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID \
             --format json)
           echo "SUMMARY_PREVIOUS_VERSION_ID=$previous_version_id" >> "$GITHUB_ENV"
           echo "SUMMARY_CANDIDATE_VERSION_ID=$(jq -er '.id' <<<"$version")" >> "$GITHUB_ENV"
