@@ -1310,6 +1310,9 @@ test('iPhone: прогресс открывается из карточки кл
 })
 
 test('iPhone: сет не ставит отдых внутри круга и не оставляет его после финала', async ({ page }, testInfo) => {
+  // WebKit in the CI container can need longer to create an isolated Auth user
+  // after a retry; this scenario also creates and runs a full grouped workout.
+  test.slow()
   await page.setViewportSize({ width: 390, height: 844 })
   const clientName = await createIsolatedClient(page, testInfo)
   await createGroupedWorkout(page, clientName, 'set')
@@ -1331,6 +1334,7 @@ test('iPhone: сет не ставит отдых внутри круга и н�
 })
 
 test('iPhone: круговая использует отдых между упражнениями и между кругами', async ({ page }, testInfo) => {
+  test.slow()
   await page.setViewportSize({ width: 390, height: 844 })
   const clientName = await createIsolatedClient(page, testInfo)
   await createGroupedWorkout(page, clientName, 'circuit')
