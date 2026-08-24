@@ -50,6 +50,10 @@ import {
   STAGE_SMOKE_PROFILE_ID,
   stageWorkoutFixtureIds,
 } from './stage-workout-fixture.js'
+import {
+  DatabaseStageDatabaseReaderAccessManager,
+  StageDatabaseReaderNotReadyError,
+} from './stage-database-reader-access.js'
 import type { DatabasePool } from './types.js'
 import {
   DatabasePilotEnroller,
@@ -108,6 +112,8 @@ const PILOT_SUBJECT_HASH = 'b'.repeat(64)
 const OUTSIDE_SUBJECT_HASH = 'c'.repeat(64)
 const ENROLLMENT_SUBJECT_HASH = 'e'.repeat(64)
 const RUNTIME_PASSWORD = 'fit-api-test-only'
+const READER_ROLE = 'fit_ops_reader_test'
+const READER_PASSWORD = 'fit-ops-reader-test-only'
 const migrationsDirectory = fileURLToPath(
   new URL('../../db/migrations', import.meta.url),
 )
@@ -477,6 +483,87 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await runtimePool?.end()
       await enrollmentPool?.end()
       await ownerPool?.end()
+    })
+
+    it('grants only curated operational views and revokes them idempotently', async () => {
+      if (ownerPool === undefined || enrollmentPool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      await ownerPool.query(`
+        do $$
+        begin
+          if not exists (
+            select 1 from pg_catalog.pg_roles where rolname = '${READER_ROLE}'
+          ) then
+            create role ${READER_ROLE} login password '${READER_PASSWORD}';
+          else
+            alter role ${READER_ROLE} login password '${READER_PASSWORD}';
+          end if;
+        end
+        $$;
+      `)
+
+      const manager = new DatabaseStageDatabaseReaderAccessManager(enrollmentPool)
+      const readerUrl = new URL(requireLocalTestDatabaseUrl())
+      readerUrl.username = READER_ROLE
+      readerUrl.password = READER_PASSWORD
+      const readerPool = new Pool({ connectionString: readerUrl.toString(), max: 1 })
+
+      try {
+        await manager.setAccess('grant', READER_ROLE)
+        await manager.setAccess('grant', READER_ROLE)
+
+        const visibleProfiles = await readerPool.query(
+          'select id from ops_readonly.profiles where id = $1',
+          [ACTOR_ID],
+        )
+        expect(visibleProfiles.rows).toEqual([{ id: ACTOR_ID }])
+
+        const clientColumns = await readerPool.query<{ column_name: string }>(
+          `
+            select column_name
+            from information_schema.columns
+            where table_schema = 'ops_readonly' and table_name = 'clients'
+            order by ordinal_position
+          `,
+        )
+        expect(clientColumns.rows.map((row) => row.column_name)).toEqual([
+          'id',
+          'trainer_id',
+          'auth_user_id',
+          'archived_at',
+          'version',
+          'created_at',
+          'updated_at',
+        ])
+
+        await expect(readerPool.query('select id from public.profiles'))
+          .rejects.toMatchObject({ code: '42501' })
+        await expect(readerPool.query(
+          'select profile_id from app_private.auth_identities',
+        )).rejects.toMatchObject({ code: '42501' })
+        await expect(readerPool.query(
+          `update ops_readonly.profiles set timezone = 'UTC' where id = $1`,
+          [ACTOR_ID],
+        )).rejects.toMatchObject({ code: '42501' })
+
+        await manager.setAccess('revoke', READER_ROLE)
+        await manager.setAccess('revoke', READER_ROLE)
+        await expect(readerPool.query('select id from ops_readonly.profiles'))
+          .rejects.toMatchObject({ code: '42501' })
+
+        await ownerPool.query(`alter role ${READER_ROLE} bypassrls`)
+        try {
+          await expect(manager.setAccess('grant', READER_ROLE))
+            .rejects.toBeInstanceOf(StageDatabaseReaderNotReadyError)
+        } finally {
+          await ownerPool.query(`alter role ${READER_ROLE} nobypassrls`)
+        }
+      } finally {
+        await readerPool.end()
+        await manager.setAccess('revoke', READER_ROLE)
+        await ownerPool.query(`drop role if exists ${READER_ROLE}`)
+      }
     })
 
     it('exposes the internal UUID through auth.uid only in one transaction', async () => {

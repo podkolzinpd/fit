@@ -9,6 +9,10 @@ import {
   PilotEnrollmentConflictError,
   type PilotEnroller,
 } from './db/yandex-pilot-enrollment.js'
+import {
+  StageDatabaseReaderNotReadyError,
+  type StageDatabaseReaderAccessManager,
+} from './db/stage-database-reader-access.js'
 import { buildMigrationApp } from './migration-app.js'
 
 const apps: ReturnType<typeof buildMigrationApp>[] = []
@@ -44,6 +48,102 @@ describe('migration endpoint', () => {
 
     expect(response.statusCode).toBe(500)
     expect(response.json()).toEqual({ status: 'migration_failed' })
+    expect(response.body).not.toContain('secret')
+  })
+})
+
+describe('stage database reader access', () => {
+  function buildDatabaseAccess(
+    setAccess: StageDatabaseReaderAccessManager['setAccess'] =
+      () => Promise.resolve(),
+  ) {
+    const access = vi.fn(setAccess)
+    const app = buildMigrationApp({
+      databaseReaderAccess: { setAccess: access },
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+    return { access, app }
+  }
+
+  it('does not expose the route unless explicitly enabled', async () => {
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/database-access/readers',
+      payload: { action: 'grant', databaseUsername: 'stage_reader' },
+    })
+
+    expect(response.statusCode).toBe(404)
+  })
+
+  it.each([
+    ['grant', 'access_granted'],
+    ['revoke', 'access_revoked'],
+  ] as const)('applies an idempotent %s request', async (action, status) => {
+    const { access, app } = buildDatabaseAccess()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/database-access/readers',
+      payload: { action, databaseUsername: 'stage.reader-1' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ status })
+    expect(access).toHaveBeenCalledWith(action, 'stage.reader-1')
+    expect(response.body).not.toContain('stage.reader-1')
+  })
+
+  it('rejects malformed requests before touching the database', async () => {
+    const { access, app } = buildDatabaseAccess()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/database-access/readers',
+      payload: { action: 'owner', databaseUsername: 'reader with spaces' },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ status: 'invalid_request' })
+    expect(access).not.toHaveBeenCalled()
+  })
+
+  it('reports a missing or privileged database user without exposing it', async () => {
+    const { app } = buildDatabaseAccess(
+      () => Promise.reject(new StageDatabaseReaderNotReadyError()),
+    )
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/database-access/readers',
+      payload: { action: 'grant', databaseUsername: 'missing_reader' },
+    })
+
+    expect(response.statusCode).toBe(409)
+    expect(response.json()).toEqual({ status: 'database_user_not_ready' })
+    expect(response.body).not.toContain('missing_reader')
+  })
+
+  it('keeps unexpected database failures generic', async () => {
+    const { app } = buildDatabaseAccess(
+      () => Promise.reject(new Error('postgresql://owner:secret@database')),
+    )
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/database-access/readers',
+      payload: { action: 'grant', databaseUsername: 'stage_reader' },
+    })
+
+    expect(response.statusCode).toBe(500)
+    expect(response.json()).toEqual({ status: 'database_access_failed' })
     expect(response.body).not.toContain('secret')
   })
 })

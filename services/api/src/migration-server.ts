@@ -5,6 +5,7 @@ import { runner } from 'node-pg-migrate'
 import { YandexIdentityClient } from './auth/yandex-identity.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
+import { DatabaseStageDatabaseReaderAccessManager } from './db/stage-database-reader-access.js'
 import { DatabaseStageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
 import { DatabasePilotEnroller } from './db/yandex-pilot-enrollment.js'
 import { buildMigrationApp } from './migration-app.js'
@@ -41,7 +42,14 @@ const stageWorkoutFixtureEnabled =
 if (stageWorkoutFixtureEnabled && process.env.APP_ENV !== 'stage') {
   throw new Error('Stage workout fixtures can be enabled only in stage')
 }
-const privateFeaturePool = pilotEnrollmentEnabled || stageWorkoutFixtureEnabled
+const stageDatabaseAccessEnabled =
+  process.env.STAGE_DATABASE_ACCESS_ENABLED === 'true'
+if (stageDatabaseAccessEnabled && process.env.APP_ENV !== 'stage') {
+  throw new Error('Stage database access can be enabled only in stage')
+}
+const privateFeaturePool = pilotEnrollmentEnabled
+  || stageWorkoutFixtureEnabled
+  || stageDatabaseAccessEnabled
   ? new PgDatabasePool(databaseConfig)
   : undefined
 const yandexClientId = process.env.YANDEX_OAUTH_CLIENT_ID
@@ -50,6 +58,12 @@ if (pilotEnrollmentEnabled && yandexClientId === undefined) {
 }
 
 const app = buildMigrationApp({
+  ...(privateFeaturePool === undefined || !stageDatabaseAccessEnabled
+    ? {}
+    : {
+        databaseReaderAccess:
+          new DatabaseStageDatabaseReaderAccessManager(privateFeaturePool),
+      }),
   ...(privateFeaturePool === undefined || yandexClientId === undefined
     ? {}
     : {
