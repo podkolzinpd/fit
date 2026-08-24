@@ -103,6 +103,7 @@ describe('workoutQueries lists', () => {
 
     workoutQueries.save(draft)
     workoutQueries.saveCompleted(draft)
+    workoutQueries.recordPlannedResult(draft)
     workoutQueries.start('workout-id', 3)
     workoutQueries.saveLiveSet('set-id', { weightKg: 42.5, reps: 10 }, 4)
     workoutQueries.confirmLiveSet('set-id', 5)
@@ -119,34 +120,35 @@ describe('workoutQueries lists', () => {
     workoutQueries.cancelPlanned('workout-id', 16)
     workoutQueries.reschedule('workout-id', '2026-07-30', '09:30', 17)
 
-    expect(rpc).toHaveBeenCalledTimes(17)
+    expect(rpc).toHaveBeenCalledTimes(18)
     expect(rpc).toHaveBeenNthCalledWith(1, 'save_workout', { p_workout: draft, p_expected_version: 3 })
     expect(rpc).toHaveBeenNthCalledWith(2, 'save_completed_workout', { p_workout: draft, p_expected_version: 3 })
-    expect(rpc).toHaveBeenNthCalledWith(3, 'start_workout', { p_workout_id: 'workout-id', p_expected_version: 3 })
-    expect(rpc).toHaveBeenNthCalledWith(4, 'save_live_set_draft', {
+    expect(rpc).toHaveBeenNthCalledWith(3, 'record_planned_workout_result', { p_workout: draft, p_expected_version: 3 })
+    expect(rpc).toHaveBeenNthCalledWith(4, 'start_workout', { p_workout_id: 'workout-id', p_expected_version: 3 })
+    expect(rpc).toHaveBeenNthCalledWith(5, 'save_live_set_draft', {
       p_set_id: 'set-id',
       p_draft: { weightKg: 42.5, reps: 10 },
       p_expected_version: 4,
     })
-    expect(rpc).toHaveBeenNthCalledWith(5, 'confirm_live_set', { p_set_id: 'set-id', p_expected_version: 5 })
-    expect(rpc).toHaveBeenNthCalledWith(6, 'append_live_exercise', {
+    expect(rpc).toHaveBeenNthCalledWith(6, 'confirm_live_set', { p_set_id: 'set-id', p_expected_version: 5 })
+    expect(rpc).toHaveBeenNthCalledWith(7, 'append_live_exercise', {
       p_workout_id: 'workout-id',
       p_exercise: exercise,
       p_expected_version: 6,
     })
-    expect(rpc).toHaveBeenNthCalledWith(7, 'append_live_set', { p_workout_exercise_id: 'exercise-id', p_expected_version: 7 })
-    expect(rpc).toHaveBeenNthCalledWith(8, 'reorder_live_block', { p_workout_id: 'workout-id', p_block_id: 'block-id', p_direction: -1, p_expected_version: 8 })
-    expect(rpc).toHaveBeenNthCalledWith(9, 'replace_live_exercise', { p_workout_id: 'workout-id', p_exercise_id: 'exercise-id', p_exercise: exercise, p_expected_version: 9 })
-    expect(rpc).toHaveBeenNthCalledWith(10, 'set_exercise_comment', { p_exercise_id: 'exercise-id', p_comment: 'Держи спину', p_expected_version: 10 })
-    expect(rpc).toHaveBeenNthCalledWith(11, 'set_workout_review', { p_workout_id: 'workout-id', p_reaction: 'fire', p_review: 'Отличная работа', p_expected_version: 11 })
-    expect(rpc).toHaveBeenNthCalledWith(12, 'set_client_workout_comment', { p_workout_id: 'workout-id', p_comment: 'Нужна корректировка веса', p_expected_version: 12 })
-    expect(rpc).toHaveBeenNthCalledWith(13, 'submit_workout_feedback', {
+    expect(rpc).toHaveBeenNthCalledWith(8, 'append_live_set', { p_workout_exercise_id: 'exercise-id', p_expected_version: 7 })
+    expect(rpc).toHaveBeenNthCalledWith(9, 'reorder_live_block', { p_workout_id: 'workout-id', p_block_id: 'block-id', p_direction: -1, p_expected_version: 8 })
+    expect(rpc).toHaveBeenNthCalledWith(10, 'replace_live_exercise', { p_workout_id: 'workout-id', p_exercise_id: 'exercise-id', p_exercise: exercise, p_expected_version: 9 })
+    expect(rpc).toHaveBeenNthCalledWith(11, 'set_exercise_comment', { p_exercise_id: 'exercise-id', p_comment: 'Держи спину', p_expected_version: 10 })
+    expect(rpc).toHaveBeenNthCalledWith(12, 'set_workout_review', { p_workout_id: 'workout-id', p_reaction: 'fire', p_review: 'Отличная работа', p_expected_version: 11 })
+    expect(rpc).toHaveBeenNthCalledWith(13, 'set_client_workout_comment', { p_workout_id: 'workout-id', p_comment: 'Нужна корректировка веса', p_expected_version: 12 })
+    expect(rpc).toHaveBeenNthCalledWith(14, 'submit_workout_feedback', {
       p_workout_id: 'workout-id', p_session_rpe: 8, p_wellbeing: 'normal',
       p_discomfort: true, p_comment: 'Тянет колено', p_expected_version: 13,
     })
-    expect(rpc).toHaveBeenNthCalledWith(14, 'finish_workout', { p_workout_id: 'workout-id', p_expected_version: 14 })
-    expect(rpc).toHaveBeenNthCalledWith(15, 'soft_delete_workout', { p_workout_id: 'workout-id', p_expected_version: 15 })
-    expect(rpc).toHaveBeenNthCalledWith(16, 'cancel_planned_workout', { p_workout_id: 'workout-id', p_expected_version: 16 })
-    expect(rpc).toHaveBeenNthCalledWith(17, 'reschedule_workout', { p_workout_id: 'workout-id', p_workout_date: '2026-07-30', p_start_time: '09:30', p_expected_version: 17 })
+    expect(rpc).toHaveBeenNthCalledWith(15, 'finish_workout', { p_workout_id: 'workout-id', p_expected_version: 14 })
+    expect(rpc).toHaveBeenNthCalledWith(16, 'soft_delete_workout', { p_workout_id: 'workout-id', p_expected_version: 15 })
+    expect(rpc).toHaveBeenNthCalledWith(17, 'cancel_planned_workout', { p_workout_id: 'workout-id', p_expected_version: 16 })
+    expect(rpc).toHaveBeenNthCalledWith(18, 'reschedule_workout', { p_workout_id: 'workout-id', p_workout_date: '2026-07-30', p_start_time: '09:30', p_expected_version: 17 })
   })
 })
