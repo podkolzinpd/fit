@@ -1,5 +1,11 @@
 import { supabase } from './client'
 
+// Public endpoint of the authenticated Cloud Function. The endpoint accepts
+// only a Supabase JWT; VITE_ASSISTANT_ORCHESTRATOR_URL can override it, while
+// this production fallback lets the one-user pilot ship without Vercel env
+// access.
+const productionAssistantOrchestratorUrl = 'https://functions.yandexcloud.net/d4emhmr9v0qist9dbcml'
+
 export type AssistantOrchestratorAction = {
   tool: 'record_workout' | 'create_client_draft' | 'create_program_draft' | 'schedule_program' | 'summarize_progress'
   status: 'needs_input' | 'proposed'
@@ -11,7 +17,8 @@ export type AssistantOrchestratorAction = {
 export type AssistantOrchestratorReply = { reply: string; action: AssistantOrchestratorAction | null }
 
 export function assistantOrchestratorUrl(): string | undefined {
-  const value = String((import.meta.env as { VITE_ASSISTANT_ORCHESTRATOR_URL?: unknown }).VITE_ASSISTANT_ORCHESTRATOR_URL ?? '').trim().replace(/\/$/, '')
+  const configured = String((import.meta.env as { VITE_ASSISTANT_ORCHESTRATOR_URL?: unknown }).VITE_ASSISTANT_ORCHESTRATOR_URL ?? '').trim()
+  const value = (configured || (import.meta.env.PROD ? productionAssistantOrchestratorUrl : '')).replace(/\/$/, '')
   if (!value) return undefined
   try {
     const url = new URL(value)
