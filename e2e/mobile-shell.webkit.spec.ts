@@ -1223,6 +1223,38 @@ test('iPhone: прошлый план предлагает нейтральны�
   await expect(page.locator('.workout-detail-page .workout-status-planned')).toHaveText('План')
 })
 
+test('iPhone: результат прошлого плана записывается без запуска Live', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const clientName = await createIsolatedClient(page, testInfo)
+  await page.goto('/workouts/new')
+  await selectClient(page, clientName)
+  await page.getByLabel('Дата').fill('2026-08-01')
+  await addExercise(page, 'Присед со штангой', true)
+  await page.getByLabel('Вес, подход 1').fill('40')
+  await page.getByLabel('Повторы, подход 1').fill('10')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+
+  const coachmark = page.getByRole('status').filter({ hasText: 'План можно закрыть спокойно' })
+  if (await coachmark.isVisible()) await coachmark.getByRole('button', { name: 'Понятно' }).click()
+  await page.getByRole('button', { name: 'Выбрать действие' }).click()
+  await page.getByRole('dialog', { name: 'Действия с планом' }).getByRole('button', { name: 'Записать результат' }).click()
+
+  await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]+\/edit\?result=1$/)
+  await expect(page.getByRole('heading', { name: 'Записать результат' })).toBeVisible()
+  await expect(page.getByLabel('Вес, подход 1')).toHaveValue('40')
+  await expect(page.getByLabel('Повторы, подход 1')).toHaveValue('10')
+  await expectNoHorizontalOverflow(page)
+  await page.getByRole('button', { name: 'Сохранить результат' }).click()
+
+  await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]+$/)
+  await expect(page).not.toHaveURL(/\/live/)
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.locator('.workout-detail-page .workout-status-completed')).toHaveText('Готово')
+  await expect(page.getByText('40 кг × 10', { exact: true }).first()).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('record-past-plan-result-390.png'), fullPage: true })
+})
+
 test('iPhone: разные плановые подходы не выдаются за результат', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const clientName = await createIsolatedClient(page, testInfo)
