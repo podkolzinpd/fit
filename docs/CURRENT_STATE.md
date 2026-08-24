@@ -18,9 +18,12 @@
 - Если metadata или authentication smoke не проходит, `$latest` возвращается
   на предыдущую активную версию и workflow остаётся красным. Первая версия без
   rollback target безопасно завершается ошибкой.
-- Production deploy service account всё ещё нужно один раз выдать роль
-  `functions.editor` в каталоге функций; текущая browser-сессия не имеет доступа
-  к этому каталогу. Это не новый runtime-ресурс и не меняет интерфейс продукта.
+- Дополнительная роль production deploy service account не нужна: последний
+  summary run создал secret-backed версию `ACTIVE` и упал только на повторном
+  `add-access-binding`, а parser стал зелёным после удаления этой операции.
+- Рекомендация поддержки про `functions.editor` относится к отдельному deployer
+  stage Serverless Container, а не к production Functions. Расширять IAM
+  production Functions на основании этого ответа нельзя.
 
 ## Последняя проверенная продуктовая точка
 
@@ -77,8 +80,8 @@
 
 ## Ближайший порядок
 
-1. Выдать production deploy service account роль `functions.editor`, слить
-   безопасный smoke/rollback и убедиться, что оба workflow зелёные.
+1. Слить безопасный smoke/rollback и убедиться, что оба production Functions
+   workflow зелёные без изменения IAM.
 2. Закрыть client/profile/custom-exercise mutations на Yandex API.
 3. Отдельно портировать feedback/reactions и вопросы/ответы после тренировки.
 4. Отдельно портировать progress/goals и derived progress/chronicle reads.

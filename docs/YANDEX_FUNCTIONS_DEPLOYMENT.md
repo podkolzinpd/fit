@@ -6,11 +6,17 @@ still use Supabase Auth and data during the migration window.
 
 ## One-time IAM bootstrap
 
-The folder administrator must grant the GitHub OIDC deploy service account
-`functions.editor` in the production Functions folder. The public
-`serverless.functions.invoker` binding is also created once by the folder
+The public `serverless.functions.invoker` binding is created once by the folder
 administrator. Workflows deliberately do not rewrite that binding on every
-release.
+release. Existing production runs prove that the GitHub OIDC deploy service
+account can create an `ACTIVE` secret-backed function version; no additional
+Functions role is required for routine releases.
+
+The Yandex Cloud support recommendation to add `functions.editor` applies to
+the separate stage Serverless Container deploy service account. It must not be
+copied to the production Functions deployer. Changing a function access
+binding would require broader IAM authority and is intentionally kept out of
+the release workflow.
 
 Runtime service accounts keep only their model invocation and Lockbox payload
 viewer roles. GitHub uses a short-lived OIDC IAM token; no authorized-key JSON
@@ -56,5 +62,6 @@ Both workflows must finish green:
 - `Deploy production Yandex summary function`.
 
 An HTTP `401` without a token is expected. `403` indicates that the one-time
-public invoker bootstrap is missing. `5xx`, a non-`ACTIVE` version, or a
-different `$latest` version fails the release and triggers rollback.
+public invoker bootstrap is missing and must be restored by a folder
+administrator. `5xx`, a non-`ACTIVE` version, or a different `$latest` version
+fails the release and triggers rollback.
