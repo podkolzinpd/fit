@@ -5,19 +5,22 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-24
-Проверенный базовый `main`: `7d91e95` (`YAFIT-360: стабилизировать мобильную оболочку (#536)`)
+Проверенный базовый `main`: `85a1648` (`feat(yandex): add base domain mutations (#538)`)
 
 ## Активное изменение
 
-- Ветка `codex/yandex-domain-contract` закрывает базовые stage-mutations для
-  клиентских карточек, персональных настроек тренера и пользовательских
-  упражнений, не переключая production frontend с Supabase.
-- Общую карточку создаёт корневой тренер или самостоятельный клиент; менять и
-  архивировать её могут только корневой тренер и сам клиент. Подключённый тренер
-  меняет только собственные alias/note с отдельной версией membership.
-- Пользовательские упражнения создаёт, редактирует, архивирует и восстанавливает
-  только владелец-тренер. Все команды используют optimistic versions и
-  security-definer functions; прямые записи ролью `fit_api` не открываются.
+- Ветка `codex/yandex-db-reader-access` добавляет
+  управляемый доступ людей к stage PostgreSQL без миграции на каждого человека.
+- Миграция `000013` создаёт только curated views в `ops_readonly`; имена,
+  свободный личный текст, invitation hashes и весь `app_private` исключены.
+  Прямые grants на `public`, `fit_api` и административные `mdb_*` роли запрещены.
+- Ручной GitHub workflow идемпотентно выдаёт и отзывает профиль по существующему
+  PostgreSQL IAM username через private runner и GitHub OIDC. Пароли и Cloud
+  Shell не нужны; сам workflow остаётся явным audit event.
+- Блокирующая stage Terraform-проверка перенесена из cross-variable validation,
+  несовместимой с закреплённым Terraform 1.8.5, в строгий resource precondition.
+- Попавшие в `main` нетипизированные строки assistant context нормализуются на
+  границе Supabase-ответа; поведение оркестратора для валидных данных не меняется.
 
 ## Последняя проверенная продуктовая точка
 
@@ -66,11 +69,11 @@
 ## Проверки активной ветки
 
 - Локальный Yandex PostgreSQL в существующем Podman-контейнере применяет
-  `000012`; 18 интеграционных actor/RLS-тестов зелёные, включая cross-tenant,
-  membership privacy, stale versions и self-managed client.
-- Полный `npm run check` зелёный: 688 frontend-тестов с coverage, lint,
-  TypeScript, DB types, iOS permissions, 39 infra policy tests, 117 API-тестов
-  (18 DB-тестов пропущены без специального env), API и production app build.
+  `000013`; 19 интеграционных actor/RLS/access-тестов зелёные, включая реальный
+  login-role grant/read/revoke, запрет `public`, `app_private` и записи.
+- Полный `npm run check` зелёный: 689 frontend-тестов с coverage, lint,
+  TypeScript, DB types, iOS permissions, 41 infra policy-тест, 128 API-тестов
+  (19 DB-тестов пропущены без специального env), API и production app build.
 - Локальный Supabase пересоздан с нуля; все 596 SQL/RLS regression-тестов
   прошли отдельно от Yandex PostgreSQL actor/RLS suite.
 - Вошедший из `main` viewport-контракт проверен unit-регрессией, WebKit на

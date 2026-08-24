@@ -11,6 +11,11 @@ import {
   type PilotEnroller,
 } from './db/yandex-pilot-enrollment.js'
 import type { StageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
+import {
+  StageDatabaseReaderNotReadyError,
+  type StageDatabaseReaderAccessAction,
+  type StageDatabaseReaderAccessManager,
+} from './db/stage-database-reader-access.js'
 
 interface PilotEnrollmentOptions {
   enroller: PilotEnroller
@@ -18,10 +23,29 @@ interface PilotEnrollmentOptions {
 }
 
 interface BuildMigrationAppOptions {
+  databaseReaderAccess?: StageDatabaseReaderAccessManager
   logger?: boolean
   pilotEnrollment?: PilotEnrollmentOptions
   runMigrations: () => Promise<readonly string[]>
   stageWorkoutFixture?: StageWorkoutFixtureLoader
+}
+
+const DATABASE_USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._@-]{0,62}$/
+
+function readDatabaseReaderAccessRequest(body: unknown): {
+  action: StageDatabaseReaderAccessAction
+  databaseUsername: string
+} | undefined {
+  if (typeof body !== 'object' || body === null) return undefined
+  if (!('action' in body) || !('databaseUsername' in body)) return undefined
+  const action = body.action
+  const databaseUsername = body.databaseUsername
+  if (
+    (action !== 'grant' && action !== 'revoke')
+    || typeof databaseUsername !== 'string'
+    || !DATABASE_USERNAME_PATTERN.test(databaseUsername)
+  ) return undefined
+  return { action, databaseUsername }
 }
 
 function readEnrollmentRequest(body: unknown): {
@@ -56,6 +80,33 @@ export function buildMigrationApp(
       return reply.code(500).send({ status: 'migration_failed' })
     }
   })
+
+  if (options.databaseReaderAccess !== undefined) {
+    const databaseReaderAccess = options.databaseReaderAccess
+    app.post('/stage/database-access/readers', async (request, reply) => {
+      const accessRequest = readDatabaseReaderAccessRequest(request.body)
+      if (accessRequest === undefined) {
+        return reply.code(400).send({ status: 'invalid_request' })
+      }
+
+      try {
+        await databaseReaderAccess.setAccess(
+          accessRequest.action,
+          accessRequest.databaseUsername,
+        )
+        return {
+          status: accessRequest.action === 'grant'
+            ? 'access_granted'
+            : 'access_revoked',
+        }
+      } catch (error) {
+        if (error instanceof StageDatabaseReaderNotReadyError) {
+          return reply.code(409).send({ status: 'database_user_not_ready' })
+        }
+        return reply.code(500).send({ status: 'database_access_failed' })
+      }
+    })
+  }
 
   if (options.pilotEnrollment !== undefined) {
     const pilotEnrollment = options.pilotEnrollment
