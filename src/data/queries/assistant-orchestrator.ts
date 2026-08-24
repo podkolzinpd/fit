@@ -1,0 +1,37 @@
+import { supabase } from './client'
+
+export type AssistantOrchestratorAction = {
+  tool: 'record_workout' | 'create_client_draft' | 'create_program_draft' | 'schedule_program' | 'summarize_progress'
+  status: 'needs_input' | 'proposed'
+  title: string
+  description: string
+  payload: Record<string, unknown>
+}
+
+export type AssistantOrchestratorReply = { reply: string; action: AssistantOrchestratorAction | null }
+
+export function assistantOrchestratorUrl(): string | undefined {
+  const value = String((import.meta.env as { VITE_ASSISTANT_ORCHESTRATOR_URL?: unknown }).VITE_ASSISTANT_ORCHESTRATOR_URL ?? '').trim().replace(/\/$/, '')
+  if (!value) return undefined
+  try {
+    const url = new URL(value)
+    const local = url.protocol === 'http:' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1')
+    return url.origin === value && (url.protocol === 'https:' || local) ? value : undefined
+  } catch {
+    return undefined
+  }
+}
+
+export async function sendAssistantTurn(conversationId: string, message: string): Promise<AssistantOrchestratorReply> {
+  const url = assistantOrchestratorUrl()
+  if (url === undefined) throw new Error('assistant_unavailable')
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) throw new Error('authentication_required')
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-supabase-authorization': `Bearer ${session.access_token}` },
+    body: JSON.stringify({ conversation_id: conversationId, message }),
+  })
+  if (!response.ok) throw new Error('assistant_request_failed')
+  return await response.json() as AssistantOrchestratorReply
+}

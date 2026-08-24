@@ -36,6 +36,10 @@ import {
   readSavePlannedWorkoutRequest,
 } from './planned-workout-request.js'
 import { PilotWorkoutCommandError } from './workout-commands.js'
+import { WorkoutParseError, type LegacyWorkoutParser } from './legacy-workout-parser.js'
+import { readAssistantProgressRequest } from './assistant-progress-request.js'
+
+export type LegacySummaryHandler = (request: Request) => Promise<Response>
 
 interface BuildAppOptions {
   allowedOrigins?: readonly string[]
@@ -49,6 +53,8 @@ interface BuildAppOptions {
   pilotSessionIssuer?: PilotSessionIssuer
   pilotTrainingDataReader?: PilotTrainingDataReader
   pilotWorkoutsWriter?: PilotWorkoutsWriter
+  legacyWorkoutParser?: LegacyWorkoutParser
+  legacySummaryHandler?: LegacySummaryHandler
   logger?: boolean
 }
 
@@ -69,7 +75,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         .header('access-control-allow-methods', 'GET, POST, PUT, DELETE, OPTIONS')
         .header(
           'access-control-allow-headers',
-          'authorization, content-type, x-fit-pilot-session',
+          'authorization, content-type, x-fit-pilot-session, x-supabase-authorization',
         )
         .header('vary', 'Origin')
     }
@@ -82,6 +88,86 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.get('/health', () => ({ status: 'ok' }))
+
+  app.post('/v1/legacy/parse-workout', async (request, reply) => {
+    const actorToken = request.headers['x-supabase-authorization']
+    if (typeof actorToken !== 'string' || !actorToken.startsWith('Bearer ')) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (options.legacyWorkoutParser === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    try {
+      return reply.send(await options.legacyWorkoutParser.parse(
+        actorToken.slice('Bearer '.length), request.body,
+      ))
+    } catch (error) {
+      if (error instanceof WorkoutParseError) {
+        if (error.code === 'invalid_request') {
+          return reply.code(400).send({ error: { code: error.code, message: 'Некорректный запрос разбора тренировки' } })
+        }
+        if (error.code === 'empty_catalog') {
+          return reply.code(400).send({ error: { code: error.code, message: 'Каталог упражнений пуст' } })
+        }
+        if (error.code === 'llm_unavailable') {
+          return reply.code(502).send({ error: { code: error.code, message: 'Модель разбора временно недоступна' } })
+        }
+        if (error.code === 'parse_failed') {
+          return reply.code(502).send({ error: { code: error.code, message: 'Не удалось разобрать диктовку' } })
+        }
+        return reply.code(error.status).send({ error: error.code })
+      }
+      throw error
+    }
+  })
+
+  app.post('/v1/legacy/summarize-client-training', async (request, reply) => {
+    const authorization = request.headers['x-supabase-authorization']
+    if (typeof authorization !== 'string' || !authorization.startsWith('Bearer ')) {
+      return reply.code(401).send({ error: 'authentication_required' })
+    }
+    if (options.legacySummaryHandler === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return forwardLegacySummary(authorization, request.body, reply)
+  })
+
+  // Первый assistant endpoint намеренно не является универсальным tool runner.
+  // Сводка read-only, поэтому её можно безопасно обкатать раньше write-действий.
+  app.post('/v1/assistant/progress-summary', async (request, reply) => {
+    const authorization = request.headers['x-supabase-authorization']
+    if (typeof authorization !== 'string' || !authorization.startsWith('Bearer ')) {
+      return reply.code(401).send({ error: 'authentication_required' })
+    }
+    const command = readAssistantProgressRequest(request.body)
+    if (command === undefined) return reply.code(400).send({ error: 'invalid_progress_request' })
+    if (options.legacySummaryHandler === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return forwardLegacySummary(authorization, {
+      client_id: command.clientId,
+      period_start: command.periodStart,
+      period_end: command.periodEnd,
+      force: command.force,
+    }, reply)
+  })
+
+  async function forwardLegacySummary(authorization: string, body: unknown, reply: FastifyReply) {
+    if (options.legacySummaryHandler === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    const response = await options.legacySummaryHandler(new Request(
+      'http://legacy.internal/summarize-client-training',
+      {
+        method: 'POST',
+        headers: { authorization, 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+    ))
+    const errorCode = response.headers.get('x-fit-error-code')
+    if (errorCode !== null) reply.header('x-fit-error-code', errorCode)
+    return reply.code(response.status).type('application/json').send(await response.text())
+  }
 
   app.get('/ready', async (_request, reply) => {
     if (options.databasePool === undefined) {

@@ -137,8 +137,8 @@ describe('AppLayout: пилот тёмной палитры', () => {
   })
 })
 
-describe('AppLayout: пилот верхней навигации (YAFIT-317)', () => {
-  it('тренер из allowlist видит верхние табы с «Ассистент» и шестерёнкой профиля', () => {
+describe('AppLayout: пилот вкладки ассистента', () => {
+  it('тренер из allowlist видит «Ассистент» в существующем нижнем таб-баре', () => {
     vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
     vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'pilot-trainer')
     authState.role = 'trainer'
@@ -146,15 +146,12 @@ describe('AppLayout: пилот верхней навигации (YAFIT-317)', 
     renderLayout('/today')
     const navigation = screen.getByRole('navigation', { name: 'Основная навигация' })
     const links = within(navigation).getAllByRole('link')
-    expect(links.map((link) => link.textContent)).toEqual(['Клиенты', 'Ассистент', 'Расписание', ''])
-    expect(within(navigation).getByRole('link', { name: 'Ассистент' })).toHaveAttribute('href', '/today')
-    const settings = within(navigation).getByRole('link', { name: 'Открыть профиль' })
-    expect(settings).toHaveAttribute('href', '/profile')
-    expect(iconName(settings)).toBe('settings')
-    expect(within(navigation).queryByRole('link', { name: 'Сегодня' })).toBeNull()
+    expect(links.map((link) => link.textContent)).toEqual(['Сегодня', 'Клиенты', 'Ассистент', 'Расписание'])
+    expect(within(navigation).getByRole('link', { name: 'Ассистент' })).toHaveAttribute('href', '/assistant')
+    expect(iconName(within(navigation).getByRole('link', { name: 'Ассистент' }))).toBe('assistant')
   })
 
-  it('в live-режиме верхние табы пилота скрыты', () => {
+  it('в live-режиме нижний таб-бар пилота скрыт', () => {
     vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
     vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'pilot-trainer')
     authState.role = 'trainer'
@@ -163,7 +160,7 @@ describe('AppLayout: пилот верхней навигации (YAFIT-317)', 
     expect(screen.queryByRole('navigation', { name: 'Основная навигация' })).toBeNull()
   })
 
-  it('тренер вне allowlist получает прежнюю нижнюю навигацию без входов в пилот', () => {
+  it('тренер вне allowlist получает прежнюю нижнюю навигацию без ассистента', () => {
     vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
     vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'pilot-trainer')
     authState.role = 'trainer'
@@ -172,10 +169,9 @@ describe('AppLayout: пилот верхней навигации (YAFIT-317)', 
     const navigation = screen.getByRole('navigation', { name: 'Основная навигация' })
     expect(within(navigation).getAllByRole('link').map((link) => link.textContent)).toEqual(['Сегодня', 'Клиенты', 'Расписание'])
     expect(within(navigation).queryByRole('link', { name: 'Ассистент' })).toBeNull()
-    expect(within(navigation).queryByRole('link', { name: 'Открыть профиль' })).toBeNull()
   })
 
-  it('клиент из allowlist сохраняет клиентскую навигацию — пилот тренерский', () => {
+  it('клиент из allowlist получает вкладку ассистента в своей навигации', () => {
     vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
     vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'pilot-client')
     authState.role = 'client'
@@ -183,6 +179,6 @@ describe('AppLayout: пилот верхней навигации (YAFIT-317)', 
     renderLayout('/me')
     const navigation = screen.getByRole('navigation', { name: 'Основная навигация' })
     expect(within(navigation).getByRole('link', { name: 'Кабинет' })).toBeInTheDocument()
-    expect(within(navigation).queryByRole('link', { name: 'Ассистент' })).toBeNull()
+    expect(within(navigation).getByRole('link', { name: 'Ассистент' })).toHaveAttribute('href', '/assistant')
   })
 })
