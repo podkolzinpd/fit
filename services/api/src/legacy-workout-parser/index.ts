@@ -70,13 +70,38 @@ export async function parseWorkout(request: Request): Promise<Response> {
     const custom = (customs ?? []).flatMap((raw): Exercise[] => typeof raw.id === 'string' && typeof raw.name === 'string' && typeof raw.input_kind === 'string' ? [{ source: 'custom', ref: raw.id, name: raw.name, inputKind: raw.input_kind }] : [])
     const catalog = [...system, ...custom]
     if (!catalog.length) throw new HttpError(400, 'empty_catalog')
-    const prompt = ['Разбери запись тренировки после диктовки. Сам раздели слитую речь на упражнения, исправь спортивные оговорки и выбери только существующие упражнения из каталога. Для каждого понятного упражнения верни item с подходами. Если сказано N подходов, верни N одинаковых объектов в sets. Не придумывай значения; неизвестное верни unmatched. Верни JSON строго по schema.', `Текст: ${body.text}`, `Каталог: ${JSON.stringify(catalog)}`].join('\n')
-    const response = await fetch(completionUrl, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Api-Key ${required('YANDEX_CLOUD_API_KEY')}` }, body: JSON.stringify({ modelUri: `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`, completionOptions: { stream: false, temperature: 0, maxTokens: '2000' }, jsonSchema: { schema }, messages: [{ role: 'user', text: prompt }] }) })
-    if (!response.ok) throw new HttpError(502, 'llm_unavailable')
-    const payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }> } }
-    const result = validate(JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? ''), catalog)
-    console.log(JSON.stringify({ event: 'workout_parse_completed', userPresent: true, items: result.items.length, unmatched: result.unmatched.length }))
-    return Response.json(result)
+    const prompt = [
+      'Разбери запись тренировки после диктовки. Сам раздели слитую речь на упражнения, исправь спортивные оговорки и выбери только существующие упражнения из каталога. Для каждого понятного упражнения верни item с подходами. Если сказано N подходов (например, «3 подхода по 15 на 100», «15 повторений, 3 подхода, 100 кг» или «3 по 15 на 100»), верни N одинаковых объектов в sets. Порядок чисел в речи не важен. Не придумывай значения: включай в set только явно названные метрики; не добавляй нули для отсутствующих повторов, веса, времени или дистанции. Для неизвестного верни unmatched и до 4 близких ref из каталога. Не объединяй упражнения. Верни JSON строго по schema.',
+      `Текст: ${body.text}`,
+      `Каталог: ${JSON.stringify(catalog)}`,
+    ].join('\n')
+    const apiKey = required('YANDEX_CLOUD_API_KEY')
+    const modelUri = `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      let response: Response
+      try {
+        response = await fetch(completionUrl, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Api-Key ${apiKey}` }, body: JSON.stringify({ modelUri, completionOptions: { stream: false, temperature: 0, maxTokens: '2000' }, jsonSchema: { schema }, messages: [{ role: 'user', text: prompt }] }) })
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'workout_parse_llm_network_error', attempt, message: error instanceof Error ? error.message : 'unknown' }))
+        if (attempt === 2) throw error
+        continue
+      }
+      if (!response.ok) {
+        console.error(JSON.stringify({ event: 'workout_parse_llm_error', attempt, status: response.status }))
+        if (response.status >= 500 && attempt < 2) continue
+        throw new HttpError(502, 'llm_unavailable')
+      }
+      try {
+        const payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }> } }
+        const result = validate(JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? ''), catalog)
+        console.log(JSON.stringify({ event: 'workout_parse_completed', attempt, items: result.items.map(({ exerciseRef, sets }) => ({ exerciseRef, sets })), unmatched: result.unmatched.map(({ reason, suggestedExerciseRefs }) => ({ reason, suggestedExerciseRefs })) }))
+        return Response.json(result)
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'workout_parse_invalid_response', attempt, message: error instanceof Error ? error.message : 'unknown' }))
+        if (attempt === 2) throw error
+      }
+    }
+    throw new Error('workout_parse_retry_exhausted')
   } catch (error) {
     const known = error instanceof HttpError ? error : new HttpError(502, 'parse_failed')
     console.error(JSON.stringify({ event: 'workout_parse_failed', code: known.code, status: known.status }))
