@@ -174,6 +174,8 @@ The private stage readiness gate applied foundation migrations `000001` through
 `000003`. The auth/profile and session slices add
 `000004_yandex_identity_rollout` and `000005_yandex_pilot_sessions`; the
 read-only connections slice adds `000006_client_invitations_read_model`.
+Workout read/write and Live slices occupy `000008` through `000011`; the base
+client/preferences/custom-exercise mutation contract is `000012`.
 Product work merged after the foundation still expands the contract required
 before a production tenant can be switched.
 

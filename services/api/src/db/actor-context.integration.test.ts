@@ -5,6 +5,7 @@ import { Pool, type QueryResultRow } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { hashPilotSessionToken } from '../auth/pilot-session-token.js'
+import { readAccessibleClients } from '../clients.js'
 import { readAccessibleConnections } from '../connections.js'
 import {
   claimClientInvitation,
@@ -13,6 +14,15 @@ import {
   removeClientTrainer,
   revokeClientInvitation,
 } from '../connection-commands.js'
+import {
+  createClientCard,
+  createCustomExercise,
+  setClientArchived,
+  setCustomExerciseArchived,
+  updateClientCard,
+  updateClientPreferences,
+  updateCustomExercise,
+} from '../domain-commands.js'
 import { DatabasePilotClientsReader } from '../pilot-clients-reader.js'
 import { DatabasePilotConnectionsReader } from '../pilot-connections-reader.js'
 import { DatabasePilotSessionIssuer } from '../pilot-session.js'
@@ -56,6 +66,7 @@ const OTHER_ACTOR_ID = '974f21af-f304-421f-81bd-050dbfabdd46'
 const MEMBER_TRAINER_ID = '8ffdb87b-078c-42d4-b6db-af8bc60f80f2'
 const OUTSIDE_TRAINER_ID = '3f520f21-0be4-4a38-bb2a-e25225e1e608'
 const CLIENT_ID = 'b3942b20-52a2-4d5d-9895-b3b63cf61442'
+const DOMAIN_CLIENT_ACTOR_ID = '32e33d28-312f-4a22-8789-459de8541199'
 const ROOT_INVITATION_ID = '76978725-d10e-4c52-9538-b28411706d38'
 const MEMBER_INVITATION_ID = '443850c1-ad40-4604-83c4-35e4111c7d88'
 const EXPIRED_INVITATION_ID = '8f371423-5120-4cee-9e5e-004878bcc870'
@@ -2246,6 +2257,220 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       )
       expect(comments.rows).toEqual([{ trainer_comment: null }])
       await ownerPool.query('delete from public.workouts where id = $1', [created.id])
+    })
+
+    it('enforces the client card, private preferences and custom exercise mutation contract', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const draft = {
+        fullName: 'Контрактный клиент',
+        gender: 'female' as const,
+        ageYears: 32,
+        ageUpdatedAt: '2026-08-24',
+        heightCm: 169,
+        goal: 'Подготовиться к соревнованию',
+        note: 'Приватная заметка корневого тренера',
+      }
+      const exerciseDraft = {
+        name: 'Контрактная тяга саней',
+        muscleGroup: 'legs' as const,
+        inputKind: 'strength' as const,
+      }
+      const created = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => createClientCard(client, draft),
+      )
+      let exerciseId: string | undefined
+
+      try {
+        expect(created).toMatchObject({ version: 1, membershipVersion: 1 })
+        await ownerPool.query(
+          `insert into public.client_trainers (client_id, trainer_id, alias)
+           values ($1, $2, 'Подключённый псевдоним')`,
+          [created.id, MEMBER_TRAINER_ID],
+        )
+
+        await expect(withActorTransaction(
+          runtimePool,
+          MEMBER_TRAINER_ID,
+          (client) => updateClientCard(client, created.id, draft, 1),
+        )).rejects.toMatchObject({ failure: 'forbidden' })
+
+        const membershipVersion = await withActorTransaction(
+          runtimePool,
+          MEMBER_TRAINER_ID,
+          (client) => updateClientPreferences(
+            client,
+            created.id,
+            'Личный псевдоним',
+            'Приватно для подключённого тренера',
+            1,
+          ),
+        )
+        expect(membershipVersion).toBe(2)
+
+        const updatedVersion = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => updateClientCard(
+            client,
+            created.id,
+            { ...draft, fullName: 'Обновлённый клиент' },
+            1,
+          ),
+        )
+        expect(updatedVersion).toBe(2)
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => updateClientCard(client, created.id, draft, 1),
+        )).rejects.toMatchObject({ failure: 'conflict' })
+
+        const archivedVersion = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => setClientArchived(client, created.id, true, 2),
+        )
+        expect(archivedVersion).toBe(3)
+        const archivedClients = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => readAccessibleClients(client, true),
+        )
+        expect(archivedClients.clients).toEqual(expect.arrayContaining([
+          expect.objectContaining({ id: created.id, version: 3 }),
+        ]))
+        const restoredVersion = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => setClientArchived(client, created.id, false, 3),
+        )
+        expect(restoredVersion).toBe(4)
+
+        const preferences = await ownerPool.query<{
+          alias: string | null
+          note: string | null
+          version: string
+        }>(
+          `select alias, note, version
+           from public.client_trainers
+           where client_id = $1 and trainer_id = $2`,
+          [created.id, MEMBER_TRAINER_ID],
+        )
+        expect(preferences.rows).toEqual([{
+          alias: 'Личный псевдоним',
+          note: 'Приватно для подключённого тренера',
+          version: '2',
+        }])
+
+        const exercise = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => createCustomExercise(client, exerciseDraft),
+        )
+        exerciseId = exercise.id
+        expect(exercise).toMatchObject({ ...exerciseDraft, version: 1 })
+
+        await expect(withActorTransaction(
+          runtimePool,
+          OUTSIDE_TRAINER_ID,
+          (client) => updateCustomExercise(client, exercise.id, exerciseDraft, 1),
+        )).rejects.toMatchObject({ failure: 'forbidden' })
+
+        const updatedExercise = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => updateCustomExercise(
+            client,
+            exercise.id,
+            { ...exerciseDraft, name: 'Обновлённая тяга саней' },
+            1,
+          ),
+        )
+        expect(updatedExercise).toMatchObject({
+          name: 'Обновлённая тяга саней',
+          version: 2,
+        })
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => updateCustomExercise(client, exercise.id, exerciseDraft, 1),
+        )).rejects.toMatchObject({ failure: 'conflict' })
+
+        const archivedExercise = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => setCustomExerciseArchived(client, exercise.id, true, 2),
+        )
+        expect(archivedExercise.version).toBe(3)
+        expect(archivedExercise.archivedAt).not.toBeNull()
+        const restoredExercise = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => setCustomExerciseArchived(client, exercise.id, false, 3),
+        )
+        expect(restoredExercise.version).toBe(4)
+        expect(restoredExercise.archivedAt).toBeNull()
+      } finally {
+        if (exerciseId !== undefined) {
+          await ownerPool.query('delete from public.custom_exercises where id = $1', [exerciseId])
+        }
+        await ownerPool.query('delete from public.clients where id = $1', [created.id])
+      }
+    })
+
+    it('lets a client create and maintain exactly one self-managed card', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      await ownerPool.query(
+        `insert into public.profiles (id, first_name, account_role)
+         values ($1, 'Self managed domain actor', 'client')
+         on conflict (id) do update set account_role = excluded.account_role`,
+        [DOMAIN_CLIENT_ACTOR_ID],
+      )
+      let clientId: string | undefined
+      try {
+        const draft = {
+          fullName: 'Самостоятельный клиент',
+          gender: null,
+          ageYears: null,
+          ageUpdatedAt: null,
+          heightCm: null,
+          goal: null,
+          note: null,
+        }
+        const created = await withActorTransaction(
+          runtimePool,
+          DOMAIN_CLIENT_ACTOR_ID,
+          (client) => createClientCard(client, draft),
+        )
+        clientId = created.id
+        await expect(withActorTransaction(
+          runtimePool,
+          DOMAIN_CLIENT_ACTOR_ID,
+          (client) => createClientCard(client, draft),
+        )).rejects.toMatchObject({ failure: 'conflict' })
+        const version = await withActorTransaction(
+          runtimePool,
+          DOMAIN_CLIENT_ACTOR_ID,
+          (client) => updateClientCard(
+            client,
+            created.id,
+            { ...draft, goal: 'Тренироваться самостоятельно' },
+            1,
+          ),
+        )
+        expect(version).toBe(2)
+      } finally {
+        if (clientId !== undefined) {
+          await ownerPool.query('delete from public.clients where id = $1', [clientId])
+        }
+        await ownerPool.query('delete from public.profiles where id = $1', [DOMAIN_CLIENT_ACTOR_ID])
+      }
     })
   },
 )
