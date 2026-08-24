@@ -63,10 +63,14 @@ The following remain unchanged during the foundation phase:
    final read model. The Live core slice ports start, set draft, set
    confirmation and finish with separate workout/set versions and a 30-day
    operation receipt: an exact retry returns the original version, while a new
-   stale operation still conflicts. Repeated deploys do not duplicate fixtures,
-   no production or Supabase data is read, and the token is not printed. The
-   remaining scope includes Live structural editing, feedback/reactions and the
-   derived progress/chronicle reads added after the foundation migrations.
+   stale operation still conflicts. The structural Live slice adds exercise and
+   set append, set removal, exercise replacement, block reorder and exercise
+   comment with the same root version and retry contract. Created child UUIDs
+   are stored in the fact-free receipt so an ambiguous exact retry returns the
+   original child instead of duplicating it. Repeated deploys do not duplicate
+   fixtures, no production or Supabase data is read, and the token is not
+   printed. The remaining scope includes feedback/reactions and the derived
+   progress/chronicle reads added after the foundation migrations.
 8. Rehearse full tenant migration at least twice. Cut over one isolated tenant
    cohort only after all data it can mutate is migrated and writes are frozen
    for the cutover window.
