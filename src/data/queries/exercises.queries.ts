@@ -7,9 +7,11 @@ export type WorkoutParseResponse = {
 }
 
 const parserUrl = 'https://functions.yandexcloud.net/d4eicdja8le8ivq53u9f'
+const isLocalSupabase = typeof import.meta.env.VITE_SUPABASE_URL === 'string'
+  && import.meta.env.VITE_SUPABASE_URL.includes('127.0.0.1:54321')
 
 export const parseWorkout = (text: string, systemCatalog: readonly ExerciseSnapshot[]) => {
-  if (import.meta.env.VITE_SUPABASE_URL?.includes('127.0.0.1:54321')) {
+  if (isLocalSupabase) {
     return supabase.functions.invoke<WorkoutParseResponse>('parse-workout', { body: { text, systemCatalog } })
   }
   return supabase.auth.getSession().then(async ({ data: { session } }) => {
