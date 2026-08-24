@@ -55,12 +55,14 @@ export function validateAssistantTurnResponse(value: unknown): AssistantTurnResp
   return { reply: value.reply.trim(), action: { tool: tool as Tool, status, title: title.trim(), description: description.trim(), payload } }
 }
 
-function modelPrompt(history: readonly { author: string; content: string }[]): string {
+function modelPrompt(history: readonly { author: string; content: string }[], clientContext: string, progressContext: string): string {
   return [
     'Ты ассистент фитнес-приложения. Отвечай по-русски, кратко и доброжелательно.',
     'Ты можешь только уточнить запрос или предложить одно типизированное действие из schema. Никогда не утверждай, что запись уже создана, тренировка сохранена или расписание изменено.',
     'Для программы сначала собери цель, опыт, ограничения и доступные дни. Не давай медицинских диагнозов; при рисках направляй к специалисту.',
     'Для write-действия верни status=needs_input или proposed. Сводка прогресса — read-only. Не выдумывай факты о клиенте.',
+    `Доступные клиенты тренера (используй только эти факты):\n${clientContext || 'Нет доступных клиентов.'}`,
+    `Последние готовые сводки прогресса (если их нет — предложи сформировать сводку, не выдумывай выводы):\n${progressContext || 'Нет готовых сводок.'}`,
     `История:\n${history.map((entry) => `${entry.author === 'user' ? 'Пользователь' : 'Ассистент'}: ${entry.content}`).join('\n')}`,
   ].join('\n\n')
 }
@@ -74,6 +76,25 @@ export async function runAssistantTurn(authorization: string, command: Assistant
     .select('id,owner_id').eq('id', command.conversationId).maybeSingle()
   if (conversationError) throw new HttpError(503, 'history_unavailable')
   if (!conversation || conversation.owner_id !== user.id) throw new HttpError(404, 'conversation_not_found')
+
+  const { data: clients, error: clientsError } = await service.from('clients')
+    .select('id,full_name,goal,age_years,height_cm,gender').eq('trainer_id', user.id).is('archived_at', null).order('full_name').limit(50)
+  if (clientsError) throw new HttpError(503, 'context_unavailable')
+  const clientContext = (clients ?? []).map((client) =>
+    `${client.full_name} (id: ${client.id}; цель: ${client.goal ?? 'не указана'}; возраст: ${client.age_years ?? 'не указан'}; рост: ${client.height_cm ?? 'не указан'}; пол: ${client.gender ?? 'не указан'})`,
+  ).join('\n')
+  const clientIds = (clients ?? []).map((client) => client.id)
+  const { data: summaries, error: summariesError } = clientIds.length === 0
+    ? { data: [], error: null }
+    : await service.from('client_training_summaries')
+      .select('client_id,period_start,period_end,summary,generated_at')
+      .eq('trainer_id', user.id).in('client_id', clientIds)
+      .order('generated_at', { ascending: false }).limit(20)
+  if (summariesError) throw new HttpError(503, 'context_unavailable')
+  const namesById = new Map((clients ?? []).map((client) => [client.id, client.full_name]))
+  const progressContext = (summaries ?? []).map((summary) =>
+    `${namesById.get(summary.client_id) ?? summary.client_id}; ${summary.period_start}—${summary.period_end}: ${summary.summary.slice(0, 1_500)}`,
+  ).join('\n')
 
   const userInsert = await service.from('assistant_messages').insert({ conversation_id: command.conversationId, author: 'user', content: command.message })
   if (userInsert.error) throw new HttpError(503, 'history_unavailable')
@@ -91,7 +112,7 @@ export async function runAssistantTurn(authorization: string, command: Assistant
       body: JSON.stringify({
         modelUri: `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`,
         completionOptions: { stream: false, temperature: 0.2, maxTokens: '1200' }, jsonSchema: { schema },
-        messages: [{ role: 'user', text: modelPrompt(history) }],
+        messages: [{ role: 'user', text: modelPrompt(history, clientContext, progressContext) }],
       }),
     })
   } catch {

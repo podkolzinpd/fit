@@ -3,6 +3,7 @@ import {
   getYandexIdPilotConfig,
   isAssistantNavPilotEnabled,
   isDarkThemePilotEnabled,
+  isProductionAssistantPilotEmail,
   isTodayStartRedesignEnabled,
   isWearablesPilotEnabled,
   trainerHomePath,
@@ -25,6 +26,12 @@ describe('today start redesign flag', () => {
 })
 
 describe('assistant nav pilot flag', () => {
+  it('matches only the explicitly approved production pilot email', () => {
+    expect(isProductionAssistantPilotEmail('TEST@test.com')).toBe(true)
+    expect(isProductionAssistantPilotEmail('trainer@test.com')).toBe(false)
+    expect(isProductionAssistantPilotEmail(null)).toBe(false)
+  })
+
   it('is disabled when the enabled flag is missing or not exactly "true", even for an allowlisted user', () => {
     vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', '')
     vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'trainer-1')
