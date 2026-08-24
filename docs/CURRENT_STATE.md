@@ -9,9 +9,20 @@
 
 ## Активное изменение
 
-- Ветка `codex/yandex-domain-contract` закрывает базовые stage-mutations для
-  клиентских карточек, персональных настроек тренера и пользовательских
-  упражнений, не переключая production frontend с Supabase.
+- Ветка `codex/yandex-db-reader-access` поверх открытого PR #538 добавляет
+  управляемый доступ людей к stage PostgreSQL без миграции на каждого человека.
+  После #538 её нужно актуализировать относительно `main` и сливать отдельным PR.
+- Миграция `000013` создаёт только curated views в `ops_readonly`; имена,
+  свободный личный текст, invitation hashes и весь `app_private` исключены.
+  Прямые grants на `public`, `fit_api` и административные `mdb_*` роли запрещены.
+- Ручной GitHub workflow идемпотентно выдаёт и отзывает профиль по существующему
+  PostgreSQL IAM username через private runner и GitHub OIDC. Пароли и Cloud
+  Shell не нужны; сам workflow остаётся явным audit event.
+- Блокирующая stage Terraform-проверка перенесена из cross-variable validation,
+  несовместимой с закреплённым Terraform 1.8.5, в строгий resource precondition.
+- Базовый PR #538 закрывает stage-mutations для клиентских карточек,
+  персональных настроек тренера и пользовательских упражнений, не переключая
+  production frontend с Supabase.
 - Общую карточку создаёт корневой тренер или самостоятельный клиент; менять и
   архивировать её могут только корневой тренер и сам клиент. Подключённый тренер
   меняет только собственные alias/note с отдельной версией membership.
@@ -66,11 +77,11 @@
 ## Проверки активной ветки
 
 - Локальный Yandex PostgreSQL в существующем Podman-контейнере применяет
-  `000012`; 18 интеграционных actor/RLS-тестов зелёные, включая cross-tenant,
-  membership privacy, stale versions и self-managed client.
+  `000013`; 19 интеграционных actor/RLS/access-тестов зелёные, включая реальный
+  login-role grant/read/revoke, запрет `public`, `app_private` и записи.
 - Полный `npm run check` зелёный: 688 frontend-тестов с coverage, lint,
-  TypeScript, DB types, iOS permissions, 39 infra policy tests, 117 API-тестов
-  (18 DB-тестов пропущены без специального env), API и production app build.
+  TypeScript, DB types, iOS permissions, 40 infra policy tests, 128 API-тестов
+  (19 DB-тестов пропущены без специального env), API и production app build.
 - Локальный Supabase пересоздан с нуля; все 596 SQL/RLS regression-тестов
   прошли отдельно от Yandex PostgreSQL actor/RLS suite.
 - Вошедший из `main` viewport-контракт проверен unit-регрессией, WebKit на
