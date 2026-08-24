@@ -115,6 +115,39 @@ variable "api_concurrency" {
   }
 }
 
+variable "api_execution_timeout" {
+  description = "Maximum HTTP request duration for the API. AI summaries need time for the existing bounded YandexGPT retry policy."
+  type        = string
+  default     = "120s"
+
+  validation {
+    condition     = can(regex("^[1-9][0-9]*s$", var.api_execution_timeout))
+    error_message = "api_execution_timeout must be a positive whole number of seconds."
+  }
+}
+
+variable "legacy_supabase_bridge_lockbox_secret_id" {
+  description = "Optional existing Lockbox secret ID with SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_SERVICE_ROLE_KEY and YANDEX_CLOUD_API_KEY for the temporary legacy-function bridge."
+  type        = string
+  default     = null
+  nullable    = true
+}
+
+variable "legacy_supabase_bridge_lockbox_secret_version_id" {
+  description = "Version ID for legacy_supabase_bridge_lockbox_secret_id. It is intentionally supplied outside Git."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = (
+      (var.legacy_supabase_bridge_lockbox_secret_id == null && var.legacy_supabase_bridge_lockbox_secret_version_id == null)
+      || (var.legacy_supabase_bridge_lockbox_secret_id != null && var.legacy_supabase_bridge_lockbox_secret_version_id != null)
+    )
+    error_message = "Legacy Supabase bridge Lockbox ID and version must be provided together."
+  }
+}
+
 variable "allow_unauthenticated_api" {
   description = "Allow browser invocation of the API transport. Application data remains protected by verified Yandex ID and the rollout allowlist."
   type        = bool

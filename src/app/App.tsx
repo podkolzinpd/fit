@@ -2,12 +2,13 @@ import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } fr
 import { useAuth } from './auth-context'
 import { trackPageView } from '../shared/yandex-metrika'
 import { AppLayout } from './AppLayout'
-import { trainerHomePath } from './feature-flags'
+import { isAssistantNavPilotEnabled, trainerHomePath } from './feature-flags'
 import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage, YandexPilotCallbackPage } from '../features/auth'
 import { ClientDetailPage, ClientFormPage, ClientProfilePage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
+import { AssistantSandboxPage } from '../features/assistant'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
 
 function Protected() {
@@ -26,6 +27,13 @@ function TrainerOnly() {
 function ClientOnly() {
   const { actor } = useAuth()
   return actor?.role === 'client' ? <Outlet /> : <Navigate to={trainerHomePath()} replace />
+}
+
+function AssistantPilotOnly() {
+  const { actor } = useAuth()
+  return actor && isAssistantNavPilotEnabled(actor.userId)
+    ? <Outlet />
+    : <Navigate to={actor?.role === 'client' ? '/me' : trainerHomePath()} replace />
 }
 
 function Home() {
@@ -54,6 +62,9 @@ const router = createBrowserRouter([
     { path: '/workouts/:workoutId', element: <WorkoutDetailPage /> },
     { path: '/workouts/:workoutId/live', element: <LiveWorkoutPage /> },
     { path: '/workouts/:workoutId/history/:exerciseRef', element: <ExerciseHistoryPage /> },
+    { element: <AssistantPilotOnly />, children: [
+      { path: '/assistant', element: <AssistantSandboxPage /> },
+    ] },
     { element: <TrainerOnly />, children: [
       { path: '/today', element: <TodayPage /> },
       { path: '/clients', element: <ClientsPage /> },

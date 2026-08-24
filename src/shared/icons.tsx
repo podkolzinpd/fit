@@ -18,6 +18,10 @@ export function TodayIcon(props: IconProps) {
   return <Icon data-icon="today" {...props}><circle cx="12" cy="12" r="8.5" /><path d="m8.2 12.1 2.4 2.4 5.2-5.2" /></Icon>
 }
 
+export function AssistantIcon(props: IconProps) {
+  return <Icon data-icon="assistant" {...props}><path d="m12 3 1.4 4.1L17.5 8.5l-4.1 1.4L12 14l-1.4-4.1-4.1-1.4 4.1-1.4L12 3Z" /><path d="m18.2 14.2.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7.7-2.1Z" /><path d="m6.2 15.2.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6.6-1.7Z" /></Icon>
+}
+
 export function ScheduleIcon(props: IconProps) {
   return <Icon data-icon="schedule" {...props}><rect x="3" y="4.5" width="18" height="16" rx="3" /><path d="M7.5 2.5v4M16.5 2.5v4M3 9h18" /><path d="M7.5 13h.01M12 13h.01M16.5 13h.01M7.5 17h.01M12 17h.01" /></Icon>
 }

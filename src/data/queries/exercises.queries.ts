@@ -1,5 +1,6 @@
 import { supabase } from './client'
 import type { ExerciseSnapshot } from '../../shared/domain'
+import { invokeLegacyCloudFunction } from './legacy-cloud-functions'
 
 export type WorkoutParseResponse = {
   items: Array<{ sourceText: string; exerciseRef: string; confidence: number; sets: Array<{ weightKg?: number; reps?: number; durationMin?: number; distanceKm?: number }> }>

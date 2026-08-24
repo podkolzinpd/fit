@@ -64,6 +64,31 @@ The service network `198.19.0.0/16` is explicitly allowed to reach only the
 PostgreSQL Odyssey port `6432`. Yandex assigns addresses from this range to
 network-connected Serverless Containers; it is distinct from the user subnet.
 
+## Temporary Supabase function bridge
+
+`parse-workout` and `summarize-client-training` can execute in the API
+Serverless Container before the source data is migrated. Their caller still
+authenticates with a Supabase JWT; the container verifies it with Supabase and
+reads/writes through the existing RLS and service-role contracts. `invite-client`
+intentionally remains a Supabase Edge Function because it creates a Supabase
+Auth e-mail invitation.
+
+To enable this bridge on an isolated stage, a security administrator creates an
+existing Lockbox version with exactly these payload keys:
+
+- `SUPABASE_URL`
+- `SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `YANDEX_CLOUD_API_KEY`
+
+Set only the Lockbox ID and version through the two
+`legacy_supabase_bridge_lockbox_*` Terraform inputs. Do not put payload values
+in Terraform variables, GitHub variables, repository files or frontend builds.
+The API receives a Supabase session only in `X-Supabase-Authorization`, because
+the container transport reserves `Authorization` for Yandex IAM. The container
+timeout is 120 seconds to preserve the existing summary function's bounded
+three-attempt, 30-second YandexGPT policy.
+
 Do not place backend credentials, OAuth secrets, database passwords or URLs,
 `.tfplan` or state files in the repository.
 
