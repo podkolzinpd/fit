@@ -126,7 +126,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   const progressProof = page.getByLabel('Доказательство прогресса')
   await expect(progressProof).toBeVisible()
-  await expect(progressProof.getByText('ПОДТВЕРЖДЁННЫЙ ФАКТ', { exact: true })).toBeVisible()
+  await expect(progressProof.getByText('ПРОГРЕСС ПО УПРАЖНЕНИЮ', { exact: true })).toBeVisible()
   await expect(progressProof.getByText(/Estimated 1RM не используется/)).toHaveCount(0)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 

@@ -32,17 +32,12 @@ describe('exercise progress presentation', () => {
     render(<ExerciseProgressSummary latest={strength} totalCount={12} />)
 
     expect(screen.getByText('60 кг × 8 повт.')).toBeVisible()
-    expect(screen.getByText('+5 кг')).toBeVisible()
-    expect(screen.getByText('65 кг')).toBeVisible()
-    expect(screen.getByText('520 кг·повт.')).toBeVisible()
-    expect(screen.getByText('12 из 25 до следующей отметки')).toBeVisible()
-    expect(screen.getByText(/без расчётных значений/)).toBeVisible()
-    const weightRecord = screen.getByText('Личный рекорд · рабочий вес').closest('div')
-    const volumeRecord = screen.getByText('Личный рекорд · вес × повторы').closest('div')
-    expect(weightRecord).toHaveClass('is-new-record')
-    expect(weightRecord?.querySelector('[data-icon="record"]')).toBeInTheDocument()
-    expect(volumeRecord).not.toHaveClass('is-new-record')
-    expect(volumeRecord?.querySelector('[data-icon="record"]')).not.toBeInTheDocument()
+    expect(screen.getByText('+5 кг к прошлой тренировке')).toBeVisible()
+    expect(screen.getByText('65 кг · 520 кг·повт.')).toBeVisible()
+    expect(screen.getByText('12 выполнений')).toBeVisible()
+    expect(screen.getByText('Отметка 10 · далее 25')).toBeVisible()
+    expect(screen.getByText('Учитываем только выполненные подходы.')).toBeVisible()
+    expect(screen.getByText('Личный рекорд').querySelector('[data-icon="record"]')).toBeInTheDocument()
   })
 
   it('marks only server-provided PRs and renders confirmed fact without a plan fallback', () => {
@@ -59,7 +54,50 @@ describe('exercise progress presentation', () => {
     expect(exerciseProgressValueLabel(30, 'reps')).toBe('30 повт.')
     expect(exerciseProgressValueLabel(90, 'duration')).toBe('1:30')
     expect(exerciseProgressValueLabel(5.25, 'distance')).toBe('5,3 км')
-    expect(exerciseProgressSetLabel({ durationSec: 60, rpe: 7.5 }, true)).toBe('1 мин × RPE 7,5')
+    expect(exerciseProgressSetLabel({ durationSec: 60, rpe: 7.5 }, 'duration', true)).toBe('1 мин × RPE 7,5')
+    expect(exerciseProgressSetLabel({ weightKg: 0, reps: 20 }, 'reps', false)).toBe('20 повт.')
+  })
+
+  it('shows bodyweight progress without fake kilograms and keeps completion milestones', () => {
+    const pushUps: ExerciseProgressResult = {
+      ...strength,
+      exerciseName: 'Отжимания',
+      inputKind: 'reps',
+      primaryValue: 20,
+      previousPrimaryValue: 15,
+      primaryChange: 5,
+      allTimePrimaryValue: 20,
+      bestWeightKg: null,
+      repsAtBestWeight: null,
+      bestWeightReps: null,
+      allTimeBestWeightKg: null,
+      allTimeBestWeightReps: null,
+      isPrimaryPr: true,
+      isWeightPr: false,
+      sets: [{ weightKg: 0, reps: 20 }],
+    }
+
+    render(<ExerciseProgressSummary latest={pushUps} totalCount={10} />)
+
+    expect(screen.getByText('20 повт.')).toBeVisible()
+    expect(screen.getByText('+5 повт. к прошлой тренировке')).toBeVisible()
+    expect(screen.getByText('10 выполнений')).toBeVisible()
+    expect(screen.getByText('Отметка 10 · далее 25')).toBeVisible()
+    expect(screen.queryByText(/0 кг/)).not.toBeInTheDocument()
+  })
+
+  it('keeps the completed-exercise milestones at 10, 25, 50 and 100', () => {
+    const view = render(<ExerciseProgressSummary latest={strength} totalCount={10} />)
+    expect(screen.getByText('Отметка 10 · далее 25')).toBeVisible()
+
+    view.rerender(<ExerciseProgressSummary latest={strength} totalCount={25} />)
+    expect(screen.getByText('Отметка 25 · далее 50')).toBeVisible()
+
+    view.rerender(<ExerciseProgressSummary latest={strength} totalCount={50} />)
+    expect(screen.getByText('Отметка 50 · далее 100')).toBeVisible()
+
+    view.rerender(<ExerciseProgressSummary latest={strength} totalCount={100} />)
+    expect(screen.getByText('Отметка 100 · далее 250')).toBeVisible()
   })
 
   it('has an explicit empty state', () => {

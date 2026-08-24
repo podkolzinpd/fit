@@ -720,7 +720,7 @@ for (const viewport of mobileViewports) {
       await expect(page.locator('main')).toBeVisible()
       if (screen === '/today') {
         await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
-        await expect(page.getByLabel('Тренировка')).toHaveCount(0)
+        await expect(page.getByRole('textbox', { name: 'Тренировка' })).toHaveCount(0)
       }
       if (screen.includes('11111111')) {
         await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()

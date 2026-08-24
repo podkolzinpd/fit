@@ -176,7 +176,7 @@ test('client and trainer receive progress and workout changes without reload', a
     await expect(trainerProof).toBeVisible()
     await expect(clientProof).toBeVisible()
     expect(await clientProof.textContent()).toBe(await trainerProof.textContent())
-    await expect(clientProof.locator('strong:visible').filter({ hasText: /^5 км$/ }).first()).toBeVisible()
+    await expect(clientProof.getByRole('heading', { name: '5 км', exact: true })).toBeVisible()
     await trainer.getByRole('tab', { name: 'История' }).click()
     await client.getByRole('tab', { name: 'История' }).click()
     expect(await client.locator('.exercise-progress-timeline').textContent())
