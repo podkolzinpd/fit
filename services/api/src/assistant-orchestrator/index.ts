@@ -34,6 +34,21 @@ function required(name: string): string {
   return value
 }
 
+async function yandexIamToken(): Promise<string> {
+  let response: Response
+  try {
+    response = await fetch('http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token', {
+      headers: { 'Metadata-Flavor': 'Google' },
+    })
+  } catch {
+    throw new HttpError(503, 'orchestrator_auth_unavailable')
+  }
+  if (!response.ok) throw new HttpError(503, 'orchestrator_auth_unavailable')
+  const body = await response.json() as { access_token?: unknown }
+  if (typeof body.access_token !== 'string' || !body.access_token) throw new HttpError(503, 'orchestrator_auth_unavailable')
+  return body.access_token
+}
+
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -157,16 +172,18 @@ export async function runAssistantTurn(authorization: string, command: Assistant
 
   let response: Response
   try {
+    const iamToken = await yandexIamToken()
     response = await fetch(completionUrl, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Api-Key ${required('YANDEX_CLOUD_API_KEY')}` },
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${iamToken}` },
       body: JSON.stringify({
         modelUri: `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`,
         completionOptions: { stream: false, temperature: 0.2, maxTokens: '1200' }, jsonSchema: { schema },
         messages: [{ role: 'user', text: modelPrompt(history, clientContext, progressContext) }],
       }),
     })
-  } catch {
+  } catch (error) {
+    if (error instanceof HttpError) throw error
     throw new HttpError(502, 'orchestrator_unavailable')
   }
   if (!response.ok) {
