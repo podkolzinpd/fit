@@ -5,22 +5,17 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-24
-Проверенный базовый `main`: `85a1648` (`feat(yandex): add base domain mutations (#538)`)
+Проверенный базовый `main`: `5debd16` (`feat(yandex): add managed database reader access (#542)`)
 
 ## Активное изменение
 
-- Ветка `codex/yandex-db-reader-access` добавляет
-  управляемый доступ людей к stage PostgreSQL без миграции на каждого человека.
-- Миграция `000013` создаёт только curated views в `ops_readonly`; имена,
-  свободный личный текст, invitation hashes и весь `app_private` исключены.
-  Прямые grants на `public`, `fit_api` и административные `mdb_*` роли запрещены.
-- Ручной GitHub workflow идемпотентно выдаёт и отзывает профиль по существующему
-  PostgreSQL IAM username через private runner и GitHub OIDC. Пароли и Cloud
-  Shell не нужны; сам workflow остаётся явным audit event.
-- Блокирующая stage Terraform-проверка перенесена из cross-variable validation,
-  несовместимой с закреплённым Terraform 1.8.5, в строгий resource precondition.
-- Попавшие в `main` нетипизированные строки assistant context нормализуются на
-  границе Supabase-ответа; поведение оркестратора для валидных данных не меняется.
+- Ветка `codex/yandex-stage-timeout-pin` явно сохраняет развёрнутый timeout
+  stage API `30s` в автоматической доставке.
+- Это устраняет случайный Terraform drift к модульному default `120s`, не
+  ослабляя plan policy, не создавая ресурсы и не увеличивая стоимость stage.
+- Управляемый доступ читателей из миграции `000013` уже в `main`; его первая
+  доставка на stage и выдача доступа пилотному читателю ждут только исправленного
+  автоматического deploy.
 
 ## Последняя проверенная продуктовая точка
 
@@ -68,16 +63,8 @@
 
 ## Проверки активной ветки
 
-- Локальный Yandex PostgreSQL в существующем Podman-контейнере применяет
-  `000013`; 19 интеграционных actor/RLS/access-тестов зелёные, включая реальный
-  login-role grant/read/revoke, запрет `public`, `app_private` и записи.
-- Полный `npm run check` зелёный: 689 frontend-тестов с coverage, lint,
-  TypeScript, DB types, iOS permissions, 41 infra policy-тест, 128 API-тестов
-  (19 DB-тестов пропущены без специального env), API и production app build.
-- Локальный Supabase пересоздан с нуля; все 596 SQL/RLS regression-тестов
-  прошли отдельно от Yandex PostgreSQL actor/RLS suite.
-- Вошедший из `main` viewport-контракт проверен unit-регрессией, WebKit на
-  390/430 px и desktop Trainer на 1440 px.
+- `npm run check` зелёный: lint, TypeScript, 689 frontend-тестов с coverage,
+  42 infra policy-теста, 128 API-тестов и оба production build.
 
 ## Ближайший порядок
 

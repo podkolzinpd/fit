@@ -44,6 +44,10 @@ test('publishes the final yandex-stage result without restoring an approval gate
   assert.doesNotMatch(workflow, /^    environment: yandex-stage$/m)
 })
 
+test('preserves the deployed stage API timeout unless a cost change is reviewed', () => {
+  assert.match(workflow, /^  TF_VAR_api_execution_timeout: '30s'$/m)
+})
+
 test('loads synthetic fixtures and verifies every read model through the runtime API', () => {
   const migrationIndex = workflow.indexOf('- name: Apply all pending migrations')
   const fixtureIndex = workflow.indexOf('- name: Prepare idempotent stage workout fixture')

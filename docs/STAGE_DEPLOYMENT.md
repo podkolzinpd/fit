@@ -17,7 +17,10 @@ After the one-time bootstrap, a release is performed only by
 2. The plan policy allows only existing API and migration runner revisions,
    exact credential metadata and lifecycle updates, and the reviewed public API
    binding. A new resource, resize, identity change, delete or replacement stops
-   the workflow before any apply. Safe plans continue automatically.
+   the workflow before any apply. Safe plans continue automatically. The stage
+   API timeout is explicitly pinned to the deployed `30s`; changing it is a
+   separate cost-sensitive infrastructure decision and cannot happen through a
+   service or migration release by accident.
 3. GitHub exchanges its OIDC token for a short-lived Yandex Cloud IAM token.
    No authorized-key JSON is used by CI.
 4. Terraform applies the scoped runtime identity and secret access grants
