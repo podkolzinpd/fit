@@ -19,7 +19,7 @@ import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { formatLlmWorkoutText, parseWorkoutWithLlm } from './llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
-import { workoutDateForRecordMode, type WorkoutRecordMode } from './workout-entry-rules'
+import { type WorkoutRecordMode } from './workout-entry-rules'
 import { WorkoutComposer } from './WorkoutComposer'
 import { VoiceInputButton, type VoiceInputPhase } from '../voice-input'
 import { WorkoutParseErrorNotice, workoutParseErrorKind, type WorkoutParseErrorKind } from './WorkoutParseErrorNotice'
@@ -229,7 +229,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       setItems(draft.items)
       setClientId(draft.clientId)
       setRecordMode(draft.recordMode ?? 'planned')
-      setWorkoutDate(workoutDateForRecordMode(draft.recordMode ?? 'planned', draft.workoutDate ? localDate(draft.workoutDate) : today, today))
+      setWorkoutDate(draft.workoutDate ? localDate(draft.workoutDate) : today)
       setStartTime(draft.startTime ?? '')
       setManualRefs(draft.manualRefs ?? [])
       setRemovedRefs(draft.removedRefs ?? [])
@@ -675,8 +675,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       {(prefillError || save.error) && <p className="error">{prefillError ?? save.error?.message}</p>}
       <section className="today-save-actions" aria-label="Тип записи">
         <p className="today-save-question">Как сохранить?</p>
-        <div className="today-record-mode" role="group" aria-label="Как сохранить тренировку"><button type="button" className={recordMode === 'planned' ? 'active' : ''} aria-pressed={recordMode === 'planned'} onClick={() => setRecordMode('planned')}>Запланировать</button><button type="button" className={recordMode === 'completed' ? 'active' : ''} aria-pressed={recordMode === 'completed'} onClick={() => { setRecordMode('completed'); setWorkoutDate((date) => workoutDateForRecordMode('completed', date, today)) }}>Записать выполненную</button></div>
-        <div className="split"><label className="today-date-field"><span>Дата</span><input aria-label="Дата тренировки" type="date" value={workoutDate} max={recordMode === 'completed' ? today : undefined} onChange={(event) => setWorkoutDate(localDate(event.target.value))} required /></label>{recordMode === 'planned' && <label className="today-date-field"><span>Время</span><input aria-label="Время тренировки" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>}</div>
+        <div className="today-record-mode" role="group" aria-label="Как сохранить тренировку"><button type="button" className={recordMode === 'planned' ? 'active' : ''} aria-pressed={recordMode === 'planned'} onClick={() => setRecordMode('planned')}>Запланировать</button><button type="button" className={recordMode === 'completed' ? 'active' : ''} aria-pressed={recordMode === 'completed'} onClick={() => setRecordMode('completed')}>Записать выполненную</button></div>
+        <div className="split"><label className="today-date-field"><span>Дата</span><input aria-label="Дата тренировки" type="date" value={workoutDate} onChange={(event) => setWorkoutDate(localDate(event.target.value))} required /></label>{recordMode === 'planned' && <label className="today-date-field"><span>Время</span><input aria-label="Время тренировки" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>}</div>
         <WorkoutCta type="button" className="wide" pending={save.isPending} pendingLabel="Сохраняем…" disabled={!items.length || !clientId} onClick={() => save.mutate(recordMode)}>{recordMode === 'planned' ? 'Запланировать тренировку' : 'Записать тренировку'}</WorkoutCta>
       </section></section>}
     </section>}
