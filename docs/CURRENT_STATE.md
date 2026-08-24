@@ -19,6 +19,8 @@
   Shell не нужны; сам workflow остаётся явным audit event.
 - Блокирующая stage Terraform-проверка перенесена из cross-variable validation,
   несовместимой с закреплённым Terraform 1.8.5, в строгий resource precondition.
+- Попавшие в `main` нетипизированные строки assistant context нормализуются на
+  границе Supabase-ответа; поведение оркестратора для валидных данных не меняется.
 
 ## Последняя проверенная продуктовая точка
 
@@ -69,7 +71,7 @@
 - Локальный Yandex PostgreSQL в существующем Podman-контейнере применяет
   `000013`; 19 интеграционных actor/RLS/access-тестов зелёные, включая реальный
   login-role grant/read/revoke, запрет `public`, `app_private` и записи.
-- Полный `npm run check` зелёный: 688 frontend-тестов с coverage, lint,
+- Полный `npm run check` зелёный: 689 frontend-тестов с coverage, lint,
   TypeScript, DB types, iOS permissions, 41 infra policy-тест, 128 API-тестов
   (19 DB-тестов пропущены без специального env), API и production app build.
 - Локальный Supabase пересоздан с нуля; все 596 SQL/RLS regression-тестов
