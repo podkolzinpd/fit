@@ -32,7 +32,7 @@ function ClientOnly() {
 
 function AssistantPilotOnly() {
   const { actor } = useAuth()
-  return actor && isAssistantNavPilotEnabled(actor.userId)
+  return actor && isAssistantNavPilotEnabled(actor.userId, actor.email)
     ? <Outlet />
     : <Navigate to={actor?.role === 'client' ? '/me' : trainerHomePath()} replace />
 }
