@@ -2110,7 +2110,17 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Старт — утилитарный экран: обычный iOS-tabbar вплотную к низу, без плавающей
    капсулы и перекрытия поля. На клавиатуре он скрывается через VisualViewport. */
 .today-start-shell .tab-bar { left:50%; bottom:0; width:min(100%, 440px); transform:translateX(-50%); border:0; border-top:1px solid var(--border); border-radius:0; box-shadow:none; }.today-start-shell .content { padding-bottom:calc(86px + env(safe-area-inset-bottom)); }.today-start-shell.keyboard-open .tab-bar { display:none; }.today-start-shell.keyboard-open .content { padding-bottom:20px; }
-@media (max-width: 480px) { html, body, #root { width:100%; height:100%; min-height:100%; overflow:hidden }.phone-frame { width:100%; height:100%; min-height:0; max-height:100%; margin:0; border:0; border-radius:0 }.auth-screen { width: 100%; min-height: 100%; margin: 0; border: 0; border-radius: 0 }.content:not(.content-immersive) { padding-bottom:0 }.tab-bar { position:static; flex:0 0 auto; bottom:auto; width:100%; border-width:1px 0 0; border-radius:0; box-shadow:none; backdrop-filter:none }.today-start-shell .tab-bar { left:auto; width:100%; transform:none }.today-start-shell .content { padding-bottom:0 } }
+@media (max-width: 480px) {
+  html, body { width:100%; height:100%; min-height:100%; overflow:hidden; overscroll-behavior:none }
+  #root { position:fixed; inset:0 auto auto 0; width:100%; height:var(--app-viewport-height, 100dvh); min-height:0; overflow:hidden; background:var(--bg) }
+  .phone-frame { width:100%; height:100%; min-height:0; max-height:none; margin:0; border:0; border-radius:0 }
+  .app-keyboard-open .phone-frame, .app-keyboard-open .auth-screen { height:var(--app-visible-height, 100%); min-height:0 }
+  .auth-screen { width:100%; height:100%; min-height:0; margin:0; border:0; border-radius:0 }
+  .content:not(.content-immersive) { padding-bottom:0 }
+  .tab-bar { position:static; flex:0 0 auto; bottom:auto; width:100%; border-width:1px 0 0; border-radius:0; box-shadow:none; backdrop-filter:none }
+  .today-start-shell .tab-bar { left:auto; width:100%; transform:none }
+  .today-start-shell .content { padding-bottom:0 }
+}
 @media (max-width: 480px) { .measurement-actions { grid-template-columns:repeat(2,minmax(0,1fr)) }.measurement-actions .measurement-primary-action { grid-column:1 / -1 }.trainer-measurements-workspace { gap:var(--space-3) } }
 @media (max-width: 480px) { .client-progress-measurement .measurement-actions { grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr) }.client-progress-measurement .measurement-actions .measurement-primary-action { grid-column:auto } }
 @media (max-width: 360px) { .measure-grid { grid-template-columns: 1fr }.inline-form { grid-template-columns: 1fr }.inline-form button { grid-column: 1 }.tab-bar a { font-size: 11px } }

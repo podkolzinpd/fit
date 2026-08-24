@@ -1,15 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnalyticsIcon, AssistantIcon, ClientsIcon, HomeIcon, ProfileIcon, ScheduleIcon, TodayIcon } from '../shared/icons'
 import { useAuth } from './auth-context'
 import { applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from './theme'
 import { isAssistantNavPilotEnabled, isDarkThemePilotEnabled, isTodayStartRedesignEnabled } from './feature-flags'
+import { useAppViewport } from './app-viewport'
 
-export function appViewportMetrics(innerHeight: number, visualHeight: number) {
-  return {
-    keyboardOpen: innerHeight - visualHeight > 160,
-  }
-}
+export { appViewportMetrics } from './app-viewport'
 
 export function AppLayout() {
   const { actor } = useAuth()
@@ -17,7 +14,7 @@ export function AppLayout() {
   const contentRef = useRef<HTMLDivElement>(null)
   const { pathname, search } = useLocation()
   const redesignedStart = isTodayStartRedesignEnabled()
-  const [keyboardOpen, setKeyboardOpen] = useState(false)
+  const { keyboardOpen } = useAppViewport()
   // main.tsx применяет тему до первого render, когда аккаунт ещё неизвестен.
   // Пилотный вариант подключается здесь — как только auth вернул actor и
   // allowlist можно проверить; вне allowlist вариант остаётся прежним тёмным.
@@ -36,26 +33,6 @@ export function AppLayout() {
     const frame = window.requestAnimationFrame(() => contentRef.current?.scrollTo(0, 0))
     return () => window.cancelAnimationFrame(frame)
   }, [pathname, search])
-
-  // На iOS окно не всегда меняет высоту при открытии клавиатуры. Visual
-  // Viewport даёт её фактическую высоту: таб-бар не мешает вводу и CTA.
-  useEffect(() => {
-    const viewport = window.visualViewport
-    if (!viewport) return
-    const update = () => {
-      const metrics = appViewportMetrics(window.innerHeight, viewport.height)
-      setKeyboardOpen(metrics.keyboardOpen)
-    }
-    update()
-    viewport.addEventListener('resize', update)
-    viewport.addEventListener('scroll', update)
-    window.addEventListener('resize', update)
-    return () => {
-      viewport.removeEventListener('resize', update)
-      viewport.removeEventListener('scroll', update)
-      window.removeEventListener('resize', update)
-    }
-  }, [])
 
   // Создание, проверка, редактирование и live — один сфокусированный путь
   // тренировки. Нижняя навигация возвращается на списках и после выхода из
