@@ -169,7 +169,10 @@ export async function runAssistantTurn(authorization: string, command: Assistant
   } catch {
     throw new HttpError(502, 'orchestrator_unavailable')
   }
-  if (!response.ok) throw new HttpError(502, 'orchestrator_unavailable')
+  if (!response.ok) {
+    console.warn('assistant_model_response_failed', { status: response.status })
+    throw new HttpError(502, 'orchestrator_unavailable')
+  }
   let raw: unknown
   try {
     const payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }> } }
