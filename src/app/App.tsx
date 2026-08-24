@@ -8,7 +8,8 @@ import { ClientDetailPage, ClientFormPage, ClientProfilePage, ClientsPage, GoalP
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
-import { AssistantSandboxPage } from '../features/assistant'
+import { AssistantHistoryPage, AssistantSandboxPage } from '../features/assistant'
+import { assistantOrchestratorUrl } from '../data/queries/assistant-orchestrator'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
 
 function Protected() {
@@ -41,6 +42,10 @@ function Home() {
   return <Navigate to={actor?.role === 'client' ? '/me' : trainerHomePath()} replace />
 }
 
+function AssistantPage() {
+  return assistantOrchestratorUrl() === undefined ? <AssistantSandboxPage /> : <AssistantHistoryPage />
+}
+
 const router = createBrowserRouter([
   { path: '/auth', element: <AuthPage /> },
   { path: '/auth/forgot', element: <ForgotPasswordPage /> },
@@ -63,7 +68,7 @@ const router = createBrowserRouter([
     { path: '/workouts/:workoutId/live', element: <LiveWorkoutPage /> },
     { path: '/workouts/:workoutId/history/:exerciseRef', element: <ExerciseHistoryPage /> },
     { element: <AssistantPilotOnly />, children: [
-      { path: '/assistant', element: <AssistantSandboxPage /> },
+      { path: '/assistant', element: <AssistantPage /> },
     ] },
     { element: <TrainerOnly />, children: [
       { path: '/today', element: <TodayPage /> },

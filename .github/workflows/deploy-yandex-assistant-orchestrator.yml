@@ -1,0 +1,71 @@
+name: Deploy production Yandex assistant orchestrator
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-yandex-assistant-orchestrator.yml'
+      - 'services/api/package.json'
+      - 'services/api/package-lock.json'
+      - 'services/api/src/assistant-orchestrator/**'
+      - 'services/api/src/yandex-assistant-orchestrator-function.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: production-yandex-assistant-orchestrator
+  cancel-in-progress: false
+
+env:
+  YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
+  YC_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  FUNCTION_NAME: fit-assistant-orchestrator
+  RUNTIME_SA_NAME: fit-assistant-orchestrator
+  LOCKBOX_NAME: fit-summarize-client-training-supabase
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - name: Build function package
+        run: |
+          npm ci --prefix services/api
+          npm --prefix services/api run typecheck
+          npm --prefix services/api run test
+          npm --prefix services/api run build
+          mkdir -p .yandex-assistant-orchestrator-package
+          cp services/api/package.json services/api/package-lock.json .yandex-assistant-orchestrator-package/
+          cp -R services/api/dist .yandex-assistant-orchestrator-package/dist
+      - name: Install Yandex Cloud CLI
+        run: |
+          curl --fail --silent --show-error --location https://storage.yandexcloud.net/yandexcloud-yc/install.sh --output /tmp/install-yc.sh
+          bash /tmp/install-yc.sh -i "$HOME/yandex-cloud" -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+      - name: Exchange GitHub OIDC token
+        run: scripts/yandex-github-oidc.sh
+      - name: Publish bounded function version
+        run: |
+          set -euo pipefail
+          lockbox_id=$(yc lockbox secret get --name "$LOCKBOX_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
+          runtime_sa_id=$(yc iam service-account get --name "$RUNTIME_SA_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id' 2>/dev/null || yc iam service-account create --name "$RUNTIME_SA_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
+          yc resource-manager folder add-access-binding "$YC_FOLDER_ID" --role ai.languageModels.user --service-account-id "$runtime_sa_id"
+          yc lockbox secret add-access-binding "$lockbox_id" --role lockbox.payloadViewer --service-account-id "$runtime_sa_id"
+          if ! yc serverless function get --name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
+            yc serverless function create "$FUNCTION_NAME" --description 'Production Fit bounded assistant orchestrator' --folder-id "$YC_FOLDER_ID"
+          fi
+          yc serverless function version create --function-name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --runtime nodejs22 --entrypoint dist/yandex-assistant-orchestrator-function.handler --memory 1GB --execution-timeout 120s --service-account-id "$runtime_sa_id" --source-path .yandex-assistant-orchestrator-package --secret id="$lockbox_id",key=SUPABASE_URL,environment-variable=SUPABASE_URL --secret id="$lockbox_id",key=SUPABASE_PUBLISHABLE_KEY,environment-variable=SUPABASE_PUBLISHABLE_KEY --secret id="$lockbox_id",key=SUPABASE_SERVICE_ROLE_KEY,environment-variable=SUPABASE_SERVICE_ROLE_KEY --secret id="$lockbox_id",key=YANDEX_CLOUD_API_KEY,environment-variable=YANDEX_CLOUD_API_KEY --secret id="$lockbox_id",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID --secret id="$lockbox_id",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID
+          yc serverless function add-access-binding "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --role serverless.functions.invoker --subject system:allUsers
+          function_url=$(yc serverless function get --name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.http_invoke_url')
+          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --request POST --header 'content-type: application/json' --data '{}' "$function_url")
+          test "$status" = 401
+          printf '### Yandex assistant orchestrator\n\n%s\n' "$function_url" >> "$GITHUB_STEP_SUMMARY"
