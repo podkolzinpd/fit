@@ -30,4 +30,10 @@ test('pins every Yandex Cloud Lockbox mount to an immutable version', () => {
   const assistant = readFileSync(join(workflowsDirectory, 'deploy-yandex-assistant-orchestrator.yml'), 'utf8')
   assert.match(assistant, /--environment RELEASE_SHA=\"\$GITHUB_SHA\"/)
   assert.doesNotMatch(assistant, /add-access-binding\s+\S+.*(?:lockbox|allUsers|serverless\.functions\.invoker)/)
+
+  const summary = readFileSync(join(workflowsDirectory, 'deploy-yandex-summary-function.yml'), 'utf8')
+  assert.match(summary, /Resolve the existing immutable Lockbox version/)
+  assert.match(summary, /\.current_version\.id/)
+  assert.doesNotMatch(summary, /api\.supabase\.com\/v1\/projects\/\$SUPABASE_PROJECT_ID\/secrets/)
+  assert.doesNotMatch(summary, /lockbox secret add-version/)
 })
