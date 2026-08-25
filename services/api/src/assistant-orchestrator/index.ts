@@ -14,7 +14,14 @@ export type AssistantTurnResponse = { reply: string; action: AssistantAction | n
 type AssistantCapability = { title: string; description: string }
 type SummaryCandidate = { id: string; fullName: string }
 type SummaryPeriod = { periodStart: string; periodEnd: string; label: string }
-type ClientDraft = { fullName: string; gender?: 'male' | 'female' | undefined; ageYears?: number | undefined; heightCm?: number | undefined }
+export type ClientDraft = {
+  fullName?: string | undefined
+  gender?: 'male' | 'female' | undefined
+  ageYears?: number | undefined
+  heightCm?: number | undefined
+  goal?: string | undefined
+  initialWeightKg?: number | undefined
+}
 
 // Add a capability here only together with its implemented confirmation handler.
 // This list is the sole source for answers about what the assistant can do.
@@ -242,6 +249,8 @@ function validProposedPayload(tool: Tool, payload: Record<string, unknown>): boo
     && (payload.gender === 'male' || payload.gender === 'female')
     && typeof payload.ageYears === 'number' && Number.isInteger(payload.ageYears) && payload.ageYears > 0 && payload.ageYears < 120
     && typeof payload.heightCm === 'number' && Number.isFinite(payload.heightCm) && payload.heightCm > 0 && payload.heightCm < 260
+    && (payload.goal === undefined || (typeof payload.goal === 'string' && payload.goal.trim().length > 0 && payload.goal.length <= 200))
+    && (payload.initialWeightKg === undefined || (typeof payload.initialWeightKg === 'number' && Number.isFinite(payload.initialWeightKg) && payload.initialWeightKg > 0 && payload.initialWeightKg < 1_000))
   if (tool === 'summarize_progress') return payload.step === 'confirm'
     && typeof payload.clientId === 'string' && UUID.test(payload.clientId)
     && typeof payload.periodStart === 'string' && typeof payload.periodEnd === 'string'
@@ -310,27 +319,60 @@ function isCreateClientRequest(message: string): boolean {
   return /(?:добав|созда|завед|нов).{0,24}клиент/u.test(normalized)
 }
 
+function extractClientName(message: string): string | undefined {
+  const withoutCommand = message.trim()
+    .replace(/^(?:добав(?:ь|ить)|созда(?:й|ть)|завед(?:и|ть))\s+(?:(?:мне|нам|нов\p{L}*|карточк\p{L}*)\s+){0,2}клиент\p{L}*\s*/iu, '')
+    .replace(/^[\s,:;—-]+/u, '')
+  const fieldStart = withoutCommand.search(/\s+(?:пол\b|женщин\p{L}*|мужчин\p{L}*|женск\p{L}*|мужск\p{L}*|[жм](?=\s|[,;:]|$)|возраст\b|рост\b|цель\b|начальн\p{L}*\s+вес\b|вес\b)/iu)
+  const candidate = ((fieldStart < 0 ? withoutCommand : withoutCommand.slice(0, fieldStart))
+    .split(/[;,]/u)[0] ?? '')
+    .replace(/^(?:по имени|имя|клиент(?:а|ку)?(?: зовут)?)\s*[:—-]?\s*/iu, '')
+    .replace(/^[\s,:;—-]+|[\s,:;—-]+$/gu, '')
+    .trim()
+  if (!candidate || /^(?:пол|женщин\p{L}*|мужчин\p{L}*|женск\p{L}*|мужск\p{L}*|возраст|рост|цель|вес)$/iu.test(candidate)) return undefined
+  const words = candidate.split(/\s+/u)
+  if (words.length > 3 || words.some((word) => !/^[\p{L}-]+$/u.test(word))) return undefined
+  return candidate.length >= 2 ? candidate : undefined
+}
+
 function clientDraftFromAction(value: unknown): ClientDraft | undefined {
   const payload = actionRecord(value)
-  if (!payload || typeof payload.fullName !== 'string') return undefined
-  return {
-    fullName: payload.fullName,
+  if (!payload) return undefined
+  const draft: ClientDraft = {
+    fullName: typeof payload.fullName === 'string' ? payload.fullName : undefined,
     gender: payload.gender === 'male' || payload.gender === 'female' ? payload.gender : undefined,
     ageYears: typeof payload.ageYears === 'number' ? payload.ageYears : undefined,
     heightCm: typeof payload.heightCm === 'number' ? payload.heightCm : undefined,
+    goal: typeof payload.goal === 'string' ? payload.goal : undefined,
+    initialWeightKg: typeof payload.initialWeightKg === 'number' ? payload.initialWeightKg : undefined,
   }
+  return draft.fullName !== undefined || draft.gender !== undefined || draft.ageYears !== undefined || draft.heightCm !== undefined || draft.goal !== undefined || draft.initialWeightKg !== undefined ? draft : undefined
 }
 
 function clientDraftFromMessage(message: string, previous: ClientDraft): ClientDraft {
   const normalized = normalizeAssistantMessage(message)
-  const age = normalized.match(/(?:^|\s)(\d{1,3})\s*(?:лет|год|года)(?:\s|$)/u)
-  const height = normalized.match(/(?:рост\s*)?(\d{2,3})\s*(?:см|сантиметр)/u)
+  const explicitAge = normalized.match(/возраст\s*[:—-]?\s*(\d{1,3})(?:\s|$)/u)
+  const verbalAge = normalized.match(/(?:^|\s)(\d{1,3})\s*(?:лет|год|года)(?:\s|$)/u)
+  const ageValue = explicitAge?.[1] ?? verbalAge?.[1]
+  const explicitHeight = normalized.match(/рост\s*[:—-]?\s*(\d{2,3})(?:\s*(?:см|сантиметр\p{L}*))?(?:\s|$)/u)
+  const heightWithUnit = normalized.match(/(\d{2,3})\s*(?:см|сантиметр\p{L}*)/u)
+  const heightValue = explicitHeight?.[1] ?? heightWithUnit?.[1]
+  const weight = normalized.match(/(?:начальн\w*\s+)?вес\s*[:—-]?\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:кг|килограмм\w*)?/u)
+  const goal = normalized.match(/(?:цель|хочу)\s*[:—-]?\s*(.+?)(?=\s*(?:[,;.]?\s*)(?:пол|женщин\p{L}*|мужчин\p{L}*|женск\p{L}*|мужск\p{L}*|возраст|рост|начальн\p{L}*\s+вес|вес)(?:\s|$)|$)/u)
+  const parsedGoal = goal?.[1]?.trim().replace(/[.,;:]+$/u, '')
   return {
     ...previous,
-    gender: normalized.includes('жен') || /(?:^|\s)ж(?:\s|$)/u.test(normalized) ? 'female' : normalized.includes('муж') || /(?:^|\s)м(?:\s|$)/u.test(normalized) ? 'male' : previous.gender,
-    ageYears: age === null ? previous.ageYears : Number(age[1]),
-    heightCm: height === null ? previous.heightCm : Number(height[1]),
+    fullName: extractClientName(message) ?? previous.fullName,
+    gender: /(?:женщин\p{L}*|женск\p{L}*|девушк\p{L}*|(?:^|\s)ж(?:\s|$))/u.test(normalized) ? 'female' : /(?:мужчин\p{L}*|мужск\p{L}*|парень|(?:^|\s)м(?:\s|$))/u.test(normalized) ? 'male' : previous.gender,
+    ageYears: ageValue === undefined ? previous.ageYears : Number(ageValue),
+    heightCm: heightValue === undefined ? previous.heightCm : Number(heightValue),
+    goal: parsedGoal === undefined || parsedGoal.length === 0 ? previous.goal : parsedGoal,
+    initialWeightKg: weight === null ? previous.initialWeightKg : Number((weight[1] ?? '0').replace(',', '.')),
   }
+}
+
+function clientDraftPayload(draft: ClientDraft): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(draft).filter(([, value]) => value !== undefined))
 }
 
 function clientAction(title: string, description: string, status: AssistantAction['status'], payload: Record<string, unknown>): AssistantTurnResponse {
@@ -476,22 +518,14 @@ export function createClientTurn(message: string, latestAction: unknown): Assist
   const continuation = previousAction?.tool === 'create_client_draft'
   if (!isCreateClientRequest(message) && !continuation) return undefined
   if (continuation && isSummaryCancellation(message)) return { reply: 'Хорошо, создание карточки клиента отменено.', action: null }
-  if (!continuation) return clientAction('Новый клиент', 'Как зовут клиента?', 'needs_input', { step: 'name' })
-
-  const previousPayload = actionRecord(previousAction?.payload)
-  const previousStep = previousPayload?.step
-  if (previousStep === 'name') {
-    const fullName = message.trim()
-    if (fullName.length < 2) return clientAction('Уточните имя', 'Напишите имя клиента, чтобы подготовить карточку.', 'needs_input', { step: 'name' })
-    return clientAction('Данные клиента', `Укажите пол, возраст и рост для ${fullName}. Например: «женщина, 32 года, 168 см».`, 'needs_input', { step: 'profile', fullName })
-  }
-
-  const previousDraft = clientDraftFromAction(previousAction?.payload)
-  if (!previousDraft) return clientAction('Новый клиент', 'Как зовут клиента?', 'needs_input', { step: 'name' })
+  const previousDraft = clientDraftFromAction(previousAction?.payload) ?? {}
   const draft = clientDraftFromMessage(message, previousDraft)
+  if (draft.fullName === undefined) {
+    return clientAction('Уточните имя', 'Напишите имя клиента, чтобы подготовить карточку.', 'needs_input', { step: 'name', ...clientDraftPayload(draft) })
+  }
   const missing = [draft.gender === undefined ? 'пол' : undefined, draft.ageYears === undefined ? 'возраст' : undefined, draft.heightCm === undefined ? 'рост' : undefined].filter((value): value is string => value !== undefined)
-  if (missing.length > 0) return clientAction('Данные клиента', `Для ${draft.fullName} осталось уточнить: ${missing.join(', ')}.`, 'needs_input', { step: 'profile', ...draft, missing })
-  return clientAction('Карточка клиента готова', `Проверьте данные ${draft.fullName} и подтвердите создание карточки.`, 'proposed', { step: 'confirm', ...draft })
+  if (missing.length > 0) return clientAction('Данные клиента', `Для ${draft.fullName} осталось уточнить: ${missing.join(', ')}.`, 'needs_input', { step: 'profile', ...clientDraftPayload(draft), missing })
+  return clientAction('Карточка клиента готова', `Проверьте данные ${draft.fullName} и подтвердите создание карточки.`, 'proposed', { step: 'confirm', ...clientDraftPayload(draft) })
 }
 
 export function usesInformalAddress(message: string): boolean {
