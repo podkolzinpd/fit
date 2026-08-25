@@ -32,6 +32,10 @@ const variablesTerraform = readFileSync(
   join(import.meta.dirname, '..', 'infra', 'yandex', 'variables.tf'),
   'utf8',
 )
+const databaseTerraform = readFileSync(
+  join(import.meta.dirname, '..', 'infra', 'yandex', 'database.tf'),
+  'utf8',
+)
 
 test('publishes the final yandex-stage result without restoring an approval gate', () => {
   assert.match(workflow, /^  publish_deployment:$/m)
@@ -39,7 +43,10 @@ test('publishes the final yandex-stage result without restoring an approval gate
     workflow,
     /^  publish_deployment:[\s\S]*?^    permissions:\n      deployments: write$/m,
   )
-  assert.match(workflow, /^    if: always\(\) && github\.ref == 'refs\/heads\/main'$/m)
+  assert.match(
+    workflow,
+    /^    if: always\(\) && github\.ref == 'refs\/heads\/main' && inputs\.plan_only != true$/m,
+  )
   assert.match(workflow, /DEPLOY_RESULT: \$\{\{ needs\.deploy\.result \}\}/)
   assert.match(workflow, /required_contexts: \[\]/)
   assert.match(workflow, /transient_environment: false/)
@@ -156,6 +163,21 @@ test('manages curated database readers only through an explicit private run', ()
   assert.doesNotMatch(databaseAccessWorkflow, /terraform apply/)
   assert.doesNotMatch(databaseAccessWorkflow, /^    environment:/m)
   assert.doesNotMatch(databaseAccessWorkflow, /fit_api|mdb_read_all_data/)
+})
+
+test('supports a plan-only stage diagnostic that cannot deploy resources', () => {
+  assert.match(
+    workflow,
+    /plan_only:\n\s+description: 'Create and validate the Terraform plan without applying it'/,
+  )
+  assert.equal(
+    [...workflow.matchAll(/inputs\.plan_only != true/g)].length,
+    2,
+  )
+})
+
+test('preserves reviewed WebSQL access instead of creating PostgreSQL drift', () => {
+  assert.match(databaseTerraform, /^      web_sql\s+= true$/m)
 })
 
 test('keeps the legacy bridge pair validation compatible with Terraform 1.8', () => {

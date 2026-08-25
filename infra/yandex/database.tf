@@ -21,7 +21,7 @@ resource "yandex_mdb_postgresql_cluster_v2" "fit" {
       data_lens     = false
       data_transfer = false
       serverless    = true
-      web_sql       = false
+      web_sql       = true
     }
 
     pooler_config = {
