@@ -158,13 +158,14 @@ describe('VoiceInputButton', () => {
       onTranscript={vi.fn()}
       source="assistant"
       streamingFactory={() => ({
-        start: vi.fn((_partial: (text: string) => void, onFinal: (text: string) => void) => { onFinal('Привет'); return Promise.resolve() }),
+        start: vi.fn((onPartial: (text: string) => void, onFinal: (text: string) => void) => { onPartial('Привет'); onFinal('Привет'); return Promise.resolve() }),
         stop: vi.fn().mockResolvedValue(undefined),
         rotate: vi.fn(),
       })}
     />)
 
     await user.click(screen.getByRole('button', { name: 'Голосовой ввод' }))
+    expect(screen.queryByText(/Сейчас распознаю/)).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Завершить голосовой ввод/ }))
 
     await waitFor(() => expect(screen.queryByText(/Текст добавлен в заметку/)).not.toBeInTheDocument())
