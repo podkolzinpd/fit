@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { goalsRepository } from '../../data/repositories/goals.repository'
 import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
+import { workoutsRepository } from '../../data/repositories/workouts.repository'
 import type {
   ClientGoal,
   ClientTrainingSummary,
@@ -16,6 +17,7 @@ import { formatLocalDate, normalizeTimeZone, todayInTimeZone, type LocalDate } f
 import { AsyncView, Coachmark, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { ClientProgressGoalSection } from './ClientProgressGoalSection'
+import { ClientBodyProgressMap } from './ClientBodyProgressMap'
 import { clientProgressPresentation } from './client-progress-presentation'
 import { progressFactChangeLabel } from './progress-facts'
 import { formatSummaryText, formatWorkoutsPerWeek, progressMetricNoun } from './summary-format'
@@ -337,6 +339,12 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
     if (!availablePeriods.includes(period)) setPeriod('1m')
   }, [availablePeriods, period])
   const summary = summaryPeriodMatch(query.data ?? [], period, today)
+  const workoutRange = summaryPeriodRange(period, today)
+  const workouts = useQuery({
+    queryKey: ['client-progress-body-map-workouts', clientId, workoutRange.start, workoutRange.end],
+    queryFn: () => workoutsRepository.list(workoutRange.start, workoutRange.end, clientId),
+    enabled: ready,
+  })
   const goal = useQuery({
     queryKey: ['client-goal', clientId],
     queryFn: () => goalsRepository.get(clientId),
@@ -377,6 +385,10 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
           goalLoading={goal.isLoading}
           goalError={goal.error}
           onGoalRetry={() => void goal.refetch()}
+          workouts={workouts.data ?? []}
+          workoutsLoading={workouts.isLoading}
+          workoutsError={workouts.error}
+          onWorkoutsRetry={() => void workouts.refetch()}
         /> : <div className="ai-progress-empty">
         <strong>Анализ за этот период ещё не создан</strong>
         <p>Создай его по завершённым тренировкам.</p>
@@ -403,7 +415,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
   </section>
 }
 
-function ClientSummaryContent({ summary, userId, goal, profileGoal, today, goalLoading, goalError, onGoalRetry }: {
+function ClientSummaryContent({ summary, userId, goal, profileGoal, today, goalLoading, goalError, onGoalRetry, workouts, workoutsLoading, workoutsError, onWorkoutsRetry }: {
   summary: PublishedTrainingSummary
   userId: string | undefined
   goal: ClientGoal | null | undefined
@@ -412,21 +424,26 @@ function ClientSummaryContent({ summary, userId, goal, profileGoal, today, goalL
   goalLoading: boolean
   goalError: Error | null
   onGoalRetry: () => void
+  workouts: Awaited<ReturnType<typeof workoutsRepository.list>>
+  workoutsLoading: boolean
+  workoutsError: Error | null
+  onWorkoutsRetry: () => void
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const presentation = clientProgressPresentation(summary)
   return <>
     <Coachmark
-      id="client-progress-results-2026-08"
+      id="client-body-progress-map-2026-08"
       userId={userId}
-      title="Главное — сразу"
-      description="Сначала показываем лучший результат и следующий ориентир, а подробности открываются отдельно."
-    ><div className="client-progress-hero">
-        <span>{presentation.hero.eyebrow}</span>
-        {presentation.hero.value && <strong>{presentation.hero.value}</strong>}
-        <h3>{presentation.hero.title}</h3>
-        <p>{presentation.hero.detail}</p>
-      </div></Coachmark>
+      title="Твоё тело в цифрах"
+      description="Переключай прогресс и нагрузку, нажимай на зоны и смотри, какие упражнения дали результат."
+    ><ClientBodyProgressMap
+      summary={summary}
+      workouts={workouts}
+      loadLoading={workoutsLoading}
+      loadError={workoutsError}
+      onLoadRetry={onWorkoutsRetry}
+    /></Coachmark>
     <div className={`ai-progress-stats count-${presentation.stats.length}`}>
       {presentation.stats.map((stat) => <div key={stat.label}><strong>{stat.value}</strong><span>{stat.label}</span></div>)}
     </div>
