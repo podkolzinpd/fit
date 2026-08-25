@@ -12,6 +12,7 @@ export type AssistantTurnResponse = { reply: string; action: AssistantAction | n
 type AssistantCapability = { title: string; description: string }
 type SummaryCandidate = { id: string; fullName: string }
 type SummaryPeriod = { periodStart: string; periodEnd: string; label: string }
+type ClientDraft = { fullName: string; gender?: 'male' | 'female' | undefined; ageYears?: number | undefined; heightCm?: number | undefined }
 
 // Add a capability here only together with its implemented confirmation handler.
 // This list is the sole source for answers about what the assistant can do.
@@ -252,6 +253,61 @@ export function isSummaryRequest(message: string): boolean {
   return ['сводк', 'прогресс', 'динамик'].some((stem) => normalized.includes(stem))
 }
 
+function isCreateClientRequest(message: string): boolean {
+  const normalized = normalizeAssistantMessage(message)
+  return /(?:добав|созда|завед|нов).{0,24}клиент/u.test(normalized)
+}
+
+function clientDraftFromAction(value: unknown): ClientDraft | undefined {
+  const payload = actionRecord(value)
+  if (!payload || typeof payload.fullName !== 'string') return undefined
+  return {
+    fullName: payload.fullName,
+    gender: payload.gender === 'male' || payload.gender === 'female' ? payload.gender : undefined,
+    ageYears: typeof payload.ageYears === 'number' ? payload.ageYears : undefined,
+    heightCm: typeof payload.heightCm === 'number' ? payload.heightCm : undefined,
+  }
+}
+
+function clientDraftFromMessage(message: string, previous: ClientDraft): ClientDraft {
+  const normalized = normalizeAssistantMessage(message)
+  const age = normalized.match(/(?:^|\s)(\d{1,3})\s*(?:лет|год|года)(?:\s|$)/u)
+  const height = normalized.match(/(?:рост\s*)?(\d{2,3})\s*(?:см|сантиметр)/u)
+  return {
+    ...previous,
+    gender: normalized.includes('жен') || /(?:^|\s)ж(?:\s|$)/u.test(normalized) ? 'female' : normalized.includes('муж') || /(?:^|\s)м(?:\s|$)/u.test(normalized) ? 'male' : previous.gender,
+    ageYears: age === null ? previous.ageYears : Number(age[1]),
+    heightCm: height === null ? previous.heightCm : Number(height[1]),
+  }
+}
+
+function clientAction(title: string, description: string, status: AssistantAction['status'], payload: Record<string, unknown>): AssistantTurnResponse {
+  return { reply: description, action: { tool: 'create_client_draft', status, title, description, payload } }
+}
+
+export function createClientTurn(message: string, latestAction: unknown): AssistantTurnResponse | undefined {
+  const previousAction = actionRecord(latestAction)
+  const continuation = previousAction?.tool === 'create_client_draft'
+  if (!isCreateClientRequest(message) && !continuation) return undefined
+  if (continuation && isSummaryCancellation(message)) return { reply: 'Хорошо, создание карточки клиента отменено.', action: null }
+  if (!continuation) return clientAction('Новый клиент', 'Как зовут клиента?', 'needs_input', { step: 'name' })
+
+  const previousPayload = actionRecord(previousAction?.payload)
+  const previousStep = previousPayload?.step
+  if (previousStep === 'name') {
+    const fullName = message.trim()
+    if (fullName.length < 2) return clientAction('Уточните имя', 'Напишите имя клиента, чтобы подготовить карточку.', 'needs_input', { step: 'name' })
+    return clientAction('Данные клиента', `Укажите пол, возраст и рост для ${fullName}. Например: «женщина, 32 года, 168 см».`, 'needs_input', { step: 'profile', fullName })
+  }
+
+  const previousDraft = clientDraftFromAction(previousAction?.payload)
+  if (!previousDraft) return clientAction('Новый клиент', 'Как зовут клиента?', 'needs_input', { step: 'name' })
+  const draft = clientDraftFromMessage(message, previousDraft)
+  const missing = [draft.gender === undefined ? 'пол' : undefined, draft.ageYears === undefined ? 'возраст' : undefined, draft.heightCm === undefined ? 'рост' : undefined].filter((value): value is string => value !== undefined)
+  if (missing.length > 0) return clientAction('Данные клиента', `Для ${draft.fullName} осталось уточнить: ${missing.join(', ')}.`, 'needs_input', { step: 'profile', ...draft, missing })
+  return clientAction('Карточка клиента готова', `Проверьте данные ${draft.fullName} и подтвердите создание карточки.`, 'proposed', { step: 'confirm', ...draft })
+}
+
 export function usesInformalAddress(message: string): boolean {
   const words = normalizeAssistantMessage(message).split(' ')
   return words.some((word) => ['ты', 'тебя', 'тебе', 'тебя', 'твой', 'твоя', 'твое', 'твои'].includes(word))
@@ -346,6 +402,15 @@ export async function runAssistantTurn(authorization: string, command: Assistant
     .select('author,content,action').eq('conversation_id', command.conversationId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(20)
   if (historyError) throw new HttpError(503, 'history_unavailable')
   const latestAssistantAction = (rows ?? []).find((row) => row.author === 'assistant')?.action
+  const clientDraft = createClientTurn(command.message, latestAssistantAction)
+  if (clientDraft !== undefined) {
+    const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({
+      conversation_id: command.conversationId, author: 'assistant', content: clientDraft.reply, action: clientDraft.action,
+    }).select('id').single()
+    if (assistantInsertError || !assistantMessage?.id) throw new HttpError(503, 'history_unavailable')
+    console.info('assistant_client_draft_reply_persisted', { status: clientDraft.action?.status })
+    return clientDraft
+  }
   const summary = summaryTurn(command.message, clientRows, latestAssistantAction, new Date())
   if (summary !== undefined) {
     const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({

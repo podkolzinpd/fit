@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allowsAssistantAction, assistantCapabilitiesReply, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, readAssistantTurnRequest, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse } from './index.js'
+import { allowsAssistantAction, assistantCapabilitiesReply, createClientTurn, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, readAssistantTurnRequest, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse } from './index.js'
 
 describe('assistant orchestrator contract', () => {
   it('accepts only bounded conversation turns', () => {
@@ -42,5 +42,15 @@ describe('assistant orchestrator contract', () => {
     const cancelled = summaryTurn('отмена', clients, waitingForClient, new Date('2026-08-24T12:00:00Z'))
     expect(cancelled).toEqual({ reply: 'Хорошо, сценарий формирования сводки отменён.', action: null })
     expect(isSummaryCancellation('закрыть сценарий')).toBe(true)
+  })
+
+  it('collects a client draft before proposing creation', () => {
+    const start = createClientTurn('Добавь нового клиента', null)
+    expect(start?.action?.payload).toEqual({ step: 'name' })
+    const name = createClientTurn('Анна Смирнова', start?.action)
+    expect(name?.action?.payload).toMatchObject({ step: 'profile', fullName: 'Анна Смирнова' })
+    const details = createClientTurn('женщина, 32 года, 168 см', name?.action)
+    expect(details?.action).toMatchObject({ status: 'proposed', payload: { step: 'confirm', fullName: 'Анна Смирнова', gender: 'female', ageYears: 32, heightCm: 168 } })
+    expect(createClientTurn('отмена', details?.action)).toEqual({ reply: 'Хорошо, создание карточки клиента отменено.', action: null })
   })
 })
