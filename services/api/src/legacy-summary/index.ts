@@ -11,7 +11,6 @@ import {
   authorizeSummaryActor,
   parseYandexJson,
   shouldUseClientCache,
-  yandexHttpError,
 } from "./self-service.js"
 import { completedWorkoutsInPeriod } from "./workout-source.js"
 import { buildSummaryConsistency } from "./summary-consistency.js"
@@ -477,10 +476,41 @@ function buildProgressData(
   }
 }
 
-async function requestYandexSummary(
+type YandexRequestOptions = {
+  fetchImpl?: typeof fetch
+  requestId?: string
+  sleep?: (delayMs: number) => Promise<void>
+}
+
+function yandexResponseError(status: number): HttpError {
+  if (status === 408 || status === 504) {
+    return new HttpError(504, "yandex_cloud_timeout")
+  }
+  if (status === 429) {
+    return new HttpError(503, "yandex_cloud_rate_limited")
+  }
+  if (status >= 500) {
+    return new HttpError(502, "yandex_cloud_unavailable")
+  }
+  if (status === 401 || status === 403) {
+    return new HttpError(502, "yandex_cloud_access_rejected")
+  }
+  return new HttpError(502, "yandex_cloud_request_rejected")
+}
+
+function isRetryableYandexStatus(status: number): boolean {
+  return status === 408 || status === 429 || status >= 500
+}
+
+function yandexRetryDelay(attempt: number): number {
+  return attempt === 1 ? 600 : 1_800
+}
+
+export async function requestYandexSummary(
   trainingData: unknown,
   periodStart: string,
   periodEnd: string,
+  options: YandexRequestOptions = {},
 ) {
   const apiKey = requiredSecret("YANDEX_CLOUD_API_KEY")
   const folderId = requiredSecret("YANDEX_CLOUD_FOLDER_ID")
@@ -499,13 +529,16 @@ async function requestYandexSummary(
   ]
   const usage: Record<string, string> = {}
   let modelVersion: string | null = null
+  const fetchImpl = options.fetchImpl ?? fetch
+  const sleep = options.sleep ?? ((delayMs: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, delayMs)))
 
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 30_000)
     let response: Response
     try {
-      response = await fetch(YANDEX_COMPLETION_URL, {
+      response = await fetchImpl(YANDEX_COMPLETION_URL, {
         method: "POST",
         headers: {
           "Authorization": `Api-Key ${apiKey}`,
@@ -524,16 +557,36 @@ async function requestYandexSummary(
         signal: controller.signal,
       })
     } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        throw new HttpError(504, "yandex_cloud_timeout")
+      const failure = error instanceof Error && error.name === "AbortError"
+        ? new HttpError(504, "yandex_cloud_timeout")
+        : new HttpError(502, "yandex_cloud_unavailable")
+      if (attempt < 3) {
+        console.warn("summary model request retry", {
+          request_id: options.requestId ?? null,
+          attempt,
+          code: failure.message,
+        })
+        await sleep(yandexRetryDelay(attempt))
+        continue
       }
-      throw new HttpError(502, "yandex_cloud_unavailable")
+      throw failure
     } finally {
       clearTimeout(timeout)
     }
 
     if (!response.ok) {
-      throw new HttpError(502, yandexHttpError(response.status, await response.text()))
+      const failure = yandexResponseError(response.status)
+      if (attempt < 3 && isRetryableYandexStatus(response.status)) {
+        console.warn("summary model request retry", {
+          request_id: options.requestId ?? null,
+          attempt,
+          code: failure.message,
+          upstream_status: response.status,
+        })
+        await sleep(yandexRetryDelay(attempt))
+        continue
+      }
+      throw failure
     }
 
     const payloadText = await response.text()
@@ -585,6 +638,7 @@ async function requestYandexSummary(
 }
 
 export const summarizeClientTraining = async (req: Request): Promise<Response> => {
+    const requestId = crypto.randomUUID()
     try {
       if (req.method !== "POST") {
         return Response.json(
@@ -601,7 +655,6 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         authorizationPresent: Boolean(req.headers.get("authorization")),
         actorIdPresent: Boolean(actorId),
         authError: authError?.message ?? null,
-        clientId: input.client_id,
       })
       if (!actorId) {
         console.error("summary authentication_required", {
@@ -779,10 +832,19 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         }
       }
 
+      console.info("summary model request started", {
+        request_id: requestId,
+        input_stats: {
+          workouts: completedWorkouts.length,
+          exercises: exercises.length,
+          sets: sets.length,
+        },
+      })
       const generated = await requestYandexSummary(
         modelInput,
         trainingData.period.start,
         trainingData.period.end,
+        { requestId },
       )
       const displayMetrics = {
         ...trainingData.consistency,
@@ -852,6 +914,7 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
     } catch (error) {
       if (error instanceof HttpError) {
         console.warn("summarize-client-training request failed", {
+          request_id: requestId,
           code: error.message,
           status: error.status,
         })

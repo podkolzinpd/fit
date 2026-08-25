@@ -258,13 +258,13 @@ describe('Training summary card states', () => {
     const user = userEvent.setup()
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
     repositories.listForClient.mockResolvedValue([publishedSummary])
-    repositories.generate.mockRejectedValue(new Error('YandexGPT временно недоступен. Попробуйте ещё раз через минуту.'))
+    repositories.generate.mockRejectedValue(new Error('Не получилось создать анализ. Попробуйте ещё раз через минуту.'))
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
     expect(await screen.findByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Обновить' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('YandexGPT временно недоступен')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Попробуйте ещё раз через минуту')
     expect(screen.getByRole('button', { name: 'Обновить' })).toBeEnabled()
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
   })
