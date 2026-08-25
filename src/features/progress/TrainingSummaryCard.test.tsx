@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -200,7 +200,8 @@ describe('Training summary card states', () => {
 
     expect((await screen.findAllByText((text) => text.includes(longExerciseName)))[0]).toBeVisible()
     expect(screen.getByAltText('Атлетичная женщина, вид спереди и сзади')).toBeVisible()
-    expect(screen.getByLabelText('Верх спины: +36%')).toBeVisible()
+    expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
+    expect(document.querySelector('.body-progress-zone')).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Подробный анализ' }))
     expect((await screen.findAllByText(/Рабочий вес: 50 → 68 кг/))[0]).toBeVisible()
     expect(screen.getByText('3')).toBeVisible()
@@ -223,7 +224,7 @@ describe('Training summary card states', () => {
     const user = userEvent.setup()
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    await screen.findByText('После завершённой тренировки покажем, на какие зоны пришлась работа.')
+    await screen.findByText('После завершённой тренировки покажем распределение нагрузки по зонам.')
     await user.click(screen.getByRole('button', { name: 'Подробный анализ' }))
     expect(await screen.findByText('Служебный показатель равен 1,3.')).toBeVisible()
     expect(document.body).not.toHaveTextContent('custom_metric_key')
@@ -260,11 +261,11 @@ describe('Training summary card states', () => {
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    expect(await screen.findByLabelText('Верх спины: +36%')).toBeVisible()
+    expect(await screen.findByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Обновить' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('YandexGPT временно недоступен')
     expect(screen.getByRole('button', { name: 'Обновить' })).toBeEnabled()
-    expect(screen.getByLabelText('Верх спины: +36%')).toBeVisible()
+    expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
   })
 
   it('lets the client switch to load and retry a failed workout history request', async () => {
@@ -277,10 +278,10 @@ describe('Training summary card states', () => {
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    await user.click(await screen.findByRole('button', { name: 'Работа' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось собрать работу')
+    await user.click(await screen.findByRole('button', { name: 'Нагрузка' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось собрать нагрузку')
     await user.click(screen.getByRole('button', { name: 'Попробовать ещё раз' }))
-    expect(await screen.findByText('После завершённой тренировки покажем, на какие зоны пришлась работа.')).toBeVisible()
+    expect(await screen.findByText('После завершённой тренировки покажем распределение нагрузки по зонам.')).toBeVisible()
     expect(repositories.workouts).toHaveBeenCalledTimes(2)
   })
 
@@ -299,11 +300,44 @@ describe('Training summary card states', () => {
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    await user.click(await screen.findByRole('button', { name: 'Работа' }))
-    expect(await screen.findByLabelText('Верх спины: 67%')).toBeVisible()
-    await user.click(screen.getByLabelText('Грудь: 33%'))
+    expect(await screen.findByAltText('Нейтральная фигура спортсмена, вид спереди и сзади')).toBeVisible()
+    expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toHaveAttribute('aria-pressed', 'true')
+    await user.click(await screen.findByRole('button', { name: 'Нагрузка' }))
+    expect(await screen.findByLabelText('Верх спины. Доля всех выполненных подходов: 67%')).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByLabelText('Грудь. Доля всех выполненных подходов: 33%'))
     expect(screen.getByText('Жим лёжа: 1 подход')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Прогресс' }))
-    expect(screen.getByLabelText('Верх спины: +36%')).toBeVisible()
+    expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('keeps the zone panel compact and opens the remaining exercise details on demand', async () => {
+    const user = userEvent.setup()
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForClient.mockResolvedValue([{
+      ...publishedSummary,
+      metrics: {
+        ...publishedSummary.metrics,
+        progressFacts: [publishedSummary.metrics.progressFacts[0]!, {
+          exerciseName: 'Тяга нижнего блока', kind: 'strength', sessionCount: 3,
+          changes: [{ metric: 'max_weight', from: 60, to: 70, changePercent: 17, favorable: true }],
+        }, {
+          exerciseName: 'Пуловер прямыми руками в блоке', kind: 'strength', sessionCount: 3,
+          changes: [{ metric: 'volume', from: 800, to: 920, changePercent: 15, favorable: true }],
+        }],
+      },
+    }])
+
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    await screen.findByLabelText('Верх спины. Лучший результат зоны: +36%')
+    const map = document.querySelector<HTMLElement>('.body-progress-map')
+    expect(map).not.toBeNull()
+    if (!map) return
+    expect(within(map).getByText(/Тяга нижнего блока/)).toBeVisible()
+    expect(within(map).queryByText(/Пуловер прямыми руками/)).toBeNull()
+    await user.click(within(map).getByRole('button', { name: 'Ещё 1 упражнение' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Верх спины' })
+    expect(dialog).toHaveTextContent('Тяга нижнего блока')
+    expect(dialog).toHaveTextContent('Пуловер прямыми руками в блоке')
   })
 })
