@@ -66,6 +66,20 @@ describe('formatLlmWorkoutText', () => {
     })
   })
 
+  it('не принимает общий жим лёжа даже при высокой уверенности модели', () => {
+    const choices: ExerciseSnapshot[] = [
+      { source: 'system', ref: 'barbell-bench', name: 'Жим лёжа (Штанга)', muscleGroup: 'chest', inputKind: 'strength', equipment: 'Штанга', equipmentRef: 'barbell' },
+      { source: 'system', ref: 'dumbbell-bench', name: 'Жим лёжа (Гантели)', muscleGroup: 'chest', inputKind: 'strength', equipment: 'Гантели', equipmentRef: 'dumbbell' },
+    ]
+
+    expect(requireExerciseConfirmation({
+      items: [{ sourceText: 'жим лёжа 3 по 10', exerciseRef: 'barbell-bench', confidence: 0.99, sets: [{ weightKg: 50, reps: 10 }] }], unmatched: [],
+    }, choices)).toEqual({
+      items: [],
+      unmatched: [{ sourceText: 'жим лёжа 3 по 10', reason: 'Нужно уточнить вариант упражнения', suggestedExerciseRefs: ['barbell-bench', 'dumbbell-bench'] }],
+    })
+  })
+
   it('не принимает от модели штангу, когда пользователь явно назвал гантели', () => {
     const equipmentCatalog: ExerciseSnapshot[] = [
       { source: 'system', ref: 'incline-barbell', name: 'Жим на наклонной (Штанга)', muscleGroup: 'chest', inputKind: 'strength', equipment: 'Штанга', equipmentRef: 'barbell' },

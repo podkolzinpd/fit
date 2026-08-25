@@ -7,13 +7,14 @@ import { assistantRepository, type AssistantOrchestratorAction } from '../../dat
 import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
 import { VoiceInputButton } from '../voice-input'
 import { clientSchema } from '../../shared/validation'
-import { todayInTimeZone } from '../../shared/local-date'
+import { currentTimeInTimeZone, todayInTimeZone } from '../../shared/local-date'
 import type { ExerciseSnapshot, WorkoutDraft } from '../../shared/domain'
 import { useExerciseCatalog } from '../exercises'
 import { WorkoutComposer } from '../workouts/WorkoutComposer'
 import { formatLlmWorkoutText, parseWorkoutWithLlm } from '../workouts/llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
+import { assistantWorkoutSaveInput } from './workout-draft'
 
 type Message = { id: string; author: string; content: string; action: AssistantOrchestratorAction | null }
 type FailedTurn = { turnId: string; message: string }
@@ -150,13 +151,21 @@ export function AssistantHistoryPage() {
     finally { setRunningClientIds((current) => current.filter((id) => id !== messageId)) }
   }
 
+  const latestWorkoutActionMessageId = [...messages].reverse().find((message) => message.action?.tool === 'record_workout')?.id
+
   return <main className="assistant-page">
     <h1 className="sr-only">Ассистент</h1>
     <p className="assistant-local-note">Ассистент сохраняет историю этой беседы. Любое изменение данных появится только в отдельной карточке подтверждения.</p>
     <section className="assistant-thread" aria-label="Диалог с ассистентом">
-      {messages.map((message) => message.author === 'user'
-        ? <article key={message.id} className="assistant-message assistant-message-user"><p>{message.content}</p></article>
-        : <article key={message.id} className="assistant-action-card"><AssistantMessageContent content={message.content} />{message.action && <AssistantAction action={message.action} timezone={actor?.timezone} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onApplyAction={(input) => applyAction(message.id, message.action!, input)} onSuggestion={(value) => void send(value)} onCancel={() => { void (async () => { const cancelled = await cancelAction(message.id, message.action!); if (cancelled && !message.action?.id) await send('Отменить') })() }} onConfirm={() => void confirmSummary(message.id, message.action!)} onConfirmClient={(draft) => void confirmClient(message.id, message.action!, draft)} running={runningSummaryIds.includes(message.id) || runningClientIds.includes(message.id)} completed={completedSummaryIds.includes(message.id) || completedClientIds.includes(message.id) || message.action.lifecycleStatus === 'applied'} />}</article>)}
+      {messages.map((message) => {
+        if (message.author === 'user') return <article key={message.id} className="assistant-message assistant-message-user"><p>{message.content}</p></article>
+        const historicalWorkoutFragment = isWorkoutCollectionAction(message.action) && message.id !== latestWorkoutActionMessageId
+        return <article key={message.id} className={`assistant-action-card${historicalWorkoutFragment ? ' assistant-action-card-compact' : ''}`}>
+          {historicalWorkoutFragment
+            ? <p className="assistant-fragment-ack">Фрагмент добавлен</p>
+            : <>{(!message.action || message.content.trim() !== message.action.description.trim()) && <AssistantMessageContent content={message.content} />}{message.action && <AssistantAction action={message.action} timezone={actor?.timezone} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onApplyAction={(input) => applyAction(message.id, message.action!, input)} onSuggestion={(value) => void send(value)} onCancel={() => { void (async () => { const cancelled = await cancelAction(message.id, message.action!); if (cancelled && !message.action?.id) await send('Отменить') })() }} onConfirm={() => void confirmSummary(message.id, message.action!)} onConfirmClient={(draft) => void confirmClient(message.id, message.action!, draft)} running={runningSummaryIds.includes(message.id) || runningClientIds.includes(message.id)} completed={completedSummaryIds.includes(message.id) || completedClientIds.includes(message.id) || message.action.lifecycleStatus === 'applied'} />}</>}
+        </article>
+      })}
       {error && <div className="assistant-card-hint" role="alert"><span>{error}</span>{failedTurn && <button type="button" onClick={() => void send(undefined, failedTurn)} disabled={sending}>Повторить отправку</button>}</div>}
     </section>
     <form className="assistant-composer" onSubmit={(event) => { event.preventDefault(); void send() }}>
@@ -179,8 +188,12 @@ function AssistantMessageContent({ content }: { content: string }) {
 
 type SummaryPayload = { step: string; clientId?: string; clientName?: string; candidates?: { id: string; fullName: string }[]; options?: string[]; periodStart?: string; periodEnd?: string; periodLabel?: string }
 type ClientDraftPayload = { step: string; fullName: string; gender: 'male' | 'female'; ageYears: number; heightCm: number; goal?: string; initialWeightKg?: number }
-type WorkoutDraftPayload = { step: string; clientId: string; clientName: string; transcript: string }
+type WorkoutDraftPayload = { step: string; clientId: string; clientName: string; transcript?: string }
 type ProgramDraftPayload = { step: string; clientId: string; clientName: string; goal?: string | null; brief: string; sessions: unknown[] }
+
+function isWorkoutCollectionAction(action: AssistantOrchestratorAction | null): boolean {
+  return action?.tool === 'record_workout' && (action.payload as { step?: unknown }).step === 'workout'
+}
 
 function summaryPayload(action: AssistantOrchestratorAction): { clientId: string; periodStart: string; periodEnd: string } | undefined {
   const payload = action.payload as SummaryPayload
@@ -199,16 +212,32 @@ function AssistantAction({ action, timezone, onWorkoutSaved, onApplyAction, onSu
     const clientId = typeof result.clientId === 'string' ? result.clientId : undefined
     const summaryClientId = typeof (action.payload as SummaryPayload).clientId === 'string' ? (action.payload as SummaryPayload).clientId : undefined
     const href = workoutId ? `/workouts/${workoutId}` : clientId ? `/clients/${clientId}` : action.tool === 'summarize_progress' && summaryClientId ? `/progress/${summaryClientId}` : undefined
-    return <div className="assistant-progress-preview"><strong>Операция выполнена</strong><span>Результат сохранён. Повторное подтверждение не требуется.</span>{href && <Link to={href}>Открыть результат</Link>}</div>
+    const workoutSaved = action.tool === 'record_workout'
+    return <div className="assistant-completion-card"><small>Готово</small><strong>{workoutSaved ? 'Тренировка сохранена' : 'Изменения сохранены'}</strong><span>{workoutSaved && typeof payload.clientName === 'string' ? payload.clientName : 'Повторное подтверждение не требуется'}</span>{href && <Link to={href}>{workoutSaved ? 'Открыть тренировку' : 'Открыть результат'}</Link>}</div>
   }
   if (action.tool === 'create_client_draft' && payload.step === 'confirm') return <ClientDraftCard payload={payload as ClientDraftPayload} onCancel={onCancel} onConfirm={onConfirmClient} running={running} completed={completed} />
   if (action.tool === 'record_workout' && payload.step === 'confirm') return <AssistantWorkoutDraftCard payload={payload as WorkoutDraftPayload} timezone={timezone} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} />
+  if (action.tool === 'record_workout' && payload.step === 'workout') return <WorkoutCollectionCard payload={payload as WorkoutDraftPayload} onSuggestion={onSuggestion} onCancel={onCancel} />
   if (action.tool === 'create_program_draft' && payload.step === 'confirm') return <ProgramDraftCard payload={payload as ProgramDraftPayload} timezone={timezone} onApply={onApplyAction} onSaved={onWorkoutSaved} onCancel={onCancel} />
   if (action.tool !== 'summarize_progress') return <ActionPreview action={action} onCancel={onCancel} />
   if (payload.step === 'client' && Array.isArray(payload.candidates)) return <SummaryClientChoices candidates={payload.candidates} onSuggestion={onSuggestion} onCancel={onCancel} />
   if (payload.step === 'period' && typeof payload.clientName === 'string' && Array.isArray(payload.options)) return <SummaryPeriodChoices clientName={payload.clientName} options={payload.options} onSuggestion={onSuggestion} onCancel={onCancel} />
   if (summaryPayload(action) !== undefined) return <div className="assistant-progress-preview"><strong>{action.title}</strong><span>{action.description}</span><button type="button" onClick={onConfirm} disabled={running || completed}>{completed ? 'Сводка сформирована' : running ? 'Формирую…' : 'Сформировать сводку'}</button>{!completed && <CancelActionButton onCancel={onCancel} />}<small>Будут использованы только завершённые тренировки за выбранный период.</small></div>
   return <ActionPreview action={action} onCancel={onCancel} />
+}
+
+function WorkoutCollectionCard({ payload, onSuggestion, onCancel }: { payload: WorkoutDraftPayload; onSuggestion: (value: string) => void; onCancel: () => void }) {
+  const transcript = payload.transcript?.trim() ?? ''
+  return <div className="assistant-workout-collection">
+    <small>Новая тренировка</small>
+    <strong>{payload.clientName}</strong>
+    {transcript
+      ? <div className="assistant-workout-transcript"><small>Уже добавлено</small><p>{transcript}</p></div>
+      : <p>Диктуйте упражнения по одному или все сразу — предыдущие фрагменты не пропадут.</p>}
+    {transcript && <button type="button" onClick={() => onSuggestion('Готово, разобрать тренировку')}>Перейти к разбору</button>}
+    <small>{transcript ? 'Можно надиктовать следующее упражнение обычным сообщением.' : 'Например: «Жим лёжа, 3 подхода по 10 повторений, 50 кг».'}</small>
+    <CancelActionButton onCancel={onCancel} />
+  </div>
 }
 
 function ProgramDraftCard({ payload, timezone, onApply, onSaved, onCancel }: { payload: ProgramDraftPayload; timezone?: string; onApply: (input: object) => Promise<void>; onSaved: () => void; onCancel: () => void }) {
@@ -253,7 +282,9 @@ function parsedWorkoutExercises(result: WorkoutParseResponse, catalog: readonly 
 
 function AssistantWorkoutDraftCard({ payload, timezone, onCancel, onApply, onSaved }: { payload: WorkoutDraftPayload; timezone?: string; onCancel: () => void; onApply: (input: object) => Promise<void>; onSaved: () => void }) {
   const catalog = useExerciseCatalog()
-  const [text, setText] = useState(payload.transcript)
+  const [text, setText] = useState(payload.transcript ?? '')
+  const [workoutDate, setWorkoutDate] = useState<string>(() => todayInTimeZone(timezone))
+  const [startTime, setStartTime] = useState(() => currentTimeInTimeZone(timezone))
   const [result, setResult] = useState<WorkoutParseResponse>()
   const [parsing, setParsing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -276,7 +307,7 @@ function AssistantWorkoutDraftCard({ payload, timezone, onCancel, onApply, onSav
     if (!exercises.length) return
     setSaving(true); setError(undefined)
     try {
-      await onApply({ workout: { requestId, clientId: payload.clientId, workoutDate: todayInTimeZone(timezone), exercises } })
+      await onApply(assistantWorkoutSaveInput(requestId, payload.clientId, workoutDate, startTime, exercises))
       setSaved(true); onSaved()
     } catch { setError('Не удалось сохранить тренировку. Проверьте данные и попробуйте ещё раз.') }
     finally { setSaving(false) }
@@ -292,8 +323,9 @@ function AssistantWorkoutDraftCard({ payload, timezone, onCancel, onApply, onSav
   }
   return <div className="assistant-program-draft" aria-label={`Разбор тренировки ${payload.clientName}`}>
     <strong>Тренировка · {payload.clientName}</strong>
+    <div className="assistant-workout-meta"><label>Дата<input type="date" value={workoutDate} onChange={(event) => setWorkoutDate(event.target.value)} /></label><label>Время<input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label></div>
     <WorkoutComposer name="assistant-workout-draft" source="assistant_workout" value={text} label="Диктовка" showVoice={false} onValueChange={setText} onClear={() => { setText(''); setResult(undefined) }} primaryAction={<button type="button" onClick={() => void parse()} disabled={!text.trim() || catalog.loading || parsing}>{catalog.loading ? 'Загружаю каталог…' : parsing ? 'Разбираю…' : 'Разобрать тренировку'}</button>} />
-    {result && <div className="assistant-progress-preview"><strong>Результат разбора</strong><span>{formatLlmWorkoutText(result, catalog.exercises) || 'Упражнения не распознаны'}</span>{unmatched.map((item) => <div key={item.sourceText} className="assistant-period-options"><small>{item.reason}: {item.sourceText}</small>{item.suggestedExerciseRefs.map((ref) => <button key={ref} type="button" onClick={() => chooseExercise(item.sourceText, ref)}>{catalog.exercises.find((exercise) => exercise.ref === ref)?.name ?? 'Вариант упражнения'}</button>)}</div>)}{unmatched.length > 0 && <small>Выберите подходящий вариант, затем разберите тренировку повторно.</small>}{!unmatched.length && result.items.length > 0 && <button type="button" onClick={() => void save()} disabled={saving || saved}>{saved ? 'Тренировка сохранена' : saving ? 'Сохраняю…' : 'Сохранить тренировку'}</button>}</div>}
+    {result && <div className="assistant-progress-preview"><strong>Результат разбора</strong><span>{formatLlmWorkoutText(result, catalog.exercises) || 'Упражнения не распознаны'}</span>{unmatched.map((item) => <div key={item.sourceText} className="assistant-exercise-choice"><small>Нужно уточнить</small><strong>{item.sourceText}</strong><span>{item.reason}</span><div>{item.suggestedExerciseRefs.map((ref) => { const exercise = catalog.exercises.find((candidate) => candidate.ref === ref); return <button key={ref} type="button" onClick={() => chooseExercise(item.sourceText, ref)}>{exercise?.name ?? 'Вариант упражнения'}{exercise?.equipment ? <small>{exercise.equipment}</small> : null}</button> })}</div></div>)}{unmatched.length > 0 && <small>Выберите вариант — исходные подходы, повторы и вес останутся в тексте.</small>}{!unmatched.length && result.items.length > 0 && <button type="button" onClick={() => void save()} disabled={saving || saved}>{saved ? 'Тренировка сохранена' : saving ? 'Сохраняю…' : 'Сохранить тренировку'}</button>}</div>}
     {error && <p className="assistant-card-hint" role="alert">{error}</p>}
     {!saved && <CancelActionButton onCancel={onCancel} />}
   </div>

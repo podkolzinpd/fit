@@ -33,13 +33,29 @@ export async function parseWorkoutWithLlm(text: string, catalog: readonly Exerci
  */
 export function requireExerciseConfirmation(response: WorkoutParseResponse, catalog: readonly ExerciseSnapshot[]): WorkoutParseResponse {
   const byRef = new Map(catalog.map((exercise) => [exercise.ref, exercise]))
-  const uncertain = response.items.filter((item) => item.confidence < REQUIRED_EXERCISE_CONFIDENCE)
+  // Не разрешаем remote-модели обходить локальную проверку вариантов. Например,
+  // «жим лёжа» может получить confidence=0.99, но без оборудования всё ещё
+  // означает несколько упражнений из каталога.
+  const locallyAmbiguousSources = new Set(response.items.flatMap((item) =>
+    parseQuickWorkoutEntry(item.sourceText, catalog).unparsed
+      .filter((unparsed) => unparsed.reason === 'ambiguous')
+      .map((unparsed) => sourceKey(unparsed.line)),
+  ))
+  const uncertain = response.items.filter((item) =>
+    item.confidence < REQUIRED_EXERCISE_CONFIDENCE || locallyAmbiguousSources.has(sourceKey(item.sourceText)),
+  )
   if (!uncertain.length) return response
   const unresolved = uncertain.map((item) => {
     const candidates = [item.exerciseRef, ...workoutCandidates(item.sourceText, catalog).map((exercise) => exercise.ref)]
       .filter((ref, index, all) => byRef.has(ref) && all.indexOf(ref) === index)
       .slice(0, 4)
-    return { sourceText: item.sourceText, reason: 'Нужно выбрать упражнение: модель не уверена в совпадении', suggestedExerciseRefs: candidates }
+    return {
+      sourceText: item.sourceText,
+      reason: item.confidence >= REQUIRED_EXERCISE_CONFIDENCE && locallyAmbiguousSources.has(sourceKey(item.sourceText))
+        ? 'Нужно уточнить вариант упражнения'
+        : 'Нужно выбрать упражнение: модель не уверена в совпадении',
+      suggestedExerciseRefs: candidates,
+    }
   })
   const uncertainSources = new Set(uncertain.map((item) => sourceKey(item.sourceText)))
   return {
