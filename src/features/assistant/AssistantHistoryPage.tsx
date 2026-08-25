@@ -7,7 +7,7 @@ import { trainingSummariesRepository } from '../../data/repositories/training-su
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { VoiceInputButton } from '../voice-input'
 import { clientSchema } from '../../shared/validation'
-import { todayInTimeZone } from '../../shared/local-date'
+import { localDate, todayInTimeZone } from '../../shared/local-date'
 import type { ExerciseSnapshot, WorkoutDraft } from '../../shared/domain'
 import { workoutsRepository } from '../../data/repositories/workouts.repository'
 import { filterExercises, useExerciseCatalog } from '../exercises'
@@ -165,7 +165,7 @@ function ProgramDraftCard({ payload, timezone, onSaved, onCancel }: { payload: P
     if (workouts.some((workout) => !workout.date || workout.exercises.some((exercise) => exercise === undefined))) { setError('Уточните дату и названия упражнений: они должны совпадать с каталогом.'); return }
     setSaving(true); setError(undefined)
     try {
-      await Promise.all(workouts.map(({ session, date, exercises }) => workoutsRepository.save({ clientId: payload.clientId, workoutDate: date, notes: session.title, exercises: exercises.map((exercise, position) => ({ ...exercise!, position, blockId: crypto.randomUUID(), blockType: 'single', blockRounds: 1, sets: [{ position: 0 }] })) })))
+      await Promise.all(workouts.map(({ session, date, exercises }) => workoutsRepository.save({ clientId: payload.clientId, workoutDate: localDate(date), notes: session.title, exercises: exercises.map((exercise, position) => ({ ...exercise!, position, blockId: crypto.randomUUID(), blockType: 'single', blockRounds: 1, sets: [{ position: 0 }] })) })))
       setSaved(true); onSaved()
     } catch { setError('Не удалось добавить программу в расписание. Попробуйте ещё раз.') }
     finally { setSaving(false) }
