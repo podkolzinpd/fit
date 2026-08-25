@@ -38,6 +38,8 @@ import type { PilotTrainingDataResponse } from './training-data.js'
 import { PilotWorkoutCommandError } from './workout-commands.js'
 import type { LegacyWorkoutParser } from './legacy-workout-parser.js'
 import type { PilotProgressData } from './progress-data.js'
+import type { PilotWorkoutParser } from './pilot-workout-parser.js'
+import type { PilotTrainingSummaries } from './training-summary.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
@@ -148,6 +150,86 @@ describe('legacy Supabase function bridge', () => {
     expect(response.statusCode).toBe(400)
     expect(response.json()).toEqual({ error: 'invalid_progress_request' })
     expect(handler).not.toHaveBeenCalled()
+  })
+})
+
+describe('native Yandex function contracts', () => {
+  it('authenticates workout parsing with the pilot session instead of Supabase', async () => {
+    const parse = vi.fn().mockResolvedValue({ items: [], unmatched: [] })
+    const pilotWorkoutParser: PilotWorkoutParser = { parse }
+    const app = buildApp({ pilotWorkoutParser, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/assistant/yandex/parse-workout',
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+      payload: { text: 'присед', systemCatalog: [] },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ items: [], unmatched: [] })
+    expect(parse).toHaveBeenCalledWith('s'.repeat(43), {
+      text: 'присед', systemCatalog: [],
+    })
+  })
+
+  it('generates and lists a goal-aware summary through the pilot session', async () => {
+    const generate = vi.fn().mockResolvedValue({
+      data: { id: 'summary-id', generated_at: '2026-08-26T12:00:00.000Z' },
+      cached: false,
+    })
+    const list = vi.fn().mockResolvedValue([{ id: 'summary-id' }])
+    const pilotTrainingSummaries: PilotTrainingSummaries = { generate, list }
+    const app = buildApp({ pilotTrainingSummaries, logger: false })
+    apps.push(app)
+
+    const generated = await app.inject({
+      method: 'POST',
+      url: `/v1/clients/${PROFILE_ID}/training-summaries/generate`,
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+      payload: {
+        client_id: PROFILE_ID,
+        period_start: '2026-08-01',
+        period_end: '2026-08-26',
+      },
+    })
+    const listed = await app.inject({
+      method: 'GET',
+      url: `/v1/clients/${PROFILE_ID}/training-summaries`,
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+    })
+
+    expect(generated.statusCode).toBe(200)
+    expect(generated.json()).toEqual({
+      data: { id: 'summary-id', generated_at: '2026-08-26T12:00:00.000Z' },
+      cached: false,
+    })
+    expect(generate).toHaveBeenCalledWith('s'.repeat(43), {
+      clientId: PROFILE_ID,
+      periodStart: '2026-08-01',
+      periodEnd: '2026-08-26',
+      force: false,
+    })
+    expect(listed.statusCode).toBe(200)
+    expect(listed.json()).toEqual({ summaries: [{ id: 'summary-id' }] })
+  })
+
+  it('does not expose either native contract without a pilot session', async () => {
+    const list = vi.fn()
+    const pilotTrainingSummaries: PilotTrainingSummaries = {
+      generate: vi.fn(), list,
+    }
+    const app = buildApp({ pilotTrainingSummaries, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/v1/clients/${PROFILE_ID}/training-summaries`,
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(list).not.toHaveBeenCalled()
   })
 })
 

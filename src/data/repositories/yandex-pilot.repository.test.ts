@@ -7,6 +7,9 @@ const queries = vi.hoisted(() => ({
   listClients: vi.fn(),
   listConnections: vi.fn(),
   listTrainingData: vi.fn(),
+  parseWorkout: vi.fn(),
+  listTrainingSummaries: vi.fn(),
+  generateTrainingSummary: vi.fn(),
   claimInvitation: vi.fn(),
   createInvitation: vi.fn(),
   leaveClient: vi.fn(),
@@ -168,11 +171,57 @@ describe('yandexPilotRepository', () => {
     queries.listClients.mockReset()
     queries.listConnections.mockReset()
     queries.listTrainingData.mockReset()
+    queries.parseWorkout.mockReset()
+    queries.listTrainingSummaries.mockReset()
+    queries.generateTrainingSummary.mockReset()
     queries.claimInvitation.mockReset()
     queries.createInvitation.mockReset()
     queries.leaveClient.mockReset()
     queries.removeTrainer.mockReset()
     queries.revokeInvitation.mockReset()
+  })
+
+  it('validates native parser and training-summary responses', async () => {
+    const generated = {
+      id: 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b',
+      client_id: CLIENT_ID,
+      period_start: '2026-08-01',
+      period_end: '2026-08-26',
+      display_metrics: { completed_workouts: 1 },
+      generated_at: '2026-08-26T12:00:00.000Z',
+      trainer_summary: { headline: 'Внутренний вывод' },
+    }
+    queries.parseWorkout.mockResolvedValue(new Response(JSON.stringify({
+      items: [{ sourceText: 'присед', exerciseRef: 'squat', confidence: 1, sets: [{ reps: 10 }] }],
+      unmatched: [],
+    }), { status: 200 }))
+    queries.listTrainingSummaries.mockResolvedValue(new Response(JSON.stringify({
+      summaries: [generated],
+    }), { status: 200 }))
+    queries.generateTrainingSummary.mockResolvedValue(new Response(JSON.stringify({
+      data: generated,
+      cached: false,
+    }), { status: 200 }))
+
+    await expect(yandexPilotRepository.parseWorkout(
+      'https://stage.example.test', 's'.repeat(43), 'присед', [],
+    )).resolves.toMatchObject({ items: [{ exerciseRef: 'squat' }] })
+    await expect(yandexPilotRepository.listTrainingSummaries(
+      'https://stage.example.test', 's'.repeat(43), CLIENT_ID,
+    )).resolves.toEqual([generated])
+    await expect(yandexPilotRepository.generateTrainingSummary(
+      'https://stage.example.test', 's'.repeat(43), CLIENT_ID,
+      '2026-08-01', '2026-08-26',
+    )).resolves.toEqual({ data: generated, cached: false })
+  })
+
+  it('explains an empty summary period without invitation wording', async () => {
+    queries.generateTrainingSummary.mockResolvedValue(new Response('{}', { status: 422 }))
+
+    await expect(yandexPilotRepository.generateTrainingSummary(
+      'https://stage.example.test', 's'.repeat(43), CLIENT_ID,
+      '2026-08-01', '2026-08-26',
+    )).rejects.toThrow('Для выбранного периода нет завершённых тренировок')
   })
 
   it('accepts the explicit read-only session contract', async () => {

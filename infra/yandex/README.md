@@ -69,9 +69,15 @@ network-connected Serverless Containers; it is distinct from the user subnet.
 `parse-workout` and `summarize-client-training` can execute in the API
 Serverless Container before the source data is migrated. Their caller still
 authenticates with a Supabase JWT; the container verifies it with Supabase and
-reads/writes through the existing RLS and service-role contracts. `invite-client`
-intentionally remains a Supabase Edge Function because it creates a Supabase
+reads/writes through the existing RLS and service-role contracts. Production
+`invite-client` remains a Supabase Edge Function because it creates a Supabase
 Auth e-mail invitation.
+
+The isolated Yandex pilot has native equivalents for all three contracts. Its
+invitation lifecycle, workout parser and goal-aware summary authenticate with
+the short-lived Fit pilot session, read Yandex PostgreSQL and never receive a
+Supabase JWT. The bridge remains only for unchanged production tenants until a
+reviewed cohort cutover.
 
 To enable this bridge on an isolated stage, a security administrator creates an
 existing Lockbox version with exactly these payload keys:
