@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { allowsAssistantAction, assistantCapabilitiesReply, createClientTurn, createProgramTurn, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, isTurnIdReuse, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse } from './index.js'
+import { allowsAssistantAction, assistantCapabilitiesReply, assistantModelMessages, createClientTurn, createProgramTurn, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, isTurnIdReuse, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse } from './index.js'
 
 describe('assistant orchestrator contract', () => {
+  it('sends one bounded user prompt after the system message', () => {
+    const messages = assistantModelMessages('Контекст и текущая реплика')
+    expect(messages).toHaveLength(2)
+    expect(messages[0]?.role).toBe('system')
+    expect(messages[0]?.text).toContain('безопасный ассистент')
+    expect(messages[1]).toEqual({ role: 'user', text: 'Контекст и текущая реплика' })
+  })
+
   it('accepts only bounded conversation turns', () => {
     expect(readAssistantTurnRequest({ conversation_id: '6f0c4fb9-5f61-4d78-97aa-1f8b8d79c447', message: '  Составь программу  ' })).toEqual({ conversationId: '6f0c4fb9-5f61-4d78-97aa-1f8b8d79c447', message: 'Составь программу' })
     expect(readAssistantTurnRequest({ conversation_id: 'bad', message: '' })).toBeUndefined()
