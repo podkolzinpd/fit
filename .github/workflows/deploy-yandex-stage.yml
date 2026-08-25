@@ -270,6 +270,12 @@ jobs:
             and (.clients | any(
               .fullName == "Тестовый клиент Yandex stage"
               and .canonicalFullName == "Тестовый клиент Yandex stage"
+              and .currentWeightKg == 64.5
+              and .activity.doneCount >= 1
+              and .activity.completionPercent != null
+              and .activity.lastWorkoutDate == "2026-08-22"
+              and .activity.daysInWork >= 0
+              and (.activity.needsAttention | type) == "boolean"
             ))
           ' <<<"$clients" >/dev/null
           connections=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \

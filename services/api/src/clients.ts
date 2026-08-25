@@ -9,14 +9,20 @@ interface ClientRow extends QueryResultRow {
   canonical_full_name: string
   gender: 'male' | 'female' | null
   age_years: number | null
-  age_updated_at: string | null
+  age_updated_at: string | Date | null
   height_cm: string | null
   goal: string | null
   note: string | null
+  current_weight_kg: string | null
   last_activity_at: Date
   archived_at: Date | null
   version: string
   membership_version: string
+  done_count: number
+  completion_percent: number | null
+  last_workout_date: string | Date | null
+  days_in_work: number | null
+  needs_attention: boolean
 }
 
 export interface PilotClient {
@@ -30,11 +36,18 @@ export interface PilotClient {
   heightCm: number | null
   goal: string | null
   note: string | null
-  currentWeightKg: null
+  currentWeightKg: number | null
   lastActivityAt: string
   archivedAt: string | null
   version: number
   membershipVersion: number
+  activity: {
+    doneCount: number
+    completionPercent: number | null
+    lastWorkoutDate: string | null
+    daysInWork: number | null
+    needsAttention: boolean
+  }
 }
 
 export interface PilotClientsResponse {
@@ -48,34 +61,22 @@ function integer(value: string, field: string): number {
   return parsed
 }
 
+function localDate(value: string | Date | null): string | null {
+  if (value === null || typeof value === 'string') return value
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export async function readAccessibleClients(
   client: DatabaseClient,
   archived = false,
 ): Promise<PilotClientsResponse> {
-  const rows = await client.query<ClientRow>(`
-    select
-      client.id,
-      client.auth_user_id is not null as has_account,
-      coalesce(membership.alias, client.full_name) as full_name,
-      client.full_name as canonical_full_name,
-      client.gender,
-      client.age_years,
-      client.age_updated_at,
-      client.height_cm,
-      client.goal,
-      membership.note,
-      client.updated_at as last_activity_at,
-      client.archived_at,
-      client.version,
-      coalesce(membership.version, 1) as membership_version
-    from public.clients client
-    left join public.client_trainers membership
-      on membership.client_id = client.id
-     and membership.trainer_id = auth.uid()
-    where public.can_access_client(client.id)
-      and (client.archived_at is not null) = $1
-    order by client.updated_at desc, lower(coalesce(membership.alias, client.full_name))
-  `, [archived])
+  const rows = await client.query<ClientRow>(
+    'select * from public.list_client_overviews($1)',
+    [archived],
+  )
 
   return {
     accessMode: 'read_only',
@@ -86,15 +87,22 @@ export async function readAccessibleClients(
       canonicalFullName: row.canonical_full_name,
       gender: row.gender,
       ageYears: row.age_years,
-      ageUpdatedAt: row.age_updated_at,
+      ageUpdatedAt: localDate(row.age_updated_at),
       heightCm: row.height_cm === null ? null : Number(row.height_cm),
       goal: row.goal,
       note: row.note,
-      currentWeightKg: null,
+      currentWeightKg: row.current_weight_kg === null ? null : Number(row.current_weight_kg),
       lastActivityAt: row.last_activity_at.toISOString(),
       archivedAt: row.archived_at?.toISOString() ?? null,
       version: integer(row.version, 'client version'),
       membershipVersion: integer(row.membership_version, 'membership version'),
+      activity: {
+        doneCount: row.done_count,
+        completionPercent: row.completion_percent,
+        lastWorkoutDate: localDate(row.last_workout_date),
+        daysInWork: row.days_in_work,
+        needsAttention: row.needs_attention,
+      },
     })),
   }
 }
