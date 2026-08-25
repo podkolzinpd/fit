@@ -1,29 +1,34 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
 import { ChevronRightIcon } from '../../shared/icons'
 import { useAuth } from '../../app/auth-context'
 import { assistantRepository, type AssistantOrchestratorAction } from '../../data/repositories/assistant.repository'
 import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
 import { VoiceInputButton } from '../voice-input'
 import { clientSchema } from '../../shared/validation'
-import { currentTimeInTimeZone, todayInTimeZone } from '../../shared/local-date'
+import { currentTimeInTimeZone, formatLocalDate, todayInTimeZone } from '../../shared/local-date'
 import type { ExerciseSnapshot, WorkoutDraft } from '../../shared/domain'
 import { useExerciseCatalog } from '../exercises'
 import { WorkoutComposer } from '../workouts/WorkoutComposer'
 import { formatLlmWorkoutText, parseWorkoutWithLlm } from '../workouts/llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
-import { assistantWorkoutSaveInput } from './workout-draft'
+import { appendWorkoutParse, assistantWorkoutSaveInput, enqueueWorkoutParse, replaceWorkoutParseSource, type WorkoutParseQueue } from './workout-draft'
+import { conversationLocalDate, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveAssistantAction, mergeAssistantMessages, selectTodayConversation, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
+import { AssistantInlineSummaryCard } from './AssistantInlineSummary'
+import { parseAssistantInlineSummary } from './assistant-inline-summary'
 
-type Message = { id: string; author: string; content: string; action: AssistantOrchestratorAction | null }
 type FailedTurn = { turnId: string; message: string }
 
 export function AssistantHistoryPage() {
   const { actor } = useAuth()
   const queryClient = useQueryClient()
   const [conversationId, setConversationId] = useState<string>()
-  const [messages, setMessages] = useState<Message[]>([])
+  const [todayConversationId, setTodayConversationId] = useState<string>()
+  const [conversations, setConversations] = useState<AssistantConversation[]>([])
+  const [messages, setMessages] = useState<AssistantMessage[]>([])
+  const [loadingMessages, setLoadingMessages] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [text, setText] = useState('')
   const [error, setError] = useState<string>()
   const [failedTurn, setFailedTurn] = useState<FailedTurn>()
@@ -32,33 +37,98 @@ export function AssistantHistoryPage() {
   const [completedSummaryIds, setCompletedSummaryIds] = useState<string[]>([])
   const [runningClientIds, setRunningClientIds] = useState<string[]>([])
   const [completedClientIds, setCompletedClientIds] = useState<string[]>([])
+  const [savingSummaryIds, setSavingSummaryIds] = useState<string[]>([])
+  const [savedSummaryIds, setSavedSummaryIds] = useState<string[]>([])
   const [actionVersions, setActionVersions] = useState<Record<string, number>>({})
+  const conversationRef = useRef<string | undefined>(undefined)
+  const loadSequence = useRef(0)
+  const threadRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
-    if (!actor) return
+    let cancelled = false
+    ++loadSequence.current
+    if (!actor) {
+      setConversationId(undefined)
+      setTodayConversationId(undefined)
+      setConversations([])
+      setMessages([])
+      setLoadingMessages(false)
+      return () => { cancelled = true }
+    }
+    setConversationId(undefined)
+    setTodayConversationId(undefined)
+    setConversations([])
+    setMessages([])
+    setLoadingMessages(false)
     void (async () => {
       const { data: conversations } = await assistantRepository.listConversations()
-      const conversation = conversations?.[0] ?? (await assistantRepository.createConversation(actor.userId)).data
+      const today = todayInTimeZone(actor.timezone)
+      let available = (conversations ?? []) as AssistantConversation[]
+      let conversation = selectTodayConversation(available, actor.timezone, today)
+      if (!conversation) {
+        conversation = (await assistantRepository.createConversation(actor.userId)).data as AssistantConversation | undefined
+        if (conversation) available = [conversation, ...available]
+      }
+      if (cancelled) return
       if (!conversation) return
+      setConversations(available)
+      const current = selectTodayConversation(available, actor.timezone, today)
+      setTodayConversationId(current?.id ?? conversation.id)
       setConversationId(conversation.id)
-      const [{ data }, { data: actions }] = await Promise.all([
-        assistantRepository.listMessages(conversation.id), assistantRepository.listActions(),
-      ])
-      const actionByMessage = new Map((actions ?? []).filter((item) => item.conversation_id === conversation.id).map((item) => [item.assistant_message_id, item]))
-      const versions: Record<string, number> = {}
-      setMessages((data ?? []).map((row) => {
-        const action = row.action as AssistantOrchestratorAction | null
-        const durable = action === null ? undefined : actionByMessage.get(row.id)
-        if (durable) versions[durable.id] = durable.version
-        return { ...row, action: action === null ? null : { ...action, lifecycleStatus: durable?.status as AssistantOrchestratorAction['lifecycleStatus'], result: durable?.result as Record<string, unknown> | null | undefined } }
-      }))
-      setActionVersions(versions)
+      conversationRef.current = conversation.id
     })()
+    return () => { cancelled = true }
   }, [actor])
+
+  useEffect(() => {
+    if (!conversationId) return
+    const sequence = ++loadSequence.current
+    conversationRef.current = conversationId
+    setMessages([])
+    setLoadingMessages(true)
+    void (async () => {
+      const [{ data }, { data: actions }] = await Promise.all([
+        assistantRepository.listMessages(conversationId), assistantRepository.listActions(conversationId),
+      ])
+      if (sequence !== loadSequence.current || conversationRef.current !== conversationId) return
+      const merged = mergeAssistantMessages((data ?? []) as AssistantMessage[], (actions ?? []) as Parameters<typeof mergeAssistantMessages>[1])
+      const versions: Record<string, number> = {}
+      for (const action of actions ?? []) versions[action.id] = action.version
+      setMessages(merged)
+      setActionVersions(versions)
+      setLoadingMessages(false)
+    })()
+  }, [conversationId])
+
+  const readOnly = isReadOnlyConversation(conversationId, todayConversationId)
+  const today = todayInTimeZone(actor?.timezone)
+  const historyConversations = conversations.filter((conversation) => conversation.id !== todayConversationId)
+  const conversationGroups = groupAssistantConversations(historyConversations, actor?.timezone, today)
+  const lastMessageId = messages[messages.length - 1]?.id
+
+  useLayoutEffect(() => {
+    if (!conversationId || loadingMessages) return
+    const thread = threadRef.current
+    const scrollContainer = thread?.closest<HTMLElement>('.content')
+    if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight
+  }, [conversationId, lastMessageId, loadingMessages])
+
+  function selectConversation(id: string) {
+    if (sending || id === conversationId) return
+    ++loadSequence.current
+    conversationRef.current = id
+    setHistoryOpen(false)
+    setConversationId(id)
+  }
+
+  function returnToToday() {
+    if (todayConversationId) selectConversation(todayConversationId)
+  }
 
   async function send(suggestedMessage?: string, retry?: FailedTurn) {
     const message = (retry?.message ?? suggestedMessage ?? text).trim()
-    if (!message || !conversationId || sending) return
+    if (!message || !conversationId || readOnly || sending) return
+    const requestConversationId = conversationId
     if (retry === undefined && suggestedMessage === undefined) setText('')
     setSending(true)
     setError(undefined)
@@ -66,21 +136,29 @@ export function AssistantHistoryPage() {
     if (retry === undefined) {
       setMessages((current) => [...current, {
         id: `pending-user-${turnId}`,
+        conversation_id: requestConversationId,
+        turn_id: turnId,
         author: 'user',
         content: message,
         action: null,
+        created_at: new Date().toISOString(),
       }])
     }
     try {
-      const turn = await assistantRepository.sendTurn(conversationId, turnId, message)
+      const turn = await assistantRepository.sendTurn(requestConversationId, turnId, message)
+      if (conversationRef.current !== requestConversationId) return
       setMessages((current) => [...current, {
         id: `pending-assistant-${turnId}`,
+        conversation_id: requestConversationId,
+        turn_id: turnId,
         author: 'assistant',
         content: turn.reply,
         action: turn.action,
+        created_at: new Date().toISOString(),
       }])
       setFailedTurn(undefined)
     } catch {
+      if (conversationRef.current !== requestConversationId) return
       setFailedTurn({ turnId, message })
       if (retry === undefined && suggestedMessage === undefined) setText((current) => current || message)
       setError('Не удалось получить ответ ассистента. Попробуйте ещё раз.')
@@ -151,30 +229,93 @@ export function AssistantHistoryPage() {
     finally { setRunningClientIds((current) => current.filter((id) => id !== messageId)) }
   }
 
-  const latestWorkoutActionMessageId = [...messages].reverse().find((message) => message.action?.tool === 'record_workout')?.id
+  async function saveInlineSummary(messageId: string, summaryId: string, clientId: string) {
+    if (savingSummaryIds.includes(messageId) || savedSummaryIds.includes(messageId)) return
+    setSavingSummaryIds((current) => [...current, messageId])
+    setError(undefined)
+    try {
+      const summaries = await trainingSummariesRepository.listForTrainer(clientId)
+      const summary = summaries.find((item) => item.id === summaryId)
+      if (!summary) throw new Error('assistant_summary_not_found')
+      await trainingSummariesRepository.publish(summary, summary.client)
+      setSavedSummaryIds((current) => [...current, messageId])
+    } catch {
+      setError('Не удалось сохранить сводку в прогресс. Попробуйте ещё раз.')
+    } finally {
+      setSavingSummaryIds((current) => current.filter((id) => id !== messageId))
+    }
+  }
+
+  const latestActiveAction = readOnly ? undefined : latestActiveAssistantAction(messages, conversationId)
+  const visibleMessages = filterTerminalAssistantMessages(messages)
+
+  useEffect(() => {
+    const summaries = messages.flatMap((message) => {
+      if (message.action?.tool !== 'summarize_progress' || message.action.lifecycleStatus !== 'applied') return []
+      const summary = parseAssistantInlineSummary(message.action.result)
+      return summary ? [{ messageId: message.id, summaryId: summary.summaryId, clientId: summary.clientId }] : []
+    })
+    if (summaries.length === 0) return
+    let cancelled = false
+    void Promise.all(summaries.map(async ({ messageId, summaryId, clientId }) => {
+      try {
+        const rows = await trainingSummariesRepository.listForTrainer(clientId)
+        return rows.some((row) => row.id === summaryId && row.published) ? messageId : undefined
+      } catch { return undefined }
+    })).then((savedIds) => {
+      if (cancelled) return
+      const found = savedIds.filter((id): id is string => id !== undefined)
+      if (found.length > 0) setSavedSummaryIds((current) => [...new Set([...current, ...found])])
+    })
+    return () => { cancelled = true }
+  }, [messages])
 
   return <main className="assistant-page">
     <h1 className="sr-only">Ассистент</h1>
-    <p className="assistant-local-note">Ассистент сохраняет историю этой беседы. Любое изменение данных появится только в отдельной карточке подтверждения.</p>
-    <section className="assistant-thread" aria-label="Диалог с ассистентом">
-      {messages.map((message) => {
-        if (message.author === 'user') return <article key={message.id} className="assistant-message assistant-message-user"><p>{message.content}</p></article>
-        const historicalWorkoutFragment = isWorkoutCollectionAction(message.action) && message.id !== latestWorkoutActionMessageId
-        return <article key={message.id} className={`assistant-action-card${historicalWorkoutFragment ? ' assistant-action-card-compact' : ''}`}>
-          {historicalWorkoutFragment
-            ? <p className="assistant-fragment-ack">Фрагмент добавлен</p>
-            : <>{(!message.action || message.content.trim() !== message.action.description.trim()) && <AssistantMessageContent content={message.content} />}{message.action && <AssistantAction action={message.action} timezone={actor?.timezone} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onApplyAction={(input) => applyAction(message.id, message.action!, input)} onSuggestion={(value) => void send(value)} onCancel={() => { void (async () => { const cancelled = await cancelAction(message.id, message.action!); if (cancelled && !message.action?.id) await send('Отменить') })() }} onConfirm={() => void confirmSummary(message.id, message.action!)} onConfirmClient={(draft) => void confirmClient(message.id, message.action!, draft)} running={runningSummaryIds.includes(message.id) || runningClientIds.includes(message.id)} completed={completedSummaryIds.includes(message.id) || completedClientIds.includes(message.id) || message.action.lifecycleStatus === 'applied'} />}</>}
-        </article>
+    <section className="assistant-session-switcher" aria-label="Сессия ассистента">
+      <div className="assistant-session-bar">
+        <div className="assistant-session-label"><strong>{readOnly ? 'Архив' : 'Сегодня'}</strong><span>{conversationId ? formatLocalDate(conversationLocalDate({ created_at: conversations.find((item) => item.id === conversationId)?.created_at ?? new Date().toISOString() }, actor?.timezone)) : 'Загружаю…'}</span></div>
+        <div className="assistant-session-actions">
+          {readOnly && <button type="button" className="assistant-session-today" onClick={returnToToday}>Сегодня</button>}
+          {historyConversations.length > 0 && <button type="button" className="assistant-history-toggle" aria-expanded={historyOpen} aria-controls="assistant-session-history" onClick={() => setHistoryOpen((open) => !open)}>История {historyConversations.length}</button>}
+        </div>
+      </div>
+      {historyOpen && historyConversations.length > 0 && <div id="assistant-session-history" className="assistant-session-history">
+          {conversationGroups.map((group) => <div key={group.date} className="assistant-session-day">
+            <span className="assistant-session-day-label">{formatLocalDate(group.date)}</span>
+            {group.conversations.map((conversation) => <button key={conversation.id} type="button" className={conversation.id === conversationId ? 'selected' : ''} onClick={() => selectConversation(conversation.id)}>
+              <small>{conversationTitle(conversation, group.date, today)}</small>
+            </button>)}
+          </div>)}
+      </div>}
+    </section>
+    <section ref={threadRef} className="assistant-thread" aria-label="Диалог с ассистентом">
+      {loadingMessages && <p className="assistant-thread-status">Загружаю сессию…</p>}
+      {visibleMessages.map((message) => {
+        if (message.author === 'user') {
+          if (isWorkoutDictationReceipt(message, messages)) return <article key={message.id} className="assistant-workout-user-receipt"><details><summary>Диктовка · фрагмент добавлен</summary><p>{message.content}</p></details></article>
+          return <article key={message.id} className="assistant-message assistant-message-user"><p>{message.content}</p></article>
+        }
+        const inlineSummary = message.action?.tool === 'summarize_progress' && message.action.lifecycleStatus === 'applied'
+          ? parseAssistantInlineSummary(message.action.result)
+          : undefined
+        if (inlineSummary) return <article key={message.id} className="assistant-message assistant-message-assistant"><AssistantInlineSummaryCard summary={inlineSummary} onSave={() => void saveInlineSummary(message.id, inlineSummary.summaryId, inlineSummary.clientId)} saving={savingSummaryIds.includes(message.id)} saved={savedSummaryIds.includes(message.id) || inlineSummary.saved === true} /></article>
+        const showContent = !message.action || message.content.trim() !== message.action.description.trim() || (message.action.tool === 'summarize_progress' && message.action.lifecycleStatus === 'applied')
+        if (!showContent) return null
+        return <article key={message.id} className="assistant-message assistant-message-assistant"><AssistantMessageContent content={message.content} /></article>
       })}
       {error && <div className="assistant-card-hint" role="alert"><span>{error}</span>{failedTurn && <button type="button" onClick={() => void send(undefined, failedTurn)} disabled={sending}>Повторить отправку</button>}</div>}
     </section>
-    <form className="assistant-composer" onSubmit={(event) => { event.preventDefault(); void send() }}>
+    {latestActiveAction && <section className="assistant-context-panel" aria-label="Текущий контекст ассистента">
+      <AssistantAction action={latestActiveAction.action} timezone={actor?.timezone} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onApplyAction={(input) => applyAction(latestActiveAction.message.id, latestActiveAction.action, input)} onSuggestion={(value) => void send(value)} onCancel={() => { void (async () => { const cancelled = await cancelAction(latestActiveAction.message.id, latestActiveAction.action); if (cancelled && !latestActiveAction.action.id) await send('Отменить') })() }} onConfirm={() => void confirmSummary(latestActiveAction.message.id, latestActiveAction.action)} onConfirmClient={(draft) => void confirmClient(latestActiveAction.message.id, latestActiveAction.action, draft)} running={runningSummaryIds.includes(latestActiveAction.message.id) || runningClientIds.includes(latestActiveAction.message.id)} completed={completedSummaryIds.includes(latestActiveAction.message.id) || completedClientIds.includes(latestActiveAction.message.id) || latestActiveAction.action.lifecycleStatus === 'applied'} />
+    </section>}
+    <form className="assistant-composer" autoComplete="off" onSubmit={(event) => { event.preventDefault(); void send() }}>
       <label className="sr-only" htmlFor="assistant-history-message">Сообщение ассистенту</label>
-      <input id="assistant-history-message" value={text} onChange={(event) => setText(event.target.value)} placeholder="Чем могу помочь?" disabled={!conversationId || sending} />
-      <VoiceInputButton variant="icon" source="assistant" idleLabel="Голосовой ввод" disabled={!conversationId || sending} showTranscriptStatus={false} onTranscript={async (transcript) => {
+      <input id="assistant-history-message" name="assistant-prompt" autoComplete="off" value={text} onChange={(event) => setText(event.target.value)} placeholder="Напишите сообщение" disabled={!conversationId || readOnly || sending} />
+      <VoiceInputButton variant="icon" source="assistant" idleLabel="Голосовой ввод" disabled={!conversationId || readOnly || sending} showTranscriptStatus={false} onTranscript={async (transcript) => {
         await send(transcript)
       }} />
-      <button type="submit" className="assistant-icon-button" disabled={!conversationId || sending} aria-label="Отправить сообщение"><ChevronRightIcon /></button>
+      <button type="submit" className="assistant-icon-button" disabled={!conversationId || readOnly || sending} aria-label="Отправить сообщение"><ChevronRightIcon /></button>
     </form>
   </main>
 }
@@ -186,14 +327,10 @@ function AssistantMessageContent({ content }: { content: string }) {
   return <p>{content}</p>
 }
 
-type SummaryPayload = { step: string; clientId?: string; clientName?: string; candidates?: { id: string; fullName: string }[]; options?: string[]; periodStart?: string; periodEnd?: string; periodLabel?: string }
+type SummaryPayload = { step: string; clientId?: string; clientName?: string; transcript?: string; candidates?: { id: string; fullName: string }[]; options?: string[]; periodStart?: string; periodEnd?: string; periodLabel?: string }
 type ClientDraftPayload = { step: string; fullName: string; gender: 'male' | 'female'; ageYears: number; heightCm: number; goal?: string; initialWeightKg?: number }
 type WorkoutDraftPayload = { step: string; clientId: string; clientName: string; transcript?: string }
 type ProgramDraftPayload = { step: string; clientId: string; clientName: string; goal?: string | null; brief: string; sessions: unknown[] }
-
-function isWorkoutCollectionAction(action: AssistantOrchestratorAction | null): boolean {
-  return action?.tool === 'record_workout' && (action.payload as { step?: unknown }).step === 'workout'
-}
 
 function summaryPayload(action: AssistantOrchestratorAction): { clientId: string; periodStart: string; periodEnd: string } | undefined {
   const payload = action.payload as SummaryPayload
@@ -204,19 +341,8 @@ function summaryPayload(action: AssistantOrchestratorAction): { clientId: string
 
 function AssistantAction({ action, timezone, onWorkoutSaved, onApplyAction, onSuggestion, onCancel, onConfirm, onConfirmClient, running, completed }: { action: AssistantOrchestratorAction; timezone?: string; onWorkoutSaved: () => void; onApplyAction: (input: object) => Promise<void>; onSuggestion: (value: string) => void; onCancel: () => void; onConfirm: () => void; onConfirmClient: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {
   const payload = action.payload as SummaryPayload
-  if (action.lifecycleStatus === 'cancelled') return <div className="assistant-progress-preview"><strong>Сценарий отменён</strong><span>Изменения не внесены.</span></div>
-  if (action.lifecycleStatus === 'failed') return <div className="assistant-progress-preview"><strong>Операция не выполнена</strong><span>Изменения не внесены. Текст запроса и карточка сохранены в истории.</span></div>
-  if (action.lifecycleStatus === 'applied') {
-    const result = action.result ?? {}
-    const workoutId = typeof result.workoutId === 'string' ? result.workoutId : Array.isArray(result.workoutIds) && typeof result.workoutIds[0] === 'string' ? result.workoutIds[0] : undefined
-    const clientId = typeof result.clientId === 'string' ? result.clientId : undefined
-    const summaryClientId = typeof (action.payload as SummaryPayload).clientId === 'string' ? (action.payload as SummaryPayload).clientId : undefined
-    const href = workoutId ? `/workouts/${workoutId}` : clientId ? `/clients/${clientId}` : action.tool === 'summarize_progress' && summaryClientId ? `/progress/${summaryClientId}` : undefined
-    const workoutSaved = action.tool === 'record_workout'
-    return <div className="assistant-completion-card"><small>Готово</small><strong>{workoutSaved ? 'Тренировка сохранена' : 'Изменения сохранены'}</strong><span>{workoutSaved && typeof payload.clientName === 'string' ? payload.clientName : 'Повторное подтверждение не требуется'}</span>{href && <Link to={href}>{workoutSaved ? 'Открыть тренировку' : 'Открыть результат'}</Link>}</div>
-  }
   if (action.tool === 'create_client_draft' && payload.step === 'confirm') return <ClientDraftCard payload={payload as ClientDraftPayload} onCancel={onCancel} onConfirm={onConfirmClient} running={running} completed={completed} />
-  if (action.tool === 'record_workout' && payload.step === 'confirm') return <AssistantWorkoutDraftCard payload={payload as WorkoutDraftPayload} timezone={timezone} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} />
+  if (action.tool === 'record_workout' && payload.step === 'confirm') return <AssistantWorkoutDraftCard key={`${action.id ?? 'workout'}-${payload.clientId}`} payload={payload as WorkoutDraftPayload} timezone={timezone} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} />
   if (action.tool === 'record_workout' && payload.step === 'workout') return <WorkoutCollectionCard payload={payload as WorkoutDraftPayload} onSuggestion={onSuggestion} onCancel={onCancel} />
   if (action.tool === 'create_program_draft' && payload.step === 'confirm') return <ProgramDraftCard payload={payload as ProgramDraftPayload} timezone={timezone} onApply={onApplyAction} onSaved={onWorkoutSaved} onCancel={onCancel} />
   if (action.tool !== 'summarize_progress') return <ActionPreview action={action} onCancel={onCancel} />
@@ -234,7 +360,7 @@ function WorkoutCollectionCard({ payload, onSuggestion, onCancel }: { payload: W
     {transcript
       ? <div className="assistant-workout-transcript"><small>Уже добавлено</small><p>{transcript}</p></div>
       : <p>Диктуйте упражнения по одному или все сразу — предыдущие фрагменты не пропадут.</p>}
-    {transcript && <button type="button" onClick={() => onSuggestion('Готово, разобрать тренировку')}>Перейти к разбору</button>}
+    {transcript && <button type="button" onClick={() => onSuggestion('Готово, разобрать тренировку')}>Распознать упражнения</button>}
     <small>{transcript ? 'Можно надиктовать следующее упражнение обычным сообщением.' : 'Например: «Жим лёжа, 3 подхода по 10 повторений, 50 кг».'}</small>
     <CancelActionButton onCancel={onCancel} />
   </div>
@@ -282,25 +408,55 @@ function parsedWorkoutExercises(result: WorkoutParseResponse, catalog: readonly 
 
 function AssistantWorkoutDraftCard({ payload, timezone, onCancel, onApply, onSaved }: { payload: WorkoutDraftPayload; timezone?: string; onCancel: () => void; onApply: (input: object) => Promise<void>; onSaved: () => void }) {
   const catalog = useExerciseCatalog()
-  const [text, setText] = useState(payload.transcript ?? '')
+  const [fragmentText, setFragmentText] = useState('')
+  const [rawFragments, setRawFragments] = useState<string[]>([])
   const [workoutDate, setWorkoutDate] = useState<string>(() => todayInTimeZone(timezone))
   const [startTime, setStartTime] = useState(() => currentTimeInTimeZone(timezone))
   const [result, setResult] = useState<WorkoutParseResponse>()
+  const [initialParsed, setInitialParsed] = useState(false)
   const [parsing, setParsing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string>()
   const [saved, setSaved] = useState(false)
   const [requestId] = useState(() => crypto.randomUUID())
-  async function parse() {
-    if (!text.trim() || catalog.loading || parsing) return
-    setParsing(true); setError(undefined); setResult(undefined)
-    try {
-      const next = await parseWorkoutWithLlm(text, catalog.exercises, { requireLocalDisambiguation: true })
-      setResult(next)
-      if (!next.items.length) setError('Не удалось распознать упражнения. Уточните текст диктовки и попробуйте ещё раз.')
-    } catch { setError('Не удалось обработать диктовку. Исходный текст сохранён — попробуйте ещё раз.') }
-    finally { setParsing(false) }
+  const parsedTranscript = useRef('')
+  const parseQueue = useRef<WorkoutParseQueue>({ current: Promise.resolve() })
+
+  function parseFragment(fragment: string, receipt = true, replaceSource?: string, inputValue?: string): Promise<void> {
+    const normalized = fragment.trim()
+    if (!normalized) return Promise.resolve()
+    return enqueueWorkoutParse(parseQueue.current, async () => {
+      if (catalog.loading) {
+        setFragmentText((current) => current.trim() || normalized)
+        setError('Каталог упражнений ещё загружается. Попробуйте распознать фрагмент ещё раз.')
+        return
+      }
+      setParsing(true); setError(undefined)
+      try {
+        const next = await parseWorkoutWithLlm(normalized, catalog.exercises, { requireLocalDisambiguation: true })
+        setResult((current) => replaceSource && current ? replaceWorkoutParseSource(current, replaceSource, next) : appendWorkoutParse(current, next))
+        if (receipt) setRawFragments((current) => [...current, normalized])
+        if (inputValue !== undefined) setFragmentText((current) => current.trim() === inputValue.trim() ? '' : current)
+        if (!next.items.length && !next.unmatched.length) setError('Не удалось распознать упражнение. Уточните диктовку и попробуйте ещё раз.')
+      } catch {
+        setFragmentText((current) => current.trim() ? current : normalized)
+        setError('Не удалось обработать диктовку. Исходный текст сохранён — попробуйте ещё раз.')
+      }
+      finally { setParsing(false) }
+    })
   }
+
+  useEffect(() => {
+    const transcript = payload.transcript?.trim() ?? ''
+    if (!transcript || catalog.loading || parsedTranscript.current === transcript) return
+    const previous = parsedTranscript.current
+    const fragment = previous && transcript.startsWith(previous) ? transcript.slice(previous.length).trim() : transcript
+    parsedTranscript.current = transcript
+    if (!fragment) return
+    setInitialParsed(true)
+    void parseFragment(fragment, true)
+  }, [catalog.loading, payload.transcript])
+
   async function save() {
     if (!result || result.unmatched.length || saving || saved) return
     const exercises = parsedWorkoutExercises(result, catalog.exercises)
@@ -318,13 +474,13 @@ function AssistantWorkoutDraftCard({ payload, timezone, onCancel, onApply, onSav
     if (!exercise) return
     const valuesStart = sourceText.search(/\d/u)
     const values = valuesStart < 0 ? '' : sourceText.slice(valuesStart).trim()
-    setText((current) => current.replace(sourceText, `${exercise.name}${values ? ` ${values}` : ''}`))
-    setResult(undefined)
+    void parseFragment(`${exercise.name}${values ? ` ${values}` : ''}`, false, sourceText)
   }
   return <div className="assistant-program-draft" aria-label={`Разбор тренировки ${payload.clientName}`}>
     <strong>Тренировка · {payload.clientName}</strong>
     <div className="assistant-workout-meta"><label>Дата<input type="date" value={workoutDate} onChange={(event) => setWorkoutDate(event.target.value)} /></label><label>Время<input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label></div>
-    <WorkoutComposer name="assistant-workout-draft" source="assistant_workout" value={text} label="Диктовка" showVoice={false} onValueChange={setText} onClear={() => { setText(''); setResult(undefined) }} primaryAction={<button type="button" onClick={() => void parse()} disabled={!text.trim() || catalog.loading || parsing}>{catalog.loading ? 'Загружаю каталог…' : parsing ? 'Разбираю…' : 'Разобрать тренировку'}</button>} />
+    {rawFragments.length > 0 && <details className="assistant-workout-receipt"><summary>Получено фрагментов: {rawFragments.length}</summary><div>{rawFragments.map((fragment, index) => <p key={`${fragment}-${index}`}>{fragment}</p>)}</div></details>}
+    <WorkoutComposer name="assistant-workout-fragment" source="assistant_workout" value={fragmentText} label="Добавить упражнение" voiceLabel="Надиктовать упражнение" showVoice onValueChange={(value) => { setFragmentText(value); if (value.trim()) setError(undefined) }} onClear={() => setFragmentText('')} onTranscriptAppended={({ value, transcript }) => parseFragment(transcript, true, undefined, value)} primaryAction={<button type="button" onClick={() => void parseFragment(fragmentText, true, undefined, fragmentText)} disabled={!fragmentText.trim() || catalog.loading || parsing}>{catalog.loading ? 'Загружаю каталог…' : parsing ? 'Распознаю…' : error ? 'Распознать снова' : initialParsed ? 'Добавить упражнение' : 'Распознать упражнения'}</button>} />
     {result && <div className="assistant-progress-preview"><strong>Результат разбора</strong><span>{formatLlmWorkoutText(result, catalog.exercises) || 'Упражнения не распознаны'}</span>{unmatched.map((item) => <div key={item.sourceText} className="assistant-exercise-choice"><small>Нужно уточнить</small><strong>{item.sourceText}</strong><span>{item.reason}</span><div>{item.suggestedExerciseRefs.map((ref) => { const exercise = catalog.exercises.find((candidate) => candidate.ref === ref); return <button key={ref} type="button" onClick={() => chooseExercise(item.sourceText, ref)}>{exercise?.name ?? 'Вариант упражнения'}{exercise?.equipment ? <small>{exercise.equipment}</small> : null}</button> })}</div></div>)}{unmatched.length > 0 && <small>Выберите вариант — исходные подходы, повторы и вес останутся в тексте.</small>}{!unmatched.length && result.items.length > 0 && <button type="button" onClick={() => void save()} disabled={saving || saved}>{saved ? 'Тренировка сохранена' : saving ? 'Сохраняю…' : 'Сохранить тренировку'}</button>}</div>}
     {error && <p className="assistant-card-hint" role="alert">{error}</p>}
     {!saved && <CancelActionButton onCancel={onCancel} />}
