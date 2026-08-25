@@ -1,4 +1,4 @@
-import type { MuscleGroup, PublishedTrainingSummary, TrainingProgressFactChange, Workout } from '../../shared/domain'
+import type { MuscleGroup, TrainingProgressFactChange, TrainingSummaryMetrics, Workout } from '../../shared/domain'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
 import { progressFactComparisonLabel } from './progress-facts'
 
@@ -40,6 +40,13 @@ export interface BodyMapData {
   description: string
   regions: BodyMapRegion[]
   emptyMessage: string
+}
+
+export interface BodyProgressSummary {
+  id: string
+  periodStart: string
+  periodEnd: string
+  metrics: TrainingSummaryMetrics
 }
 
 const BODY_ZONE_LABELS: Record<BodyMapZone, string> = {
@@ -175,7 +182,7 @@ function setCountLabel(count: number): string {
   return `${count} подходов`
 }
 
-export function progressBodyMap(summary: PublishedTrainingSummary): BodyMapData {
+export function progressBodyMap(summary: BodyProgressSummary): BodyMapData {
   const grouped = new Map<BodyMapZone, Array<{ percent: number; detail: string }>>()
   for (const fact of summary.metrics.progressFacts) {
     const change = favorableChange(fact.changes)

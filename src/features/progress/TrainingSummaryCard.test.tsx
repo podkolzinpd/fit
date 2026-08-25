@@ -250,8 +250,84 @@ describe('Training summary card states', () => {
     expect(await screen.findByText(trainerSummary.trainer.headline)).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Обновить' }))
     expect(await screen.findByText(updated.trainer.headline)).toBeVisible()
-    expect(screen.getByRole('status')).toHaveTextContent('Анализ обновлён')
+    expect(screen.getByText('Анализ обновлён')).toHaveAttribute('role', 'status')
     expect(repositories.listForTrainer).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps the trainer card after a refresh error and confirms a successful retry', async () => {
+    const user = userEvent.setup()
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForTrainer.mockResolvedValue([trainerSummary])
+    repositories.generate
+      .mockRejectedValueOnce(new Error('Не получилось обновить анализ'))
+      .mockResolvedValueOnce({ generatedAt: trainerSummary.generatedAt, cached: true })
+
+    render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByText(trainerSummary.trainer.headline)).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Обновить' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Не получилось обновить анализ')
+    await user.click(screen.getByRole('button', { name: 'Обновить' }))
+    expect(await screen.findByText('Анализ уже актуален')).toHaveAttribute('role', 'status')
+    expect(screen.getByText(trainerSummary.trainer.headline)).toBeVisible()
+  })
+
+  it('shows the shared body map for the trainer with the client figure and workout load', async () => {
+    const user = userEvent.setup()
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForTrainer.mockResolvedValue([trainerSummary])
+    repositories.workouts.mockResolvedValue([{
+      id: 'workout-1', clientId: 'client-1', workoutDate: localDate('2026-08-18'), status: 'done',
+      exercises: [{ name: 'Тяга верхнего блока', muscleGroup: 'back', sets: [
+        { confirmedAt: '2026-08-18T10:00:00Z' }, { confirmedAt: '2026-08-18T10:01:00Z' },
+      ] }, { name: 'Жим лёжа', muscleGroup: 'chest', sets: [
+        { confirmedAt: '2026-08-18T10:02:00Z' },
+      ] }],
+    } as Workout])
+
+    render(<TrainerTrainingSummaryCard clientId="client-1" gender="female" />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByAltText('Атлетичная женщина, вид сзади')).toBeVisible()
+    expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Нагрузка' }))
+    expect(await screen.findByLabelText('Верх спины. Доля всех выполненных подходов: 67%')).toBeVisible()
+    expect(repositories.workouts).toHaveBeenCalledWith(
+      trainerSummary.periodStart,
+      trainerSummary.periodEnd,
+      'client-1',
+    )
+  })
+
+  it('keeps trainer progress visible and retries a failed body load request', async () => {
+    const user = userEvent.setup()
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForTrainer.mockResolvedValue([trainerSummary])
+    repositories.workouts
+      .mockRejectedValueOnce(new Error('История временно недоступна'))
+      .mockResolvedValueOnce([])
+
+    render(<TrainerTrainingSummaryCard clientId="client-1" gender="female" />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Нагрузка' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось собрать нагрузку')
+    await user.click(screen.getByRole('button', { name: 'Попробовать ещё раз' }))
+    expect(await screen.findByText('После завершённой тренировки покажем распределение нагрузки по зонам.')).toBeVisible()
+    expect(repositories.workouts).toHaveBeenCalledTimes(2)
+  })
+
+  it('shows an explicit trainer body-load state when progress facts are not available yet', async () => {
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForTrainer.mockResolvedValue([{
+      ...trainerSummary,
+      metrics: { ...trainerSummary.metrics, progressFacts: [] },
+    }])
+    repositories.workouts.mockReturnValue(new Promise(() => undefined))
+
+    render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByText('Собираем нагрузку по тренировкам…')).toHaveAttribute('role', 'status')
+    expect(screen.getByText('Карта тела')).toBeVisible()
   })
 
   it('keeps the current client analysis and exposes a readable refresh error', async () => {

@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type TouchEvent } from 'react'
-import type { Gender, PublishedTrainingSummary, Workout } from '../../shared/domain'
+import type { Gender, Workout } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
 import {
   loadBodyMap,
@@ -7,6 +7,7 @@ import {
   type BodyMapData,
   type BodyMapMode,
   type BodyMapRegion,
+  type BodyProgressSummary,
   type BodyMapZone,
 } from './body-progress-map'
 import {
@@ -202,8 +203,8 @@ function MapPanel({ data, selected, gender, side, discovering, onSideChange, onS
   </>
 }
 
-export function ClientBodyProgressMap({ summary, workouts, gender = null, loadLoading, loadError, onLoadRetry }: {
-  summary: PublishedTrainingSummary
+export function TrainingBodyProgressMap({ summary, workouts, gender = null, loadLoading, loadError, onLoadRetry }: {
+  summary: BodyProgressSummary
   workouts: readonly Workout[]
   gender?: Gender | null
   loadLoading: boolean
