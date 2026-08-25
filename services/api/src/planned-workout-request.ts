@@ -19,6 +19,7 @@ type BlockType = 'single' | 'group'
 type BlockPreset = 'set' | 'circuit' | 'interval'
 
 export interface PlannedWorkoutSetDraft {
+  sourceSetId?: string
   position: number
   weightKg: number | null
   reps: number | null
@@ -29,6 +30,7 @@ export interface PlannedWorkoutSetDraft {
 }
 
 export interface PlannedWorkoutExerciseDraft {
+  sourceExerciseId?: string
   position: number
   source: ExerciseSource
   ref: string
@@ -49,6 +51,7 @@ export interface PlannedWorkoutExerciseDraft {
 
 export interface PlannedWorkoutDraft {
   id: string | null
+  requestId?: string
   clientId: string
   workoutDate: string
   startTime: string | null
@@ -148,6 +151,9 @@ function readSet(value: unknown): PlannedWorkoutSetDraft | undefined {
   const input = record(value)
   if (input === undefined) return undefined
   const position = integer(input.position, 0, 32_767)
+  const sourceSetId = input.sourceSetId === null || input.sourceSetId === undefined
+    ? null
+    : uuid(input.sourceSetId)
   const weightKg = metric(input.weightKg, 99_999)
   const reps = metric(input.reps, 2_147_483_647, true)
   const durationMin = metric(input.durationMin, 999_999)
@@ -156,6 +162,7 @@ function readSet(value: unknown): PlannedWorkoutSetDraft | undefined {
   const rpe = metric(input.rpe, 10)
   if (
     position === undefined
+    || sourceSetId === undefined
     || weightKg === undefined
     || reps === undefined
     || durationMin === undefined
@@ -165,6 +172,7 @@ function readSet(value: unknown): PlannedWorkoutSetDraft | undefined {
     || (rpe !== null && (rpe < 6 || !Number.isInteger(rpe * 2)))
   ) return undefined
   return {
+    ...(sourceSetId === null ? {} : { sourceSetId }),
     position,
     weightKg,
     reps,
@@ -179,6 +187,10 @@ function readExercise(value: unknown): PlannedWorkoutExerciseDraft | undefined {
   const input = record(value)
   if (input === undefined || !Array.isArray(input.sets)) return undefined
   const position = integer(input.position, 0, 32_767)
+  const sourceExerciseId = input.sourceExerciseId === null
+    || input.sourceExerciseId === undefined
+    ? null
+    : uuid(input.sourceExerciseId)
   const source = enumValue(input.source, ['system', 'custom'] as const)
   const ref = text(input.ref, { max: 300 })
   const customExerciseId = input.customExerciseId === null
@@ -210,6 +222,7 @@ function readExercise(value: unknown): PlannedWorkoutExerciseDraft | undefined {
   const sets = input.sets.map(readSet)
   if (
     position === undefined
+    || sourceExerciseId === undefined
     || source === undefined
     || ref === undefined
     || customExerciseId === undefined
@@ -230,6 +243,7 @@ function readExercise(value: unknown): PlannedWorkoutExerciseDraft | undefined {
     || (source === 'system' && customExerciseId !== null)
   ) return undefined
   return {
+    ...(sourceExerciseId === null ? {} : { sourceExerciseId }),
     position,
     source,
     ref,
@@ -256,6 +270,9 @@ export function readSavePlannedWorkoutRequest(
   const input = record(body)
   if (input === undefined || !Array.isArray(input.exercises)) return undefined
   const clientId = uuid(input.clientId)
+  const requestId = input.requestId === null || input.requestId === undefined
+    ? null
+    : uuid(input.requestId)
   const workoutDate = validDate(input.workoutDate)
   const startTime = nullableTime(input.startTime)
   const endTime = nullableTime(input.endTime)
@@ -266,6 +283,7 @@ export function readSavePlannedWorkoutRequest(
     : integer(input.expectedVersion, 1, Number.MAX_SAFE_INTEGER)
   if (
     clientId === undefined
+    || requestId === undefined
     || workoutDate === undefined
     || startTime === undefined
     || endTime === undefined
@@ -283,6 +301,7 @@ export function readSavePlannedWorkoutRequest(
   return {
     draft: {
       id: workoutId,
+      ...(requestId === null ? {} : { requestId }),
       clientId,
       workoutDate,
       startTime,

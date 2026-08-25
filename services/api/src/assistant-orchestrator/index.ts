@@ -345,7 +345,8 @@ export async function runAssistantTurn(authorization: string, command: Assistant
   const { data: rows, error: historyError } = await service.from('assistant_messages')
     .select('author,content,action').eq('conversation_id', command.conversationId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(20)
   if (historyError) throw new HttpError(503, 'history_unavailable')
-  const latestAssistantAction = (rows ?? []).find((row) => row.author === 'assistant')?.action
+  const latestAssistantAction: unknown = (rows ?? [])
+    .find((row) => row.author === 'assistant')?.action
   const summary = summaryTurn(command.message, clientRows, latestAssistantAction, new Date())
   if (summary !== undefined) {
     const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({

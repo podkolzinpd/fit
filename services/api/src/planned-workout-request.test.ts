@@ -8,6 +8,9 @@ import {
 const WORKOUT_ID = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
 const CLIENT_ID = 'b3942b20-52a2-4d5d-9895-b3b63cf61442'
 const BLOCK_ID = '8ffdb87b-078c-42d4-b6db-af8bc60f80f2'
+const REQUEST_ID = '3d959430-cecf-4c21-9636-2f5727acfd24'
+const EXERCISE_ID = '2fc8f3d7-a178-4019-ad62-cf765374ba26'
+const SET_ID = '33430010-2b05-42a5-83dc-1ef555f2206d'
 
 function validRequest() {
   return {
@@ -68,6 +71,33 @@ describe('planned workout request', () => {
     })
     expect(readExpectedVersion({ expectedVersion: 2 })).toBe(2)
     expect(readExpectedVersion({ expectedVersion: 0 })).toBeUndefined()
+  })
+
+  it('keeps idempotency and source identities for completed-workout writes', () => {
+    const request = {
+      ...validRequest(),
+      requestId: REQUEST_ID,
+      expectedVersion: 4,
+      exercises: [{
+        ...validRequest().exercises[0],
+        sourceExerciseId: EXERCISE_ID,
+        sets: [{
+          ...validRequest().exercises[0]!.sets[0],
+          sourceSetId: SET_ID,
+        }],
+      }],
+    }
+    expect(readSavePlannedWorkoutRequest(request, WORKOUT_ID)).toMatchObject({
+      draft: {
+        id: WORKOUT_ID,
+        requestId: REQUEST_ID,
+        exercises: [{
+          sourceExerciseId: EXERCISE_ID,
+          sets: [{ sourceSetId: SET_ID }],
+        }],
+      },
+      expectedVersion: 4,
+    })
   })
 
   it.each([

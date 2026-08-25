@@ -12,14 +12,20 @@ import type { PlannedWorkoutDraft } from './planned-workout-request.js'
 import {
   appendLiveExercise,
   appendLiveSet,
+  cancelPlannedWorkout,
   confirmLiveSet,
   finishLiveWorkout,
+  recordPlannedWorkoutResult,
   removeLiveSet,
   reorderLiveBlock,
+  rescheduleWorkout,
   replaceLiveExercise,
+  saveCompletedWorkout,
   savePlannedWorkout,
   saveLiveSetDraft,
+  setClientWorkoutComment,
   setLiveExerciseComment,
+  softDeleteWorkout,
   softDeletePlannedWorkout,
   startLiveWorkout,
   type PilotLiveCommandResult,
@@ -41,6 +47,11 @@ export interface PilotWorkoutsWriter {
     expectedVersion: number,
     operationId: string,
   ): Promise<PilotLiveStructureResult>
+  cancelPlanned(
+    sessionToken: string,
+    workoutId: string,
+    expectedVersion: number,
+  ): Promise<number>
   confirmLiveSet(
     sessionToken: string,
     setId: string,
@@ -52,6 +63,28 @@ export interface PilotWorkoutsWriter {
     workoutId: string,
     expectedVersion: number,
   ): Promise<number>
+  deleteWorkout(
+    sessionToken: string,
+    workoutId: string,
+    expectedVersion: number,
+  ): Promise<number>
+  recordPlannedResult(
+    sessionToken: string,
+    draft: PlannedWorkoutDraft,
+    expectedVersion: number,
+  ): Promise<SavedPilotWorkout>
+  reschedule(
+    sessionToken: string,
+    workoutId: string,
+    workoutDate: string,
+    startTime: string | null,
+    expectedVersion: number,
+  ): Promise<number>
+  saveCompleted(
+    sessionToken: string,
+    draft: PlannedWorkoutDraft,
+    expectedVersion: number | null,
+  ): Promise<SavedPilotWorkout>
   savePlanned(
     sessionToken: string,
     draft: PlannedWorkoutDraft,
@@ -105,6 +138,12 @@ export interface PilotWorkoutsWriter {
     expectedVersion: number,
     operationId: string,
   ): Promise<PilotLiveStructureResult>
+  setClientComment(
+    sessionToken: string,
+    workoutId: string,
+    comment: string,
+    expectedVersion: number,
+  ): Promise<number>
 }
 
 export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
@@ -149,6 +188,15 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
     ))
   }
 
+  cancelPlanned(
+    sessionToken: string,
+    workoutId: string,
+    expectedVersion: number,
+  ): Promise<number> {
+    return this.withSession(sessionToken, (client) =>
+      cancelPlannedWorkout(client, workoutId, expectedVersion))
+  }
+
   deletePlanned(
     sessionToken: string,
     workoutId: string,
@@ -156,6 +204,15 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   ): Promise<number> {
     return this.withSession(sessionToken, (client) =>
       softDeletePlannedWorkout(client, workoutId, expectedVersion))
+  }
+
+  deleteWorkout(
+    sessionToken: string,
+    workoutId: string,
+    expectedVersion: number,
+  ): Promise<number> {
+    return this.withSession(sessionToken, (client) =>
+      softDeleteWorkout(client, workoutId, expectedVersion))
   }
 
   confirmLiveSet(
@@ -175,6 +232,15 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   ): Promise<SavedPilotWorkout> {
     return this.withSession(sessionToken, (client) =>
       savePlannedWorkout(client, draft, expectedVersion))
+  }
+
+  saveCompleted(
+    sessionToken: string,
+    draft: PlannedWorkoutDraft,
+    expectedVersion: number | null,
+  ): Promise<SavedPilotWorkout> {
+    return this.withSession(sessionToken, (client) =>
+      saveCompletedWorkout(client, draft, expectedVersion))
   }
 
   saveLiveSet(
@@ -202,6 +268,15 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   ): Promise<PilotLiveCommandResult> {
     return this.withSession(sessionToken, (client) =>
       finishLiveWorkout(client, workoutId, expectedVersion, operationId))
+  }
+
+  recordPlannedResult(
+    sessionToken: string,
+    draft: PlannedWorkoutDraft,
+    expectedVersion: number,
+  ): Promise<SavedPilotWorkout> {
+    return this.withSession(sessionToken, (client) =>
+      recordPlannedWorkoutResult(client, draft, expectedVersion))
   }
 
   removeLiveSet(
@@ -233,6 +308,22 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
       direction,
       expectedVersion,
       operationId,
+    ))
+  }
+
+  reschedule(
+    sessionToken: string,
+    workoutId: string,
+    workoutDate: string,
+    startTime: string | null,
+    expectedVersion: number,
+  ): Promise<number> {
+    return this.withSession(sessionToken, (client) => rescheduleWorkout(
+      client,
+      workoutId,
+      workoutDate,
+      startTime,
+      expectedVersion,
     ))
   }
 
@@ -277,6 +368,20 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
       comment,
       expectedVersion,
       operationId,
+    ))
+  }
+
+  setClientComment(
+    sessionToken: string,
+    workoutId: string,
+    comment: string,
+    expectedVersion: number,
+  ): Promise<number> {
+    return this.withSession(sessionToken, (client) => setClientWorkoutComment(
+      client,
+      workoutId,
+      comment,
+      expectedVersion,
     ))
   }
 }
