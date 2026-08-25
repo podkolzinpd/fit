@@ -18,6 +18,23 @@ describe('body progress geometry', () => {
     expect(bodyZoneShapes('male', 'upper_back')).not.toEqual(bodyZoneShapes('female', 'upper_back'))
   })
 
+  it('keeps shoulder masks on the deltoids instead of the chest', () => {
+    const male = bodyZoneShapes('male', 'shoulders', 'front')
+    const female = bodyZoneShapes('female', 'shoulders', 'front')
+    expect(male.map((shape) => shape.cx)).toEqual([168, 392])
+    expect(female.map((shape) => shape.cx)).toEqual([142, 352])
+    expect(Math.max(...female.map((shape) => shape.rx))).toBeLessThanOrEqual(26)
+  })
+
+  it('separates upper-back muscles from the centre of the shirt', () => {
+    for (const variant of ['male', 'female'] as const) {
+      const sideShapes = bodyZoneShapes(variant, 'upper_back', 'back').filter((shape) => shape.cy > 280)
+      expect(sideShapes).toHaveLength(2)
+      expect(sideShapes[1]!.cx - sideShapes[0]!.cx).toBeGreaterThan(120)
+      expect(Math.max(...sideShapes.map((shape) => shape.rx))).toBeLessThanOrEqual(37)
+    }
+  })
+
   it('separates front and back shapes without changing their image coordinates', () => {
     expect(bodyZoneShapes('female', 'arms', 'front').every((shape) => shape.cx < 476)).toBe(true)
     expect(bodyZoneShapes('female', 'arms', 'back').every((shape) => shape.cx >= 476)).toBe(true)
