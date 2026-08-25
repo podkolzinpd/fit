@@ -226,7 +226,10 @@ function validProgramPayload(payload: Record<string, unknown>): boolean {
   if (payload.step !== 'confirm' || typeof payload.clientId !== 'string' || !UUID.test(payload.clientId) || typeof payload.clientName !== 'string' || typeof payload.brief !== 'string' || !Array.isArray(payload.sessions)) return false
   return payload.sessions.length > 0 && payload.sessions.length <= 4 && payload.sessions.every((session) => {
     if (!record(session) || typeof session.title !== 'string' || typeof session.day !== 'string' || !Array.isArray(session.exercises)) return false
-    return session.exercises.length > 0 && session.exercises.length <= 12 && session.exercises.every((exercise) => typeof exercise === 'string' && exercise.trim().length > 0)
+    return session.exercises.length > 0 && session.exercises.length <= 12 && session.exercises.every((exercise) => {
+      if (!record(exercise) || typeof exercise.name !== 'string' || !exercise.name.trim() || typeof exercise.sets !== 'number' || !Number.isInteger(exercise.sets) || exercise.sets < 1 || exercise.sets > 8) return false
+      return ['reps', 'weightKg', 'durationMin', 'distanceKm'].every((field) => exercise[field] === undefined || (typeof exercise[field] === 'number' && Number.isFinite(exercise[field]) && exercise[field] > 0))
+    })
   })
 }
 
@@ -566,7 +569,7 @@ export async function runAssistantTurn(authorization: string, command: Assistant
       body: JSON.stringify({
         modelUri: `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`,
         completionOptions: { stream: false, temperature: 0.2, maxTokens: (allowsAssistantAction(command.message) || programBriefReady) ? '1200' : '120' }, jsonSchema: { schema },
-        messages: [{ role: 'user', text: `${modelPrompt(history, clientContext, progressContext, !(allowsAssistantAction(command.message) || programBriefReady), usesInformalAddress(command.message))}${programBriefReady ? `\n\nСформируй именно action=create_program_draft, status=proposed. В payload обязательно верни step=confirm, clientId, clientName, goal, brief и sessions: массив до 4 тренировок с полями title, day, exercises (массив строк). Не утверждай, что программа сохранена.` : ''}` }],
+        messages: [{ role: 'user', text: `${modelPrompt(history, clientContext, progressContext, !(allowsAssistantAction(command.message) || programBriefReady), usesInformalAddress(command.message))}${programBriefReady ? `\n\nСформируй именно action=create_program_draft, status=proposed. В payload обязательно верни step=confirm, clientId, clientName, goal, brief и sessions: массив до 4 тренировок с полями title, day, exercises. Каждое exercises — объект {name, sets, reps?, weightKg?, durationMin?, distanceKm?}: name — точное название упражнения; sets — целое 1..8. Для силовых обязательно указывай reps, вес добавляй только если он обоснован. Для кардио укажи durationMin или distanceKm. Не утверждай, что программа сохранена.` : ''}` }],
       }),
     })
   } catch (error) {

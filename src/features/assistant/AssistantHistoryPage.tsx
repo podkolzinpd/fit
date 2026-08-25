@@ -129,7 +129,9 @@ function AssistantMessageContent({ content }: { content: string }) {
 type SummaryPayload = { step: string; clientId?: string; clientName?: string; candidates?: { id: string; fullName: string }[]; options?: string[]; periodStart?: string; periodEnd?: string; periodLabel?: string }
 type ClientDraftPayload = { step: string; fullName: string; gender: 'male' | 'female'; ageYears: number; heightCm: number; goal?: string; initialWeightKg?: number }
 type WorkoutDraftPayload = { step: string; clientId: string; clientName: string; transcript: string }
-type ProgramDraftPayload = { step: string; clientId: string; clientName: string; goal?: string | null; brief: string; sessions: { title: string; day: string; exercises: string[] }[] }
+type ProgramExerciseDraft = { name: string; sets: number; reps?: number; weightKg?: number; durationMin?: number; distanceKm?: number }
+type ProgramSessionDraft = { title: string; day: string; exercises: ProgramExerciseDraft[] }
+type ProgramDraftPayload = { step: string; clientId: string; clientName: string; goal?: string | null; brief: string; sessions: unknown[] }
 
 function summaryPayload(action: AssistantOrchestratorAction): { clientId: string; periodStart: string; periodEnd: string } | undefined {
   const payload = action.payload as SummaryPayload
@@ -152,11 +154,11 @@ function AssistantAction({ action, timezone, onWorkoutSaved, onSuggestion, onCan
 
 function ProgramDraftCard({ payload, timezone, onSaved, onCancel }: { payload: ProgramDraftPayload; timezone?: string; onSaved: () => void; onCancel: () => void }) {
   const catalog = useExerciseCatalog()
-  const [sessions, setSessions] = useState(payload.sessions)
+  const [sessions, setSessions] = useState(() => programSessions(payload.sessions))
   const [dates, setDates] = useState(() => sessions.map((_, index) => { const date = new Date(`${todayInTimeZone(timezone)}T12:00:00`); date.setDate(date.getDate() + index * 7); return date.toISOString().slice(0, 10) }))
   // One confirmation can be safely retried after a timeout: each planned
   // workout keeps its own idempotency key for the lifetime of this card.
-  const [requestIds] = useState(() => payload.sessions.map(() => crypto.randomUUID()))
+  const [requestIds] = useState(() => programSessions(payload.sessions).map(() => crypto.randomUUID()))
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string>()
@@ -171,12 +173,43 @@ function ProgramDraftCard({ payload, timezone, onSaved, onCancel }: { payload: P
     } catch { setError('Не удалось добавить программу в расписание. Попробуйте ещё раз.') }
     finally { setSaving(false) }
   }
-  return <div className="assistant-program-draft" aria-label={`Черновик программы ${payload.clientName}`}><strong>Программа · {payload.clientName}</strong><small>{payload.goal ? `Цель: ${payload.goal}` : 'Цель уточнена в анкете'}</small>{sessions.map((session, index) => <fieldset key={`${session.day}-${index}`}><label>Дата<input type="date" value={dates[index] ?? ''} onChange={(event) => setDates((current) => current.map((value, position) => position === index ? event.target.value : value))} /></label><label>Название<input value={session.title} onChange={(event) => setSessions((current) => current.map((item, position) => position === index ? { ...item, title: event.target.value } : item))} /></label><label>Упражнения<input value={session.exercises.join(', ')} onChange={(event) => setSessions((current) => current.map((item, position) => position === index ? { ...item, exercises: event.target.value.split(',').map((value) => value.trim()).filter(Boolean) } : item))} /></label></fieldset>)}{error && <p className="assistant-card-hint" role="alert">{error}</p>}<button type="button" onClick={() => void save()} disabled={catalog.loading || saving || saved}>{saved ? 'Программа добавлена в расписание' : saving ? 'Добавляю…' : 'Добавить в расписание'}</button>{!saved && <CancelActionButton onCancel={onCancel} />}</div>
+  return <div className="assistant-program-draft" aria-label={`Черновик программы ${payload.clientName}`}><strong>Программа · {payload.clientName}</strong><small>{payload.goal ? `Цель: ${payload.goal}` : 'Цель уточнена в анкете'}</small>{sessions.map((session, index) => <fieldset key={`${session.day}-${index}`}><label>Дата<input type="date" value={dates[index] ?? ''} onChange={(event) => setDates((current) => current.map((value, position) => position === index ? event.target.value : value))} /></label><label>Название<input value={session.title} onChange={(event) => setSessions((current) => current.map((item, position) => position === index ? { ...item, title: event.target.value } : item))} /></label><div className="assistant-program-exercises">{session.exercises.map((exercise, exerciseIndex) => <div key={exerciseIndex} className="assistant-program-exercise"><label>Упражнение<input value={exercise.name} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { name: event.target.value }))} /></label><label>Подходы<input type="number" min="1" max="8" value={exercise.sets} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { sets: Number(event.target.value) }))} /></label><label>Повторы<input type="number" min="1" value={exercise.reps ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { reps: optionalNumber(event.target.value) }))} /></label><label>Вес, кг<input type="number" min="0" step="0.5" value={exercise.weightKg ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { weightKg: optionalNumber(event.target.value) }))} /></label></div>)}</div></fieldset>)}{error && <p className="assistant-card-hint" role="alert">{error}</p>}<button type="button" onClick={() => void save()} disabled={catalog.loading || saving || saved}>{saved ? 'Программа добавлена в расписание' : saving ? 'Добавляю…' : 'Добавить в расписание'}</button>{!saved && <CancelActionButton onCancel={onCancel} />}</div>
+}
+
+function optionalNumber(value: string): number | undefined {
+  if (!value.trim()) return undefined
+  const number = Number(value)
+  return Number.isFinite(number) && number > 0 ? number : undefined
+}
+
+function programSessions(value: readonly unknown[]): ProgramSessionDraft[] {
+  return value.flatMap((session): ProgramSessionDraft[] => {
+    if (typeof session !== 'object' || session === null || Array.isArray(session)) return []
+    const row = session as Record<string, unknown>
+    if (typeof row.title !== 'string' || typeof row.day !== 'string' || !Array.isArray(row.exercises)) return []
+    const exercises = row.exercises.flatMap((exercise): ProgramExerciseDraft[] => {
+      // Keep already stored early draft cards readable after the schema upgrade.
+      if (typeof exercise === 'string' && exercise.trim()) return [{ name: exercise.trim(), sets: 1 }]
+      if (typeof exercise !== 'object' || exercise === null || Array.isArray(exercise)) return []
+      const item = exercise as Record<string, unknown>
+      if (typeof item.name !== 'string' || !item.name.trim() || typeof item.sets !== 'number' || !Number.isInteger(item.sets) || item.sets < 1) return []
+      const number = (field: string) => typeof item[field] === 'number' && Number.isFinite(item[field]) && item[field] > 0 ? item[field] as number : undefined
+      return [{ name: item.name.trim(), sets: item.sets, reps: number('reps'), weightKg: number('weightKg'), durationMin: number('durationMin'), distanceKm: number('distanceKm') }]
+    })
+    return exercises.length ? [{ title: row.title, day: row.day, exercises }] : []
+  })
+}
+
+function updateProgramExercise(sessions: ProgramSessionDraft[], sessionIndex: number, exerciseIndex: number, patch: Partial<ProgramExerciseDraft>): ProgramSessionDraft[] {
+  return sessions.map((session, currentSessionIndex) => currentSessionIndex !== sessionIndex ? session : {
+    ...session,
+    exercises: session.exercises.map((exercise, currentExerciseIndex) => currentExerciseIndex === exerciseIndex ? { ...exercise, ...patch } : exercise),
+  })
 }
 
 export function programWorkoutDrafts(
   clientId: string,
-  sessions: ProgramDraftPayload['sessions'],
+  sessions: readonly ProgramSessionDraft[],
   dates: readonly string[],
   requestIds: readonly string[],
   catalog: readonly ExerciseSnapshot[],
@@ -192,14 +225,14 @@ export function programWorkoutDrafts(
   const drafts = sessions.map((session, index) => {
     const date = dates[index]?.trim()
     const requestId = requestIds[index]?.trim()
-    const exercises = session.exercises.map(resolveExercise)
-    if (!date || !requestId || !session.title.trim() || exercises.some((exercise) => exercise === undefined)) return undefined
+    const exercises = session.exercises.map((item) => ({ item, exercise: resolveExercise(item.name) }))
+    if (!date || !requestId || !session.title.trim() || exercises.some(({ exercise }) => exercise === undefined)) return undefined
     return {
       requestId,
       clientId,
       workoutDate: localDate(date),
       notes: session.title.trim(),
-      exercises: exercises.map((exercise, position) => ({ ...exercise!, position, blockId: crypto.randomUUID(), blockType: 'single' as const, blockRounds: 1, sets: [{ position: 0 }] })),
+      exercises: exercises.map(({ item, exercise }, position) => ({ ...exercise!, position, blockId: crypto.randomUUID(), blockType: 'single' as const, blockRounds: 1, sets: Array.from({ length: item.sets }, (_, setPosition) => ({ position: setPosition, reps: item.reps, weightKg: item.weightKg, durationMin: item.durationMin, distanceKm: item.distanceKm })) })),
     }
   })
   return drafts.every((draft): draft is WorkoutDraft => draft !== undefined) ? drafts : undefined
