@@ -18,7 +18,7 @@ import { formatLocalDate, normalizeTimeZone, todayInTimeZone, type LocalDate } f
 import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { ClientProgressGoalSection } from './ClientProgressGoalSection'
-import { ClientBodyProgressMap } from './ClientBodyProgressMap'
+import { TrainingBodyProgressMap } from './ClientBodyProgressMap'
 import { clientProgressPresentation } from './client-progress-presentation'
 import { progressFactChangeLabel } from './progress-facts'
 import { formatSummaryText, formatWorkoutsPerWeek, progressMetricNoun } from './summary-format'
@@ -114,7 +114,7 @@ function SummaryCore({ headline, metrics, progress, consistency, progressLimit, 
   </>
 }
 
-export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
+export function TrainerTrainingSummaryCard({ clientId, gender = null }: { clientId: string; gender?: Gender | null }) {
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
   const timeZone = normalizeTimeZone(actor?.timezone)
@@ -138,6 +138,23 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
   }, [availablePeriods, period])
   const summary = summaryPeriodMatch(query.data ?? [], period, today)
   const range = summaryPeriodRange(period, today)
+  const workoutRange = summary
+    ? { start: summary.periodStart, end: summary.periodEnd }
+    : range
+  const workouts = useQuery({
+    queryKey: [
+      'trainer-progress-body-map-workouts',
+      clientId,
+      workoutRange.start,
+      workoutRange.end,
+    ],
+    queryFn: () => workoutsRepository.list(
+      workoutRange.start,
+      workoutRange.end,
+      clientId,
+    ),
+    enabled: ready && Boolean(summary),
+  })
   const generate = useMutation({
     mutationFn: async () => {
       const generation = await trainingSummariesRepository.generate(
@@ -174,6 +191,11 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
             key={summary.id}
             summary={summary}
             clientId={clientId}
+            gender={gender}
+            workouts={workouts.data ?? []}
+            workoutsLoading={workouts.isLoading}
+            workoutsError={workouts.error}
+            onWorkoutsRetry={() => void workouts.refetch()}
             onChanged={() => queryClient.invalidateQueries({
               queryKey: ['training-summaries', 'trainer', clientId],
             })}
@@ -207,9 +229,14 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
   </section>
 }
 
-function TrainerSummaryContent({ summary, clientId, onChanged }: {
+function TrainerSummaryContent({ summary, clientId, gender, workouts, workoutsLoading, workoutsError, onWorkoutsRetry, onChanged }: {
   summary: TrainingSummary
   clientId: string
+  gender: Gender | null
+  workouts: Awaited<ReturnType<typeof workoutsRepository.list>>
+  workoutsLoading: boolean
+  workoutsError: Error | null
+  onWorkoutsRetry: () => void
   onChanged: () => Promise<unknown>
 }) {
   const [clientCopyOpen, setClientCopyOpen] = useState(false)
@@ -217,6 +244,14 @@ function TrainerSummaryContent({ summary, clientId, onChanged }: {
   const [attentionOpen, setAttentionOpen] = useState(false)
   const hiddenAttentionCount = Math.max(0, summary.trainer.attention.length - 1)
   return <>
+    <TrainingBodyProgressMap
+      summary={summary}
+      workouts={workouts}
+      gender={gender}
+      loadLoading={workoutsLoading}
+      loadError={workoutsError}
+      onLoadRetry={onWorkoutsRetry}
+    />
     <SummaryCore
       headline={summary.trainer.headline}
       metrics={summary.metrics}
@@ -437,7 +472,7 @@ function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalL
   const [detailsOpen, setDetailsOpen] = useState(false)
   const presentation = clientProgressPresentation(summary)
   return <>
-    <ClientBodyProgressMap
+    <TrainingBodyProgressMap
       summary={summary}
       workouts={workouts}
       gender={gender}
