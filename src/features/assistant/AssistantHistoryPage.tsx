@@ -10,7 +10,7 @@ import { clientSchema } from '../../shared/validation'
 import { todayInTimeZone } from '../../shared/local-date'
 import type { ExerciseSnapshot, WorkoutDraft } from '../../shared/domain'
 import { workoutsRepository } from '../../data/repositories/workouts.repository'
-import { useExerciseCatalog } from '../exercises'
+import { filterExercises, useExerciseCatalog } from '../exercises'
 import { WorkoutComposer } from '../workouts/WorkoutComposer'
 import { formatLlmWorkoutText, parseWorkoutWithLlm } from '../workouts/llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
@@ -160,7 +160,8 @@ function ProgramDraftCard({ payload, timezone, onSaved, onCancel }: { payload: P
   async function save() {
     if (saving || saved) return
     const byName = new Map(catalog.exercises.map((exercise) => [exercise.name.toLocaleLowerCase('ru-RU'), exercise]))
-    const workouts = sessions.map((session, index) => ({ session, date: dates[index]!, exercises: session.exercises.map((name) => byName.get(name.toLocaleLowerCase('ru-RU'))) }))
+    const resolveExercise = (name: string) => byName.get(name.toLocaleLowerCase('ru-RU')) ?? (filterExercises(catalog.exercises, 'all', name).length === 1 ? filterExercises(catalog.exercises, 'all', name)[0] : undefined)
+    const workouts = sessions.map((session, index) => ({ session, date: dates[index]!, exercises: session.exercises.map(resolveExercise) }))
     if (workouts.some((workout) => !workout.date || workout.exercises.some((exercise) => exercise === undefined))) { setError('Уточните дату и названия упражнений: они должны совпадать с каталогом.'); return }
     setSaving(true); setError(undefined)
     try {
