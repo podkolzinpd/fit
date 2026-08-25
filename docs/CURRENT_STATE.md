@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-25
-Проверенный базовый `main`: `ba1d45c` (`feat(assistant): send SpeechKit transcripts to chat (#555)`)
+Проверенный базовый `main`: `57f570a` (`ci(e2e): parallelize safe browser checks (#559)`)
 
 ## Активное изменение
 
@@ -20,8 +20,8 @@
 - Автоматический stage smoke проверяет completed create/replay/edit, planned
   result, cancel/reschedule и итоговый read model до принятия новой revision.
 - WebKit behavior CI изолирует 40 сценариев в восьми короткоживущих browser
-  shards. Упавший из-за internal engine error shard повторяется один раз в новом
-  контейнере; детерминированный product fail остаётся блокирующим.
+  shards, распределённых между двумя параллельными линиями с отдельной локальной
+  БД. Упавший shard повторяется один раз в новом контейнере.
 
 ## Последняя проверенная продуктовая точка
 
@@ -81,7 +81,7 @@
 - Локальный Yandex PostgreSQL 17 применяет `000014`; 21 интеграционный
   actor/RLS-тест зелёный, включая cross-tenant и идемпотентность.
 - API gate зелёный: lint, TypeScript, 141 unit/API-тест и production build;
-  12 frontend repository tests и 44 infra/workflow policy tests зелёные.
+  12 frontend repository tests и 50 infra/workflow policy tests зелёные.
 - Полный root `npm run check`, `npm run db:reset` и `npm run db:test`
   зелёные; stage delivery `000014` ожидает merge.
 

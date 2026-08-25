@@ -7,6 +7,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   migration-safety:
     if: github.event_name == 'pull_request'
@@ -87,7 +91,24 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/fit_actor_test
 
-  e2e:
+  e2e-scope:
+    runs-on: ubuntu-latest
+    outputs:
+      required: ${{ steps.scope.outputs.required }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect browser-relevant changes
+        id: scope
+        run: node scripts/e2e-scope.mjs "$BASE_SHA" "$HEAD_SHA"
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+  e2e-chromium-visual:
+    needs: e2e-scope
+    if: needs.e2e-scope.outputs.required == 'true'
     runs-on: ubuntu-latest
     env:
       VITE_SUPABASE_URL: http://127.0.0.1:54321
@@ -111,6 +132,19 @@ jobs:
       - run: supabase db reset --local
       - name: Pull pinned Playwright runtime
         run: docker pull "$PLAYWRIGHT_IMAGE"
+      # Visual checks run against the clean seed before behavior scenarios mutate
+      # shared demo records. This removes the second database reset.
+      - name: Run isolated visual baselines
+        run: |
+          docker run --rm --init --ipc=host --network host \
+            --env CI=true \
+            --env VITE_SUPABASE_URL \
+            --env VITE_SUPABASE_PUBLISHABLE_KEY \
+            --volume "${{ github.workspace }}:/work" \
+            --volume "/usr/share/fonts:/usr/share/fonts:ro" \
+            --workdir /work \
+            "$PLAYWRIGHT_IMAGE" \
+            bash -lc 'fc-cache -f >/dev/null && exec npx playwright test --project=visual-client-390 --project=visual-client-430 --project=visual-trainer-1440 --workers=1'
       - name: Run Chromium behavior scenarios
         run: |
           docker run --rm --init --ipc=host --network host \
@@ -121,10 +155,47 @@ jobs:
             --workdir /work \
             "$PLAYWRIGHT_IMAGE" \
             npx playwright test --project=mobile-chromium
-      # WebKit can corrupt its long-lived browser process after an internal
-      # engine error and make unrelated later tests fail. Keep each process
-      # short-lived and retry only the affected shard in a fresh container.
-      - name: Run iPhone behavior scenarios in isolated shards
+      - name: Upload Playwright diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-diagnostics-chromium-visual
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Each lane owns a local Supabase instance. The two lanes run concurrently,
+  # while short-lived browser processes keep WebKit engine failures isolated.
+  e2e-webkit:
+    needs: e2e-scope
+    if: needs.e2e-scope.outputs.required == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        lane: [1, 2]
+    env:
+      VITE_SUPABASE_URL: http://127.0.0.1:54321
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
+      PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.61.1-noble
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+      - run: supabase start --exclude mailpit
+      - run: supabase db reset --local
+      - name: Pull pinned Playwright runtime
+        run: docker pull "$PLAYWRIGHT_IMAGE"
+      - name: Run iPhone behavior scenarios in isolated parallel lanes
         shell: bash
         run: |
           set -euo pipefail
@@ -144,40 +215,48 @@ jobs:
                 --shard="${shard}/8"
           }
 
-          for shard in {1..8}; do
+          for shard in $(seq "${{ matrix.lane }}" 2 8); do
             if ! run_webkit_shard "$shard"; then
               echo "::warning::WebKit shard ${shard}/8 crashed; retrying once in a fresh container"
               run_webkit_shard "$shard"
             fi
           done
-      # Поведенческие сценарии меняют общие seed-данные. Возвращаем эталонное
-      # состояние перед снимками, иначе параллельные тренировки меняют главную.
-      - name: Reset visual baseline data
-        run: supabase db reset --local
-      - name: Wait for local Auth after reset
-        run: >-
-          curl --fail --silent --show-error
-          --retry 30 --retry-all-errors --retry-delay 1
-          http://127.0.0.1:54321/auth/v1/health
-          > /dev/null
-      - name: Run isolated visual baselines
-        run: |
-          docker run --rm --init --ipc=host --network host \
-            --env CI=true \
-            --env VITE_SUPABASE_URL \
-            --env VITE_SUPABASE_PUBLISHABLE_KEY \
-            --volume "${{ github.workspace }}:/work" \
-            --volume "/usr/share/fonts:/usr/share/fonts:ro" \
-            --workdir /work \
-            "$PLAYWRIGHT_IMAGE" \
-            bash -lc 'fc-cache -f >/dev/null && exec npx playwright test --project=visual-client-390 --project=visual-client-430 --project=visual-trainer-1440 --workers=1'
       - name: Upload Playwright diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-diagnostics
+          name: playwright-diagnostics-webkit-${{ matrix.lane }}
           path: |
             playwright-report/
             test-results/
           if-no-files-found: ignore
           retention-days: 7
+
+  # Preserve one stable required check regardless of whether the heavy browser
+  # jobs ran, passed, failed or were intentionally skipped by the scope gate.
+  e2e:
+    needs: [e2e-scope, e2e-chromium-visual, e2e-webkit]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify E2E result
+        env:
+          SCOPE_RESULT: ${{ needs.e2e-scope.result }}
+          E2E_REQUIRED: ${{ needs.e2e-scope.outputs.required }}
+          CHROMIUM_VISUAL_RESULT: ${{ needs.e2e-chromium-visual.result }}
+          WEBKIT_RESULT: ${{ needs.e2e-webkit.result }}
+        run: |
+          set -euo pipefail
+          if [[ "$SCOPE_RESULT" != "success" ]]; then
+            echo "E2E scope detection failed"
+            exit 1
+          fi
+          if [[ "$E2E_REQUIRED" != "true" ]]; then
+            echo "E2E skipped: changes do not affect the browser runtime"
+            exit 0
+          fi
+          if [[ "$CHROMIUM_VISUAL_RESULT" != "success" || "$WEBKIT_RESULT" != "success" ]]; then
+            echo "E2E failed: chromium=$CHROMIUM_VISUAL_RESULT webkit=$WEBKIT_RESULT"
+            exit 1
+          fi
+          echo "All E2E lanes passed"
