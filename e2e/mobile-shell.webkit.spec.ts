@@ -851,6 +851,11 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
               kind: 'strength',
               session_count: 3,
               changes: [{ metric: 'max_weight', from: 50, to: 68, change_percent: 36, favorable: true }],
+            }, {
+              exercise_name: 'Жим гантелей лёжа',
+              kind: 'strength',
+              session_count: 3,
+              changes: [{ metric: 'volume', from: 2100, to: 2520, change_percent: 20, favorable: true }],
             }],
           },
           generated_at: '2026-08-20T08:00:00Z',
@@ -861,6 +866,12 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
 
     await page.goto('/me/progress')
     const summary = page.locator('.client-progress-card')
+    await expect(summary.locator('.body-progress-figure')).toHaveCount(1)
+    await expect(summary.getByAltText('Атлетичная женщина, вид сзади')).toBeVisible()
+    await summary.getByRole('button', { name: 'Спереди' }).click()
+    await expect(summary.getByAltText('Атлетичная женщина, вид спереди')).toBeVisible()
+    await summary.getByLabel('Грудь. Лучший результат зоны: +20%').click()
+    await summary.getByRole('button', { name: 'Сзади' }).click()
     await summary.getByLabel('Верх спины. Лучший результат зоны: +36%').click()
     await expect(summary.locator('.body-progress-detail').getByText('Тяга верхнего блока обратным узким хватом в кроссовере с дополнительной рукоятью', { exact: false })).toBeVisible()
     await summary.getByRole('button', { name: 'Подробный анализ' }).click()
