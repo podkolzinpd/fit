@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-25
-Проверенный базовый `main`: `30495f2` (`feat(progress): focus body map on one side (#569)`)
+Проверенный базовый `main`: `bbd1ab5` (`fix(assistant): make chat actions durable and atomic (#571)`)
 
 ## Активное изменение
 
@@ -49,6 +49,10 @@
 - Общая ИИ-сводка и production-разбор тренировки вызываются через Yandex Cloud
   Functions. Локальный разбор остаётся в локальном Supabase. Форма обратной связи
   сохраняет сообщения в `app_feedback`; канал уведомлений решается отдельно.
+- Assistant pilot trainer-only: `/assistant` защищён `TrainerOnly`, client nav и
+  client route exposure убраны. Turns принимают `turnId`; history/action state
+  сохраняются durable, proposed actions подтверждаются узкими RPC с owner/RLS,
+  program apply атомарен, повтор возвращает прежний результат.
 - PWA предлагает понятную установку на домашний экран. Ручной беговой MVP и
   локальный public-domain каталог упражнений работают без внешнего медиасервиса.
 - Client Progress сохраняет короткую сводку YAFIT-362: честные счётчики,
@@ -92,6 +96,9 @@
 - Полный `npm run check` зелёный: 739 frontend, 153 API и 52 infra/policy
   проверки, lint, typecheck и production build. Чистый Supabase reset применил
   все миграции; 596 SQL/RLS-тестов зелёные.
+- Assistant release применяет чистую цепочку Supabase; 624 SQL/RLS-теста
+  зелёные, включая exact-once turn/action, cross-tenant запреты и атомарный
+  rollback всей программы при ошибке одного элемента.
 
 ## Ближайший порядок
 

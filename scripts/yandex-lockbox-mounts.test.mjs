@@ -12,6 +12,7 @@ test('pins every Yandex Cloud Lockbox mount to an immutable version', () => {
   for (const workflow of workflows) {
     const source = readFileSync(join(workflowsDirectory, workflow), 'utf8')
     const mounts = [...source.matchAll(/--secret\s+([^\s\\]+)/g)]
+    const intendedVersions = new Set()
 
     for (const mount of mounts) {
       const argument = mount[1]
@@ -20,6 +21,13 @@ test('pins every Yandex Cloud Lockbox mount to an immutable version', () => {
         /(?:^|,)version-id=[^,]+(?:,|$)/,
         `${workflow} contains an unpinned Lockbox mount: --secret ${argument}`,
       )
+      const version = argument.match(/(?:^|,)version-id=([^,]+)(?:,|$)/)?.[1]
+      if (version) intendedVersions.add(version)
     }
+    if (mounts.length > 0) assert.equal(intendedVersions.size, 1, `${workflow} mixes Lockbox release versions in one function`)
   }
+
+  const assistant = readFileSync(join(workflowsDirectory, 'deploy-yandex-assistant-orchestrator.yml'), 'utf8')
+  assert.match(assistant, /--environment RELEASE_SHA=\"\$GITHUB_SHA\"/)
+  assert.doesNotMatch(assistant, /add-access-binding\s+\S+.*(?:lockbox|allUsers|serverless\.functions\.invoker)/)
 })

@@ -10,6 +10,8 @@ on:
       - 'services/api/package-lock.json'
       - 'services/api/src/assistant-orchestrator/**'
       - 'services/api/src/yandex-assistant-orchestrator-function.ts'
+      - 'scripts/verify-yandex-function-release.mjs'
+      - 'scripts/yandex-lockbox-mounts.test.mjs'
   workflow_dispatch:
 
 permissions:
@@ -60,15 +62,17 @@ jobs:
           lockbox_id=$(yc lockbox secret get --name "$LOCKBOX_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
           lockbox_version_id=$(yc lockbox secret get --id "$lockbox_id" --format json | jq -er '.current_version.id')
           runtime_sa_id=$(yc iam service-account get --name "$RUNTIME_SA_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id' 2>/dev/null || yc iam service-account create --name "$RUNTIME_SA_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
-          yc resource-manager folder add-access-binding "$YC_FOLDER_ID" --role serverless.functions.admin --service-account-id "$YC_DEPLOY_SA_ID"
-          yc resource-manager folder add-access-binding "$YC_FOLDER_ID" --role ai.languageModels.user --service-account-id "$runtime_sa_id"
-          yc lockbox secret add-access-binding "$lockbox_id" --role lockbox.payloadViewer --service-account-id "$runtime_sa_id"
+          # IAM bindings and public invoker are one-time bootstrap, never a
+          # side effect of an application release. See the bootstrap runbook.
           if ! yc serverless function get --name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
             yc serverless function create "$FUNCTION_NAME" --description 'Production Fit bounded assistant orchestrator' --folder-id "$YC_FOLDER_ID"
           fi
-          yc serverless function version create --function-name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --runtime nodejs22 --entrypoint dist/yandex-assistant-orchestrator-function.handler --memory 1GB --execution-timeout 120s --service-account-id "$runtime_sa_id" --source-path .yandex-assistant-orchestrator-package --secret id="$lockbox_id",version-id="$lockbox_version_id",key=SUPABASE_URL,environment-variable=SUPABASE_URL --secret id="$lockbox_id",version-id="$lockbox_version_id",key=SUPABASE_PUBLISHABLE_KEY,environment-variable=SUPABASE_PUBLISHABLE_KEY --secret id="$lockbox_id",version-id="$lockbox_version_id",key=SUPABASE_SERVICE_ROLE_KEY,environment-variable=SUPABASE_SERVICE_ROLE_KEY --secret id="$lockbox_id",version-id="$lockbox_version_id",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID --secret id="$lockbox_id",version-id="$lockbox_version_id",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID
-          yc serverless function add-access-binding "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --role serverless.functions.invoker --subject system:allUsers
-          function_url=$(yc serverless function get --name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.http_invoke_url')
-          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --request POST --header 'content-type: application/json' --data '{}' "$function_url")
-          test "$status" = 401
-          printf '### Yandex assistant orchestrator\n\n%s\n' "$function_url" >> "$GITHUB_STEP_SUMMARY"
+          previous_version_id=$(yc serverless function version get-by-tag --function-name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --tag '$latest' --format json 2>/dev/null | jq -r '.id // empty' || true)
+          version=$(yc serverless function version create --function-name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --runtime nodejs22 --entrypoint dist/yandex-assistant-orchestrator-function.handler --memory 1GB --execution-timeout 120s --service-account-id "$runtime_sa_id" --source-path .yandex-assistant-orchestrator-package --environment RELEASE_SHA="$GITHUB_SHA" --secret id="$lockbox_id",version-id="$lockbox_version_id",key=SUPABASE_URL,environment-variable=SUPABASE_URL --secret id="$lockbox_id",version-id="$lockbox_version_id",key=SUPABASE_PUBLISHABLE_KEY,environment-variable=SUPABASE_PUBLISHABLE_KEY --secret id="$lockbox_id",version-id="$lockbox_version_id",key=SUPABASE_SERVICE_ROLE_KEY,environment-variable=SUPABASE_SERVICE_ROLE_KEY --secret id="$lockbox_id",version-id="$lockbox_version_id",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID --secret id="$lockbox_id",version-id="$lockbox_version_id",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID --format json)
+          echo "ASSISTANT_PREVIOUS_VERSION_ID=$previous_version_id" >> "$GITHUB_ENV"
+          echo "ASSISTANT_CANDIDATE_VERSION_ID=$(jq -er '.id' <<<"$version")" >> "$GITHUB_ENV"
+          echo "ASSISTANT_LOCKBOX_VERSION_ID=$lockbox_version_id" >> "$GITHUB_ENV"
+      - name: Verify candidate and roll back on smoke failure
+        run: |
+          set -euo pipefail
+          node scripts/verify-yandex-function-release.mjs --function-name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --expected-version-id "$ASSISTANT_CANDIDATE_VERSION_ID" --previous-version-id "$ASSISTANT_PREVIOUS_VERSION_ID" | tee -a "$GITHUB_STEP_SUMMARY"
