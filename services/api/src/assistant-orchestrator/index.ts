@@ -340,7 +340,11 @@ function workoutTextProvided(message: string): boolean {
 
 function isWorkoutRecordRequest(message: string): boolean {
   const normalized = normalizeAssistantMessage(message)
+  // «Подготовить запись тренировки» — такой же явный вход в существующий
+  // разбор тренировки, как «записать» или «разобрать». Не отправляем его в
+  // свободный LLM-диалог: сначала детерминированно уточняем клиента и текст.
   const asksToRecord = ['запиши', 'записать', 'зафиксируй', 'зафиксировать', 'разбери', 'разобрать', 'продиктуй', 'продиктовать'].some((verb) => normalized.includes(verb))
+    || normalized.includes('подготов')
   return asksToRecord && ['тренировк', 'упражнен', 'подход', 'жим', 'тяга', 'присед', 'бег'].some((stem) => normalized.includes(stem))
 }
 

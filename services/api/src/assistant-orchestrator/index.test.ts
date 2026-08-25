@@ -67,6 +67,15 @@ describe('assistant orchestrator contract', () => {
     expect(recordWorkoutTurn('отмена', clients, draft?.action)).toEqual({ reply: 'Хорошо, запись тренировки отменена.', action: null })
   })
 
+  it('keeps a request to prepare a workout in the deterministic recording flow', () => {
+    const clients = [{ id: 'client-1', fullName: 'Сан Саныч', goal: null, ageYears: null, heightCm: null, gender: null }]
+    const result = recordWorkoutTurn('Давай подготовим запись тренировки для Сан Саныча', clients, null)
+    expect(result?.action).toMatchObject({
+      tool: 'record_workout', status: 'needs_input', payload: { step: 'workout', clientId: 'client-1', clientName: 'Сан Саныч' },
+    })
+    expect(result?.reply).toContain('Напишите или продиктуйте')
+  })
+
   it('collects a complete brief before proposing a training program', () => {
     const clients = [{ id: 'client-1', fullName: 'Антон Ковалёв', goal: 'Набрать силу', ageYears: 32, heightCm: 180, gender: 'male' }]
     const start = createProgramTurn('Составь программу тренировок', clients, null)
