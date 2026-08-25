@@ -872,7 +872,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
     await expect(summary.getByAltText('Атлетичная женщина, вид спереди')).toBeVisible()
     await summary.getByLabel('Грудь. Лучший результат зоны: +20%').click()
     await summary.getByRole('button', { name: 'Сзади' }).click()
-    await summary.getByLabel('Верх спины. Лучший результат зоны: +36%').click()
+    await summary.getByLabel('Верх спины. Лучший результат зоны: +36%').press('Enter')
     await expect(summary.locator('.body-progress-detail').getByText('Тяга верхнего блока обратным узким хватом в кроссовере с дополнительной рукоятью', { exact: false })).toBeVisible()
     await summary.getByRole('button', { name: 'Подробный анализ' }).click()
     await expect(page.getByRole('dialog', { name: 'Подробный анализ' }).getByText('Рабочий вес: 50 → 68 кг', { exact: false })).toBeVisible()
