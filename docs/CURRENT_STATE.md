@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-25
-Проверенный базовый `main`: `ba1d45c` (`feat(assistant): send SpeechKit transcripts to chat (#555)`)
+Проверенный базовый `main`: `b57f5d4` (`fix(yandex): pin deployed Lockbox versions (#556)`)
 
 ## Активное изменение
 
@@ -69,7 +69,7 @@
 ## Проверки активной ветки
 
 - Целевые scope/workflow-тесты зелёные: 6 сценариев.
-- Все 49 infra policy тестов зелёные.
+- Все 50 infra policy тестов зелёные.
 - Root lint, TypeScript, 715 frontend-тестов с coverage, DB types и iOS
   permissions зелёные. Полный `npm run check` временно блокирует известный API
   lint из `main`; исправление находится в отдельном PR #551.
