@@ -37,6 +37,7 @@ import type { ProfileResponse } from './profile.js'
 import type { PilotTrainingDataResponse } from './training-data.js'
 import { PilotWorkoutCommandError } from './workout-commands.js'
 import type { LegacyWorkoutParser } from './legacy-workout-parser.js'
+import type { PilotProgressData } from './progress-data.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
@@ -468,6 +469,30 @@ function buildTrainingDataReader(
     result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
   )
   return { pilotTrainingDataReader: { readTrainingData }, readTrainingData }
+}
+
+function buildProgressData(): {
+  pilotProgressData: PilotProgressData
+  readBundle: ReturnType<typeof vi.fn>
+  saveProgress: ReturnType<typeof vi.fn>
+} {
+  const readBundle = vi.fn().mockResolvedValue({ entries: [], customMetrics: [], goal: null })
+  const saveProgress = vi.fn().mockResolvedValue({ id: WORKOUT_ID, version: 1 })
+  return { readBundle, saveProgress, pilotProgressData: {
+    readBundle,
+    readRegularity: vi.fn().mockResolvedValue([]),
+    readRunning: vi.fn().mockResolvedValue([]),
+    readExercise: vi.fn().mockResolvedValue({ items: [], nextCursor: null, totalCount: 0 }),
+    readChronicle: vi.fn().mockResolvedValue({ items: [], nextCursor: null, totalCount: 0 }),
+    saveProgress,
+    deleteProgress: vi.fn().mockResolvedValue(2),
+    saveMetric: vi.fn().mockResolvedValue({ id: WORKOUT_ID, archivedAt: null, version: 1 }),
+    setMetricArchived: vi.fn().mockResolvedValue({ id: WORKOUT_ID, archivedAt: null, version: 2 }),
+    saveGoal: vi.fn().mockResolvedValue({ id: WORKOUT_ID, version: 1 }),
+    archiveGoal: vi.fn().mockResolvedValue(2),
+    saveStage: vi.fn().mockResolvedValue({ id: WORKOUT_ID, version: 1 }),
+    deleteStage: vi.fn().mockResolvedValue(undefined),
+  } }
 }
 
 function buildConnectionsWriter(error?: Error): {
@@ -1022,6 +1047,62 @@ describe('read-only pilot training data endpoint', () => {
     expect(missing.statusCode).toBe(401)
     expect(expired.statusCode).toBe(401)
     expect(expired.json()).toEqual({ error: 'unauthorized' })
+  })
+})
+
+describe('pilot progress and goals endpoints', () => {
+  const sessionToken = 's'.repeat(43)
+  const clientId = CLIENTS_RESPONSE.clients[0]!.id
+
+  it('returns the shared progress bundle and creates a validated atomic entry', async () => {
+    const progress = buildProgressData()
+    const app = buildApp({ pilotProgressData: progress.pilotProgressData, logger: false })
+    apps.push(app)
+
+    const read = await app.inject({
+      method: 'GET',
+      url: `/v1/clients/${clientId}/progress`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+    const created = await app.inject({
+      method: 'POST',
+      url: '/v1/progress',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { draft: {
+        clientId, recordedOn: '2026-08-25', weightKg: 70,
+        customMetrics: [],
+      } },
+    })
+
+    expect(read.statusCode).toBe(200)
+    expect(read.json()).toEqual({ entries: [], customMetrics: [], goal: null })
+    expect(progress.readBundle).toHaveBeenCalledWith(sessionToken, clientId)
+    expect(created.statusCode).toBe(201)
+    expect(progress.saveProgress).toHaveBeenCalledWith(sessionToken, {
+      id: null, clientId, recordedOn: '2026-08-25', weightKg: 70,
+      chestCm: null, waistCm: null, hipCm: null, notes: null, customMetrics: [],
+    }, null)
+  })
+
+  it('rejects incomplete cursors and malformed writes before the database', async () => {
+    const progress = buildProgressData()
+    const app = buildApp({ pilotProgressData: progress.pilotProgressData, logger: false })
+    apps.push(app)
+
+    const cursor = await app.inject({
+      method: 'GET',
+      url: `/v1/clients/${clientId}/workout-chronicle?beforeCompletedAt=2026-08-25T10:00:00Z`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+    const write = await app.inject({
+      method: 'POST', url: '/v1/progress',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { draft: { clientId, recordedOn: 'not-a-date', customMetrics: [] } },
+    })
+
+    expect(cursor.statusCode).toBe(400)
+    expect(write.statusCode).toBe(400)
+    expect(progress.saveProgress).not.toHaveBeenCalled()
   })
 })
 

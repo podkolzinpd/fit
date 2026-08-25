@@ -96,6 +96,8 @@ const ROOT_WORKOUT_ID = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
 const MEMBER_WORKOUT_ID = 'd3cff30a-7aa2-4407-b62d-0683167cf4c8'
 const CLIENT_WORKOUT_ID = '6e2d8d63-7c3a-4301-b9ba-76d875210f1f'
 const POST_WORKOUT_ID = 'cd691fd5-86ee-4740-838c-b37166df7e71'
+const PROGRESS_WORKOUT_EXERCISE_ID = '736e9f0c-634a-42e0-a13b-2c5b070fe5ef'
+const PROGRESS_WORKOUT_SET_ID = '9a15f723-44cb-4cf1-9bcf-4659c43cc764'
 const ROOT_WORKOUT_EXERCISE_ID = 'd40b742b-5d5b-41ab-91df-ed464414d034'
 const ROOT_WORKOUT_SET_ID = 'ea8efab5-0530-4660-9798-79901fcddfeb'
 const LIVE_OPERATION_IDS = {
@@ -158,6 +160,10 @@ interface InvitationSecretRow extends QueryResultRow {
 
 interface CountRow extends QueryResultRow {
   count: number
+}
+
+interface JsonResultRow extends QueryResultRow {
+  result: Record<string, unknown> | unknown[]
 }
 
 interface WorkoutAuditRow extends QueryResultRow {
@@ -282,6 +288,21 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
            'Исправленный факт',
            'Прошлый план',
            'План для переноса'
+         )`,
+      )
+      await ownerPool.query(
+        `delete from public.client_goals where client_id in (
+           select id from public.clients where full_name = 'Тестовый клиент Yandex stage'
+         )`,
+      )
+      await ownerPool.query(
+        `delete from public.client_progress where client_id in (
+           select id from public.clients where full_name = 'Тестовый клиент Yandex stage'
+         )`,
+      )
+      await ownerPool.query(
+        `delete from public.client_custom_metrics where client_id in (
+           select id from public.clients where full_name = 'Тестовый клиент Yandex stage'
          )`,
       )
       await ownerPool.query(
@@ -3146,6 +3167,119 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         }
         await ownerPool.query('delete from public.profiles where id = $1', [DOMAIN_CLIENT_ACTOR_ID])
       }
+    })
+
+    it('keeps progress and goals author-scoped while sharing confirmed derived facts', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      await ownerPool.query('delete from public.client_goals where client_id = $1', [CLIENT_ID])
+      await ownerPool.query('delete from public.client_progress where client_id = $1', [CLIENT_ID])
+      await ownerPool.query('delete from public.client_custom_metrics where client_id = $1', [CLIENT_ID])
+      await ownerPool.query('delete from public.workout_sets where id = $1', [PROGRESS_WORKOUT_SET_ID])
+      await ownerPool.query('delete from public.workout_exercises where id = $1', [PROGRESS_WORKOUT_EXERCISE_ID])
+      await ownerPool.query(
+        `insert into public.workout_exercises (
+           id, workout_id, trainer_id, client_id, position, exercise_source,
+           exercise_ref, exercise_name, muscle_group, input_kind
+         ) values ($1, $2, $3, $4, 0, 'system', 'push-up', 'Отжимания', 'chest', 'reps')`,
+        [PROGRESS_WORKOUT_EXERCISE_ID, CLIENT_WORKOUT_ID, ACTOR_ID, CLIENT_ID],
+      )
+      await ownerPool.query(
+        `insert into public.workout_sets (
+           id, workout_exercise_id, trainer_id, client_id, position,
+           fact_reps, confirmed_at
+         ) values ($1, $2, $3, $4, 0, 15, timestamptz '2026-08-19 12:10:00+00')`,
+        [PROGRESS_WORKOUT_SET_ID, PROGRESS_WORKOUT_EXERCISE_ID, ACTOR_ID, CLIENT_ID],
+      )
+
+      const metric = await withActorTransaction(runtimePool, ACTOR_ID, async (client) => {
+        const rows = await client.query<{ metric_id: string; version: string } & QueryResultRow>(
+          `select metric_id, version from public.save_client_metric($1::jsonb, null)`,
+          [JSON.stringify({ id: null, clientId: CLIENT_ID, name: 'Процент жира', unit: '%' })],
+        )
+        return rows[0]
+      })
+      expect(metric?.version).toBe('1')
+      await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+        client.query('select * from public.save_client_metric($1::jsonb, null)', [JSON.stringify({
+          id: null, clientId: CLIENT_ID, name: 'Клиентская метрика', unit: null,
+        })]))).rejects.toMatchObject({ message: 'metric_forbidden' })
+
+      const progress = await withActorTransaction(runtimePool, ACTOR_ID, async (client) => {
+        const rows = await client.query<{ progress_id: string; version: string } & QueryResultRow>(
+          `select progress_id, version from public.save_client_progress($1::jsonb, null)`,
+          [JSON.stringify({
+            id: null, clientId: CLIENT_ID, recordedOn: '2026-08-20', weightKg: 70,
+            chestCm: null, waistCm: 75, hipCm: null, notes: 'Первый замер',
+            customMetrics: [{ metricId: metric?.metric_id, value: 20.5 }],
+          })],
+        )
+        return rows[0]
+      })
+      expect(progress?.version).toBe('1')
+
+      const goal = await withActorTransaction(runtimePool, ACTOR_ID, async (client) => {
+        const rows = await client.query<{ goal_id: string; version: string } & QueryResultRow>(
+          `select goal_id, version from public.save_client_goal($1::jsonb, null)`,
+          [JSON.stringify({ id: null, clientId: CLIENT_ID, title: 'Подтянуться 10 раз', targetDate: '2026-12-31' })],
+        )
+        return rows[0]
+      })
+      await withActorTransaction(runtimePool, MEMBER_TRAINER_ID, (client) =>
+        client.query(
+          `select stage_id from public.save_goal_stage($1::jsonb, null)`,
+          [JSON.stringify({ id: null, goalId: goal?.goal_id, title: 'Первые пять', startsOn: '2026-08-20', endsOn: '2026-10-01', position: 0 })],
+        ))
+
+      const shared = await withActorTransaction(runtimePool, MEMBER_TRAINER_ID, async (client) => {
+        const rows = await client.query<JsonResultRow>(
+          'select public.get_client_progress_bundle($1) result', [CLIENT_ID])
+        return rows[0]?.result as { entries: unknown[]; customMetrics: unknown[]; goal: unknown }
+      })
+      expect(shared.entries).toHaveLength(1)
+      expect(shared.customMetrics).toHaveLength(1)
+      expect(shared.goal).not.toBeNull()
+
+      await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        client.query(
+          `insert into public.client_progress (
+             trainer_id, client_id, created_by, recorded_on
+           ) values ($1, $2, $1, date '2026-08-21')`,
+          [ACTOR_ID, CLIENT_ID],
+        ))).rejects.toMatchObject({ code: '42501' })
+
+      await expect(withActorTransaction(runtimePool, MEMBER_TRAINER_ID, (client) =>
+        client.query('select * from public.save_client_progress($1::jsonb, $2)', [JSON.stringify({
+          id: progress?.progress_id, clientId: CLIENT_ID, recordedOn: '2026-08-20',
+          weightKg: 69, customMetrics: [],
+        }), 1]))).rejects.toMatchObject({ message: 'progress_forbidden' })
+
+      await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
+        client.query('select public.get_client_progress_bundle($1)', [CLIENT_ID])))
+        .rejects.toMatchObject({ message: 'progress_forbidden' })
+
+      await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        client.query('select * from public.save_client_progress($1::jsonb, null)', [JSON.stringify({
+          id: null, clientId: CLIENT_ID, recordedOn: '2099-01-01',
+          weightKg: 70, customMetrics: [],
+        })]))).rejects.toMatchObject({ message: 'progress_invalid' })
+
+      const exercisePage = await withActorTransaction(runtimePool, MEMBER_TRAINER_ID, async (client) => {
+        const rows = await client.query<JsonResultRow>(
+          `select public.list_exercise_progress($1, 'push-up', 20, null, null) result`, [CLIENT_ID])
+        return rows[0]?.result as { items: unknown[]; totalCount: number }
+      })
+      expect(exercisePage.items).toHaveLength(1)
+      expect(exercisePage.totalCount).toBe(1)
+
+      const chronicle = await withActorTransaction(runtimePool, MEMBER_TRAINER_ID, async (client) => {
+        const rows = await client.query<JsonResultRow>(
+          'select public.list_workout_chronicle($1, 20, null, null) result', [CLIENT_ID])
+        return rows[0]?.result as { items: unknown[]; totalCount: number }
+      })
+      expect(chronicle.items).toHaveLength(1)
+      expect(chronicle.totalCount).toBe(1)
     })
   },
 )

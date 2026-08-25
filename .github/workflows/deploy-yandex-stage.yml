@@ -323,6 +323,56 @@ jobs:
             | select(.fullName == "Тестовый клиент Yandex stage")
             | .id
           ' <<<"$clients")
+          progress=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/clients/$client_id/progress")
+          jq -e '
+            (.entries | any(
+              .recordedOn == "2026-08-22"
+              and .weightKg == 64.5
+              and (.customMetrics | any(.value == 19.5))
+            ))
+            and (.customMetrics | any(.name == "Процент жира" and .unit == "%"))
+            and .goal.title == "Подтянуться 10 раз"
+            and (.goal.stages | any(.title == "Первые пять"))
+          ' <<<"$progress" >/dev/null
+          exercise_ref=$(jq -er '
+            .workouts[]
+            | select(.notes == "Синтетическая проверка переноса Yandex stage")
+            | .exercises[] | select(.source == "custom") | .ref
+          ' <<<"$training")
+          exercise_progress=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
+            --get --data-urlencode "limit=20" \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/clients/$client_id/progress/exercises/$exercise_ref")
+          jq -e '
+            .totalCount == 1 and .nextCursor == null
+            and (.items | any(
+              .confirmedSetCount == 1 and .bestWeightKg == 42.5
+              and .isPrimaryPr == true
+            ))
+          ' <<<"$exercise_progress" >/dev/null
+          running_progress=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
+            --get --data-urlencode "from=2026-08-01" --data-urlencode "to=2026-08-31" \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/clients/$client_id/progress/running")
+          jq -e '
+            (.sessions | any(.distanceKm == 5.2 and .durationSec == 1740))
+          ' <<<"$running_progress" >/dev/null
+          chronicle=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/clients/$client_id/workout-chronicle?limit=20")
+          jq -e '
+            .totalCount == 1 and .nextCursor == null
+            and (.items | any(
+              .workoutDate == "2026-08-22" and .confirmedSetCount == 2
+              and .durationSec == 3600 and .hasPr == true
+            ))
+          ' <<<"$chronicle" >/dev/null
           post_workout_id=$(jq -er '
             .workouts[]
             | select(.notes == "Синтетическая проверка переноса Yandex stage")
