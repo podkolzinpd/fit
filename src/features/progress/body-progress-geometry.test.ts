@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bodyFigureVariant, bodyZoneShapes } from './body-progress-geometry'
+import { bodyFigureVariant, bodyFigureViewBox, bodyZoneShapes, bodyZoneSides } from './body-progress-geometry'
 
 describe('body progress geometry', () => {
   it('uses a deterministic neutral figure when gender is missing', () => {
@@ -16,5 +16,15 @@ describe('body progress geometry', () => {
 
   it('keeps male and female masks independently calibrated', () => {
     expect(bodyZoneShapes('male', 'upper_back')).not.toEqual(bodyZoneShapes('female', 'upper_back'))
+  })
+
+  it('separates front and back shapes without changing their image coordinates', () => {
+    expect(bodyZoneShapes('female', 'arms', 'front').every((shape) => shape.cx < 476)).toBe(true)
+    expect(bodyZoneShapes('female', 'arms', 'back').every((shape) => shape.cx >= 476)).toBe(true)
+    expect(bodyZoneSides('male', 'chest')).toEqual(['front'])
+    expect(bodyZoneSides('male', 'upper_back')).toEqual(['back'])
+    expect(bodyZoneSides('male', 'arms')).toEqual(['front', 'back'])
+    expect(bodyFigureViewBox('front')).toBe('0 0 476 1000')
+    expect(bodyFigureViewBox('back')).toBe('476 0 476 1000')
   })
 })

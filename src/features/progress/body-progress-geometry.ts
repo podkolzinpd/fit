@@ -10,6 +10,7 @@ export interface BodyZoneShape {
 }
 
 export type BodyFigureVariant = Gender | 'neutral'
+export type BodyFigureSide = 'front' | 'back'
 
 type BodyZoneGeometry = Record<BodyMapZone, readonly BodyZoneShape[]>
 
@@ -48,36 +49,36 @@ const male: BodyZoneGeometry = {
 }
 
 const female: BodyZoneGeometry = {
-  chest: [{ cx: 247, cy: 286, rx: 43, ry: 38 }, { cx: 317, cy: 286, rx: 43, ry: 38 }],
-  shoulders: [{ cx: 202, cy: 251, rx: 34, ry: 37 }, { cx: 362, cy: 251, rx: 34, ry: 37 }],
-  biceps: [{ cx: 181, cy: 350, rx: 24, ry: 62, rotate: 7 }, { cx: 383, cy: 350, rx: 24, ry: 62, rotate: -7 }],
-  triceps: [{ cx: 558, cy: 350, rx: 24, ry: 63, rotate: -7 }, { cx: 780, cy: 350, rx: 24, ry: 63, rotate: 7 }],
-  forearms: [{ cx: 158, cy: 452, rx: 21, ry: 74, rotate: 7 }, { cx: 406, cy: 452, rx: 21, ry: 74, rotate: -7 }],
-  core: [{ cx: 282, cy: 381, rx: 43, ry: 61 }, { cx: 282, cy: 449, rx: 38, ry: 49 }],
+  chest: [{ cx: 215, cy: 286, rx: 39, ry: 36 }, { cx: 277, cy: 286, rx: 39, ry: 36 }],
+  shoulders: [{ cx: 171, cy: 250, rx: 32, ry: 36 }, { cx: 338, cy: 250, rx: 32, ry: 36 }],
+  biceps: [{ cx: 146, cy: 350, rx: 23, ry: 61, rotate: 7 }, { cx: 365, cy: 350, rx: 23, ry: 61, rotate: -7 }],
+  triceps: [{ cx: 575, cy: 350, rx: 23, ry: 62, rotate: -7 }, { cx: 840, cy: 350, rx: 23, ry: 62, rotate: 7 }],
+  forearms: [{ cx: 116, cy: 452, rx: 20, ry: 73, rotate: 7 }, { cx: 395, cy: 452, rx: 20, ry: 73, rotate: -7 }],
+  core: [{ cx: 247, cy: 381, rx: 42, ry: 60 }, { cx: 247, cy: 449, rx: 37, ry: 48 }],
   upper_back: [
-    { cx: 630, cy: 301, rx: 44, ry: 59, rotate: -9 },
-    { cx: 708, cy: 301, rx: 44, ry: 59, rotate: 9 },
-    { cx: 669, cy: 245, rx: 48, ry: 31 },
+    { cx: 666, cy: 301, rx: 45, ry: 58, rotate: -9 },
+    { cx: 756, cy: 301, rx: 45, ry: 58, rotate: 9 },
+    { cx: 711, cy: 245, rx: 51, ry: 30 },
   ],
-  lower_back: [{ cx: 638, cy: 419, rx: 38, ry: 56 }, { cx: 700, cy: 419, rx: 38, ry: 56 }],
-  glutes: [{ cx: 628, cy: 526, rx: 49, ry: 50 }, { cx: 710, cy: 526, rx: 49, ry: 50 }],
-  quadriceps: [{ cx: 245, cy: 650, rx: 43, ry: 111 }, { cx: 320, cy: 650, rx: 43, ry: 111 }],
-  hamstrings: [{ cx: 632, cy: 650, rx: 41, ry: 110 }, { cx: 706, cy: 650, rx: 41, ry: 110 }],
-  calves: [{ cx: 632, cy: 801, rx: 31, ry: 95 }, { cx: 706, cy: 801, rx: 31, ry: 95 }],
-  inner_thigh: [{ cx: 271, cy: 649, rx: 25, ry: 105 }, { cx: 294, cy: 649, rx: 25, ry: 105 }],
-  outer_thigh: [{ cx: 234, cy: 650, rx: 31, ry: 108 }, { cx: 331, cy: 650, rx: 31, ry: 108 }],
+  lower_back: [{ cx: 682, cy: 419, rx: 36, ry: 55 }, { cx: 742, cy: 419, rx: 36, ry: 55 }],
+  glutes: [{ cx: 670, cy: 526, rx: 47, ry: 49 }, { cx: 752, cy: 526, rx: 47, ry: 49 }],
+  quadriceps: [{ cx: 214, cy: 650, rx: 41, ry: 110 }, { cx: 291, cy: 650, rx: 41, ry: 110 }],
+  hamstrings: [{ cx: 675, cy: 650, rx: 39, ry: 109 }, { cx: 748, cy: 650, rx: 39, ry: 109 }],
+  calves: [{ cx: 676, cy: 801, rx: 30, ry: 94 }, { cx: 747, cy: 801, rx: 30, ry: 94 }],
+  inner_thigh: [{ cx: 239, cy: 649, rx: 24, ry: 104 }, { cx: 264, cy: 649, rx: 24, ry: 104 }],
+  outer_thigh: [{ cx: 203, cy: 650, rx: 30, ry: 107 }, { cx: 307, cy: 650, rx: 30, ry: 107 }],
   arms: [
-    { cx: 181, cy: 342, rx: 26, ry: 75, rotate: 7 }, { cx: 383, cy: 342, rx: 26, ry: 75, rotate: -7 },
-    { cx: 158, cy: 454, rx: 22, ry: 78, rotate: 7 }, { cx: 406, cy: 454, rx: 22, ry: 78, rotate: -7 },
-    { cx: 558, cy: 342, rx: 26, ry: 75, rotate: -7 }, { cx: 780, cy: 342, rx: 26, ry: 75, rotate: 7 },
+    { cx: 146, cy: 342, rx: 25, ry: 74, rotate: 7 }, { cx: 365, cy: 342, rx: 25, ry: 74, rotate: -7 },
+    { cx: 116, cy: 454, rx: 21, ry: 77, rotate: 7 }, { cx: 395, cy: 454, rx: 21, ry: 77, rotate: -7 },
+    { cx: 575, cy: 342, rx: 25, ry: 74, rotate: -7 }, { cx: 840, cy: 342, rx: 25, ry: 74, rotate: 7 },
   ],
   legs: [
-    { cx: 245, cy: 703, rx: 47, ry: 207 }, { cx: 320, cy: 703, rx: 47, ry: 207 },
-    { cx: 632, cy: 703, rx: 47, ry: 207 }, { cx: 706, cy: 703, rx: 47, ry: 207 },
+    { cx: 214, cy: 703, rx: 45, ry: 206 }, { cx: 291, cy: 703, rx: 45, ry: 206 },
+    { cx: 675, cy: 703, rx: 45, ry: 206 }, { cx: 748, cy: 703, rx: 45, ry: 206 },
   ],
   back: [
-    { cx: 630, cy: 302, rx: 47, ry: 66, rotate: -8 }, { cx: 708, cy: 302, rx: 47, ry: 66, rotate: 8 },
-    { cx: 640, cy: 416, rx: 40, ry: 61 }, { cx: 698, cy: 416, rx: 40, ry: 61 },
+    { cx: 667, cy: 302, rx: 45, ry: 65, rotate: -8 }, { cx: 755, cy: 302, rx: 45, ry: 65, rotate: 8 },
+    { cx: 683, cy: 416, rx: 38, ry: 60 }, { cx: 741, cy: 416, rx: 38, ry: 60 },
   ],
 }
 
@@ -97,6 +98,20 @@ export function bodyFigureVariant(gender: Gender | null): BodyFigureVariant {
   return gender ?? 'neutral'
 }
 
-export function bodyZoneShapes(variant: BodyFigureVariant, zone: BodyMapZone): readonly BodyZoneShape[] {
-  return geometries[variant][zone]
+export function bodyZoneShapes(
+  variant: BodyFigureVariant,
+  zone: BodyMapZone,
+  side?: BodyFigureSide,
+): readonly BodyZoneShape[] {
+  const shapes = geometries[variant][zone]
+  if (!side) return shapes
+  return shapes.filter((shape) => side === 'front' ? shape.cx < 476 : shape.cx >= 476)
+}
+
+export function bodyZoneSides(variant: BodyFigureVariant, zone: BodyMapZone): readonly BodyFigureSide[] {
+  return (['front', 'back'] as const).filter((side) => bodyZoneShapes(variant, zone, side).length > 0)
+}
+
+export function bodyFigureViewBox(side: BodyFigureSide): string {
+  return side === 'front' ? '0 0 476 1000' : '476 0 476 1000'
 }
