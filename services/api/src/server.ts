@@ -11,6 +11,7 @@ import { DatabasePilotProfileReader } from './pilot-profile-reader.js'
 import { DatabasePilotSessionIssuer } from './pilot-session.js'
 import { DatabasePilotTrainingDataReader } from './pilot-training-data-reader.js'
 import { DatabasePilotWorkoutsWriter } from './pilot-workouts-writer.js'
+import { DatabasePilotProgressData } from './progress-data.js'
 import { SupabaseWorkoutParser } from './legacy-workout-parser.js'
 import { readSupabaseBridgeConfig, SupabaseBridge } from './supabase-bridge.js'
 import { summarizeClientTraining } from './legacy-summary/index.js'
@@ -84,6 +85,10 @@ const pilotWorkoutsWriter =
   databasePool === undefined
     ? undefined
     : new DatabasePilotWorkoutsWriter(databasePool)
+const pilotProgressData =
+  databasePool === undefined
+    ? undefined
+    : new DatabasePilotProgressData(databasePool)
 const supabaseBridgeConfig = readSupabaseBridgeConfig()
 const legacyWorkoutParser =
   supabaseBridgeConfig === undefined
@@ -116,6 +121,7 @@ const app = buildApp(
     ...(pilotSessionIssuer === undefined ? {} : { pilotSessionIssuer }),
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),
     ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),
+    ...(pilotProgressData === undefined ? {} : { pilotProgressData }),
     ...(legacyWorkoutParser === undefined ? {} : { legacyWorkoutParser }),
     ...(legacySummaryHandler === undefined ? {} : { legacySummaryHandler }),
   },

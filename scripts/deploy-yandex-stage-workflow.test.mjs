@@ -76,6 +76,8 @@ test('loads synthetic fixtures and verifies every read model through the runtime
   assert.match(workflow, /\/v1\/connections/)
   assert.match(workflow, /\.memberships \| any\(\.isRoot == true\)/)
   assert.match(workflow, /\/v1\/training-data/)
+  assert.match(workflow, /\/v1\/clients\/\$client_id\/progress/)
+  assert.match(workflow, /\/v1\/clients\/\$client_id\/workout-chronicle/)
   assert.match(workflow, /\.accessMode == "read_only"/)
   assert.match(workflow, /\.workoutDate == "2026-08-22"/)
   assert.match(workflow, /--request POST[\s\S]*?\/v1\/clients/)

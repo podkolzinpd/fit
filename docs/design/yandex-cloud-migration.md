@@ -180,7 +180,12 @@ read-only connections slice adds `000006_client_invitations_read_model`.
 Workout read/write and Live slices occupy `000008` through `000011`; the base
 client/preferences/custom-exercise mutation contract is `000012`, managed
 reader access is `000013`, the non-Live workout lifecycle is `000014`, and the
-post-workout feedback/questions/attention contract is `000015`.
+post-workout feedback/questions/attention contract is `000015`. Migration
+`000016_progress_goals` adds shared measurements and custom metrics, the active
+goal aggregate with stages, timezone-aware regularity, confirmed-only running
+and exercise progress, deterministic PR flags and the paginated workout
+chronicle. It grants `fit_api` reads plus versioned security-definer commands,
+never direct domain writes.
 Product work merged after the foundation still expands the contract required
 before a production tenant can be switched.
 
@@ -193,11 +198,12 @@ Port the current `main` behavior in this order:
 4. versioned aggregate mutations, transaction-local actor context and
    `updated_by` attribution;
 5. live-workout conflict, retry and ambiguous-network-result semantics;
-6. client progress and goals;
+6. client progress and goals (ported to stage contract in `000016`; production
+   routing remains unchanged);
 7. post-workout feedback plus trainer reaction/response ownership (ported to
    stage contract in `000015`; production routing remains unchanged);
 8. role-safe regularity, confirmed-only exercise progress/PR and paginated
-   workout chronicle;
+   workout chronicle (ported to stage contract in `000016`);
 9. client-overview activity analytics and realtime invalidation/refetch;
 10. goal-aware training summary and the remaining Edge Function behavior.
 
@@ -214,9 +220,10 @@ Manager supplies the separate owner/runtime passwords directly; application
 database URL secrets are not recreated for each release. A failed API readiness
 check restores the previous image, while migration history remains forward-only.
 For the workout read model, the same gate also loads a bounded stage-only
-synthetic fixture after migration and calls `/v1/training-data` with an
-ephemeral session after the candidate revision is deployed. A failed nested
-aggregate or RLS check follows the existing API rollback path.
+synthetic fixture after migration and calls `/v1/training-data`, progress,
+running, exercise-progress and chronicle endpoints with an ephemeral session
+after the candidate revision is deployed. A failed nested aggregate or RLS
+check follows the existing API rollback path.
 
 A production pilot cannot start after only profiles and memberships have been
 ported. Every mutable and shared domain reachable by that tenant cohort must
