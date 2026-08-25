@@ -8,9 +8,12 @@ const workflow = readFileSync(
   'utf8',
 )
 
-test('isolates WebKit behavior tests and retries only a failed shard', () => {
-  assert.match(workflow, /Run iPhone behavior scenarios in isolated shards/)
-  assert.match(workflow, /for shard in \{1\.\.8\}/)
+test('runs isolated WebKit shards in two parallel lanes and retries only a failed shard', () => {
+  assert.match(workflow, /e2e-webkit:/)
+  assert.match(workflow, /max-parallel: 2/)
+  assert.match(workflow, /lane: \[1, 2\]/)
+  assert.match(workflow, /Run iPhone behavior scenarios in isolated parallel lanes/)
+  assert.match(workflow, /for shard in \$\(seq "\$\{\{ matrix\.lane \}\}" 2 8\)/)
   assert.match(workflow, /--shard="\$\{shard\}\/8"/)
   assert.match(workflow, /if ! run_webkit_shard "\$shard"/)
   assert.match(workflow, /retrying once in a fresh container/)
@@ -18,4 +21,18 @@ test('isolates WebKit behavior tests and retries only a failed shard', () => {
     workflow,
     /npx playwright test --project=iphone-13-webkit --workers=1/,
   )
+})
+
+test('keeps one required E2E result while skipping heavy jobs only for a safe scope', () => {
+  assert.match(workflow, /e2e-scope:/)
+  assert.match(workflow, /node scripts\/e2e-scope\.mjs "\$BASE_SHA" "\$HEAD_SHA"/)
+  assert.match(workflow, /e2e-chromium-visual:/)
+  assert.match(workflow, /if: needs\.e2e-scope\.outputs\.required == 'true'/)
+  assert.match(workflow, /e2e:\n    needs: \[e2e-scope, e2e-chromium-visual, e2e-webkit\]/)
+  assert.match(workflow, /E2E skipped: changes do not affect the browser runtime/)
+})
+
+test('cancels a superseded CI run for the same pull request', () => {
+  assert.match(workflow, /concurrency:\n  group: ci-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}/)
+  assert.match(workflow, /cancel-in-progress: true/)
 })
