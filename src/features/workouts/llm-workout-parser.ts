@@ -8,7 +8,9 @@ import { matchesExplicitWorkoutEquipment, parseQuickWorkoutEntry, splitWorkoutTe
  */
 export const REQUIRED_EXERCISE_CONFIDENCE = 0.97
 
-export async function parseWorkoutWithLlm(text: string, catalog: readonly ExerciseSnapshot[]) {
+type WorkoutParseOptions = { requireLocalDisambiguation?: boolean }
+
+export async function parseWorkoutWithLlm(text: string, catalog: readonly ExerciseSnapshot[], options: WorkoutParseOptions = {}) {
   // Сначала отделяем однозначно найденные упражнения. Это даёт LLM и
   // детерминированному парсеру одинаковые исходные строки и не создаёт дублей,
   // когда одна разговорная связка означает два упражнения.
@@ -16,7 +18,7 @@ export async function parseWorkoutWithLlm(text: string, catalog: readonly Exerci
   const local = localWorkoutParse(preparedText, catalog)
   try {
     const remote = await exercisesRepository.parseWorkout(preparedText, catalog.filter((exercise) => exercise.source === 'system'))
-    return requireExerciseConfirmation(mergeWorkoutParse(remote, local, catalog), catalog)
+    return requireExerciseConfirmation(mergeWorkoutParse(remote, local, catalog), catalog, options)
   } catch (error) {
     // Явные названия и числовые значения не должны пропадать только из-за
     // временной ошибки или нестандартного ответа модели. Не угадываем:
@@ -31,15 +33,30 @@ export async function parseWorkoutWithLlm(text: string, catalog: readonly Exerci
  * Для неуверенного выбора показываем текущий вариант вместе с ближайшими из
  * каталога и ждём явного выбора человека.
  */
-export function requireExerciseConfirmation(response: WorkoutParseResponse, catalog: readonly ExerciseSnapshot[]): WorkoutParseResponse {
+export function requireExerciseConfirmation(response: WorkoutParseResponse, catalog: readonly ExerciseSnapshot[], options: WorkoutParseOptions = {}): WorkoutParseResponse {
   const byRef = new Map(catalog.map((exercise) => [exercise.ref, exercise]))
-  const uncertain = response.items.filter((item) => item.confidence < REQUIRED_EXERCISE_CONFIDENCE)
+  // Ассистент обязан явно уточнять варианты оборудования. В быстром Today-флоу
+  // сохраняем прежний контракт: уверенный ответ модели сразу открывает review.
+  const locallyAmbiguousSources = new Set(options.requireLocalDisambiguation ? response.items.flatMap((item) =>
+    parseQuickWorkoutEntry(item.sourceText, catalog).unparsed
+      .filter((unparsed) => unparsed.reason === 'ambiguous')
+      .map((unparsed) => sourceKey(unparsed.line)),
+  ) : [])
+  const uncertain = response.items.filter((item) =>
+    item.confidence < REQUIRED_EXERCISE_CONFIDENCE || locallyAmbiguousSources.has(sourceKey(item.sourceText)),
+  )
   if (!uncertain.length) return response
   const unresolved = uncertain.map((item) => {
     const candidates = [item.exerciseRef, ...workoutCandidates(item.sourceText, catalog).map((exercise) => exercise.ref)]
       .filter((ref, index, all) => byRef.has(ref) && all.indexOf(ref) === index)
       .slice(0, 4)
-    return { sourceText: item.sourceText, reason: 'Нужно выбрать упражнение: модель не уверена в совпадении', suggestedExerciseRefs: candidates }
+    return {
+      sourceText: item.sourceText,
+      reason: item.confidence >= REQUIRED_EXERCISE_CONFIDENCE && locallyAmbiguousSources.has(sourceKey(item.sourceText))
+        ? 'Нужно уточнить вариант упражнения'
+        : 'Нужно выбрать упражнение: модель не уверена в совпадении',
+      suggestedExerciseRefs: candidates,
+    }
   })
   const uncertainSources = new Set(uncertain.map((item) => sourceKey(item.sourceText)))
   return {

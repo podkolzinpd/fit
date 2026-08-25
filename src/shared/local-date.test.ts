@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   addDays, addMonths, DEFAULT_TIME_ZONE, endOfMonth, endOfWeek, formatLocalDate, formatLocalDateShort,
-  formatMonth, isValidTimeZone, localDate, normalizeTimeZone, startOfMonth, startOfWeek, todayInTimeZone,
+  currentTimeInTimeZone, formatMonth, isValidTimeZone, localDate, normalizeTimeZone, startOfMonth, startOfWeek, todayInTimeZone,
 } from './local-date'
 
 describe('LocalDate', () => {
@@ -13,6 +13,12 @@ describe('LocalDate', () => {
     const now = new Date('2026-08-14T22:30:00.000Z')
     expect(todayInTimeZone('Europe/Berlin', now)).toBe('2026-08-15')
     expect(todayInTimeZone('America/New_York', now)).toBe('2026-08-14')
+  })
+
+  it('подставляет локальное время профиля для новой тренировки', () => {
+    const now = new Date('2026-08-25T14:07:00.000Z')
+    expect(currentTimeInTimeZone('Europe/Moscow', now)).toBe('17:07')
+    expect(currentTimeInTimeZone('America/New_York', now)).toBe('10:07')
   })
 
   it('корректно переживает оба перехода DST', () => {

@@ -68,14 +68,18 @@ describe('assistant orchestrator contract', () => {
     expect(createClientTurn('отмена', details?.action)).toEqual({ reply: 'Хорошо, создание карточки клиента отменено.', action: null })
   })
 
-  it('hands a workout draft to the existing workout review after client selection', () => {
+  it('collects workout dictation in fragments before handing it to review', () => {
     const clients = [{ id: 'client-1', fullName: 'Антон Ковалёв', goal: null, ageYears: null, heightCm: null, gender: null }]
     const start = recordWorkoutTurn('Запиши тренировку', clients, null)
     expect(start?.action?.payload).toEqual({ step: 'client' })
     const client = recordWorkoutTurn('Антон Ковалёв', clients, start?.action)
     expect(client?.action?.payload).toMatchObject({ step: 'workout', clientName: 'Антон Ковалёв' })
-    const draft = recordWorkoutTurn('жим лёжа 3 подхода по 50 кг 10 повторений', clients, client?.action)
-    expect(draft?.action).toMatchObject({ tool: 'record_workout', status: 'proposed', payload: { step: 'confirm', clientName: 'Антон Ковалёв', transcript: 'жим лёжа 3 подхода по 50 кг 10 повторений' } })
+    const first = recordWorkoutTurn('жим лёжа 3 подхода по 50 кг 10 повторений', clients, client?.action)
+    expect(first?.action).toMatchObject({ tool: 'record_workout', status: 'needs_input', payload: { step: 'workout', transcript: 'жим лёжа 3 подхода по 50 кг 10 повторений' } })
+    const second = recordWorkoutTurn('присед 80 кг 3 подхода по 8', clients, first?.action)
+    expect(second?.action?.payload).toMatchObject({ step: 'workout', transcript: 'жим лёжа 3 подхода по 50 кг 10 повторений\nприсед 80 кг 3 подхода по 8' })
+    const draft = recordWorkoutTurn('Готово, разобрать тренировку', clients, second?.action)
+    expect(draft?.action).toMatchObject({ tool: 'record_workout', status: 'proposed', payload: { step: 'confirm', clientName: 'Антон Ковалёв', transcript: 'жим лёжа 3 подхода по 50 кг 10 повторений\nприсед 80 кг 3 подхода по 8' } })
     expect(recordWorkoutTurn('отмена', clients, draft?.action)).toEqual({ reply: 'Хорошо, запись тренировки отменена.', action: null })
   })
 
@@ -83,9 +87,9 @@ describe('assistant orchestrator contract', () => {
     const clients = [{ id: 'client-1', fullName: 'Сан Саныч', goal: null, ageYears: null, heightCm: null, gender: null }]
     const result = recordWorkoutTurn('Давай подготовим запись тренировки для Сан Саныча', clients, null)
     expect(result?.action).toMatchObject({
-      tool: 'record_workout', status: 'needs_input', payload: { step: 'workout', clientId: 'client-1', clientName: 'Сан Саныч' },
+      tool: 'record_workout', status: 'needs_input', payload: { step: 'workout', clientId: 'client-1', clientName: 'Сан Саныч', transcript: '' },
     })
-    expect(result?.reply).toContain('Напишите или продиктуйте')
+    expect(result?.reply).toContain('по одному или все сразу')
   })
 
   it('collects a complete brief before proposing a training program', () => {
