@@ -59,8 +59,9 @@ describe('body progress map', () => {
     expect(result.regions.map((region) => [region.group, region.percent])).toEqual([
       ['chest', 40], ['upper_back', 36],
     ])
-    expect(result.regions[0]!.details[0]).toBe(
-      'Жим гантелей лёжа (Гантели) · Объём за тренировку: 1 000 → 1 400 кг · +40%',
+    expect(result.regions[0]!.metricLabel).toBe('Лучший результат зоны')
+    expect(result.regions[0]!.primaryDetail).toBe(
+      'Жим гантелей лёжа (Гантели) · Объём за тренировку: 1 000 → 1 400 кг',
     )
   })
 
@@ -102,7 +103,8 @@ describe('body progress map', () => {
     expect(result.regions.map((region) => [region.group, region.percent])).toEqual([
       ['chest', 67], ['upper_back', 33],
     ])
-    expect(result.regions[0]?.summaryLabel).toBe('2 подхода из 3')
+    expect(result.regions[0]?.metricLabel).toBe('Доля всех выполненных подходов')
+    expect(result.regions[0]?.primaryDetail).toBe('2 из 3 подходов')
   })
 
   it('ignores drafts and workouts outside the period and uses correct set plurals', () => {
@@ -121,5 +123,17 @@ describe('body progress map', () => {
     expect(result.regions).toHaveLength(1)
     expect(result.regions[0]?.group).toBe('quadriceps')
     expect(result.regions[0]?.details).toEqual(['Присед: 5 подходов'])
+  })
+
+  it('keeps load-only zones out of progress and exposes them in load', () => {
+    const workout = {
+      id: 'workout-arms', clientId: 'client-1', workoutDate: localDate('2026-08-24'), status: 'done',
+      exercises: [{ name: 'Молот с гантелями', muscleGroup: 'arms', sets: [
+        { confirmedAt: '2026-08-24T10:00:00Z' }, { confirmedAt: '2026-08-24T10:01:00Z' },
+      ] }],
+    } as Workout
+
+    expect(progressBodyMap({ ...summary, metrics: { ...summary.metrics, progressFacts: [] } }).regions).toEqual([])
+    expect(loadBodyMap([workout], '2026-08-01', '2026-08-25').regions[0]?.group).toBe('biceps')
   })
 })
