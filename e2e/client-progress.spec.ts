@@ -14,6 +14,7 @@ test('linked client sees only the published client progress view', async ({ page
   await expect(page.getByRole('tab', { name: 'Неделя' })).toHaveCount(0)
   await expect(page.getByText('Твой прогресс', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '1 месяц' })).toHaveClass(/active/)
+  await page.getByRole('button', { name: 'Прогресс', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
   await expect(page.getByAltText(/Атлетичн/)).toBeVisible()
   await page.getByRole('button', { name: 'Подробный анализ' }).click()
