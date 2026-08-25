@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="952" height="1000" viewBox="0 0 952 1000" fill="none">
+  <defs>
+    <linearGradient id="skin" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#D9B39A"/>
+      <stop offset="1" stop-color="#B98569"/>
+    </linearGradient>
+    <linearGradient id="fabric" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#FBFAF6"/>
+      <stop offset="1" stop-color="#E9E7E0"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-10%" width="140%" height="130%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#26332F" flood-opacity=".14"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)" stroke="#7E746D" stroke-opacity=".22" stroke-width="2">
+    <g aria-label="Вид спереди">
+      <ellipse cx="280" cy="119" rx="45" ry="57" fill="url(#skin)"/>
+      <path d="M251 176c8 13 50 13 58 0v55h-58z" fill="url(#skin)"/>
+      <path d="M204 224c24-22 49-29 76-29s52 7 76 29l-20 278c-34 20-78 20-112 0z" fill="url(#fabric)"/>
+      <path d="M206 226c-31 22-49 72-58 132l-19 149c-3 26 31 32 38 8l33-142 25-126z" fill="url(#skin)"/>
+      <path d="M354 226c31 22 49 72 58 132l19 149c3 26-31 32-38 8l-33-142-25-126z" fill="url(#skin)"/>
+      <path d="M224 484c34 14 78 14 112 0l22 93-74 27-82-27z" fill="url(#fabric)"/>
+      <path d="M209 565c28 2 54 10 75 26l-15 176-20 153c-3 24-44 24-46-2l-1-163z" fill="url(#skin)"/>
+      <path d="M351 565c-28 2-54 10-75 26l15 176 20 153c3 24 44 24 46-2l1-163z" fill="url(#skin)"/>
+      <path d="M198 909c14 8 46 8 60 0l16 34c4 9-3 18-13 18h-71c-13 0-19-15-10-24z" fill="url(#fabric)"/>
+      <path d="M302 909c14 8 46 8 60 0l18 28c8 12 0 24-14 24h-72c-10 0-17-9-13-18z" fill="url(#fabric)"/>
+    </g>
+    <g aria-label="Вид сзади">
+      <ellipse cx="672" cy="119" rx="45" ry="57" fill="url(#skin)"/>
+      <path d="M643 176c8 13 50 13 58 0v55h-58z" fill="url(#skin)"/>
+      <path d="M596 224c24-22 49-29 76-29s52 7 76 29l-20 278c-34 20-78 20-112 0z" fill="url(#fabric)"/>
+      <path d="M598 226c-31 22-49 72-58 132l-19 149c-3 26 31 32 38 8l33-142 25-126z" fill="url(#skin)"/>
+      <path d="M746 226c31 22 49 72 58 132l19 149c3 26-31 32-38 8l-33-142-25-126z" fill="url(#skin)"/>
+      <path d="M616 484c34 14 78 14 112 0l22 93-74 27-82-27z" fill="url(#fabric)"/>
+      <path d="M601 565c28 2 54 10 75 26l-15 176-20 153c-3 24-44 24-46-2l-1-163z" fill="url(#skin)"/>
+      <path d="M743 565c-28 2-54 10-75 26l15 176 20 153c3 24 44 24 46-2l1-163z" fill="url(#skin)"/>
+      <path d="M590 909c14 8 46 8 60 0l16 34c4 9-3 18-13 18h-71c-13 0-19-15-10-24z" fill="url(#fabric)"/>
+      <path d="M694 909c14 8 46 8 60 0l18 28c8 12 0 24-14 24h-72c-10 0-17-9-13-18z" fill="url(#fabric)"/>
+    </g>
+  </g>
+</svg>
