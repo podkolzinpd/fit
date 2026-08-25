@@ -40,3 +40,7 @@ export function progressFactChangeLabel(change: TrainingProgressFactChange): str
   const sign = change.changePercent > 0 ? '+' : '−'
   return `${metricLabels[change.metric]}: ${comparison} · ${sign}${Math.abs(change.changePercent)}%`
 }
+
+export function progressFactComparisonLabel(change: TrainingProgressFactChange): string {
+  return `${metricLabels[change.metric]}: ${value(change, change.from)} → ${value(change, change.to)}${unit(change)}`
+}
