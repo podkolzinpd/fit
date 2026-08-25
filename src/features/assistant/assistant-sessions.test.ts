@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AssistantOrchestratorAction } from '../../data/repositories/assistant.repository'
 import type { LocalDate } from '../../shared/local-date'
-import { conversationTitle, groupAssistantConversations, isInteractiveAssistantAction, isReadOnlyConversation, mergeAssistantMessages, selectTodayConversation } from './assistant-sessions'
+import { conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isInteractiveAssistantAction, isReadOnlyConversation, latestActiveAssistantAction, mergeAssistantMessages, selectTodayConversation } from './assistant-sessions'
 
 const conversations = [
   { id: 'old', title: null, created_at: '2026-08-24T18:00:00.000Z' },
@@ -37,5 +37,19 @@ describe('assistant sessions', () => {
 
     const foreign = mergeAssistantMessages(messages, [{ id: 'foreign-action', conversation_id: 'old', assistant_message_id: 'message-1', status: 'cancelled', version: 1, result: null }])
     expect(foreign[0]?.action).toEqual(action)
+  })
+
+  it('returns only the newest active action for the selected session', () => {
+    const makeAction = (step: string, lifecycleStatus?: 'applied' | 'cancelled') => ({ tool: 'record_workout' as const, status: 'proposed' as const, title: step, description: step, payload: { step }, lifecycleStatus })
+    const messages = [
+      { id: 'old', conversation_id: 'today', turn_id: 'old', author: 'assistant', content: 'old', action: makeAction('old'), created_at: '2026-08-25T09:00:00.000Z' },
+      { id: 'terminal', conversation_id: 'today', turn_id: 'terminal', author: 'assistant', content: 'Тренировка сохранена', action: makeAction('done', 'applied'), created_at: '2026-08-25T09:01:00.000Z' },
+      { id: 'latest', conversation_id: 'today', turn_id: 'latest', author: 'assistant', content: 'latest', action: makeAction('latest'), created_at: '2026-08-25T09:02:00.000Z' },
+      { id: 'archive', conversation_id: 'yesterday', turn_id: 'archive', author: 'assistant', content: 'archive', action: makeAction('archive'), created_at: '2026-08-24T09:00:00.000Z' },
+    ]
+    expect(latestActiveAssistantAction(messages, 'today')?.message.id).toBe('latest')
+    const visible = filterTerminalAssistantMessages(messages)
+    expect(visible.map((message) => message.id)).toEqual(['old', 'terminal', 'latest', 'archive'])
+    expect(visible.find((message) => message.id === 'terminal')?.action).toBeNull()
   })
 })

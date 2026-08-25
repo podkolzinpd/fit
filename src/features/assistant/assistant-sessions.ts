@@ -31,6 +31,11 @@ export type AssistantConversationGroup = {
   conversations: AssistantConversation[]
 }
 
+export type AssistantActionMessage = {
+  message: AssistantMessage
+  action: AssistantOrchestratorAction
+}
+
 export function conversationLocalDate(conversation: Pick<AssistantConversation, 'created_at'>, timezone?: string): LocalDate {
   return todayInTimeZone(timezone, new Date(conversation.created_at))
 }
@@ -80,6 +85,18 @@ export function mergeAssistantMessages(
 
 export function isInteractiveAssistantAction(action: AssistantOrchestratorAction | null): boolean {
   return action !== null && action.lifecycleStatus !== 'applied' && action.lifecycleStatus !== 'cancelled' && action.lifecycleStatus !== 'failed'
+}
+
+export function latestActiveAssistantAction(messages: readonly AssistantMessage[], conversationId?: string): AssistantActionMessage | undefined {
+  const message = [...messages].reverse().find((item) => item.conversation_id === conversationId && isInteractiveAssistantAction(item.action))
+  return message?.action ? { message, action: message.action } : undefined
+}
+
+export function filterTerminalAssistantMessages(messages: readonly AssistantMessage[]): AssistantMessage[] {
+  return messages.flatMap((message) => {
+    if (!message.action || isInteractiveAssistantAction(message.action)) return [message]
+    return message.content.trim() === message.action.description.trim() ? [] : [{ ...message, action: null }]
+  })
 }
 
 export function isReadOnlyConversation(selectedId: string | undefined, todayId: string | undefined): boolean {

@@ -14,7 +14,7 @@ import { formatLlmWorkoutText, parseWorkoutWithLlm } from '../workouts/llm-worko
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
 import { assistantWorkoutSaveInput } from './workout-draft'
-import { conversationLocalDate, conversationTitle, groupAssistantConversations, isInteractiveAssistantAction, isReadOnlyConversation, mergeAssistantMessages, selectTodayConversation, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
+import { conversationLocalDate, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isReadOnlyConversation, latestActiveAssistantAction, mergeAssistantMessages, selectTodayConversation, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
 
 type FailedTurn = { turnId: string; message: string }
 
@@ -105,7 +105,8 @@ export function AssistantHistoryPage() {
   useLayoutEffect(() => {
     if (!conversationId || loadingMessages) return
     const thread = threadRef.current
-    if (thread) thread.scrollTop = thread.scrollHeight
+    const scrollContainer = thread?.closest<HTMLElement>('.content')
+    if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight
   }, [conversationId, lastMessageId, loadingMessages])
 
   function selectConversation(id: string) {
@@ -224,45 +225,41 @@ export function AssistantHistoryPage() {
     finally { setRunningClientIds((current) => current.filter((id) => id !== messageId)) }
   }
 
-  const latestRecordWorkoutAction = [...messages].reverse().find((message) => message.action?.tool === 'record_workout')
-  const latestWorkoutActionMessageId = latestRecordWorkoutAction && isWorkoutCollectionAction(latestRecordWorkoutAction.action) ? latestRecordWorkoutAction.id : undefined
+  const latestActiveAction = readOnly ? undefined : latestActiveAssistantAction(messages, conversationId)
+  const visibleMessages = filterTerminalAssistantMessages(messages)
 
   return <main className="assistant-page">
     <h1 className="sr-only">Ассистент</h1>
     <section className="assistant-session-switcher" aria-label="Сессия ассистента">
-      <div className="assistant-session-current">
-        <div><small>Сессия</small><strong>{readOnly ? 'История' : 'Сегодня'}</strong><span>{conversationId ? formatLocalDate(conversationLocalDate({ created_at: conversations.find((item) => item.id === conversationId)?.created_at ?? new Date().toISOString() }, actor?.timezone)) : 'Загружаю…'}</span></div>
-        {readOnly && <button type="button" onClick={returnToToday}>Вернуться сегодня</button>}
-      </div>
-      {historyConversations.length > 0 && <details open={historyOpen} onToggle={(event) => setHistoryOpen(event.currentTarget.open)}>
-        <summary>История бесед · {historyConversations.length}</summary>
-        <div className="assistant-session-history">
-          {conversationGroups.flatMap((group) => group.conversations.map((conversation) => <button key={conversation.id} type="button" className={conversation.id === conversationId ? 'selected' : ''} onClick={() => selectConversation(conversation.id)}>
-            <span>{conversation.id === todayConversationId ? 'Сегодня' : formatLocalDate(group.date)}</span>
-            <small>{conversationTitle(conversation, group.date, today)}</small>
-          </button>))}
+      <div className="assistant-session-bar">
+        <div className="assistant-session-label"><strong>{readOnly ? 'Архив' : 'Сегодня'}</strong><span>{conversationId ? formatLocalDate(conversationLocalDate({ created_at: conversations.find((item) => item.id === conversationId)?.created_at ?? new Date().toISOString() }, actor?.timezone)) : 'Загружаю…'}</span></div>
+        <div className="assistant-session-actions">
+          {readOnly && <button type="button" className="assistant-session-today" onClick={returnToToday}>Сегодня</button>}
+          {historyConversations.length > 0 && <button type="button" className="assistant-history-toggle" aria-expanded={historyOpen} aria-controls="assistant-session-history" onClick={() => setHistoryOpen((open) => !open)}>История {historyConversations.length}</button>}
         </div>
-      </details>}
+      </div>
+      {historyOpen && historyConversations.length > 0 && <div id="assistant-session-history" className="assistant-session-history">
+          {conversationGroups.map((group) => <div key={group.date} className="assistant-session-day">
+            <span className="assistant-session-day-label">{formatLocalDate(group.date)}</span>
+            {group.conversations.map((conversation) => <button key={conversation.id} type="button" className={conversation.id === conversationId ? 'selected' : ''} onClick={() => selectConversation(conversation.id)}>
+              <small>{conversationTitle(conversation, group.date, today)}</small>
+            </button>)}
+          </div>)}
+      </div>}
     </section>
     <section ref={threadRef} className="assistant-thread" aria-label="Диалог с ассистентом">
       {loadingMessages && <p className="assistant-thread-status">Загружаю сессию…</p>}
-      {messages.map((message) => {
+      {visibleMessages.map((message) => {
         if (message.author === 'user') return <article key={message.id} className="assistant-message assistant-message-user"><p>{message.content}</p></article>
-        const collectionAction = isWorkoutCollectionAction(message.action)
-        if (collectionAction && latestWorkoutActionMessageId === undefined) return null
-        const historicalWorkoutFragment = collectionAction && message.id !== latestWorkoutActionMessageId
-        const interactive = !readOnly && isInteractiveAssistantAction(message.action)
         const showContent = !message.action || message.content.trim() !== message.action.description.trim()
-        if (!interactive && !showContent) return null
-        return <article key={message.id} className={`assistant-action-card${historicalWorkoutFragment ? ' assistant-action-card-compact' : ''}`}>
-          {historicalWorkoutFragment
-            ? <p className="assistant-fragment-ack">Фрагмент добавлен</p>
-            : <>{showContent && <AssistantMessageContent content={message.content} />}{interactive && message.action && <AssistantAction action={message.action} timezone={actor?.timezone} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onApplyAction={(input) => applyAction(message.id, message.action!, input)} onSuggestion={(value) => void send(value)} onCancel={() => { void (async () => { const cancelled = await cancelAction(message.id, message.action!); if (cancelled && !message.action?.id) await send('Отменить') })() }} onConfirm={() => void confirmSummary(message.id, message.action!)} onConfirmClient={(draft) => void confirmClient(message.id, message.action!, draft)} running={runningSummaryIds.includes(message.id) || runningClientIds.includes(message.id)} completed={completedSummaryIds.includes(message.id) || completedClientIds.includes(message.id) || message.action.lifecycleStatus === 'applied'} />}</>}
-        </article>
+        if (!showContent) return null
+        return <article key={message.id} className="assistant-message assistant-message-assistant"><AssistantMessageContent content={message.content} /></article>
       })}
       {error && <div className="assistant-card-hint" role="alert"><span>{error}</span>{failedTurn && <button type="button" onClick={() => void send(undefined, failedTurn)} disabled={sending}>Повторить отправку</button>}</div>}
     </section>
-    {readOnly && <button type="button" className="assistant-readonly-note" onClick={returnToToday}>Это история за прошлый день. Вернуться в сегодняшнюю сессию</button>}
+    {latestActiveAction && <section className="assistant-context-panel" aria-label="Текущий контекст ассистента">
+      <AssistantAction action={latestActiveAction.action} timezone={actor?.timezone} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onApplyAction={(input) => applyAction(latestActiveAction.message.id, latestActiveAction.action, input)} onSuggestion={(value) => void send(value)} onCancel={() => { void (async () => { const cancelled = await cancelAction(latestActiveAction.message.id, latestActiveAction.action); if (cancelled && !latestActiveAction.action.id) await send('Отменить') })() }} onConfirm={() => void confirmSummary(latestActiveAction.message.id, latestActiveAction.action)} onConfirmClient={(draft) => void confirmClient(latestActiveAction.message.id, latestActiveAction.action, draft)} running={runningSummaryIds.includes(latestActiveAction.message.id) || runningClientIds.includes(latestActiveAction.message.id)} completed={completedSummaryIds.includes(latestActiveAction.message.id) || completedClientIds.includes(latestActiveAction.message.id) || latestActiveAction.action.lifecycleStatus === 'applied'} />
+    </section>}
     <form className="assistant-composer" autoComplete="off" onSubmit={(event) => { event.preventDefault(); void send() }}>
       <label className="sr-only" htmlFor="assistant-history-message">Сообщение ассистенту</label>
       <input id="assistant-history-message" name="assistant-prompt" autoComplete="off" value={text} onChange={(event) => setText(event.target.value)} placeholder="Напишите сообщение" disabled={!conversationId || readOnly || sending} />
@@ -285,10 +282,6 @@ type SummaryPayload = { step: string; clientId?: string; clientName?: string; ca
 type ClientDraftPayload = { step: string; fullName: string; gender: 'male' | 'female'; ageYears: number; heightCm: number; goal?: string; initialWeightKg?: number }
 type WorkoutDraftPayload = { step: string; clientId: string; clientName: string; transcript?: string }
 type ProgramDraftPayload = { step: string; clientId: string; clientName: string; goal?: string | null; brief: string; sessions: unknown[] }
-
-function isWorkoutCollectionAction(action: AssistantOrchestratorAction | null): boolean {
-  return action?.tool === 'record_workout' && (action.payload as { step?: unknown }).step === 'workout'
-}
 
 function summaryPayload(action: AssistantOrchestratorAction): { clientId: string; periodStart: string; periodEnd: string } | undefined {
   const payload = action.payload as SummaryPayload
