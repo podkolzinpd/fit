@@ -146,7 +146,7 @@ export function ProgressPage() {
     <AsyncView loading={loading} error={error} onRetry={() => { void client.refetch(); void entries.refetch(); void metrics.refetch() }}>
       {client.data && <div className="trainer-progress-stack">
         <TrainerProgressOverviewCard clientId={clientId} />
-        <TrainerTrainingSummaryCard clientId={clientId} gender={client.data.gender} />
+        <TrainerTrainingSummaryCard clientId={clientId} />
         <RunningProgressCard clientId={clientId} compact detailsPath={`/progress/${clientId}?view=running`} />
         <Link className="trainer-progress-route-card measurements" to={`/progress/${clientId}?view=measurements`} aria-label="Открыть замеры и показатели">
           <div>

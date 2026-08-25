@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type TouchEvent } from 'react'
 import type { Gender, Workout } from '../../shared/domain'
+import { useAuth } from '../../app/auth-context'
 import { CloseIcon } from '../../shared/icons'
 import {
   loadBodyMap,
@@ -11,7 +12,7 @@ import {
   type BodyMapZone,
 } from './body-progress-map'
 import {
-  bodyFigureVariant,
+  bodyFigureClipBox,
   bodyFigureViewBox,
   bodyZoneShapes,
   bodyZoneSides,
@@ -19,6 +20,7 @@ import {
   type BodyFigureVariant,
   type BodyZoneShape,
 } from './body-progress-geometry'
+import { useBodyMapAppearance } from './body-map-appearance'
 
 const BODY_FIGURES: Record<BodyFigureVariant, { image: string; alt: Record<BodyFigureSide, string> }> = {
   male: {
@@ -119,18 +121,19 @@ function BodyRegion({ region, variant, side, selected, mode, index, filterId, on
   </g>
 }
 
-function MapPanel({ data, selected, gender, side, discovering, onSideChange, onSelect, onShowDetails }: {
+function MapPanel({ data, selected, variant, side, discovering, onSideChange, onSelect, onShowDetails }: {
   data: BodyMapData
   selected: BodyMapRegion | undefined
-  gender: Gender | null
+  variant: BodyFigureVariant
   side: BodyFigureSide
   discovering: boolean
   onSideChange: (side: BodyFigureSide) => void
   onSelect: (region: BodyMapRegion) => void
   onShowDetails: () => void
 }) {
-  const variant = bodyFigureVariant(gender)
   const figure = BODY_FIGURES[variant]
+  const clipBox = bodyFigureClipBox(side)
+  const clipId = `body-progress-clip-${useId().replace(/:/g, '')}`
   const maskId = `body-progress-mask-${useId().replace(/:/g, '')}`
   const filterId = `body-progress-soft-${useId().replace(/:/g, '')}`
   const swipeStartX = useRef<number | null>(null)
@@ -164,16 +167,20 @@ function MapPanel({ data, selected, gender, side, discovering, onSideChange, onS
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        <img className={`body-progress-figure side-${side}`} src={figure.image} alt={figure.alt[side]} />
-        <svg className="body-progress-overlay" viewBox={bodyFigureViewBox(side)} aria-label="Интерактивная карта тела">
+        <svg className="body-progress-overlay" viewBox={bodyFigureViewBox(variant, side)} role="group" aria-label={figure.alt[side]}>
+          <title>{figure.alt[side]}</title>
           <defs>
+            <clipPath id={clipId} clipPathUnits="userSpaceOnUse">
+              <rect {...clipBox} />
+            </clipPath>
             <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="952" height="1000" style={{ maskType: 'alpha' }}>
-              <image href={figure.image} width="952" height="1000" preserveAspectRatio="none" />
+              <image href={figure.image} width="952" height="1000" preserveAspectRatio="none" clipPath={`url(#${clipId})`} />
             </mask>
             <filter id={filterId} x="-18%" y="-18%" width="136%" height="136%" colorInterpolationFilters="sRGB">
               <feGaussianBlur stdDeviation="2.5" />
             </filter>
           </defs>
+          <image href={figure.image} width="952" height="1000" preserveAspectRatio="none" clipPath={`url(#${clipId})`} aria-hidden="true" />
           <g mask={`url(#${maskId})`}>
             {regionsBySide[side].map((region, index) => <BodyRegion
               key={region.group}
@@ -203,14 +210,16 @@ function MapPanel({ data, selected, gender, side, discovering, onSideChange, onS
   </>
 }
 
-export function TrainingBodyProgressMap({ summary, workouts, gender = null, loadLoading, loadError, onLoadRetry }: {
+export function TrainingBodyProgressMap({ summary, workouts, viewerGender = null, loadLoading, loadError, onLoadRetry }: {
   summary: BodyProgressSummary
   workouts: readonly Workout[]
-  gender?: Gender | null
+  viewerGender?: Gender | null
   loadLoading: boolean
   loadError: Error | null
   onLoadRetry: () => void
 }) {
+  const { actor } = useAuth()
+  const variant = useBodyMapAppearance(actor?.userId, actor?.role, viewerGender)
   const progress = useMemo(() => progressBodyMap(summary), [summary])
   const load = useMemo(() => loadBodyMap(workouts, summary.periodStart, summary.periodEnd), [summary, workouts])
   const initialMode: BodyMapMode = progress.regions.length > 0 ? 'progress' : 'load'
@@ -235,7 +244,6 @@ export function TrainingBodyProgressMap({ summary, workouts, gender = null, load
   }, [data])
 
   const selected = data.regions.find((region) => region.group === selectedGroup) ?? data.regions[0]
-  const variant = bodyFigureVariant(gender)
   useEffect(() => {
     if (!selected) return
     const sides = bodyZoneSides(variant, selected.group)
@@ -265,7 +273,7 @@ export function TrainingBodyProgressMap({ summary, workouts, gender = null, load
       : <MapPanel
           data={data}
           selected={selected}
-          gender={gender}
+          variant={variant}
           side={side}
           discovering={discovering}
           onSideChange={changeSide}

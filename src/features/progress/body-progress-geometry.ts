@@ -94,6 +94,15 @@ const neutral: BodyZoneGeometry = {
 
 const geometries: Record<BodyFigureVariant, BodyZoneGeometry> = { male, female, neutral }
 
+// Центры фигур внутри исходных 952×1000 ассетов различаются. Кадрируем каждый
+// ракурс вокруг его реального центра, чтобы изображение и SVG-маски оставались
+// одним координатным слоем и не съезжали друг относительно друга.
+const figureCenters: Record<BodyFigureVariant, Record<BodyFigureSide, number>> = {
+  male: { front: 280, back: 679 },
+  female: { front: 247, back: 713 },
+  neutral: { front: 280, back: 672 },
+}
+
 export function bodyFigureVariant(gender: Gender | null): BodyFigureVariant {
   return gender ?? 'neutral'
 }
@@ -112,6 +121,11 @@ export function bodyZoneSides(variant: BodyFigureVariant, zone: BodyMapZone): re
   return (['front', 'back'] as const).filter((side) => bodyZoneShapes(variant, zone, side).length > 0)
 }
 
-export function bodyFigureViewBox(side: BodyFigureSide): string {
-  return side === 'front' ? '0 0 476 1000' : '476 0 476 1000'
+export function bodyFigureViewBox(variant: BodyFigureVariant, side: BodyFigureSide): string {
+  const x = figureCenters[variant][side] - 238
+  return `${x} 0 476 1000`
+}
+
+export function bodyFigureClipBox(side: BodyFigureSide) {
+  return { x: side === 'front' ? 0 : 476, y: 0, width: 476, height: 1000 } as const
 }
