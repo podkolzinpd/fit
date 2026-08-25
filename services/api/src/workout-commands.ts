@@ -80,6 +80,12 @@ function commandError(error: unknown): PilotWorkoutCommandError | undefined {
     return new PilotWorkoutCommandError('invalid')
   }
   if (
+    message === 'workout_not_resolvable'
+    || message === 'workout_date_in_past'
+  ) {
+    return new PilotWorkoutCommandError('invalid')
+  }
+  if (
     message === 'exercise_not_found'
     || message === 'block_not_found'
     || message === 'set_not_found'
@@ -169,6 +175,44 @@ export function savePlannedWorkout(
   })
 }
 
+export function saveCompletedWorkout(
+  client: DatabaseClient,
+  draft: PlannedWorkoutDraft,
+  expectedVersion: number | null,
+): Promise<SavedPilotWorkout> {
+  return runCommand(async () => {
+    const rows = await client.query<SavedWorkoutRow>(
+      `
+        select workout_id, version
+        from public.save_completed_workout($1::jsonb, $2)
+      `,
+      [JSON.stringify(draft), expectedVersion],
+    )
+    const saved = rows[0]
+    if (saved === undefined) throw new Error('Completed workout was not saved')
+    return { id: saved.workout_id, version: safeVersion(saved.version) }
+  })
+}
+
+export function recordPlannedWorkoutResult(
+  client: DatabaseClient,
+  draft: PlannedWorkoutDraft,
+  expectedVersion: number,
+): Promise<SavedPilotWorkout> {
+  return runCommand(async () => {
+    const rows = await client.query<SavedWorkoutRow>(
+      `
+        select workout_id, version
+        from public.record_planned_workout_result($1::jsonb, $2)
+      `,
+      [JSON.stringify(draft), expectedVersion],
+    )
+    const saved = rows[0]
+    if (saved === undefined) throw new Error('Planned result was not saved')
+    return { id: saved.workout_id, version: safeVersion(saved.version) }
+  })
+}
+
 export function softDeletePlannedWorkout(
   client: DatabaseClient,
   workoutId: string,
@@ -183,6 +227,70 @@ export function softDeletePlannedWorkout(
     if (version === undefined) throw new Error('Workout was not deleted')
     return safeVersion(version)
   })
+}
+
+function runVersionCommand(
+  client: DatabaseClient,
+  query: string,
+  values: readonly unknown[],
+): Promise<number> {
+  return runCommand(async () => {
+    const rows = await client.query<DeletedWorkoutRow>(query, values)
+    const version = rows[0]?.version
+    if (version === undefined) throw new Error('Workout command returned no version')
+    return safeVersion(version)
+  })
+}
+
+export function cancelPlannedWorkout(
+  client: DatabaseClient,
+  workoutId: string,
+  expectedVersion: number,
+): Promise<number> {
+  return runVersionCommand(
+    client,
+    'select public.cancel_planned_workout($1, $2) as version',
+    [workoutId, expectedVersion],
+  )
+}
+
+export function rescheduleWorkout(
+  client: DatabaseClient,
+  workoutId: string,
+  workoutDate: string,
+  startTime: string | null,
+  expectedVersion: number,
+): Promise<number> {
+  return runVersionCommand(
+    client,
+    'select public.reschedule_workout($1, $2, $3, $4) as version',
+    [workoutId, workoutDate, startTime, expectedVersion],
+  )
+}
+
+export function setClientWorkoutComment(
+  client: DatabaseClient,
+  workoutId: string,
+  comment: string,
+  expectedVersion: number,
+): Promise<number> {
+  return runVersionCommand(
+    client,
+    'select public.set_client_workout_comment($1, $2, $3) as version',
+    [workoutId, comment, expectedVersion],
+  )
+}
+
+export function softDeleteWorkout(
+  client: DatabaseClient,
+  workoutId: string,
+  expectedVersion: number,
+): Promise<number> {
+  return runVersionCommand(
+    client,
+    'select public.soft_delete_workout($1, $2) as version',
+    [workoutId, expectedVersion],
+  )
 }
 
 export function startLiveWorkout(

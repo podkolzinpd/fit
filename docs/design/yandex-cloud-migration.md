@@ -67,9 +67,12 @@ The following remain unchanged during the foundation phase:
    set append, set removal, exercise replacement, block reorder and exercise
    comment with the same root version and retry contract. Created child UUIDs
    are stored in the fact-free receipt so an ambiguous exact retry returns the
-   original child instead of duplicating it. Repeated deploys do not duplicate
-   fixtures, no production or Supabase data is read, and the token is not
-   printed. The remaining scope includes feedback/reactions and the derived
+   original child instead of duplicating it. The non-Live lifecycle slice adds
+   idempotent completed create, completed-fact correction with preserved plan,
+   atomic planned-result recording, missed-plan cancel/reschedule, client
+   comment and author-scoped delete. Repeated deploys do not duplicate fixtures,
+   no production or Supabase data is read, and the token is not printed. The
+   remaining scope includes feedback/reactions, questions and the derived
    progress/chronicle reads added after the foundation migrations.
 8. Rehearse full tenant migration at least twice. Cut over one isolated tenant
    cohort only after all data it can mutate is migrated and writes are frozen
@@ -175,7 +178,8 @@ The private stage readiness gate applied foundation migrations `000001` through
 `000004_yandex_identity_rollout` and `000005_yandex_pilot_sessions`; the
 read-only connections slice adds `000006_client_invitations_read_model`.
 Workout read/write and Live slices occupy `000008` through `000011`; the base
-client/preferences/custom-exercise mutation contract is `000012`.
+client/preferences/custom-exercise mutation contract is `000012`, managed
+reader access is `000013`, and the non-Live workout lifecycle is `000014`.
 Product work merged after the foundation still expands the contract required
 before a production tenant can be switched.
 

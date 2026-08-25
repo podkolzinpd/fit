@@ -94,6 +94,7 @@ const trainingData = {
     endTime: null,
     status: 'done',
     notes: null,
+    clientComment: null,
     startedAt: '2026-08-20T12:00:00.000Z',
     completedAt: '2026-08-20T13:00:00.000Z',
     version: 1,

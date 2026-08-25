@@ -32,15 +32,21 @@ import { readAccessibleTrainingData } from '../training-data.js'
 import {
   appendLiveExercise,
   appendLiveSet,
+  cancelPlannedWorkout,
   confirmLiveSet,
   finishLiveWorkout,
+  recordPlannedWorkoutResult,
   removeLiveSet,
   reorderLiveBlock,
+  rescheduleWorkout,
   replaceLiveExercise,
+  saveCompletedWorkout,
   savePlannedWorkout,
   saveLiveSetDraft,
+  setClientWorkoutComment,
   setLiveExerciseComment,
   softDeletePlannedWorkout,
+  softDeleteWorkout,
   startLiveWorkout,
 } from '../workout-commands.js'
 import { withActorTransaction } from './actor-transaction.js'
@@ -261,6 +267,15 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await ownerPool.query(
         `delete from public.workouts
          where notes = 'Синтетическая проверка переноса Yandex stage'`,
+      )
+      await ownerPool.query(
+        `delete from public.workouts
+         where notes in (
+           'Завершённая тренировка без Live',
+           'Исправленный факт',
+           'Прошлый план',
+           'План для переноса'
+         )`,
       )
       await ownerPool.query(
         `delete from public.custom_exercises
@@ -1193,6 +1208,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             startTime: '10:00:00',
             endTime: '11:00:00',
             notes: 'Синтетическая проверка переноса Yandex stage',
+            clientComment: null,
             status: 'done',
             startedAt: '2026-08-22T07:00:00.000Z',
             completedAt: '2026-08-22T08:00:00.000Z',
@@ -1509,6 +1525,357 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       )
       expect(actorData.workouts.some((workout) => workout.id === created.id)).toBe(false)
       await ownerPool.query('delete from public.workouts where id = $1', [created.id])
+    })
+
+    it('saves and corrects completed facts idempotently without rewriting the plan', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const requestId = 'b081807b-5fe5-4b26-8e72-dfe3b9eb054a'
+      const draft: PlannedWorkoutDraft = {
+        id: null,
+        requestId,
+        clientId: CLIENT_ID,
+        workoutDate: '2026-08-20',
+        startTime: null,
+        endTime: null,
+        notes: 'Завершённая тренировка без Live',
+        exercises: [{
+          position: 0,
+          source: 'system',
+          ref: 'barbell-squat',
+          customExerciseId: null,
+          name: 'Приседания со штангой',
+          muscleGroup: 'legs',
+          inputKind: 'strength',
+          blockId: 'cbf26086-1e3b-4fba-a46c-d3ff6ee9f5ad',
+          blockType: 'single',
+          blockPreset: 'set',
+          blockRounds: 1,
+          restBetweenExercisesSec: 0,
+          restBetweenRoundsSec: 90,
+          restBetweenSetsSec: 90,
+          trainerComment: 'Контроль глубины',
+          sets: [{
+            position: 0,
+            weightKg: 40,
+            reps: 10,
+            durationMin: null,
+            durationSec: null,
+            distanceKm: null,
+            rpe: 7,
+          }],
+        }],
+      }
+
+      const created = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => saveCompletedWorkout(client, draft, null),
+      )
+      expect(created.version).toBe(2)
+      await expect(withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => saveCompletedWorkout(client, draft, null),
+      )).resolves.toEqual(created)
+
+      const aggregate = await ownerPool.query<QueryResultRow & {
+        completed_at: Date
+        exercise_id: string
+        fact_weight_kg: string
+        plan_weight_kg: string
+        set_id: string
+        status: string
+      }>(
+        `
+          select
+            workout.status,
+            workout.completed_at,
+            exercise.id as exercise_id,
+            workout_set.id as set_id,
+            workout_set.plan_weight_kg,
+            workout_set.fact_weight_kg
+          from public.workouts workout
+          join public.workout_exercises exercise
+            on exercise.workout_id = workout.id
+          join public.workout_sets workout_set
+            on workout_set.workout_exercise_id = exercise.id
+          where workout.id = $1
+        `,
+        [created.id],
+      )
+      expect(aggregate.rows[0]).toMatchObject({
+        fact_weight_kg: '40.00',
+        plan_weight_kg: '40.00',
+        status: 'done',
+      })
+      const originalCompletedAt = aggregate.rows[0]!.completed_at.toISOString()
+      const correctedDraft: PlannedWorkoutDraft = {
+        ...draft,
+        id: created.id,
+        notes: 'Исправленный факт',
+        exercises: [{
+          ...draft.exercises[0]!,
+          sourceExerciseId: aggregate.rows[0]!.exercise_id,
+          sets: [{
+            ...draft.exercises[0]!.sets[0]!,
+            sourceSetId: aggregate.rows[0]!.set_id,
+            weightKg: 45,
+          }],
+        }],
+      }
+      delete correctedDraft.requestId
+      await expect(withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => saveCompletedWorkout(
+          client,
+          { ...correctedDraft, clientId: LIFECYCLE_CLIENT_ID },
+          created.version,
+        ),
+      )).rejects.toMatchObject({ failure: 'invalid' })
+
+      const corrected = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => saveCompletedWorkout(client, correctedDraft, created.version),
+      )
+      expect(corrected.version).toBe(3)
+
+      const correctedRows = await ownerPool.query<QueryResultRow & {
+        completed_at: Date
+        fact_weight_kg: string
+        plan_weight_kg: string
+      }>(
+        `
+          select workout.completed_at,
+            workout_set.plan_weight_kg,
+            workout_set.fact_weight_kg
+          from public.workouts workout
+          join public.workout_exercises exercise
+            on exercise.workout_id = workout.id
+          join public.workout_sets workout_set
+            on workout_set.workout_exercise_id = exercise.id
+          where workout.id = $1 and workout_set.id = $2
+        `,
+        [created.id, aggregate.rows[0]!.set_id],
+      )
+      expect(correctedRows.rows).toEqual([{
+        completed_at: new Date(originalCompletedAt),
+        fact_weight_kg: '45.00',
+        plan_weight_kg: '40.00',
+      }])
+
+      await expect(withActorTransaction(
+        runtimePool,
+        OUTSIDE_TRAINER_ID,
+        (client) => saveCompletedWorkout(
+          client,
+          correctedDraft,
+          corrected.version,
+        ),
+      )).rejects.toMatchObject({ failure: 'forbidden' })
+
+      const deletedVersion = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => softDeleteWorkout(client, created.id, corrected.version),
+      )
+      expect(deletedVersion).toBe(4)
+      await ownerPool.query('delete from public.workouts where id = $1', [created.id])
+    })
+
+    it('records a past plan atomically and resolves cancel, reschedule and comment actions', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const plan: PlannedWorkoutDraft = {
+        id: null,
+        clientId: CLIENT_ID,
+        workoutDate: '2000-01-01',
+        startTime: '10:00',
+        endTime: null,
+        notes: 'Прошлый план',
+        exercises: [{
+          position: 0,
+          source: 'system',
+          ref: 'running',
+          customExerciseId: null,
+          name: 'Бег',
+          muscleGroup: 'cardio',
+          inputKind: 'distance',
+          blockId: '3a802aee-86c7-49aa-9e9b-404a4bc53058',
+          blockType: 'single',
+          blockPreset: 'set',
+          blockRounds: 1,
+          restBetweenExercisesSec: 0,
+          restBetweenRoundsSec: 90,
+          restBetweenSetsSec: 60,
+          trainerComment: null,
+          sets: [{
+            position: 0,
+            weightKg: null,
+            reps: null,
+            durationMin: null,
+            durationSec: 1800,
+            distanceKm: 5,
+            rpe: 7,
+          }],
+        }],
+      }
+      const created = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => savePlannedWorkout(client, plan, null),
+      )
+      const sourceRows = await ownerPool.query<QueryResultRow & {
+        exercise_id: string
+        set_id: string
+      }>(
+        `
+          select exercise.id as exercise_id, workout_set.id as set_id
+          from public.workout_exercises exercise
+          join public.workout_sets workout_set
+            on workout_set.workout_exercise_id = exercise.id
+          where exercise.workout_id = $1
+        `,
+        [created.id],
+      )
+      const resultDraft: PlannedWorkoutDraft = {
+        ...plan,
+        id: created.id,
+        exercises: [{
+          ...plan.exercises[0]!,
+          sourceExerciseId: sourceRows.rows[0]!.exercise_id,
+          sets: [{
+            ...plan.exercises[0]!.sets[0]!,
+            sourceSetId: sourceRows.rows[0]!.set_id,
+            durationSec: 1740,
+            distanceKm: 5.2,
+            rpe: 8,
+          }],
+        }],
+      }
+      const recorded = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => recordPlannedWorkoutResult(
+          client,
+          resultDraft,
+          created.version,
+        ),
+      )
+      expect(recorded).toEqual({ id: created.id, version: 3 })
+      await expect(withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => recordPlannedWorkoutResult(
+          client,
+          resultDraft,
+          created.version,
+        ),
+      )).rejects.toMatchObject({ failure: 'conflict' })
+      await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => setClientWorkoutComment(
+          client,
+          created.id,
+          '  Темп был комфортным  ',
+          recorded.version,
+        ),
+      )
+      const recordedRows = await ownerPool.query<QueryResultRow & {
+        client_comment: string
+        fact_distance_km: string
+        plan_distance_km: string
+        status: string
+      }>(
+        `
+          select workout.status, workout.client_comment,
+            workout_set.plan_distance_km, workout_set.fact_distance_km
+          from public.workouts workout
+          join public.workout_exercises exercise
+            on exercise.workout_id = workout.id
+          join public.workout_sets workout_set
+            on workout_set.workout_exercise_id = exercise.id
+          where workout.id = $1
+        `,
+        [created.id],
+      )
+      expect(recordedRows.rows).toEqual([{
+        client_comment: 'Темп был комфортным',
+        fact_distance_km: '5.200',
+        plan_distance_km: '5.000',
+        status: 'done',
+      }])
+
+      const missed = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => savePlannedWorkout(client, {
+          ...plan,
+          notes: 'План для переноса',
+          exercises: [],
+        }, null),
+      )
+      await expect(withActorTransaction(
+        runtimePool,
+        OUTSIDE_TRAINER_ID,
+        (client) => cancelPlannedWorkout(client, missed.id, missed.version),
+      )).rejects.toMatchObject({ failure: 'forbidden' })
+      const cancelledVersion = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => cancelPlannedWorkout(client, missed.id, missed.version),
+      )
+      expect(cancelledVersion).toBe(2)
+      const rescheduledVersion = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => rescheduleWorkout(
+          client,
+          missed.id,
+          '2099-01-01',
+          '12:30',
+          cancelledVersion,
+        ),
+      )
+      expect(rescheduledVersion).toBe(3)
+      const rescheduledRows = await ownerPool.query<QueryResultRow & {
+        end_time: string | null
+        start_time: string
+        status: string
+        workout_date: string
+      }>(
+        `select status, workout_date::text, start_time, end_time
+         from public.workouts where id = $1`,
+        [missed.id],
+      )
+      expect(rescheduledRows.rows).toEqual([{
+        end_time: null,
+        start_time: '12:30:00',
+        status: 'planned',
+        workout_date: '2099-01-01',
+      }])
+
+      await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => softDeleteWorkout(client, created.id, recorded.version + 1),
+      )
+      await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => softDeleteWorkout(client, missed.id, rescheduledVersion),
+      )
+      await ownerPool.query(
+        'delete from public.workouts where id = any($1::uuid[])',
+        [[created.id, missed.id]],
+      )
     })
 
     it('runs the idempotent live core lifecycle with conflicts and actor attribution', async () => {

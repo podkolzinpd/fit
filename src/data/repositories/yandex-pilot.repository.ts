@@ -115,6 +115,7 @@ const workoutSchema = z.object({
   endTime: z.string().regex(/^\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/).nullable(),
   status: z.enum(['planned', 'in_progress', 'done', 'cancelled']),
   notes: z.string().nullable(),
+  clientComment: z.string().max(5_000).nullable(),
   startedAt: z.iso.datetime().nullable(),
   completedAt: z.iso.datetime().nullable(),
   version: z.number().int().positive(),
