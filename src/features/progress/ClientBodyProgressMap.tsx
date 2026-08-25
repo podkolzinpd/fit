@@ -20,7 +20,7 @@ import {
   type BodyFigureVariant,
   type BodyZoneShape,
 } from './body-progress-geometry'
-import { useBodyMapAppearance } from './body-map-appearance'
+import { resolveBodyFigureVariant, useBodyMapDisplayMode } from './body-map-appearance'
 
 const BODY_FIGURES: Record<BodyFigureVariant, { image: string; alt: Record<BodyFigureSide, string> }> = {
   male: {
@@ -33,7 +33,7 @@ const BODY_FIGURES: Record<BodyFigureVariant, { image: string; alt: Record<BodyF
   },
   neutral: {
     image: '/illustrations/body-progress-athlete-neutral.svg',
-    alt: { front: 'Нейтральная фигура спортсмена, вид спереди', back: 'Нейтральная фигура спортсмена, вид сзади' },
+    alt: { front: 'Анатомическая схема мышц, вид спереди', back: 'Анатомическая схема мышц, вид сзади' },
   },
 }
 
@@ -62,15 +62,17 @@ function exercisesCountLabel(count: number): string {
 }
 
 function RegionShapes({ shapes, className }: { shapes: readonly BodyZoneShape[]; className: string }) {
-  return <>{shapes.map((shape, index) => <ellipse
-    key={`${shape.cx}-${shape.cy}-${index}`}
-    className={className}
-    cx={shape.cx}
-    cy={shape.cy}
-    rx={shape.rx}
-    ry={shape.ry}
-    transform={shapeTransform(shape)}
-  />)}</>
+  return <>{shapes.map((shape, index) => shape.path
+    ? <path key={`${shape.cx}-${shape.cy}-${index}`} className={className} d={shape.path} />
+    : <ellipse
+        key={`${shape.cx}-${shape.cy}-${index}`}
+        className={className}
+        cx={shape.cx}
+        cy={shape.cy}
+        rx={shape.rx}
+        ry={shape.ry}
+        transform={shapeTransform(shape)}
+      />)}</>
 }
 
 function BodyDetailsSheet({ region, onClose }: { region: BodyMapRegion; onClose: () => void }) {
@@ -116,7 +118,7 @@ function BodyRegion({ region, variant, side, selected, mode, index, filterId, on
     onClick={onSelect}
     onKeyDown={selectFromKeyboard}
   >
-    <g className="body-progress-region-fill" filter={`url(#${filterId})`}><RegionShapes shapes={shapes} className="body-progress-region-shape" /></g>
+    <g className="body-progress-region-fill" filter={variant === 'neutral' ? undefined : `url(#${filterId})`}><RegionShapes shapes={shapes} className="body-progress-region-shape" /></g>
     <RegionShapes shapes={shapes} className="body-progress-region-hit" />
   </g>
 }
@@ -163,7 +165,7 @@ function MapPanel({ data, selected, variant, side, discovering, onSideChange, on
         <button type="button" aria-pressed={side === 'back'} disabled={regionsBySide.back.length === 0} onClick={() => onSideChange('back')}>Сзади</button>
       </div>}
       <div
-        className={`body-progress-visual mode-${data.mode}${discovering ? ' discovering' : ''}`}
+        className={`body-progress-visual mode-${data.mode} figure-${variant}${discovering ? ' discovering' : ''}`}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
@@ -210,16 +212,18 @@ function MapPanel({ data, selected, variant, side, discovering, onSideChange, on
   </>
 }
 
-export function TrainingBodyProgressMap({ summary, workouts, viewerGender = null, loadLoading, loadError, onLoadRetry }: {
+export function TrainingBodyProgressMap({ summary, workouts, clientId, clientGender = null, loadLoading, loadError, onLoadRetry }: {
   summary: BodyProgressSummary
   workouts: readonly Workout[]
-  viewerGender?: Gender | null
+  clientId: string
+  clientGender?: Gender | null
   loadLoading: boolean
   loadError: Error | null
   onLoadRetry: () => void
 }) {
   const { actor } = useAuth()
-  const variant = useBodyMapAppearance(actor?.userId, actor?.role, viewerGender)
+  const displayMode = useBodyMapDisplayMode(actor?.userId, actor?.role, clientId, clientGender)
+  const variant = resolveBodyFigureVariant(displayMode, clientGender)
   const progress = useMemo(() => progressBodyMap(summary), [summary])
   const load = useMemo(() => loadBodyMap(workouts, summary.periodStart, summary.periodEnd), [summary, workouts])
   const initialMode: BodyMapMode = progress.regions.length > 0 ? 'progress' : 'load'

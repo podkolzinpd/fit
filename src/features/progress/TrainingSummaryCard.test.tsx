@@ -287,7 +287,7 @@ describe('Training summary card states', () => {
 
     render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    expect(await screen.findByRole('group', { name: 'Нейтральная фигура спортсмена, вид сзади' })).toBeVisible()
+    expect(await screen.findByRole('group', { name: 'Анатомическая схема мышц, вид сзади' })).toBeVisible()
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Нагрузка' }))
     expect(await screen.findByLabelText('Верх спины. Доля всех выполненных подходов: 67%')).toBeVisible()
@@ -377,17 +377,17 @@ describe('Training summary card states', () => {
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    expect(await screen.findByRole('group', { name: 'Нейтральная фигура спортсмена, вид сзади' })).toBeVisible()
+    expect(await screen.findByRole('group', { name: 'Анатомическая схема мышц, вид сзади' })).toBeVisible()
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toHaveAttribute('aria-pressed', 'true')
     await user.click(await screen.findByRole('button', { name: 'Нагрузка' }))
     expect(await screen.findByLabelText('Верх спины. Доля всех выполненных подходов: 67%')).toHaveAttribute('aria-pressed', 'true')
     await user.click(screen.getByRole('button', { name: 'Спереди' }))
-    expect(screen.getByRole('group', { name: 'Нейтральная фигура спортсмена, вид спереди' })).toBeVisible()
+    expect(screen.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
     await user.click(screen.getByLabelText('Грудь. Доля всех выполненных подходов: 33%'))
     expect(screen.getByText('Жим лёжа: 1 подход')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Прогресс' }))
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('group', { name: 'Нейтральная фигура спортсмена, вид сзади' })).toBeVisible()
+    expect(screen.getByRole('group', { name: 'Анатомическая схема мышц, вид сзади' })).toBeVisible()
   })
 
   it('keeps the zone panel compact and opens the remaining exercise details on demand', async () => {
