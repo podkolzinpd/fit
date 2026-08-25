@@ -18,6 +18,8 @@ type ClientDraft = { fullName: string; gender?: 'male' | 'female' | undefined; a
 // This list is the sole source for answers about what the assistant can do.
 const executableCapabilities: readonly AssistantCapability[] = [
   { title: 'Сформировать сводку прогресса', description: 'по завершённым тренировкам выбранного клиента за период' },
+  { title: 'Создать карточку клиента', description: 'после уточнения данных и вашего подтверждения' },
+  { title: 'Подготовить запись тренировки', description: 'для выбранного клиента и открыть её в существующем разборе упражнений' },
 ]
 
 class HttpError extends Error {
@@ -128,7 +130,7 @@ function summaryCandidatesFromAction(value: unknown): SummaryCandidate[] {
 }
 
 function summaryClientFromAction(value: unknown, clients: readonly ClientContextRow[]): ClientContextRow | undefined {
-  const clientId = actionRecord(value)?.clientId
+  const clientId = actionRecord(actionRecord(value)?.payload)?.clientId
   return typeof clientId === 'string' ? clients.find((client) => client.id === clientId) : undefined
 }
 
@@ -285,6 +287,69 @@ function clientAction(title: string, description: string, status: AssistantActio
   return { reply: description, action: { tool: 'create_client_draft', status, title, description, payload } }
 }
 
+function workoutAction(title: string, description: string, status: AssistantAction['status'], payload: Record<string, unknown>): AssistantTurnResponse {
+  return { reply: description, action: { tool: 'record_workout', status, title, description, payload } }
+}
+
+function workoutCandidatesFromAction(value: unknown): SummaryCandidate[] {
+  return summaryCandidatesFromAction(value)
+}
+
+function workoutTextProvided(message: string): boolean {
+  const normalized = normalizeAssistantMessage(message)
+  return /\d/u.test(normalized) || ['подход', 'жим', 'тяга', 'присед', 'выпад', 'планка', 'бег', 'тяг', 'разведен'].some((stem) => normalized.includes(stem))
+}
+
+function isWorkoutRecordRequest(message: string): boolean {
+  const normalized = normalizeAssistantMessage(message)
+  const asksToRecord = ['запиши', 'записать', 'зафиксируй', 'зафиксировать', 'разбери', 'разобрать', 'продиктуй', 'продиктовать'].some((verb) => normalized.includes(verb))
+  return asksToRecord && ['тренировк', 'упражнен', 'подход', 'жим', 'тяга', 'присед', 'бег'].some((stem) => normalized.includes(stem))
+}
+
+/**
+ * The assistant owns dialog and client selection; the existing Today flow owns
+ * parsing, editing and saving the workout. This keeps the write path single.
+ */
+export function recordWorkoutTurn(
+  message: string,
+  clients: readonly ClientContextRow[],
+  latestAction: unknown,
+): AssistantTurnResponse | undefined {
+  const previousAction = actionRecord(latestAction)
+  const continuation = previousAction?.tool === 'record_workout'
+  if (!isWorkoutRecordRequest(message) && !continuation) return undefined
+  if (continuation && isSummaryCancellation(message)) return { reply: 'Хорошо, запись тренировки отменена.', action: null }
+
+  const previousPayload = actionRecord(previousAction?.payload)
+  const previousStep = previousPayload?.step
+  const candidates = workoutCandidatesFromAction(latestAction)
+  const selectedByNumber = normalizeAssistantMessage(message).match(/^(?:выбрать )?(\d{1,2})$/u)
+  const numberedClient = selectedByNumber === null ? undefined : candidates[Number(selectedByNumber[1]) - 1]
+  const matches = numberedClient === undefined
+    ? matchingSummaryClients(message, clients)
+    : clients.filter((client) => client.id === numberedClient.id)
+  const selectedClient = matches.length === 1
+    ? matches[0]
+    : previousStep === 'workout' ? summaryClientFromAction(latestAction, clients) : undefined
+
+  if (matches.length > 1) {
+    return workoutAction('Выберите клиента', 'Нашла несколько клиентов с таким именем. Выберите одного из списка.', 'needs_input', {
+      step: 'client', candidates: matches.map(({ id, fullName }) => ({ id, fullName })),
+    })
+  }
+  if (!selectedClient) {
+    return workoutAction('Уточните клиента', 'Для кого записать тренировку? Напишите имя или фамилию клиента.', 'needs_input', { step: 'client' })
+  }
+  if (!workoutTextProvided(message) || (previousStep === 'client' && !workoutTextProvided(message))) {
+    return workoutAction('Продиктуйте тренировку', `Клиент: ${selectedClient.fullName}. Напишите или продиктуйте упражнения, подходы и значения.`, 'needs_input', {
+      step: 'workout', clientId: selectedClient.id, clientName: selectedClient.fullName,
+    })
+  }
+  return workoutAction('Тренировка готова к разбору', `Открою разбор тренировки для ${selectedClient.fullName}. Перед сохранением вы сможете проверить упражнения и значения.`, 'proposed', {
+    step: 'confirm', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: message.trim(),
+  })
+}
+
 export function createClientTurn(message: string, latestAction: unknown): AssistantTurnResponse | undefined {
   const previousAction = actionRecord(latestAction)
   const continuation = previousAction?.tool === 'create_client_draft'
@@ -410,6 +475,15 @@ export async function runAssistantTurn(authorization: string, command: Assistant
     if (assistantInsertError || !assistantMessage?.id) throw new HttpError(503, 'history_unavailable')
     console.info('assistant_client_draft_reply_persisted', { status: clientDraft.action?.status })
     return clientDraft
+  }
+  const workoutDraft = recordWorkoutTurn(command.message, clientRows, latestAssistantAction)
+  if (workoutDraft !== undefined) {
+    const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({
+      conversation_id: command.conversationId, author: 'assistant', content: workoutDraft.reply, action: workoutDraft.action,
+    }).select('id').single()
+    if (assistantInsertError || !assistantMessage?.id) throw new HttpError(503, 'history_unavailable')
+    console.info('assistant_workout_draft_reply_persisted', { status: workoutDraft.action?.status })
+    return workoutDraft
   }
   const summary = summaryTurn(command.message, clientRows, latestAssistantAction, new Date())
   if (summary !== undefined) {
