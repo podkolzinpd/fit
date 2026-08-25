@@ -1,4 +1,4 @@
-// schema-sha256: 00731dcf9dbbdcc7966a182c01cb6a3b79e97c652aca0480bba94cd70d43c69b
+// schema-sha256: fa20134342784a3598adabb3ec8bdf99ba74fda6806990bf8e42b6a8ecbcfe6d
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -103,6 +103,76 @@ export type Database = {
           },
         ]
       }
+      assistant_actions: {
+        Row: {
+          applied_at: string | null
+          assistant_message_id: string
+          conversation_id: string
+          created_at: string
+          error_code: string | null
+          id: string
+          owner_id: string
+          payload: Json
+          result: Json | null
+          status: string
+          tool: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          applied_at?: string | null
+          assistant_message_id: string
+          conversation_id: string
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          owner_id: string
+          payload: Json
+          result?: Json | null
+          status?: string
+          tool: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          applied_at?: string | null
+          assistant_message_id?: string
+          conversation_id?: string
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          owner_id?: string
+          payload?: Json
+          result?: Json | null
+          status?: string
+          tool?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistant_actions_assistant_message_id_fkey"
+            columns: ["assistant_message_id"]
+            isOneToOne: true
+            referencedRelation: "assistant_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assistant_actions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "assistant_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assistant_actions_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assistant_conversations: {
         Row: {
           created_at: string
@@ -166,76 +236,6 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "assistant_conversations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      assistant_actions: {
-        Row: {
-          id: string
-          owner_id: string
-          conversation_id: string
-          assistant_message_id: string
-          tool: string
-          status: string
-          payload: Json
-          result: Json | null
-          error_code: string | null
-          version: number
-          created_at: string
-          updated_at: string
-          applied_at: string | null
-        }
-        Insert: {
-          id?: string
-          owner_id: string
-          conversation_id: string
-          assistant_message_id: string
-          tool: string
-          status?: string
-          payload: Json
-          result?: Json | null
-          error_code?: string | null
-          version?: number
-          created_at?: string
-          updated_at?: string
-          applied_at?: string | null
-        }
-        Update: {
-          id?: string
-          owner_id?: string
-          conversation_id?: string
-          assistant_message_id?: string
-          tool?: string
-          status?: string
-          payload?: Json
-          result?: Json | null
-          error_code?: string | null
-          version?: number
-          created_at?: string
-          updated_at?: string
-          applied_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "assistant_actions_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "assistant_actions_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "assistant_conversations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "assistant_actions_assistant_message_id_fkey"
-            columns: ["assistant_message_id"]
-            isOneToOne: false
-            referencedRelation: "assistant_messages"
             referencedColumns: ["id"]
           },
         ]
@@ -1267,13 +1267,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      apply_assistant_action: {
-        Args: { p_action_id: string; p_input?: Json; p_expected_version?: number }
-        Returns: Json
-      }
-      persist_assistant_response: {
-        Args: { p_conversation_id: string; p_turn_id: string; p_content: string; p_action?: Json }
-        Returns: Json
+      answer_workout_question: {
+        Args: {
+          p_expected_version: number
+          p_reaction: string | null
+          p_review: string
+          p_workout_id: string
+        }
+        Returns: number
       }
       append_live_exercise: {
         Args: {
@@ -1287,6 +1288,14 @@ export type Database = {
         Args: { p_expected_version: number; p_workout_exercise_id: string }
         Returns: number
       }
+      apply_assistant_action: {
+        Args: {
+          p_action_id: string
+          p_expected_version?: number
+          p_input?: Json
+        }
+        Returns: Json
+      }
       archive_client_goal: {
         Args: { p_expected_version: number; p_goal_id: string }
         Returns: undefined
@@ -1295,15 +1304,6 @@ export type Database = {
         Args: {
           p_expected_version: number
           p_question: string
-          p_workout_id: string
-        }
-        Returns: number
-      }
-      answer_workout_question: {
-        Args: {
-          p_expected_version: number
-          p_reaction: string | null
-          p_review: string
           p_workout_id: string
         }
         Returns: number
@@ -1318,24 +1318,24 @@ export type Database = {
       }
       can_access_client: { Args: { p_client_id: string }; Returns: boolean }
       can_read_workout: { Args: { p_workout_id: string }; Returns: boolean }
+      cancel_assistant_action: {
+        Args: { p_action_id: string; p_expected_version?: number }
+        Returns: Json
+      }
       cancel_planned_workout: {
         Args: { p_expected_version: number; p_workout_id: string }
         Returns: number
       }
       claim_client_invitation: { Args: { p_code: string }; Returns: string }
+      complete_assistant_summary: {
+        Args: { p_action_id: string; p_expected_version?: number }
+        Returns: Json
+      }
       confirm_live_set: {
         Args: { p_expected_version: number; p_set_id: string }
         Returns: number
       }
       create_client: { Args: { p_client: Json }; Returns: string }
-      complete_assistant_summary: {
-        Args: { p_action_id: string; p_expected_version?: number }
-        Returns: Json
-      }
-      cancel_assistant_action: {
-        Args: { p_action_id: string; p_expected_version?: number }
-        Returns: Json
-      }
       create_client_invitation: {
         Args: { p_client_id: string; p_target_role: string }
         Returns: string
@@ -1372,7 +1372,7 @@ export type Database = {
         Returns: {
           completed_count: number
           completed_planned_count: number
-          completion_percent: number | null
+          completion_percent: number
           partial_count: number
           period: string
           period_end: string
@@ -1500,10 +1500,10 @@ export type Database = {
           p_period_start: string
         }
         Returns: {
-          distance_km: number | null
-          duration_sec: number | null
-          pace_sec_per_km: number | null
-          rpe: number | null
+          distance_km: number
+          duration_sec: number
+          pace_sec_per_km: number
+          rpe: number
           running_format: string
           workout_date: string
           workout_id: string
@@ -1512,13 +1512,13 @@ export type Database = {
       list_trainer_attention_workouts: {
         Args: never
         Returns: {
-          client_comment: string | null
+          client_comment: string
           client_id: string
           client_name: string
-          client_question: string | null
-          client_question_asked_at: string | null
-          discomfort: boolean | null
-          feedback_submitted_at: string | null
+          client_question: string
+          client_question_asked_at: string
+          discomfort: boolean
+          feedback_submitted_at: string
           version: number
           workout_date: string
           workout_id: string
@@ -1532,8 +1532,8 @@ export type Database = {
           input_kind: string
           metric: string
           primary_value: number
-          reps: number | null
-          weight_kg: number | null
+          reps: number
+          weight_kg: number
         }[]
       }
       list_workout_summaries: {
@@ -1553,6 +1553,15 @@ export type Database = {
           p_to?: string | null
         }
         Returns: WorkoutListRow[]
+      }
+      persist_assistant_response: {
+        Args: {
+          p_action?: Json
+          p_content: string
+          p_conversation_id: string
+          p_turn_id: string
+        }
+        Returns: Json
       }
       publish_training_summary: {
         Args: {

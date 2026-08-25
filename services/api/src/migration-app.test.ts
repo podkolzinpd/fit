@@ -169,6 +169,8 @@ describe('stage workout fixture', () => {
       seededTrainerCount: 2,
       sessionToken: 's'.repeat(43),
       sessionExpiresAt: '2026-08-22T12:15:00.000Z',
+      clientSessionToken: 'c'.repeat(43),
+      clientSessionExpiresAt: '2026-08-22T12:15:00.000Z',
     })
     const app = buildMigrationApp({
       logger: false,
@@ -188,6 +190,10 @@ describe('stage workout fixture', () => {
       seededTrainerCount: 2,
       session: {
         token: 's'.repeat(43),
+        expiresAt: '2026-08-22T12:15:00.000Z',
+      },
+      clientSession: {
+        token: 'c'.repeat(43),
         expiresAt: '2026-08-22T12:15:00.000Z',
       },
     })

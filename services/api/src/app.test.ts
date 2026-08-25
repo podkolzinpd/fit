@@ -350,6 +350,17 @@ const TRAINING_DATA_RESPONSE: PilotTrainingDataResponse = {
     status: 'planned',
     notes: null,
     clientComment: null,
+    sessionRpe: null,
+    wellbeing: null,
+    discomfort: null,
+    feedbackSubmittedAt: null,
+    trainerReaction: null,
+    trainerReview: null,
+    trainerReviewAuthorId: null,
+    trainerReviewedAt: null,
+    clientQuestion: null,
+    clientQuestionAskedAt: null,
+    clientQuestionResolvedAt: null,
     startedAt: null,
     completedAt: null,
     version: 1,
@@ -394,6 +405,8 @@ const TRAINING_DATA_RESPONSE: PilotTrainingDataResponse = {
       }],
     }],
   }],
+  attention: [],
+  attentionPreferences: [],
   hasMoreWorkouts: false,
 }
 
@@ -588,6 +601,12 @@ function buildWorkoutsWriter(error?: Error): {
   setLiveExerciseComment: ReturnType<typeof vi.fn>
   setClientComment: ReturnType<typeof vi.fn>
   startLive: ReturnType<typeof vi.fn>
+  submitFeedback: ReturnType<typeof vi.fn>
+  setReview: ReturnType<typeof vi.fn>
+  askQuestion: ReturnType<typeof vi.fn>
+  answerQuestion: ReturnType<typeof vi.fn>
+  resolveQuestion: ReturnType<typeof vi.fn>
+  snoozeAttention: ReturnType<typeof vi.fn>
 } {
   const result = <Value>(value: Value) => error === undefined
     ? Promise.resolve(value)
@@ -600,6 +619,12 @@ function buildWorkoutsWriter(error?: Error): {
   const saveCompleted = vi.fn(() => result({ id: WORKOUT_ID, version: 2 }))
   const recordPlannedResult = vi.fn(() => result({ id: WORKOUT_ID, version: 3 }))
   const setClientComment = vi.fn(() => result(4))
+  const submitFeedback = vi.fn(() => result(5))
+  const setReview = vi.fn(() => result(6))
+  const askQuestion = vi.fn(() => result(7))
+  const answerQuestion = vi.fn(() => result(8))
+  const resolveQuestion = vi.fn(() => result(9))
+  const snoozeAttention = vi.fn(() => result('2026-09-08T12:00:00.000Z'))
   const appendLiveExercise = vi.fn(() => result({
     resourceId: WORKOUT_EXERCISE_ID,
     version: 3,
@@ -636,6 +661,12 @@ function buildWorkoutsWriter(error?: Error): {
   }))
   return {
     pilotWorkoutsWriter: {
+      submitFeedback,
+      setReview,
+      askQuestion,
+      answerQuestion,
+      resolveQuestion,
+      snoozeAttention,
       appendLiveExercise,
       appendLiveSet,
       cancelPlanned,
@@ -673,6 +704,12 @@ function buildWorkoutsWriter(error?: Error): {
     setLiveExerciseComment,
     setClientComment,
     startLive,
+    submitFeedback,
+    setReview,
+    askQuestion,
+    answerQuestion,
+    resolveQuestion,
+    snoozeAttention,
   }
 }
 
@@ -1404,6 +1441,112 @@ describe('pilot completed workout lifecycle commands', () => {
     expect([rescheduled.statusCode, commented.statusCode]).toEqual([400, 400])
     expect(writer.reschedule).not.toHaveBeenCalled()
     expect(writer.setClientComment).not.toHaveBeenCalled()
+  })
+})
+
+describe('pilot post-workout commands', () => {
+  const sessionToken = 's'.repeat(43)
+
+  it('validates and forwards feedback, responses, questions and snooze', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({
+      pilotWorkoutsWriter: writer.pilotWorkoutsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const feedback = await app.inject({
+      method: 'PUT',
+      url: `/v1/workouts/${WORKOUT_ID}/feedback`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        sessionRpe: 8, wellbeing: 'normal', discomfort: true,
+        comment: '  Тянуло плечо  ', expectedVersion: 1,
+      },
+    })
+    const review = await app.inject({
+      method: 'PUT',
+      url: `/v1/workouts/${WORKOUT_ID}/review`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { reaction: 'strong', review: ' Отличная работа ', expectedVersion: 2 },
+    })
+    const question = await app.inject({
+      method: 'PUT',
+      url: `/v1/workouts/${WORKOUT_ID}/question`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { question: ' Как заменить упражнение? ', expectedVersion: 3 },
+    })
+    const answer = await app.inject({
+      method: 'PUT',
+      url: `/v1/workouts/${WORKOUT_ID}/question/answer`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { reaction: null, review: 'Заменим в плане', expectedVersion: 4 },
+    })
+    const resolve = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/question/resolve`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 5 },
+    })
+    const snooze = await app.inject({
+      method: 'POST',
+      url: `/v1/clients/${CLIENTS_RESPONSE.clients[0]!.id}/attention/snooze`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+
+    expect([
+      feedback.statusCode, review.statusCode, question.statusCode,
+      answer.statusCode, resolve.statusCode, snooze.statusCode,
+    ]).toEqual([200, 200, 200, 200, 200, 200])
+    expect(writer.submitFeedback).toHaveBeenCalledWith(sessionToken, WORKOUT_ID, {
+      sessionRpe: 8, wellbeing: 'normal', discomfort: true,
+      comment: 'Тянуло плечо', expectedVersion: 1,
+    })
+    expect(writer.setReview).toHaveBeenCalledWith(sessionToken, WORKOUT_ID, {
+      reaction: 'strong', review: 'Отличная работа', expectedVersion: 2,
+    })
+    expect(writer.askQuestion).toHaveBeenCalledWith(
+      sessionToken, WORKOUT_ID, 'Как заменить упражнение?', 3,
+    )
+    expect(writer.answerQuestion).toHaveBeenCalledWith(sessionToken, WORKOUT_ID, {
+      reaction: null, review: 'Заменим в плане', expectedVersion: 4,
+    })
+    expect(writer.resolveQuestion).toHaveBeenCalledWith(sessionToken, WORKOUT_ID, 5)
+    expect(snooze.json()).toEqual({
+      client: {
+        id: CLIENTS_RESPONSE.clients[0]!.id,
+        snoozedUntil: '2026-09-08T12:00:00.000Z',
+      },
+    })
+  })
+
+  it('rejects incomplete feedback and empty question answers', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({
+      pilotWorkoutsWriter: writer.pilotWorkoutsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const feedback = await app.inject({
+      method: 'PUT',
+      url: `/v1/workouts/${WORKOUT_ID}/feedback`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        sessionRpe: 11, wellbeing: 'normal', discomfort: true,
+        comment: '', expectedVersion: 1,
+      },
+    })
+    const answer = await app.inject({
+      method: 'PUT',
+      url: `/v1/workouts/${WORKOUT_ID}/question/answer`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { reaction: null, review: ' ', expectedVersion: 1 },
+    })
+
+    expect([feedback.statusCode, answer.statusCode]).toEqual([400, 400])
+    expect(writer.submitFeedback).not.toHaveBeenCalled()
+    expect(writer.answerQuestion).not.toHaveBeenCalled()
   })
 })
 

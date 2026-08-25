@@ -199,7 +199,8 @@ describe('Training summary card states', () => {
     render(<ClientTrainingSummaryCard clientId="client-1" gender="female" />, { wrapper: wrapper(queryClient()) })
 
     expect((await screen.findAllByText((text) => text.includes(longExerciseName)))[0]).toBeVisible()
-    expect(screen.getByAltText('Атлетичная женщина, вид спереди и сзади')).toBeVisible()
+    expect(screen.getByAltText('Атлетичная женщина, вид сзади')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Сзади' })).toBeNull()
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
     expect(document.querySelector('.body-progress-zone')).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Подробный анализ' }))
@@ -300,14 +301,17 @@ describe('Training summary card states', () => {
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    expect(await screen.findByAltText('Нейтральная фигура спортсмена, вид спереди и сзади')).toBeVisible()
+    expect(await screen.findByAltText('Нейтральная фигура спортсмена, вид сзади')).toBeVisible()
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toHaveAttribute('aria-pressed', 'true')
     await user.click(await screen.findByRole('button', { name: 'Нагрузка' }))
     expect(await screen.findByLabelText('Верх спины. Доля всех выполненных подходов: 67%')).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: 'Спереди' }))
+    expect(screen.getByAltText('Нейтральная фигура спортсмена, вид спереди')).toBeVisible()
     await user.click(screen.getByLabelText('Грудь. Доля всех выполненных подходов: 33%'))
     expect(screen.getByText('Жим лёжа: 1 подход')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Прогресс' }))
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByAltText('Нейтральная фигура спортсмена, вид сзади')).toBeVisible()
   })
 
   it('keeps the zone panel compact and opens the remaining exercise details on demand', async () => {

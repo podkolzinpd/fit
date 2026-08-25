@@ -198,6 +198,8 @@ jobs:
             and (.seededTrainerCount | type == "number" and . >= 1)
             and (.session.token | test("^[A-Za-z0-9_-]{43}$"))
             and (.session.expiresAt | type == "string")
+            and (.clientSession.token | test("^[A-Za-z0-9_-]{43}$"))
+            and (.clientSession.expiresAt | type == "string")
           ' stage-workout-fixture-response.json >/dev/null
           jq -r '"Prepared synthetic fixtures for " + (.seededTrainerCount | tostring) + " stage trainer(s)."' \
             stage-workout-fixture-response.json
@@ -258,6 +260,7 @@ jobs:
           jq -e '.status == "ok"' <<<"$health" >/dev/null
           jq -e '.status == "ready"' <<<"$ready" >/dev/null
           fixture_token=$(jq -er '.session.token' stage-workout-fixture-response.json)
+          client_fixture_token=$(jq -er '.clientSession.token' stage-workout-fixture-response.json)
           clients=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Pilot-Session: $fixture_token" \
@@ -292,6 +295,13 @@ jobs:
               .notes == "Синтетическая проверка переноса Yandex stage"
               and .workoutDate == "2026-08-22"
               and .status == "done"
+              and .sessionRpe == null
+              and .wellbeing == null
+              and .discomfort == null
+              and .clientComment == null
+              and .trainerReaction == null
+              and .trainerReview == null
+              and .clientQuestion == null
               and (.exercises | any(
                 .source == "custom"
                 and (.sets | any(
@@ -305,12 +315,167 @@ jobs:
                 ))
               ))
             ))
+            and (.attention | length == 0)
+            and (.attentionPreferences | type == "array")
           ' <<<"$training" >/dev/null
           client_id=$(jq -er '
             .clients[]
             | select(.fullName == "Тестовый клиент Yandex stage")
             | .id
           ' <<<"$clients")
+          post_workout_id=$(jq -er '
+            .workouts[]
+            | select(.notes == "Синтетическая проверка переноса Yandex stage")
+            | .id
+          ' <<<"$training")
+          post_feedback_payload='{
+            "sessionRpe":8,
+            "wellbeing":"normal",
+            "discomfort":true,
+            "comment":"Тянуло плечо",
+            "expectedVersion":1
+          }'
+          post_feedback=$(curl --fail --silent --show-error \
+            --request PUT \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $client_fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$post_feedback_payload" \
+            "${api_url%/}/v1/workouts/$post_workout_id/feedback")
+          jq -e --arg workout_id "$post_workout_id" '
+            .workout.id == $workout_id and .workout.version == 2
+          ' <<<"$post_feedback" >/dev/null
+          post_feedback_replayed=$(curl --fail --silent --show-error \
+            --request PUT \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $client_fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$post_feedback_payload" \
+            "${api_url%/}/v1/workouts/$post_workout_id/feedback")
+          jq -e '.workout.version == 2' <<<"$post_feedback_replayed" >/dev/null
+          post_question_payload='{
+            "question":"Можно заменить упражнение?",
+            "expectedVersion":2
+          }'
+          post_question=$(curl --fail --silent --show-error \
+            --request PUT \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $client_fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$post_question_payload" \
+            "${api_url%/}/v1/workouts/$post_workout_id/question")
+          jq -e '.workout.version == 3' <<<"$post_question" >/dev/null
+          post_question_replayed=$(curl --fail --silent --show-error \
+            --request PUT \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $client_fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$post_question_payload" \
+            "${api_url%/}/v1/workouts/$post_workout_id/question")
+          jq -e '.workout.version == 3' <<<"$post_question_replayed" >/dev/null
+          post_question_read=$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/training-data")
+          jq -e --arg workout_id "$post_workout_id" '
+            (.workouts | any(
+              .id == $workout_id
+              and .sessionRpe == 8
+              and .wellbeing == "normal"
+              and .discomfort == true
+              and .clientComment == "Тянуло плечо"
+              and .clientQuestion == "Можно заменить упражнение?"
+              and .clientQuestionResolvedAt == null
+              and .version == 3
+            ))
+            and (.attention | any(
+              .workoutId == $workout_id
+              and .clientQuestion == "Можно заменить упражнение?"
+            ))
+          ' <<<"$post_question_read" >/dev/null
+          post_answer_payload='{
+            "reaction":null,
+            "review":"Да, заменим в следующем плане",
+            "expectedVersion":3
+          }'
+          post_answered=$(curl --fail --silent --show-error \
+            --request PUT \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$post_answer_payload" \
+            "${api_url%/}/v1/workouts/$post_workout_id/question/answer")
+          jq -e '.workout.version == 4' <<<"$post_answered" >/dev/null
+          post_answer_replayed=$(curl --fail --silent --show-error \
+            --request PUT \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$post_answer_payload" \
+            "${api_url%/}/v1/workouts/$post_workout_id/question/answer")
+          jq -e '.workout.version == 4' <<<"$post_answer_replayed" >/dev/null
+          post_review_payload='{
+            "reaction":"strong",
+            "review":"Снизим нагрузку на плечо",
+            "expectedVersion":4
+          }'
+          post_reviewed=$(curl --fail --silent --show-error \
+            --request PUT \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$post_review_payload" \
+            "${api_url%/}/v1/workouts/$post_workout_id/review")
+          jq -e --arg workout_id "$post_workout_id" '
+            .workout.id == $workout_id and .workout.version == 5
+          ' <<<"$post_reviewed" >/dev/null
+          post_review_replayed=$(curl --fail --silent --show-error \
+            --request PUT \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$post_review_payload" \
+            "${api_url%/}/v1/workouts/$post_workout_id/review")
+          jq -e '.workout.version == 5' <<<"$post_review_replayed" >/dev/null
+          snoozed=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/clients/$client_id/attention/snooze")
+          jq -e --arg client_id "$client_id" '
+            .client.id == $client_id
+            and (.client.snoozedUntil | type == "string")
+            and (.client.snoozedUntil | endswith("Z"))
+          ' <<<"$snoozed" >/dev/null
+          snooze_timestamp=$(jq -er '.client.snoozedUntil' <<<"$snoozed")
+          snoozed_replayed=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/clients/$client_id/attention/snooze")
+          test "$(jq -er '.client.snoozedUntil' <<<"$snoozed_replayed")" = "$snooze_timestamp"
+          post_workout_read=$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/training-data")
+          jq -e --arg workout_id "$post_workout_id" --arg client_id "$client_id" '
+            (.workouts | any(
+              .id == $workout_id
+              and .sessionRpe == 8
+              and .wellbeing == "normal"
+              and .discomfort == true
+              and .clientComment == "Тянуло плечо"
+              and .trainerReaction == "strong"
+              and .trainerReview == "Снизим нагрузку на плечо"
+              and .clientQuestion == "Можно заменить упражнение?"
+              and .clientQuestionResolvedAt != null
+              and .version == 5
+            ))
+            and (.attention | length == 0)
+            and (.attentionPreferences | any(
+              .clientId == $client_id and .snoozedUntil != null
+            ))
+          ' <<<"$post_workout_read" >/dev/null
           custom_exercise_id=$(jq -er '
             .customExercises[]
             | select(.name == "Тестовая тяга Yandex stage")

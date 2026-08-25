@@ -5,18 +5,24 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-25
-Проверенный базовый `main`: `8b04c88` (`feat(assistant): generate and schedule program drafts (#567)`)
+Проверенный базовый `main`: `30495f2` (`feat(progress): focus body map on one side (#569)`)
 
 ## Активное изменение
 
-- `YAFIT-365` заменяет точки карты тела в Client Progress на цельные области
-  касания и мягкую анатомическую подсветку строго внутри силуэта.
-- Мужская и женская фигуры имеют отдельную геометрию зон; незаполненный пол
-  получает детерминированную нейтральную фигуру. Светлая и тёмная темы используют
-  общие семантические токены.
-- «Прогресс» показывает только подтверждённый рост и лучший точный результат
-  зоны; «Нагрузка» отдельно показывает долю и абсолютное число выполненных
-  подходов. Расчёты прогресса, Trainer Progress и LLM-контракт не меняются.
+- Ветка `codex/yandex-post-workout` переносит в Yandex PostgreSQL feedback
+  клиента, реакцию/ответ тренера, вопросы, явное закрытие и attention queue.
+- `000015` использует только versioned security-definer команды: точный повтор
+  идемпотентен, stale payload конфликтует, прямые записи `fit_api` закрыты.
+- Production UI и Supabase routing не меняются; контракт доступен только через
+  Yandex stage API и read-only pilot aggregate до отдельного cutover.
+- `YAFIT-366` показывает на карте тела одну крупную фигуру за раз: спереди или
+  сзади. Сторона переключается кнопками и горизонтальным жестом, а при выборе
+  зоны на другой стороне меняется автоматически.
+- Женская геометрия заново откалибрована отдельно от мужской; SVG-маска покрывает
+  обе половины исходного изображения. Постоянных точек и деления тела нет:
+  доступные зоны едва заметны, выбранная мягко подсвечивается целиком.
+- «Прогресс» и «Нагрузка» сохраняют расчёты YAFIT-365. Trainer Progress,
+  LLM-контракт и исходные данные не меняются.
 
 ## Последняя проверенная продуктовая точка
 
@@ -49,9 +55,11 @@
   локальный public-domain каталог упражнений работают без внешнего медиасервиса.
 - Client Progress сохраняет короткую сводку YAFIT-362: честные счётчики,
   достижения, связь с целью, один следующий ориентир и подробный анализ в
-  нижнем листе. YAFIT-363/364 добавляют карту тела с мужской/женской фигурой и
-  только подтверждёнными зонами, не выдавая рост результата упражнения за рост
-  мышечной массы.
+  нижнем листе. YAFIT-363–365 добавляют карту тела с отдельной геометрией фигур,
+  цельными областями касания и только подтверждёнными зонами, не выдавая рост
+  результата упражнения за рост мышечной массы.
+- Ассистент умеет подготовить в чате черновик программы, показать расписание и
+  создать тренировки только после явного подтверждения пользователя.
 
 ## Инфраструктура и Yandex Cloud
 
@@ -60,9 +68,9 @@
   доставляются автоматически через GitHub OIDC, private runner и forward-only
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
-  exercises и workout aggregate работают на stage. Миграции `000001–000013`,
-  API revision, Live core и структурные Live-команды доставлены автоматически;
-  `000014` слита и ожидает повторной доставки после исправления drift.
+  exercises и полный workout lifecycle работают на stage. Миграции
+  `000001–000014` и API revision доставлены автоматически; следующий PR
+  добавляет `000015` post-workout.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
 - Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
@@ -78,26 +86,22 @@
 
 ## Проверки активной ветки
 
-- Workout lifecycle PR #551 и весь его CI зелёные; stage delivery остановилась
-  до миграции на проверке Terraform из-за рассинхронизации WebSQL.
-- Локальный Yandex PostgreSQL 17 применяет `000014`; 21 интеграционный
-  actor/RLS-тест зелёный, включая cross-tenant и идемпотентность.
-- Последние автоматические stage runs `5244032`, `083d7db` и `e95a5e1`
-  остановились на том же PostgreSQL plan до применения миграции и API revision.
-- После синхронизации с `e95a5e1` полный `npm run check` зелёный: 726 frontend,
-  143 API и 52 infra/workflow policy теста, lint, typecheck и build.
-- На текущей ветке проходят `npm run lint`, `npm run typecheck`, `npm run
-  db:types:check`, `npm run migrations:check`, целевые assistant frontend/API
-  tests и workflow policy tests. `npm run db:reset` пока заблокирован локальным
-  окружением: Supabase CLI видит Docker socket `.colima`, а проектный процесс
-  требует Podman; DB/pgTAP acceptance нужно повторить в доступном Podman/CI.
+- Stage run `32833096878` доставил `000014`, fixture, API revision и lifecycle
+  smoke без платного resize и rollback.
+- Локальный Yandex PostgreSQL 17 применяет `000015`; 22 интеграционных
+  actor/RLS-теста зелёные, включая client/root/member/outsider, повтор запроса,
+  optional reaction, автоматическое закрытие ответа и snooze.
+- Полный `npm run check` зелёный: 738 frontend, 148 API и 52 infra/policy
+  проверки, lint, typecheck и production build.
+- Assistant release применяет чистую цепочку Supabase; 624 SQL/RLS-теста
+  зелёные, включая exact-once turn/action, cross-tenant запреты и атомарный
+  rollback всей программы при ошибке одного элемента.
 
 ## Ближайший порядок
 
-1. Слить исправление WebSQL drift, повторить автоматическую доставку `000014`
-   и проверить workout lifecycle smoke на stage.
-2. Отдельно портировать feedback/reactions и вопросы/ответы после тренировки.
-3. Отдельно портировать progress/goals и derived progress/chronicle reads.
+1. Доставить `000015` и проверить post-workout/attention stage smoke.
+2. Отдельно портировать progress/goals и derived progress/chronicle reads.
+3. Перенести оставшиеся realtime/refetch и Edge Function tenant-контракты.
 4. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
 5. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению

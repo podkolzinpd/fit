@@ -179,7 +179,8 @@ The private stage readiness gate applied foundation migrations `000001` through
 read-only connections slice adds `000006_client_invitations_read_model`.
 Workout read/write and Live slices occupy `000008` through `000011`; the base
 client/preferences/custom-exercise mutation contract is `000012`, managed
-reader access is `000013`, and the non-Live workout lifecycle is `000014`.
+reader access is `000013`, the non-Live workout lifecycle is `000014`, and the
+post-workout feedback/questions/attention contract is `000015`.
 Product work merged after the foundation still expands the contract required
 before a production tenant can be switched.
 
@@ -193,7 +194,8 @@ Port the current `main` behavior in this order:
    `updated_by` attribution;
 5. live-workout conflict, retry and ambiguous-network-result semantics;
 6. client progress and goals;
-7. post-workout feedback plus trainer reaction/response ownership;
+7. post-workout feedback plus trainer reaction/response ownership (ported to
+   stage contract in `000015`; production routing remains unchanged);
 8. role-safe regularity, confirmed-only exercise progress/PR and paginated
    workout chronicle;
 9. client-overview activity analytics and realtime invalidation/refetch;
