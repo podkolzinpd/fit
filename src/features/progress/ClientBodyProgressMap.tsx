@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type CSSProperties, type KeyboardEvent } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type TouchEvent } from 'react'
 import type { Gender, PublishedTrainingSummary, Workout } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
 import {
@@ -9,20 +9,28 @@ import {
   type BodyMapRegion,
   type BodyMapZone,
 } from './body-progress-map'
-import { bodyFigureVariant, bodyZoneShapes, type BodyFigureVariant, type BodyZoneShape } from './body-progress-geometry'
+import {
+  bodyFigureVariant,
+  bodyFigureViewBox,
+  bodyZoneShapes,
+  bodyZoneSides,
+  type BodyFigureSide,
+  type BodyFigureVariant,
+  type BodyZoneShape,
+} from './body-progress-geometry'
 
-const BODY_FIGURES: Record<BodyFigureVariant, { image: string; alt: string }> = {
+const BODY_FIGURES: Record<BodyFigureVariant, { image: string; alt: Record<BodyFigureSide, string> }> = {
   male: {
     image: '/illustrations/body-progress-athlete.png',
-    alt: 'Атлетичный мужчина, вид спереди и сзади',
+    alt: { front: 'Атлетичный мужчина, вид спереди', back: 'Атлетичный мужчина, вид сзади' },
   },
   female: {
     image: '/illustrations/body-progress-athlete-female.png',
-    alt: 'Атлетичная женщина, вид спереди и сзади',
+    alt: { front: 'Атлетичная женщина, вид спереди', back: 'Атлетичная женщина, вид сзади' },
   },
   neutral: {
     image: '/illustrations/body-progress-athlete-neutral.svg',
-    alt: 'Нейтральная фигура спортсмена, вид спереди и сзади',
+    alt: { front: 'Нейтральная фигура спортсмена, вид спереди', back: 'Нейтральная фигура спортсмена, вид сзади' },
   },
 }
 
@@ -30,10 +38,12 @@ function shapeTransform(shape: BodyZoneShape): string | undefined {
   return shape.rotate ? `rotate(${shape.rotate} ${shape.cx} ${shape.cy})` : undefined
 }
 
-function regionStyle(region: BodyMapRegion, index: number): CSSProperties {
+function regionStyle(region: BodyMapRegion, index: number, mode: BodyMapMode): CSSProperties {
   return {
     '--body-zone-intensity': region.intensity,
-    '--body-zone-load-opacity': 0.12 + region.intensity * 0.28,
+    '--body-zone-base-opacity': mode === 'load'
+      ? 0.035 + region.intensity * 0.07
+      : 0.025 + region.intensity * 0.035,
     '--body-zone-delay': `${index * 55}ms`,
   } as CSSProperties
 }
@@ -75,16 +85,18 @@ function BodyDetailsSheet({ region, onClose }: { region: BodyMapRegion; onClose:
   </div>
 }
 
-function BodyRegion({ region, variant, selected, mode, index, filterId, onSelect }: {
+function BodyRegion({ region, variant, side, selected, mode, index, filterId, onSelect }: {
   region: BodyMapRegion
   variant: BodyFigureVariant
+  side: BodyFigureSide
   selected: boolean
   mode: BodyMapMode
   index: number
   filterId: string
   onSelect: () => void
 }) {
-  const shapes = bodyZoneShapes(variant, region.group)
+  const shapes = bodyZoneShapes(variant, region.group, side)
+  if (shapes.length === 0) return null
   const selectFromKeyboard = (event: KeyboardEvent<SVGGElement>) => {
     if (event.key !== 'Enter' && event.key !== ' ') return
     event.preventDefault()
@@ -96,7 +108,7 @@ function BodyRegion({ region, variant, selected, mode, index, filterId, onSelect
     aria-label={regionAriaLabel(region)}
     aria-pressed={selected}
     className={`body-progress-region body-progress-region-${mode}${selected ? ' selected' : ''}`}
-    style={regionStyle(region, index)}
+    style={regionStyle(region, index, mode)}
     onClick={onSelect}
     onKeyDown={selectFromKeyboard}
   >
@@ -105,11 +117,13 @@ function BodyRegion({ region, variant, selected, mode, index, filterId, onSelect
   </g>
 }
 
-function MapPanel({ data, selected, gender, discovering, onSelect, onShowDetails }: {
+function MapPanel({ data, selected, gender, side, discovering, onSideChange, onSelect, onShowDetails }: {
   data: BodyMapData
   selected: BodyMapRegion | undefined
   gender: Gender | null
+  side: BodyFigureSide
   discovering: boolean
+  onSideChange: (side: BodyFigureSide) => void
   onSelect: (region: BodyMapRegion) => void
   onShowDetails: () => void
 }) {
@@ -117,34 +131,62 @@ function MapPanel({ data, selected, gender, discovering, onSelect, onShowDetails
   const figure = BODY_FIGURES[variant]
   const maskId = `body-progress-mask-${useId().replace(/:/g, '')}`
   const filterId = `body-progress-soft-${useId().replace(/:/g, '')}`
+  const swipeStartX = useRef<number | null>(null)
   const visibleSecondary = selected?.details[0]
   const hiddenCount = selected ? Math.max(0, selected.details.length - 1) : 0
+  const regionsBySide = useMemo(() => ({
+    front: data.regions.filter((region) => bodyZoneShapes(variant, region.group, 'front').length > 0),
+    back: data.regions.filter((region) => bodyZoneShapes(variant, region.group, 'back').length > 0),
+  }), [data.regions, variant])
+  const onTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    swipeStartX.current = event.changedTouches[0]?.clientX ?? null
+  }
+  const onTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    if (swipeStartX.current === null) return
+    const delta = (event.changedTouches[0]?.clientX ?? swipeStartX.current) - swipeStartX.current
+    swipeStartX.current = null
+    if (Math.abs(delta) < 44) return
+    const nextSide: BodyFigureSide = delta < 0 ? 'back' : 'front'
+    if (regionsBySide[nextSide].length > 0) onSideChange(nextSide)
+  }
+  const canSwitchSide = regionsBySide.front.length > 0 && regionsBySide.back.length > 0
 
   return <>
-    <div className={`body-progress-visual mode-${data.mode}${discovering ? ' discovering' : ''}`}>
-      <img src={figure.image} alt={figure.alt} />
-      <svg className="body-progress-overlay" viewBox="0 0 952 1000" aria-label="Интерактивная карта тела">
-        <defs>
-          <mask id={maskId} maskUnits="userSpaceOnUse" style={{ maskType: 'alpha' }}>
-            <image href={figure.image} width="952" height="1000" preserveAspectRatio="xMidYMid meet" />
-          </mask>
-          <filter id={filterId} x="-25%" y="-25%" width="150%" height="150%" colorInterpolationFilters="sRGB">
-            <feGaussianBlur stdDeviation="9" />
-          </filter>
-        </defs>
-        <g mask={`url(#${maskId})`}>
-          {data.regions.map((region, index) => <BodyRegion
-            key={region.group}
-            region={region}
-            variant={variant}
-            selected={selected?.group === region.group}
-            mode={data.mode}
-            index={index}
-            filterId={filterId}
-            onSelect={() => onSelect(region)}
-          />)}
-        </g>
-      </svg>
+    <div className="body-progress-figure-shell">
+      {canSwitchSide && <div className="body-progress-sides" aria-label="Сторона тела">
+        <button type="button" aria-pressed={side === 'front'} disabled={regionsBySide.front.length === 0} onClick={() => onSideChange('front')}>Спереди</button>
+        <button type="button" aria-pressed={side === 'back'} disabled={regionsBySide.back.length === 0} onClick={() => onSideChange('back')}>Сзади</button>
+      </div>}
+      <div
+        className={`body-progress-visual mode-${data.mode}${discovering ? ' discovering' : ''}`}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
+        <img className={`body-progress-figure side-${side}`} src={figure.image} alt={figure.alt[side]} />
+        <svg className="body-progress-overlay" viewBox={bodyFigureViewBox(side)} aria-label="Интерактивная карта тела">
+          <defs>
+            <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="952" height="1000" style={{ maskType: 'alpha' }}>
+              <image href={figure.image} width="952" height="1000" preserveAspectRatio="none" />
+            </mask>
+            <filter id={filterId} x="-18%" y="-18%" width="136%" height="136%" colorInterpolationFilters="sRGB">
+              <feGaussianBlur stdDeviation="4" />
+            </filter>
+          </defs>
+          <g mask={`url(#${maskId})`}>
+            {regionsBySide[side].map((region, index) => <BodyRegion
+              key={region.group}
+              region={region}
+              variant={variant}
+              side={side}
+              selected={selected?.group === region.group}
+              mode={data.mode}
+              index={index}
+              filterId={filterId}
+              onSelect={() => onSelect(region)}
+            />)}
+          </g>
+        </svg>
+      </div>
     </div>
     {data.regions.length === 0 && <p className="body-progress-empty">{data.emptyMessage}</p>}
     {selected && <div className="body-progress-detail" role="status">
@@ -173,6 +215,7 @@ export function ClientBodyProgressMap({ summary, workouts, gender = null, loadLo
   const [mode, setMode] = useState<BodyMapMode>(initialMode)
   const data = mode === 'progress' ? progress : load
   const [selectedGroup, setSelectedGroup] = useState<BodyMapZone | undefined>(data.regions[0]?.group)
+  const [side, setSide] = useState<BodyFigureSide>('front')
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [discovering, setDiscovering] = useState(true)
 
@@ -190,6 +233,18 @@ export function ClientBodyProgressMap({ summary, workouts, gender = null, loadLo
   }, [data])
 
   const selected = data.regions.find((region) => region.group === selectedGroup) ?? data.regions[0]
+  const variant = bodyFigureVariant(gender)
+  useEffect(() => {
+    if (!selected) return
+    const sides = bodyZoneSides(variant, selected.group)
+    if (sides.includes(side)) return
+    setSide(sides[0] ?? 'front')
+  }, [selected, side, variant])
+  const changeSide = (nextSide: BodyFigureSide) => {
+    setSide(nextSide)
+    if (selected && bodyZoneShapes(variant, selected.group, nextSide).length > 0) return
+    setSelectedGroup(data.regions.find((region) => bodyZoneShapes(variant, region.group, nextSide).length > 0)?.group)
+  }
   return <section className="body-progress-map" aria-labelledby="body-progress-title">
     <header>
       <div><span>Карта тела</span><h3 id="body-progress-title">{data.title}</h3><p>{data.description}</p></div>
@@ -209,7 +264,9 @@ export function ClientBodyProgressMap({ summary, workouts, gender = null, loadLo
           data={data}
           selected={selected}
           gender={gender}
+          side={side}
           discovering={discovering}
+          onSideChange={changeSide}
           onSelect={(region) => setSelectedGroup(region.group)}
           onShowDetails={() => setDetailsOpen(true)}
         />}
