@@ -50,6 +50,24 @@ describe('yandexPilotQueries', () => {
         headers: { 'x-fit-pilot-session': 's'.repeat(43) },
       },
     )
+
+    await yandexPilotQueries.generateTrainingSummary(
+      'https://stage.example.test',
+      's'.repeat(43),
+      '6e577cc7-3b56-4a86-bc85-1ce2426ce249',
+      '2026-08-01',
+      '2026-08-26',
+      false,
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://stage.example.test/v1/clients/6e577cc7-3b56-4a86-bc85-1ce2426ce249/training-summaries/generate',
+      expect.objectContaining({ method: 'POST' }),
+    )
+    const summaryRequest = fetchMock.mock.calls.at(-1)?.[1]
+    expect(summaryRequest?.headers).toEqual({
+      'content-type': 'application/json',
+      'x-fit-pilot-session': 's'.repeat(43),
+    })
   })
 
   it('uses explicit JSON and destructive endpoints for connection commands', async () => {
