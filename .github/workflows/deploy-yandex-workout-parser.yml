@@ -56,6 +56,7 @@ jobs:
         run: |
           set -euo pipefail
           lockbox_id=$(yc lockbox secret get --name "$LOCKBOX_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
+          lockbox_version_id=$(yc lockbox secret get --id "$lockbox_id" --format json | jq -er '.current_version.id')
           runtime_sa_id=$(yc iam service-account get --name "$RUNTIME_SA_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id' 2>/dev/null || yc iam service-account create --name "$RUNTIME_SA_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
           yc resource-manager folder add-access-binding "$YC_FOLDER_ID" --role ai.languageModels.user --service-account-id "$runtime_sa_id"
           yc lockbox secret add-access-binding "$lockbox_id" --role lockbox.payloadViewer --service-account-id "$runtime_sa_id"
@@ -78,11 +79,11 @@ jobs:
             --execution-timeout 120s \
             --service-account-id "$runtime_sa_id" \
             --source-path .yandex-workout-parser-package \
-            --secret id="$lockbox_id",key=SUPABASE_URL,environment-variable=SUPABASE_URL \
-            --secret id="$lockbox_id",key=SUPABASE_PUBLISHABLE_KEY,environment-variable=SUPABASE_PUBLISHABLE_KEY \
-            --secret id="$lockbox_id",key=YANDEX_CLOUD_API_KEY,environment-variable=YANDEX_CLOUD_API_KEY \
-            --secret id="$lockbox_id",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID \
-            --secret id="$lockbox_id",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID \
+            --secret id="$lockbox_id",version-id="$lockbox_version_id",key=SUPABASE_URL,environment-variable=SUPABASE_URL \
+            --secret id="$lockbox_id",version-id="$lockbox_version_id",key=SUPABASE_PUBLISHABLE_KEY,environment-variable=SUPABASE_PUBLISHABLE_KEY \
+            --secret id="$lockbox_id",version-id="$lockbox_version_id",key=YANDEX_CLOUD_API_KEY,environment-variable=YANDEX_CLOUD_API_KEY \
+            --secret id="$lockbox_id",version-id="$lockbox_version_id",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID \
+            --secret id="$lockbox_id",version-id="$lockbox_version_id",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID \
             --format json)
           echo "PARSER_PREVIOUS_VERSION_ID=$previous_version_id" >> "$GITHUB_ENV"
           echo "PARSER_CANDIDATE_VERSION_ID=$(jq -er '.id' <<<"$version")" >> "$GITHUB_ENV"
