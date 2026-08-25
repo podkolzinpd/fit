@@ -92,13 +92,27 @@ describe('Yandex Terraform plan policy', () => {
       [
         {
           address: 'yandex_mdb_postgresql_cluster_v2.fit',
-          change: { actions: ['update'], before: {}, after: {} },
+          change: {
+            actions: ['update'],
+            before: {
+              description: 'old',
+              config: [{ resources: [{ disk_size: 100 }] }],
+            },
+            after: {
+              description: 'new',
+              config: [{ resources: [{ disk_size: 200 }] }],
+            },
+          },
         },
       ],
       { automaticStageUpdate: true },
     )
 
     assert.notEqual(result.status, 0)
+    assert.match(
+      result.stderr,
+      /yandex_mdb_postgresql_cluster_v2\.fit \[config, description\]/,
+    )
   })
 
   test('blocks an automatic Serverless Container resize', () => {
