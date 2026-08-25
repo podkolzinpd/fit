@@ -222,7 +222,7 @@ export function programWorkoutDrafts(
     const matches = filterExercises(catalog, 'all', name)
     return matches.length === 1 ? matches[0] : undefined
   }
-  const drafts = sessions.map((session, index) => {
+  const drafts: Array<WorkoutDraft | undefined> = sessions.map((session, index): WorkoutDraft | undefined => {
     const date = dates[index]?.trim()
     const requestId = requestIds[index]?.trim()
     const exercises = session.exercises.map((item) => ({ item, exercise: resolveExercise(item.name) }))
