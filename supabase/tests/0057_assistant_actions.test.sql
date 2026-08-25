@@ -46,7 +46,7 @@ insert into public.assistant_messages (id, conversation_id, turn_id, author, con
 values (
   'b0000000-0000-4000-8000-000000000061',
   'a0000000-0000-4000-8000-000000000057',
-  'd0000000-0000-4000-8000-000000000061',
+  'd0000000-0000-4000-8000-000000000062',
   'assistant', 'Сводка готова',
   '{"tool":"summarize_progress","status":"proposed","title":"Сводка","description":"Сформирую сводку","payload":{"step":"confirm","clientId":"c0000000-0000-4000-8000-000000000057","clientName":"Assistant A","periodStart":"2026-08-01","periodEnd":"2026-08-25","periodLabel":"август"}}'::jsonb
 );
