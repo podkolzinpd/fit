@@ -82,7 +82,7 @@ export function VoiceInputButton({
       streamingTextRef.current = ''
       try {
         await withTimeout(
-          streaming.start((text) => { if (mountedRef.current) setMessage(`Сейчас распознаю: ${text}`) }, (text) => { streamingTextRef.current += `${streamingTextRef.current ? ' ' : ''}${text}` }),
+          streaming.start((text) => { if (mountedRef.current && variant !== 'icon') setMessage(`Сейчас распознаю: ${text}`) }, (text) => { streamingTextRef.current += `${streamingTextRef.current ? ' ' : ''}${text}` }),
           startupTimeoutMs,
         )
         streamingRef.current = streaming
