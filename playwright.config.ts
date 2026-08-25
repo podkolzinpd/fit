@@ -16,8 +16,8 @@ export default defineConfig({
     // Три узких профиля визуальной приёмки: два клиентских мобильных размера
     // и фактический desktop viewport тренера. Они запускают только один smoke,
     // поэтому не размножают весь поведенческий e2e-набор.
-    { name: 'visual-client-390', testMatch: /ui-visual\.spec\.ts/, use: { ...devices['iPhone 13'], viewport: { width: 390, height: 844 } } },
-    { name: 'visual-client-430', testMatch: /ui-visual\.spec\.ts/, use: { ...devices['Pixel 7'], viewport: { width: 430, height: 932 } } },
-    { name: 'visual-trainer-1440', testMatch: /ui-visual\.spec\.ts/, use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 1000 } } },
+    { name: 'visual-client-390', testMatch: /ui-visual\.spec\.ts/, use: { ...devices['iPhone 13'], timezoneId: 'Europe/Moscow', viewport: { width: 390, height: 844 } } },
+    { name: 'visual-client-430', testMatch: /ui-visual\.spec\.ts/, use: { ...devices['Pixel 7'], timezoneId: 'Europe/Moscow', viewport: { width: 430, height: 932 } } },
+    { name: 'visual-trainer-1440', testMatch: /ui-visual\.spec\.ts/, use: { ...devices['Desktop Chrome'], timezoneId: 'Europe/Moscow', viewport: { width: 1440, height: 1000 } } },
   ],
 })
