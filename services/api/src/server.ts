@@ -12,7 +12,10 @@ import { DatabasePilotSessionIssuer } from './pilot-session.js'
 import { DatabasePilotTrainingDataReader } from './pilot-training-data-reader.js'
 import { DatabasePilotWorkoutsWriter } from './pilot-workouts-writer.js'
 import { DatabasePilotProgressData } from './progress-data.js'
+import { DatabasePilotWorkoutParser } from './pilot-workout-parser.js'
+import { DatabasePilotTrainingSummaries } from './training-summary.js'
 import { SupabaseWorkoutParser } from './legacy-workout-parser.js'
+import { YandexWorkoutParser } from './legacy-workout-parser.js'
 import { readSupabaseBridgeConfig, SupabaseBridge } from './supabase-bridge.js'
 import { summarizeClientTraining } from './legacy-summary/index.js'
 
@@ -89,6 +92,25 @@ const pilotProgressData =
   databasePool === undefined
     ? undefined
     : new DatabasePilotProgressData(databasePool)
+const pilotWorkoutParser =
+  databasePool === undefined
+    || process.env.YANDEX_CLOUD_API_KEY === undefined
+    || process.env.YANDEX_CLOUD_FOLDER_ID === undefined
+    ? undefined
+    : new DatabasePilotWorkoutParser(
+        databasePool,
+        new YandexWorkoutParser(
+          process.env.YANDEX_CLOUD_API_KEY,
+          process.env.YANDEX_CLOUD_FOLDER_ID,
+          process.env.YANDEX_CLOUD_MODEL_ID,
+        ),
+      )
+const pilotTrainingSummaries =
+  databasePool === undefined
+    || process.env.YANDEX_CLOUD_API_KEY === undefined
+    || process.env.YANDEX_CLOUD_FOLDER_ID === undefined
+    ? undefined
+    : new DatabasePilotTrainingSummaries(databasePool)
 const supabaseBridgeConfig = readSupabaseBridgeConfig()
 const legacyWorkoutParser =
   supabaseBridgeConfig === undefined
@@ -122,6 +144,8 @@ const app = buildApp(
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),
     ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),
     ...(pilotProgressData === undefined ? {} : { pilotProgressData }),
+    ...(pilotWorkoutParser === undefined ? {} : { pilotWorkoutParser }),
+    ...(pilotTrainingSummaries === undefined ? {} : { pilotTrainingSummaries }),
     ...(legacyWorkoutParser === undefined ? {} : { legacyWorkoutParser }),
     ...(legacySummaryHandler === undefined ? {} : { legacySummaryHandler }),
   },

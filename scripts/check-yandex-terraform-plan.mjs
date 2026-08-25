@@ -105,9 +105,20 @@ const hasBoundedImageRetention = (resource) => {
     })
 }
 
+const hasBoundedApiExecutionTimeout = (resource) => {
+  if (resource.address !== 'yandex_serverless_container.api') return false
+  const before = /^(\d+)s$/.exec(resource.change.before?.execution_timeout ?? '')
+  const after = /^(\d+)s$/.exec(resource.change.after?.execution_timeout ?? '')
+  return before !== null && after !== null
+    && Number(after[1]) >= Number(before[1])
+    && Number(after[1]) <= 120
+}
+
 const changesContainerCostOrIdentity = (resource) =>
   costSensitiveContainerFields.some(
     (field) =>
+      !(field === 'execution_timeout' && hasBoundedApiExecutionTimeout(resource))
+      &&
       JSON.stringify(resource.change.before?.[field])
       !== JSON.stringify(resource.change.after?.[field]),
   )

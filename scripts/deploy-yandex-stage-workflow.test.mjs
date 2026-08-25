@@ -54,8 +54,8 @@ test('publishes the final yandex-stage result without restoring an approval gate
   assert.doesNotMatch(workflow, /^    environment: yandex-stage$/m)
 })
 
-test('preserves the deployed stage API timeout unless a cost change is reviewed', () => {
-  assert.match(workflow, /^  TF_VAR_api_execution_timeout: '30s'$/m)
+test('keeps enough time for the bounded three-attempt summary contract', () => {
+  assert.match(workflow, /^  TF_VAR_api_execution_timeout: '120s'$/m)
 })
 
 test('loads synthetic fixtures and verifies every read model through the runtime API', () => {
@@ -78,6 +78,7 @@ test('loads synthetic fixtures and verifies every read model through the runtime
   assert.match(workflow, /\/v1\/training-data/)
   assert.match(workflow, /\/v1\/clients\/\$client_id\/progress/)
   assert.match(workflow, /\/v1\/clients\/\$client_id\/workout-chronicle/)
+  assert.match(workflow, /\/v1\/clients\/\$client_id\/training-summaries/)
   assert.match(workflow, /\.accessMode == "read_only"/)
   assert.match(workflow, /\.workoutDate == "2026-08-22"/)
   assert.match(workflow, /--request POST[\s\S]*?\/v1\/clients/)
