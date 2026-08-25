@@ -1,4 +1,4 @@
-// schema-sha256: 2e4e4cf71a9290f00a1c9dc795165e7c8689905ce2bbda9f9a09d6c066523c45
+// schema-sha256: 00731dcf9dbbdcc7966a182c01cb6a3b79e97c652aca0480bba94cd70d43c69b
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -140,6 +140,7 @@ export type Database = {
           conversation_id: string
           created_at: string
           id: string
+          turn_id: string | null
         }
         Insert: {
           action?: Json | null
@@ -148,6 +149,7 @@ export type Database = {
           conversation_id: string
           created_at?: string
           id?: string
+          turn_id?: string | null
         }
         Update: {
           action?: Json | null
@@ -156,6 +158,7 @@ export type Database = {
           conversation_id?: string
           created_at?: string
           id?: string
+          turn_id?: string | null
         }
         Relationships: [
           {
@@ -163,6 +166,76 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "assistant_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assistant_actions: {
+        Row: {
+          id: string
+          owner_id: string
+          conversation_id: string
+          assistant_message_id: string
+          tool: string
+          status: string
+          payload: Json
+          result: Json | null
+          error_code: string | null
+          version: number
+          created_at: string
+          updated_at: string
+          applied_at: string | null
+        }
+        Insert: {
+          id?: string
+          owner_id: string
+          conversation_id: string
+          assistant_message_id: string
+          tool: string
+          status?: string
+          payload: Json
+          result?: Json | null
+          error_code?: string | null
+          version?: number
+          created_at?: string
+          updated_at?: string
+          applied_at?: string | null
+        }
+        Update: {
+          id?: string
+          owner_id?: string
+          conversation_id?: string
+          assistant_message_id?: string
+          tool?: string
+          status?: string
+          payload?: Json
+          result?: Json | null
+          error_code?: string | null
+          version?: number
+          created_at?: string
+          updated_at?: string
+          applied_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistant_actions_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assistant_actions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "assistant_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assistant_actions_assistant_message_id_fkey"
+            columns: ["assistant_message_id"]
+            isOneToOne: false
+            referencedRelation: "assistant_messages"
             referencedColumns: ["id"]
           },
         ]
@@ -1194,6 +1267,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_assistant_action: {
+        Args: { p_action_id: string; p_input?: Json; p_expected_version?: number }
+        Returns: Json
+      }
+      persist_assistant_response: {
+        Args: { p_conversation_id: string; p_turn_id: string; p_content: string; p_action?: Json }
+        Returns: Json
+      }
       append_live_exercise: {
         Args: {
           p_exercise: Json
@@ -1247,6 +1328,14 @@ export type Database = {
         Returns: number
       }
       create_client: { Args: { p_client: Json }; Returns: string }
+      complete_assistant_summary: {
+        Args: { p_action_id: string; p_expected_version?: number }
+        Returns: Json
+      }
+      cancel_assistant_action: {
+        Args: { p_action_id: string; p_expected_version?: number }
+        Returns: Json
+      }
       create_client_invitation: {
         Args: { p_client_id: string; p_target_role: string }
         Returns: string

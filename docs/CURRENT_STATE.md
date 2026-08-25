@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-25
-Проверенный базовый `main`: `861a5ae` (`feat(assistant): record workouts inline in chat (#565)`)
+Проверенный базовый `main`: `8b04c88` (`feat(assistant): generate and schedule program drafts (#567)`)
 
 ## Активное изменение
 
@@ -41,6 +41,10 @@
 - Общая ИИ-сводка и production-разбор тренировки вызываются через Yandex Cloud
   Functions. Локальный разбор остаётся в локальном Supabase. Форма обратной связи
   сохраняет сообщения в `app_feedback`; канал уведомлений решается отдельно.
+- Assistant pilot trainer-only: `/assistant` защищён `TrainerOnly`, client nav и
+  client route exposure убраны. Turns принимают `turnId`; history/action state
+  сохраняются durable, proposed actions подтверждаются узкими RPC с owner/RLS,
+  program apply атомарен, повтор возвращает прежний результат.
 - PWA предлагает понятную установку на домашний экран. Ручной беговой MVP и
   локальный public-domain каталог упражнений работают без внешнего медиасервиса.
 - Client Progress сохраняет короткую сводку YAFIT-362: честные счётчики,
@@ -82,6 +86,11 @@
   остановились на том же PostgreSQL plan до применения миграции и API revision.
 - После синхронизации с `e95a5e1` полный `npm run check` зелёный: 726 frontend,
   143 API и 52 infra/workflow policy теста, lint, typecheck и build.
+- На текущей ветке проходят `npm run lint`, `npm run typecheck`, `npm run
+  db:types:check`, `npm run migrations:check`, целевые assistant frontend/API
+  tests и workflow policy tests. `npm run db:reset` пока заблокирован локальным
+  окружением: Supabase CLI видит Docker socket `.colima`, а проектный процесс
+  требует Podman; DB/pgTAP acceptance нужно повторить в доступном Podman/CI.
 
 ## Ближайший порядок
 
