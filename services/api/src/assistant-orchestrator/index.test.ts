@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allowsAssistantAction, assistantCapabilitiesReply, createClientTurn, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, readAssistantTurnRequest, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse } from './index.js'
+import { allowsAssistantAction, assistantCapabilitiesReply, createClientTurn, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse } from './index.js'
 
 describe('assistant orchestrator contract', () => {
   it('accepts only bounded conversation turns', () => {
@@ -52,5 +52,16 @@ describe('assistant orchestrator contract', () => {
     const details = createClientTurn('женщина, 32 года, 168 см', name?.action)
     expect(details?.action).toMatchObject({ status: 'proposed', payload: { step: 'confirm', fullName: 'Анна Смирнова', gender: 'female', ageYears: 32, heightCm: 168 } })
     expect(createClientTurn('отмена', details?.action)).toEqual({ reply: 'Хорошо, создание карточки клиента отменено.', action: null })
+  })
+
+  it('hands a workout draft to the existing workout review after client selection', () => {
+    const clients = [{ id: 'client-1', fullName: 'Антон Ковалёв', goal: null, ageYears: null, heightCm: null, gender: null }]
+    const start = recordWorkoutTurn('Запиши тренировку', clients, null)
+    expect(start?.action?.payload).toEqual({ step: 'client' })
+    const client = recordWorkoutTurn('Антон Ковалёв', clients, start?.action)
+    expect(client?.action?.payload).toMatchObject({ step: 'workout', clientName: 'Антон Ковалёв' })
+    const draft = recordWorkoutTurn('жим лёжа 3 подхода по 50 кг 10 повторений', clients, client?.action)
+    expect(draft?.action).toMatchObject({ tool: 'record_workout', status: 'proposed', payload: { step: 'confirm', clientName: 'Антон Ковалёв', transcript: 'жим лёжа 3 подхода по 50 кг 10 повторений' } })
+    expect(recordWorkoutTurn('отмена', clients, draft?.action)).toEqual({ reply: 'Хорошо, запись тренировки отменена.', action: null })
   })
 })
