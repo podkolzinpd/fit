@@ -2,12 +2,23 @@ import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
 import { appendWorkoutParse, assistantWorkoutSaveInput, enqueueWorkoutParse, replaceWorkoutParseSource } from './workout-draft'
+import { assistantActionView } from './assistant-action-view'
 
 const benchPress = {
   source: 'system', ref: 'barbell-bench-press', name: 'Жим штанги лёжа', muscleGroup: 'chest', inputKind: 'strength',
 } as ExerciseSnapshot
 
 describe('assistant program draft saving', () => {
+  it('routes every designed assistant flow to a structured card instead of the generic preview', () => {
+    expect(assistantActionView({ tool: 'record_workout', payload: { step: 'workout' } })).toBe('workout-collection')
+    expect(assistantActionView({ tool: 'record_workout', payload: { step: 'confirm' } })).toBe('workout-confirm')
+    expect(assistantActionView({ tool: 'create_client_draft', payload: { step: 'profile' } })).toBe('client-collection')
+    expect(assistantActionView({ tool: 'create_client_draft', payload: { step: 'confirm' } })).toBe('client-confirm')
+    expect(assistantActionView({ tool: 'create_program_draft', payload: { step: 'brief' } })).toBe('program-brief')
+    expect(assistantActionView({ tool: 'create_program_draft', payload: { step: 'confirm' } })).toBe('program-confirm')
+    expect(assistantActionView({ tool: 'schedule_program', payload: { step: 'confirm' } })).toBe('program-confirm')
+    expect(assistantActionView({ tool: 'summarize_progress', payload: { step: 'period' } })).toBe('summary-period')
+  })
   it('keeps the locally prefilled workout time in the completed workout payload', () => {
     expect(assistantWorkoutSaveInput('request-1', 'client-1', '2026-08-25', '17:07', [])).toEqual({
       workout: { requestId: 'request-1', clientId: 'client-1', workoutDate: '2026-08-25', startTime: '17:07', exercises: [] },

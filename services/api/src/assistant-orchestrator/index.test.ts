@@ -68,6 +68,47 @@ describe('assistant orchestrator contract', () => {
     expect(createClientTurn('отмена', details?.action)).toEqual({ reply: 'Хорошо, создание карточки клиента отменено.', action: null })
   })
 
+  it('extracts a complete client draft from the first dictated request', () => {
+    const result = createClientTurn('Добавь нового клиента Анна Смирнова: женщина, 32 года, рост 168 см, цель: набрать силу, начальный вес 60 кг', null)
+    expect(result?.action).toMatchObject({
+      tool: 'create_client_draft', status: 'proposed', payload: {
+        step: 'confirm', fullName: 'Анна Смирнова', gender: 'female', ageYears: 32, heightCm: 168,
+        goal: 'набрать силу', initialWeightKg: 60,
+      },
+    })
+    const withPronoun = createClientTurn('Добавь мне нового клиента Анна Смирнова, женщина, 32 года, 168 см', null)
+    expect(withPronoun?.action).toMatchObject({ status: 'proposed', payload: { fullName: 'Анна Смирнова', gender: 'female', ageYears: 32, heightCm: 168 } })
+  })
+
+  it('understands labeled profile fields without relying on unit words', () => {
+    const result = createClientTurn('Добавь клиента Петр Иванов, пол мужской, возраст 41, рост 182, цель: восстановление, начальный вес 84', null)
+    expect(result?.action).toMatchObject({
+      status: 'proposed', payload: {
+        step: 'confirm', fullName: 'Петр Иванов', gender: 'male', ageYears: 41, heightCm: 182,
+        goal: 'восстановление', initialWeightKg: 84,
+      },
+    })
+  })
+
+  it('keeps fields from the first fragment and merges later client details', () => {
+    const first = createClientTurn('Создай клиента Анна Смирнова, женщина, цель: набрать силу', null)
+    expect(first?.action).toMatchObject({ status: 'needs_input', payload: { step: 'profile', fullName: 'Анна Смирнова', gender: 'female', goal: 'набрать силу' } })
+    const completed = createClientTurn('32 года, 168 см, вес 60 кг', first?.action)
+    expect(completed?.action).toMatchObject({
+      status: 'proposed', payload: {
+        step: 'confirm', fullName: 'Анна Смирнова', gender: 'female', ageYears: 32, heightCm: 168,
+        goal: 'набрать силу', initialWeightKg: 60,
+      },
+    })
+  })
+
+  it('preserves named fields while waiting for a missing name', () => {
+    const first = createClientTurn('Добавь клиента, женщина, 32 года, 168 см, цель: похудеть, вес 60 кг', null)
+    expect(first?.action).toMatchObject({ status: 'needs_input', payload: { step: 'name', gender: 'female', ageYears: 32, heightCm: 168, goal: 'похудеть', initialWeightKg: 60 } })
+    const completed = createClientTurn('Анна Смирнова', first?.action)
+    expect(completed?.action).toMatchObject({ status: 'proposed', payload: { step: 'confirm', fullName: 'Анна Смирнова', gender: 'female', ageYears: 32, heightCm: 168, goal: 'похудеть', initialWeightKg: 60 } })
+  })
+
   it('collects workout dictation in fragments before handing it to review', () => {
     const clients = [{ id: 'client-1', fullName: 'Антон Ковалёв', goal: null, ageYears: null, heightCm: null, gender: null }]
     const start = recordWorkoutTurn('Запиши тренировку', clients, null)
