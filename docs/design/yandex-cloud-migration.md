@@ -185,7 +185,9 @@ post-workout feedback/questions/attention contract is `000015`. Migration
 goal aggregate with stages, timezone-aware regularity, confirmed-only running
 and exercise progress, deterministic PR flags and the paginated workout
 chronicle. It grants `fit_api` reads plus versioned security-definer commands,
-never direct domain writes.
+never direct domain writes. Migration `000017_client_overview` adds the
+role-filtered client-card analytics derived from those shared facts: latest
+weight, completion, last workout, time in work and the inactivity signal.
 Product work merged after the foundation still expands the contract required
 before a production tenant can be switched.
 
@@ -204,7 +206,10 @@ Port the current `main` behavior in this order:
    stage contract in `000015`; production routing remains unchanged);
 8. role-safe regularity, confirmed-only exercise progress/PR and paginated
    workout chronicle (ported to stage contract in `000016`);
-9. client-overview activity analytics and realtime invalidation/refetch;
+9. client-overview activity analytics and realtime invalidation/refetch
+   (`000017` serves the analytics; the isolated pilot uses visible-tab polling
+   every 15 seconds and an immediate refetch on return, while production keeps
+   its existing Supabase realtime channel until cutover);
 10. goal-aware training summary and the remaining Edge Function behavior.
 
 Each item is a separate vertical slice: PostgreSQL migration, grants/RLS and
