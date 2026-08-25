@@ -871,10 +871,9 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
 
     await page.goto('/me/progress')
     const summary = page.locator('.client-progress-card')
-    await expect(summary.locator('.body-progress-figure')).toHaveCount(1)
-    await expect(summary.getByAltText('Атлетичная женщина, вид сзади')).toBeVisible()
+    await expect(summary.getByRole('group', { name: 'Атлетичная женщина, вид сзади' })).toBeVisible()
     await summary.getByRole('button', { name: 'Спереди' }).click()
-    await expect(summary.getByAltText('Атлетичная женщина, вид спереди')).toBeVisible()
+    await expect(summary.getByRole('group', { name: 'Атлетичная женщина, вид спереди' })).toBeVisible()
     await summary.getByLabel('Грудь. Лучший результат зоны: +20%').click()
     await summary.getByRole('button', { name: 'Сзади' }).click()
     await summary.getByLabel('Верх спины. Лучший результат зоны: +36%').press('Enter')
