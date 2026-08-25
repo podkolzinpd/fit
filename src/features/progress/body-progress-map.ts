@@ -1,6 +1,6 @@
 import type { MuscleGroup, PublishedTrainingSummary, TrainingProgressFactChange, Workout } from '../../shared/domain'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
-import { progressFactChangeLabel } from './progress-facts'
+import { progressFactComparisonLabel } from './progress-facts'
 
 export type BodyMapMode = 'progress' | 'load'
 
@@ -28,7 +28,8 @@ export interface BodyMapRegion {
   label: string
   percent: number
   valueLabel: string
-  summaryLabel: string
+  metricLabel: string
+  primaryDetail: string
   details: string[]
   intensity: number
 }
@@ -168,12 +169,6 @@ function favorableChange(changes: readonly TrainingProgressFactChange[]): Traini
   return undefined
 }
 
-function exerciseCountLabel(count: number): string {
-  if (count % 10 === 1 && count % 100 !== 11) return `${count} упражнение с прогрессом`
-  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return `${count} упражнения с прогрессом`
-  return `${count} упражнений с прогрессом`
-}
-
 function setCountLabel(count: number): string {
   if (count % 10 === 1 && count % 100 !== 11) return `${count} подход`
   if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return `${count} подхода`
@@ -190,7 +185,7 @@ export function progressBodyMap(summary: PublishedTrainingSummary): BodyMapData 
     const current = grouped.get(group) ?? []
     current.push({
       percent: Math.abs(change.changePercent),
-      detail: `${fact.exerciseName} · ${progressFactChangeLabel(change)}`,
+      detail: `${fact.exerciseName} · ${progressFactComparisonLabel(change)}`,
     })
     grouped.set(group, current)
   }
@@ -204,8 +199,9 @@ export function progressBodyMap(summary: PublishedTrainingSummary): BodyMapData 
         label: BODY_ZONE_LABELS[group],
         percent,
         valueLabel: `+${percent}%`,
-        summaryLabel: exerciseCountLabel(values.length),
-        details: sorted.slice(0, 3).map((value) => value.detail),
+        metricLabel: 'Лучший результат зоны',
+        primaryDetail: sorted[0]!.detail,
+        details: sorted.slice(1).map((value) => value.detail),
         intensity: Math.min(1, Math.max(.28, percent / 50)),
       }
     })
@@ -243,14 +239,14 @@ export function loadBodyMap(workouts: readonly Workout[], periodStart: string, p
       const percent = totalSets > 0 ? Math.max(1, Math.round(value.sets / totalSets * 100)) : 0
       const details = [...value.exercises.entries()]
         .sort((left, right) => right[1] - left[1])
-        .slice(0, 3)
         .map(([name, sets]) => `${name}: ${setCountLabel(sets)}`)
       return {
         group,
         label: BODY_ZONE_LABELS[group],
         percent,
         valueLabel: `${percent}%`,
-        summaryLabel: `${setCountLabel(value.sets)} из ${totalSets}`,
+        metricLabel: 'Доля всех выполненных подходов',
+        primaryDetail: `${value.sets} из ${totalSets} подходов`,
         details,
         intensity: Math.min(1, Math.max(.28, percent / 45)),
       }
@@ -259,9 +255,9 @@ export function loadBodyMap(workouts: readonly Workout[], periodStart: string, p
 
   return {
     mode: 'load',
-    title: 'Куда пришлась работа',
-    description: 'Доля подтверждённых подходов за выбранный период',
+    title: 'Куда пришлась нагрузка',
+    description: 'Распределение выполненных подходов за выбранный период',
     regions,
-    emptyMessage: 'После завершённой тренировки покажем, на какие зоны пришлась работа.',
+    emptyMessage: 'После завершённой тренировки покажем распределение нагрузки по зонам.',
   }
 }
