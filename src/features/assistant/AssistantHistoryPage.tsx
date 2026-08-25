@@ -14,6 +14,7 @@ import { useExerciseCatalog } from '../exercises'
 import { WorkoutComposer } from '../workouts/WorkoutComposer'
 import { formatLlmWorkoutText, parseWorkoutWithLlm } from '../workouts/llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
+import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
 
 type Message = { id: string; author: string; content: string; action: AssistantOrchestratorAction | null }
 
@@ -105,7 +106,7 @@ export function AssistantHistoryPage() {
     <section className="assistant-thread" aria-label="Диалог с ассистентом">
       {messages.map((message) => message.author === 'user'
         ? <article key={message.id} className="assistant-message assistant-message-user"><p>{message.content}</p></article>
-        : <article key={message.id} className="assistant-action-card"><p>{message.content}</p>{message.action && message.id === activeActionId && <AssistantAction action={message.action} timezone={actor?.timezone} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onSuggestion={(value) => void send(value)} onCancel={() => void send('Отменить')} onConfirm={() => void confirmSummary(message.id, message.action!)} onConfirmClient={(draft) => void confirmClient(message.id, draft)} running={runningSummaryIds.includes(message.id) || runningClientIds.includes(message.id)} completed={completedSummaryIds.includes(message.id) || completedClientIds.includes(message.id)} />}</article>)}
+        : <article key={message.id} className="assistant-action-card"><AssistantMessageContent content={message.content} />{message.action && message.id === activeActionId && <AssistantAction action={message.action} timezone={actor?.timezone} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onSuggestion={(value) => void send(value)} onCancel={() => void send('Отменить')} onConfirm={() => void confirmSummary(message.id, message.action!)} onConfirmClient={(draft) => void confirmClient(message.id, draft)} running={runningSummaryIds.includes(message.id) || runningClientIds.includes(message.id)} completed={completedSummaryIds.includes(message.id) || completedClientIds.includes(message.id)} />}</article>)}
       {error && <p className="assistant-card-hint" role="alert">{error}</p>}
     </section>
     <form className="assistant-composer" onSubmit={(event) => { event.preventDefault(); void send() }}>
@@ -119,9 +120,17 @@ export function AssistantHistoryPage() {
   </main>
 }
 
+function AssistantMessageContent({ content }: { content: string }) {
+  const lines = content.split('\n').map((line) => line.trim()).filter(Boolean)
+  const bullets = lines.filter((line) => line.startsWith('• '))
+  if (bullets.length) return <div className="assistant-message-copy"><p>{lines.find((line) => !line.startsWith('• '))}</p><ul>{bullets.map((line) => <li key={line}>{line.slice(2)}</li>)}</ul></div>
+  return <p>{content}</p>
+}
+
 type SummaryPayload = { step: string; clientId?: string; clientName?: string; candidates?: { id: string; fullName: string }[]; options?: string[]; periodStart?: string; periodEnd?: string; periodLabel?: string }
 type ClientDraftPayload = { step: string; fullName: string; gender: 'male' | 'female'; ageYears: number; heightCm: number; goal?: string; initialWeightKg?: number }
 type WorkoutDraftPayload = { step: string; clientId: string; clientName: string; transcript: string }
+type ProgramDraftPayload = { step: string; clientId: string; clientName: string; goal?: string | null; brief: string; sessions: unknown[] }
 
 function summaryPayload(action: AssistantOrchestratorAction): { clientId: string; periodStart: string; periodEnd: string } | undefined {
   const payload = action.payload as SummaryPayload
@@ -134,11 +143,36 @@ function AssistantAction({ action, timezone, onWorkoutSaved, onSuggestion, onCan
   const payload = action.payload as SummaryPayload
   if (action.tool === 'create_client_draft' && payload.step === 'confirm') return <ClientDraftCard payload={payload as ClientDraftPayload} onCancel={onCancel} onConfirm={onConfirmClient} running={running} completed={completed} />
   if (action.tool === 'record_workout' && payload.step === 'confirm') return <AssistantWorkoutDraftCard payload={payload as WorkoutDraftPayload} timezone={timezone} onCancel={onCancel} onSaved={onWorkoutSaved} />
+  if (action.tool === 'create_program_draft' && payload.step === 'confirm') return <ProgramDraftCard payload={payload as ProgramDraftPayload} timezone={timezone} onSaved={onWorkoutSaved} onCancel={onCancel} />
   if (action.tool !== 'summarize_progress') return <ActionPreview action={action} onCancel={onCancel} />
   if (payload.step === 'client' && Array.isArray(payload.candidates)) return <SummaryClientChoices candidates={payload.candidates} onSuggestion={onSuggestion} onCancel={onCancel} />
   if (payload.step === 'period' && typeof payload.clientName === 'string' && Array.isArray(payload.options)) return <SummaryPeriodChoices clientName={payload.clientName} options={payload.options} onSuggestion={onSuggestion} onCancel={onCancel} />
   if (summaryPayload(action) !== undefined) return <div className="assistant-progress-preview"><strong>{action.title}</strong><span>{action.description}</span><button type="button" onClick={onConfirm} disabled={running || completed}>{completed ? 'Сводка сформирована' : running ? 'Формирую…' : 'Сформировать сводку'}</button>{!completed && <CancelActionButton onCancel={onCancel} />}<small>Будут использованы только завершённые тренировки за выбранный период.</small></div>
   return <ActionPreview action={action} onCancel={onCancel} />
+}
+
+function ProgramDraftCard({ payload, timezone, onSaved, onCancel }: { payload: ProgramDraftPayload; timezone?: string; onSaved: () => void; onCancel: () => void }) {
+  const catalog = useExerciseCatalog()
+  const [sessions, setSessions] = useState(() => programSessions(payload.sessions))
+  const [dates, setDates] = useState(() => sessions.map((_, index) => { const date = new Date(`${todayInTimeZone(timezone)}T12:00:00`); date.setDate(date.getDate() + index * 7); return date.toISOString().slice(0, 10) }))
+  // One confirmation can be safely retried after a timeout: each planned
+  // workout keeps its own idempotency key for the lifetime of this card.
+  const [requestIds] = useState(() => programSessions(payload.sessions).map(() => crypto.randomUUID()))
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string>()
+  async function save() {
+    if (saving || saved) return
+    const workouts = programWorkoutDrafts(payload.clientId, sessions, dates, requestIds, catalog.exercises)
+    if (workouts === undefined) { setError('Уточните дату и названия упражнений: они должны совпадать с каталогом.'); return }
+    setSaving(true); setError(undefined)
+    try {
+      await Promise.all(workouts.map((workout) => workoutsRepository.save(workout)))
+      setSaved(true); onSaved()
+    } catch { setError('Не удалось добавить программу в расписание. Попробуйте ещё раз.') }
+    finally { setSaving(false) }
+  }
+  return <div className="assistant-program-draft" aria-label={`Черновик программы ${payload.clientName}`}><strong>Программа · {payload.clientName}</strong><small>{payload.goal ? `Цель: ${payload.goal}` : 'Цель уточнена в анкете'}</small>{sessions.map((session, index) => <fieldset key={`${session.day}-${index}`}><label>Дата<input type="date" value={dates[index] ?? ''} onChange={(event) => setDates((current) => current.map((value, position) => position === index ? event.target.value : value))} /></label><label>Название<input value={session.title} onChange={(event) => setSessions((current) => current.map((item, position) => position === index ? { ...item, title: event.target.value } : item))} /></label><div className="assistant-program-exercises">{session.exercises.map((exercise, exerciseIndex) => <div key={exerciseIndex} className="assistant-program-exercise"><label>Упражнение<input value={exercise.name} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { name: event.target.value }))} /></label><label>Подходы<input type="number" min="1" max="8" value={exercise.sets} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { sets: Number(event.target.value) }))} /></label><label>Повторы<input type="number" min="1" value={exercise.reps ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { reps: optionalProgramNumber(event.target.value) }))} /></label><label>Вес, кг<input type="number" min="0" step="0.5" value={exercise.weightKg ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { weightKg: optionalProgramNumber(event.target.value) }))} /></label><label>Время, мин<input type="number" min="0" step="1" value={exercise.durationMin ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { durationMin: optionalProgramNumber(event.target.value) }))} /></label><label>Дистанция, км<input type="number" min="0" step="0.1" value={exercise.distanceKm ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { distanceKm: optionalProgramNumber(event.target.value) }))} /></label></div>)}</div></fieldset>)}{error && <p className="assistant-card-hint" role="alert">{error}</p>}<button type="button" onClick={() => void save()} disabled={catalog.loading || saving || saved}>{saved ? 'Программа добавлена в расписание' : saving ? 'Добавляю…' : 'Добавить в расписание'}</button>{!saved && <CancelActionButton onCancel={onCancel} />}</div>
 }
 
 function parsedWorkoutExercises(result: WorkoutParseResponse, catalog: readonly ExerciseSnapshot[]): WorkoutDraft['exercises'] {

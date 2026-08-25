@@ -20,6 +20,7 @@ const executableCapabilities: readonly AssistantCapability[] = [
   { title: 'Сформировать сводку прогресса', description: 'по завершённым тренировкам выбранного клиента за период' },
   { title: 'Создать карточку клиента', description: 'после уточнения данных и вашего подтверждения' },
   { title: 'Подготовить запись тренировки', description: 'для выбранного клиента и открыть её в существующем разборе упражнений' },
+  { title: 'Подготовить программу тренировок', description: 'после анкеты и вашего подтверждения' },
 ]
 
 class HttpError extends Error {
@@ -217,7 +218,30 @@ export function validateAssistantTurnResponse(value: unknown): AssistantTurnResp
   const { tool, status, title, description, payload } = value.action
   if (!tools.includes(tool as Tool) || (status !== 'needs_input' && status !== 'proposed') || typeof title !== 'string' || typeof description !== 'string' || !record(payload)) return undefined
   if (!title.trim() || !description.trim() || title.length > 200 || description.length > 1_000) return undefined
+  if (tool === 'create_program_draft' && status === 'proposed' && !validProgramPayload(payload)) return undefined
   return { reply: value.reply.trim(), action: { tool: tool as Tool, status, title: title.trim(), description: description.trim(), payload } }
+}
+
+function validProgramPayload(payload: Record<string, unknown>): boolean {
+  if (payload.step !== 'confirm' || typeof payload.clientId !== 'string' || !UUID.test(payload.clientId) || typeof payload.clientName !== 'string' || typeof payload.brief !== 'string' || !Array.isArray(payload.sessions)) return false
+  return payload.sessions.length > 0 && payload.sessions.length <= 4 && payload.sessions.every((session) => {
+    if (!record(session) || typeof session.title !== 'string' || typeof session.day !== 'string' || !Array.isArray(session.exercises)) return false
+    return session.exercises.length > 0 && session.exercises.length <= 12 && session.exercises.every((exercise) => {
+      if (!record(exercise) || typeof exercise.name !== 'string' || !exercise.name.trim() || typeof exercise.sets !== 'number' || !Number.isInteger(exercise.sets) || exercise.sets < 1 || exercise.sets > 8) return false
+      return ['reps', 'weightKg', 'durationMin', 'distanceKm'].every((field) => exercise[field] === undefined || (typeof exercise[field] === 'number' && Number.isFinite(exercise[field]) && exercise[field] > 0))
+    })
+  })
+}
+
+function isGeneratedProgramForSelectedClient(result: AssistantTurnResponse, generatedDraft: AssistantTurnResponse | undefined): boolean {
+  const expected = actionRecord(generatedDraft?.action?.payload)
+  const actual = actionRecord(result.action?.payload)
+  return result.action?.tool === 'create_program_draft'
+    && result.action.status === 'proposed'
+    && expected?.step === 'generate'
+    && actual?.step === 'confirm'
+    && actual.clientId === expected.clientId
+    && actual.clientName === expected.clientName
 }
 
 export function allowsAssistantAction(message: string): boolean {
@@ -291,6 +315,34 @@ function workoutAction(title: string, description: string, status: AssistantActi
   return { reply: description, action: { tool: 'record_workout', status, title, description, payload } }
 }
 
+function programAction(title: string, description: string, status: AssistantAction['status'], payload: Record<string, unknown>): AssistantTurnResponse {
+  return { reply: description, action: { tool: 'create_program_draft', status, title, description, payload } }
+}
+
+function isProgramRequest(message: string): boolean {
+  const normalized = normalizeAssistantMessage(message)
+  return ['состав', 'созда', 'подготов', 'сдела'].some((verb) => normalized.includes(verb))
+    && ['программ', 'план трениров'].some((stem) => normalized.includes(stem))
+}
+
+/** Первые шаги программы намеренно детерминированы: модель получает только полный brief. */
+export function createProgramTurn(message: string, clients: readonly ClientContextRow[], latestAction: unknown): AssistantTurnResponse | undefined {
+  const previousAction = actionRecord(latestAction)
+  const continuation = previousAction?.tool === 'create_program_draft'
+  if (!isProgramRequest(message) && !continuation) return undefined
+  if (continuation && isSummaryCancellation(message)) return { reply: 'Хорошо, создание программы отменено.', action: null }
+  const payload = actionRecord(previousAction?.payload)
+  const candidates = summaryCandidatesFromAction(latestAction)
+  const selectedByNumber = normalizeAssistantMessage(message).match(/^(?:выбрать )?(\d{1,2})$/u)
+  const numbered = selectedByNumber === null ? undefined : candidates[Number(selectedByNumber[1]) - 1]
+  const matches = numbered === undefined ? matchingSummaryClients(message, clients) : clients.filter((client) => client.id === numbered.id)
+  if (matches.length > 1) return programAction('Выберите клиента', 'Нашла несколько клиентов с таким именем. Выберите одного из списка.', 'needs_input', { step: 'client', candidates: matches.map(({ id, fullName }) => ({ id, fullName })) })
+  const client = matches.length === 1 ? matches[0] : summaryClientFromAction(latestAction, clients)
+  if (!client) return programAction('Уточните клиента', 'Для кого составить программу тренировок? Напишите имя или фамилию клиента.', 'needs_input', { step: 'client' })
+  if (payload?.step !== 'brief') return programAction('Данные для программы', `Клиент: ${client.fullName}. Укажите опыт, ограничения и доступные дни. Цель из карточки: ${client.goal ?? 'не указана'}.`, 'needs_input', { step: 'brief', clientId: client.id, clientName: client.fullName, goal: client.goal })
+  return programAction('Черновик программы', `Собрала данные для ${client.fullName}. Следующим шагом подготовлю программу на основе анкеты для проверки.`, 'proposed', { step: 'generate', clientId: client.id, clientName: client.fullName, goal: client.goal, brief: message.trim() })
+}
+
 function workoutCandidatesFromAction(value: unknown): SummaryCandidate[] {
   return summaryCandidatesFromAction(value)
 }
@@ -302,7 +354,11 @@ function workoutTextProvided(message: string): boolean {
 
 function isWorkoutRecordRequest(message: string): boolean {
   const normalized = normalizeAssistantMessage(message)
+  // «Подготовить запись тренировки» — такой же явный вход в существующий
+  // разбор тренировки, как «записать» или «разобрать». Не отправляем его в
+  // свободный LLM-диалог: сначала детерминированно уточняем клиента и текст.
   const asksToRecord = ['запиши', 'записать', 'зафиксируй', 'зафиксировать', 'разбери', 'разобрать', 'продиктуй', 'продиктовать'].some((verb) => normalized.includes(verb))
+    || normalized.includes('подготов')
   return asksToRecord && ['тренировк', 'упражнен', 'подход', 'жим', 'тяга', 'присед', 'бег'].some((stem) => normalized.includes(stem))
 }
 
@@ -485,6 +541,13 @@ export async function runAssistantTurn(authorization: string, command: Assistant
     console.info('assistant_workout_draft_reply_persisted', { status: workoutDraft.action?.status })
     return workoutDraft
   }
+  const programDraft = createProgramTurn(command.message, clientRows, latestAssistantAction)
+  const programBriefReady = programDraft?.action?.tool === 'create_program_draft' && programDraft.action.payload.step === 'generate'
+  if (programDraft !== undefined && !programBriefReady) {
+    const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({ conversation_id: command.conversationId, author: 'assistant', content: programDraft.reply, action: programDraft.action }).select('id').single()
+    if (assistantInsertError || !assistantMessage?.id) throw new HttpError(503, 'history_unavailable')
+    return programDraft
+  }
   const summary = summaryTurn(command.message, clientRows, latestAssistantAction, new Date())
   if (summary !== undefined) {
     const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({
@@ -505,8 +568,8 @@ export async function runAssistantTurn(authorization: string, command: Assistant
       headers: { 'content-type': 'application/json', authorization: `Bearer ${iamToken}` },
       body: JSON.stringify({
         modelUri: `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`,
-        completionOptions: { stream: false, temperature: 0.2, maxTokens: allowsAssistantAction(command.message) ? '1200' : '120' }, jsonSchema: { schema },
-        messages: [{ role: 'user', text: modelPrompt(history, clientContext, progressContext, !allowsAssistantAction(command.message), usesInformalAddress(command.message)) }],
+        completionOptions: { stream: false, temperature: 0.2, maxTokens: (allowsAssistantAction(command.message) || programBriefReady) ? '1200' : '120' }, jsonSchema: { schema },
+        messages: [{ role: 'user', text: `${modelPrompt(history, clientContext, progressContext, !(allowsAssistantAction(command.message) || programBriefReady), usesInformalAddress(command.message))}${programBriefReady ? `\n\nСформируй именно action=create_program_draft, status=proposed. В payload обязательно верни step=confirm, clientId, clientName, goal, brief и sessions: массив до 4 тренировок с полями title, day, exercises. Каждое exercises — объект {name, sets, reps?, weightKg?, durationMin?, distanceKm?}: name — точное название упражнения; sets — целое 1..8. Для силовых обязательно указывай reps, вес добавляй только если он обоснован. Для кардио укажи durationMin или distanceKm. Не утверждай, что программа сохранена.` : ''}` }],
       }),
     })
   } catch (error) {
@@ -526,7 +589,12 @@ export async function runAssistantTurn(authorization: string, command: Assistant
   }
   const modelResult = validateAssistantTurnResponse(raw)
   if (!modelResult) throw new HttpError(502, 'orchestrator_invalid_response')
-  const result = allowsAssistantAction(command.message)
+  // The deterministic dialog owns the target client. The model only fills in
+  // sessions and may not switch a confirmed program to another client.
+  if (programBriefReady && !isGeneratedProgramForSelectedClient(modelResult, programDraft)) {
+    throw new HttpError(502, 'orchestrator_invalid_response')
+  }
+  const result = allowsAssistantAction(command.message) || programBriefReady
     ? modelResult
     : { ...modelResult, action: null }
   if (modelResult.action !== null && result.action === null) console.info('assistant_action_suppressed_for_small_talk')

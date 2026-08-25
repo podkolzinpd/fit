@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allowsAssistantAction, assistantCapabilitiesReply, createClientTurn, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse } from './index.js'
+import { allowsAssistantAction, assistantCapabilitiesReply, createClientTurn, createProgramTurn, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse } from './index.js'
 
 describe('assistant orchestrator contract', () => {
   it('accepts only bounded conversation turns', () => {
@@ -11,6 +11,10 @@ describe('assistant orchestrator contract', () => {
     expect(validateAssistantTurnResponse({ reply: 'Нужны уточнения', action: { tool: 'delete_everything', status: 'applied', title: 'x', description: 'x', payload: {} } })).toBeUndefined()
     const validResponse = validateAssistantTurnResponse({ reply: 'Нужны дни и ограничения', action: { tool: 'create_program_draft', status: 'needs_input', title: 'Черновик программы', description: 'Уточню данные', payload: { fields: ['Цель'] } } })
     expect(validResponse?.action?.tool).toBe('create_program_draft')
+    expect(validateAssistantTurnResponse({ reply: 'Готово', action: { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: '...', payload: { step: 'confirm', clientId: '6f0c4fb9-5f61-4d78-97aa-1f8b8d79c447', clientName: 'Антон', brief: 'Новичок', sessions: [{ title: 'Тренировка A', day: 'Понедельник', exercises: [{ name: 'Жим лёжа', sets: 3, reps: 8 }] }] } } })?.action?.tool).toBe('create_program_draft')
+    expect(validateAssistantTurnResponse({ reply: 'Готово', action: { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: '...', payload: { step: 'confirm' } } })).toBeUndefined()
+    expect(validateAssistantTurnResponse({ reply: 'Готово', action: { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: '...', payload: { step: 'confirm', clientId: 'client-1', clientName: 'Антон', brief: 'Новичок', sessions: [{ title: 'Тренировка A', day: 'Понедельник', exercises: [{ name: 'Жим лёжа', sets: 3, reps: 8 }] }] } } })).toBeUndefined()
+    expect(validateAssistantTurnResponse({ reply: 'Готово', action: { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: '...', payload: { step: 'confirm', clientId: '6f0c4fb9-5f61-4d78-97aa-1f8b8d79c447', clientName: 'Антон', brief: 'Новичок', sessions: [{ title: 'Тренировка A', day: 'Понедельник', exercises: [{ name: 'Жим лёжа', sets: 0, reps: 8 }] }] } } })).toBeUndefined()
   })
 
   it('allows action cards only for explicit application commands', () => {
@@ -63,5 +67,24 @@ describe('assistant orchestrator contract', () => {
     const draft = recordWorkoutTurn('жим лёжа 3 подхода по 50 кг 10 повторений', clients, client?.action)
     expect(draft?.action).toMatchObject({ tool: 'record_workout', status: 'proposed', payload: { step: 'confirm', clientName: 'Антон Ковалёв', transcript: 'жим лёжа 3 подхода по 50 кг 10 повторений' } })
     expect(recordWorkoutTurn('отмена', clients, draft?.action)).toEqual({ reply: 'Хорошо, запись тренировки отменена.', action: null })
+  })
+
+  it('keeps a request to prepare a workout in the deterministic recording flow', () => {
+    const clients = [{ id: 'client-1', fullName: 'Сан Саныч', goal: null, ageYears: null, heightCm: null, gender: null }]
+    const result = recordWorkoutTurn('Давай подготовим запись тренировки для Сан Саныча', clients, null)
+    expect(result?.action).toMatchObject({
+      tool: 'record_workout', status: 'needs_input', payload: { step: 'workout', clientId: 'client-1', clientName: 'Сан Саныч' },
+    })
+    expect(result?.reply).toContain('Напишите или продиктуйте')
+  })
+
+  it('collects a complete brief before proposing a training program', () => {
+    const clients = [{ id: 'client-1', fullName: 'Антон Ковалёв', goal: 'Набрать силу', ageYears: 32, heightCm: 180, gender: 'male' }]
+    const start = createProgramTurn('Составь программу тренировок', clients, null)
+    const client = createProgramTurn('Антон Ковалёв', clients, start?.action)
+    expect(client?.action?.payload).toMatchObject({ step: 'brief', clientId: 'client-1' })
+    const brief = createProgramTurn('Новичок, без ограничений, понедельник и четверг', clients, client?.action)
+    expect(brief?.action).toMatchObject({ tool: 'create_program_draft', status: 'proposed', payload: { step: 'generate', clientId: 'client-1' } })
+    expect(createProgramTurn('отмена', clients, brief?.action)).toEqual({ reply: 'Хорошо, создание программы отменено.', action: null })
   })
 })
