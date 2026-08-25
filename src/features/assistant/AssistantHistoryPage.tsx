@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { ChevronRightIcon } from '../../shared/icons'
 import { useAuth } from '../../app/auth-context'
 import { assistantRepository, type AssistantOrchestratorAction } from '../../data/repositories/assistant.repository'
 import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
-import { clientsRepository } from '../../data/repositories/clients.repository'
 import { VoiceInputButton } from '../voice-input'
 import { clientSchema } from '../../shared/validation'
 import { todayInTimeZone } from '../../shared/local-date'
 import type { ExerciseSnapshot, WorkoutDraft } from '../../shared/domain'
-import { workoutsRepository } from '../../data/repositories/workouts.repository'
 import { useExerciseCatalog } from '../exercises'
 import { WorkoutComposer } from '../workouts/WorkoutComposer'
 import { formatLlmWorkoutText, parseWorkoutWithLlm } from '../workouts/llm-workout-parser'
@@ -17,6 +16,7 @@ import type { WorkoutParseResponse } from '../../data/repositories/exercises.rep
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
 
 type Message = { id: string; author: string; content: string; action: AssistantOrchestratorAction | null }
+type FailedTurn = { turnId: string; message: string }
 
 export function AssistantHistoryPage() {
   const { actor } = useAuth()
@@ -25,13 +25,13 @@ export function AssistantHistoryPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [text, setText] = useState('')
   const [error, setError] = useState<string>()
+  const [failedTurn, setFailedTurn] = useState<FailedTurn>()
   const [sending, setSending] = useState(false)
   const [runningSummaryIds, setRunningSummaryIds] = useState<string[]>([])
   const [completedSummaryIds, setCompletedSummaryIds] = useState<string[]>([])
   const [runningClientIds, setRunningClientIds] = useState<string[]>([])
   const [completedClientIds, setCompletedClientIds] = useState<string[]>([])
-  const latestAssistantMessage = [...messages].reverse().find((message) => message.author === 'assistant')
-  const activeActionId = latestAssistantMessage?.action ? latestAssistantMessage.id : undefined
+  const [actionVersions, setActionVersions] = useState<Record<string, number>>({})
 
   useEffect(() => {
     if (!actor) return
@@ -40,37 +40,78 @@ export function AssistantHistoryPage() {
       const conversation = conversations?.[0] ?? (await assistantRepository.createConversation(actor.userId)).data
       if (!conversation) return
       setConversationId(conversation.id)
-      const { data } = await assistantRepository.listMessages(conversation.id)
-      setMessages((data ?? []).map((row) => ({ ...row, action: row.action as AssistantOrchestratorAction | null })))
+      const [{ data }, { data: actions }] = await Promise.all([
+        assistantRepository.listMessages(conversation.id), assistantRepository.listActions(),
+      ])
+      const actionByMessage = new Map((actions ?? []).filter((item) => item.conversation_id === conversation.id).map((item) => [item.assistant_message_id, item]))
+      const versions: Record<string, number> = {}
+      setMessages((data ?? []).map((row) => {
+        const action = row.action as AssistantOrchestratorAction | null
+        const durable = action === null ? undefined : actionByMessage.get(row.id)
+        if (durable) versions[durable.id] = durable.version
+        return { ...row, action: action === null ? null : { ...action, lifecycleStatus: durable?.status as AssistantOrchestratorAction['lifecycleStatus'], result: durable?.result as Record<string, unknown> | null | undefined } }
+      }))
+      setActionVersions(versions)
     })()
   }, [actor])
 
-  async function send(suggestedMessage?: string) {
-    const message = (suggestedMessage ?? text).trim()
+  async function send(suggestedMessage?: string, retry?: FailedTurn) {
+    const message = (retry?.message ?? suggestedMessage ?? text).trim()
     if (!message || !conversationId || sending) return
-    if (suggestedMessage === undefined) setText('')
+    if (retry === undefined && suggestedMessage === undefined) setText('')
     setSending(true)
     setError(undefined)
-    const submittedAt = Date.now()
-    setMessages((current) => [...current, {
-      id: `pending-user-${submittedAt}`,
-      author: 'user',
-      content: message,
-      action: null,
-    }])
-    try {
-      const turn = await assistantRepository.sendTurn(conversationId, message)
+    const turnId = retry?.turnId ?? crypto.randomUUID()
+    if (retry === undefined) {
       setMessages((current) => [...current, {
-        id: `pending-assistant-${submittedAt}`,
+        id: `pending-user-${turnId}`,
+        author: 'user',
+        content: message,
+        action: null,
+      }])
+    }
+    try {
+      const turn = await assistantRepository.sendTurn(conversationId, turnId, message)
+      setMessages((current) => [...current, {
+        id: `pending-assistant-${turnId}`,
         author: 'assistant',
         content: turn.reply,
         action: turn.action,
       }])
+      setFailedTurn(undefined)
     } catch {
+      setFailedTurn({ turnId, message })
+      if (retry === undefined && suggestedMessage === undefined) setText((current) => current || message)
       setError('Не удалось получить ответ ассистента. Попробуйте ещё раз.')
     } finally {
       setSending(false)
     }
+  }
+
+  async function applyAction(messageId: string, action: AssistantOrchestratorAction, input: object): Promise<void> {
+    if (!action.id) throw new Error('assistant_action_not_found')
+    const version = actionVersions[action.id] ?? 1
+    const result = await assistantRepository.applyAction(action.id, input, version)
+    if (result.error) throw result.error
+    const payload = result.data as { status?: string; version?: number } | null
+    if (payload?.status === 'failed') {
+      setActionVersions((current) => ({ ...current, [action.id!]: payload.version ?? version }))
+      setMessages((current) => current.map((message) => message.id !== messageId || message.action === null ? message : { ...message, action: { ...message.action, lifecycleStatus: 'failed', result: payload as Record<string, unknown> } }))
+      throw new Error('assistant_action_failed')
+    }
+    if (payload?.status !== 'applied') throw new Error('assistant_action_failed')
+    setActionVersions((current) => ({ ...current, [action.id!]: payload.version ?? version + 1 }))
+    setMessages((current) => current.map((message) => message.id !== messageId || message.action === null ? message : { ...message, action: { ...message.action, lifecycleStatus: 'applied', result: payload as Record<string, unknown> } }))
+  }
+
+  async function cancelAction(messageId: string, action: AssistantOrchestratorAction): Promise<boolean> {
+    if (!action.id) return true
+    const version = actionVersions[action.id] ?? 1
+    const result = await assistantRepository.cancelAction(action.id, version)
+    if (result.error) { setError('Не удалось отменить операцию. Обновите страницу и попробуйте ещё раз.'); return false }
+    setActionVersions((current) => ({ ...current, [action.id!]: (result.data as { version?: number } | null)?.version ?? version + 1 }))
+    setMessages((current) => current.map((message) => message.id !== messageId || message.action === null ? message : { ...message, action: { ...message.action, lifecycleStatus: 'cancelled' } }))
+    return true
   }
 
   async function confirmSummary(messageId: string, action: AssistantOrchestratorAction) {
@@ -80,6 +121,15 @@ export function AssistantHistoryPage() {
     setError(undefined)
     try {
       await trainingSummariesRepository.generate(payload.clientId, payload.periodStart, payload.periodEnd, false)
+      if (action.id) {
+        const version = actionVersions[action.id] ?? 1
+        const result = await assistantRepository.completeSummary(action.id, version)
+        if (result.error) throw result.error
+        const completed = result.data as { status?: string; version?: number; summaryId?: string } | null
+        if (completed?.status !== 'applied') throw new Error('assistant_summary_not_completed')
+        setActionVersions((current) => ({ ...current, [action.id!]: completed.version ?? version + 1 }))
+        setMessages((current) => current.map((message) => message.id !== messageId || message.action === null ? message : { ...message, action: { ...message.action, lifecycleStatus: 'applied', result: completed as Record<string, unknown> } }))
+      }
     } catch {
       setRunningSummaryIds((current) => current.filter((id) => id !== messageId))
       setError('Не удалось сформировать сводку. Попробуйте ещё раз.')
@@ -89,12 +139,12 @@ export function AssistantHistoryPage() {
     setCompletedSummaryIds((current) => [...current, messageId])
   }
 
-  async function confirmClient(messageId: string, draft: ClientDraftPayload) {
+  async function confirmClient(messageId: string, action: AssistantOrchestratorAction, draft: ClientDraftPayload) {
     if (runningClientIds.includes(messageId) || completedClientIds.includes(messageId)) return
     setRunningClientIds((current) => [...current, messageId]); setError(undefined)
     try {
       const parsed = clientSchema.parse({ fullName: draft.fullName, gender: draft.gender, ageYears: draft.ageYears, heightCm: draft.heightCm, goal: draft.goal || undefined, initialWeightKg: draft.initialWeightKg })
-      await clientsRepository.create({ ...parsed, ageUpdatedAt: todayInTimeZone(actor?.timezone), initialWeightRecordedOn: parsed.initialWeightKg === undefined ? undefined : todayInTimeZone(actor?.timezone) })
+      await applyAction(messageId, action, { ...parsed, ageUpdatedAt: todayInTimeZone(actor?.timezone), initialWeightRecordedOn: parsed.initialWeightKg === undefined ? undefined : todayInTimeZone(actor?.timezone) })
       setCompletedClientIds((current) => [...current, messageId])
     } catch { setError('Не удалось создать карточку клиента. Проверьте данные и попробуйте ещё раз.') }
     finally { setRunningClientIds((current) => current.filter((id) => id !== messageId)) }
@@ -106,8 +156,8 @@ export function AssistantHistoryPage() {
     <section className="assistant-thread" aria-label="Диалог с ассистентом">
       {messages.map((message) => message.author === 'user'
         ? <article key={message.id} className="assistant-message assistant-message-user"><p>{message.content}</p></article>
-        : <article key={message.id} className="assistant-action-card"><AssistantMessageContent content={message.content} />{message.action && message.id === activeActionId && <AssistantAction action={message.action} timezone={actor?.timezone} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onSuggestion={(value) => void send(value)} onCancel={() => void send('Отменить')} onConfirm={() => void confirmSummary(message.id, message.action!)} onConfirmClient={(draft) => void confirmClient(message.id, draft)} running={runningSummaryIds.includes(message.id) || runningClientIds.includes(message.id)} completed={completedSummaryIds.includes(message.id) || completedClientIds.includes(message.id)} />}</article>)}
-      {error && <p className="assistant-card-hint" role="alert">{error}</p>}
+        : <article key={message.id} className="assistant-action-card"><AssistantMessageContent content={message.content} />{message.action && <AssistantAction action={message.action} timezone={actor?.timezone} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onApplyAction={(input) => applyAction(message.id, message.action!, input)} onSuggestion={(value) => void send(value)} onCancel={() => { void (async () => { const cancelled = await cancelAction(message.id, message.action!); if (cancelled && !message.action?.id) await send('Отменить') })() }} onConfirm={() => void confirmSummary(message.id, message.action!)} onConfirmClient={(draft) => void confirmClient(message.id, message.action!, draft)} running={runningSummaryIds.includes(message.id) || runningClientIds.includes(message.id)} completed={completedSummaryIds.includes(message.id) || completedClientIds.includes(message.id) || message.action.lifecycleStatus === 'applied'} />}</article>)}
+      {error && <div className="assistant-card-hint" role="alert"><span>{error}</span>{failedTurn && <button type="button" onClick={() => void send(undefined, failedTurn)} disabled={sending}>Повторить отправку</button>}</div>}
     </section>
     <form className="assistant-composer" onSubmit={(event) => { event.preventDefault(); void send() }}>
       <label className="sr-only" htmlFor="assistant-history-message">Сообщение ассистенту</label>
@@ -139,11 +189,21 @@ function summaryPayload(action: AssistantOrchestratorAction): { clientId: string
     : undefined
 }
 
-function AssistantAction({ action, timezone, onWorkoutSaved, onSuggestion, onCancel, onConfirm, onConfirmClient, running, completed }: { action: AssistantOrchestratorAction; timezone?: string; onWorkoutSaved: () => void; onSuggestion: (value: string) => void; onCancel: () => void; onConfirm: () => void; onConfirmClient: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {
+function AssistantAction({ action, timezone, onWorkoutSaved, onApplyAction, onSuggestion, onCancel, onConfirm, onConfirmClient, running, completed }: { action: AssistantOrchestratorAction; timezone?: string; onWorkoutSaved: () => void; onApplyAction: (input: object) => Promise<void>; onSuggestion: (value: string) => void; onCancel: () => void; onConfirm: () => void; onConfirmClient: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {
   const payload = action.payload as SummaryPayload
+  if (action.lifecycleStatus === 'cancelled') return <div className="assistant-progress-preview"><strong>Сценарий отменён</strong><span>Изменения не внесены.</span></div>
+  if (action.lifecycleStatus === 'failed') return <div className="assistant-progress-preview"><strong>Операция не выполнена</strong><span>Изменения не внесены. Текст запроса и карточка сохранены в истории.</span></div>
+  if (action.lifecycleStatus === 'applied') {
+    const result = action.result ?? {}
+    const workoutId = typeof result.workoutId === 'string' ? result.workoutId : Array.isArray(result.workoutIds) && typeof result.workoutIds[0] === 'string' ? result.workoutIds[0] : undefined
+    const clientId = typeof result.clientId === 'string' ? result.clientId : undefined
+    const summaryClientId = typeof (action.payload as SummaryPayload).clientId === 'string' ? (action.payload as SummaryPayload).clientId : undefined
+    const href = workoutId ? `/workouts/${workoutId}` : clientId ? `/clients/${clientId}` : action.tool === 'summarize_progress' && summaryClientId ? `/progress/${summaryClientId}` : undefined
+    return <div className="assistant-progress-preview"><strong>Операция выполнена</strong><span>Результат сохранён. Повторное подтверждение не требуется.</span>{href && <Link to={href}>Открыть результат</Link>}</div>
+  }
   if (action.tool === 'create_client_draft' && payload.step === 'confirm') return <ClientDraftCard payload={payload as ClientDraftPayload} onCancel={onCancel} onConfirm={onConfirmClient} running={running} completed={completed} />
-  if (action.tool === 'record_workout' && payload.step === 'confirm') return <AssistantWorkoutDraftCard payload={payload as WorkoutDraftPayload} timezone={timezone} onCancel={onCancel} onSaved={onWorkoutSaved} />
-  if (action.tool === 'create_program_draft' && payload.step === 'confirm') return <ProgramDraftCard payload={payload as ProgramDraftPayload} timezone={timezone} onSaved={onWorkoutSaved} onCancel={onCancel} />
+  if (action.tool === 'record_workout' && payload.step === 'confirm') return <AssistantWorkoutDraftCard payload={payload as WorkoutDraftPayload} timezone={timezone} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} />
+  if (action.tool === 'create_program_draft' && payload.step === 'confirm') return <ProgramDraftCard payload={payload as ProgramDraftPayload} timezone={timezone} onApply={onApplyAction} onSaved={onWorkoutSaved} onCancel={onCancel} />
   if (action.tool !== 'summarize_progress') return <ActionPreview action={action} onCancel={onCancel} />
   if (payload.step === 'client' && Array.isArray(payload.candidates)) return <SummaryClientChoices candidates={payload.candidates} onSuggestion={onSuggestion} onCancel={onCancel} />
   if (payload.step === 'period' && typeof payload.clientName === 'string' && Array.isArray(payload.options)) return <SummaryPeriodChoices clientName={payload.clientName} options={payload.options} onSuggestion={onSuggestion} onCancel={onCancel} />
@@ -151,7 +211,7 @@ function AssistantAction({ action, timezone, onWorkoutSaved, onSuggestion, onCan
   return <ActionPreview action={action} onCancel={onCancel} />
 }
 
-function ProgramDraftCard({ payload, timezone, onSaved, onCancel }: { payload: ProgramDraftPayload; timezone?: string; onSaved: () => void; onCancel: () => void }) {
+function ProgramDraftCard({ payload, timezone, onApply, onSaved, onCancel }: { payload: ProgramDraftPayload; timezone?: string; onApply: (input: object) => Promise<void>; onSaved: () => void; onCancel: () => void }) {
   const catalog = useExerciseCatalog()
   const [sessions, setSessions] = useState(() => programSessions(payload.sessions))
   const [dates, setDates] = useState(() => sessions.map((_, index) => { const date = new Date(`${todayInTimeZone(timezone)}T12:00:00`); date.setDate(date.getDate() + index * 7); return date.toISOString().slice(0, 10) }))
@@ -167,7 +227,7 @@ function ProgramDraftCard({ payload, timezone, onSaved, onCancel }: { payload: P
     if (workouts === undefined) { setError('Уточните дату и названия упражнений: они должны совпадать с каталогом.'); return }
     setSaving(true); setError(undefined)
     try {
-      await Promise.all(workouts.map((workout) => workoutsRepository.save(workout)))
+      await onApply({ workouts })
       setSaved(true); onSaved()
     } catch { setError('Не удалось добавить программу в расписание. Попробуйте ещё раз.') }
     finally { setSaving(false) }
@@ -191,7 +251,7 @@ function parsedWorkoutExercises(result: WorkoutParseResponse, catalog: readonly 
   })
 }
 
-function AssistantWorkoutDraftCard({ payload, timezone, onCancel, onSaved }: { payload: WorkoutDraftPayload; timezone?: string; onCancel: () => void; onSaved: () => void }) {
+function AssistantWorkoutDraftCard({ payload, timezone, onCancel, onApply, onSaved }: { payload: WorkoutDraftPayload; timezone?: string; onCancel: () => void; onApply: (input: object) => Promise<void>; onSaved: () => void }) {
   const catalog = useExerciseCatalog()
   const [text, setText] = useState(payload.transcript)
   const [result, setResult] = useState<WorkoutParseResponse>()
@@ -199,6 +259,7 @@ function AssistantWorkoutDraftCard({ payload, timezone, onCancel, onSaved }: { p
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string>()
   const [saved, setSaved] = useState(false)
+  const [requestId] = useState(() => crypto.randomUUID())
   async function parse() {
     if (!text.trim() || catalog.loading || parsing) return
     setParsing(true); setError(undefined); setResult(undefined)
@@ -215,7 +276,7 @@ function AssistantWorkoutDraftCard({ payload, timezone, onCancel, onSaved }: { p
     if (!exercises.length) return
     setSaving(true); setError(undefined)
     try {
-      await workoutsRepository.saveCompleted({ clientId: payload.clientId, workoutDate: todayInTimeZone(timezone), exercises })
+      await onApply({ workout: { requestId, clientId: payload.clientId, workoutDate: todayInTimeZone(timezone), exercises } })
       setSaved(true); onSaved()
     } catch { setError('Не удалось сохранить тренировку. Проверьте данные и попробуйте ещё раз.') }
     finally { setSaving(false) }

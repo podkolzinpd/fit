@@ -172,7 +172,7 @@ describe('AppLayout: пилот вкладки ассистента', () => {
     expect(within(navigation).queryByRole('link', { name: 'Ассистент' })).toBeNull()
   })
 
-  it('клиент из allowlist получает вкладку ассистента в своей навигации', () => {
+  it('клиент не получает trainer-only вкладку ассистента', () => {
     vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
     vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'pilot-client')
     authState.role = 'client'
@@ -180,6 +180,6 @@ describe('AppLayout: пилот вкладки ассистента', () => {
     renderLayout('/me')
     const navigation = screen.getByRole('navigation', { name: 'Основная навигация' })
     expect(within(navigation).getByRole('link', { name: 'Кабинет' })).toBeInTheDocument()
-    expect(within(navigation).getByRole('link', { name: 'Ассистент' })).toHaveAttribute('href', '/assistant')
+    expect(within(navigation).queryByRole('link', { name: 'Ассистент' })).toBeNull()
   })
 })

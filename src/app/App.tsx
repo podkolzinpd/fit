@@ -67,9 +67,9 @@ const router = createBrowserRouter([
     { path: '/workouts/:workoutId', element: <WorkoutDetailPage /> },
     { path: '/workouts/:workoutId/live', element: <LiveWorkoutPage /> },
     { path: '/workouts/:workoutId/history/:exerciseRef', element: <ExerciseHistoryPage /> },
-    { element: <AssistantPilotOnly />, children: [
+    { element: <TrainerOnly />, children: [{ element: <AssistantPilotOnly />, children: [
       { path: '/assistant', element: <AssistantPage /> },
-    ] },
+    ] }] },
     { element: <TrainerOnly />, children: [
       { path: '/today', element: <TodayPage /> },
       { path: '/clients', element: <ClientsPage /> },

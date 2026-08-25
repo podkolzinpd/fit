@@ -15,10 +15,10 @@ saved. Scenario selection is intentionally not rendered in the product UI:
 the future orchestrator derives it from the text or SpeechKit transcript.
 
 The trainer enters it from the existing bottom tab bar on the non-immersive
-start screen (`Сегодня → Клиенты → Ассистент → Расписание`). A client in the
-same local allowlist gets the same tab between `Прогресс` and `Профиль`. There
-is no close button: the same tabs or the platform back gesture return to the
-previous task.
+start screen (`Сегодня → Клиенты → Ассистент → Расписание`). The pilot is
+trainer-only: clients do not receive the tab and `/assistant` is protected by
+the trainer route guard. There is no close button: the same tabs or the
+platform back gesture return to the previous task.
 
 ## Why the renderer comes before AI
 
