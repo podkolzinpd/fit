@@ -5,23 +5,17 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-25
-Проверенный базовый `main`: `57f570a` (`ci(e2e): parallelize safe browser checks (#559)`)
+Проверенный базовый `main`: `5244032` (`feat(yandex): complete workout lifecycle (#551)`)
 
 ## Активное изменение
 
-- Ветка `codex/workout-lifecycle-completion` закрывает non-Live workout
-  lifecycle в изолированном Yandex API без изменения production routing и UI.
-- Миграция `000014` добавляет идемпотентное создание завершённого workout,
-  исправление факта с сохранением исходного плана, атомарную запись результата
-  прошлого назначения, cancel/reschedule, комментарий клиента и author-scoped
-  soft-delete.
-- Все команды используют optimistic version, actor context и tenant-проверки;
-  `fit_api` по-прежнему не получает прямых write-grants на domain tables.
-- Автоматический stage smoke проверяет completed create/replay/edit, planned
-  result, cancel/reschedule и итоговый read model до принятия новой revision.
-- WebKit behavior CI изолирует 40 сценариев в восьми короткоживущих browser
-  shards, распределённых между двумя параллельными линиями с отдельной локальной
-  БД. Упавший shard повторяется один раз в новом контейнере.
+- `YAFIT-364` уточняет интерактивную карту тела в Client Progress: показываются
+  только зоны с подтверждённым результатом или выполненной работой.
+- На теле остаются небольшие точки без цифр; выбранная точка подсвечивает одну
+  анатомическую зону и открывает точную метрику с изменением от и до.
+- Женский профиль получает отдельную женскую front/back-фигуру, мужской или
+  незаполненный — мужскую. Режим «Работа» показывает абсолютное число подходов
+  и их долю. Trainer Progress и LLM-контракт не меняются.
 
 ## Последняя проверенная продуктовая точка
 
@@ -31,6 +25,9 @@
 - Прошлый план можно завершить через предзаполненную форму факта без перехода в
   Live и без дубликата; отмена оставляет план неизменным. Тренер может сохранить
   завершённую тренировку на выбранную дату, включая будущую.
+- Yandex stage поддерживает non-Live lifecycle: создание и исправление факта,
+  результат прошлого назначения, cancel/reschedule, комментарий клиента и
+  author-scoped soft-delete с optimistic version и tenant-проверками.
 - Единый мобильный viewport-контракт восстанавливает полную высоту Trainer,
   Client и авторизации после закрытия клавиатуры даже при запоздавшем resize
   WebKit. Создание тренировки использует каталог «Силовая» и «Бег», недавние
@@ -40,9 +37,6 @@
   не исправляется скрыто.
 - Сохранённые тренировки используют компактную хронику упражнений с раскрытием
   подходов и отдельной кнопкой истории; копирование и удаление находятся в меню.
-- Клиентская карточка общей ИИ-сводки показывает лучший подтверждённый факт,
-  честные счётчики и до трёх достижений; подробная динамика остаётся в нижнем
-  листе, а trainer-версия и LLM-контракт не меняются.
 - Общая ИИ-сводка и production-разбор тренировки вызываются через Yandex Cloud
   Functions. Локальный разбор остаётся в локальном Supabase. Форма обратной связи
   сохраняет сообщения в `app_feedback`; канал уведомлений решается отдельно.
@@ -60,17 +54,16 @@
   доставляются автоматически через GitHub OIDC, private runner и forward-only
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
-  exercises и workout aggregate работают на stage. Миграции `000001–000013`,
-  API revision, Live core и структурные Live-команды доставлены автоматически.
+  exercises и workout aggregate работают на stage. Миграции `000001–000014`,
+  API revision, Live core и non-Live workout lifecycle доставлены автоматически.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
 - Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
   `main` без force-push; callback URL и CORS origin не меняются. Все остальные
   ветки исключены из Vercel Git deployments.
 - Callback показывает pilot profile, clients, connections и training data, но
-  pilot UI остаётся read-only. Client/custom-exercise и Planned/Live writes уже
-  доступны через stage API; активная ветка готовит non-Live lifecycle delivery.
-  Ни один из этих путей не затрагивает production routing.
+  pilot UI остаётся read-only. Client/custom-exercise и Planned/Live writes
+  доступны только через stage API и не затрагивают production routing.
 - Реальный invite → join → leave/remove smoke на двух разрешённых Yandex ID
   остаётся внешней stage-проверкой; локальный lifecycle и RLS-матрица зелёные.
 - Полный cutover не выполнен. Production frontend и основной tenant продолжают
@@ -78,17 +71,18 @@
 
 ## Проверки активной ветки
 
-- Локальный Yandex PostgreSQL 17 применяет `000014`; 21 интеграционный
-  actor/RLS-тест зелёный, включая cross-tenant и идемпотентность.
-- API gate зелёный: lint, TypeScript, 141 unit/API-тест и production build;
-  12 frontend repository tests и 50 infra/workflow policy tests зелёные.
-- Полный root `npm run check`, `npm run db:reset` и `npm run db:test`
-  зелёные; stage delivery `000014` ожидает merge.
+- Целевые unit/component: 34 сценария карты и клиентской сводки зелёные;
+  TypeScript зелёный.
+- Три целевых WebKit-сценария 390/430 px и два визуальных baseline зелёные;
+  горизонтального переполнения нет.
+- Общий frontend-контроль: 724 теста, coverage, database types, iOS permissions
+  и infra policy зелёные. Полный `npm run check` доходит до существующего API
+  lint в `assistant-orchestrator/index.ts`, который эта ветка не меняет.
 
 ## Ближайший порядок
 
-1. Завершить non-Live workout lifecycle PR, проверить CI и автоматическую
-   доставку `000014` на stage.
+1. Завершить `YAFIT-364` отдельным PR, проверить полный control, CI, merge и
+   production.
 2. Отдельно портировать feedback/reactions и вопросы/ответы после тренировки.
 3. Отдельно портировать progress/goals и derived progress/chronicle reads.
 4. После полного tenant-контракта провести две миграционные репетиции; только

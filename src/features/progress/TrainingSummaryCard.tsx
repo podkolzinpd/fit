@@ -7,6 +7,7 @@ import { workoutsRepository } from '../../data/repositories/workouts.repository'
 import type {
   ClientGoal,
   ClientTrainingSummary,
+  Gender,
   PublishedTrainingSummary,
   TrainingSummary,
   TrainingSummaryMetrics,
@@ -14,7 +15,7 @@ import type {
 } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
 import { formatLocalDate, normalizeTimeZone, todayInTimeZone, type LocalDate } from '../../shared/local-date'
-import { AsyncView, Coachmark, Field } from '../../shared/ui'
+import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { ClientProgressGoalSection } from './ClientProgressGoalSection'
 import { ClientBodyProgressMap } from './ClientBodyProgressMap'
@@ -316,7 +317,11 @@ function ClientCopyEditor({ summary, clientId, onChanged }: {
   </form>
 }
 
-export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId: string; profileGoal?: string | null }) {
+export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null }: {
+  clientId: string
+  profileGoal?: string | null
+  gender?: Gender | null
+}) {
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
   const timeZone = normalizeTimeZone(actor?.timezone)
@@ -378,9 +383,9 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
     >
       {summary ? <ClientSummaryContent
           summary={summary}
-          userId={actor?.userId}
           goal={goal.data}
           profileGoal={profileGoal}
+          gender={gender}
           today={today}
           goalLoading={goal.isLoading}
           goalError={goal.error}
@@ -415,11 +420,11 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
   </section>
 }
 
-function ClientSummaryContent({ summary, userId, goal, profileGoal, today, goalLoading, goalError, onGoalRetry, workouts, workoutsLoading, workoutsError, onWorkoutsRetry }: {
+function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalLoading, goalError, onGoalRetry, workouts, workoutsLoading, workoutsError, onWorkoutsRetry }: {
   summary: PublishedTrainingSummary
-  userId: string | undefined
   goal: ClientGoal | null | undefined
   profileGoal?: string | null
+  gender: Gender | null
   today: LocalDate
   goalLoading: boolean
   goalError: Error | null
@@ -432,18 +437,14 @@ function ClientSummaryContent({ summary, userId, goal, profileGoal, today, goalL
   const [detailsOpen, setDetailsOpen] = useState(false)
   const presentation = clientProgressPresentation(summary)
   return <>
-    <Coachmark
-      id="client-body-progress-map-2026-08"
-      userId={userId}
-      title="Твоё тело в цифрах"
-      description="Переключай прогресс и нагрузку, нажимай на зоны и смотри, какие упражнения дали результат."
-    ><ClientBodyProgressMap
+    <ClientBodyProgressMap
       summary={summary}
       workouts={workouts}
+      gender={gender}
       loadLoading={workoutsLoading}
       loadError={workoutsError}
       onLoadRetry={onWorkoutsRetry}
-    /></Coachmark>
+    />
     <div className={`ai-progress-stats count-${presentation.stats.length}`}>
       {presentation.stats.map((stat) => <div key={stat.label}><strong>{stat.value}</strong><span>{stat.label}</span></div>)}
     </div>
