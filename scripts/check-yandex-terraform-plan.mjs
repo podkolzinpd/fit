@@ -78,6 +78,21 @@ const hasOnlyTopLevelChanges = (resource, allowedFields) => {
   )
 }
 
+const changedTopLevelFields = (resource) => {
+  const before = resource.change.before ?? {}
+  const after = resource.change.after ?? {}
+  return [...new Set([...Object.keys(before), ...Object.keys(after)])]
+    .filter((field) => !isDeepStrictEqual(before[field], after[field]))
+    .sort()
+}
+
+const describeUnexpectedAutomaticChange = (resource) => {
+  const fields = changedTopLevelFields(resource)
+  return fields.length === 0
+    ? resource.address
+    : `${resource.address} [${fields.join(', ')}]`
+}
+
 const hasBoundedImageRetention = (resource) => {
   const rules = resource.change.after?.rule
   return Array.isArray(rules)
@@ -161,7 +176,7 @@ if (unexpectedPublicResources.length > 0) {
 }
 if (unexpectedAutomaticChanges.length > 0) {
   throw new Error(
-    `Automatic stage deploy contains new or cost-sensitive infrastructure changes: ${unexpectedAutomaticChanges.map((resource) => resource.address).join(', ')}`,
+    `Automatic stage deploy contains new or cost-sensitive infrastructure changes: ${unexpectedAutomaticChanges.map(describeUnexpectedAutomaticChange).join(', ')}`,
   )
 }
 if (destructive.length > 0 && !allowDestroy) {

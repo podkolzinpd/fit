@@ -12,6 +12,12 @@ on:
       - 'scripts/verify-yandex-stage-access.mjs'
       - 'scripts/yandex-github-oidc.sh'
   workflow_dispatch:
+    inputs:
+      plan_only:
+        description: 'Create and validate the Terraform plan without applying it'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -91,7 +97,7 @@ jobs:
   deploy:
     name: Migrate and deploy API
     needs: plan
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && inputs.plan_only != true
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -1085,7 +1091,7 @@ jobs:
   publish_deployment:
     name: Publish yandex-stage deployment status
     needs: [plan, deploy]
-    if: always() && github.ref == 'refs/heads/main'
+    if: always() && github.ref == 'refs/heads/main' && inputs.plan_only != true
     runs-on: ubuntu-24.04
     permissions:
       deployments: write
