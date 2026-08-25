@@ -126,4 +126,47 @@ describe('VoiceInputButton', () => {
     expect(cancel).toHaveBeenCalledOnce()
     expect(onTranscript).not.toHaveBeenCalled()
   })
+
+  it('renders a compact icon control for chat composers', async () => {
+    const user = userEvent.setup()
+    const onTranscript = vi.fn()
+    render(<VoiceInputButton
+      variant="icon"
+      idleLabel="Голосовой ввод"
+      onTranscript={onTranscript}
+      source="assistant"
+      streamingFactory={() => ({
+        start: vi.fn((_partial: (text: string) => void, onFinal: (text: string) => void) => { onFinal('Покажи сводку Антона'); return Promise.resolve() }),
+        stop: vi.fn().mockResolvedValue(undefined),
+        rotate: vi.fn(),
+      })}
+    />)
+
+    await user.click(screen.getByRole('button', { name: 'Голосовой ввод' }))
+    await user.click(screen.getByRole('button', { name: /Завершить голосовой ввод/ }))
+
+    await waitFor(() => expect(onTranscript).toHaveBeenCalledWith('Покажи сводку Антона'))
+    expect(screen.getByText(/Текст добавлен в заметку/)).toBeVisible()
+  })
+
+  it('can suppress the intermediate transcript status when a chat sends it immediately', async () => {
+    const user = userEvent.setup()
+    render(<VoiceInputButton
+      variant="icon"
+      idleLabel="Голосовой ввод"
+      showTranscriptStatus={false}
+      onTranscript={vi.fn()}
+      source="assistant"
+      streamingFactory={() => ({
+        start: vi.fn((_partial: (text: string) => void, onFinal: (text: string) => void) => { onFinal('Привет'); return Promise.resolve() }),
+        stop: vi.fn().mockResolvedValue(undefined),
+        rotate: vi.fn(),
+      })}
+    />)
+
+    await user.click(screen.getByRole('button', { name: 'Голосовой ввод' }))
+    await user.click(screen.getByRole('button', { name: /Завершить голосовой ввод/ }))
+
+    await waitFor(() => expect(screen.queryByText(/Текст добавлен в заметку/)).not.toBeInTheDocument())
+  })
 })

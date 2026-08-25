@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-25
-Проверенный базовый `main`: `cdcf650` (`fix(vercel): exclude slash branches from previews (#558)`)
+Проверенный базовый `main`: `ba1d45c` (`feat(assistant): send SpeechKit transcripts to chat (#555)`)
 
 ## Активное изменение
 
@@ -39,6 +39,10 @@
   сохраняет сообщения в `app_feedback`; канал уведомлений решается отдельно.
 - PWA предлагает понятную установку на домашний экран. Ручной беговой MVP и
   локальный public-domain каталог упражнений работают без внешнего медиасервиса.
+- Client Progress сохраняет короткую сводку YAFIT-362: честные счётчики,
+  достижения, связь с целью, один следующий ориентир и подробный анализ в
+  нижнем листе. YAFIT-363 добавляет к ней карту тела, не выдавая рост результата
+  упражнения за рост мышечной массы.
 
 ## Инфраструктура и Yandex Cloud
 
@@ -66,17 +70,15 @@
 
 - Целевые scope/workflow-тесты зелёные: 6 сценариев.
 - Все 49 infra policy тестов зелёные.
-- Root lint, TypeScript, 699 frontend-тестов с coverage, DB types и iOS
-  permissions зелёные. Полный `npm run check` дошёл до существующей в `main`
-  API lint-ошибки `no-unsafe-assignment` в
-  `services/api/src/assistant-orchestrator/index.ts:334`; ветка этот файл не меняет.
+- Root lint, TypeScript, 715 frontend-тестов с coverage, DB types и iOS
+  permissions зелёные. Полный `npm run check` временно блокирует известный API
+  lint из `main`; исправление находится в отдельном PR #551.
 
 ## Ближайший порядок
 
-1. Завершить `YAFIT-362` отдельным PR, проверить Client WebKit 390/430 px, CI,
-   merge и production.
-2. Доставить client/profile/custom-exercise mutations на stage и расширить
-   автоматический delivery smoke на новые команды.
+1. Завершить ускорение E2E, проверить обе параллельные WebKit-линии и единый
+   обязательный check.
+2. Завершить non-Live workout lifecycle PR #551 и stage delivery `000014`.
 3. Отдельно портировать feedback/reactions и вопросы/ответы после тренировки.
 4. Отдельно портировать progress/goals и derived progress/chronicle reads.
 5. После полного tenant-контракта провести две миграционные репетиции; только
