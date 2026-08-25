@@ -98,7 +98,7 @@ export function MyProgressPage() {
   }
   return <Page className="client-progress-page" title="Мой прогресс"><AsyncView loading={mine.isLoading || entries.isLoading || metrics.isLoading} error={mine.error ?? entries.error ?? metrics.error} empty={!mine.data} onRetry={() => { void mine.refetch(); void entries.refetch(); void metrics.refetch() }}
     emptyTitle="Сначала создайте личную карточку" emptyDescription="Она связывает тренировки, замеры и анализ прогресса в одном профиле." emptyAction={<Link className="button" to="/me">Создать карточку</Link>}>
-    {entries.data && mine.data && <div className="client-progress-stack"><ClientTrainingSummaryCard clientId={mine.data.id} profileGoal={mine.data.goal} />
+    {entries.data && mine.data && <div className="client-progress-stack"><ClientTrainingSummaryCard clientId={mine.data.id} profileGoal={mine.data.goal} gender={mine.data.gender} />
       <RunningProgressCard clientId={mine.data.id} />
       <section className="client-progress-measurement">
         <div className="client-progress-measurement-head"><div><p className="eyebrow">ЗАМЕРЫ И ПОКАЗАТЕЛИ</p><h2>{entries.data[0] ? 'Последний замер' : 'Замеров пока нет'}</h2></div></div>
