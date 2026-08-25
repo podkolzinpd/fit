@@ -1,12 +1,13 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 const completionUrl = 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion'
+const releaseSha = process.env.RELEASE_SHA?.trim() || 'unknown'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const tools = ['record_workout', 'create_client_draft', 'create_program_draft', 'schedule_program', 'summarize_progress'] as const
 type Tool = typeof tools[number]
 
-export type AssistantTurnRequest = { conversationId: string; message: string }
-export type AssistantAction = { tool: Tool; status: 'needs_input' | 'proposed'; title: string; description: string; payload: Record<string, unknown> }
+export type AssistantTurnRequest = { conversationId: string; message: string; turnId?: string }
+export type AssistantAction = { id?: string; tool: Tool; status: 'needs_input' | 'proposed'; title: string; description: string; payload: Record<string, unknown> }
 export type AssistantTurnResponse = { reply: string; action: AssistantAction | null }
 
 type AssistantCapability = { title: string; description: string }
@@ -208,18 +209,42 @@ export function readAssistantTurnRequest(value: unknown): AssistantTurnRequest |
   if (!record(value) || typeof value.conversation_id !== 'string' || typeof value.message !== 'string') return undefined
   const message = value.message.trim()
   if (!UUID.test(value.conversation_id) || message.length === 0 || message.length > 4_000) return undefined
-  return { conversationId: value.conversation_id, message }
+  const turnId = value.turn_id === undefined ? undefined : typeof value.turn_id === 'string' && UUID.test(value.turn_id) ? value.turn_id : undefined
+  if (value.turn_id !== undefined && turnId === undefined) return undefined
+  return { conversationId: value.conversation_id, ...(turnId === undefined ? {} : { turnId }), message }
+}
+
+export function isTurnIdReuse(existingContent: unknown, requestedContent: string): boolean {
+  return typeof existingContent === 'string' && existingContent !== requestedContent
 }
 
 export function validateAssistantTurnResponse(value: unknown): AssistantTurnResponse | undefined {
   if (!record(value) || typeof value.reply !== 'string' || value.reply.trim().length === 0 || value.reply.length > 4_000) return undefined
   if (value.action === null) return { reply: value.reply.trim(), action: null }
   if (!record(value.action)) return undefined
-  const { tool, status, title, description, payload } = value.action
+  const { id, tool, status, title, description, payload } = value.action
   if (!tools.includes(tool as Tool) || (status !== 'needs_input' && status !== 'proposed') || typeof title !== 'string' || typeof description !== 'string' || !record(payload)) return undefined
   if (!title.trim() || !description.trim() || title.length > 200 || description.length > 1_000) return undefined
-  if (tool === 'create_program_draft' && status === 'proposed' && !validProgramPayload(payload)) return undefined
-  return { reply: value.reply.trim(), action: { tool: tool as Tool, status, title: title.trim(), description: description.trim(), payload } }
+  if (status === 'proposed' && !validProposedPayload(tool as Tool, payload)) return undefined
+  if (id !== undefined && (typeof id !== 'string' || !UUID.test(id))) return undefined
+  return { reply: value.reply.trim(), action: { ...(id === undefined ? {} : { id }), tool: tool as Tool, status, title: title.trim(), description: description.trim(), payload } }
+}
+
+function validProposedPayload(tool: Tool, payload: Record<string, unknown>): boolean {
+  if (tool === 'create_program_draft' || tool === 'schedule_program') return validProgramPayload(payload)
+  if (tool === 'record_workout') return payload.step === 'confirm'
+    && typeof payload.clientId === 'string' && UUID.test(payload.clientId)
+    && typeof payload.clientName === 'string' && typeof payload.transcript === 'string'
+    && payload.transcript.trim().length > 0 && payload.transcript.length <= 4_000
+  if (tool === 'create_client_draft') return payload.step === 'confirm'
+    && typeof payload.fullName === 'string' && payload.fullName.trim().length >= 2
+    && (payload.gender === 'male' || payload.gender === 'female')
+    && typeof payload.ageYears === 'number' && Number.isInteger(payload.ageYears) && payload.ageYears > 0 && payload.ageYears < 120
+    && typeof payload.heightCm === 'number' && Number.isFinite(payload.heightCm) && payload.heightCm > 0 && payload.heightCm < 260
+  if (tool === 'summarize_progress') return payload.step === 'confirm'
+    && typeof payload.clientId === 'string' && UUID.test(payload.clientId)
+    && typeof payload.periodStart === 'string' && typeof payload.periodEnd === 'string'
+  return false
 }
 
 function validProgramPayload(payload: Record<string, unknown>): boolean {
@@ -227,7 +252,7 @@ function validProgramPayload(payload: Record<string, unknown>): boolean {
   return payload.sessions.length > 0 && payload.sessions.length <= 4 && payload.sessions.every((session) => {
     if (!record(session) || typeof session.title !== 'string' || typeof session.day !== 'string' || !Array.isArray(session.exercises)) return false
     return session.exercises.length > 0 && session.exercises.length <= 12 && session.exercises.every((exercise) => {
-      if (!record(exercise) || typeof exercise.name !== 'string' || !exercise.name.trim() || typeof exercise.sets !== 'number' || !Number.isInteger(exercise.sets) || exercise.sets < 1 || exercise.sets > 8) return false
+      if (!record(exercise) || typeof exercise.name !== 'string' || !exercise.name.trim() || (exercise.exerciseRef !== undefined && (typeof exercise.exerciseRef !== 'string' || !exercise.exerciseRef.trim())) || typeof exercise.sets !== 'number' || !Number.isInteger(exercise.sets) || exercise.sets < 1 || exercise.sets > 8) return false
       return ['reps', 'weightKg', 'durationMin', 'distanceKm'].every((field) => exercise[field] === undefined || (typeof exercise[field] === 'number' && Number.isFinite(exercise[field]) && exercise[field] > 0))
     })
   })
@@ -462,6 +487,7 @@ function modelPrompt(history: readonly { author: string; content: string }[], cl
     'Ты дружелюбная, но очень краткая болталка фитнес-приложения. Отвечай по-русски не более чем двумя короткими предложениями.',
     `Обращайся к пользователю на ${informal ? 'ты' : 'вы'}.`,
     'Всегда возвращай action=null. Не перечисляй функции приложения и не обещай выполнить действие.',
+    'Не ставь диагнозов и не давай опасных советов про боль, травмы, лекарства, голодание или экстремальные нагрузки. При боли или травме рекомендуй обратиться к врачу/специалисту.',
     `Недавняя история:\n${history.slice(-6).map((entry) => `${entry.author === 'user' ? 'Пользователь' : 'Ассистент'}: ${entry.content}`).join('\n')}`,
   ].join('\n\n')
   return [
@@ -477,26 +503,87 @@ function modelPrompt(history: readonly { author: string; content: string }[], cl
   ].join('\n\n')
 }
 
+type AssistantService = SupabaseClient
+
+function responseFromStoredMessage(value: unknown): AssistantTurnResponse | undefined {
+  if (!record(value) || typeof value.content !== 'string') return undefined
+  const parsed = value.action === null || value.action === undefined
+    ? null
+    : validateAssistantTurnResponse({ reply: value.content, action: value.action })?.action ?? null
+  return { reply: value.content, action: parsed }
+}
+
+async function persistAssistantResponse(
+  service: AssistantService,
+  conversationId: string,
+  turnId: string,
+  result: AssistantTurnResponse,
+): Promise<AssistantTurnResponse> {
+  const action = result.action === null || result.action.status === 'needs_input'
+    ? result.action
+    : { ...result.action, id: crypto.randomUUID() }
+  const response: AssistantTurnResponse = { reply: result.reply, action }
+  const persisted = await service.rpc('persist_assistant_response', {
+    p_conversation_id: conversationId,
+    p_turn_id: turnId,
+    p_content: response.reply,
+    p_action: response.action,
+  })
+  if (persisted.error) throw new HttpError(503, 'history_unavailable')
+  const persistedData = persisted.data as unknown
+  if (record(persistedData) && persistedData.deduplicated === true) {
+    const stored = responseFromStoredMessage(persistedData)
+    if (stored === undefined) throw new HttpError(503, 'history_unavailable')
+    return stored
+  }
+  return response
+}
+
 export async function runAssistantTurn(authorization: string, command: AssistantTurnRequest): Promise<AssistantTurnResponse> {
   const actorClient = createClient(required('SUPABASE_URL'), required('SUPABASE_PUBLISHABLE_KEY'), { global: { headers: { Authorization: authorization } } })
   const { data: { user } } = await actorClient.auth.getUser()
   if (!user) throw new HttpError(401, 'authentication_required')
   const service = createClient(required('SUPABASE_URL'), required('SUPABASE_SERVICE_ROLE_KEY'))
+  const turnId = command.turnId ?? crypto.randomUUID()
+  console.info('assistant_turn_started', { operationId: turnId, releaseSha })
   const { data: conversation, error: conversationError } = await service.from('assistant_conversations')
     .select('id,owner_id').eq('id', command.conversationId).maybeSingle()
   if (conversationError) throw new HttpError(503, 'history_unavailable')
   if (!conversation || conversation.owner_id !== user.id) throw new HttpError(404, 'conversation_not_found')
 
-  const userInsert = await service.from('assistant_messages').insert({ conversation_id: command.conversationId, author: 'user', content: command.message })
-  if (userInsert.error) throw new HttpError(503, 'history_unavailable')
+  const { data: profile, error: profileError } = await service.from('profiles')
+    .select('account_role').eq('id', user.id).maybeSingle()
+  if (profileError) throw new HttpError(503, 'context_unavailable')
+  if (profile?.account_role !== 'trainer') throw new HttpError(403, 'trainer_role_required')
+
+  const { data: storedAssistant, error: storedAssistantError } = await service.from('assistant_messages')
+    .select('content,action').eq('conversation_id', command.conversationId).eq('turn_id', turnId).eq('author', 'assistant').maybeSingle()
+  if (storedAssistantError) throw new HttpError(503, 'history_unavailable')
+  const storedResponse = responseFromStoredMessage(storedAssistant)
+  if (storedResponse !== undefined) {
+    const { data: existingUser, error: existingUserError } = await service.from('assistant_messages')
+      .select('content').eq('conversation_id', command.conversationId).eq('turn_id', turnId).eq('author', 'user').maybeSingle()
+    if (existingUserError) throw new HttpError(503, 'history_unavailable')
+    if (!existingUser || typeof existingUser.content !== 'string') throw new HttpError(503, 'history_unavailable')
+    if (isTurnIdReuse(existingUser.content, command.message)) throw new HttpError(409, 'turn_id_reused')
+    return storedResponse
+  }
+
+  const userInsert = await service.from('assistant_messages').insert({ conversation_id: command.conversationId, turn_id: turnId, author: 'user', content: command.message })
+  if (userInsert.error) {
+    // A retry after a crash between the user insert and response persistence
+    // reuses the existing user turn. The persistence RPC deduplicates the
+    // assistant row, so concurrent retries cannot create duplicate messages.
+    if (userInsert.error.code !== '23505') throw new HttpError(503, 'history_unavailable')
+    const { data: existingUser, error: existingUserError } = await service.from('assistant_messages')
+      .select('content').eq('conversation_id', command.conversationId).eq('turn_id', turnId).eq('author', 'user').maybeSingle()
+    if (existingUserError) throw new HttpError(503, 'history_unavailable')
+    if (isTurnIdReuse(existingUser?.content, command.message)) throw new HttpError(409, 'turn_id_reused')
+  }
   if (isAssistantCapabilityQuestion(command.message)) {
     const result: AssistantTurnResponse = { reply: assistantCapabilitiesReply(), action: null }
-    const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({
-      conversation_id: command.conversationId, author: 'assistant', content: result.reply, action: null,
-    }).select('id').single()
-    if (assistantInsertError || !assistantMessage?.id) throw new HttpError(503, 'history_unavailable')
-    console.info('assistant_capabilities_reply_persisted')
-    return result
+    console.info('assistant_capabilities_reply_persisted', { operationId: turnId, releaseSha })
+    return persistAssistantResponse(service, command.conversationId, turnId, result)
   }
 
   const { data: clients, error: clientsError } = await service.from('clients')
@@ -525,37 +612,23 @@ export async function runAssistantTurn(authorization: string, command: Assistant
   const latestAssistantAction: unknown = (rows ?? []).find((row) => row.author === 'assistant')?.action
   const clientDraft = createClientTurn(command.message, latestAssistantAction)
   if (clientDraft !== undefined) {
-    const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({
-      conversation_id: command.conversationId, author: 'assistant', content: clientDraft.reply, action: clientDraft.action,
-    }).select('id').single()
-    if (assistantInsertError || !assistantMessage?.id) throw new HttpError(503, 'history_unavailable')
-    console.info('assistant_client_draft_reply_persisted', { status: clientDraft.action?.status })
-    return clientDraft
+    console.info('assistant_client_draft_reply_persisted', { operationId: turnId, releaseSha, status: clientDraft.action?.status })
+    return persistAssistantResponse(service, command.conversationId, turnId, clientDraft)
   }
   const workoutDraft = recordWorkoutTurn(command.message, clientRows, latestAssistantAction)
   if (workoutDraft !== undefined) {
-    const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({
-      conversation_id: command.conversationId, author: 'assistant', content: workoutDraft.reply, action: workoutDraft.action,
-    }).select('id').single()
-    if (assistantInsertError || !assistantMessage?.id) throw new HttpError(503, 'history_unavailable')
-    console.info('assistant_workout_draft_reply_persisted', { status: workoutDraft.action?.status })
-    return workoutDraft
+    console.info('assistant_workout_draft_reply_persisted', { operationId: turnId, releaseSha, status: workoutDraft.action?.status })
+    return persistAssistantResponse(service, command.conversationId, turnId, workoutDraft)
   }
   const programDraft = createProgramTurn(command.message, clientRows, latestAssistantAction)
   const programBriefReady = programDraft?.action?.tool === 'create_program_draft' && programDraft.action.payload.step === 'generate'
   if (programDraft !== undefined && !programBriefReady) {
-    const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({ conversation_id: command.conversationId, author: 'assistant', content: programDraft.reply, action: programDraft.action }).select('id').single()
-    if (assistantInsertError || !assistantMessage?.id) throw new HttpError(503, 'history_unavailable')
-    return programDraft
+    return persistAssistantResponse(service, command.conversationId, turnId, programDraft)
   }
   const summary = summaryTurn(command.message, clientRows, latestAssistantAction, new Date())
   if (summary !== undefined) {
-    const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({
-      conversation_id: command.conversationId, author: 'assistant', content: summary.reply, action: summary.action,
-    }).select('id').single()
-    if (assistantInsertError || !assistantMessage?.id) throw new HttpError(503, 'history_unavailable')
-    console.info('assistant_summary_flow_reply_persisted', { status: summary.action?.status })
-    return summary
+    console.info('assistant_summary_flow_reply_persisted', { operationId: turnId, releaseSha, status: summary.action?.status })
+    return persistAssistantResponse(service, command.conversationId, turnId, summary)
   }
   const history = [...(rows ?? [])].reverse().flatMap((row): { author: string; content: string }[] =>
     typeof row.author === 'string' && typeof row.content === 'string' ? [{ author: row.author, content: row.content.slice(0, 4_000) }] : [])
@@ -569,7 +642,11 @@ export async function runAssistantTurn(authorization: string, command: Assistant
       body: JSON.stringify({
         modelUri: `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`,
         completionOptions: { stream: false, temperature: 0.2, maxTokens: (allowsAssistantAction(command.message) || programBriefReady) ? '1200' : '120' }, jsonSchema: { schema },
-        messages: [{ role: 'user', text: `${modelPrompt(history, clientContext, progressContext, !(allowsAssistantAction(command.message) || programBriefReady), usesInformalAddress(command.message))}${programBriefReady ? `\n\nСформируй именно action=create_program_draft, status=proposed. В payload обязательно верни step=confirm, clientId, clientName, goal, brief и sessions: массив до 4 тренировок с полями title, day, exercises. Каждое exercises — объект {name, sets, reps?, weightKg?, durationMin?, distanceKm?}: name — точное название упражнения; sets — целое 1..8. Для силовых обязательно указывай reps, вес добавляй только если он обоснован. Для кардио укажи durationMin или distanceKm. Не утверждай, что программа сохранена.` : ''}` }],
+        messages: [
+          { role: 'system', text: 'Ты безопасный ассистент фитнес-приложения. Не ставь диагнозов и не давай опасных рекомендаций. Любое write-действие только как предложенная карточка с подтверждением; никогда не утверждай, что данные уже сохранены.' },
+          ...history.map((entry) => ({ role: entry.author === 'user' ? 'user' : 'assistant', text: entry.content })),
+          { role: 'user', text: `${modelPrompt(history, clientContext, progressContext, !(allowsAssistantAction(command.message) || programBriefReady), usesInformalAddress(command.message))}${programBriefReady ? `\n\nСформируй именно action=create_program_draft, status=proposed. В payload обязательно верни step=confirm, clientId, clientName, goal, brief и sessions: массив до 4 тренировок с полями title, day, exercises. Каждое exercises — объект {name, exerciseRef?, sets, reps?, weightKg?, durationMin?, distanceKm?}. Если у тебя есть канонический exerciseRef, верни его и не выдумывай ref; UI дополнительно проверит его по каталогу. name — понятное название упражнения; sets — целое 1..8. Для силовых обязательно указывай reps, вес добавляй только если он обоснован. Для кардио укажи durationMin или distanceKm. Не утверждай, что программа сохранена.` : ''}` },
+        ],
       }),
     })
   } catch (error) {
@@ -598,26 +675,24 @@ export async function runAssistantTurn(authorization: string, command: Assistant
     ? modelResult
     : { ...modelResult, action: null }
   if (modelResult.action !== null && result.action === null) console.info('assistant_action_suppressed_for_small_talk')
-  const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({
-    conversation_id: command.conversationId, author: 'assistant', content: result.reply, action: result.action,
-  }).select('id').single()
-  if (assistantInsertError || !assistantMessage?.id) throw new HttpError(503, 'history_unavailable')
-  console.info('assistant_turn_persisted', { hasAction: result.action !== null })
-  return result
+  console.info('assistant_turn_persisted', { operationId: turnId, releaseSha, hasAction: result.action !== null })
+  return persistAssistantResponse(service, command.conversationId, turnId, result)
 }
 
 export async function assistantOrchestrator(request: Request): Promise<Response> {
+  let operationId = 'unknown'
   try {
     const authorization = request.headers.get('authorization')
     if (!authorization?.startsWith('Bearer ')) throw new HttpError(401, 'authentication_required')
     const command = readAssistantTurnRequest(await request.json())
     if (!command) throw new HttpError(400, 'invalid_assistant_request')
+    operationId = command.turnId ?? 'generated'
     const result = await runAssistantTurn(authorization, command)
-    console.info('assistant_orchestrator_succeeded', { hasAction: result.action !== null })
+    console.info('assistant_orchestrator_succeeded', { operationId: command.turnId ?? 'generated', releaseSha, hasAction: result.action !== null })
     return Response.json(result)
   } catch (error) {
     const known = error instanceof HttpError ? error : new HttpError(502, 'orchestrator_failed')
-    console.warn('assistant_orchestrator_failed', { status: known.status, code: known.code })
+    console.warn('assistant_orchestrator_failed', { operationId, releaseSha, status: known.status, code: known.code })
     return Response.json({ error: known.code }, { status: known.status })
   }
 }
