@@ -4,18 +4,19 @@
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
 
-Обновлено: 2026-08-25
-Проверенный базовый `main`: `0ec1748` (`feat(progress): share body map with trainer (#578)`)
+Обновлено: 2026-08-26
+Проверенный базовый `main`: `e02dea2` (`Improve assistant workout composition (#577)`)
 
 ## Активное изменение
 
-- YAFIT-370 разделяет выбор вида карты тела между тренером и клиентом. Выбор
-  хранится локально в scope роли и пользователя, не передаётся другой роли и не
-  зависит от того, чей прогресс сейчас открыт.
-- Клиент выбирает реалистичную фигуру своего пола или нейтральную схему; тренер
-  выбирает мужскую, женскую или нейтральную фигуру для собственного интерфейса.
-- Фотография и зоны теперь находятся в одном SVG-слое с отдельным центром для
-  каждого пола и ракурса. Расчёты прогресса, нагрузки и ИИ-сводка не меняются.
+- Отдельный Yandex slice переносит два оставшихся Supabase Edge Function
+  контракта: AI-сводку и разбор диктовки. Приглашения уже обслуживает нативный
+  invitation API; production Supabase routes не переключаются.
+- Миграция `000018` хранит внутреннюю и физически отдельную безопасную клиентскую
+  сводку. Goal и активный stage входят в fingerprint/model input, а исходные
+  имена, контакты, заметки и замеры в модель не передаются.
+- Pilot-session API читает каталог упражнений и факты из Yandex PostgreSQL,
+  вызывает YandexGPT и сохраняет результат через узкий security-definer контракт.
 
 ## Последняя проверенная продуктовая точка
 
@@ -65,8 +66,8 @@
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
   exercises, полный workout lifecycle и post-workout работают на stage.
-  Миграции `000001–000016` и API revision доставлены автоматически; текущий PR
-  добавляет `000017` client overview и bounded refetch.
+  Миграции `000001–000017` и API revision доставлены автоматически; текущий PR
+  добавляет `000018` training summaries и нативные AI function contracts.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
 - Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
@@ -82,13 +83,13 @@
 
 ## Проверки активной ветки
 
-- Stage run `32859940202` автоматически доставил `000016`, fixture, API revision и
-  progress/goals/derived smoke без ручного применения миграций.
-- Локальный Yandex PostgreSQL 17 применил `000017`; 23 интеграционных
-  actor/RLS-теста зелёные, включая client overview для member и пустой результат для
-  outsider. `npm run check` зелёный: 745 frontend, 158 API и 52 infra/policy
-  проверки, lint, typecheck и production build. Чистый Supabase reset и 624 SQL/RLS-теста
-  зелёные; production-цепочка не изменена.
+- Stage run `32867438764` автоматически доставил `000017`, fixture, API revision,
+  health/readiness и client-overview smoke без ручного применения миграций.
+- Локальный Yandex PostgreSQL 17 применил `000018`; 23 интеграционных actor/RLS-
+  теста зелёные, включая trainer/client separation, safe publication и outsider
+  denial. `npm run check` зелёный: 760 frontend, 161 API и 53 infra/policy
+  проверки, lint, typecheck и production build. Чистый Supabase reset и 624
+  SQL/RLS-теста зелёные; production-цепочка не изменена.
 - Для YAFIT-368 зелёные 44 целевых теста геометрии/карты тела, мобильные
   сценарии 390/430 px, Chromium visual и обе WebKit-половины CI.
 - Assistant release применяет чистую цепочку Supabase; 624 SQL/RLS-теста
@@ -97,12 +98,11 @@
 
 ## Ближайший порядок
 
-1. Доставить `000017` и проверить client-overview stage smoke.
-2. Отдельным PR перенести goal-aware training summary и оставшиеся Edge Function
-   tenant-контракты.
-3. После полного tenant-контракта провести две миграционные репетиции; только
+1. Доставить `000018` и проверить summary-list stage smoke; отдельно выполнить
+   один контролируемый AI generation/parse smoke без логирования исходного текста.
+2. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
-4. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению
+3. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению
    программ и нового решения владельца продукта.
 
 ## Отложено

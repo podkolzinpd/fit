@@ -177,6 +177,37 @@ const createdInvitationSchema = z.object({
 })
 
 const claimedInvitationSchema = z.object({ clientId: z.uuid() })
+const parsedWorkoutSchema = z.object({
+  items: z.array(z.object({
+    sourceText: z.string(),
+    exerciseRef: z.string().min(1),
+    confidence: z.number().min(0).max(1),
+    sets: z.array(z.object({
+      weightKg: z.number().nonnegative().optional(),
+      reps: z.number().positive().optional(),
+      durationMin: z.number().positive().optional(),
+      distanceKm: z.number().positive().optional(),
+    })),
+  })),
+  unmatched: z.array(z.object({
+    sourceText: z.string(),
+    reason: z.string(),
+    suggestedExerciseRefs: z.array(z.string()),
+  })),
+})
+const storedSummarySchema = z.object({
+  id: z.uuid(),
+  client_id: z.uuid(),
+  period_start: z.iso.date(),
+  period_end: z.iso.date(),
+  display_metrics: z.record(z.string(), z.unknown()),
+  generated_at: z.iso.datetime(),
+}).passthrough()
+const summaryListSchema = z.object({ summaries: z.array(storedSummarySchema) })
+const generatedSummarySchema = z.object({
+  data: storedSummarySchema,
+  cached: z.boolean(),
+})
 
 export type YandexPilotSession = z.infer<typeof sessionSchema>
 export type YandexPilotClient = z.infer<typeof clientSchema>
@@ -185,6 +216,8 @@ export type YandexPilotInvitation = z.infer<typeof invitationSchema>
 export type YandexPilotConnections = Omit<z.infer<typeof connectionsSchema>, 'accessMode'>
 export type YandexPilotCreatedInvitation = z.infer<typeof createdInvitationSchema>['invitation']
 export type YandexPilotTrainingData = Omit<z.infer<typeof trainingDataSchema>, 'accessMode'>
+export type YandexPilotParsedWorkout = z.infer<typeof parsedWorkoutSchema>
+export type YandexPilotStoredSummary = z.infer<typeof storedSummarySchema>
 
 function responseError(status: number): Error {
   if (status === 401) return new Error('Yandex ID не подтвердил вход. Начните заново.')
@@ -219,6 +252,28 @@ async function commandResponse(request: () => Promise<Response>): Promise<Respon
   }
   if (!response.ok) throw commandResponseError(response.status)
   return response
+}
+
+async function aiResponse(request: () => Promise<Response>): Promise<Response> {
+  let response: Response
+  try {
+    response = await request()
+  } catch {
+    throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+  }
+  if (response.ok) return response
+  if (response.status === 401) {
+    throw new Error('Сессия пилота истекла. Начните вход через Yandex ID заново.')
+  }
+  if (response.status === 403 || response.status === 404) {
+    throw new Error('Нет доступа к данным этого клиента.')
+  }
+  if (response.status === 400) throw new Error('Запрос ИИ имеет некорректный формат.')
+  if (response.status === 422) throw new Error('Для выбранного периода нет завершённых тренировок.')
+  if (response.status === 502 || response.status === 503 || response.status === 504) {
+    throw new Error('ИИ временно недоступен. Попробуйте позднее.')
+  }
+  throw new Error('Не удалось выполнить запрос ИИ.')
 }
 
 export const yandexPilotRepository = {
@@ -278,6 +333,46 @@ export const yandexPilotRepository = {
       attentionPreferences: result.data.attentionPreferences,
       hasMoreWorkouts: result.data.hasMoreWorkouts,
     }
+  },
+  async parseWorkout(
+    apiBaseUrl: string,
+    sessionToken: string,
+    text: string,
+    systemCatalog: readonly unknown[],
+  ): Promise<YandexPilotParsedWorkout> {
+    const response = await aiResponse(() => yandexPilotQueries.parseWorkout(
+      apiBaseUrl, sessionToken, text, systemCatalog,
+    ))
+    const result = parsedWorkoutSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый формат разбора тренировки.')
+    return result.data
+  },
+  async listTrainingSummaries(
+    apiBaseUrl: string,
+    sessionToken: string,
+    clientId: string,
+  ): Promise<YandexPilotStoredSummary[]> {
+    const response = await aiResponse(() => yandexPilotQueries.listTrainingSummaries(
+      apiBaseUrl, sessionToken, clientId,
+    ))
+    const result = summaryListSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый формат ИИ-анализа.')
+    return result.data.summaries
+  },
+  async generateTrainingSummary(
+    apiBaseUrl: string,
+    sessionToken: string,
+    clientId: string,
+    periodStart: string,
+    periodEnd: string,
+    force = false,
+  ): Promise<{ data: YandexPilotStoredSummary; cached: boolean }> {
+    const response = await aiResponse(() => yandexPilotQueries.generateTrainingSummary(
+      apiBaseUrl, sessionToken, clientId, periodStart, periodEnd, force,
+    ))
+    const result = generatedSummarySchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый результат ИИ-анализа.')
+    return result.data
   },
   async createInvitation(
     apiBaseUrl: string,

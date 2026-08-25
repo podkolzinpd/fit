@@ -35,6 +35,11 @@ import type { PilotSessionIssuer } from './pilot-session.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
 import type { PilotProgressData } from './progress-data.js'
 import type { PilotWorkoutsWriter } from './pilot-workouts-writer.js'
+import type { PilotWorkoutParser } from './pilot-workout-parser.js'
+import {
+  PilotTrainingSummaryError,
+  type PilotTrainingSummaries,
+} from './training-summary.js'
 import {
   readLiveCommentRequest,
   readLiveExerciseRequest,
@@ -57,6 +62,7 @@ import {
 } from './post-workout-request.js'
 import { PilotWorkoutCommandError } from './workout-commands.js'
 import { WorkoutParseError, type LegacyWorkoutParser } from './legacy-workout-parser.js'
+import { HttpError as SummaryModelError } from './legacy-summary/index.js'
 import { readAssistantProgressRequest } from './assistant-progress-request.js'
 import {
   readVersionedGoalRequest,
@@ -81,6 +87,8 @@ interface BuildAppOptions {
   pilotTrainingDataReader?: PilotTrainingDataReader
   pilotProgressData?: PilotProgressData
   pilotWorkoutsWriter?: PilotWorkoutsWriter
+  pilotWorkoutParser?: PilotWorkoutParser
+  pilotTrainingSummaries?: PilotTrainingSummaries
   legacyWorkoutParser?: LegacyWorkoutParser
   legacySummaryHandler?: LegacySummaryHandler
   logger?: boolean
@@ -179,6 +187,97 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       force: command.force,
     }, reply)
   })
+
+  app.post('/v1/assistant/yandex/parse-workout', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (options.pilotWorkoutParser === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    try {
+      return reply.header('cache-control', 'no-store')
+        .send(await options.pilotWorkoutParser.parse(sessionToken, request.body))
+    } catch (error) {
+      if (error instanceof PilotSessionInvalidError) {
+        return reply.code(401).send({ error: 'unauthorized' })
+      }
+      if (error instanceof WorkoutParseError) {
+        return reply.code(error.status).send({ error: error.code })
+      }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.get('/v1/clients/:clientId/training-summaries', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { clientId } = request.params as { clientId?: unknown }
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainingSummaries === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    try {
+      const summaries = await options.pilotTrainingSummaries.list(sessionToken, clientId)
+      return reply.header('cache-control', 'no-store').send({ summaries })
+    } catch (error) {
+      return sendPilotSummaryError(error, reply)
+    }
+  })
+
+  app.post('/v1/clients/:clientId/training-summaries/generate', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { clientId } = request.params as { clientId?: unknown }
+    const command = readAssistantProgressRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId)
+      || command === undefined || command.clientId !== clientId) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainingSummaries === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    try {
+      return reply.header('cache-control', 'no-store').send(
+        await options.pilotTrainingSummaries.generate(sessionToken, command),
+      )
+    } catch (error) {
+      return sendPilotSummaryError(error, reply)
+    }
+  })
+
+  function sendPilotSummaryError(error: unknown, reply: FastifyReply) {
+    if (error instanceof PilotSessionInvalidError) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (error instanceof PilotTrainingSummaryError) {
+      return reply.header('x-fit-error-code', error.code)
+        .code(error.status).send({ error: error.code })
+    }
+    if (error instanceof SummaryModelError) {
+      return reply.header('x-fit-error-code', error.message)
+        .code(error.status).send({ error: error.message })
+    }
+    const code = error instanceof Error ? error.message : 'service_unavailable'
+    const modelCodes = new Set([
+      'yandex_cloud_timeout', 'yandex_cloud_rate_limited',
+      'yandex_cloud_unavailable', 'yandex_cloud_access_rejected',
+      'yandex_cloud_request_rejected', 'yandex_cloud_invalid_json',
+      'yandex_cloud_invalid_summary', 'yandex_cloud_empty_response',
+      'yandex_cloud_quality_check_failed',
+    ])
+    if (modelCodes.has(code)) {
+      return reply.header('x-fit-error-code', code).code(502).send({ error: code })
+    }
+    return reply.code(503).send({ error: 'service_unavailable' })
+  }
 
   async function forwardLegacySummary(authorization: string, body: unknown, reply: FastifyReply) {
     if (options.legacySummaryHandler === undefined) {

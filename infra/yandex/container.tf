@@ -39,6 +39,7 @@ resource "yandex_serverless_container" "api" {
         DATABASE_NAME          = yandex_mdb_postgresql_database.fit.name
         DATABASE_USER          = yandex_mdb_postgresql_user.api.name
         DATABASE_SSL_ROOT_CERT = "/app/certs/yandex-cloud-ca.pem"
+        YANDEX_CLOUD_FOLDER_ID = var.folder_id
       },
       var.yandex_oauth_client_id == null ? {} : {
         YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id

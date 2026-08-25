@@ -30,14 +30,14 @@ type SummarizeRequest = {
   force: boolean
 }
 
-type WorkoutRow = {
+export type WorkoutRow = {
   id: string
   workout_date: string
   status: string
   deleted_at: string | null
 }
 
-type ExerciseRow = {
+export type ExerciseRow = {
   id: string
   workout_id: string
   exercise_ref: string
@@ -46,7 +46,7 @@ type ExerciseRow = {
   position: number
 }
 
-type SetRow = {
+export type SetRow = {
   workout_exercise_id: string
   position: number
   fact_weight_kg: number | null
@@ -68,14 +68,14 @@ type YandexCompletionResponse = {
   }
 }
 
-type TrainerSummary = {
+export type TrainerSummary = {
   headline: string
   progress: string[]
   consistency: string
   attention: string[]
 }
 
-type ClientSummary = {
+export type ClientSummary = {
   headline: string
   achievements: string[]
   consistency: string
@@ -84,12 +84,12 @@ type ClientSummary = {
   nextSteps: string[]
 }
 
-type GeneratedSummary = {
+export type GeneratedSummary = {
   trainer: TrainerSummary
   client: ClientSummary
 }
 
-class HttpError extends Error {
+export class HttpError extends Error {
   constructor(
     readonly status: number,
     message: string,
@@ -154,7 +154,7 @@ function parseGeneratedSummary(value: string): GeneratedSummary {
   }
 }
 
-function trainerSummaryAsText(summary: TrainerSummary): string {
+export function trainerSummaryAsText(summary: TrainerSummary): string {
   const attention = summary.attention.length
     ? `\n\nНа что обратить внимание\n${summary.attention.map((item) => `- ${item}`).join("\n")}`
     : ""
@@ -277,10 +277,10 @@ function percentChange(start?: number, end?: number): number | undefined {
   return Math.round(((end - start) / start) * 100)
 }
 
-function buildProgressData(
-  workouts: WorkoutRow[],
-  exercises: ExerciseRow[],
-  sets: SetRow[],
+export function buildProgressData(
+  workouts: readonly WorkoutRow[],
+  exercises: readonly ExerciseRow[],
+  sets: readonly SetRow[],
   periodStart: string,
   periodEnd: string,
   firstCompletedWorkoutDate: string | null,
