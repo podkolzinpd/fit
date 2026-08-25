@@ -223,11 +223,22 @@ export function validateAssistantTurnResponse(value: unknown): AssistantTurnResp
 }
 
 function validProgramPayload(payload: Record<string, unknown>): boolean {
-  if (payload.step !== 'confirm' || typeof payload.clientId !== 'string' || typeof payload.clientName !== 'string' || typeof payload.brief !== 'string' || !Array.isArray(payload.sessions)) return false
+  if (payload.step !== 'confirm' || typeof payload.clientId !== 'string' || !UUID.test(payload.clientId) || typeof payload.clientName !== 'string' || typeof payload.brief !== 'string' || !Array.isArray(payload.sessions)) return false
   return payload.sessions.length > 0 && payload.sessions.length <= 4 && payload.sessions.every((session) => {
     if (!record(session) || typeof session.title !== 'string' || typeof session.day !== 'string' || !Array.isArray(session.exercises)) return false
     return session.exercises.length > 0 && session.exercises.length <= 12 && session.exercises.every((exercise) => typeof exercise === 'string' && exercise.trim().length > 0)
   })
+}
+
+function isGeneratedProgramForSelectedClient(result: AssistantTurnResponse, generatedDraft: AssistantTurnResponse | undefined): boolean {
+  const expected = actionRecord(generatedDraft?.action?.payload)
+  const actual = actionRecord(result.action?.payload)
+  return result.action?.tool === 'create_program_draft'
+    && result.action.status === 'proposed'
+    && expected?.step === 'generate'
+    && actual?.step === 'confirm'
+    && actual.clientId === expected.clientId
+    && actual.clientName === expected.clientName
 }
 
 export function allowsAssistantAction(message: string): boolean {
@@ -575,6 +586,11 @@ export async function runAssistantTurn(authorization: string, command: Assistant
   }
   const modelResult = validateAssistantTurnResponse(raw)
   if (!modelResult) throw new HttpError(502, 'orchestrator_invalid_response')
+  // The deterministic dialog owns the target client. The model only fills in
+  // sessions and may not switch a confirmed program to another client.
+  if (programBriefReady && !isGeneratedProgramForSelectedClient(modelResult, programDraft)) {
+    throw new HttpError(502, 'orchestrator_invalid_response')
+  }
   const result = allowsAssistantAction(command.message) || programBriefReady
     ? modelResult
     : { ...modelResult, action: null }

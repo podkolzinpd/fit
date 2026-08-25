@@ -154,23 +154,55 @@ function ProgramDraftCard({ payload, timezone, onSaved, onCancel }: { payload: P
   const catalog = useExerciseCatalog()
   const [sessions, setSessions] = useState(payload.sessions)
   const [dates, setDates] = useState(() => sessions.map((_, index) => { const date = new Date(`${todayInTimeZone(timezone)}T12:00:00`); date.setDate(date.getDate() + index * 7); return date.toISOString().slice(0, 10) }))
+  // One confirmation can be safely retried after a timeout: each planned
+  // workout keeps its own idempotency key for the lifetime of this card.
+  const [requestIds] = useState(() => payload.sessions.map(() => crypto.randomUUID()))
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string>()
   async function save() {
     if (saving || saved) return
-    const byName = new Map(catalog.exercises.map((exercise) => [exercise.name.toLocaleLowerCase('ru-RU'), exercise]))
-    const resolveExercise = (name: string) => byName.get(name.toLocaleLowerCase('ru-RU')) ?? (filterExercises(catalog.exercises, 'all', name).length === 1 ? filterExercises(catalog.exercises, 'all', name)[0] : undefined)
-    const workouts = sessions.map((session, index) => ({ session, date: dates[index]!, exercises: session.exercises.map(resolveExercise) }))
-    if (workouts.some((workout) => !workout.date || workout.exercises.some((exercise) => exercise === undefined))) { setError('Уточните дату и названия упражнений: они должны совпадать с каталогом.'); return }
+    const workouts = programWorkoutDrafts(payload.clientId, sessions, dates, requestIds, catalog.exercises)
+    if (workouts === undefined) { setError('Уточните дату и названия упражнений: они должны совпадать с каталогом.'); return }
     setSaving(true); setError(undefined)
     try {
-      await Promise.all(workouts.map(({ session, date, exercises }) => workoutsRepository.save({ clientId: payload.clientId, workoutDate: localDate(date), notes: session.title, exercises: exercises.map((exercise, position) => ({ ...exercise!, position, blockId: crypto.randomUUID(), blockType: 'single', blockRounds: 1, sets: [{ position: 0 }] })) })))
+      await Promise.all(workouts.map((workout) => workoutsRepository.save(workout)))
       setSaved(true); onSaved()
     } catch { setError('Не удалось добавить программу в расписание. Попробуйте ещё раз.') }
     finally { setSaving(false) }
   }
   return <div className="assistant-program-draft" aria-label={`Черновик программы ${payload.clientName}`}><strong>Программа · {payload.clientName}</strong><small>{payload.goal ? `Цель: ${payload.goal}` : 'Цель уточнена в анкете'}</small>{sessions.map((session, index) => <fieldset key={`${session.day}-${index}`}><label>Дата<input type="date" value={dates[index] ?? ''} onChange={(event) => setDates((current) => current.map((value, position) => position === index ? event.target.value : value))} /></label><label>Название<input value={session.title} onChange={(event) => setSessions((current) => current.map((item, position) => position === index ? { ...item, title: event.target.value } : item))} /></label><label>Упражнения<input value={session.exercises.join(', ')} onChange={(event) => setSessions((current) => current.map((item, position) => position === index ? { ...item, exercises: event.target.value.split(',').map((value) => value.trim()).filter(Boolean) } : item))} /></label></fieldset>)}{error && <p className="assistant-card-hint" role="alert">{error}</p>}<button type="button" onClick={() => void save()} disabled={catalog.loading || saving || saved}>{saved ? 'Программа добавлена в расписание' : saving ? 'Добавляю…' : 'Добавить в расписание'}</button>{!saved && <CancelActionButton onCancel={onCancel} />}</div>
+}
+
+export function programWorkoutDrafts(
+  clientId: string,
+  sessions: ProgramDraftPayload['sessions'],
+  dates: readonly string[],
+  requestIds: readonly string[],
+  catalog: readonly ExerciseSnapshot[],
+): WorkoutDraft[] | undefined {
+  if (sessions.length === 0 || sessions.length !== dates.length || sessions.length !== requestIds.length) return undefined
+  const byName = new Map(catalog.map((exercise) => [exercise.name.toLocaleLowerCase('ru-RU'), exercise]))
+  const resolveExercise = (name: string) => {
+    const exact = byName.get(name.toLocaleLowerCase('ru-RU'))
+    if (exact) return exact
+    const matches = filterExercises(catalog, 'all', name)
+    return matches.length === 1 ? matches[0] : undefined
+  }
+  const drafts = sessions.map((session, index) => {
+    const date = dates[index]?.trim()
+    const requestId = requestIds[index]?.trim()
+    const exercises = session.exercises.map(resolveExercise)
+    if (!date || !requestId || !session.title.trim() || exercises.some((exercise) => exercise === undefined)) return undefined
+    return {
+      requestId,
+      clientId,
+      workoutDate: localDate(date),
+      notes: session.title.trim(),
+      exercises: exercises.map((exercise, position) => ({ ...exercise!, position, blockId: crypto.randomUUID(), blockType: 'single' as const, blockRounds: 1, sets: [{ position: 0 }] })),
+    }
+  })
+  return drafts.every((draft): draft is WorkoutDraft => draft !== undefined) ? drafts : undefined
 }
 
 function parsedWorkoutExercises(result: WorkoutParseResponse, catalog: readonly ExerciseSnapshot[]): WorkoutDraft['exercises'] {

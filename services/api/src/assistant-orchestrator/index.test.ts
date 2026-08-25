@@ -11,8 +11,9 @@ describe('assistant orchestrator contract', () => {
     expect(validateAssistantTurnResponse({ reply: 'Нужны уточнения', action: { tool: 'delete_everything', status: 'applied', title: 'x', description: 'x', payload: {} } })).toBeUndefined()
     const validResponse = validateAssistantTurnResponse({ reply: 'Нужны дни и ограничения', action: { tool: 'create_program_draft', status: 'needs_input', title: 'Черновик программы', description: 'Уточню данные', payload: { fields: ['Цель'] } } })
     expect(validResponse?.action?.tool).toBe('create_program_draft')
-    expect(validateAssistantTurnResponse({ reply: 'Готово', action: { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: '...', payload: { step: 'confirm', clientId: 'client-1', clientName: 'Антон', brief: 'Новичок', sessions: [{ title: 'Тренировка A', day: 'Понедельник', exercises: ['Жим лёжа'] }] } } })?.action?.tool).toBe('create_program_draft')
+    expect(validateAssistantTurnResponse({ reply: 'Готово', action: { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: '...', payload: { step: 'confirm', clientId: '6f0c4fb9-5f61-4d78-97aa-1f8b8d79c447', clientName: 'Антон', brief: 'Новичок', sessions: [{ title: 'Тренировка A', day: 'Понедельник', exercises: ['Жим лёжа'] }] } } })?.action?.tool).toBe('create_program_draft')
     expect(validateAssistantTurnResponse({ reply: 'Готово', action: { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: '...', payload: { step: 'confirm' } } })).toBeUndefined()
+    expect(validateAssistantTurnResponse({ reply: 'Готово', action: { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: '...', payload: { step: 'confirm', clientId: 'client-1', clientName: 'Антон', brief: 'Новичок', sessions: [{ title: 'Тренировка A', day: 'Понедельник', exercises: ['Жим лёжа'] }] } } })).toBeUndefined()
   })
 
   it('allows action cards only for explicit application commands', () => {
