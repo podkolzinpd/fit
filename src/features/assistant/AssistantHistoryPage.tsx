@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { ChevronRightIcon, MicIcon } from '../../shared/icons'
+import { ChevronRightIcon } from '../../shared/icons'
 import { useAuth } from '../../app/auth-context'
 import { assistantRepository, type AssistantOrchestratorAction } from '../../data/repositories/assistant.repository'
 import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
+import { VoiceInputButton } from '../voice-input'
 
 type Message = { id: string; author: string; content: string; action: AssistantOrchestratorAction | null }
 
@@ -84,7 +85,9 @@ export function AssistantHistoryPage() {
     <form className="assistant-composer" onSubmit={(event) => { event.preventDefault(); void send() }}>
       <label className="sr-only" htmlFor="assistant-history-message">Сообщение ассистенту</label>
       <input id="assistant-history-message" value={text} onChange={(event) => setText(event.target.value)} placeholder="Чем могу помочь?" disabled={!conversationId || sending} />
-      <button type="button" className="assistant-icon-button" disabled aria-label="Голосовой ввод появится в следующем этапе"><MicIcon /></button>
+      <VoiceInputButton variant="icon" source="assistant" idleLabel="Голосовой ввод" disabled={!conversationId || sending} showTranscriptStatus={false} onTranscript={async (transcript) => {
+        await send(transcript)
+      }} />
       <button type="submit" className="assistant-icon-button" disabled={!conversationId || sending} aria-label="Отправить сообщение"><ChevronRightIcon /></button>
     </form>
   </main>
