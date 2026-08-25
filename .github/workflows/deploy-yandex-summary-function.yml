@@ -63,51 +63,28 @@ jobs:
       - name: Exchange GitHub OIDC token for Yandex Cloud IAM token
         run: scripts/yandex-github-oidc.sh
 
-      - name: Copy current Supabase runtime credentials into Lockbox
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      - name: Resolve the existing immutable Lockbox version
         run: |
           set -euo pipefail
+          lockbox=$(yc lockbox secret get \
+            --name "$SUMMARY_LOCKBOX_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --format json)
+          lockbox_id=$(jq -er '.id' <<<"$lockbox")
+          lockbox_version_id=$(jq -er '.current_version.id' <<<"$lockbox")
 
-          api_keys=$(curl --fail --silent --show-error \
-            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_ID/api-keys?reveal=true")
-          edge_secrets=$(curl --fail --silent --show-error \
-            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_ID/secrets")
-
-          publishable_key=$(jq -er '[.[] | select(.type == "publishable" or .name == "anon") | .api_key] | first // empty' <<<"$api_keys")
-          service_role_key=$(jq -er '[.[] | select(.type == "secret" or .name == "service_role") | .api_key] | first // empty' <<<"$api_keys")
-          yandex_api_key=$(jq -er '.[] | select(.name == "YANDEX_CLOUD_API_KEY") | .value' <<<"$edge_secrets")
-          yandex_folder_id=$(jq -er '.[] | select(.name == "YANDEX_CLOUD_FOLDER_ID") | .value' <<<"$edge_secrets")
-          yandex_model_id=$(jq -er '[.[] | select(.name == "YANDEX_CLOUD_MODEL_ID") | .value] | first // "yandexgpt"' <<<"$edge_secrets")
-
-          for value in "$publishable_key" "$service_role_key" "$yandex_api_key"; do
-            echo "::add-mask::$value"
+          for required_key in \
+            SUPABASE_URL \
+            SUPABASE_PUBLISHABLE_KEY \
+            SUPABASE_SERVICE_ROLE_KEY \
+            YANDEX_CLOUD_API_KEY \
+            YANDEX_CLOUD_FOLDER_ID \
+            YANDEX_CLOUD_MODEL_ID; do
+            jq -e --arg required_key "$required_key" \
+              '.current_version.payload_entry_keys | index($required_key) != null' \
+              <<<"$lockbox" >/dev/null
           done
-          payload=$(jq -cn \
-            --arg supabase_url "https://$SUPABASE_PROJECT_ID.supabase.co" \
-            --arg publishable_key "$publishable_key" \
-            --arg service_role_key "$service_role_key" \
-            --arg yandex_api_key "$yandex_api_key" \
-            --arg yandex_folder_id "$yandex_folder_id" \
-            --arg yandex_model_id "$yandex_model_id" \
-            '[
-              {key:"SUPABASE_URL", text_value:$supabase_url},
-              {key:"SUPABASE_PUBLISHABLE_KEY", text_value:$publishable_key},
-              {key:"SUPABASE_SERVICE_ROLE_KEY", text_value:$service_role_key},
-              {key:"YANDEX_CLOUD_API_KEY", text_value:$yandex_api_key},
-              {key:"YANDEX_CLOUD_FOLDER_ID", text_value:$yandex_folder_id},
-              {key:"YANDEX_CLOUD_MODEL_ID", text_value:$yandex_model_id}
-            ]')
 
-          if lockbox_id=$(yc lockbox secret get --name "$SUMMARY_LOCKBOX_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id' 2>/dev/null); then
-            printf '%s' "$payload" | yc lockbox secret add-version "$lockbox_id" --payload - >/dev/null
-          else
-            lockbox_id=$(printf '%s' "$payload" | yc lockbox secret create --name "$SUMMARY_LOCKBOX_NAME" --folder-id "$YC_FOLDER_ID" --payload - --format json | jq -er '.id')
-          fi
-          lockbox_version_id=$(yc lockbox secret get --id "$lockbox_id" --format json | jq -er '.current_version.id')
           echo "SUMMARY_LOCKBOX_ID=$lockbox_id" >> "$GITHUB_ENV"
           echo "SUMMARY_LOCKBOX_VERSION_ID=$lockbox_version_id" >> "$GITHUB_ENV"
 
