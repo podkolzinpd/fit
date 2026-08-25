@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { goalsRepository } from '../../data/repositories/goals.repository'
 import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
+import { workoutsRepository } from '../../data/repositories/workouts.repository'
 import type {
   ClientGoal,
   ClientTrainingSummary,
@@ -13,9 +14,11 @@ import type {
 } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
 import { formatLocalDate, normalizeTimeZone, todayInTimeZone, type LocalDate } from '../../shared/local-date'
-import { AsyncView, Field } from '../../shared/ui'
+import { AsyncView, Coachmark, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { ClientProgressGoalSection } from './ClientProgressGoalSection'
+import { ClientBodyProgressMap } from './ClientBodyProgressMap'
+import { clientProgressPresentation } from './client-progress-presentation'
 import { progressFactChangeLabel } from './progress-facts'
 import { formatSummaryText, formatWorkoutsPerWeek, progressMetricNoun } from './summary-format'
 import { availableSummaryPeriods, SUMMARY_PERIODS, summaryPeriodMatch, summaryPeriodRange, type SummaryPeriod } from './summary-period'
@@ -336,6 +339,12 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
     if (!availablePeriods.includes(period)) setPeriod('1m')
   }, [availablePeriods, period])
   const summary = summaryPeriodMatch(query.data ?? [], period, today)
+  const workoutRange = summaryPeriodRange(period, today)
+  const workouts = useQuery({
+    queryKey: ['client-progress-body-map-workouts', clientId, workoutRange.start, workoutRange.end],
+    queryFn: () => workoutsRepository.list(workoutRange.start, workoutRange.end, clientId),
+    enabled: ready,
+  })
   const goal = useQuery({
     queryKey: ['client-goal', clientId],
     queryFn: () => goalsRepository.get(clientId),
@@ -368,14 +377,19 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
       onRetry={() => void Promise.all([query.refetch(), firstWorkout.refetch()])}
     >
       {summary ? <ClientSummaryContent
-        summary={summary}
-        goal={goal.data}
-        profileGoal={profileGoal}
-        today={today}
-        goalLoading={goal.isLoading}
-        goalError={goal.error}
-        onGoalRetry={() => void goal.refetch()}
-      /> : <div className="ai-progress-empty">
+          summary={summary}
+          userId={actor?.userId}
+          goal={goal.data}
+          profileGoal={profileGoal}
+          today={today}
+          goalLoading={goal.isLoading}
+          goalError={goal.error}
+          onGoalRetry={() => void goal.refetch()}
+          workouts={workouts.data ?? []}
+          workoutsLoading={workouts.isLoading}
+          workoutsError={workouts.error}
+          onWorkoutsRetry={() => void workouts.refetch()}
+        /> : <div className="ai-progress-empty">
         <strong>Анализ за этот период ещё не создан</strong>
         <p>Создай его по завершённым тренировкам.</p>
       </div>}
@@ -401,22 +415,42 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal }: { clientId:
   </section>
 }
 
-function ClientSummaryContent({ summary, goal, profileGoal, today, goalLoading, goalError, onGoalRetry }: {
+function ClientSummaryContent({ summary, userId, goal, profileGoal, today, goalLoading, goalError, onGoalRetry, workouts, workoutsLoading, workoutsError, onWorkoutsRetry }: {
   summary: PublishedTrainingSummary
+  userId: string | undefined
   goal: ClientGoal | null | undefined
   profileGoal?: string | null
   today: LocalDate
   goalLoading: boolean
   goalError: Error | null
   onGoalRetry: () => void
+  workouts: Awaited<ReturnType<typeof workoutsRepository.list>>
+  workoutsLoading: boolean
+  workoutsError: Error | null
+  onWorkoutsRetry: () => void
 }) {
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const presentation = clientProgressPresentation(summary)
   return <>
-    <SummaryCore
-      headline={summary.summary.headline}
-      metrics={summary.metrics}
-      progress={summary.summary.achievements}
-      consistency={summary.summary.consistency}
-    />
+    <Coachmark
+      id="client-body-progress-map-2026-08"
+      userId={userId}
+      title="Твоё тело в цифрах"
+      description="Переключай прогресс и нагрузку, нажимай на зоны и смотри, какие упражнения дали результат."
+    ><ClientBodyProgressMap
+      summary={summary}
+      workouts={workouts}
+      loadLoading={workoutsLoading}
+      loadError={workoutsError}
+      onLoadRetry={onWorkoutsRetry}
+    /></Coachmark>
+    <div className={`ai-progress-stats count-${presentation.stats.length}`}>
+      {presentation.stats.map((stat) => <div key={stat.label}><strong>{stat.value}</strong><span>{stat.label}</span></div>)}
+    </div>
+    {presentation.wins.length > 0 && <section className="client-progress-wins" aria-labelledby="client-progress-wins-title">
+      <h3 id="client-progress-wins-title">Твои достижения</h3>
+      <div>{presentation.wins.map((win) => <article key={win.title}><span aria-hidden="true" /><div><strong>{win.title}</strong><p>{win.detail}</p></div></article>)}</div>
+    </section>}
     <ClientProgressGoalSection
       goal={goal}
       profileGoal={profileGoal}
@@ -426,10 +460,31 @@ function ClientSummaryContent({ summary, goal, profileGoal, today, goalLoading, 
       alignment={summary.summary.goalAlignment}
       onRetry={onGoalRetry}
     />
-    {summary.summary.nextSteps && summary.summary.nextSteps.length > 0 && <div className="ai-progress-section ai-progress-next-steps">
-      <h3>Что делать дальше</h3>
-      <ul>{summary.summary.nextSteps.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
-    </div>}
-    <div className="client-encouragement"><span aria-hidden="true">✦</span><p>{formatSummaryText(summary.summary.encouragement)}</p></div>
+    {presentation.nextStep && <section className="client-progress-next" aria-labelledby="client-progress-next-title">
+      <span>Следующий ориентир</span>
+      <h3 id="client-progress-next-title">На следующей тренировке</h3>
+      <p>{formatSummaryText(presentation.nextStep)}</p>
+    </section>}
+    {presentation.insight && <section className="client-progress-insight" aria-labelledby="client-progress-insight-title">
+      <h3 id="client-progress-insight-title">Главное сейчас</h3>
+      <p>{presentation.insight}</p>
+    </section>}
+    <div className="client-progress-details-toggle">
+      <button type="button" className="link" onClick={() => setDetailsOpen(true)}>Подробный анализ</button>
+    </div>
+    {detailsOpen && <SummarySheet title="Подробный анализ" onClose={() => setDetailsOpen(false)}>
+      <section className="client-progress-details-section">
+        <h3>Динамика упражнений</h3>
+        <ProgressFacts facts={summary.metrics.progressFacts} fallback={summary.summary.achievements} />
+      </section>
+      <section className="client-progress-details-section">
+        <h3>Ритм тренировок</h3>
+        <p>{formatSummaryText(summary.summary.consistency)}</p>
+      </section>
+      {summary.summary.nextSteps && summary.summary.nextSteps.length > 0 && <section className="client-progress-details-section">
+        <h3>Ориентиры</h3>
+        <ul>{summary.summary.nextSteps.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
+      </section>}
+    </SummarySheet>}
   </>
 }
