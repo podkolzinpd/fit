@@ -21,9 +21,12 @@ export const assistantHistoryQueries = {
     .insert({ conversation_id: conversationId, author: 'user', content })
     .select(messageColumns)
     .single(),
-  listActions: () => supabase.from('assistant_actions')
-    .select('id,owner_id,conversation_id,assistant_message_id,tool,status,payload,result,error_code,version,created_at,updated_at,applied_at')
-    .order('created_at'),
+  listActions: (conversationId?: string) => {
+    const query = supabase.from('assistant_actions')
+      .select('id,owner_id,conversation_id,assistant_message_id,tool,status,payload,result,error_code,version,created_at,updated_at,applied_at')
+      .order('created_at')
+    return conversationId === undefined ? query : query.eq('conversation_id', conversationId)
+  },
   applyAction: (actionId: string, input: Json, version: number) => supabase.rpc('apply_assistant_action', {
     p_action_id: actionId, p_input: input, p_expected_version: version,
   }),
