@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
-import { assistantWorkoutSaveInput } from './workout-draft'
+import { appendWorkoutParse, assistantWorkoutSaveInput, enqueueWorkoutParse, replaceWorkoutParseSource } from './workout-draft'
 
 const benchPress = {
   source: 'system', ref: 'barbell-bench-press', name: 'Жим штанги лёжа', muscleGroup: 'chest', inputKind: 'strength',
@@ -12,6 +12,33 @@ describe('assistant program draft saving', () => {
     expect(assistantWorkoutSaveInput('request-1', 'client-1', '2026-08-25', '17:07', [])).toEqual({
       workout: { requestId: 'request-1', clientId: 'client-1', workoutDate: '2026-08-25', startTime: '17:07', exercises: [] },
     })
+  })
+
+  it('appends a newly recognized fragment without replacing the existing structured draft', () => {
+    const first = { items: [{ sourceText: 'Жим', exerciseRef: 'barbell-bench-press', confidence: 1, sets: [] }], unmatched: [] }
+    const second = { items: [{ sourceText: 'Тяга', exerciseRef: 'row', confidence: 1, sets: [] }], unmatched: [] }
+    expect(appendWorkoutParse(first, second).items.map((item) => item.sourceText)).toEqual(['Жим', 'Тяга'])
+  })
+
+  it('replaces only the selected ambiguous fragment after an explicit choice', () => {
+    const existing = { items: [{ sourceText: 'Жим', exerciseRef: 'barbell-bench-press', confidence: 1, sets: [] }], unmatched: [{ sourceText: 'Тяга', reason: 'Нужно уточнить', suggestedExerciseRefs: ['row', 'pulldown'] }] }
+    const resolved = replaceWorkoutParseSource(existing, 'Тяга', { items: [{ sourceText: 'Тяга', exerciseRef: 'row', confidence: 1, sets: [] }], unmatched: [] })
+    expect(resolved.items.map((item) => item.sourceText)).toEqual(['Жим', 'Тяга'])
+    expect(resolved.unmatched).toEqual([])
+  })
+
+  it('serializes workout parsing fragments instead of dropping a concurrent append', async () => {
+    const queue = { current: Promise.resolve() }
+    let releaseFirst!: () => void
+    const firstGate = new Promise<void>((resolve) => { releaseFirst = resolve })
+    const order: string[] = []
+    const first = enqueueWorkoutParse(queue, async () => { order.push('first:start'); await firstGate; order.push('first:end') })
+    const second = enqueueWorkoutParse(queue, () => { order.push('second'); return Promise.resolve() })
+    await Promise.resolve()
+    expect(order).toEqual(['first:start'])
+    releaseFirst()
+    await Promise.all([first, second])
+    expect(order).toEqual(['first:start', 'first:end', 'second'])
   })
 
   it('normalizes stored program sessions and keeps legacy exercise names editable', () => {

@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(28);
+select plan(42);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('50000000-0000-4000-8000-000000000057', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'assistant-a@example.test', ''),
@@ -30,6 +30,35 @@ insert into public.assistant_actions (id, owner_id, conversation_id, assistant_m
   ('e0000000-0000-4000-8000-000000000058', '50000000-0000-4000-8000-000000000057', 'a0000000-0000-4000-8000-000000000057', 'b0000000-0000-4000-8000-000000000058', 'create_program_draft', '{"step":"confirm","clientId":"c0000000-0000-4000-8000-000000000057"}'),
   ('e0000000-0000-4000-8000-000000000059', '50000000-0000-4000-8000-000000000057', 'a0000000-0000-4000-8000-000000000057', 'b0000000-0000-4000-8000-000000000059', 'create_program_draft', '{"step":"confirm","clientId":"c0000000-0000-4000-8000-000000000057"}'),
   ('e0000000-0000-4000-8000-000000000060', '50000000-0000-4000-8000-000000000057', 'a0000000-0000-4000-8000-000000000057', 'b0000000-0000-4000-8000-000000000060', 'record_workout', '{"step":"confirm","clientId":"c0000000-0000-4000-8000-000000000057"}');
+insert into public.client_training_summaries (
+  id, trainer_id, client_id, period_start, period_end, summary, model_uri, prompt_version, input_fingerprint,
+  trainer_summary, client_summary, display_metrics
+) values (
+  '90000000-0000-4000-8000-000000000057',
+  '50000000-0000-4000-8000-000000000057',
+  'c0000000-0000-4000-8000-000000000057',
+  '2026-08-01', '2026-08-25', 'Assistant summary', 'test-model', 'test-prompt', 'assistant-summary-fingerprint',
+  '{"headline":"Темп стал стабильнее","progress":["Жим растёт"],"consistency":"Две тренировки в неделю","attention":["Следить за плечом"]}'::jsonb,
+  '{"headline":"Хороший прогресс","achievements":["Шесть тренировок"],"consistency":"Продолжайте","encouragement":"Так держать"}'::jsonb,
+  '{"completed_workouts":6,"workouts_per_week":1.5,"active_weeks":4}'::jsonb
+);
+insert into public.assistant_messages (id, conversation_id, turn_id, author, content, action)
+values (
+  'b0000000-0000-4000-8000-000000000061',
+  'a0000000-0000-4000-8000-000000000057',
+  'd0000000-0000-4000-8000-000000000061',
+  'assistant', 'Сводка готова',
+  '{"tool":"summarize_progress","status":"proposed","title":"Сводка","description":"Сформирую сводку","payload":{"step":"confirm","clientId":"c0000000-0000-4000-8000-000000000057","clientName":"Assistant A","periodStart":"2026-08-01","periodEnd":"2026-08-25","periodLabel":"август"}}'::jsonb
+);
+insert into public.assistant_actions (id, owner_id, conversation_id, assistant_message_id, tool, payload)
+values (
+  'e0000000-0000-4000-8000-000000000061',
+  '50000000-0000-4000-8000-000000000057',
+  'a0000000-0000-4000-8000-000000000057',
+  'b0000000-0000-4000-8000-000000000061',
+  'summarize_progress',
+  '{"step":"confirm","clientId":"c0000000-0000-4000-8000-000000000057","clientName":"Assistant A","periodStart":"2026-08-01","periodEnd":"2026-08-25","periodLabel":"август"}'::jsonb
+);
 reset role;
 
 select has_table('public', 'assistant_actions', 'assistant actions table exists');
@@ -56,7 +85,21 @@ select throws_ok(
   'PT404', null, 'foreign trainer cannot apply action');
 
 select set_config('request.jwt.claim.sub', '50000000-0000-4000-8000-000000000057', true);
-select is((select count(*) from public.assistant_actions), 4::bigint, 'owner can read own actions');
+select is((select count(*) from public.assistant_actions), 5::bigint, 'owner can read own actions');
+select is(public.complete_assistant_summary('e0000000-0000-4000-8000-000000000061'::uuid, 1)->>'status', 'applied', 'summary completion applies the generated summary');
+select is(public.complete_assistant_summary('e0000000-0000-4000-8000-000000000061'::uuid, 1)->>'summaryId', '90000000-0000-4000-8000-000000000057', 'summary completion returns the durable summary id');
+select is(public.complete_assistant_summary('e0000000-0000-4000-8000-000000000061'::uuid, 1)->>'clientId', 'c0000000-0000-4000-8000-000000000057', 'summary snapshot includes the client id');
+select is(public.complete_assistant_summary('e0000000-0000-4000-8000-000000000061'::uuid, 1)->>'clientName', 'Assistant A', 'summary snapshot keeps the client name from the action payload');
+select is(public.complete_assistant_summary('e0000000-0000-4000-8000-000000000061'::uuid, 1)->>'periodLabel', 'август', 'summary snapshot keeps the period label from the action payload');
+select is(public.complete_assistant_summary('e0000000-0000-4000-8000-000000000061'::uuid, 1)->>'periodStart', '2026-08-01', 'summary snapshot includes period start from the summary row');
+select is(public.complete_assistant_summary('e0000000-0000-4000-8000-000000000061'::uuid, 1)->>'periodEnd', '2026-08-25', 'summary snapshot includes period end from the summary row');
+select is(public.complete_assistant_summary('e0000000-0000-4000-8000-000000000061'::uuid, 1)->'trainer'->>'headline', 'Темп стал стабильнее', 'summary snapshot uses trainer headline from the summary row');
+select is(public.complete_assistant_summary('e0000000-0000-4000-8000-000000000061'::uuid, 1)->'metrics'->>'completedWorkouts', '6', 'summary snapshot includes completed workouts');
+select is(public.complete_assistant_summary('e0000000-0000-4000-8000-000000000061'::uuid, 1)->'metrics'->>'workoutsPerWeek', '1.5', 'summary snapshot includes workouts per week');
+select is(public.complete_assistant_summary('e0000000-0000-4000-8000-000000000061'::uuid, 1)->'metrics'->>'activeWeeks', '4', 'summary snapshot includes active weeks');
+select is((select result->'trainer'->>'headline' from public.assistant_actions where id = 'e0000000-0000-4000-8000-000000000061'), 'Темп стал стабильнее', 'summary snapshot is durable in assistant action result');
+select is(public.complete_assistant_summary('e0000000-0000-4000-8000-000000000061'::uuid, 1)->>'status', 'applied', 'summary completion retry is idempotent');
+select is(public.complete_assistant_summary('e0000000-0000-4000-8000-000000000061'::uuid, 1)->>'version', '2', 'summary completion retry returns the applied action version');
 select is(
   public.apply_assistant_action('e0000000-0000-4000-8000-000000000058'::uuid, jsonb_build_object('workouts', jsonb_build_array(jsonb_build_object('requestId','f0000000-0000-4000-8000-000000000058','clientId','c0000000-0000-4000-8000-000000000057','workoutDate','2026-08-25','notes','Program A','exercises',jsonb_build_array(jsonb_build_object('position',0,'source','system','ref','bench-press','name','Жим лёжа','muscleGroup','chest','inputKind','strength','blockId','10000000-0000-4000-8000-000000000058','blockType','single','blockRounds',1,'sets',jsonb_build_array(jsonb_build_object('position',0,'reps',8,'weightKg',20))))))), 1)->>'status',
   'applied', 'program apply succeeds');

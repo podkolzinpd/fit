@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AssistantOrchestratorAction } from '../../data/repositories/assistant.repository'
 import type { LocalDate } from '../../shared/local-date'
-import { conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isInteractiveAssistantAction, isReadOnlyConversation, latestActiveAssistantAction, mergeAssistantMessages, selectTodayConversation } from './assistant-sessions'
+import { conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isInteractiveAssistantAction, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveAssistantAction, mergeAssistantMessages, selectTodayConversation } from './assistant-sessions'
 
 const conversations = [
   { id: 'old', title: null, created_at: '2026-08-24T18:00:00.000Z' },
@@ -51,5 +51,25 @@ describe('assistant sessions', () => {
     const visible = filterTerminalAssistantMessages(messages)
     expect(visible.map((message) => message.id)).toEqual(['old', 'terminal', 'latest', 'archive'])
     expect(visible.find((message) => message.id === 'terminal')?.action).toBeNull()
+  })
+
+  it('keeps an applied progress action for the durable inline summary', () => {
+    const message = {
+      id: 'summary', conversation_id: 'today', turn_id: 'summary', author: 'assistant',
+      content: 'Сводка сформирована', action: {
+        tool: 'summarize_progress' as const, status: 'proposed' as const, title: 'Сводка',
+        description: 'Сводка сформирована', payload: { step: 'confirm' }, lifecycleStatus: 'applied' as const,
+        result: { status: 'applied' },
+      }, created_at: '2026-08-25T09:03:00.000Z',
+    }
+    expect(filterTerminalAssistantMessages([message])).toEqual([message])
+  })
+
+  it('identifies only user turns paired with a workout collection fragment', () => {
+    const user = { id: 'user', conversation_id: 'today', turn_id: 'turn', author: 'user', content: 'жим лёжа', action: null, created_at: '2026-08-25T09:04:00.000Z' }
+    const workout = { id: 'assistant', conversation_id: 'today', turn_id: 'turn', author: 'assistant', content: 'Добавила фрагмент', action: { tool: 'record_workout' as const, status: 'needs_input' as const, title: 'Тренировка', description: 'Добавила', payload: { step: 'workout', transcript: 'жим лёжа' } }, created_at: '2026-08-25T09:04:01.000Z' }
+    expect(isWorkoutDictationReceipt(user, [user, workout])).toBe(true)
+    expect(isWorkoutDictationReceipt({ ...user, turn_id: 'other' }, [user, workout])).toBe(false)
+    expect(isWorkoutDictationReceipt(user, [user, { ...workout, action: { ...workout.action, payload: { step: 'confirm', transcript: 'жим лёжа' } } }])).toBe(false)
   })
 })

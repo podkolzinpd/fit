@@ -13,8 +13,10 @@ import { WorkoutComposer } from '../workouts/WorkoutComposer'
 import { formatLlmWorkoutText, parseWorkoutWithLlm } from '../workouts/llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
-import { assistantWorkoutSaveInput } from './workout-draft'
-import { conversationLocalDate, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isReadOnlyConversation, latestActiveAssistantAction, mergeAssistantMessages, selectTodayConversation, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
+import { appendWorkoutParse, assistantWorkoutSaveInput, enqueueWorkoutParse, replaceWorkoutParseSource, type WorkoutParseQueue } from './workout-draft'
+import { conversationLocalDate, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveAssistantAction, mergeAssistantMessages, selectTodayConversation, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
+import { AssistantInlineSummaryCard } from './AssistantInlineSummary'
+import { parseAssistantInlineSummary } from './assistant-inline-summary'
 
 type FailedTurn = { turnId: string; message: string }
 
@@ -35,6 +37,8 @@ export function AssistantHistoryPage() {
   const [completedSummaryIds, setCompletedSummaryIds] = useState<string[]>([])
   const [runningClientIds, setRunningClientIds] = useState<string[]>([])
   const [completedClientIds, setCompletedClientIds] = useState<string[]>([])
+  const [savingSummaryIds, setSavingSummaryIds] = useState<string[]>([])
+  const [savedSummaryIds, setSavedSummaryIds] = useState<string[]>([])
   const [actionVersions, setActionVersions] = useState<Record<string, number>>({})
   const conversationRef = useRef<string | undefined>(undefined)
   const loadSequence = useRef(0)
@@ -225,8 +229,46 @@ export function AssistantHistoryPage() {
     finally { setRunningClientIds((current) => current.filter((id) => id !== messageId)) }
   }
 
+  async function saveInlineSummary(messageId: string, summaryId: string, clientId: string) {
+    if (savingSummaryIds.includes(messageId) || savedSummaryIds.includes(messageId)) return
+    setSavingSummaryIds((current) => [...current, messageId])
+    setError(undefined)
+    try {
+      const summaries = await trainingSummariesRepository.listForTrainer(clientId)
+      const summary = summaries.find((item) => item.id === summaryId)
+      if (!summary) throw new Error('assistant_summary_not_found')
+      await trainingSummariesRepository.publish(summary, summary.client)
+      setSavedSummaryIds((current) => [...current, messageId])
+    } catch {
+      setError('Не удалось сохранить сводку в прогресс. Попробуйте ещё раз.')
+    } finally {
+      setSavingSummaryIds((current) => current.filter((id) => id !== messageId))
+    }
+  }
+
   const latestActiveAction = readOnly ? undefined : latestActiveAssistantAction(messages, conversationId)
   const visibleMessages = filterTerminalAssistantMessages(messages)
+
+  useEffect(() => {
+    const summaries = messages.flatMap((message) => {
+      if (message.action?.tool !== 'summarize_progress' || message.action.lifecycleStatus !== 'applied') return []
+      const summary = parseAssistantInlineSummary(message.action.result)
+      return summary ? [{ messageId: message.id, summaryId: summary.summaryId, clientId: summary.clientId }] : []
+    })
+    if (summaries.length === 0) return
+    let cancelled = false
+    void Promise.all(summaries.map(async ({ messageId, summaryId, clientId }) => {
+      try {
+        const rows = await trainingSummariesRepository.listForTrainer(clientId)
+        return rows.some((row) => row.id === summaryId && row.published) ? messageId : undefined
+      } catch { return undefined }
+    })).then((savedIds) => {
+      if (cancelled) return
+      const found = savedIds.filter((id): id is string => id !== undefined)
+      if (found.length > 0) setSavedSummaryIds((current) => [...new Set([...current, ...found])])
+    })
+    return () => { cancelled = true }
+  }, [messages])
 
   return <main className="assistant-page">
     <h1 className="sr-only">Ассистент</h1>
@@ -250,8 +292,15 @@ export function AssistantHistoryPage() {
     <section ref={threadRef} className="assistant-thread" aria-label="Диалог с ассистентом">
       {loadingMessages && <p className="assistant-thread-status">Загружаю сессию…</p>}
       {visibleMessages.map((message) => {
-        if (message.author === 'user') return <article key={message.id} className="assistant-message assistant-message-user"><p>{message.content}</p></article>
-        const showContent = !message.action || message.content.trim() !== message.action.description.trim()
+        if (message.author === 'user') {
+          if (isWorkoutDictationReceipt(message, messages)) return <article key={message.id} className="assistant-workout-user-receipt"><details><summary>Диктовка · фрагмент добавлен</summary><p>{message.content}</p></details></article>
+          return <article key={message.id} className="assistant-message assistant-message-user"><p>{message.content}</p></article>
+        }
+        const inlineSummary = message.action?.tool === 'summarize_progress' && message.action.lifecycleStatus === 'applied'
+          ? parseAssistantInlineSummary(message.action.result)
+          : undefined
+        if (inlineSummary) return <article key={message.id} className="assistant-message assistant-message-assistant"><AssistantInlineSummaryCard summary={inlineSummary} onSave={() => void saveInlineSummary(message.id, inlineSummary.summaryId, inlineSummary.clientId)} saving={savingSummaryIds.includes(message.id)} saved={savedSummaryIds.includes(message.id) || inlineSummary.saved === true} /></article>
+        const showContent = !message.action || message.content.trim() !== message.action.description.trim() || (message.action.tool === 'summarize_progress' && message.action.lifecycleStatus === 'applied')
         if (!showContent) return null
         return <article key={message.id} className="assistant-message assistant-message-assistant"><AssistantMessageContent content={message.content} /></article>
       })}
@@ -278,7 +327,7 @@ function AssistantMessageContent({ content }: { content: string }) {
   return <p>{content}</p>
 }
 
-type SummaryPayload = { step: string; clientId?: string; clientName?: string; candidates?: { id: string; fullName: string }[]; options?: string[]; periodStart?: string; periodEnd?: string; periodLabel?: string }
+type SummaryPayload = { step: string; clientId?: string; clientName?: string; transcript?: string; candidates?: { id: string; fullName: string }[]; options?: string[]; periodStart?: string; periodEnd?: string; periodLabel?: string }
 type ClientDraftPayload = { step: string; fullName: string; gender: 'male' | 'female'; ageYears: number; heightCm: number; goal?: string; initialWeightKg?: number }
 type WorkoutDraftPayload = { step: string; clientId: string; clientName: string; transcript?: string }
 type ProgramDraftPayload = { step: string; clientId: string; clientName: string; goal?: string | null; brief: string; sessions: unknown[] }
@@ -293,7 +342,7 @@ function summaryPayload(action: AssistantOrchestratorAction): { clientId: string
 function AssistantAction({ action, timezone, onWorkoutSaved, onApplyAction, onSuggestion, onCancel, onConfirm, onConfirmClient, running, completed }: { action: AssistantOrchestratorAction; timezone?: string; onWorkoutSaved: () => void; onApplyAction: (input: object) => Promise<void>; onSuggestion: (value: string) => void; onCancel: () => void; onConfirm: () => void; onConfirmClient: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {
   const payload = action.payload as SummaryPayload
   if (action.tool === 'create_client_draft' && payload.step === 'confirm') return <ClientDraftCard payload={payload as ClientDraftPayload} onCancel={onCancel} onConfirm={onConfirmClient} running={running} completed={completed} />
-  if (action.tool === 'record_workout' && payload.step === 'confirm') return <AssistantWorkoutDraftCard payload={payload as WorkoutDraftPayload} timezone={timezone} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} />
+  if (action.tool === 'record_workout' && payload.step === 'confirm') return <AssistantWorkoutDraftCard key={`${action.id ?? 'workout'}-${payload.clientId}`} payload={payload as WorkoutDraftPayload} timezone={timezone} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} />
   if (action.tool === 'record_workout' && payload.step === 'workout') return <WorkoutCollectionCard payload={payload as WorkoutDraftPayload} onSuggestion={onSuggestion} onCancel={onCancel} />
   if (action.tool === 'create_program_draft' && payload.step === 'confirm') return <ProgramDraftCard payload={payload as ProgramDraftPayload} timezone={timezone} onApply={onApplyAction} onSaved={onWorkoutSaved} onCancel={onCancel} />
   if (action.tool !== 'summarize_progress') return <ActionPreview action={action} onCancel={onCancel} />
@@ -311,7 +360,7 @@ function WorkoutCollectionCard({ payload, onSuggestion, onCancel }: { payload: W
     {transcript
       ? <div className="assistant-workout-transcript"><small>Уже добавлено</small><p>{transcript}</p></div>
       : <p>Диктуйте упражнения по одному или все сразу — предыдущие фрагменты не пропадут.</p>}
-    {transcript && <button type="button" onClick={() => onSuggestion('Готово, разобрать тренировку')}>Перейти к разбору</button>}
+    {transcript && <button type="button" onClick={() => onSuggestion('Готово, разобрать тренировку')}>Распознать упражнения</button>}
     <small>{transcript ? 'Можно надиктовать следующее упражнение обычным сообщением.' : 'Например: «Жим лёжа, 3 подхода по 10 повторений, 50 кг».'}</small>
     <CancelActionButton onCancel={onCancel} />
   </div>
@@ -359,25 +408,55 @@ function parsedWorkoutExercises(result: WorkoutParseResponse, catalog: readonly 
 
 function AssistantWorkoutDraftCard({ payload, timezone, onCancel, onApply, onSaved }: { payload: WorkoutDraftPayload; timezone?: string; onCancel: () => void; onApply: (input: object) => Promise<void>; onSaved: () => void }) {
   const catalog = useExerciseCatalog()
-  const [text, setText] = useState(payload.transcript ?? '')
+  const [fragmentText, setFragmentText] = useState('')
+  const [rawFragments, setRawFragments] = useState<string[]>([])
   const [workoutDate, setWorkoutDate] = useState<string>(() => todayInTimeZone(timezone))
   const [startTime, setStartTime] = useState(() => currentTimeInTimeZone(timezone))
   const [result, setResult] = useState<WorkoutParseResponse>()
+  const [initialParsed, setInitialParsed] = useState(false)
   const [parsing, setParsing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string>()
   const [saved, setSaved] = useState(false)
   const [requestId] = useState(() => crypto.randomUUID())
-  async function parse() {
-    if (!text.trim() || catalog.loading || parsing) return
-    setParsing(true); setError(undefined); setResult(undefined)
-    try {
-      const next = await parseWorkoutWithLlm(text, catalog.exercises, { requireLocalDisambiguation: true })
-      setResult(next)
-      if (!next.items.length) setError('Не удалось распознать упражнения. Уточните текст диктовки и попробуйте ещё раз.')
-    } catch { setError('Не удалось обработать диктовку. Исходный текст сохранён — попробуйте ещё раз.') }
-    finally { setParsing(false) }
+  const parsedTranscript = useRef('')
+  const parseQueue = useRef<WorkoutParseQueue>({ current: Promise.resolve() })
+
+  function parseFragment(fragment: string, receipt = true, replaceSource?: string, inputValue?: string): Promise<void> {
+    const normalized = fragment.trim()
+    if (!normalized) return Promise.resolve()
+    return enqueueWorkoutParse(parseQueue.current, async () => {
+      if (catalog.loading) {
+        setFragmentText((current) => current.trim() || normalized)
+        setError('Каталог упражнений ещё загружается. Попробуйте распознать фрагмент ещё раз.')
+        return
+      }
+      setParsing(true); setError(undefined)
+      try {
+        const next = await parseWorkoutWithLlm(normalized, catalog.exercises, { requireLocalDisambiguation: true })
+        setResult((current) => replaceSource && current ? replaceWorkoutParseSource(current, replaceSource, next) : appendWorkoutParse(current, next))
+        if (receipt) setRawFragments((current) => [...current, normalized])
+        if (inputValue !== undefined) setFragmentText((current) => current.trim() === inputValue.trim() ? '' : current)
+        if (!next.items.length && !next.unmatched.length) setError('Не удалось распознать упражнение. Уточните диктовку и попробуйте ещё раз.')
+      } catch {
+        setFragmentText((current) => current.trim() ? current : normalized)
+        setError('Не удалось обработать диктовку. Исходный текст сохранён — попробуйте ещё раз.')
+      }
+      finally { setParsing(false) }
+    })
   }
+
+  useEffect(() => {
+    const transcript = payload.transcript?.trim() ?? ''
+    if (!transcript || catalog.loading || parsedTranscript.current === transcript) return
+    const previous = parsedTranscript.current
+    const fragment = previous && transcript.startsWith(previous) ? transcript.slice(previous.length).trim() : transcript
+    parsedTranscript.current = transcript
+    if (!fragment) return
+    setInitialParsed(true)
+    void parseFragment(fragment, true)
+  }, [catalog.loading, payload.transcript])
+
   async function save() {
     if (!result || result.unmatched.length || saving || saved) return
     const exercises = parsedWorkoutExercises(result, catalog.exercises)
@@ -395,13 +474,13 @@ function AssistantWorkoutDraftCard({ payload, timezone, onCancel, onApply, onSav
     if (!exercise) return
     const valuesStart = sourceText.search(/\d/u)
     const values = valuesStart < 0 ? '' : sourceText.slice(valuesStart).trim()
-    setText((current) => current.replace(sourceText, `${exercise.name}${values ? ` ${values}` : ''}`))
-    setResult(undefined)
+    void parseFragment(`${exercise.name}${values ? ` ${values}` : ''}`, false, sourceText)
   }
   return <div className="assistant-program-draft" aria-label={`Разбор тренировки ${payload.clientName}`}>
     <strong>Тренировка · {payload.clientName}</strong>
     <div className="assistant-workout-meta"><label>Дата<input type="date" value={workoutDate} onChange={(event) => setWorkoutDate(event.target.value)} /></label><label>Время<input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label></div>
-    <WorkoutComposer name="assistant-workout-draft" source="assistant_workout" value={text} label="Диктовка" showVoice={false} onValueChange={setText} onClear={() => { setText(''); setResult(undefined) }} primaryAction={<button type="button" onClick={() => void parse()} disabled={!text.trim() || catalog.loading || parsing}>{catalog.loading ? 'Загружаю каталог…' : parsing ? 'Разбираю…' : 'Разобрать тренировку'}</button>} />
+    {rawFragments.length > 0 && <details className="assistant-workout-receipt"><summary>Получено фрагментов: {rawFragments.length}</summary><div>{rawFragments.map((fragment, index) => <p key={`${fragment}-${index}`}>{fragment}</p>)}</div></details>}
+    <WorkoutComposer name="assistant-workout-fragment" source="assistant_workout" value={fragmentText} label="Добавить упражнение" voiceLabel="Надиктовать упражнение" showVoice onValueChange={(value) => { setFragmentText(value); if (value.trim()) setError(undefined) }} onClear={() => setFragmentText('')} onTranscriptAppended={({ value, transcript }) => parseFragment(transcript, true, undefined, value)} primaryAction={<button type="button" onClick={() => void parseFragment(fragmentText, true, undefined, fragmentText)} disabled={!fragmentText.trim() || catalog.loading || parsing}>{catalog.loading ? 'Загружаю каталог…' : parsing ? 'Распознаю…' : error ? 'Распознать снова' : initialParsed ? 'Добавить упражнение' : 'Распознать упражнения'}</button>} />
     {result && <div className="assistant-progress-preview"><strong>Результат разбора</strong><span>{formatLlmWorkoutText(result, catalog.exercises) || 'Упражнения не распознаны'}</span>{unmatched.map((item) => <div key={item.sourceText} className="assistant-exercise-choice"><small>Нужно уточнить</small><strong>{item.sourceText}</strong><span>{item.reason}</span><div>{item.suggestedExerciseRefs.map((ref) => { const exercise = catalog.exercises.find((candidate) => candidate.ref === ref); return <button key={ref} type="button" onClick={() => chooseExercise(item.sourceText, ref)}>{exercise?.name ?? 'Вариант упражнения'}{exercise?.equipment ? <small>{exercise.equipment}</small> : null}</button> })}</div></div>)}{unmatched.length > 0 && <small>Выберите вариант — исходные подходы, повторы и вес останутся в тексте.</small>}{!unmatched.length && result.items.length > 0 && <button type="button" onClick={() => void save()} disabled={saving || saved}>{saved ? 'Тренировка сохранена' : saving ? 'Сохраняю…' : 'Сохранить тренировку'}</button>}</div>}
     {error && <p className="assistant-card-hint" role="alert">{error}</p>}
     {!saved && <CancelActionButton onCancel={onCancel} />}

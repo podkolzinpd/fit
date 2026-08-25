@@ -95,7 +95,17 @@ export function latestActiveAssistantAction(messages: readonly AssistantMessage[
 export function filterTerminalAssistantMessages(messages: readonly AssistantMessage[]): AssistantMessage[] {
   return messages.flatMap((message) => {
     if (!message.action || isInteractiveAssistantAction(message.action)) return [message]
+    if (message.action.tool === 'summarize_progress' && message.action.lifecycleStatus === 'applied') return [message]
     return message.content.trim() === message.action.description.trim() ? [] : [{ ...message, action: null }]
+  })
+}
+
+export function isWorkoutDictationReceipt(message: AssistantMessage, messages: readonly AssistantMessage[]): boolean {
+  if (message.author !== 'user' || !message.turn_id || !message.content.trim()) return false
+  return messages.some((candidate) => {
+    const payload = candidate.action?.payload
+    return candidate.author === 'assistant' && candidate.turn_id === message.turn_id && candidate.action?.tool === 'record_workout'
+      && payload?.step === 'workout' && typeof payload.transcript === 'string' && payload.transcript.trim().length > 0
   })
 }
 
