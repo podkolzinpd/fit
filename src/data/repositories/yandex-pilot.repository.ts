@@ -30,11 +30,18 @@ const clientSchema = z.object({
   heightCm: z.number().positive().max(260).nullable(),
   goal: z.string().nullable(),
   note: z.string().nullable(),
-  currentWeightKg: z.null(),
+  currentWeightKg: z.number().positive().nullable(),
   lastActivityAt: z.iso.datetime(),
   archivedAt: z.iso.datetime().nullable(),
   version: z.number().int().positive(),
   membershipVersion: z.number().int().positive(),
+  activity: z.object({
+    doneCount: z.number().int().nonnegative(),
+    completionPercent: z.number().int().min(0).max(100).nullable(),
+    lastWorkoutDate: z.iso.date().nullable(),
+    daysInWork: z.number().int().nonnegative().nullable(),
+    needsAttention: z.boolean(),
+  }),
 })
 
 const clientsSchema = z.object({

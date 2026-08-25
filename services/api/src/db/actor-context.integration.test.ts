@@ -3241,6 +3241,28 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(shared.customMetrics).toHaveLength(1)
       expect(shared.goal).not.toBeNull()
 
+      const memberOverview = await withActorTransaction(
+        runtimePool,
+        MEMBER_TRAINER_ID,
+        (client) => readAccessibleClients(client),
+      )
+      expect(memberOverview.clients.find((client) => client.id === CLIENT_ID)).toMatchObject({
+        currentWeightKg: 70,
+        activity: {
+          doneCount: 1,
+          completionPercent: 50,
+          lastWorkoutDate: '2026-08-19',
+          needsAttention: false,
+        },
+      })
+
+      const outsiderOverview = await withActorTransaction(
+        runtimePool,
+        OUTSIDE_TRAINER_ID,
+        (client) => readAccessibleClients(client),
+      )
+      expect(outsiderOverview.clients.some((client) => client.id === CLIENT_ID)).toBe(false)
+
       await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
         client.query(
           `insert into public.client_progress (

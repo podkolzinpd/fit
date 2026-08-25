@@ -307,6 +307,13 @@ const CLIENTS_RESPONSE: PilotClientsResponse = {
     archivedAt: null,
     version: 1,
     membershipVersion: 1,
+    activity: {
+      doneCount: 1,
+      completionPercent: 100,
+      lastWorkoutDate: '2026-08-20',
+      daysInWork: 0,
+      needsAttention: false,
+    },
   }],
 }
 

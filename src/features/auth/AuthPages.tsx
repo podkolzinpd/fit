@@ -16,6 +16,7 @@ import type { AccountRole } from '../../shared/domain'
 import { consumeYandexAuthorizationCallback, createYandexAuthorizationUrl } from './yandex-pilot-oauth'
 import { YandexPilotConnections } from './YandexPilotConnections'
 import { YandexPilotTrainingData } from './YandexPilotTrainingData'
+import { useYandexPilotPolling } from './use-yandex-pilot-polling'
 
 type Mode = 'login' | 'register'
 
@@ -134,6 +135,29 @@ export function YandexPilotCallbackPage() {
       loadTrainingData(apiBaseUrl, session.session.token),
     ])
   }
+
+  async function refreshPilotDataInBackground(): Promise<void> {
+    if (session === null || apiBaseUrl === null) return
+    const [clientsResult, connectionsResult, trainingDataResult] = await Promise.allSettled([
+      yandexPilotRepository.listClients(apiBaseUrl, session.session.token),
+      yandexPilotRepository.listConnections(apiBaseUrl, session.session.token),
+      yandexPilotRepository.listTrainingData(apiBaseUrl, session.session.token),
+    ])
+    if (clientsResult.status === 'fulfilled') {
+      setClients(clientsResult.value)
+      setClientsError(null)
+    }
+    if (connectionsResult.status === 'fulfilled') {
+      setConnections(connectionsResult.value)
+      setConnectionsError(null)
+    }
+    if (trainingDataResult.status === 'fulfilled') {
+      setTrainingData(trainingDataResult.value)
+      setTrainingDataError(null)
+    }
+  }
+
+  useYandexPilotPolling(session !== null && apiBaseUrl !== null, refreshPilotDataInBackground)
 
   useEffect(() => {
     if (apiBaseUrl === null) return

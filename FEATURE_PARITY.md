@@ -71,6 +71,11 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
   stage API contract с `000015`, actor/RLS и idempotency-проверками; основной UI
   на этот API пока не переключён. Production продолжает использовать Supabase, а Yandex callback
   не открывает основное приложение.
+- Client overview в stage возвращает последний вес, количество завершённых
+  тренировок, процент выполнения, дату последней тренировки, дни в работе
+  и attention-сигнал только из доступных actor-у фактов. Pilot callback обновляет
+  данные раз в 15 секунд только в видимой вкладке и сразу после возврата; это
+  временная замена realtime для pilot, а не изменение production-канала.
 
 ## Client self-service workout acceptance contract
 
