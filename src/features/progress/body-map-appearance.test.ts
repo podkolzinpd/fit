@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  allowedBodyMapAppearances,
-  defaultBodyMapAppearance,
-  getBodyMapAppearance,
-  setBodyMapAppearance,
+  defaultBodyMapDisplayMode,
+  getBodyMapDisplayMode,
+  resolveBodyFigureVariant,
+  setBodyMapDisplayMode,
 } from './body-map-appearance'
 
-describe('body map appearance', () => {
+describe('body map display', () => {
   const storage = new Map<string, string>()
 
   beforeEach(() => {
@@ -15,32 +15,44 @@ describe('body map appearance', () => {
       getItem: (key: string) => storage.get(key) ?? null,
       setItem: (key: string, value: string) => storage.set(key, value),
     })
+    vi.stubGlobal('dispatchEvent', vi.fn())
   })
 
   afterEach(() => vi.unstubAllGlobals())
 
-  it('defaults a client to the figure matching their gender', () => {
-    expect(defaultBodyMapAppearance('client', 'female')).toBe('female')
-    expect(defaultBodyMapAppearance('client', 'male')).toBe('male')
-    expect(allowedBodyMapAppearances('client', 'female')).toEqual(['female', 'neutral'])
+  it('shows the real figure matching the subject gender by default', () => {
+    expect(defaultBodyMapDisplayMode('female')).toBe('real')
+    expect(defaultBodyMapDisplayMode('male')).toBe('real')
+    expect(resolveBodyFigureVariant('real', 'female')).toBe('female')
+    expect(resolveBodyFigureVariant('real', 'male')).toBe('male')
   })
 
-  it('does not accept a realistic figure that conflicts with the client gender', () => {
-    storage.set('fit.bodyMapAppearance.client.client-1', 'male')
-    expect(getBodyMapAppearance('client-1', 'client', 'female')).toBe('female')
+  it('uses the anatomical scheme when the subject gender is unknown', () => {
+    expect(defaultBodyMapDisplayMode(null)).toBe('scheme')
+    expect(resolveBodyFigureVariant('real', null)).toBe('neutral')
+    expect(resolveBodyFigureVariant('scheme', 'female')).toBe('neutral')
   })
 
-  it('keeps trainer and client choices private even for the same user id', () => {
-    setBodyMapAppearance('shared-id', 'trainer', 'male')
-    setBodyMapAppearance('shared-id', 'client', 'neutral')
+  it('keeps trainer choices separate for every client', () => {
+    setBodyMapDisplayMode('trainer-1', 'trainer', 'client-1', 'scheme')
 
-    expect(getBodyMapAppearance('shared-id', 'trainer', null)).toBe('male')
-    expect(getBodyMapAppearance('shared-id', 'client', 'female')).toBe('neutral')
+    expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-1', 'female')).toBe('scheme')
+    expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-2', 'male')).toBe('real')
   })
 
-  it('uses the neutral scheme when the viewer has not made a choice and gender is unknown', () => {
-    expect(defaultBodyMapAppearance('trainer', null)).toBe('neutral')
-    expect(defaultBodyMapAppearance('client', null)).toBe('neutral')
-    expect(allowedBodyMapAppearances('client', null)).toEqual(['neutral'])
+  it('keeps trainer and client choices private for the same subject', () => {
+    setBodyMapDisplayMode('trainer-1', 'trainer', 'client-1', 'scheme')
+    setBodyMapDisplayMode('client-1', 'client', 'client-1', 'real')
+
+    expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-1', 'female')).toBe('scheme')
+    expect(getBodyMapDisplayMode('client-1', 'client', 'client-1', 'female')).toBe('real')
+  })
+
+  it('migrates only the old client preference', () => {
+    storage.set('fit.bodyMapAppearance.client.client-1', 'neutral')
+    storage.set('fit.bodyMapAppearance.trainer.trainer-1', 'female')
+
+    expect(getBodyMapDisplayMode('client-1', 'client', 'client-1', 'female')).toBe('scheme')
+    expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-1', 'male')).toBe('real')
   })
 })
