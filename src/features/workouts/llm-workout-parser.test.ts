@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
-import { formatLlmWorkoutText, mergeWorkoutParse, parseWorkoutWithLlm } from './llm-workout-parser'
+import { formatLlmWorkoutText, mergeWorkoutParse, parseWorkoutWithLlm, requireExerciseConfirmation } from './llm-workout-parser'
 
 const catalog: ExerciseSnapshot[] = [
   { source: 'system', ref: 'bench', name: 'Жим лёжа', muscleGroup: 'chest', inputKind: 'strength' },
@@ -50,6 +50,19 @@ describe('formatLlmWorkoutText', () => {
     })).toEqual({
       items: [],
       unmatched: [{ sourceText: 'Сведение и разведение ног 20 кг 3 по 20', reason: 'Нужно уточнить вариант упражнения', suggestedExerciseRefs: ['adductor', 'abductor'] }],
+    })
+  })
+
+  it('не подставляет упражнение из модели с недостаточной уверенностью', () => {
+    const choices: ExerciseSnapshot[] = [
+      { source: 'system', ref: 'barbell-bench', name: 'Жим штанги лёжа', muscleGroup: 'chest', inputKind: 'strength' },
+      { source: 'system', ref: 'dumbbell-bench', name: 'Жим гантелей лёжа', muscleGroup: 'chest', inputKind: 'strength' },
+    ]
+    expect(requireExerciseConfirmation({
+      items: [{ sourceText: 'жим лёжа 3 по 10', exerciseRef: 'barbell-bench', confidence: 0.96, sets: [{ weightKg: 50, reps: 10 }] }], unmatched: [],
+    }, choices)).toEqual({
+      items: [],
+      unmatched: [{ sourceText: 'жим лёжа 3 по 10', reason: 'Нужно выбрать упражнение: модель не уверена в совпадении', suggestedExerciseRefs: ['barbell-bench', 'dumbbell-bench'] }],
     })
   })
 

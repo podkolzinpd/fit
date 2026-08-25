@@ -221,7 +221,7 @@ export function VoiceInputButton({
     >
       {recording ? <StopIcon /> : <MicIcon />}
     </button>
-    {message && <div className="voice-input-status" role="status"><small className={message.startsWith('Текст добавлен') ? 'success' : 'error'}>{message}</small>{undo && <button type="button" className="link" onClick={() => { undo(); setUndo(null); setMessage(null) }}>Отменить</button>}</div>}
+    {message && <VoiceInputStatus message={message} undo={undo} onUndo={() => { undo?.(); setUndo(null); setMessage(null) }} onDismiss={() => setMessage(null)} />}
   </div>
 
   return <div className="voice-input">
@@ -236,7 +236,16 @@ export function VoiceInputButton({
       {beta && phase === 'idle' && <span className="voice-beta">beta</span>}
     </button>
     {phase === 'loading' && <small className="muted">При первом запуске загружается локальная модель (~31 МБ).</small>}
-    {message && <div className="voice-input-status" role="status"><small className={message.startsWith('Текст добавлен') ? 'success' : 'error'}>{message}</small>{undo && <button type="button" className="link" onClick={() => { undo(); setUndo(null); setMessage(null) }}>Отменить</button>}</div>}
+    {message && <VoiceInputStatus message={message} undo={undo} onUndo={() => { undo?.(); setUndo(null); setMessage(null) }} onDismiss={() => setMessage(null)} />}
+  </div>
+}
+
+function VoiceInputStatus({ message, undo, onUndo, onDismiss }: { message: string; undo: (() => void) | null; onUndo: () => void; onDismiss: () => void }) {
+  const successful = message.startsWith('Текст добавлен')
+  return <div className="voice-input-status" role={successful ? 'status' : 'alert'}>
+    <small className={successful ? 'success' : 'error'}>{message}</small>
+    {undo && <button type="button" className="link" onClick={onUndo}>Отменить</button>}
+    <button type="button" className="voice-status-dismiss" aria-label="Закрыть сообщение" onClick={onDismiss}>×</button>
   </div>
 }
 

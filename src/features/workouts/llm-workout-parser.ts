@@ -2,6 +2,12 @@ import type { ExerciseSnapshot } from '../../shared/domain'
 import { exercisesRepository, type WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { matchesExplicitWorkoutEquipment, parseQuickWorkoutEntry, splitWorkoutText, workoutCandidates, type ParsedWorkoutExercise } from './quick-workout-entry'
 
+/**
+ * Ниже этого порога выбор модели нужно подтвердить. Локальный строгий матчинг
+ * имеет confidence=1 и не зависит от самооценки LLM.
+ */
+export const REQUIRED_EXERCISE_CONFIDENCE = 0.97
+
 export async function parseWorkoutWithLlm(text: string, catalog: readonly ExerciseSnapshot[]) {
   // Сначала отделяем однозначно найденные упражнения. Это даёт LLM и
   // детерминированному парсеру одинаковые исходные строки и не создаёт дублей,
@@ -10,13 +16,35 @@ export async function parseWorkoutWithLlm(text: string, catalog: readonly Exerci
   const local = localWorkoutParse(preparedText, catalog)
   try {
     const remote = await exercisesRepository.parseWorkout(preparedText, catalog.filter((exercise) => exercise.source === 'system'))
-    return mergeWorkoutParse(remote, local, catalog)
+    return requireExerciseConfirmation(mergeWorkoutParse(remote, local, catalog), catalog)
   } catch (error) {
     // Явные названия и числовые значения не должны пропадать только из-за
     // временной ошибки или нестандартного ответа модели. Не угадываем:
     // fallback включается лишь для упражнений, безопасно найденных в каталоге.
     if (local.items.length) return local
     throw error
+  }
+}
+
+/**
+ * Безопасный разбор не должен превращать похожее упражнение в факт тренировки.
+ * Для неуверенного выбора показываем текущий вариант вместе с ближайшими из
+ * каталога и ждём явного выбора человека.
+ */
+export function requireExerciseConfirmation(response: WorkoutParseResponse, catalog: readonly ExerciseSnapshot[]): WorkoutParseResponse {
+  const byRef = new Map(catalog.map((exercise) => [exercise.ref, exercise]))
+  const uncertain = response.items.filter((item) => item.confidence < REQUIRED_EXERCISE_CONFIDENCE)
+  if (!uncertain.length) return response
+  const unresolved = uncertain.map((item) => {
+    const candidates = [item.exerciseRef, ...workoutCandidates(item.sourceText, catalog).map((exercise) => exercise.ref)]
+      .filter((ref, index, all) => byRef.has(ref) && all.indexOf(ref) === index)
+      .slice(0, 4)
+    return { sourceText: item.sourceText, reason: 'Нужно выбрать упражнение: модель не уверена в совпадении', suggestedExerciseRefs: candidates }
+  })
+  const uncertainSources = new Set(uncertain.map((item) => sourceKey(item.sourceText)))
+  return {
+    items: response.items.filter((item) => !uncertainSources.has(sourceKey(item.sourceText))),
+    unmatched: response.unmatched.concat(unresolved.filter((item) => !response.unmatched.some((existing) => sourceKey(existing.sourceText) === sourceKey(item.sourceText)))),
   }
 }
 
