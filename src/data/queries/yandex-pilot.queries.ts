@@ -17,6 +17,46 @@ export const yandexPilotQueries = {
     cache: 'no-store',
     headers: { 'x-fit-pilot-session': sessionToken },
   }),
+  parseWorkout: (
+    apiBaseUrl: string,
+    sessionToken: string,
+    text: string,
+    systemCatalog: readonly unknown[],
+  ) => fetch(`${apiBaseUrl}/v1/assistant/yandex/parse-workout`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      'content-type': 'application/json',
+      'x-fit-pilot-session': sessionToken,
+    },
+    body: JSON.stringify({ text, systemCatalog }),
+  }),
+  listTrainingSummaries: (apiBaseUrl: string, sessionToken: string, clientId: string) =>
+    fetch(`${apiBaseUrl}/v1/clients/${clientId}/training-summaries`, {
+      cache: 'no-store',
+      headers: { 'x-fit-pilot-session': sessionToken },
+    }),
+  generateTrainingSummary: (
+    apiBaseUrl: string,
+    sessionToken: string,
+    clientId: string,
+    periodStart: string,
+    periodEnd: string,
+    force: boolean,
+  ) => fetch(`${apiBaseUrl}/v1/clients/${clientId}/training-summaries/generate`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      'content-type': 'application/json',
+      'x-fit-pilot-session': sessionToken,
+    },
+    body: JSON.stringify({
+      client_id: clientId,
+      period_start: periodStart,
+      period_end: periodEnd,
+      force,
+    }),
+  }),
   createInvitation: (
     apiBaseUrl: string,
     sessionToken: string,

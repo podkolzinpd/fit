@@ -2,7 +2,12 @@ import { SupabaseBridge, SupabaseBridgeError } from './supabase-bridge.js'
 
 const completionUrl = 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion'
 
-type Exercise = { source: 'system' | 'custom'; ref: string; name: string; inputKind: string }
+export type WorkoutParserExercise = {
+  source: 'system' | 'custom'
+  ref: string
+  name: string
+  inputKind: string
+}
 type ParsedItem = { sourceText: string; exerciseRef: string; confidence: number; sets: Array<{ weightKg?: number; reps?: number; durationMin?: number; distanceKm?: number }> }
 type Unmatched = { sourceText: string; reason: string; suggestedExerciseRefs: string[] }
 
@@ -36,7 +41,7 @@ function isSetValue(key: string, value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && (key === 'weightKg' ? value >= 0 : value > 0)
 }
 
-function validate(value: unknown, catalog: Exercise[]): WorkoutParseResponse {
+function validate(value: unknown, catalog: WorkoutParserExercise[]): WorkoutParseResponse {
   if (!isRecord(value) || !Array.isArray(value.items) || !Array.isArray(value.unmatched)) throw new Error('invalid_output')
   const allowed = new Set(catalog.map((item) => item.ref))
   const items = value.items.flatMap((raw): ParsedItem[] => {
@@ -57,28 +62,22 @@ export interface LegacyWorkoutParser {
   parse(actorToken: string, value: unknown): Promise<WorkoutParseResponse>
 }
 
-export class SupabaseWorkoutParser implements LegacyWorkoutParser {
+export class YandexWorkoutParser {
   constructor(
-    private readonly supabase: SupabaseBridge,
     private readonly yandexApiKey: string,
     private readonly yandexFolderId: string,
     private readonly modelId = 'yandexgpt',
     private readonly request = fetch,
   ) {}
 
-  async parse(actorToken: string, value: unknown): Promise<WorkoutParseResponse> {
+  async parse(value: unknown, customCatalog: readonly WorkoutParserExercise[] = []): Promise<WorkoutParseResponse> {
     const input = this.parseInput(value)
-    const userId = await this.supabase.authenticatedUserId(actorToken)
-    if (userId === undefined) throw new WorkoutParseError(401, 'unauthorized')
-    let customs: Array<{ id: string; name: string; input_kind: string }> 
-    try {
-      customs = await this.supabase.select('custom_exercises?select=id,name,input_kind,archived_at&archived_at=is.null', actorToken)
-    } catch (error) {
-      if (error instanceof SupabaseBridgeError && error.status === 503) throw new WorkoutParseError(503, 'supabase_unavailable')
-      throw new WorkoutParseError(502, 'parse_failed')
-    }
-    const system = input.systemCatalog.flatMap((raw): Exercise[] => isRecord(raw) && raw.source === 'system' && typeof raw.ref === 'string' && typeof raw.name === 'string' && typeof raw.inputKind === 'string' ? [{ source: 'system', ref: raw.ref, name: raw.name, inputKind: raw.inputKind }] : [])
-    const custom = customs.flatMap((raw): Exercise[] => typeof raw.id === 'string' && typeof raw.name === 'string' && typeof raw.input_kind === 'string' ? [{ source: 'custom', ref: raw.id, name: raw.name, inputKind: raw.input_kind }] : [])
+    const system = input.systemCatalog.flatMap((raw): WorkoutParserExercise[] =>
+      isRecord(raw) && raw.source === 'system' && typeof raw.ref === 'string'
+        && typeof raw.name === 'string' && typeof raw.inputKind === 'string'
+        ? [{ source: 'system', ref: raw.ref, name: raw.name, inputKind: raw.inputKind }]
+        : [])
+    const custom = customCatalog.filter((item) => item.source === 'custom')
     const catalog = [...system, ...custom]
     if (catalog.length === 0) throw new WorkoutParseError(400, 'empty_catalog')
     const prompt = [
@@ -108,9 +107,42 @@ export class SupabaseWorkoutParser implements LegacyWorkoutParser {
   }
 
   private parseInput(value: unknown): { text: string; systemCatalog: unknown[] } {
-    if (!isRecord(value) || typeof value.text !== 'string' || !Array.isArray(value.systemCatalog) || value.text.length > 12_000) {
+    if (!isRecord(value) || typeof value.text !== 'string' || !value.text.trim()
+      || !Array.isArray(value.systemCatalog) || value.text.length > 12_000) {
       throw new WorkoutParseError(400, 'invalid_request')
     }
     return { text: value.text, systemCatalog: value.systemCatalog }
+  }
+}
+
+export class SupabaseWorkoutParser implements LegacyWorkoutParser {
+  constructor(
+    private readonly supabase: SupabaseBridge,
+    private readonly yandexApiKey: string,
+    private readonly yandexFolderId: string,
+    private readonly modelId = 'yandexgpt',
+    private readonly request = fetch,
+  ) {}
+
+  async parse(actorToken: string, value: unknown): Promise<WorkoutParseResponse> {
+    const userId = await this.supabase.authenticatedUserId(actorToken)
+    if (userId === undefined) throw new WorkoutParseError(401, 'unauthorized')
+    let customs: Array<{ id: string; name: string; input_kind: string }>
+    try {
+      customs = await this.supabase.select('custom_exercises?select=id,name,input_kind,archived_at&archived_at=is.null', actorToken)
+    } catch (error) {
+      if (error instanceof SupabaseBridgeError && error.status === 503) throw new WorkoutParseError(503, 'supabase_unavailable')
+      throw new WorkoutParseError(502, 'parse_failed')
+    }
+    const custom = customs.flatMap((raw): WorkoutParserExercise[] =>
+      typeof raw.id === 'string' && typeof raw.name === 'string' && typeof raw.input_kind === 'string'
+        ? [{ source: 'custom', ref: raw.id, name: raw.name, inputKind: raw.input_kind }]
+        : [])
+    return new YandexWorkoutParser(
+      this.yandexApiKey,
+      this.yandexFolderId,
+      this.modelId,
+      this.request,
+    ).parse(value, custom)
   }
 }

@@ -72,8 +72,9 @@ The following remain unchanged during the foundation phase:
    atomic planned-result recording, missed-plan cancel/reschedule, client
    comment and author-scoped delete. Repeated deploys do not duplicate fixtures,
    no production or Supabase data is read, and the token is not printed. The
-   remaining scope includes feedback/reactions, questions and the derived
-   progress/chronicle reads added after the foundation migrations.
+   Feedback/reactions, questions, progress/chronicle, client overview and the
+   goal-aware summary storage/API are now represented in the isolated Yandex
+   chain. Production routing and the tenant data copy remain pending.
 8. Rehearse full tenant migration at least twice. Cut over one isolated tenant
    cohort only after all data it can mutate is migrated and writes are frozen
    for the cutover window.
@@ -188,6 +189,11 @@ chronicle. It grants `fit_api` reads plus versioned security-definer commands,
 never direct domain writes. Migration `000017_client_overview` adds the
 role-filtered client-card analytics derived from those shared facts: latest
 weight, completion, last workout, time in work and the inactivity signal.
+Migration `000018_training_summaries` adds role-safe internal summaries and a
+physically separate client-safe projection. Native pilot routes authenticate
+summary generation and workout parsing with the hashed Fit session, read the
+facts and custom exercise catalog from Yandex PostgreSQL and do not require a
+Supabase JWT. Existing production routes remain intact.
 Product work merged after the foundation still expands the contract required
 before a production tenant can be switched.
 
@@ -210,7 +216,9 @@ Port the current `main` behavior in this order:
    (`000017` serves the analytics; the isolated pilot uses visible-tab polling
    every 15 seconds and an immediate refetch on return, while production keeps
    its existing Supabase realtime channel until cutover);
-10. goal-aware training summary and the remaining Edge Function behavior.
+10. goal-aware training summary and the remaining Edge Function behavior
+    (`000018` and the native pilot API are implemented; controlled stage AI
+    smoke and tenant migration rehearsal remain before cutover).
 
 Each item is a separate vertical slice: PostgreSQL migration, grants/RLS and
 cross-tenant tests, API transaction/DTO, repository adapter and observable
@@ -227,7 +235,9 @@ check restores the previous image, while migration history remains forward-only.
 For the workout read model, the same gate also loads a bounded stage-only
 synthetic fixture after migration and calls `/v1/training-data`, progress,
 running, exercise-progress and chronicle endpoints with an ephemeral session
-after the candidate revision is deployed. A failed nested aggregate or RLS
+after the candidate revision is deployed. It also verifies the native summary
+list contract without generating a paid model request on every deployment. A
+failed nested aggregate or RLS
 check follows the existing API rollback path.
 
 A production pilot cannot start after only profiles and memberships have been
