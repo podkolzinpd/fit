@@ -17,6 +17,7 @@ import { VoiceInputButton, VoiceNoteField, type VoiceInputPhase } from '../voice
 import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
+import { BodyMapAppearanceSetting } from '../progress/BodyMapAppearanceSetting'
 
 export function MyClientPage() {
   const { actor, refresh } = useAuth()
@@ -295,6 +296,12 @@ export function ClientDetailPage() {
         </nav>
       </div>
       <ClientGoalBlock client={query.data} />
+      {actor?.role === 'trainer' && <BodyMapAppearanceSetting
+        viewerUserId={actor.userId}
+        role={actor.role}
+        clientId={query.data.id}
+        gender={query.data.gender}
+      />}
       {upcoming.length > 0 && <section className="client-detail-upcoming"><h2>Предстоит</h2><div className="cards">{upcoming.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}{workout.startTime ? ` · ${workout.startTime.slice(0, 5)}` : ''}</strong><WorkoutExercisesSummary workout={workout} />{workout.stageTitle && <p className="stage-tag">🎯 {workout.stageTitle}</p>}</div><span className={`badge ${workout.status}`}>{workout.status === 'in_progress' ? 'Идёт' : 'План'}</span></Link>)}</div></section>}
       <ClientNoteBlock client={query.data} />
       <div className="page-actions">

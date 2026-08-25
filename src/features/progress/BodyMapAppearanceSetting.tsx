@@ -1,40 +1,43 @@
 import type { AccountRole, Gender } from '../../shared/domain'
 import {
-  allowedBodyMapAppearances,
-  setBodyMapAppearance,
-  useBodyMapAppearance,
-  type BodyMapAppearance,
+  setBodyMapDisplayMode,
+  useBodyMapDisplayMode,
+  type BodyMapDisplayMode,
 } from './body-map-appearance'
 
-const LABELS: Record<BodyMapAppearance, string> = {
-  male: 'Мужская фигура',
-  female: 'Женская фигура',
-  neutral: 'Схема',
+const LABELS: Record<BodyMapDisplayMode, string> = {
+  real: 'Реальная фигура',
+  scheme: 'Схема',
 }
 
-export function BodyMapAppearanceSetting({ userId, role, gender }: {
-  userId: string
+export function BodyMapAppearanceSetting({ viewerUserId, role, clientId, gender }: {
+  viewerUserId: string
   role: AccountRole
+  clientId: string
   gender: Gender | null
 }) {
-  const appearance = useBodyMapAppearance(userId, role, gender)
-  const options = allowedBodyMapAppearances(role, gender)
-  return <section className="body-map-appearance-setting" aria-labelledby="body-map-appearance-title">
+  const mode = useBodyMapDisplayMode(viewerUserId, role, clientId, gender)
+  const options: readonly BodyMapDisplayMode[] = gender ? ['real', 'scheme'] : ['scheme']
+  const hint = role === 'trainer'
+    ? 'Выбор действует только для этого спортсмена'
+    : 'Личный выбор — тренер его не увидит'
+  return <section className="body-map-appearance-setting" aria-label="Вид карты тела">
     <div>
-      <strong id="body-map-appearance-title">Фигура на карте тела</strong>
-      <span>Личный выбор — другим пользователям он не виден</span>
+      <strong>Фигура на карте тела</strong>
+      <span>{hint}</span>
     </div>
     <div className={`body-map-appearance-options count-${options.length}`} role="radiogroup" aria-label="Вид фигуры">
       {options.map((option) => <button
         key={option}
         type="button"
         role="radio"
-        aria-checked={appearance === option}
-        onClick={() => setBodyMapAppearance(userId, role, option)}
+        aria-checked={mode === option}
+        onClick={() => setBodyMapDisplayMode(viewerUserId, role, clientId, option)}
       >
         <span className={`body-map-appearance-icon ${option}`} aria-hidden="true" />
         {LABELS[option]}
       </button>)}
     </div>
+    {!gender && <small>Для реальной фигуры укажите пол спортсмена</small>}
   </section>
 }

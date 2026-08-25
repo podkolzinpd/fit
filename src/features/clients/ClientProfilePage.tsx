@@ -42,7 +42,12 @@ export function ClientProfilePage() {
           <Link className="button secondary client-profile-edit" to="/me/edit">Изменить данные</Link>
         </section>
         <ClientTrainerConnections clientId={client.data.id} />
-        <BodyMapAppearanceSetting userId={actor.userId} role={actor.role} gender={client.data.gender} />
+        <BodyMapAppearanceSetting
+          viewerUserId={actor.userId}
+          role={actor.role}
+          clientId={client.data.id}
+          gender={client.data.gender}
+        />
       </>}
     </AsyncView>
     <section className="profile-settings" aria-label="Настройки">

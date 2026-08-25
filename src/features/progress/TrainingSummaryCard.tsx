@@ -114,7 +114,7 @@ function SummaryCore({ headline, metrics, progress, consistency, progressLimit, 
   </>
 }
 
-export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
+export function TrainerTrainingSummaryCard({ clientId, gender = null }: { clientId: string; gender?: Gender | null }) {
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
   const timeZone = normalizeTimeZone(actor?.timezone)
@@ -191,6 +191,7 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
             key={summary.id}
             summary={summary}
             clientId={clientId}
+            gender={gender}
             workouts={workouts.data ?? []}
             workoutsLoading={workouts.isLoading}
             workoutsError={workouts.error}
@@ -228,9 +229,10 @@ export function TrainerTrainingSummaryCard({ clientId }: { clientId: string }) {
   </section>
 }
 
-function TrainerSummaryContent({ summary, clientId, workouts, workoutsLoading, workoutsError, onWorkoutsRetry, onChanged }: {
+function TrainerSummaryContent({ summary, clientId, gender, workouts, workoutsLoading, workoutsError, onWorkoutsRetry, onChanged }: {
   summary: TrainingSummary
   clientId: string
+  gender: Gender | null
   workouts: Awaited<ReturnType<typeof workoutsRepository.list>>
   workoutsLoading: boolean
   workoutsError: Error | null
@@ -245,6 +247,8 @@ function TrainerSummaryContent({ summary, clientId, workouts, workoutsLoading, w
     <TrainingBodyProgressMap
       summary={summary}
       workouts={workouts}
+      clientId={clientId}
+      clientGender={gender}
       loadLoading={workoutsLoading}
       loadError={workoutsError}
       onLoadRetry={onWorkoutsRetry}
@@ -472,7 +476,8 @@ function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalL
     <TrainingBodyProgressMap
       summary={summary}
       workouts={workouts}
-      viewerGender={gender}
+      clientId={summary.clientId}
+      clientGender={gender}
       loadLoading={workoutsLoading}
       loadError={workoutsError}
       onLoadRetry={onWorkoutsRetry}
