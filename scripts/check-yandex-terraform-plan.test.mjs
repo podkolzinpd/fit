@@ -133,6 +133,28 @@ describe('Yandex Terraform plan policy', () => {
     assert.notEqual(result.status, 0)
   })
 
+  test('allows only the bounded API timeout needed by the summary retry contract', () => {
+    const accepted = runPolicy([{
+      address: 'yandex_serverless_container.api',
+      change: {
+        actions: ['update'],
+        before: { execution_timeout: '30s', image: [{ url: 'old' }] },
+        after: { execution_timeout: '120s', image: [{ url: 'new' }] },
+      },
+    }], { automaticStageUpdate: true })
+    const rejected = runPolicy([{
+      address: 'yandex_serverless_container.api',
+      change: {
+        actions: ['update'],
+        before: { execution_timeout: '120s' },
+        after: { execution_timeout: '300s' },
+      },
+    }], { automaticStageUpdate: true })
+
+    assert.equal(accepted.status, 0)
+    assert.notEqual(rejected.status, 0)
+  })
+
   test('accepts bounded automatic image retention', () => {
     const result = runPolicy(
       [

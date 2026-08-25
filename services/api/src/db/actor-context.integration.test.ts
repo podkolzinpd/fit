@@ -3302,6 +3302,89 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       })
       expect(chronicle.items).toHaveLength(1)
       expect(chronicle.totalCount).toBe(1)
+
+      const trainerSummary = {
+        headline: 'Внутренний вывод только для тренеров',
+        progress: ['Отжимания: 15 повторений'],
+        consistency: 'Одна завершённая тренировка',
+        attention: ['Проверить: доступна 1 тренировка'],
+      }
+      const clientSummary = {
+        headline: 'Отжимания: подтверждено 15 повторений',
+        achievements: ['Выполнено 15 повторений'],
+        consistency: 'За период завершена 1 тренировка',
+        encouragement: 'Первый результат уже зафиксирован.',
+        goalAlignment: 'Это начальная точка для цели «Подтянуться 10 раз».',
+        nextSteps: ['Собрать данные следующей тренировки'],
+      }
+      const saveSummary = (actorId: string, fingerprint: string) =>
+        withActorTransaction(runtimePool!, actorId, (client) => client.query<JsonResultRow>(`
+          select public.save_generated_training_summary(
+            $1, date '2026-08-01', date '2026-08-26', $2,
+            $3::jsonb, $4::jsonb, $5::jsonb, 'gpt://folder/yandexgpt/latest',
+            'training-progress-v6', $6, $7::jsonb, $8::jsonb,
+            timestamptz '2026-08-26 12:00:00+00'
+          ) result
+        `, [
+          CLIENT_ID, trainerSummary.headline, JSON.stringify(trainerSummary),
+          JSON.stringify(clientSummary), JSON.stringify({ completed_workouts: 1 }),
+          fingerprint, JSON.stringify({ workouts: 1, exercises: 1, sets: 1 }),
+          JSON.stringify({ inputTextTokens: '100' }),
+        ]))
+
+      await saveSummary(ACTOR_ID, 'a'.repeat(64))
+      const memberInternal = await withActorTransaction(
+        runtimePool,
+        MEMBER_TRAINER_ID,
+        (client) => client.query<QueryResultRow & { trainer_summary: unknown }>(
+          'select trainer_summary from public.client_training_summaries where client_id = $1',
+          [CLIENT_ID],
+        ),
+      )
+      expect(memberInternal).toHaveLength(1)
+      expect(memberInternal[0]?.trainer_summary).toEqual(trainerSummary)
+
+      const clientInternal = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => client.query(
+          'select trainer_summary from public.client_training_summaries where client_id = $1',
+          [CLIENT_ID],
+        ),
+      )
+      expect(clientInternal).toEqual([])
+
+      await saveSummary(OTHER_ACTOR_ID, 'b'.repeat(64))
+      const clientVisible = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => client.query<QueryResultRow & { summary: unknown }>(
+          'select summary from public.client_published_training_summaries where client_id = $1',
+          [CLIENT_ID],
+        ),
+      )
+      expect(clientVisible).toHaveLength(1)
+      expect(clientVisible[0]?.summary).toEqual(clientSummary)
+      expect(JSON.stringify(clientVisible)).not.toContain('Внутренний вывод')
+
+      await expect(saveSummary(OUTSIDE_TRAINER_ID, 'c'.repeat(64)))
+        .rejects.toMatchObject({ message: 'training_summary_forbidden' })
+      const outsiderVisible = await withActorTransaction(
+        runtimePool,
+        OUTSIDE_TRAINER_ID,
+        (client) => client.query(
+          'select summary from public.client_published_training_summaries where client_id = $1',
+          [CLIENT_ID],
+        ),
+      )
+      expect(outsiderVisible).toEqual([])
+      await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        client.query(`insert into public.client_training_summaries (
+          trainer_id, client_id, period_start, period_end, summary,
+          trainer_summary, client_summary, model_uri, prompt_version, input_fingerprint
+        ) values ($1, $2, current_date, current_date, 'x', '{}'::jsonb, '{}'::jsonb,
+          'model', 'prompt', 'fingerprint')`, [ACTOR_ID, CLIENT_ID])))
+        .rejects.toMatchObject({ code: '42501' })
     })
   },
 )

@@ -35,7 +35,7 @@ env:
   TF_VAR_cloud_id: ${{ vars.YC_CLOUD_ID }}
   TF_VAR_folder_id: ${{ vars.YC_FOLDER_ID }}
   TF_VAR_environment: stage
-  TF_VAR_api_execution_timeout: '30s'
+  TF_VAR_api_execution_timeout: '120s'
   TF_VAR_allow_unauthenticated_api: 'true'
   TF_VAR_deployer_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   TF_VAR_migration_invoker_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
@@ -379,6 +379,11 @@ jobs:
               and .durationSec == 3600 and .hasPr == true
             ))
           ' <<<"$chronicle" >/dev/null
+          summaries=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
+            "${api_url%/}/v1/clients/$client_id/training-summaries")
+          jq -e '.summaries | type == "array"' <<<"$summaries" >/dev/null
           post_workout_id=$(jq -er '
             .workouts[]
             | select(.notes == "Синтетическая проверка переноса Yandex stage")
