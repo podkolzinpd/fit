@@ -32,6 +32,10 @@ const variablesTerraform = readFileSync(
   join(import.meta.dirname, '..', 'infra', 'yandex', 'variables.tf'),
   'utf8',
 )
+const databaseTerraform = readFileSync(
+  join(import.meta.dirname, '..', 'infra', 'yandex', 'database.tf'),
+  'utf8',
+)
 
 test('publishes the final yandex-stage result without restoring an approval gate', () => {
   assert.match(workflow, /^  publish_deployment:$/m)
@@ -170,6 +174,10 @@ test('supports a plan-only stage diagnostic that cannot deploy resources', () =>
     [...workflow.matchAll(/inputs\.plan_only != true/g)].length,
     2,
   )
+})
+
+test('preserves reviewed WebSQL access instead of creating PostgreSQL drift', () => {
+  assert.match(databaseTerraform, /^      web_sql\s+= true$/m)
 })
 
 test('keeps the legacy bridge pair validation compatible with Terraform 1.8', () => {

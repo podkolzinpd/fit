@@ -5,20 +5,16 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-25
-Проверенный базовый `main`: `57f570a` (`ci(e2e): parallelize safe browser checks (#559)`)
+Проверенный базовый `main`: `5244032` (`feat(yandex): complete workout lifecycle (#551)`)
 
 ## Активное изменение
 
-- Ветка `codex/workout-lifecycle-completion` закрывает non-Live workout
-  lifecycle в изолированном Yandex API без изменения production routing и UI.
-- Миграция `000014` добавляет идемпотентное создание завершённого workout,
-  исправление факта с сохранением исходного плана, атомарную запись результата
-  прошлого назначения, cancel/reschedule, комментарий клиента и author-scoped
-  soft-delete.
-- Все команды используют optimistic version, actor context и tenant-проверки;
-  `fit_api` по-прежнему не получает прямых write-grants на domain tables.
-- Автоматический stage smoke проверяет completed create/replay/edit, planned
-  result, cancel/reschedule и итоговый read model до принятия новой revision.
+- Ветка `codex/fix-yandex-stage-postgres-drift` устраняет блокировку доставки
+  `000014`: WebSQL уже включён в stage для управляемого доступа к таблицам, но
+  Terraform ошибочно пытался выключать его при каждом API-релизе.
+- Безопасный `plan_only` manual run теперь явно исключает deploy и показывает
+  названия изменившихся Terraform-полей без значений и секретов.
+- Защита от создания, resize и удаления платных ресурсов остаётся включённой.
 - WebKit behavior CI изолирует 40 сценариев в восьми короткоживущих browser
   shards, распределённых между двумя параллельными линиями с отдельной локальной
   БД. Упавший shard повторяется один раз в новом контейнере.
@@ -61,7 +57,8 @@
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
   exercises и workout aggregate работают на stage. Миграции `000001–000013`,
-  API revision, Live core и структурные Live-команды доставлены автоматически.
+  API revision, Live core и структурные Live-команды доставлены автоматически;
+  `000014` слита и ожидает повторной доставки после исправления drift.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
 - Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
@@ -78,17 +75,15 @@
 
 ## Проверки активной ветки
 
+- Workout lifecycle PR #551 и весь его CI зелёные; stage delivery остановилась
+  до миграции на проверке Terraform из-за рассинхронизации WebSQL.
 - Локальный Yandex PostgreSQL 17 применяет `000014`; 21 интеграционный
   actor/RLS-тест зелёный, включая cross-tenant и идемпотентность.
-- API gate зелёный: lint, TypeScript, 141 unit/API-тест и production build;
-  12 frontend repository tests и 50 infra/workflow policy tests зелёные.
-- Полный root `npm run check`, `npm run db:reset` и `npm run db:test`
-  зелёные; stage delivery `000014` ожидает merge.
 
 ## Ближайший порядок
 
-1. Завершить non-Live workout lifecycle PR, проверить CI и автоматическую
-   доставку `000014` на stage.
+1. Слить исправление WebSQL drift, повторить автоматическую доставку `000014`
+   и проверить workout lifecycle smoke на stage.
 2. Отдельно портировать feedback/reactions и вопросы/ответы после тренировки.
 3. Отдельно портировать progress/goals и derived progress/chronicle reads.
 4. После полного tenant-контракта провести две миграционные репетиции; только
