@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { PublishedTrainingSummary, Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
-import { loadBodyMap, muscleGroupForExerciseName, progressBodyMap } from './body-progress-map'
+import { bodyZoneForExerciseName, loadBodyMap, muscleGroupForExerciseName, progressBodyMap } from './body-progress-map'
 
 const summary: PublishedTrainingSummary = {
   id: 'published-1', sourceSummaryId: 'summary-1', clientId: 'client-1',
@@ -40,15 +40,31 @@ describe('body progress map', () => {
     expect(muscleGroupForExerciseName(name)).toBe(group)
   })
 
+  it.each([
+    ['Сгибание на бицепс (Гантели)', 'biceps'],
+    ['Французский жим', 'triceps'],
+    ['Сгибание кистей на предплечья', 'forearms'],
+    ['Тяга верхнего блока (Блок)', 'upper_back'],
+    ['Гиперэкстензия с блином', 'lower_back'],
+    ['Ягодичный мост', 'glutes'],
+    ['Разгибание ног (Тренажёр)', 'quadriceps'],
+    ['Сгибание ног лёжа (Тренажёр)', 'hamstrings'],
+    ['Подъём на носки стоя (Тренажёр)', 'calves'],
+  ] as const)('maps %s to the precise body zone', (name, zone) => {
+    expect(bodyZoneForExerciseName(name)).toBe(zone)
+  })
+
   it('aggregates only favorable confirmed progress facts by muscle group', () => {
     const result = progressBodyMap(summary)
     expect(result.regions.map((region) => [region.group, region.percent])).toEqual([
-      ['chest', 40], ['back', 36],
+      ['chest', 40], ['upper_back', 36],
     ])
-    expect(result.regions[0]!.details[0]).toContain('Жим гантелей лёжа')
+    expect(result.regions[0]!.details[0]).toBe(
+      'Жим гантелей лёжа (Гантели) · Объём за тренировку: 1 000 → 1 400 кг · +40%',
+    )
   })
 
-  it('uses the median of several improvements and describes a faster pace', () => {
+  it('uses the strongest confirmed improvement in a zone and ignores unsupported body metrics', () => {
     const result = progressBodyMap({
       ...summary,
       metrics: {
@@ -69,8 +85,7 @@ describe('body progress map', () => {
       },
     })
 
-    expect(result.regions.find((region) => region.group === 'chest')?.percent).toBe(45)
-    expect(result.regions.some((region) => region.group === 'cardio')).toBe(false)
+    expect(result.regions.find((region) => region.group === 'chest')?.percent).toBe(50)
     expect(result.regions).toHaveLength(1)
   })
 
@@ -85,8 +100,9 @@ describe('body progress map', () => {
     } as Workout
     const result = loadBodyMap([workout], '2026-08-01', '2026-08-25')
     expect(result.regions.map((region) => [region.group, region.percent])).toEqual([
-      ['chest', 67], ['back', 33],
+      ['chest', 67], ['upper_back', 33],
     ])
+    expect(result.regions[0]?.summaryLabel).toBe('2 подхода из 3')
   })
 
   it('ignores drafts and workouts outside the period and uses correct set plurals', () => {
@@ -103,6 +119,7 @@ describe('body progress map', () => {
 
     const result = loadBodyMap([planned, outside, done], '2026-08-01', '2026-08-25')
     expect(result.regions).toHaveLength(1)
+    expect(result.regions[0]?.group).toBe('quadriceps')
     expect(result.regions[0]?.details).toEqual(['Присед: 5 подходов'])
   })
 })
