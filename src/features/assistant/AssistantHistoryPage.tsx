@@ -295,7 +295,7 @@ function AssistantWorkoutDraftCard({ payload, timezone, onCancel, onApply, onSav
     if (!text.trim() || catalog.loading || parsing) return
     setParsing(true); setError(undefined); setResult(undefined)
     try {
-      const next = await parseWorkoutWithLlm(text, catalog.exercises)
+      const next = await parseWorkoutWithLlm(text, catalog.exercises, { requireLocalDisambiguation: true })
       setResult(next)
       if (!next.items.length) setError('Не удалось распознать упражнения. Уточните текст диктовки и попробуйте ещё раз.')
     } catch { setError('Не удалось обработать диктовку. Исходный текст сохранён — попробуйте ещё раз.') }

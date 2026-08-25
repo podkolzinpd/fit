@@ -74,10 +74,23 @@ describe('formatLlmWorkoutText', () => {
 
     expect(requireExerciseConfirmation({
       items: [{ sourceText: 'жим лёжа 3 по 10', exerciseRef: 'barbell-bench', confidence: 0.99, sets: [{ weightKg: 50, reps: 10 }] }], unmatched: [],
-    }, choices)).toEqual({
+    }, choices, { requireLocalDisambiguation: true })).toEqual({
       items: [],
       unmatched: [{ sourceText: 'жим лёжа 3 по 10', reason: 'Нужно уточнить вариант упражнения', suggestedExerciseRefs: ['barbell-bench', 'dumbbell-bench'] }],
     })
+  })
+
+  it('сохраняет быстрый Today-флоу для уверенного ответа модели', () => {
+    const choices: ExerciseSnapshot[] = [
+      { source: 'system', ref: 'barbell-bench', name: 'Жим лёжа (Штанга)', muscleGroup: 'chest', inputKind: 'strength', equipment: 'Штанга', equipmentRef: 'barbell' },
+      { source: 'system', ref: 'dumbbell-bench', name: 'Жим лёжа (Гантели)', muscleGroup: 'chest', inputKind: 'strength', equipment: 'Гантели', equipmentRef: 'dumbbell' },
+    ]
+    const response = {
+      items: [{ sourceText: 'жим лёжа 3 по 10', exerciseRef: 'barbell-bench', confidence: 0.99, sets: [{ weightKg: 50, reps: 10 }] }],
+      unmatched: [],
+    }
+
+    expect(requireExerciseConfirmation(response, choices)).toEqual(response)
   })
 
   it('не принимает от модели штангу, когда пользователь явно назвал гантели', () => {
