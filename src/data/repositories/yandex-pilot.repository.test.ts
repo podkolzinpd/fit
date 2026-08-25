@@ -95,6 +95,17 @@ const trainingData = {
     status: 'done',
     notes: null,
     clientComment: null,
+    sessionRpe: 8,
+    wellbeing: 'normal',
+    discomfort: false,
+    feedbackSubmittedAt: '2026-08-20T13:01:00.000Z',
+    trainerReaction: 'fire',
+    trainerReview: 'Отличная работа',
+    trainerReviewAuthorId: session.profile.id,
+    trainerReviewedAt: '2026-08-20T13:05:00.000Z',
+    clientQuestion: null,
+    clientQuestionAskedAt: null,
+    clientQuestionResolvedAt: null,
     startedAt: '2026-08-20T12:00:00.000Z',
     completedAt: '2026-08-20T13:00:00.000Z',
     version: 1,
@@ -139,6 +150,8 @@ const trainingData = {
       }],
     }],
   }],
+  attention: [],
+  attentionPreferences: [{ clientId: CLIENT_ID, snoozedUntil: null }],
   hasMoreWorkouts: false,
 }
 
@@ -255,6 +268,8 @@ describe('yandexPilotRepository', () => {
     )).resolves.toEqual({
       customExercises: trainingData.customExercises,
       workouts: trainingData.workouts,
+      attention: trainingData.attention,
+      attentionPreferences: trainingData.attentionPreferences,
       hasMoreWorkouts: false,
     })
   })

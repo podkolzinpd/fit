@@ -5,16 +5,16 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-25
-Проверенный базовый `main`: `e95a5e1` (`feat(assistant): create clients through confirmed drafts (#563)`)
+Проверенный базовый `main`: `861a5ae` (`feat(assistant): record workouts inline in chat (#565)`)
 
 ## Активное изменение
 
-- Ветка `codex/fix-yandex-stage-postgres-drift` устраняет блокировку доставки
-  `000014`: WebSQL уже включён в stage для управляемого доступа к таблицам, но
-  Terraform ошибочно пытался выключать его при каждом API-релизе.
-- Безопасный `plan_only` manual run теперь явно исключает deploy и показывает
-  названия изменившихся Terraform-полей без значений и секретов.
-- Защита от создания, resize и удаления платных ресурсов остаётся включённой.
+- Ветка `codex/yandex-post-workout` переносит в Yandex PostgreSQL feedback
+  клиента, реакцию/ответ тренера, вопросы, явное закрытие и attention queue.
+- `000015` использует только versioned security-definer команды: точный повтор
+  идемпотентен, stale payload конфликтует, прямые записи `fit_api` закрыты.
+- Production UI и Supabase routing не меняются; контракт доступен только через
+  Yandex stage API и read-only pilot aggregate до отдельного cutover.
 
 ## Последняя проверенная продуктовая точка
 
@@ -54,9 +54,9 @@
   доставляются автоматически через GitHub OIDC, private runner и forward-only
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
-  exercises и workout aggregate работают на stage. Миграции `000001–000013`,
-  API revision, Live core и структурные Live-команды доставлены автоматически;
-  `000014` слита и ожидает повторной доставки после исправления drift.
+  exercises и полный workout lifecycle работают на stage. Миграции
+  `000001–000014` и API revision доставлены автоматически; следующий PR
+  добавляет `000015` post-workout.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
 - Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
@@ -72,21 +72,20 @@
 
 ## Проверки активной ветки
 
-- Workout lifecycle PR #551 и весь его CI зелёные; stage delivery остановилась
-  до миграции на проверке Terraform из-за рассинхронизации WebSQL.
-- Локальный Yandex PostgreSQL 17 применяет `000014`; 21 интеграционный
-  actor/RLS-тест зелёный, включая cross-tenant и идемпотентность.
-- Последние автоматические stage runs `5244032`, `083d7db` и `e95a5e1`
-  остановились на том же PostgreSQL plan до применения миграции и API revision.
-- После синхронизации с `e95a5e1` полный `npm run check` зелёный: 726 frontend,
-  143 API и 52 infra/workflow policy теста, lint, typecheck и build.
+- Stage run `32833096878` доставил `000014`, fixture, API revision и lifecycle
+  smoke без платного resize и rollback.
+- Локальный Yandex PostgreSQL 17 применяет `000015`; 22 интеграционных
+  actor/RLS-теста зелёные, включая client/root/member/outsider, повтор запроса,
+  optional reaction, автоматическое закрытие ответа и snooze.
+- Полный `npm run check` зелёный: 727 frontend, 146 API и 52 infra/policy
+  проверки, lint, typecheck и production build. Чистый Supabase reset применил
+  все миграции; 596 SQL/RLS-тестов зелёные.
 
 ## Ближайший порядок
 
-1. Слить исправление WebSQL drift, повторить автоматическую доставку `000014`
-   и проверить workout lifecycle smoke на stage.
-2. Отдельно портировать feedback/reactions и вопросы/ответы после тренировки.
-3. Отдельно портировать progress/goals и derived progress/chronicle reads.
+1. Доставить `000015` и проверить post-workout/attention stage smoke.
+2. Отдельно портировать progress/goals и derived progress/chronicle reads.
+3. Перенести оставшиеся realtime/refetch и Edge Function tenant-контракты.
 4. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
 5. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению

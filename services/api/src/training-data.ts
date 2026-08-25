@@ -19,6 +19,8 @@ type WorkoutStatus = 'planned' | 'in_progress' | 'done' | 'cancelled'
 type ExerciseSource = 'system' | 'custom'
 type BlockType = 'single' | 'group'
 type BlockPreset = 'set' | 'circuit' | 'interval'
+type Wellbeing = 'good' | 'normal' | 'hard'
+type TrainerReaction = 'thumbs_up' | 'fire' | 'strong'
 
 interface CustomExerciseRow extends QueryResultRow {
   id: string
@@ -41,9 +43,38 @@ interface WorkoutRow extends QueryResultRow {
   status: WorkoutStatus
   notes: string | null
   client_comment: string | null
+  session_rpe: number | null
+  wellbeing: Wellbeing | null
+  discomfort: boolean | null
+  feedback_submitted_at: Date | null
+  trainer_reaction: TrainerReaction | null
+  trainer_review: string | null
+  trainer_review_author_id: string | null
+  trainer_reviewed_at: Date | null
+  client_question: string | null
+  client_question_asked_at: Date | null
+  client_question_resolved_at: Date | null
   started_at: Date | null
   completed_at: Date | null
   version: string
+}
+
+interface AttentionRow extends QueryResultRow {
+  workout_id: string
+  client_id: string
+  client_name: string
+  workout_date: string
+  client_question: string | null
+  client_question_asked_at: Date | null
+  discomfort: boolean
+  client_comment: string | null
+  feedback_submitted_at: Date
+  version: string
+}
+
+interface AttentionPreferenceRow extends QueryResultRow {
+  client_id: string
+  attention_snoozed_until: Date | null
 }
 
 interface WorkoutExerciseRow extends QueryResultRow {
@@ -150,16 +181,47 @@ export interface PilotWorkout {
   status: WorkoutStatus
   notes: string | null
   clientComment: string | null
+  sessionRpe: number | null
+  wellbeing: Wellbeing | null
+  discomfort: boolean | null
+  feedbackSubmittedAt: string | null
+  trainerReaction: TrainerReaction | null
+  trainerReview: string | null
+  trainerReviewAuthorId: string | null
+  trainerReviewedAt: string | null
+  clientQuestion: string | null
+  clientQuestionAskedAt: string | null
+  clientQuestionResolvedAt: string | null
   startedAt: string | null
   completedAt: string | null
   version: number
   exercises: PilotWorkoutExercise[]
 }
 
+export interface PilotTrainerAttentionWorkout {
+  workoutId: string
+  clientId: string
+  clientName: string
+  workoutDate: string
+  clientQuestion: string | null
+  clientQuestionAskedAt: string | null
+  discomfort: boolean
+  clientComment: string | null
+  feedbackSubmittedAt: string
+  version: number
+}
+
+export interface PilotAttentionPreference {
+  clientId: string
+  snoozedUntil: string | null
+}
+
 export interface PilotTrainingDataResponse {
   accessMode: 'read_only'
   customExercises: PilotCustomExercise[]
   workouts: PilotWorkout[]
+  attention: PilotTrainerAttentionWorkout[]
+  attentionPreferences: PilotAttentionPreference[]
   hasMoreWorkouts: boolean
 }
 
@@ -176,7 +238,7 @@ function optionalNumber(value: string | null): number | null {
 export async function readAccessibleTrainingData(
   client: DatabaseClient,
 ): Promise<PilotTrainingDataResponse> {
-  const [customExerciseRows, workoutLookahead] = await Promise.all([
+  const [customExerciseRows, workoutLookahead, attentionRows, preferenceRows] = await Promise.all([
     client.query<CustomExerciseRow>(`
       select id, name, muscle_group, input_kind, archived_at, version
       from public.custom_exercises
@@ -195,6 +257,17 @@ export async function readAccessibleTrainingData(
         workout.status,
         workout.notes,
         workout.client_comment,
+        workout.session_rpe,
+        workout.wellbeing,
+        workout.discomfort,
+        workout.feedback_submitted_at,
+        workout.trainer_reaction,
+        workout.trainer_review,
+        workout.trainer_review_author_id,
+        workout.trainer_reviewed_at,
+        workout.client_question,
+        workout.client_question_asked_at,
+        workout.client_question_resolved_at,
         workout.started_at,
         workout.completed_at,
         workout.version
@@ -205,6 +278,18 @@ export async function readAccessibleTrainingData(
         workout.created_at desc, workout.id
       limit $1
     `, [WORKOUT_PAGE_SIZE + 1]),
+    client.query<AttentionRow>(`
+      select workout_id, client_id, client_name, workout_date::text,
+        client_question, client_question_asked_at, discomfort,
+        client_comment, feedback_submitted_at, version
+      from public.list_trainer_attention_workouts()
+    `),
+    client.query<AttentionPreferenceRow>(`
+      select client_id, attention_snoozed_until
+      from public.client_trainers
+      where trainer_id = auth.uid()
+      order by client_id
+    `),
   ])
   const workoutRows = workoutLookahead.slice(0, WORKOUT_PAGE_SIZE)
   const workoutIds = workoutRows.map((row) => row.id)
@@ -311,10 +396,37 @@ export async function readAccessibleTrainingData(
       status: row.status,
       notes: row.notes,
       clientComment: row.client_comment,
+      sessionRpe: row.session_rpe,
+      wellbeing: row.wellbeing,
+      discomfort: row.discomfort,
+      feedbackSubmittedAt: row.feedback_submitted_at?.toISOString() ?? null,
+      trainerReaction: row.trainer_reaction,
+      trainerReview: row.trainer_review,
+      trainerReviewAuthorId: row.trainer_review_author_id,
+      trainerReviewedAt: row.trainer_reviewed_at?.toISOString() ?? null,
+      clientQuestion: row.client_question,
+      clientQuestionAskedAt: row.client_question_asked_at?.toISOString() ?? null,
+      clientQuestionResolvedAt: row.client_question_resolved_at?.toISOString() ?? null,
       startedAt: row.started_at?.toISOString() ?? null,
       completedAt: row.completed_at?.toISOString() ?? null,
       version: safeInteger(row.version, 'workout version'),
       exercises: exercisesByWorkout.get(row.id) ?? [],
+    })),
+    attention: attentionRows.map((row) => ({
+      workoutId: row.workout_id,
+      clientId: row.client_id,
+      clientName: row.client_name,
+      workoutDate: row.workout_date,
+      clientQuestion: row.client_question,
+      clientQuestionAskedAt: row.client_question_asked_at?.toISOString() ?? null,
+      discomfort: row.discomfort,
+      clientComment: row.client_comment,
+      feedbackSubmittedAt: row.feedback_submitted_at.toISOString(),
+      version: safeInteger(row.version, 'attention version'),
+    })),
+    attentionPreferences: preferenceRows.map((row) => ({
+      clientId: row.client_id,
+      snoozedUntil: row.attention_snoozed_until?.toISOString() ?? null,
     })),
     hasMoreWorkouts: workoutLookahead.length > WORKOUT_PAGE_SIZE,
   }

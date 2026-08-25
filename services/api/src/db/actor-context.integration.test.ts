@@ -32,6 +32,8 @@ import { readAccessibleTrainingData } from '../training-data.js'
 import {
   appendLiveExercise,
   appendLiveSet,
+  answerWorkoutQuestion,
+  askWorkoutQuestion,
   cancelPlannedWorkout,
   confirmLiveSet,
   finishLiveWorkout,
@@ -43,6 +45,10 @@ import {
   saveCompletedWorkout,
   savePlannedWorkout,
   saveLiveSetDraft,
+  setWorkoutReview,
+  snoozeClientAttention,
+  submitWorkoutFeedback,
+  resolveWorkoutQuestion,
   setClientWorkoutComment,
   setLiveExerciseComment,
   softDeletePlannedWorkout,
@@ -89,6 +95,7 @@ const MEMBER_CUSTOM_EXERCISE_ID = '3127663e-4395-4100-8dd1-7b784d90917a'
 const ROOT_WORKOUT_ID = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
 const MEMBER_WORKOUT_ID = 'd3cff30a-7aa2-4407-b62d-0683167cf4c8'
 const CLIENT_WORKOUT_ID = '6e2d8d63-7c3a-4301-b9ba-76d875210f1f'
+const POST_WORKOUT_ID = 'cd691fd5-86ee-4740-838c-b37166df7e71'
 const ROOT_WORKOUT_EXERCISE_ID = 'd40b742b-5d5b-41ab-91df-ed464414d034'
 const ROOT_WORKOUT_SET_ID = 'ea8efab5-0530-4660-9798-79901fcddfeb'
 const LIVE_OPERATION_IDS = {
@@ -286,6 +293,10 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
          where full_name = 'Тестовый клиент Yandex stage'`,
       )
       await ownerPool.query(
+        'delete from public.profiles where id = $1',
+        [stageWorkoutFixtureIds(STAGE_SMOKE_PROFILE_ID).clientActorId],
+      )
+      await ownerPool.query(
         'delete from public.trainers where profile_id = $1',
         [STAGE_SMOKE_PROFILE_ID],
       )
@@ -299,6 +310,10 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await ownerPool.query(
         'delete from public.clients where id = $1',
         [LIFECYCLE_CLIENT_ID],
+      )
+      await ownerPool.query(
+        'delete from public.workouts where id = $1',
+        [POST_WORKOUT_ID],
       )
       await ownerPool.query(
         'delete from public.profiles where id = $1',
@@ -905,6 +920,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         accessMode: 'read_only',
         customExercises: [],
         workouts: [],
+        attention: [],
+        attentionPreferences: [],
         hasMoreWorkouts: false,
       })
     })
@@ -1182,6 +1199,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(first.seededTrainerCount).toBeGreaterThanOrEqual(2)
       expect(first.sessionToken).toMatch(/^[A-Za-z0-9_-]{43}$/)
       expect(first.sessionExpiresAt).toBe(expectedExpiry.toISOString())
+      expect(first.clientSessionToken).toMatch(/^[A-Za-z0-9_-]{43}$/)
+      expect(first.clientSessionExpiresAt).toBe(expectedExpiry.toISOString())
 
       const smokeData = await reader.readTrainingData(first.sessionToken)
       const smokeIds = stageWorkoutFixtureIds(STAGE_SMOKE_PROFILE_ID)
@@ -1209,6 +1228,17 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             endTime: '11:00:00',
             notes: 'Синтетическая проверка переноса Yandex stage',
             clientComment: null,
+            sessionRpe: null,
+            wellbeing: null,
+            discomfort: null,
+            feedbackSubmittedAt: null,
+            trainerReaction: null,
+            trainerReview: null,
+            trainerReviewAuthorId: null,
+            trainerReviewedAt: null,
+            clientQuestion: null,
+            clientQuestionAskedAt: null,
+            clientQuestionResolvedAt: null,
             status: 'done',
             startedAt: '2026-08-22T07:00:00.000Z',
             completedAt: '2026-08-22T08:00:00.000Z',
@@ -1301,8 +1331,21 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             ],
           },
         ],
+        attention: [],
+        attentionPreferences: [{
+          clientId: smokeIds.clientId,
+          snoozedUntil: null,
+        }],
         hasMoreWorkouts: false,
       })
+
+      const clientSmokeData = await reader.readTrainingData(
+        first.clientSessionToken,
+      )
+      expect(clientSmokeData.workouts.map((workout) => workout.id)).toEqual([
+        smokeIds.workoutId,
+      ])
+      expect(clientSmokeData.attention).toEqual([])
 
       const actorIds = stageWorkoutFixtureIds(ACTOR_ID)
       const actorData = await withActorTransaction(
@@ -1332,6 +1375,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       const second = await loader.load()
       expect(second.seededTrainerCount).toBe(first.seededTrainerCount)
       expect(second.sessionToken).not.toBe(first.sessionToken)
+      expect(second.clientSessionToken).not.toBe(first.clientSessionToken)
 
       for (const [table, id] of [
         ['clients', smokeIds.clientId],
@@ -1876,6 +1920,183 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         'delete from public.workouts where id = any($1::uuid[])',
         [[created.id, missed.id]],
       )
+    })
+
+    it('keeps post-workout feedback, questions and attention tenant-safe and idempotent', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      await ownerPool.query('delete from public.workouts where id = $1', [POST_WORKOUT_ID])
+      await ownerPool.query(
+        `
+          insert into public.workouts (
+            id, trainer_id, client_id, created_by, workout_date,
+            status, completed_at, notes
+          ) values ($1, $2, $3, $2, '2026-08-24', 'done', now(),
+            'Post-workout contract')
+        `,
+        [POST_WORKOUT_ID, ACTOR_ID, CLIENT_ID],
+      )
+
+      const feedback = {
+        sessionRpe: 8,
+        wellbeing: 'normal' as const,
+        discomfort: true,
+        comment: '  Тянуло плечо  ',
+        expectedVersion: 1,
+      }
+      await expect(withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => submitWorkoutFeedback(client, POST_WORKOUT_ID, feedback),
+      )).resolves.toBe(2)
+      await expect(withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => submitWorkoutFeedback(client, POST_WORKOUT_ID, feedback),
+      )).resolves.toBe(2)
+      await expect(withActorTransaction(
+        runtimePool,
+        OUTSIDE_TRAINER_ID,
+        (client) => submitWorkoutFeedback(client, POST_WORKOUT_ID, feedback),
+      )).rejects.toMatchObject({ failure: 'forbidden' })
+
+      const attentionAfterFeedback = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => client.query<QueryResultRow & { workout_id: string }>(
+          `select workout_id from public.list_trainer_attention_workouts()
+           where workout_id = $1`,
+          [POST_WORKOUT_ID],
+        ),
+      )
+      expect(attentionAfterFeedback).toEqual([{ workout_id: POST_WORKOUT_ID }])
+      await expect(withActorTransaction(
+        runtimePool,
+        MEMBER_TRAINER_ID,
+        (client) => client.query(
+          `select workout_id from public.list_trainer_attention_workouts()
+           where workout_id = $1`,
+          [POST_WORKOUT_ID],
+        ),
+      )).resolves.toEqual([])
+
+      const reviewed = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => setWorkoutReview(client, POST_WORKOUT_ID, {
+          reaction: 'strong',
+          review: 'Снизим нагрузку на плечо',
+          expectedVersion: 2,
+        }),
+      )
+      expect(reviewed).toBe(3)
+      await expect(withActorTransaction(
+        runtimePool,
+        MEMBER_TRAINER_ID,
+        (client) => setWorkoutReview(client, POST_WORKOUT_ID, {
+          reaction: 'fire',
+          review: 'Чужой ответ',
+          expectedVersion: reviewed,
+        }),
+      )).rejects.toMatchObject({ failure: 'forbidden' })
+
+      const asked = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => askWorkoutQuestion(
+          client, POST_WORKOUT_ID, 'Можно заменить упражнение?', reviewed,
+        ),
+      )
+      expect(asked).toBe(4)
+      await expect(withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => askWorkoutQuestion(
+          client, POST_WORKOUT_ID, 'Можно заменить упражнение?', reviewed,
+        ),
+      )).resolves.toBe(asked)
+      await expect(withActorTransaction(
+        runtimePool,
+        MEMBER_TRAINER_ID,
+        (client) => answerWorkoutQuestion(client, POST_WORKOUT_ID, {
+          reaction: null,
+          review: 'Ответ подключённого тренера',
+          expectedVersion: asked,
+        }),
+      )).rejects.toMatchObject({ failure: 'forbidden' })
+
+      const answered = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => answerWorkoutQuestion(client, POST_WORKOUT_ID, {
+          reaction: null,
+          review: 'Да, заменим в следующем плане',
+          expectedVersion: asked,
+        }),
+      )
+      expect(answered).toBe(5)
+      const noAttention = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => client.query(
+          `select workout_id from public.list_trainer_attention_workouts()
+           where workout_id = $1`,
+          [POST_WORKOUT_ID],
+        ),
+      )
+      expect(noAttention).toEqual([])
+
+      const askedAgain = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => askWorkoutQuestion(
+          client, POST_WORKOUT_ID, 'А какой именно вариант?', answered,
+        ),
+      )
+      await expect(withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => resolveWorkoutQuestion(client, POST_WORKOUT_ID, askedAgain),
+      )).resolves.toBe(7)
+
+      const snoozedUntil = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => snoozeClientAttention(client, CLIENT_ID),
+      )
+      expect(new Date(snoozedUntil).getTime()).toBeGreaterThan(Date.now())
+      await expect(withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => snoozeClientAttention(client, CLIENT_ID),
+      )).resolves.toBe(snoozedUntil)
+      const readModel = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        readAccessibleTrainingData,
+      )
+      expect(readModel.workouts.find((workout) => workout.id === POST_WORKOUT_ID))
+        .toMatchObject({
+          sessionRpe: 8,
+          wellbeing: 'normal',
+          discomfort: true,
+          clientComment: 'Тянуло плечо',
+          trainerReaction: null,
+          trainerReview: 'Да, заменим в следующем плане',
+          clientQuestion: 'А какой именно вариант?',
+          version: 7,
+        })
+      expect(readModel.attention.some(
+        (attention) => attention.workoutId === POST_WORKOUT_ID,
+      )).toBe(false)
+      expect(readModel.attentionPreferences).toContainEqual({
+        clientId: CLIENT_ID,
+        snoozedUntil: snoozedUntil,
+      })
+
+      await ownerPool.query('delete from public.workouts where id = $1', [POST_WORKOUT_ID])
     })
 
     it('runs the idempotent live core lifecycle with conflicts and actor attribution', async () => {
