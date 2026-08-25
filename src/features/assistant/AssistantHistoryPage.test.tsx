@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
-import { programWorkoutDrafts } from './AssistantHistoryPage'
+import { programWorkoutDrafts } from './program-draft'
 
 const benchPress = {
   source: 'system', ref: 'barbell-bench-press', name: 'Жим штанги лёжа', muscleGroup: 'chest', inputKind: 'strength',

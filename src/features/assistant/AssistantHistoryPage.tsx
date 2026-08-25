@@ -7,13 +7,14 @@ import { trainingSummariesRepository } from '../../data/repositories/training-su
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { VoiceInputButton } from '../voice-input'
 import { clientSchema } from '../../shared/validation'
-import { localDate, todayInTimeZone } from '../../shared/local-date'
+import { todayInTimeZone } from '../../shared/local-date'
 import type { ExerciseSnapshot, WorkoutDraft } from '../../shared/domain'
 import { workoutsRepository } from '../../data/repositories/workouts.repository'
-import { filterExercises, useExerciseCatalog } from '../exercises'
+import { useExerciseCatalog } from '../exercises'
 import { WorkoutComposer } from '../workouts/WorkoutComposer'
 import { formatLlmWorkoutText, parseWorkoutWithLlm } from '../workouts/llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
+import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
 
 type Message = { id: string; author: string; content: string; action: AssistantOrchestratorAction | null }
 
@@ -129,8 +130,6 @@ function AssistantMessageContent({ content }: { content: string }) {
 type SummaryPayload = { step: string; clientId?: string; clientName?: string; candidates?: { id: string; fullName: string }[]; options?: string[]; periodStart?: string; periodEnd?: string; periodLabel?: string }
 type ClientDraftPayload = { step: string; fullName: string; gender: 'male' | 'female'; ageYears: number; heightCm: number; goal?: string; initialWeightKg?: number }
 type WorkoutDraftPayload = { step: string; clientId: string; clientName: string; transcript: string }
-type ProgramExerciseDraft = { name: string; sets: number; reps?: number; weightKg?: number; durationMin?: number; distanceKm?: number }
-type ProgramSessionDraft = { title: string; day: string; exercises: ProgramExerciseDraft[] }
 type ProgramDraftPayload = { step: string; clientId: string; clientName: string; goal?: string | null; brief: string; sessions: unknown[] }
 
 function summaryPayload(action: AssistantOrchestratorAction): { clientId: string; periodStart: string; periodEnd: string } | undefined {
@@ -173,69 +172,7 @@ function ProgramDraftCard({ payload, timezone, onSaved, onCancel }: { payload: P
     } catch { setError('Не удалось добавить программу в расписание. Попробуйте ещё раз.') }
     finally { setSaving(false) }
   }
-  return <div className="assistant-program-draft" aria-label={`Черновик программы ${payload.clientName}`}><strong>Программа · {payload.clientName}</strong><small>{payload.goal ? `Цель: ${payload.goal}` : 'Цель уточнена в анкете'}</small>{sessions.map((session, index) => <fieldset key={`${session.day}-${index}`}><label>Дата<input type="date" value={dates[index] ?? ''} onChange={(event) => setDates((current) => current.map((value, position) => position === index ? event.target.value : value))} /></label><label>Название<input value={session.title} onChange={(event) => setSessions((current) => current.map((item, position) => position === index ? { ...item, title: event.target.value } : item))} /></label><div className="assistant-program-exercises">{session.exercises.map((exercise, exerciseIndex) => <div key={exerciseIndex} className="assistant-program-exercise"><label>Упражнение<input value={exercise.name} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { name: event.target.value }))} /></label><label>Подходы<input type="number" min="1" max="8" value={exercise.sets} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { sets: Number(event.target.value) }))} /></label><label>Повторы<input type="number" min="1" value={exercise.reps ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { reps: optionalNumber(event.target.value) }))} /></label><label>Вес, кг<input type="number" min="0" step="0.5" value={exercise.weightKg ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { weightKg: optionalNumber(event.target.value) }))} /></label><label>Время, мин<input type="number" min="0" step="1" value={exercise.durationMin ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { durationMin: optionalNumber(event.target.value) }))} /></label><label>Дистанция, км<input type="number" min="0" step="0.1" value={exercise.distanceKm ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { distanceKm: optionalNumber(event.target.value) }))} /></label></div>)}</div></fieldset>)}{error && <p className="assistant-card-hint" role="alert">{error}</p>}<button type="button" onClick={() => void save()} disabled={catalog.loading || saving || saved}>{saved ? 'Программа добавлена в расписание' : saving ? 'Добавляю…' : 'Добавить в расписание'}</button>{!saved && <CancelActionButton onCancel={onCancel} />}</div>
-}
-
-function optionalNumber(value: string): number | undefined {
-  if (!value.trim()) return undefined
-  const number = Number(value)
-  return Number.isFinite(number) && number > 0 ? number : undefined
-}
-
-function programSessions(value: readonly unknown[]): ProgramSessionDraft[] {
-  return value.flatMap((session): ProgramSessionDraft[] => {
-    if (typeof session !== 'object' || session === null || Array.isArray(session)) return []
-    const row = session as Record<string, unknown>
-    if (typeof row.title !== 'string' || typeof row.day !== 'string' || !Array.isArray(row.exercises)) return []
-    const exercises = row.exercises.flatMap((exercise): ProgramExerciseDraft[] => {
-      // Keep already stored early draft cards readable after the schema upgrade.
-      if (typeof exercise === 'string' && exercise.trim()) return [{ name: exercise.trim(), sets: 1 }]
-      if (typeof exercise !== 'object' || exercise === null || Array.isArray(exercise)) return []
-      const item = exercise as Record<string, unknown>
-      if (typeof item.name !== 'string' || !item.name.trim() || typeof item.sets !== 'number' || !Number.isInteger(item.sets) || item.sets < 1) return []
-      const number = (field: string) => typeof item[field] === 'number' && Number.isFinite(item[field]) && item[field] > 0 ? item[field] as number : undefined
-      return [{ name: item.name.trim(), sets: item.sets, reps: number('reps'), weightKg: number('weightKg'), durationMin: number('durationMin'), distanceKm: number('distanceKm') }]
-    })
-    return exercises.length ? [{ title: row.title, day: row.day, exercises }] : []
-  })
-}
-
-function updateProgramExercise(sessions: ProgramSessionDraft[], sessionIndex: number, exerciseIndex: number, patch: Partial<ProgramExerciseDraft>): ProgramSessionDraft[] {
-  return sessions.map((session, currentSessionIndex) => currentSessionIndex !== sessionIndex ? session : {
-    ...session,
-    exercises: session.exercises.map((exercise, currentExerciseIndex) => currentExerciseIndex === exerciseIndex ? { ...exercise, ...patch } : exercise),
-  })
-}
-
-export function programWorkoutDrafts(
-  clientId: string,
-  sessions: readonly ProgramSessionDraft[],
-  dates: readonly string[],
-  requestIds: readonly string[],
-  catalog: readonly ExerciseSnapshot[],
-): WorkoutDraft[] | undefined {
-  if (sessions.length === 0 || sessions.length !== dates.length || sessions.length !== requestIds.length) return undefined
-  const byName = new Map(catalog.map((exercise) => [exercise.name.toLocaleLowerCase('ru-RU'), exercise]))
-  const resolveExercise = (name: string) => {
-    const exact = byName.get(name.toLocaleLowerCase('ru-RU'))
-    if (exact) return exact
-    const matches = filterExercises(catalog, 'all', name)
-    return matches.length === 1 ? matches[0] : undefined
-  }
-  const drafts: Array<WorkoutDraft | undefined> = sessions.map((session, index): WorkoutDraft | undefined => {
-    const date = dates[index]?.trim()
-    const requestId = requestIds[index]?.trim()
-    const exercises = session.exercises.map((item) => ({ item, exercise: resolveExercise(item.name) }))
-    if (!date || !requestId || !session.title.trim() || exercises.some(({ exercise }) => exercise === undefined)) return undefined
-    return {
-      requestId,
-      clientId,
-      workoutDate: localDate(date),
-      notes: session.title.trim(),
-      exercises: exercises.map(({ item, exercise }, position) => ({ ...exercise!, position, blockId: crypto.randomUUID(), blockType: 'single' as const, blockRounds: 1, sets: Array.from({ length: item.sets }, (_, setPosition) => ({ position: setPosition, reps: item.reps, weightKg: item.weightKg, durationMin: item.durationMin, distanceKm: item.distanceKm })) })),
-    }
-  })
-  return drafts.every((draft): draft is WorkoutDraft => draft !== undefined) ? drafts : undefined
+  return <div className="assistant-program-draft" aria-label={`Черновик программы ${payload.clientName}`}><strong>Программа · {payload.clientName}</strong><small>{payload.goal ? `Цель: ${payload.goal}` : 'Цель уточнена в анкете'}</small>{sessions.map((session, index) => <fieldset key={`${session.day}-${index}`}><label>Дата<input type="date" value={dates[index] ?? ''} onChange={(event) => setDates((current) => current.map((value, position) => position === index ? event.target.value : value))} /></label><label>Название<input value={session.title} onChange={(event) => setSessions((current) => current.map((item, position) => position === index ? { ...item, title: event.target.value } : item))} /></label><div className="assistant-program-exercises">{session.exercises.map((exercise, exerciseIndex) => <div key={exerciseIndex} className="assistant-program-exercise"><label>Упражнение<input value={exercise.name} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { name: event.target.value }))} /></label><label>Подходы<input type="number" min="1" max="8" value={exercise.sets} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { sets: Number(event.target.value) }))} /></label><label>Повторы<input type="number" min="1" value={exercise.reps ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { reps: optionalProgramNumber(event.target.value) }))} /></label><label>Вес, кг<input type="number" min="0" step="0.5" value={exercise.weightKg ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { weightKg: optionalProgramNumber(event.target.value) }))} /></label><label>Время, мин<input type="number" min="0" step="1" value={exercise.durationMin ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { durationMin: optionalProgramNumber(event.target.value) }))} /></label><label>Дистанция, км<input type="number" min="0" step="0.1" value={exercise.distanceKm ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { distanceKm: optionalProgramNumber(event.target.value) }))} /></label></div>)}</div></fieldset>)}{error && <p className="assistant-card-hint" role="alert">{error}</p>}<button type="button" onClick={() => void save()} disabled={catalog.loading || saving || saved}>{saved ? 'Программа добавлена в расписание' : saving ? 'Добавляю…' : 'Добавить в расписание'}</button>{!saved && <CancelActionButton onCancel={onCancel} />}</div>
 }
 
 function parsedWorkoutExercises(result: WorkoutParseResponse, catalog: readonly ExerciseSnapshot[]): WorkoutDraft['exercises'] {
