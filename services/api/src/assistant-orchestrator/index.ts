@@ -378,6 +378,23 @@ function workoutTextProvided(message: string): boolean {
   return /\d/u.test(normalized) || ['подход', 'жим', 'тяга', 'присед', 'выпад', 'планка', 'бег', 'тяг', 'разведен'].some((stem) => normalized.includes(stem))
 }
 
+function isWorkoutCollectionComplete(message: string): boolean {
+  const normalized = normalizeAssistantMessage(message)
+  return [
+    'готово', 'все', 'все готово', 'закончил', 'закончила', 'закончить',
+    'перейти к разбору', 'разобрать тренировку', 'готово разобрать тренировку',
+  ].includes(normalized)
+}
+
+function workoutTranscript(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function appendWorkoutFragment(transcript: string, fragment: string): string | undefined {
+  const next = [transcript, fragment.trim()].filter(Boolean).join('\n')
+  return next.length <= 4_000 ? next : undefined
+}
+
 function isWorkoutRecordRequest(message: string): boolean {
   const normalized = normalizeAssistantMessage(message)
   // «Подготовить запись тренировки» — такой же явный вход в существующий
@@ -422,13 +439,35 @@ export function recordWorkoutTurn(
   if (!selectedClient) {
     return workoutAction('Уточните клиента', 'Для кого записать тренировку? Напишите имя или фамилию клиента.', 'needs_input', { step: 'client' })
   }
-  if (!workoutTextProvided(message) || (previousStep === 'client' && !workoutTextProvided(message))) {
-    return workoutAction('Продиктуйте тренировку', `Клиент: ${selectedClient.fullName}. Напишите или продиктуйте упражнения, подходы и значения.`, 'needs_input', {
-      step: 'workout', clientId: selectedClient.id, clientName: selectedClient.fullName,
+  const collectedTranscript = workoutTranscript(previousPayload?.transcript)
+  if (previousStep === 'workout' && isWorkoutCollectionComplete(message)) {
+    if (!collectedTranscript) {
+      return workoutAction('Добавьте упражнения', 'Сначала напишите или продиктуйте хотя бы одно упражнение.', 'needs_input', {
+        step: 'workout', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: '',
+      })
+    }
+    return workoutAction('Проверьте тренировку', `Собрала тренировку для ${selectedClient.fullName}. Теперь можно проверить распознавание, дату и время перед сохранением.`, 'proposed', {
+      step: 'confirm', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: collectedTranscript,
     })
   }
-  return workoutAction('Тренировка готова к разбору', `Открою разбор тренировки для ${selectedClient.fullName}. Перед сохранением вы сможете проверить упражнения и значения.`, 'proposed', {
-    step: 'confirm', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: message.trim(),
+  if (previousStep === 'workout') {
+    const nextTranscript = appendWorkoutFragment(collectedTranscript, message)
+    if (nextTranscript === undefined) {
+      return workoutAction('Черновик заполнен', 'Текст достиг лимита. Перейдите к разбору или отмените сценарий.', 'needs_input', {
+        step: 'workout', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: collectedTranscript,
+      })
+    }
+    return workoutAction('Продолжайте диктовку', 'Добавила фрагмент. Продиктуйте следующее упражнение или перейдите к разбору.', 'needs_input', {
+      step: 'workout', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: nextTranscript,
+    })
+  }
+  if (!workoutTextProvided(message)) {
+    return workoutAction('Новая тренировка', `Клиент: ${selectedClient.fullName}. Диктуйте упражнения по одному или все сразу.`, 'needs_input', {
+      step: 'workout', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: '',
+    })
+  }
+  return workoutAction('Продолжайте диктовку', 'Добавила первый фрагмент. Продиктуйте следующее упражнение или перейдите к разбору.', 'needs_input', {
+    step: 'workout', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: message.trim(),
   })
 }
 

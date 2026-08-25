@@ -144,6 +144,25 @@ function normalizedExerciseName(value: string): string {
   return normalize(value.replace(/\s*\([^)]*\)\s*$/, ''))
 }
 
+function equipmentNeutralExerciseName(value: string): string {
+  const equipmentWords = new Set([
+    'штанга', 'штанги', 'гантель', 'гантели', 'гантелей', 'тренажер', 'тренажере',
+    'машина', 'машине', 'смит', 'смита', 'гиря', 'гири', 'гирей', 'блок', 'блоке',
+  ])
+  const words = normalizedExerciseName(value).split(' ').filter((word) => !equipmentWords.has(word))
+  return words.filter((word, index) => !['с', 'со', 'в', 'на'].includes(word) || (index > 0 && index < words.length - 1)).join(' ')
+}
+
+function equipmentVariantMatches(name: string, catalog: readonly ExerciseSnapshot[]): ExerciseSnapshot[] {
+  if (explicitEquipmentRefs(name).length) return []
+  const neutralName = equipmentNeutralExerciseName(name)
+  if (!neutralName) return []
+  return catalog.filter((exercise) => {
+    const equipment = explicitEquipmentRefs(`${exercise.name} ${exercise.equipment ?? ''}`)
+    return equipment.length > 0 && equipmentNeutralExerciseName(exercise.name) === neutralName
+  })
+}
+
 function number(value: string | undefined): number | undefined {
   return parseWorkoutNumber(value)
 }
@@ -205,6 +224,8 @@ function matchingExercises(name: string, catalog: readonly ExerciseSnapshot[], p
   const query = normalize(normalizeSportSpeech(name))
   if (!query) return []
   const scopedCatalog = catalog.filter((exercise) => matchesExplicitWorkoutEquipment(name, exercise))
+  const equipmentVariants = equipmentVariantMatches(name, scopedCatalog)
+  if (equipmentVariants.length > 1) return prioritizePreferred(equipmentVariants, preferredExerciseRefs)
   const exact = scopedCatalog.filter((exercise) => normalizedExerciseName(exercise.name) === query)
   if (exact.length === 1) return exact
   // Своё упражнение иногда повторяет системное по имени. Для записи без явного
@@ -225,6 +246,7 @@ function matchingExercises(name: string, catalog: readonly ExerciseSnapshot[], p
 }
 
 function canResolveSafely(name: string, matches: readonly ExerciseSnapshot[], catalog: readonly ExerciseSnapshot[]): boolean {
+  if (equipmentVariantMatches(name, catalog).length > 1) return false
   if (matches.length !== 1 && name.trim().split(/\s+/).length < 2) return false
   if (matches.length === 1) return true
   const ranked = rankExerciseSearch(catalog.filter((exercise) => matchesExplicitWorkoutEquipment(name, exercise)), name)

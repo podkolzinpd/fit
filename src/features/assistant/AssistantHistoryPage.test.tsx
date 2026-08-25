@@ -1,12 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
+import { assistantWorkoutSaveInput } from './workout-draft'
 
 const benchPress = {
   source: 'system', ref: 'barbell-bench-press', name: 'Жим штанги лёжа', muscleGroup: 'chest', inputKind: 'strength',
 } as ExerciseSnapshot
 
 describe('assistant program draft saving', () => {
+  it('keeps the locally prefilled workout time in the completed workout payload', () => {
+    expect(assistantWorkoutSaveInput('request-1', 'client-1', '2026-08-25', '17:07', [])).toEqual({
+      workout: { requestId: 'request-1', clientId: 'client-1', workoutDate: '2026-08-25', startTime: '17:07', exercises: [] },
+    })
+  })
+
   it('normalizes stored program sessions and keeps legacy exercise names editable', () => {
     expect(programSessions([{ title: 'A', day: 'Пн', exercises: ['Жим штанги лёжа'] }, { title: 'broken', day: 'Вт', exercises: [null] }, null])).toEqual([
       { title: 'A', day: 'Пн', exercises: [{ name: 'Жим штанги лёжа', sets: 1 }] },

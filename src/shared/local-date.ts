@@ -45,6 +45,17 @@ export function todayInTimeZone(timeZone?: string | null, now = new Date()): Loc
   return localDate(`${value.year}-${value.month}-${value.day}`)
 }
 
+export function currentTimeInTimeZone(timeZone?: string | null, now = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: normalizeTimeZone(timeZone),
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now)
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  return `${value.hour}:${value.minute}`
+}
+
 export function todayLocalDate(now = new Date()): LocalDate {
   return todayInTimeZone(systemTimeZone(), now)
 }

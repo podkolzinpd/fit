@@ -49,6 +49,16 @@ describe('parseQuickWorkoutEntry', () => {
     expect(barbell.parsed[0]?.exercise.equipmentRef).toBe('barbell')
   })
 
+  it('просит выбрать оборудование для общего названия жима лёжа', () => {
+    const result = parseQuickWorkoutEntry('Жим лёжа 100 кг 3 по 15', SYSTEM_EXERCISE_CATALOG)
+
+    expect(result.parsed).toEqual([])
+    expect(result.unparsed[0]).toMatchObject({ reason: 'ambiguous' })
+    expect(result.unparsed[0]?.candidates.map((exercise) => exercise.ref)).toEqual(expect.arrayContaining([
+      'bench-press', 'dumbbell-bench-press',
+    ]))
+  })
+
   it('понимает разговорные названия тренажёров и не смешивает их с похожими движениями', () => {
     const cases = [
       ['хак присед 3×10 80 кг', 'fedb-hack-squat'],
