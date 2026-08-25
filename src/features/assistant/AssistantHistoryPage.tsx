@@ -16,6 +16,8 @@ export function AssistantHistoryPage() {
   const [sending, setSending] = useState(false)
   const [runningSummaryIds, setRunningSummaryIds] = useState<string[]>([])
   const [completedSummaryIds, setCompletedSummaryIds] = useState<string[]>([])
+  const latestAssistantMessage = [...messages].reverse().find((message) => message.author === 'assistant')
+  const activeActionId = latestAssistantMessage?.action ? latestAssistantMessage.id : undefined
 
   useEffect(() => {
     if (!actor) return
@@ -79,7 +81,7 @@ export function AssistantHistoryPage() {
     <section className="assistant-thread" aria-label="Диалог с ассистентом">
       {messages.map((message) => message.author === 'user'
         ? <article key={message.id} className="assistant-message assistant-message-user"><p>{message.content}</p></article>
-        : <article key={message.id} className="assistant-action-card"><p>{message.content}</p>{message.action && <AssistantAction action={message.action} onSuggestion={(value) => void send(value)} onConfirm={() => void confirmSummary(message.id, message.action!)} running={runningSummaryIds.includes(message.id)} completed={completedSummaryIds.includes(message.id)} />}</article>)}
+        : <article key={message.id} className="assistant-action-card"><p>{message.content}</p>{message.action && message.id === activeActionId && <AssistantAction action={message.action} onSuggestion={(value) => void send(value)} onCancel={() => void send('Отменить')} onConfirm={() => void confirmSummary(message.id, message.action!)} running={runningSummaryIds.includes(message.id)} completed={completedSummaryIds.includes(message.id)} />}</article>)}
       {error && <p className="assistant-card-hint" role="alert">{error}</p>}
     </section>
     <form className="assistant-composer" onSubmit={(event) => { event.preventDefault(); void send() }}>
@@ -102,19 +104,27 @@ function summaryPayload(action: AssistantOrchestratorAction): { clientId: string
     : undefined
 }
 
-function AssistantAction({ action, onSuggestion, onConfirm, running, completed }: { action: AssistantOrchestratorAction; onSuggestion: (value: string) => void; onConfirm: () => void; running: boolean; completed: boolean }) {
+function AssistantAction({ action, onSuggestion, onCancel, onConfirm, running, completed }: { action: AssistantOrchestratorAction; onSuggestion: (value: string) => void; onCancel: () => void; onConfirm: () => void; running: boolean; completed: boolean }) {
   const payload = action.payload as SummaryPayload
-  if (action.tool !== 'summarize_progress') return <div className="assistant-progress-preview"><strong>{action.title}</strong><span>{action.description}</span><small>Черновик: требуется отдельное подтверждение.</small></div>
-  if (payload.step === 'client' && Array.isArray(payload.candidates)) return <SummaryClientChoices candidates={payload.candidates} onSuggestion={onSuggestion} />
-  if (payload.step === 'period' && typeof payload.clientName === 'string' && Array.isArray(payload.options)) return <SummaryPeriodChoices clientName={payload.clientName} options={payload.options} onSuggestion={onSuggestion} />
-  if (summaryPayload(action) !== undefined) return <div className="assistant-progress-preview"><strong>{action.title}</strong><span>{action.description}</span><button type="button" onClick={onConfirm} disabled={running || completed}>{completed ? 'Сводка сформирована' : running ? 'Формирую…' : 'Сформировать сводку'}</button><small>Будут использованы только завершённые тренировки за выбранный период.</small></div>
-  return <div className="assistant-progress-preview"><strong>{action.title}</strong><span>{action.description}</span></div>
+  if (action.tool !== 'summarize_progress') return <ActionPreview action={action} onCancel={onCancel} />
+  if (payload.step === 'client' && Array.isArray(payload.candidates)) return <SummaryClientChoices candidates={payload.candidates} onSuggestion={onSuggestion} onCancel={onCancel} />
+  if (payload.step === 'period' && typeof payload.clientName === 'string' && Array.isArray(payload.options)) return <SummaryPeriodChoices clientName={payload.clientName} options={payload.options} onSuggestion={onSuggestion} onCancel={onCancel} />
+  if (summaryPayload(action) !== undefined) return <div className="assistant-progress-preview"><strong>{action.title}</strong><span>{action.description}</span><button type="button" onClick={onConfirm} disabled={running || completed}>{completed ? 'Сводка сформирована' : running ? 'Формирую…' : 'Сформировать сводку'}</button>{!completed && <CancelActionButton onCancel={onCancel} />}<small>Будут использованы только завершённые тренировки за выбранный период.</small></div>
+  return <ActionPreview action={action} onCancel={onCancel} />
 }
 
-function SummaryClientChoices({ candidates, onSuggestion }: { candidates: { id: string; fullName: string }[]; onSuggestion: (value: string) => void }) {
-  return <div className="assistant-progress-preview"><strong>Совпадения</strong><table className="assistant-choice-table"><tbody>{candidates.map((candidate) => <tr key={candidate.id}><td>{candidate.fullName}</td><td><button type="button" onClick={() => onSuggestion(`Сводка прогресса для ${candidate.fullName}`)}>Выбрать</button></td></tr>)}</tbody></table></div>
+function ActionPreview({ action, onCancel }: { action: AssistantOrchestratorAction; onCancel: () => void }) {
+  return <div className="assistant-progress-preview"><strong>{action.title}</strong><span>{action.description}</span><CancelActionButton onCancel={onCancel} /><small>Черновик: требуется отдельное подтверждение.</small></div>
 }
 
-function SummaryPeriodChoices({ clientName, options, onSuggestion }: { clientName: string; options: string[]; onSuggestion: (value: string) => void }) {
-  return <div className="assistant-progress-preview"><strong>{clientName}</strong><div className="assistant-period-options">{options.map((option) => <button key={option} type="button" onClick={() => onSuggestion(`Сводка прогресса для ${clientName} за ${option}`)}>{option}</button>)}</div><small>Можно также написать период в формате: с ГГГГ-ММ-ДД по ГГГГ-ММ-ДД.</small></div>
+function CancelActionButton({ onCancel }: { onCancel: () => void }) {
+  return <button type="button" className="assistant-action-cancel" onClick={onCancel}>Отменить сценарий</button>
+}
+
+function SummaryClientChoices({ candidates, onSuggestion, onCancel }: { candidates: { id: string; fullName: string }[]; onSuggestion: (value: string) => void; onCancel: () => void }) {
+  return <div className="assistant-progress-preview"><strong>Совпадения</strong><table className="assistant-choice-table"><tbody>{candidates.map((candidate) => <tr key={candidate.id}><td>{candidate.fullName}</td><td><button type="button" onClick={() => onSuggestion(`Сводка прогресса для ${candidate.fullName}`)}>Выбрать</button></td></tr>)}</tbody></table><CancelActionButton onCancel={onCancel} /></div>
+}
+
+function SummaryPeriodChoices({ clientName, options, onSuggestion, onCancel }: { clientName: string; options: string[]; onSuggestion: (value: string) => void; onCancel: () => void }) {
+  return <div className="assistant-progress-preview"><strong>{clientName}</strong><div className="assistant-period-options">{options.map((option) => <button key={option} type="button" onClick={() => onSuggestion(`Сводка прогресса для ${clientName} за ${option}`)}>{option}</button>)}</div><CancelActionButton onCancel={onCancel} /><small>Можно также написать период в формате: с ГГГГ-ММ-ДД по ГГГГ-ММ-ДД.</small></div>
 }

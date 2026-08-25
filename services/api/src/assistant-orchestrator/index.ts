@@ -145,15 +145,25 @@ function summaryAction(title: string, description: string, status: AssistantActi
   return { reply: description, action: { tool: 'summarize_progress', status, title, description, payload } }
 }
 
-function summaryTurn(
+export function isSummaryCancellation(message: string): boolean {
+  const normalized = normalizeAssistantMessage(message)
+  return ['отмена', 'отменить', 'не надо', 'стоп', 'закрыть', 'выход'].some((value) => normalized === value || normalized.startsWith(`${value} `))
+}
+
+export function summaryTurn(
   message: string,
   clients: readonly ClientContextRow[],
   latestAction: unknown,
   now: Date,
 ): AssistantTurnResponse | undefined {
   const previousAction = actionRecord(latestAction)
-  const continuation = previousAction?.tool === 'summarize_progress'
-  if (!isSummaryRequest(message) && !continuation) return undefined
+  if (previousAction?.tool === 'summarize_progress' && isSummaryCancellation(message)) {
+    return { reply: 'Хорошо, сценарий формирования сводки отменён.', action: null }
+  }
+
+  const previousPayload = actionRecord(previousAction?.payload)
+  const previousStep = previousPayload?.step
+  const period = summaryPeriodFromMessage(message, now)
 
   const previousCandidates = summaryCandidatesFromAction(latestAction)
   const selectedByNumber = normalizeAssistantMessage(message).match(/^(?:выбрать )?(\d{1,2})$/u)
@@ -161,9 +171,14 @@ function summaryTurn(
   const matches = numberedClient === undefined
     ? matchingSummaryClients(message, clients)
     : clients.filter((client) => client.id === numberedClient.id)
+  const continuation = previousAction?.tool === 'summarize_progress' && (
+    (previousStep === 'client' && matches.length > 0)
+    || (previousStep === 'period' && period !== undefined)
+  )
+  if (!isSummaryRequest(message) && !continuation) return undefined
   const selectedClient = matches.length === 1
     ? matches[0]
-    : summaryClientFromAction(latestAction, clients)
+    : continuation ? summaryClientFromAction(latestAction, clients) : undefined
 
   if (matches.length > 1) {
     const candidates = matches.map(({ id, fullName }) => ({ id, fullName }))
@@ -173,7 +188,6 @@ function summaryTurn(
     return summaryAction('Уточните клиента', 'Для кого сформировать сводку прогресса? Напишите имя или фамилию клиента.', 'needs_input', { step: 'client' })
   }
 
-  const period = summaryPeriodFromMessage(message, now)
   if (!period) {
     return summaryAction('Выберите период', `Клиент: ${selectedClient.fullName}. За какой период сформировать сводку?`, 'needs_input', {
       step: 'period', clientId: selectedClient.id, clientName: selectedClient.fullName,
