@@ -33,6 +33,7 @@ import type { PilotDomainWriter } from './pilot-domain-writer.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer } from './pilot-session.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
+import type { PilotProgressData } from './progress-data.js'
 import type { PilotWorkoutsWriter } from './pilot-workouts-writer.js'
 import {
   readLiveCommentRequest,
@@ -57,6 +58,12 @@ import {
 import { PilotWorkoutCommandError } from './workout-commands.js'
 import { WorkoutParseError, type LegacyWorkoutParser } from './legacy-workout-parser.js'
 import { readAssistantProgressRequest } from './assistant-progress-request.js'
+import {
+  readVersionedGoalRequest,
+  readVersionedGoalStageRequest,
+  readVersionedMetricRequest,
+  readVersionedProgressRequest,
+} from './progress-request.js'
 
 export type LegacySummaryHandler = (request: Request) => Promise<Response>
 
@@ -72,6 +79,7 @@ interface BuildAppOptions {
   pilotProfileReader?: PilotProfileReader
   pilotSessionIssuer?: PilotSessionIssuer
   pilotTrainingDataReader?: PilotTrainingDataReader
+  pilotProgressData?: PilotProgressData
   pilotWorkoutsWriter?: PilotWorkoutsWriter
   legacyWorkoutParser?: LegacyWorkoutParser
   legacySummaryHandler?: LegacySummaryHandler
@@ -379,8 +387,113 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
   })
 
+  app.get('/v1/clients/:clientId/progress', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { clientId } = request.params as { clientId?: unknown }
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => data.readBundle(sessionToken, clientId),
+      (result) => reply.header('cache-control', 'no-store').send(result))
+  })
+
+  app.get('/v1/clients/:clientId/progress/regularity', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { clientId } = request.params as { clientId?: unknown }
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => data.readRegularity(sessionToken, clientId),
+      (result) => reply.header('cache-control', 'no-store').send({ regularity: result }))
+  })
+
+  app.get('/v1/clients/:clientId/progress/running', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { clientId } = request.params as { clientId?: unknown }
+    const { from, to } = request.query as { from?: unknown; to?: unknown }
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId)
+      || !validDate(from) || !validDate(to) || from > to) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => data.readRunning(sessionToken, clientId, from, to),
+      (result) => reply.header('cache-control', 'no-store').send({ sessions: result }))
+  })
+
+  function readProgressCursor(query: Record<string, unknown>) {
+    const limitValue = query.limit === undefined ? 20 : Number(query.limit)
+    const completedAt = query.beforeCompletedAt
+    const workoutId = query.beforeWorkoutId
+    const cursorAbsent = completedAt === undefined && workoutId === undefined
+    const cursorValid = typeof completedAt === 'string'
+      && Number.isFinite(Date.parse(completedAt))
+      && typeof workoutId === 'string' && uuidPattern.test(workoutId)
+    return Number.isSafeInteger(limitValue) && limitValue >= 1 && limitValue <= 50
+      && (cursorAbsent || cursorValid)
+      ? { limit: limitValue, cursor: cursorAbsent
+        ? { completedAt: null, workoutId: null }
+        : { completedAt: completedAt as string, workoutId: workoutId as string } }
+      : undefined
+  }
+
+  app.get('/v1/clients/:clientId/progress/exercises/:exerciseRef', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { clientId, exerciseRef } = request.params as { clientId?: unknown; exerciseRef?: unknown }
+    const page = readProgressCursor(request.query as Record<string, unknown>)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId)
+      || typeof exerciseRef !== 'string' || exerciseRef.trim().length === 0
+      || exerciseRef.length > 300 || page === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => data.readExercise(sessionToken, clientId, exerciseRef, page.limit, page.cursor),
+      (result) => reply.header('cache-control', 'no-store').send(result))
+  })
+
+  app.get('/v1/clients/:clientId/workout-chronicle', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { clientId } = request.params as { clientId?: unknown }
+    const page = readProgressCursor(request.query as Record<string, unknown>)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId) || page === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => data.readChronicle(sessionToken, clientId, page.limit, page.cursor),
+      (result) => reply.header('cache-control', 'no-store').send(result))
+  })
+
   const uuidPattern =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/
+  const validDate = (value: unknown): value is string => {
+    if (typeof value !== 'string' || !datePattern.test(value)) return false
+    const parsed = new Date(`${value}T00:00:00.000Z`)
+    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+  }
 
   async function sendPilotCommand<Result>(
     reply: FastifyReply,
@@ -592,6 +705,207 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       ),
       (exercise) => reply.header('cache-control', 'no-store').send({ exercise }),
     )
+  })
+
+  app.post('/v1/progress', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const command = readVersionedProgressRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (command === undefined || command.draft.id !== null) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => data.saveProgress(sessionToken, command.draft, command.expectedVersion),
+      (progress) => reply.header('cache-control', 'no-store').code(201).send({ progress }))
+  })
+
+  app.put('/v1/progress/:progressId', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { progressId } = request.params as { progressId?: unknown }
+    const command = readVersionedProgressRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof progressId !== 'string' || !uuidPattern.test(progressId)
+      || command === undefined || command.draft.id !== progressId
+      || command.expectedVersion === null) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => data.saveProgress(sessionToken, command.draft, command.expectedVersion),
+      (progress) => reply.header('cache-control', 'no-store').send({ progress }))
+  })
+
+  app.delete('/v1/progress/:progressId', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { progressId } = request.params as { progressId?: unknown }
+    const expectedVersion = readExpectedVersion(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof progressId !== 'string' || !uuidPattern.test(progressId)
+      || expectedVersion === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => data.deleteProgress(sessionToken, progressId, expectedVersion),
+      (version) => reply.header('cache-control', 'no-store').send({ progress: { id: progressId, version } }))
+  })
+
+  app.post('/v1/progress-metrics', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const command = readVersionedMetricRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (command === undefined || command.draft.id !== null) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => data.saveMetric(sessionToken, command.draft, command.expectedVersion),
+      (metric) => reply.header('cache-control', 'no-store').code(201).send({ metric }))
+  })
+
+  app.put('/v1/progress-metrics/:metricId', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { metricId } = request.params as { metricId?: unknown }
+    const command = readVersionedMetricRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof metricId !== 'string' || !uuidPattern.test(metricId)
+      || command === undefined || command.draft.id !== metricId
+      || command.expectedVersion === null) return reply.code(400).send({ error: 'invalid_request' })
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => data.saveMetric(sessionToken, command.draft, command.expectedVersion),
+      (metric) => reply.header('cache-control', 'no-store').send({ metric }))
+  })
+
+  app.put('/v1/progress-metrics/:metricId/archive', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { metricId } = request.params as { metricId?: unknown }
+    const command = readArchiveRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof metricId !== 'string' || !uuidPattern.test(metricId) || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => data.setMetricArchived(sessionToken, metricId, command.archived, command.expectedVersion),
+      (metric) => reply.header('cache-control', 'no-store').send({ metric }))
+  })
+
+  app.post('/v1/goals', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const command = readVersionedGoalRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (command === undefined || command.draft.id !== null) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => data.saveGoal(sessionToken, command.draft, command.expectedVersion),
+      (goal) => reply.header('cache-control', 'no-store').code(201).send({ goal }))
+  })
+
+  app.put('/v1/goals/:goalId', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { goalId } = request.params as { goalId?: unknown }
+    const command = readVersionedGoalRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof goalId !== 'string' || !uuidPattern.test(goalId)
+      || command === undefined || command.draft.id !== goalId
+      || command.expectedVersion === null) return reply.code(400).send({ error: 'invalid_request' })
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => data.saveGoal(sessionToken, command.draft, command.expectedVersion),
+      (goal) => reply.header('cache-control', 'no-store').send({ goal }))
+  })
+
+  app.put('/v1/goals/:goalId/archive', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { goalId } = request.params as { goalId?: unknown }
+    const expectedVersion = readExpectedVersion(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof goalId !== 'string' || !uuidPattern.test(goalId) || expectedVersion === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => data.archiveGoal(sessionToken, goalId, expectedVersion),
+      (version) => reply.header('cache-control', 'no-store').send({ goal: { id: goalId, version } }))
+  })
+
+  app.post('/v1/goal-stages', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const command = readVersionedGoalStageRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (command === undefined || command.draft.id !== null) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => data.saveStage(sessionToken, command.draft, command.expectedVersion),
+      (stage) => reply.header('cache-control', 'no-store').code(201).send({ stage }))
+  })
+
+  app.put('/v1/goal-stages/:stageId', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { stageId } = request.params as { stageId?: unknown }
+    const command = readVersionedGoalStageRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof stageId !== 'string' || !uuidPattern.test(stageId)
+      || command === undefined || command.draft.id !== stageId
+      || command.expectedVersion === null) return reply.code(400).send({ error: 'invalid_request' })
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => data.saveStage(sessionToken, command.draft, command.expectedVersion),
+      (stage) => reply.header('cache-control', 'no-store').send({ stage }))
+  })
+
+  app.delete('/v1/goal-stages/:stageId', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { stageId } = request.params as { stageId?: unknown }
+    const expectedVersion = readExpectedVersion(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof stageId !== 'string' || !uuidPattern.test(stageId) || expectedVersion === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => data.deleteStage(sessionToken, stageId, expectedVersion),
+      () => reply.header('cache-control', 'no-store').send({ stage: { id: stageId, deleted: true } }))
   })
 
   app.post('/v1/workouts', async (request, reply) => {

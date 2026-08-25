@@ -5,14 +5,16 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-25
-Проверенный базовый `main`: `30495f2` (`feat(progress): focus body map on one side (#569)`)
+Проверенный базовый `main`: `71d6f7e` (`fix(progress): retry transient summary failures (#572)`)
 
 ## Активное изменение
 
-- Ветка `codex/yandex-post-workout` переносит в Yandex PostgreSQL feedback
-  клиента, реакцию/ответ тренера, вопросы, явное закрытие и attention queue.
-- `000015` использует только versioned security-definer команды: точный повтор
-  идемпотентен, stale payload конфликтует, прямые записи `fit_api` закрыты.
+- Ветка `codex/yandex-progress-goals` переносит в Yandex PostgreSQL замеры,
+  пользовательские показатели, цель/этапы, регулярность, беговой и
+  exercise-progress и курсорную хронику тренировок.
+- `000016` использует security-definer команды и optimistic versions; прямые
+  записи `fit_api` в новые domain tables закрыты. Подключённые участники читают
+  общие факты, но замер и пользовательский показатель меняет только автор.
 - Production UI и Supabase routing не меняются; контракт доступен только через
   Yandex stage API и read-only pilot aggregate до отдельного cutover.
 - `YAFIT-366` показывает на карте тела одну крупную фигуру за раз: спереди или
@@ -71,9 +73,9 @@
   доставляются автоматически через GitHub OIDC, private runner и forward-only
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
-  exercises и полный workout lifecycle работают на stage. Миграции
-  `000001–000014` и API revision доставлены автоматически; следующий PR
-  добавляет `000015` post-workout.
+  exercises, полный workout lifecycle и post-workout работают на stage.
+  Миграции `000001–000015` и API revision доставлены автоматически; текущий PR
+  добавляет `000016` progress/goals/derived reads.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
 - Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
@@ -89,25 +91,25 @@
 
 ## Проверки активной ветки
 
-- Stage run `32833096878` доставил `000014`, fixture, API revision и lifecycle
-  smoke без платного resize и rollback.
-- Локальный Yandex PostgreSQL 17 применяет `000015`; 22 интеграционных
-  actor/RLS-теста зелёные, включая client/root/member/outsider, повтор запроса,
-  optional reaction, автоматическое закрытие ответа и snooze.
-- Полный `npm run check` зелёный: 738 frontend, 148 API и 52 infra/policy
-  проверки, lint, typecheck и production build.
+- Stage run `32845473975` доставил `000015`, fixture, API revision и
+  post-workout/attention smoke без ручного применения миграций.
+- Локальный Yandex PostgreSQL 17 применяет `000016`; 23 интеграционных
+  actor/RLS-теста зелёные, включая root/member/outsider, запрет прямой записи,
+  общие замеры/цель и confirmed-only exercise progress/chronicle.
+- Полный `npm run check` зелёный: 740 frontend, 157 API и 52 infra/policy
+  проверки, lint, typecheck и production build. Чистый Supabase reset применил
+  все миграции; 596 SQL/RLS-тестов зелёные.
 - Assistant release применяет чистую цепочку Supabase; 624 SQL/RLS-теста
   зелёные, включая exact-once turn/action, cross-tenant запреты и атомарный
   rollback всей программы при ошибке одного элемента.
 
 ## Ближайший порядок
 
-1. Доставить `000015` и проверить post-workout/attention stage smoke.
-2. Отдельно портировать progress/goals и derived progress/chronicle reads.
-3. Перенести оставшиеся realtime/refetch и Edge Function tenant-контракты.
-4. После полного tenant-контракта провести две миграционные репетиции; только
+1. Доставить `000016` и проверить progress/goals/derived stage smoke.
+2. Перенести оставшиеся realtime/refetch и Edge Function tenant-контракты.
+3. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
-5. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению
+4. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению
    программ и нового решения владельца продукта.
 
 ## Отложено

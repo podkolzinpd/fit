@@ -24,6 +24,11 @@ export interface StageWorkoutFixtureIds {
   runningBlockId: string
   strengthSetId: string
   runningSetId: string
+  progressId: string
+  progressMetricId: string
+  progressCustomValueId: string
+  goalId: string
+  goalStageId: string
 }
 
 export interface StageWorkoutFixtureResult {
@@ -69,6 +74,11 @@ export function stageWorkoutFixtureIds(
     runningBlockId: deterministicUuid(`${trainerId}:running-block`),
     strengthSetId: deterministicUuid(`${trainerId}:strength-set`),
     runningSetId: deterministicUuid(`${trainerId}:running-set`),
+    progressId: deterministicUuid(`${trainerId}:progress`),
+    progressMetricId: deterministicUuid(`${trainerId}:progress-metric`),
+    progressCustomValueId: deterministicUuid(`${trainerId}:progress-custom-value`),
+    goalId: deterministicUuid(`${trainerId}:goal`),
+    goalStageId: deterministicUuid(`${trainerId}:goal-stage`),
   }
 }
 
@@ -115,6 +125,9 @@ async function seedTrainerFixture(
     `,
     [trainerId],
   )
+  await client.query('delete from public.client_goals where client_id = $1', [ids.clientId])
+  await client.query('delete from public.client_progress where client_id = $1', [ids.clientId])
+  await client.query('delete from public.client_custom_metrics where client_id = $1', [ids.clientId])
   await client.query(
     `
       delete from public.clients
@@ -241,6 +254,40 @@ async function seedTrainerFixture(
       on conflict (id) do nothing
     `,
     [ids.runningSetId, ids.runningExerciseId, trainerId, ids.clientId],
+  )
+  await client.query('delete from public.client_goals where client_id = $1', [ids.clientId])
+  await client.query('delete from public.client_progress where client_id = $1', [ids.clientId])
+  await client.query('delete from public.client_custom_metrics where client_id = $1', [ids.clientId])
+  await client.query(
+    `insert into public.client_custom_metrics (
+       id, trainer_id, client_id, created_by, name, unit
+     ) values ($1, $2, $3, $2, 'Процент жира', '%')`,
+    [ids.progressMetricId, trainerId, ids.clientId],
+  )
+  await client.query(
+    `insert into public.client_progress (
+       id, trainer_id, client_id, created_by, recorded_on, weight_kg, waist_cm, notes
+     ) values ($1, $2, $3, $2, date '2026-08-22', 64.5, 72, 'Синтетический замер stage')`,
+    [ids.progressId, trainerId, ids.clientId],
+  )
+  await client.query(
+    `insert into public.client_progress_custom (
+       id, trainer_id, client_id, progress_id, metric_id, value
+     ) values ($1, $2, $3, $4, $5, 19.5)`,
+    [ids.progressCustomValueId, trainerId, ids.clientId, ids.progressId, ids.progressMetricId],
+  )
+  await client.query(
+    `insert into public.client_goals (
+       id, trainer_id, client_id, created_by, title, target_date
+     ) values ($1, $2, $3, $2, 'Подтянуться 10 раз', date '2026-12-31')`,
+    [ids.goalId, trainerId, ids.clientId],
+  )
+  await client.query(
+    `insert into public.goal_stages (
+       id, goal_id, trainer_id, client_id, created_by, title,
+       starts_on, ends_on, position
+     ) values ($1, $2, $3, $4, $3, 'Первые пять', date '2026-08-22', date '2026-10-01', 0)`,
+    [ids.goalStageId, ids.goalId, trainerId, ids.clientId],
   )
 }
 
