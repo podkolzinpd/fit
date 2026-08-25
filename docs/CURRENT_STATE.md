@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-26
-Проверенный базовый `main`: `e02dea2` (`Improve assistant workout composition (#577)`)
+Проверенный базовый `main`: `e8af424` (`feat(progress): add independent anatomical body map (#580)`)
 
 ## Активное изменение
 
@@ -92,6 +92,9 @@
   SQL/RLS-теста зелёные; production-цепочка не изменена.
 - Для YAFIT-368 зелёные 44 целевых теста геометрии/карты тела, мобильные
   сценарии 390/430 px, Chromium visual и обе WebKit-половины CI.
+- Для YAFIT-371 зелёные 32 целевых теста настройки и геометрии, WebKit-сценарии
+  схемы на 390/430 px, светлые и тёмные visual baseline; полный `npm run check`
+  также зелёный.
 - Assistant release применяет чистую цепочку Supabase; 624 SQL/RLS-теста
   зелёные, включая exact-once turn/action, cross-tenant запреты и атомарный
   rollback всей программы при ошибке одного элемента.
