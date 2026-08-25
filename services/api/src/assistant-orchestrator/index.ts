@@ -218,7 +218,16 @@ export function validateAssistantTurnResponse(value: unknown): AssistantTurnResp
   const { tool, status, title, description, payload } = value.action
   if (!tools.includes(tool as Tool) || (status !== 'needs_input' && status !== 'proposed') || typeof title !== 'string' || typeof description !== 'string' || !record(payload)) return undefined
   if (!title.trim() || !description.trim() || title.length > 200 || description.length > 1_000) return undefined
+  if (tool === 'create_program_draft' && status === 'proposed' && !validProgramPayload(payload)) return undefined
   return { reply: value.reply.trim(), action: { tool: tool as Tool, status, title: title.trim(), description: description.trim(), payload } }
+}
+
+function validProgramPayload(payload: Record<string, unknown>): boolean {
+  if (payload.step !== 'confirm' || typeof payload.clientId !== 'string' || typeof payload.clientName !== 'string' || typeof payload.brief !== 'string' || !Array.isArray(payload.sessions)) return false
+  return payload.sessions.length > 0 && payload.sessions.length <= 4 && payload.sessions.every((session) => {
+    if (!record(session) || typeof session.title !== 'string' || typeof session.day !== 'string' || !Array.isArray(session.exercises)) return false
+    return session.exercises.length > 0 && session.exercises.length <= 12 && session.exercises.every((exercise) => typeof exercise === 'string' && exercise.trim().length > 0)
+  })
 }
 
 export function allowsAssistantAction(message: string): boolean {
