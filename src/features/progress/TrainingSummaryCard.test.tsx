@@ -196,12 +196,13 @@ describe('Training summary card states', () => {
       periodStart: localDate('2026-02-21'),
     }])
 
-    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+    render(<ClientTrainingSummaryCard clientId="client-1" gender="female" />, { wrapper: wrapper(queryClient()) })
 
     expect((await screen.findAllByText((text) => text.includes(longExerciseName)))[0]).toBeVisible()
-    expect(screen.getByLabelText('Спина: +36%')).toBeVisible()
+    expect(screen.getByAltText('Атлетичная женщина, вид спереди и сзади')).toBeVisible()
+    expect(screen.getByLabelText('Верх спины: +36%')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Подробный анализ' }))
-    expect(await screen.findByText(/Рабочий вес: 50 → 68 кг/)).toBeVisible()
+    expect((await screen.findAllByText(/Рабочий вес: 50 → 68 кг/))[0]).toBeVisible()
     expect(screen.getByText('3')).toBeVisible()
     expect(screen.getByText('недели с тренировками')).toBeVisible()
     expect(screen.queryByText('1,1 в неделю')).toBeNull()
@@ -222,7 +223,7 @@ describe('Training summary card states', () => {
     const user = userEvent.setup()
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    await screen.findByText('После завершённой тренировки покажем, на какие зоны пришлась нагрузка.')
+    await screen.findByText('После завершённой тренировки покажем, на какие зоны пришлась работа.')
     await user.click(screen.getByRole('button', { name: 'Подробный анализ' }))
     expect(await screen.findByText('Служебный показатель равен 1,3.')).toBeVisible()
     expect(document.body).not.toHaveTextContent('custom_metric_key')
@@ -259,11 +260,11 @@ describe('Training summary card states', () => {
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    expect(await screen.findByLabelText('Спина: +36%')).toBeVisible()
+    expect(await screen.findByLabelText('Верх спины: +36%')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Обновить' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('YandexGPT временно недоступен')
     expect(screen.getByRole('button', { name: 'Обновить' })).toBeEnabled()
-    expect(screen.getByLabelText('Спина: +36%')).toBeVisible()
+    expect(screen.getByLabelText('Верх спины: +36%')).toBeVisible()
   })
 
   it('lets the client switch to load and retry a failed workout history request', async () => {
@@ -276,10 +277,10 @@ describe('Training summary card states', () => {
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    await user.click(await screen.findByRole('button', { name: 'Нагрузка' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось собрать нагрузку')
+    await user.click(await screen.findByRole('button', { name: 'Работа' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось собрать работу')
     await user.click(screen.getByRole('button', { name: 'Попробовать ещё раз' }))
-    expect(await screen.findByText('После завершённой тренировки покажем, на какие зоны пришлась нагрузка.')).toBeVisible()
+    expect(await screen.findByText('После завершённой тренировки покажем, на какие зоны пришлась работа.')).toBeVisible()
     expect(repositories.workouts).toHaveBeenCalledTimes(2)
   })
 
@@ -298,11 +299,11 @@ describe('Training summary card states', () => {
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    await user.click(await screen.findByRole('button', { name: 'Нагрузка' }))
-    expect(await screen.findByLabelText('Спина: 67%')).toBeVisible()
-    await user.click(screen.getByRole('button', { name: '2Грудь33%' }))
+    await user.click(await screen.findByRole('button', { name: 'Работа' }))
+    expect(await screen.findByLabelText('Верх спины: 67%')).toBeVisible()
+    await user.click(screen.getByLabelText('Грудь: 33%'))
     expect(screen.getByText('Жим лёжа: 1 подход')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Прогресс' }))
-    expect(screen.getByLabelText('Спина: +36%')).toBeVisible()
+    expect(screen.getByLabelText('Верх спины: +36%')).toBeVisible()
   })
 })
