@@ -16,7 +16,7 @@ export function ClientProgressGoalSection({ goal, profileGoal, today, loading, e
   const goalTitle = goal?.title ?? profileGoal?.trim() ?? ''
   const stage = goal ? currentStage(goal, today) : null
   return <section className="ai-progress-goal" aria-labelledby="ai-progress-goal-title">
-    <h3 id="ai-progress-goal-title">Твоя цель</h3>
+    <h3 id="ai-progress-goal-title">Для твоей цели</h3>
     {loading && <p className="muted" role="status">Проверяем цель…</p>}
     {error && <div className="ai-progress-goal-error" role="alert"><p>Не удалось загрузить цель.</p><button type="button" className="link" onClick={onRetry}>Повторить</button></div>}
     {!loading && !error && goalTitle && <>
