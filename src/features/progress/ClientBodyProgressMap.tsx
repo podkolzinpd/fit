@@ -42,8 +42,8 @@ function regionStyle(region: BodyMapRegion, index: number, mode: BodyMapMode): C
   return {
     '--body-zone-intensity': region.intensity,
     '--body-zone-base-opacity': mode === 'load'
-      ? 0.035 + region.intensity * 0.07
-      : 0.025 + region.intensity * 0.035,
+      ? 0.07 + region.intensity * 0.08
+      : 0.045 + region.intensity * 0.045,
     '--body-zone-delay': `${index * 55}ms`,
   } as CSSProperties
 }
@@ -108,6 +108,7 @@ function BodyRegion({ region, variant, side, selected, mode, index, filterId, on
     aria-label={regionAriaLabel(region)}
     aria-pressed={selected}
     className={`body-progress-region body-progress-region-${mode}${selected ? ' selected' : ''}`}
+    data-body-zone={region.group}
     style={regionStyle(region, index, mode)}
     onClick={onSelect}
     onKeyDown={selectFromKeyboard}
@@ -169,7 +170,7 @@ function MapPanel({ data, selected, gender, side, discovering, onSideChange, onS
               <image href={figure.image} width="952" height="1000" preserveAspectRatio="none" />
             </mask>
             <filter id={filterId} x="-18%" y="-18%" width="136%" height="136%" colorInterpolationFilters="sRGB">
-              <feGaussianBlur stdDeviation="4" />
+              <feGaussianBlur stdDeviation="2.5" />
             </filter>
           </defs>
           <g mask={`url(#${maskId})`}>
