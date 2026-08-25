@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { PublishedTrainingSummary, TrainingSummary } from '../../shared/domain'
+import type { PublishedTrainingSummary, TrainingSummary, Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { ClientProgressGoalSection } from './ClientProgressGoalSection'
 import { ClientTrainingSummaryCard, TrainerTrainingSummaryCard } from './TrainingSummaryCard'
@@ -17,6 +17,7 @@ const repositories = vi.hoisted(() => ({
   publish: vi.fn(),
   unpublish: vi.fn(),
   goal: vi.fn(),
+  workouts: vi.fn(),
 }))
 vi.mock('../../app/auth-context', () => ({
   useAuth: () => ({ actor: { timezone: 'Europe/Moscow' } }),
@@ -33,6 +34,9 @@ vi.mock('../../data/repositories/training-summaries.repository', () => ({
 }))
 vi.mock('../../data/repositories/goals.repository', () => ({
   goalsRepository: { get: repositories.goal },
+}))
+vi.mock('../../data/repositories/workouts.repository', () => ({
+  workoutsRepository: { list: repositories.workouts },
 }))
 vi.mock('../../shared/yandex-metrika', () => ({ trackGoal: vi.fn() }))
 
@@ -153,6 +157,7 @@ describe('Training summary card states', () => {
   beforeEach(() => {
     Object.values(repositories).forEach((mock) => mock.mockReset())
     repositories.goal.mockResolvedValue(null)
+    repositories.workouts.mockResolvedValue([])
   })
 
   it('does not expose period or generation actions while trainer data is loading', () => {
@@ -182,6 +187,7 @@ describe('Training summary card states', () => {
   })
 
   it('accepts a short history, a long exercise name and no client goal without leaking technical text', async () => {
+    const user = userEvent.setup()
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-08-10'))
     repositories.listForClient.mockResolvedValue([publishedSummary, {
       ...publishedSummary,
@@ -192,9 +198,10 @@ describe('Training summary card states', () => {
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    expect(await screen.findByText(longExerciseName)).toBeVisible()
-    expect(screen.getByText('+36%')).toBeVisible()
-    expect(screen.getByText('Рабочий вес: 50 → 68 кг')).toBeVisible()
+    expect((await screen.findAllByText((text) => text.includes(longExerciseName)))[0]).toBeVisible()
+    expect(screen.getByLabelText('Спина: +36%')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Подробный анализ' }))
+    expect(await screen.findByText(/Рабочий вес: 50 → 68 кг/)).toBeVisible()
     expect(screen.getByText('3')).toBeVisible()
     expect(screen.getByText('недели с тренировками')).toBeVisible()
     expect(screen.queryByText('1,1 в неделю')).toBeNull()
@@ -215,7 +222,7 @@ describe('Training summary card states', () => {
     const user = userEvent.setup()
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    await screen.findByText('Рабочий вес вырос на 17%.')
+    await screen.findByText('После завершённой тренировки покажем, на какие зоны пришлась нагрузка.')
     await user.click(screen.getByRole('button', { name: 'Подробный анализ' }))
     expect(await screen.findByText('Служебный показатель равен 1,3.')).toBeVisible()
     expect(document.body).not.toHaveTextContent('custom_metric_key')
@@ -252,10 +259,50 @@ describe('Training summary card states', () => {
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    expect(await screen.findByText('+36%')).toBeVisible()
+    expect(await screen.findByLabelText('Спина: +36%')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Обновить' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('YandexGPT временно недоступен')
     expect(screen.getByRole('button', { name: 'Обновить' })).toBeEnabled()
-    expect(screen.getByText('+36%')).toBeVisible()
+    expect(screen.getByLabelText('Спина: +36%')).toBeVisible()
+  })
+
+  it('lets the client switch to load and retry a failed workout history request', async () => {
+    const user = userEvent.setup()
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForClient.mockResolvedValue([publishedSummary])
+    repositories.workouts
+      .mockRejectedValueOnce(new Error('История временно недоступна'))
+      .mockResolvedValueOnce([])
+
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    await user.click(await screen.findByRole('button', { name: 'Нагрузка' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось собрать нагрузку')
+    await user.click(screen.getByRole('button', { name: 'Попробовать ещё раз' }))
+    expect(await screen.findByText('После завершённой тренировки покажем, на какие зоны пришлась нагрузка.')).toBeVisible()
+    expect(repositories.workouts).toHaveBeenCalledTimes(2)
+  })
+
+  it('lets the client inspect the load behind a highlighted body zone', async () => {
+    const user = userEvent.setup()
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForClient.mockResolvedValue([publishedSummary])
+    repositories.workouts.mockResolvedValue([{
+      id: 'workout-1', clientId: 'client-1', workoutDate: localDate('2026-08-18'), status: 'done',
+      exercises: [{ name: 'Тяга верхнего блока', muscleGroup: 'back', sets: [
+        { confirmedAt: '2026-08-18T10:00:00Z' }, { confirmedAt: '2026-08-18T10:01:00Z' },
+      ] }, { name: 'Жим лёжа', muscleGroup: 'chest', sets: [
+        { confirmedAt: '2026-08-18T10:02:00Z' },
+      ] }],
+    } as Workout])
+
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    await user.click(await screen.findByRole('button', { name: 'Нагрузка' }))
+    expect(await screen.findByLabelText('Спина: 67%')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: '2Грудь33%' }))
+    expect(screen.getByText('Жим лёжа: 1 подход')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Прогресс' }))
+    expect(screen.getByLabelText('Спина: +36%')).toBeVisible()
   })
 })

@@ -17,11 +17,13 @@ interface VoiceInputButtonProps {
   maxDurationMs?: number
   idleLabel?: string
   beta?: boolean
-  variant?: 'inline' | 'hero'
+  variant?: 'inline' | 'hero' | 'icon'
   onPhaseChange?: (phase: VoiceInputPhase) => void
   onStart?: () => void
   streamingFactory?: () => StreamingSpeechSession
   startupTimeoutMs?: number
+  disabled?: boolean
+  showTranscriptStatus?: boolean
 }
 
 export function VoiceInputButton({
@@ -38,6 +40,8 @@ export function VoiceInputButton({
   onStart,
   streamingFactory = () => new SpeechKitStreamingSession(),
   startupTimeoutMs = 30_000,
+  disabled = false,
+  showTranscriptStatus = true,
 }: VoiceInputButtonProps) {
   const [phase, setPhase] = useState<VoiceInputPhase>('idle')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -67,6 +71,7 @@ export function VoiceInputButton({
   useEffect(() => { onPhaseChange?.(phase) }, [onPhaseChange, phase])
 
   async function startRecording() {
+    if (disabled) return
     onStart?.()
     setMessage(null)
     setUndo(null)
@@ -120,7 +125,7 @@ export function VoiceInputButton({
     if (!streamingRef.current || stoppingRef.current) return
     stoppingRef.current = true; clearTimers(intervalRef, timeoutRef)
     const streaming = streamingRef.current; streamingRef.current = null
-    try { await streaming.stop(); const text = streamingTextRef.current.trim(); if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.'); setPhase('transcribing'); const revert = await onTranscript(text); setUndo(() => revert ?? null); setMessage(variant === 'hero' ? null : 'Текст добавлен в заметку. Проверьте его перед сохранением.') }
+    try { await streaming.stop(); const text = streamingTextRef.current.trim(); if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.'); setPhase('transcribing'); const revert = await onTranscript(text); setUndo(() => revert ?? null); setMessage(variant === 'hero' || !showTranscriptStatus ? null : 'Текст добавлен в заметку. Проверьте его перед сохранением.') }
     catch (error) { if (mountedRef.current) setMessage(error instanceof Error ? error.message : 'Не удалось распознать запись.') }
     finally { stoppingRef.current = false; if (mountedRef.current) setPhase('idle') }
   }
@@ -157,7 +162,7 @@ export function VoiceInputButton({
       if (!mountedRef.current) return
       const revert = await onTranscript(text)
       setUndo(() => revert ?? null)
-      setMessage(variant === 'hero' ? null : 'Текст добавлен в заметку. Проверьте его перед сохранением.')
+      setMessage(variant === 'hero' || !showTranscriptStatus ? null : 'Текст добавлен в заметку. Проверьте его перед сохранением.')
     } catch (error) {
       if (!mountedRef.current) return
       setMessage(error instanceof Error ? error.message : 'Не удалось распознать запись.')
@@ -195,7 +200,7 @@ export function VoiceInputButton({
       className="voice-action-button"
       aria-label={recording ? `Завершить запись, ${formatDuration(elapsedSeconds)}` : busy ? voiceHeroStatus(phase) : idleLabel}
       aria-pressed={recording}
-      disabled={busy}
+      disabled={busy || disabled}
       onClick={() => { if (recording) { void (streamingRef.current ? finishStreaming() : finishRecording()); return }; trackGoal(`voice_note_start_click_${source}`); void startRecording() }}
     >
       {recording ? <StopIcon /> : <MicIcon />}
@@ -205,11 +210,25 @@ export function VoiceInputButton({
     {message && !message.startsWith('Сейчас распознаю:') && <div className="voice-action-error" role="alert"><strong>{message}</strong></div>}
   </section>
 
+  if (variant === 'icon') return <div className="voice-input voice-input-icon">
+    <button
+      type="button"
+      className={`assistant-icon-button ${recording ? 'recording' : ''}`}
+      aria-label={recording ? `Завершить голосовой ввод, ${formatDuration(elapsedSeconds)}` : busy ? voiceHeroStatus(phase) : idleLabel}
+      aria-pressed={recording}
+      disabled={busy || disabled}
+      onClick={() => { if (recording) { void (streamingRef.current ? finishStreaming() : finishRecording()); return }; trackGoal(`voice_note_start_click_${source}`); void startRecording() }}
+    >
+      {recording ? <StopIcon /> : <MicIcon />}
+    </button>
+    {message && <div className="voice-input-status" role="status"><small className={message.startsWith('Текст добавлен') ? 'success' : 'error'}>{message}</small>{undo && <button type="button" className="link" onClick={() => { undo(); setUndo(null); setMessage(null) }}>Отменить</button>}</div>}
+  </div>
+
   return <div className="voice-input">
     <button
       type="button"
       className={`voice-input-button secondary ${recording ? 'recording' : ''}`}
-      disabled={busy}
+      disabled={busy || disabled}
       onClick={() => { if (recording) { void (streamingRef.current ? finishStreaming() : finishRecording()); return }; trackGoal(`voice_note_start_click_${source}`); void startRecording() }}
     >
       {recording ? <StopIcon /> : <MicIcon />}
