@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 const completionUrl = 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion'
 const releaseSha = process.env.RELEASE_SHA?.trim() || 'unknown'
+const assistantSystemPrompt = 'Ты безопасный ассистент фитнес-приложения. Не ставь диагнозов и не давай опасных рекомендаций. Любое write-действие только как предложенная карточка с подтверждением; никогда не утверждай, что данные уже сохранены.'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const tools = ['record_workout', 'create_client_draft', 'create_program_draft', 'schedule_program', 'summarize_progress'] as const
 type Tool = typeof tools[number]
@@ -503,6 +504,13 @@ function modelPrompt(history: readonly { author: string; content: string }[], cl
   ].join('\n\n')
 }
 
+export function assistantModelMessages(prompt: string): Array<{ role: 'system' | 'user'; text: string }> {
+  return [
+    { role: 'system', text: assistantSystemPrompt },
+    { role: 'user', text: prompt },
+  ]
+}
+
 type AssistantService = SupabaseClient
 
 function responseFromStoredMessage(value: unknown): AssistantTurnResponse | undefined {
@@ -642,11 +650,7 @@ export async function runAssistantTurn(authorization: string, command: Assistant
       body: JSON.stringify({
         modelUri: `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`,
         completionOptions: { stream: false, temperature: 0.2, maxTokens: (allowsAssistantAction(command.message) || programBriefReady) ? '1200' : '120' }, jsonSchema: { schema },
-        messages: [
-          { role: 'system', text: 'Ты безопасный ассистент фитнес-приложения. Не ставь диагнозов и не давай опасных рекомендаций. Любое write-действие только как предложенная карточка с подтверждением; никогда не утверждай, что данные уже сохранены.' },
-          ...history.map((entry) => ({ role: entry.author === 'user' ? 'user' : 'assistant', text: entry.content })),
-          { role: 'user', text: `${modelPrompt(history, clientContext, progressContext, !(allowsAssistantAction(command.message) || programBriefReady), usesInformalAddress(command.message))}${programBriefReady ? `\n\nСформируй именно action=create_program_draft, status=proposed. В payload обязательно верни step=confirm, clientId, clientName, goal, brief и sessions: массив до 4 тренировок с полями title, day, exercises. Каждое exercises — объект {name, exerciseRef?, sets, reps?, weightKg?, durationMin?, distanceKm?}. Если у тебя есть канонический exerciseRef, верни его и не выдумывай ref; UI дополнительно проверит его по каталогу. name — понятное название упражнения; sets — целое 1..8. Для силовых обязательно указывай reps, вес добавляй только если он обоснован. Для кардио укажи durationMin или distanceKm. Не утверждай, что программа сохранена.` : ''}` },
-        ],
+        messages: assistantModelMessages(`${modelPrompt(history, clientContext, progressContext, !(allowsAssistantAction(command.message) || programBriefReady), usesInformalAddress(command.message))}${programBriefReady ? `\n\nСформируй именно action=create_program_draft, status=proposed. В payload обязательно верни step=confirm, clientId, clientName, goal, brief и sessions: массив до 4 тренировок с полями title, day, exercises. Каждое exercises — объект {name, exerciseRef?, sets, reps?, weightKg?, durationMin?, distanceKm?}. Если у тебя есть канонический exerciseRef, верни его и не выдумывай ref; UI дополнительно проверит его по каталогу. name — понятное название упражнения; sets — целое 1..8. Для силовых обязательно указывай reps, вес добавляй только если он обоснован. Для кардио укажи durationMin или distanceKm. Не утверждай, что программа сохранена.` : ''}`),
       }),
     })
   } catch (error) {
