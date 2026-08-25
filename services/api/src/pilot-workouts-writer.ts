@@ -28,12 +28,28 @@ import {
   softDeleteWorkout,
   softDeletePlannedWorkout,
   startLiveWorkout,
+  submitWorkoutFeedback,
+  setWorkoutReview,
+  askWorkoutQuestion,
+  answerWorkoutQuestion,
+  resolveWorkoutQuestion,
+  snoozeClientAttention,
   type PilotLiveCommandResult,
   type PilotLiveStructureResult,
   type SavedPilotWorkout,
 } from './workout-commands.js'
+import type {
+  WorkoutFeedbackRequest,
+  WorkoutTrainerResponseRequest,
+} from './post-workout-request.js'
 
 export interface PilotWorkoutsWriter {
+  submitFeedback(sessionToken: string, workoutId: string, feedback: WorkoutFeedbackRequest): Promise<number>
+  setReview(sessionToken: string, workoutId: string, response: WorkoutTrainerResponseRequest): Promise<number>
+  askQuestion(sessionToken: string, workoutId: string, question: string, expectedVersion: number): Promise<number>
+  answerQuestion(sessionToken: string, workoutId: string, response: WorkoutTrainerResponseRequest): Promise<number>
+  resolveQuestion(sessionToken: string, workoutId: string, expectedVersion: number): Promise<number>
+  snoozeAttention(sessionToken: string, clientId: string): Promise<string>
   appendLiveExercise(
     sessionToken: string,
     workoutId: string,
@@ -156,6 +172,36 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
     const tokenHash = hashPilotSessionToken(sessionToken)
     if (tokenHash === undefined) throw new PilotSessionInvalidError()
     return withYandexPilotSessionTransaction(this.pool, tokenHash, work)
+  }
+
+  submitFeedback(sessionToken: string, workoutId: string, feedback: WorkoutFeedbackRequest) {
+    return this.withSession(sessionToken, (client) =>
+      submitWorkoutFeedback(client, workoutId, feedback))
+  }
+
+  setReview(sessionToken: string, workoutId: string, response: WorkoutTrainerResponseRequest) {
+    return this.withSession(sessionToken, (client) =>
+      setWorkoutReview(client, workoutId, response))
+  }
+
+  askQuestion(sessionToken: string, workoutId: string, question: string, expectedVersion: number) {
+    return this.withSession(sessionToken, (client) =>
+      askWorkoutQuestion(client, workoutId, question, expectedVersion))
+  }
+
+  answerQuestion(sessionToken: string, workoutId: string, response: WorkoutTrainerResponseRequest) {
+    return this.withSession(sessionToken, (client) =>
+      answerWorkoutQuestion(client, workoutId, response))
+  }
+
+  resolveQuestion(sessionToken: string, workoutId: string, expectedVersion: number) {
+    return this.withSession(sessionToken, (client) =>
+      resolveWorkoutQuestion(client, workoutId, expectedVersion))
+  }
+
+  snoozeAttention(sessionToken: string, clientId: string) {
+    return this.withSession(sessionToken, (client) =>
+      snoozeClientAttention(client, clientId))
   }
 
   appendLiveExercise(

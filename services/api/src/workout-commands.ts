@@ -6,6 +6,10 @@ import type {
   LiveSetDraft,
 } from './live-workout-request.js'
 import type { PlannedWorkoutDraft } from './planned-workout-request.js'
+import type {
+  WorkoutFeedbackRequest,
+  WorkoutTrainerResponseRequest,
+} from './post-workout-request.js'
 
 interface SavedWorkoutRow extends QueryResultRow {
   workout_id: string
@@ -58,7 +62,7 @@ function commandError(error: unknown): PilotWorkoutCommandError | undefined {
     return undefined
   }
   const message = error.message
-  if (message === 'workout_forbidden') {
+  if (message === 'workout_forbidden' || message === 'client_forbidden') {
     return new PilotWorkoutCommandError('forbidden')
   }
   if (message === 'workout_not_found') {
@@ -76,7 +80,15 @@ function commandError(error: unknown): PilotWorkoutCommandError | undefined {
   if (message === 'active_workout_exists') {
     return new PilotWorkoutCommandError('active')
   }
-  if (message === 'workout_invalid') {
+  if (
+    message === 'workout_invalid'
+    || message === 'workout_not_completed'
+    || message === 'workout_feedback_invalid'
+    || message === 'workout_response_invalid'
+    || message === 'workout_question_invalid'
+    || message === 'workout_question_not_found'
+    || message === 'workout_question_resolved'
+  ) {
     return new PilotWorkoutCommandError('invalid')
   }
   if (
@@ -279,6 +291,91 @@ export function setClientWorkoutComment(
     'select public.set_client_workout_comment($1, $2, $3) as version',
     [workoutId, comment, expectedVersion],
   )
+}
+
+export function submitWorkoutFeedback(
+  client: DatabaseClient,
+  workoutId: string,
+  feedback: WorkoutFeedbackRequest,
+): Promise<number> {
+  return runVersionCommand(
+    client,
+    `select public.submit_workout_feedback(
+      $1, $2, $3, $4, $5, $6
+    ) as version`,
+    [
+      workoutId,
+      feedback.sessionRpe,
+      feedback.wellbeing,
+      feedback.discomfort,
+      feedback.comment,
+      feedback.expectedVersion,
+    ],
+  )
+}
+
+export function setWorkoutReview(
+  client: DatabaseClient,
+  workoutId: string,
+  response: WorkoutTrainerResponseRequest,
+): Promise<number> {
+  return runVersionCommand(
+    client,
+    'select public.set_workout_review($1, $2, $3, $4) as version',
+    [workoutId, response.reaction, response.review, response.expectedVersion],
+  )
+}
+
+export function askWorkoutQuestion(
+  client: DatabaseClient,
+  workoutId: string,
+  question: string,
+  expectedVersion: number,
+): Promise<number> {
+  return runVersionCommand(
+    client,
+    'select public.ask_workout_question($1, $2, $3) as version',
+    [workoutId, question, expectedVersion],
+  )
+}
+
+export function answerWorkoutQuestion(
+  client: DatabaseClient,
+  workoutId: string,
+  response: WorkoutTrainerResponseRequest,
+): Promise<number> {
+  return runVersionCommand(
+    client,
+    'select public.answer_workout_question($1, $2, $3, $4) as version',
+    [workoutId, response.reaction, response.review, response.expectedVersion],
+  )
+}
+
+export function resolveWorkoutQuestion(
+  client: DatabaseClient,
+  workoutId: string,
+  expectedVersion: number,
+): Promise<number> {
+  return runVersionCommand(
+    client,
+    'select public.resolve_workout_question($1, $2) as version',
+    [workoutId, expectedVersion],
+  )
+}
+
+export function snoozeClientAttention(
+  client: DatabaseClient,
+  clientId: string,
+): Promise<string> {
+  return runCommand(async () => {
+    const rows = await client.query<{ snoozed_until: Date } & QueryResultRow>(
+      'select public.snooze_client_attention($1) as snoozed_until',
+      [clientId],
+    )
+    const value = rows[0]?.snoozed_until
+    if (!(value instanceof Date)) throw new Error('Attention command returned no date')
+    return value.toISOString()
+  })
 }
 
 export function softDeleteWorkout(

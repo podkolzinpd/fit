@@ -66,8 +66,10 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
   же `requestId` не дублирует workout, прошлый план атомарно получает результат,
   а cancel/reschedule, client comment и author-scoped soft-delete защищены
   версиями и tenant-проверками. Callback по-прежнему показывает тренировки
-  только для чтения; feedback/reactions, вопросы и остальные tenant-данные ещё
-  не перенесены. Production продолжает использовать Supabase, а Yandex callback
+  только для чтения. Post-workout feedback, trainer reaction/response,
+  questions, explicit resolution и attention snooze перенесены в отдельный
+  stage API contract с `000015`, actor/RLS и idempotency-проверками; основной UI
+  на этот API пока не переключён. Production продолжает использовать Supabase, а Yandex callback
   не открывает основное приложение.
 
 ## Client self-service workout acceptance contract

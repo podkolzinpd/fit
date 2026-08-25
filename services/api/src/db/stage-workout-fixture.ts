@@ -15,6 +15,7 @@ interface TrainerRow extends QueryResultRow {
 
 export interface StageWorkoutFixtureIds {
   clientId: string
+  clientActorId: string
   customExerciseId: string
   workoutId: string
   strengthExerciseId: string
@@ -29,6 +30,8 @@ export interface StageWorkoutFixtureResult {
   seededTrainerCount: number
   sessionToken: string
   sessionExpiresAt: string
+  clientSessionToken: string
+  clientSessionExpiresAt: string
 }
 
 export interface StageWorkoutFixtureLoader {
@@ -57,6 +60,7 @@ export function stageWorkoutFixtureIds(
 ): StageWorkoutFixtureIds {
   return {
     clientId: deterministicUuid(`${trainerId}:client`),
+    clientActorId: deterministicUuid(`${trainerId}:client-actor`),
     customExerciseId: deterministicUuid(`${trainerId}:custom-exercise`),
     workoutId: deterministicUuid(`${trainerId}:workout`),
     strengthExerciseId: deterministicUuid(`${trainerId}:strength-exercise`),
@@ -73,6 +77,27 @@ async function seedTrainerFixture(
   trainerId: string,
 ): Promise<void> {
   const ids = stageWorkoutFixtureIds(trainerId)
+
+  await client.query(
+    `
+      insert into public.profiles (id, first_name, account_role)
+      values ($1, 'Stage smoke client', 'client')
+      on conflict (id) do update set account_role = excluded.account_role
+    `,
+    [ids.clientActorId],
+  )
+  await client.query(
+    `
+      insert into app_private.profile_rollout_assignments (
+        profile_id, target_backend, access_mode, enabled
+      ) values ($1, 'yandex', 'read_only', true)
+      on conflict (profile_id) do update set
+        target_backend = excluded.target_backend,
+        access_mode = excluded.access_mode,
+        enabled = excluded.enabled
+    `,
+    [ids.clientActorId],
+  )
 
   await client.query(
     `
@@ -102,14 +127,15 @@ async function seedTrainerFixture(
   await client.query(
     `
       insert into public.clients (
-        id, trainer_id, full_name, gender, age_years, height_cm, goal
+        id, trainer_id, auth_user_id, full_name, gender, age_years,
+        height_cm, goal
       ) values (
-        $1, $2, 'Тестовый клиент Yandex stage', 'female', 30, 170,
+        $1, $2, $3, 'Тестовый клиент Yandex stage', 'female', 30, 170,
         'Проверка read-only переноса'
       )
-      on conflict (id) do nothing
+      on conflict (id) do update set auth_user_id = excluded.auth_user_id
     `,
-    [ids.clientId, trainerId],
+    [ids.clientId, trainerId, ids.clientActorId],
   )
   await client.query(
     `
@@ -141,7 +167,20 @@ async function seedTrainerFixture(
         timestamptz '2026-08-22 07:00:00+00',
         timestamptz '2026-08-22 08:00:00+00'
       )
-      on conflict (id) do nothing
+      on conflict (id) do update set
+        session_rpe = null,
+        wellbeing = null,
+        discomfort = null,
+        client_comment = null,
+        feedback_submitted_at = null,
+        trainer_reaction = null,
+        trainer_review = null,
+        trainer_review_author_id = null,
+        trainer_reviewed_at = null,
+        client_question = null,
+        client_question_asked_at = null,
+        client_question_resolved_at = null,
+        version = 1
     `,
     [ids.workoutId, trainerId, ids.clientId],
   )
@@ -276,13 +315,15 @@ implements StageWorkoutFixtureLoader {
       }
 
       const session = createPilotSessionToken()
+      const clientSession = createPilotSessionToken()
       const expiresAt = new Date(this.now().getTime() + PILOT_SESSION_TTL_MS)
+      const smokeIds = stageWorkoutFixtureIds(STAGE_SMOKE_PROFILE_ID)
       await connection.query(
         `
           delete from app_private.yandex_pilot_sessions
-          where profile_id = $1 and expires_at <= now()
+          where profile_id in ($1, $2) and expires_at <= now()
         `,
-        [STAGE_SMOKE_PROFILE_ID],
+        [STAGE_SMOKE_PROFILE_ID, smokeIds.clientActorId],
       )
       await connection.query(
         `
@@ -292,12 +333,22 @@ implements StageWorkoutFixtureLoader {
         `,
         [session.sha256, STAGE_SMOKE_PROFILE_ID, expiresAt],
       )
+      await connection.query(
+        `
+          insert into app_private.yandex_pilot_sessions (
+            token_sha256, profile_id, expires_at
+          ) values ($1, $2, $3)
+        `,
+        [clientSession.sha256, smokeIds.clientActorId, expiresAt],
+      )
 
       await connection.query('commit')
       return {
         seededTrainerCount: trainers.length,
         sessionToken: session.raw,
         sessionExpiresAt: expiresAt.toISOString(),
+        clientSessionToken: clientSession.raw,
+        clientSessionExpiresAt: expiresAt.toISOString(),
       }
     } catch (error) {
       if (transactionStarted) {
