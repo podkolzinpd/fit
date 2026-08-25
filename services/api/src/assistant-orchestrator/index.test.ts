@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allowsAssistantAction, assistantCapabilitiesReply, createClientTurn, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse } from './index.js'
+import { allowsAssistantAction, assistantCapabilitiesReply, createClientTurn, createProgramTurn, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse } from './index.js'
 
 describe('assistant orchestrator contract', () => {
   it('accepts only bounded conversation turns', () => {
@@ -63,5 +63,15 @@ describe('assistant orchestrator contract', () => {
     const draft = recordWorkoutTurn('жим лёжа 3 подхода по 50 кг 10 повторений', clients, client?.action)
     expect(draft?.action).toMatchObject({ tool: 'record_workout', status: 'proposed', payload: { step: 'confirm', clientName: 'Антон Ковалёв', transcript: 'жим лёжа 3 подхода по 50 кг 10 повторений' } })
     expect(recordWorkoutTurn('отмена', clients, draft?.action)).toEqual({ reply: 'Хорошо, запись тренировки отменена.', action: null })
+  })
+
+  it('collects a complete brief before proposing a training program', () => {
+    const clients = [{ id: 'client-1', fullName: 'Антон Ковалёв', goal: 'Набрать силу', ageYears: 32, heightCm: 180, gender: 'male' }]
+    const start = createProgramTurn('Составь программу тренировок', clients, null)
+    const client = createProgramTurn('Антон Ковалёв', clients, start?.action)
+    expect(client?.action?.payload).toMatchObject({ step: 'brief', clientId: 'client-1' })
+    const brief = createProgramTurn('Новичок, без ограничений, понедельник и четверг', clients, client?.action)
+    expect(brief?.action).toMatchObject({ tool: 'create_program_draft', status: 'proposed', payload: { step: 'generate', clientId: 'client-1' } })
+    expect(createProgramTurn('отмена', clients, brief?.action)).toEqual({ reply: 'Хорошо, создание программы отменено.', action: null })
   })
 })

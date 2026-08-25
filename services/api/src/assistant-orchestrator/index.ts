@@ -20,6 +20,7 @@ const executableCapabilities: readonly AssistantCapability[] = [
   { title: 'Сформировать сводку прогресса', description: 'по завершённым тренировкам выбранного клиента за период' },
   { title: 'Создать карточку клиента', description: 'после уточнения данных и вашего подтверждения' },
   { title: 'Подготовить запись тренировки', description: 'для выбранного клиента и открыть её в существующем разборе упражнений' },
+  { title: 'Подготовить программу тренировок', description: 'после анкеты и вашего подтверждения' },
 ]
 
 class HttpError extends Error {
@@ -291,6 +292,34 @@ function workoutAction(title: string, description: string, status: AssistantActi
   return { reply: description, action: { tool: 'record_workout', status, title, description, payload } }
 }
 
+function programAction(title: string, description: string, status: AssistantAction['status'], payload: Record<string, unknown>): AssistantTurnResponse {
+  return { reply: description, action: { tool: 'create_program_draft', status, title, description, payload } }
+}
+
+function isProgramRequest(message: string): boolean {
+  const normalized = normalizeAssistantMessage(message)
+  return ['состав', 'созда', 'подготов', 'сдела'].some((verb) => normalized.includes(verb))
+    && ['программ', 'план трениров'].some((stem) => normalized.includes(stem))
+}
+
+/** Первые шаги программы намеренно детерминированы: модель получает только полный brief. */
+export function createProgramTurn(message: string, clients: readonly ClientContextRow[], latestAction: unknown): AssistantTurnResponse | undefined {
+  const previousAction = actionRecord(latestAction)
+  const continuation = previousAction?.tool === 'create_program_draft'
+  if (!isProgramRequest(message) && !continuation) return undefined
+  if (continuation && isSummaryCancellation(message)) return { reply: 'Хорошо, создание программы отменено.', action: null }
+  const payload = actionRecord(previousAction?.payload)
+  const candidates = summaryCandidatesFromAction(latestAction)
+  const selectedByNumber = normalizeAssistantMessage(message).match(/^(?:выбрать )?(\d{1,2})$/u)
+  const numbered = selectedByNumber === null ? undefined : candidates[Number(selectedByNumber[1]) - 1]
+  const matches = numbered === undefined ? matchingSummaryClients(message, clients) : clients.filter((client) => client.id === numbered.id)
+  if (matches.length > 1) return programAction('Выберите клиента', 'Нашла несколько клиентов с таким именем. Выберите одного из списка.', 'needs_input', { step: 'client', candidates: matches.map(({ id, fullName }) => ({ id, fullName })) })
+  const client = matches.length === 1 ? matches[0] : summaryClientFromAction(latestAction, clients)
+  if (!client) return programAction('Уточните клиента', 'Для кого составить программу тренировок? Напишите имя или фамилию клиента.', 'needs_input', { step: 'client' })
+  if (payload?.step !== 'brief') return programAction('Данные для программы', `Клиент: ${client.fullName}. Укажите опыт, ограничения и доступные дни. Цель из карточки: ${client.goal ?? 'не указана'}.`, 'needs_input', { step: 'brief', clientId: client.id, clientName: client.fullName, goal: client.goal })
+  return programAction('Черновик программы', `Собрала данные для ${client.fullName}. Следующим шагом подготовлю программу на основе анкеты для проверки.`, 'proposed', { step: 'generate', clientId: client.id, clientName: client.fullName, goal: client.goal, brief: message.trim() })
+}
+
 function workoutCandidatesFromAction(value: unknown): SummaryCandidate[] {
   return summaryCandidatesFromAction(value)
 }
@@ -484,6 +513,12 @@ export async function runAssistantTurn(authorization: string, command: Assistant
     if (assistantInsertError || !assistantMessage?.id) throw new HttpError(503, 'history_unavailable')
     console.info('assistant_workout_draft_reply_persisted', { status: workoutDraft.action?.status })
     return workoutDraft
+  }
+  const programDraft = createProgramTurn(command.message, clientRows, latestAssistantAction)
+  if (programDraft !== undefined) {
+    const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({ conversation_id: command.conversationId, author: 'assistant', content: programDraft.reply, action: programDraft.action }).select('id').single()
+    if (assistantInsertError || !assistantMessage?.id) throw new HttpError(503, 'history_unavailable')
+    return programDraft
   }
   const summary = summaryTurn(command.message, clientRows, latestAssistantAction, new Date())
   if (summary !== undefined) {
