@@ -155,6 +155,10 @@ export function buildMigrationApp(
             token: result.sessionToken,
             expiresAt: result.sessionExpiresAt,
           },
+          clientSession: {
+            token: result.clientSessionToken,
+            expiresAt: result.clientSessionExpiresAt,
+          },
         }
       } catch {
         return reply.code(500).send({ status: 'fixture_failed' })

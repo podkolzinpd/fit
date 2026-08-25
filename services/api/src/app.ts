@@ -49,6 +49,11 @@ import {
   readRescheduleWorkoutRequest,
   readWorkoutCommentRequest,
 } from './workout-lifecycle-request.js'
+import {
+  readWorkoutFeedbackRequest,
+  readWorkoutQuestionRequest,
+  readWorkoutTrainerResponseRequest,
+} from './post-workout-request.js'
 import { PilotWorkoutCommandError } from './workout-commands.js'
 import { WorkoutParseError, type LegacyWorkoutParser } from './legacy-workout-parser.js'
 import { readAssistantProgressRequest } from './assistant-progress-request.js'
@@ -851,6 +856,132 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       (version) => reply
         .header('cache-control', 'no-store')
         .send({ workout: { id: workoutId, version } }),
+    )
+  })
+
+  app.put('/v1/workouts/:workoutId/feedback', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { workoutId } = request.params as { workoutId?: unknown }
+    const command = readWorkoutFeedbackRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof workoutId !== 'string' || !uuidPattern.test(workoutId)
+      || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.submitFeedback(sessionToken, workoutId, command),
+      (version) => reply.header('cache-control', 'no-store')
+        .send({ workout: { id: workoutId, version } }),
+    )
+  })
+
+  app.put('/v1/workouts/:workoutId/review', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { workoutId } = request.params as { workoutId?: unknown }
+    const command = readWorkoutTrainerResponseRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof workoutId !== 'string' || !uuidPattern.test(workoutId)
+      || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.setReview(sessionToken, workoutId, command),
+      (version) => reply.header('cache-control', 'no-store')
+        .send({ workout: { id: workoutId, version } }),
+    )
+  })
+
+  app.put('/v1/workouts/:workoutId/question', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { workoutId } = request.params as { workoutId?: unknown }
+    const command = readWorkoutQuestionRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof workoutId !== 'string' || !uuidPattern.test(workoutId)
+      || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.askQuestion(
+        sessionToken, workoutId, command.question, command.expectedVersion,
+      ),
+      (version) => reply.header('cache-control', 'no-store')
+        .send({ workout: { id: workoutId, version } }),
+    )
+  })
+
+  app.put('/v1/workouts/:workoutId/question/answer', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { workoutId } = request.params as { workoutId?: unknown }
+    const command = readWorkoutTrainerResponseRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof workoutId !== 'string' || !uuidPattern.test(workoutId)
+      || command === undefined || command.review.length === 0) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.answerQuestion(sessionToken, workoutId, command),
+      (version) => reply.header('cache-control', 'no-store')
+        .send({ workout: { id: workoutId, version } }),
+    )
+  })
+
+  app.post('/v1/workouts/:workoutId/question/resolve', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { workoutId } = request.params as { workoutId?: unknown }
+    const expectedVersion = readExpectedVersion(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof workoutId !== 'string' || !uuidPattern.test(workoutId)
+      || expectedVersion === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.resolveQuestion(sessionToken, workoutId, expectedVersion),
+      (version) => reply.header('cache-control', 'no-store')
+        .send({ workout: { id: workoutId, version } }),
+    )
+  })
+
+  app.post('/v1/clients/:clientId/attention/snooze', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { clientId } = request.params as { clientId?: unknown }
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.snoozeAttention(sessionToken, clientId),
+      (snoozedUntil) => reply.header('cache-control', 'no-store')
+        .send({ client: { id: clientId, snoozedUntil } }),
     )
   })
 
