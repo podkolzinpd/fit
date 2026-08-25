@@ -515,7 +515,8 @@ export async function runAssistantTurn(authorization: string, command: Assistant
     return workoutDraft
   }
   const programDraft = createProgramTurn(command.message, clientRows, latestAssistantAction)
-  if (programDraft !== undefined) {
+  const programBriefReady = programDraft?.action?.tool === 'create_program_draft' && programDraft.action.payload.step === 'generate'
+  if (programDraft !== undefined && !programBriefReady) {
     const { data: assistantMessage, error: assistantInsertError } = await service.from('assistant_messages').insert({ conversation_id: command.conversationId, author: 'assistant', content: programDraft.reply, action: programDraft.action }).select('id').single()
     if (assistantInsertError || !assistantMessage?.id) throw new HttpError(503, 'history_unavailable')
     return programDraft
@@ -540,8 +541,8 @@ export async function runAssistantTurn(authorization: string, command: Assistant
       headers: { 'content-type': 'application/json', authorization: `Bearer ${iamToken}` },
       body: JSON.stringify({
         modelUri: `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`,
-        completionOptions: { stream: false, temperature: 0.2, maxTokens: allowsAssistantAction(command.message) ? '1200' : '120' }, jsonSchema: { schema },
-        messages: [{ role: 'user', text: modelPrompt(history, clientContext, progressContext, !allowsAssistantAction(command.message), usesInformalAddress(command.message)) }],
+        completionOptions: { stream: false, temperature: 0.2, maxTokens: (allowsAssistantAction(command.message) || programBriefReady) ? '1200' : '120' }, jsonSchema: { schema },
+        messages: [{ role: 'user', text: `${modelPrompt(history, clientContext, progressContext, !(allowsAssistantAction(command.message) || programBriefReady), usesInformalAddress(command.message))}${programBriefReady ? `\n\nСформируй именно action=create_program_draft, status=proposed. В payload обязательно верни step=confirm, clientId, clientName, goal, brief и sessions: массив до 4 тренировок с полями title, day, exercises (массив строк). Не утверждай, что программа сохранена.` : ''}` }],
       }),
     })
   } catch (error) {
@@ -561,7 +562,7 @@ export async function runAssistantTurn(authorization: string, command: Assistant
   }
   const modelResult = validateAssistantTurnResponse(raw)
   if (!modelResult) throw new HttpError(502, 'orchestrator_invalid_response')
-  const result = allowsAssistantAction(command.message)
+  const result = allowsAssistantAction(command.message) || programBriefReady
     ? modelResult
     : { ...modelResult, action: null }
   if (modelResult.action !== null && result.action === null) console.info('assistant_action_suppressed_for_small_talk')
