@@ -178,6 +178,8 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   const trainerAnalysis = page.getByLabel('ИИ-анализ тренировок')
   await expect(trainerAnalysis).toBeVisible()
   await expect(trainerAnalysis.locator('.body-progress-map')).toBeVisible()
+  await expect(trainerAnalysis.getByRole('group', { name: 'Нейтральная фигура спортсмена, вид спереди' })).toBeVisible()
+  await expect(trainerAnalysis.getByRole('group', { name: 'Атлетичная женщина, вид спереди' })).toHaveCount(0)
   await expect(page.getByText(/AI-анализ/)).toHaveCount(0)
   const coachmark = page.getByRole('button', { name: 'Понятно' })
   if (await coachmark.isVisible()) await coachmark.click()

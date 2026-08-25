@@ -20,7 +20,7 @@ const repositories = vi.hoisted(() => ({
   workouts: vi.fn(),
 }))
 vi.mock('../../app/auth-context', () => ({
-  useAuth: () => ({ actor: { timezone: 'Europe/Moscow' } }),
+  useAuth: () => ({ actor: { userId: 'viewer-1', role: 'client', timezone: 'Europe/Moscow' } }),
 }))
 vi.mock('../../data/repositories/training-summaries.repository', () => ({
   trainingSummariesRepository: {
@@ -199,7 +199,7 @@ describe('Training summary card states', () => {
     render(<ClientTrainingSummaryCard clientId="client-1" gender="female" />, { wrapper: wrapper(queryClient()) })
 
     expect((await screen.findAllByText((text) => text.includes(longExerciseName)))[0]).toBeVisible()
-    expect(screen.getByAltText('Атлетичная женщина, вид сзади')).toBeVisible()
+    expect(screen.getByRole('group', { name: 'Атлетичная женщина, вид сзади' })).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Сзади' })).toBeNull()
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
     expect(document.querySelector('.body-progress-zone')).toBeNull()
@@ -272,7 +272,7 @@ describe('Training summary card states', () => {
     expect(screen.getByText(trainerSummary.trainer.headline)).toBeVisible()
   })
 
-  it('shows the shared body map for the trainer with the client figure and workout load', async () => {
+  it('shows the trainer body map without exposing the client figure choice', async () => {
     const user = userEvent.setup()
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
     repositories.listForTrainer.mockResolvedValue([trainerSummary])
@@ -285,9 +285,9 @@ describe('Training summary card states', () => {
       ] }],
     } as Workout])
 
-    render(<TrainerTrainingSummaryCard clientId="client-1" gender="female" />, { wrapper: wrapper(queryClient()) })
+    render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    expect(await screen.findByAltText('Атлетичная женщина, вид сзади')).toBeVisible()
+    expect(await screen.findByRole('group', { name: 'Нейтральная фигура спортсмена, вид сзади' })).toBeVisible()
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Нагрузка' }))
     expect(await screen.findByLabelText('Верх спины. Доля всех выполненных подходов: 67%')).toBeVisible()
@@ -306,7 +306,7 @@ describe('Training summary card states', () => {
       .mockRejectedValueOnce(new Error('История временно недоступна'))
       .mockResolvedValueOnce([])
 
-    render(<TrainerTrainingSummaryCard clientId="client-1" gender="female" />, { wrapper: wrapper(queryClient()) })
+    render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
     expect(await screen.findByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Нагрузка' }))
@@ -377,17 +377,17 @@ describe('Training summary card states', () => {
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    expect(await screen.findByAltText('Нейтральная фигура спортсмена, вид сзади')).toBeVisible()
+    expect(await screen.findByRole('group', { name: 'Нейтральная фигура спортсмена, вид сзади' })).toBeVisible()
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toHaveAttribute('aria-pressed', 'true')
     await user.click(await screen.findByRole('button', { name: 'Нагрузка' }))
     expect(await screen.findByLabelText('Верх спины. Доля всех выполненных подходов: 67%')).toHaveAttribute('aria-pressed', 'true')
     await user.click(screen.getByRole('button', { name: 'Спереди' }))
-    expect(screen.getByAltText('Нейтральная фигура спортсмена, вид спереди')).toBeVisible()
+    expect(screen.getByRole('group', { name: 'Нейтральная фигура спортсмена, вид спереди' })).toBeVisible()
     await user.click(screen.getByLabelText('Грудь. Доля всех выполненных подходов: 33%'))
     expect(screen.getByText('Жим лёжа: 1 подход')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Прогресс' }))
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByAltText('Нейтральная фигура спортсмена, вид сзади')).toBeVisible()
+    expect(screen.getByRole('group', { name: 'Нейтральная фигура спортсмена, вид сзади' })).toBeVisible()
   })
 
   it('keeps the zone panel compact and opens the remaining exercise details on demand', async () => {
