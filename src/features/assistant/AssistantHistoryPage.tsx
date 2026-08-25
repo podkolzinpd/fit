@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
 import { ChevronRightIcon } from '../../shared/icons'
 import { useAuth } from '../../app/auth-context'
 import { assistantRepository, type AssistantOrchestratorAction } from '../../data/repositories/assistant.repository'
 import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
 import { VoiceInputButton } from '../voice-input'
 import { clientSchema } from '../../shared/validation'
-import { currentTimeInTimeZone, todayInTimeZone } from '../../shared/local-date'
+import { currentTimeInTimeZone, formatLocalDate, todayInTimeZone } from '../../shared/local-date'
 import type { ExerciseSnapshot, WorkoutDraft } from '../../shared/domain'
 import { useExerciseCatalog } from '../exercises'
 import { WorkoutComposer } from '../workouts/WorkoutComposer'
@@ -15,15 +14,19 @@ import { formatLlmWorkoutText, parseWorkoutWithLlm } from '../workouts/llm-worko
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
 import { assistantWorkoutSaveInput } from './workout-draft'
+import { conversationLocalDate, conversationTitle, groupAssistantConversations, isInteractiveAssistantAction, isReadOnlyConversation, mergeAssistantMessages, selectTodayConversation, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
 
-type Message = { id: string; author: string; content: string; action: AssistantOrchestratorAction | null }
 type FailedTurn = { turnId: string; message: string }
 
 export function AssistantHistoryPage() {
   const { actor } = useAuth()
   const queryClient = useQueryClient()
   const [conversationId, setConversationId] = useState<string>()
-  const [messages, setMessages] = useState<Message[]>([])
+  const [todayConversationId, setTodayConversationId] = useState<string>()
+  const [conversations, setConversations] = useState<AssistantConversation[]>([])
+  const [messages, setMessages] = useState<AssistantMessage[]>([])
+  const [loadingMessages, setLoadingMessages] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [text, setText] = useState('')
   const [error, setError] = useState<string>()
   const [failedTurn, setFailedTurn] = useState<FailedTurn>()
@@ -33,32 +36,94 @@ export function AssistantHistoryPage() {
   const [runningClientIds, setRunningClientIds] = useState<string[]>([])
   const [completedClientIds, setCompletedClientIds] = useState<string[]>([])
   const [actionVersions, setActionVersions] = useState<Record<string, number>>({})
+  const conversationRef = useRef<string | undefined>(undefined)
+  const loadSequence = useRef(0)
+  const threadRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
-    if (!actor) return
+    let cancelled = false
+    ++loadSequence.current
+    if (!actor) {
+      setConversationId(undefined)
+      setTodayConversationId(undefined)
+      setConversations([])
+      setMessages([])
+      setLoadingMessages(false)
+      return () => { cancelled = true }
+    }
+    setConversationId(undefined)
+    setTodayConversationId(undefined)
+    setConversations([])
+    setMessages([])
+    setLoadingMessages(false)
     void (async () => {
       const { data: conversations } = await assistantRepository.listConversations()
-      const conversation = conversations?.[0] ?? (await assistantRepository.createConversation(actor.userId)).data
+      const today = todayInTimeZone(actor.timezone)
+      let available = (conversations ?? []) as AssistantConversation[]
+      let conversation = selectTodayConversation(available, actor.timezone, today)
+      if (!conversation) {
+        conversation = (await assistantRepository.createConversation(actor.userId)).data as AssistantConversation | undefined
+        if (conversation) available = [conversation, ...available]
+      }
+      if (cancelled) return
       if (!conversation) return
+      setConversations(available)
+      const current = selectTodayConversation(available, actor.timezone, today)
+      setTodayConversationId(current?.id ?? conversation.id)
       setConversationId(conversation.id)
-      const [{ data }, { data: actions }] = await Promise.all([
-        assistantRepository.listMessages(conversation.id), assistantRepository.listActions(),
-      ])
-      const actionByMessage = new Map((actions ?? []).filter((item) => item.conversation_id === conversation.id).map((item) => [item.assistant_message_id, item]))
-      const versions: Record<string, number> = {}
-      setMessages((data ?? []).map((row) => {
-        const action = row.action as AssistantOrchestratorAction | null
-        const durable = action === null ? undefined : actionByMessage.get(row.id)
-        if (durable) versions[durable.id] = durable.version
-        return { ...row, action: action === null ? null : { ...action, lifecycleStatus: durable?.status as AssistantOrchestratorAction['lifecycleStatus'], result: durable?.result as Record<string, unknown> | null | undefined } }
-      }))
-      setActionVersions(versions)
+      conversationRef.current = conversation.id
     })()
+    return () => { cancelled = true }
   }, [actor])
+
+  useEffect(() => {
+    if (!conversationId) return
+    const sequence = ++loadSequence.current
+    conversationRef.current = conversationId
+    setMessages([])
+    setLoadingMessages(true)
+    void (async () => {
+      const [{ data }, { data: actions }] = await Promise.all([
+        assistantRepository.listMessages(conversationId), assistantRepository.listActions(conversationId),
+      ])
+      if (sequence !== loadSequence.current || conversationRef.current !== conversationId) return
+      const merged = mergeAssistantMessages((data ?? []) as AssistantMessage[], (actions ?? []) as Parameters<typeof mergeAssistantMessages>[1])
+      const versions: Record<string, number> = {}
+      for (const action of actions ?? []) versions[action.id] = action.version
+      setMessages(merged)
+      setActionVersions(versions)
+      setLoadingMessages(false)
+    })()
+  }, [conversationId])
+
+  const readOnly = isReadOnlyConversation(conversationId, todayConversationId)
+  const today = todayInTimeZone(actor?.timezone)
+  const historyConversations = conversations.filter((conversation) => conversation.id !== todayConversationId)
+  const conversationGroups = groupAssistantConversations(historyConversations, actor?.timezone, today)
+  const lastMessageId = messages[messages.length - 1]?.id
+
+  useLayoutEffect(() => {
+    if (!conversationId || loadingMessages) return
+    const thread = threadRef.current
+    if (thread) thread.scrollTop = thread.scrollHeight
+  }, [conversationId, lastMessageId, loadingMessages])
+
+  function selectConversation(id: string) {
+    if (sending || id === conversationId) return
+    ++loadSequence.current
+    conversationRef.current = id
+    setHistoryOpen(false)
+    setConversationId(id)
+  }
+
+  function returnToToday() {
+    if (todayConversationId) selectConversation(todayConversationId)
+  }
 
   async function send(suggestedMessage?: string, retry?: FailedTurn) {
     const message = (retry?.message ?? suggestedMessage ?? text).trim()
-    if (!message || !conversationId || sending) return
+    if (!message || !conversationId || readOnly || sending) return
+    const requestConversationId = conversationId
     if (retry === undefined && suggestedMessage === undefined) setText('')
     setSending(true)
     setError(undefined)
@@ -66,21 +131,29 @@ export function AssistantHistoryPage() {
     if (retry === undefined) {
       setMessages((current) => [...current, {
         id: `pending-user-${turnId}`,
+        conversation_id: requestConversationId,
+        turn_id: turnId,
         author: 'user',
         content: message,
         action: null,
+        created_at: new Date().toISOString(),
       }])
     }
     try {
-      const turn = await assistantRepository.sendTurn(conversationId, turnId, message)
+      const turn = await assistantRepository.sendTurn(requestConversationId, turnId, message)
+      if (conversationRef.current !== requestConversationId) return
       setMessages((current) => [...current, {
         id: `pending-assistant-${turnId}`,
+        conversation_id: requestConversationId,
+        turn_id: turnId,
         author: 'assistant',
         content: turn.reply,
         action: turn.action,
+        created_at: new Date().toISOString(),
       }])
       setFailedTurn(undefined)
     } catch {
+      if (conversationRef.current !== requestConversationId) return
       setFailedTurn({ turnId, message })
       if (retry === undefined && suggestedMessage === undefined) setText((current) => current || message)
       setError('Не удалось получить ответ ассистента. Попробуйте ещё раз.')
@@ -151,30 +224,52 @@ export function AssistantHistoryPage() {
     finally { setRunningClientIds((current) => current.filter((id) => id !== messageId)) }
   }
 
-  const latestWorkoutActionMessageId = [...messages].reverse().find((message) => message.action?.tool === 'record_workout')?.id
+  const latestRecordWorkoutAction = [...messages].reverse().find((message) => message.action?.tool === 'record_workout')
+  const latestWorkoutActionMessageId = latestRecordWorkoutAction && isWorkoutCollectionAction(latestRecordWorkoutAction.action) ? latestRecordWorkoutAction.id : undefined
 
   return <main className="assistant-page">
     <h1 className="sr-only">Ассистент</h1>
-    <p className="assistant-local-note">Ассистент сохраняет историю этой беседы. Любое изменение данных появится только в отдельной карточке подтверждения.</p>
-    <section className="assistant-thread" aria-label="Диалог с ассистентом">
+    <section className="assistant-session-switcher" aria-label="Сессия ассистента">
+      <div className="assistant-session-current">
+        <div><small>Сессия</small><strong>{readOnly ? 'История' : 'Сегодня'}</strong><span>{conversationId ? formatLocalDate(conversationLocalDate({ created_at: conversations.find((item) => item.id === conversationId)?.created_at ?? new Date().toISOString() }, actor?.timezone)) : 'Загружаю…'}</span></div>
+        {readOnly && <button type="button" onClick={returnToToday}>Вернуться сегодня</button>}
+      </div>
+      {historyConversations.length > 0 && <details open={historyOpen} onToggle={(event) => setHistoryOpen(event.currentTarget.open)}>
+        <summary>История бесед · {historyConversations.length}</summary>
+        <div className="assistant-session-history">
+          {conversationGroups.flatMap((group) => group.conversations.map((conversation) => <button key={conversation.id} type="button" className={conversation.id === conversationId ? 'selected' : ''} onClick={() => selectConversation(conversation.id)}>
+            <span>{conversation.id === todayConversationId ? 'Сегодня' : formatLocalDate(group.date)}</span>
+            <small>{conversationTitle(conversation, group.date, today)}</small>
+          </button>))}
+        </div>
+      </details>}
+    </section>
+    <section ref={threadRef} className="assistant-thread" aria-label="Диалог с ассистентом">
+      {loadingMessages && <p className="assistant-thread-status">Загружаю сессию…</p>}
       {messages.map((message) => {
         if (message.author === 'user') return <article key={message.id} className="assistant-message assistant-message-user"><p>{message.content}</p></article>
-        const historicalWorkoutFragment = isWorkoutCollectionAction(message.action) && message.id !== latestWorkoutActionMessageId
+        const collectionAction = isWorkoutCollectionAction(message.action)
+        if (collectionAction && latestWorkoutActionMessageId === undefined) return null
+        const historicalWorkoutFragment = collectionAction && message.id !== latestWorkoutActionMessageId
+        const interactive = !readOnly && isInteractiveAssistantAction(message.action)
+        const showContent = !message.action || message.content.trim() !== message.action.description.trim()
+        if (!interactive && !showContent) return null
         return <article key={message.id} className={`assistant-action-card${historicalWorkoutFragment ? ' assistant-action-card-compact' : ''}`}>
           {historicalWorkoutFragment
             ? <p className="assistant-fragment-ack">Фрагмент добавлен</p>
-            : <>{(!message.action || message.content.trim() !== message.action.description.trim()) && <AssistantMessageContent content={message.content} />}{message.action && <AssistantAction action={message.action} timezone={actor?.timezone} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onApplyAction={(input) => applyAction(message.id, message.action!, input)} onSuggestion={(value) => void send(value)} onCancel={() => { void (async () => { const cancelled = await cancelAction(message.id, message.action!); if (cancelled && !message.action?.id) await send('Отменить') })() }} onConfirm={() => void confirmSummary(message.id, message.action!)} onConfirmClient={(draft) => void confirmClient(message.id, message.action!, draft)} running={runningSummaryIds.includes(message.id) || runningClientIds.includes(message.id)} completed={completedSummaryIds.includes(message.id) || completedClientIds.includes(message.id) || message.action.lifecycleStatus === 'applied'} />}</>}
+            : <>{showContent && <AssistantMessageContent content={message.content} />}{interactive && message.action && <AssistantAction action={message.action} timezone={actor?.timezone} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onApplyAction={(input) => applyAction(message.id, message.action!, input)} onSuggestion={(value) => void send(value)} onCancel={() => { void (async () => { const cancelled = await cancelAction(message.id, message.action!); if (cancelled && !message.action?.id) await send('Отменить') })() }} onConfirm={() => void confirmSummary(message.id, message.action!)} onConfirmClient={(draft) => void confirmClient(message.id, message.action!, draft)} running={runningSummaryIds.includes(message.id) || runningClientIds.includes(message.id)} completed={completedSummaryIds.includes(message.id) || completedClientIds.includes(message.id) || message.action.lifecycleStatus === 'applied'} />}</>}
         </article>
       })}
       {error && <div className="assistant-card-hint" role="alert"><span>{error}</span>{failedTurn && <button type="button" onClick={() => void send(undefined, failedTurn)} disabled={sending}>Повторить отправку</button>}</div>}
     </section>
-    <form className="assistant-composer" onSubmit={(event) => { event.preventDefault(); void send() }}>
+    {readOnly && <button type="button" className="assistant-readonly-note" onClick={returnToToday}>Это история за прошлый день. Вернуться в сегодняшнюю сессию</button>}
+    <form className="assistant-composer" autoComplete="off" onSubmit={(event) => { event.preventDefault(); void send() }}>
       <label className="sr-only" htmlFor="assistant-history-message">Сообщение ассистенту</label>
-      <input id="assistant-history-message" value={text} onChange={(event) => setText(event.target.value)} placeholder="Чем могу помочь?" disabled={!conversationId || sending} />
-      <VoiceInputButton variant="icon" source="assistant" idleLabel="Голосовой ввод" disabled={!conversationId || sending} showTranscriptStatus={false} onTranscript={async (transcript) => {
+      <input id="assistant-history-message" name="assistant-prompt" autoComplete="off" value={text} onChange={(event) => setText(event.target.value)} placeholder="Напишите сообщение" disabled={!conversationId || readOnly || sending} />
+      <VoiceInputButton variant="icon" source="assistant" idleLabel="Голосовой ввод" disabled={!conversationId || readOnly || sending} showTranscriptStatus={false} onTranscript={async (transcript) => {
         await send(transcript)
       }} />
-      <button type="submit" className="assistant-icon-button" disabled={!conversationId || sending} aria-label="Отправить сообщение"><ChevronRightIcon /></button>
+      <button type="submit" className="assistant-icon-button" disabled={!conversationId || readOnly || sending} aria-label="Отправить сообщение"><ChevronRightIcon /></button>
     </form>
   </main>
 }
@@ -204,17 +299,6 @@ function summaryPayload(action: AssistantOrchestratorAction): { clientId: string
 
 function AssistantAction({ action, timezone, onWorkoutSaved, onApplyAction, onSuggestion, onCancel, onConfirm, onConfirmClient, running, completed }: { action: AssistantOrchestratorAction; timezone?: string; onWorkoutSaved: () => void; onApplyAction: (input: object) => Promise<void>; onSuggestion: (value: string) => void; onCancel: () => void; onConfirm: () => void; onConfirmClient: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {
   const payload = action.payload as SummaryPayload
-  if (action.lifecycleStatus === 'cancelled') return <div className="assistant-progress-preview"><strong>Сценарий отменён</strong><span>Изменения не внесены.</span></div>
-  if (action.lifecycleStatus === 'failed') return <div className="assistant-progress-preview"><strong>Операция не выполнена</strong><span>Изменения не внесены. Текст запроса и карточка сохранены в истории.</span></div>
-  if (action.lifecycleStatus === 'applied') {
-    const result = action.result ?? {}
-    const workoutId = typeof result.workoutId === 'string' ? result.workoutId : Array.isArray(result.workoutIds) && typeof result.workoutIds[0] === 'string' ? result.workoutIds[0] : undefined
-    const clientId = typeof result.clientId === 'string' ? result.clientId : undefined
-    const summaryClientId = typeof (action.payload as SummaryPayload).clientId === 'string' ? (action.payload as SummaryPayload).clientId : undefined
-    const href = workoutId ? `/workouts/${workoutId}` : clientId ? `/clients/${clientId}` : action.tool === 'summarize_progress' && summaryClientId ? `/progress/${summaryClientId}` : undefined
-    const workoutSaved = action.tool === 'record_workout'
-    return <div className="assistant-completion-card"><small>Готово</small><strong>{workoutSaved ? 'Тренировка сохранена' : 'Изменения сохранены'}</strong><span>{workoutSaved && typeof payload.clientName === 'string' ? payload.clientName : 'Повторное подтверждение не требуется'}</span>{href && <Link to={href}>{workoutSaved ? 'Открыть тренировку' : 'Открыть результат'}</Link>}</div>
-  }
   if (action.tool === 'create_client_draft' && payload.step === 'confirm') return <ClientDraftCard payload={payload as ClientDraftPayload} onCancel={onCancel} onConfirm={onConfirmClient} running={running} completed={completed} />
   if (action.tool === 'record_workout' && payload.step === 'confirm') return <AssistantWorkoutDraftCard payload={payload as WorkoutDraftPayload} timezone={timezone} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} />
   if (action.tool === 'record_workout' && payload.step === 'workout') return <WorkoutCollectionCard payload={payload as WorkoutDraftPayload} onSuggestion={onSuggestion} onCancel={onCancel} />
