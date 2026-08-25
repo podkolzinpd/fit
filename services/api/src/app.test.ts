@@ -349,6 +349,7 @@ const TRAINING_DATA_RESPONSE: PilotTrainingDataResponse = {
     endTime: null,
     status: 'planned',
     notes: null,
+    clientComment: null,
     startedAt: null,
     completedAt: null,
     version: 1,
@@ -571,22 +572,34 @@ function buildWorkoutsWriter(error?: Error): {
   pilotWorkoutsWriter: PilotWorkoutsWriter
   appendLiveExercise: ReturnType<typeof vi.fn>
   appendLiveSet: ReturnType<typeof vi.fn>
+  cancelPlanned: ReturnType<typeof vi.fn>
   confirmLiveSet: ReturnType<typeof vi.fn>
   deletePlanned: ReturnType<typeof vi.fn>
+  deleteWorkout: ReturnType<typeof vi.fn>
   finishLive: ReturnType<typeof vi.fn>
   removeLiveSet: ReturnType<typeof vi.fn>
   reorderLiveBlock: ReturnType<typeof vi.fn>
   replaceLiveExercise: ReturnType<typeof vi.fn>
+  recordPlannedResult: ReturnType<typeof vi.fn>
+  reschedule: ReturnType<typeof vi.fn>
+  saveCompleted: ReturnType<typeof vi.fn>
   saveLiveSet: ReturnType<typeof vi.fn>
   savePlanned: ReturnType<typeof vi.fn>
   setLiveExerciseComment: ReturnType<typeof vi.fn>
+  setClientComment: ReturnType<typeof vi.fn>
   startLive: ReturnType<typeof vi.fn>
 } {
   const result = <Value>(value: Value) => error === undefined
     ? Promise.resolve(value)
     : Promise.reject(error)
   const deletePlanned = vi.fn(() => result(3))
+  const deleteWorkout = vi.fn(() => result(3))
+  const cancelPlanned = vi.fn(() => result(2))
+  const reschedule = vi.fn(() => result(3))
   const savePlanned = vi.fn(() => result({ id: WORKOUT_ID, version: 1 }))
+  const saveCompleted = vi.fn(() => result({ id: WORKOUT_ID, version: 2 }))
+  const recordPlannedResult = vi.fn(() => result({ id: WORKOUT_ID, version: 3 }))
+  const setClientComment = vi.fn(() => result(4))
   const appendLiveExercise = vi.fn(() => result({
     resourceId: WORKOUT_EXERCISE_ID,
     version: 3,
@@ -625,28 +638,40 @@ function buildWorkoutsWriter(error?: Error): {
     pilotWorkoutsWriter: {
       appendLiveExercise,
       appendLiveSet,
+      cancelPlanned,
       confirmLiveSet,
       deletePlanned,
+      deleteWorkout,
       finishLive,
       removeLiveSet,
       reorderLiveBlock,
       replaceLiveExercise,
+      recordPlannedResult,
+      reschedule,
+      saveCompleted,
       saveLiveSet,
       savePlanned,
       setLiveExerciseComment,
+      setClientComment,
       startLive,
     },
     appendLiveExercise,
     appendLiveSet,
+    cancelPlanned,
     confirmLiveSet,
     deletePlanned,
+    deleteWorkout,
     finishLive,
     removeLiveSet,
     reorderLiveBlock,
     replaceLiveExercise,
+    recordPlannedResult,
+    reschedule,
+    saveCompleted,
     saveLiveSet,
     savePlanned,
     setLiveExerciseComment,
+    setClientComment,
     startLive,
   }
 }
@@ -1171,7 +1196,7 @@ describe('pilot planned workout commands', () => {
       { ...draft, id: WORKOUT_ID, notes: 'Обновлённый план' } satisfies PlannedWorkoutDraft,
       1,
     )
-    expect(writer.deletePlanned).toHaveBeenCalledWith(
+    expect(writer.deleteWorkout).toHaveBeenCalledWith(
       sessionToken,
       WORKOUT_ID,
       2,
@@ -1243,7 +1268,142 @@ describe('pilot planned workout commands', () => {
     })
 
     expect(response.statusCode).toBe(401)
-    expect(writer.deletePlanned).not.toHaveBeenCalled()
+    expect(writer.deleteWorkout).not.toHaveBeenCalled()
+  })
+})
+
+describe('pilot completed workout lifecycle commands', () => {
+  const sessionToken = 's'.repeat(43)
+  const clientId = CLIENTS_RESPONSE.clients[0]!.id
+  const requestId = 'd0807ffc-0826-4d5e-a70d-56ffcb6c5a0c'
+  const draft = {
+    clientId,
+    requestId,
+    workoutDate: '2026-08-20',
+    startTime: null,
+    endTime: null,
+    notes: 'Фактическая тренировка',
+    exercises: [],
+  }
+
+  it('creates, edits and records completed facts without Live', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({
+      pilotWorkoutsWriter: writer.pilotWorkoutsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/v1/workouts/completed',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: draft,
+    })
+    const updated = await app.inject({
+      method: 'PUT',
+      url: `/v1/workouts/${WORKOUT_ID}/completed`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { ...draft, expectedVersion: 2 },
+    })
+    const recorded = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/result`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { ...draft, expectedVersion: 1 },
+    })
+
+    expect(created.statusCode).toBe(201)
+    expect(created.json()).toEqual({ workout: { id: WORKOUT_ID, version: 2 } })
+    expect(updated.statusCode).toBe(200)
+    expect(recorded.statusCode).toBe(200)
+    expect(writer.saveCompleted).toHaveBeenNthCalledWith(
+      1,
+      sessionToken,
+      { ...draft, id: null } satisfies PlannedWorkoutDraft,
+      null,
+    )
+    expect(writer.saveCompleted).toHaveBeenNthCalledWith(
+      2,
+      sessionToken,
+      { ...draft, id: WORKOUT_ID } satisfies PlannedWorkoutDraft,
+      2,
+    )
+    expect(writer.recordPlannedResult).toHaveBeenCalledWith(
+      sessionToken,
+      { ...draft, id: WORKOUT_ID } satisfies PlannedWorkoutDraft,
+      1,
+    )
+  })
+
+  it('cancels, reschedules and stores the client comment with versions', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({
+      pilotWorkoutsWriter: writer.pilotWorkoutsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const cancelled = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/cancel`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 1 },
+    })
+    const rescheduled = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/reschedule`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        expectedVersion: 2,
+        workoutDate: '2026-08-30',
+        startTime: '12:30',
+      },
+    })
+    const commented = await app.inject({
+      method: 'PUT',
+      url: `/v1/workouts/${WORKOUT_ID}/comment`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 3, comment: '  Было тяжело  ' },
+    })
+
+    expect([cancelled.statusCode, rescheduled.statusCode, commented.statusCode])
+      .toEqual([200, 200, 200])
+    expect(writer.cancelPlanned).toHaveBeenCalledWith(
+      sessionToken, WORKOUT_ID, 1,
+    )
+    expect(writer.reschedule).toHaveBeenCalledWith(
+      sessionToken, WORKOUT_ID, '2026-08-30', '12:30', 2,
+    )
+    expect(writer.setClientComment).toHaveBeenCalledWith(
+      sessionToken, WORKOUT_ID, 'Было тяжело', 3,
+    )
+  })
+
+  it('rejects malformed lifecycle commands before invoking the writer', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({
+      pilotWorkoutsWriter: writer.pilotWorkoutsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const rescheduled = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/reschedule`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 1, workoutDate: 'tomorrow' },
+    })
+    const commented = await app.inject({
+      method: 'PUT',
+      url: `/v1/workouts/${WORKOUT_ID}/comment`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 1, comment: 'a'.repeat(5_001) },
+    })
+
+    expect([rescheduled.statusCode, commented.statusCode]).toEqual([400, 400])
+    expect(writer.reschedule).not.toHaveBeenCalled()
+    expect(writer.setClientComment).not.toHaveBeenCalled()
   })
 })
 
