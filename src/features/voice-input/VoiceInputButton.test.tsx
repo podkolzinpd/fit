@@ -149,6 +149,28 @@ describe('VoiceInputButton', () => {
     expect(screen.getByText(/Текст добавлен в заметку/)).toBeVisible()
   })
 
+  it('lets the trainer cancel a stalled microphone request from the chat composer', async () => {
+    const user = userEvent.setup()
+    const stop = vi.fn().mockResolvedValue(undefined)
+    const onCancel = vi.fn()
+    render(<VoiceInputButton
+      variant="icon"
+      idleLabel="Голосовой ввод"
+      onTranscript={vi.fn()}
+      onCancel={onCancel}
+      source="assistant"
+      streamingFactory={() => ({ start: vi.fn(() => new Promise<void>(() => undefined)), stop, rotate: vi.fn() })}
+      startupTimeoutMs={30_000}
+    />)
+
+    await user.click(screen.getByRole('button', { name: 'Голосовой ввод' }))
+    await user.click(screen.getByRole('button', { name: 'Отменить запрос к микрофону' }))
+
+    expect(screen.getByRole('button', { name: 'Голосовой ввод' })).toBeEnabled()
+    expect(onCancel).toHaveBeenCalledOnce()
+    expect(stop).toHaveBeenCalledOnce()
+  })
+
   it('can suppress the intermediate transcript status when a chat sends it immediately', async () => {
     const user = userEvent.setup()
     render(<VoiceInputButton

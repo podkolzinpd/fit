@@ -677,8 +677,12 @@ p { margin: 6px 0 }
 .assistant-save-workout { min-height:48px; }
 .assistant-card-hint { margin:0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug); }
 .assistant-composer { position:static; display:grid; grid-template-columns:minmax(0, 1fr) 46px 46px; gap:var(--space-2); margin-top:var(--space-2); padding:var(--space-3) 0 calc(var(--space-3) + env(safe-area-inset-bottom)); background:linear-gradient(180deg, transparent, var(--bg) 20%); }
-.assistant-composer input { min-width:0; min-height:52px; border:1px solid var(--border); border-radius:var(--radius-pill); background:var(--surface-raised); color:var(--fg); padding:0 var(--space-4); font-size:var(--type-body-size); }
-.assistant-composer input:focus { outline:3px solid var(--accent-ring); border-color:var(--accent-strong); }
+.assistant-composer textarea { min-width:0; min-height:52px; max-height:112px; overflow-y:auto; resize:none; border:1px solid var(--border); border-radius:26px; background:var(--surface-raised); color:var(--fg); padding:13px var(--space-4); font:inherit; font-size:var(--type-body-size); line-height:1.35; }
+.assistant-composer textarea:focus { outline:3px solid var(--accent-ring); border-color:var(--accent-strong); }
+.assistant-workout-saved { display:flex; align-items:center; gap:var(--space-3); padding:var(--space-3) var(--space-4); border:1px solid var(--accent-border); border-radius:var(--radius-lg); background:var(--surface-raised); }
+.assistant-workout-saved > span { display:grid; place-items:center; width:32px; height:32px; border-radius:50%; background:var(--accent-soft); color:var(--accent-strong); font-weight:800; }
+.assistant-workout-saved > div { display:grid; gap:2px; }
+.assistant-workout-saved small { color:var(--muted); }
 .assistant-icon-button { display:grid; place-items:center; width:46px; min-height:52px; padding:0; border-radius:50%; }
 .assistant-icon-button svg { width:22px; height:22px; }
 .assistant-reset { grid-column:1 / -1; justify-self:center; min-height:auto; padding:4px 8px; border:0; background:transparent; color:var(--muted); box-shadow:none; font-size:var(--type-caption-size); }

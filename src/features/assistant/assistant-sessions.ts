@@ -101,14 +101,28 @@ export function latestActiveAssistantAction(messages: readonly AssistantMessage[
 }
 
 export function latestActiveWorkoutAction(messages: readonly AssistantMessage[], conversationId?: string): AssistantActionMessage | undefined {
-  const latest = latestActiveAssistantAction(messages, conversationId)
-  return latest?.action.tool === 'record_workout' ? latest : undefined
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]
+    if (!message || message.conversation_id !== conversationId) continue
+    if (message.action) {
+      if (message.action.tool !== 'record_workout') return undefined
+      return isInteractiveAssistantAction(message.action) ? { message, action: message.action } : undefined
+    }
+    if (isWorkoutTerminalReply(message)) return undefined
+  }
+  return undefined
+}
+
+function isWorkoutTerminalReply(message: AssistantMessage): boolean {
+  if (message.author !== 'assistant' || message.action !== null) return false
+  const content = message.content.trim().toLocaleLowerCase('ru-RU')
+  return content.includes('запись тренировки отменена') || content.includes('тренировка сохранена')
 }
 
 export function filterTerminalAssistantMessages(messages: readonly AssistantMessage[]): AssistantMessage[] {
   return messages.flatMap((message) => {
     if (!message.action || isInteractiveAssistantAction(message.action)) return [message]
-    if (message.action.tool === 'summarize_progress' && message.action.lifecycleStatus === 'applied') return [message]
+    if ((message.action.tool === 'summarize_progress' || message.action.tool === 'record_workout') && message.action.lifecycleStatus === 'applied') return [message]
     return message.content.trim() === message.action.description.trim() ? [] : [{ ...message, action: null }]
   })
 }

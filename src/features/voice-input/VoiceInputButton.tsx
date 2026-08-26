@@ -60,6 +60,7 @@ export function VoiceInputButton({
   const stoppingRef = useRef(false)
   const mountedRef = useRef(true)
   const streamingRef = useRef<StreamingSpeechSession | null>(null)
+  const startingStreamingRef = useRef<StreamingSpeechSession | null>(null)
   const streamingTextRef = useRef('')
   const streamingInterimTextRef = useRef('')
   const sessionGenerationRef = useRef(0)
@@ -72,6 +73,7 @@ export function VoiceInputButton({
       sessionGenerationRef.current += 1
       clearTimers(intervalRef, timeoutRef)
       recorderRef.current?.cancel()
+      void startingStreamingRef.current?.stop()
       void streamingRef.current?.stop()
       if (recognizerRef.current) void recognizerRef.current.dispose()
     }
@@ -89,6 +91,7 @@ export function VoiceInputButton({
     setPhase('requesting')
     {
       const streaming = streamingFactory()
+      startingStreamingRef.current = streaming
       streamingTextRef.current = ''
       streamingInterimTextRef.current = ''
       try {
@@ -110,8 +113,10 @@ export function VoiceInputButton({
           ),
           startupTimeoutMs,
         )
+        const stillStarting = startingStreamingRef.current === streaming
+        if (stillStarting) startingStreamingRef.current = null
         if (!isCurrentSession(sessionId)) {
-          await streaming.stop()
+          if (stillStarting) await streaming.stop()
           return
         }
         streamingRef.current = streaming
@@ -120,7 +125,10 @@ export function VoiceInputButton({
         timeoutRef.current = window.setTimeout(() => void rotateStreaming(sessionId), maxDurationMs)
         return
       } catch (error) {
-        await streaming.stop()
+        if (startingStreamingRef.current === streaming) {
+          startingStreamingRef.current = null
+          await streaming.stop()
+        }
         if (!isCurrentSession(sessionId)) return
         if (isMicrophoneStartFailure(error)) {
           if (mountedRef.current) {
@@ -235,6 +243,9 @@ export function VoiceInputButton({
     const streaming = streamingRef.current
     streamingRef.current = null
     if (streaming) void streaming.stop()
+    const startingStreaming = startingStreamingRef.current
+    startingStreamingRef.current = null
+    if (startingStreaming) void startingStreaming.stop()
     streamingTextRef.current = ''
     streamingInterimTextRef.current = ''
     stoppingRef.current = false
@@ -270,12 +281,12 @@ export function VoiceInputButton({
     <button
       type="button"
       className={`assistant-icon-button ${recording ? 'recording' : ''}`}
-      aria-label={recording ? `Завершить голосовой ввод, ${formatDuration(elapsedSeconds)}` : busy ? voiceHeroStatus(phase) : idleLabel}
+      aria-label={recording ? `Завершить голосовой ввод, ${formatDuration(elapsedSeconds)}` : phase === 'requesting' ? 'Отменить запрос к микрофону' : busy ? voiceHeroStatus(phase) : idleLabel}
       aria-pressed={recording}
-      disabled={busy || disabled}
-      onClick={() => { if (recording) { void (streamingRef.current ? finishStreaming() : finishRecording()); return }; trackGoal(`voice_note_start_click_${source}`); void startRecording() }}
+      disabled={(busy && phase !== 'requesting') || disabled}
+      onClick={() => { if (phase === 'requesting') { cancelRecording(); return }; if (recording) { void (streamingRef.current ? finishStreaming() : finishRecording()); return }; trackGoal(`voice_note_start_click_${source}`); void startRecording() }}
     >
-      {recording ? <StopIcon /> : <MicIcon />}
+      {recording || phase === 'requesting' ? <StopIcon /> : <MicIcon />}
     </button>
     {message && <VoiceInputStatus message={message} undo={undo} onUndo={() => { undo?.(); setUndo(null); setMessage(null) }} onDismiss={() => setMessage(null)} />}
   </div>

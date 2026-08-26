@@ -35,7 +35,7 @@ export function AssistantWorkoutDraftSurface({
 }
 
 function WorkoutMetricFields({ sourceText, setCount, reps, weightKg, onChange }: { sourceText: string; setCount: number; reps?: number; weightKg?: number; onChange: (sourceText: string, patch: MetricPatch) => void }) {
-  return <div className="assistant-workout-metrics" aria-label={`Параметры ${sourceText}`}>
+  return <div className="assistant-workout-metrics" aria-label="Параметры упражнения">
     <label><input aria-label="Подходы" type="number" min="1" max="20" value={setCount} onChange={(event) => onChange(sourceText, { setCount: Number(event.target.value) || 1 })} /><small>подх.</small></label>
     <label><input aria-label="Повторы" type="number" min="1" value={reps ?? ''} placeholder="—" onChange={(event) => { const value = Number(event.target.value); if (value > 0) onChange(sourceText, { reps: value }) }} /><small>повт.</small></label>
     <label><input aria-label="Вес" type="number" min="0" step="0.5" value={weightKg ?? ''} placeholder="—" onChange={(event) => { const value = Number(event.target.value); if (value >= 0 && event.target.value !== '') onChange(sourceText, { weightKg: value }) }} /><small>кг</small></label>

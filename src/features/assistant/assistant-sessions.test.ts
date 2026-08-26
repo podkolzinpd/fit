@@ -54,7 +54,31 @@ describe('assistant sessions', () => {
     expect(latestActiveAssistantAction(messages, 'today')?.message.id).toBe('latest')
     const visible = filterTerminalAssistantMessages(messages)
     expect(visible.map((message) => message.id)).toEqual(['old', 'terminal', 'latest', 'archive'])
-    expect(visible.find((message) => message.id === 'terminal')?.action).toBeNull()
+    expect(visible.find((message) => message.id === 'terminal')?.action?.lifecycleStatus).toBe('applied')
+  })
+
+  it('does not resurrect an older workout after the newest workout was applied', () => {
+    const makeAction = (lifecycleStatus?: 'applied') => ({ tool: 'record_workout' as const, status: 'proposed' as const, title: 'Тренировка', description: 'Тренировка', payload: { step: 'confirm' }, lifecycleStatus })
+    const messages = [
+      { id: 'older-draft', conversation_id: 'today', turn_id: 'older', author: 'assistant', content: 'Черновик', action: makeAction(), created_at: '2026-08-25T09:00:00.000Z' },
+      { id: 'saved', conversation_id: 'today', turn_id: 'saved', author: 'assistant', content: 'Тренировка сохранена', action: makeAction('applied'), created_at: '2026-08-25T09:01:00.000Z' },
+    ]
+
+    expect(latestActiveWorkoutAction(messages, 'today')).toBeUndefined()
+    expect(filterTerminalAssistantMessages(messages).find((message) => message.id === 'saved')?.action?.lifecycleStatus).toBe('applied')
+  })
+
+  it('closes an undurable workout after a persisted cancel reply but keeps it through small talk', () => {
+    const draft = { tool: 'record_workout' as const, status: 'needs_input' as const, title: 'Тренировка', description: 'Продолжайте', payload: { step: 'workout' } }
+    const base = [
+      { id: 'draft', conversation_id: 'today', turn_id: 'draft', author: 'assistant', content: 'Продолжайте', action: draft, created_at: '2026-08-25T09:00:00.000Z' },
+      { id: 'small-talk', conversation_id: 'today', turn_id: 'hello', author: 'assistant', content: 'Здравствуйте!', action: null, created_at: '2026-08-25T09:01:00.000Z' },
+    ]
+    expect(latestActiveWorkoutAction(base, 'today')?.message.id).toBe('draft')
+    const cancelled = [...base, { id: 'cancelled', conversation_id: 'today', turn_id: 'cancel', author: 'assistant', content: 'Хорошо, запись тренировки отменена.', action: null, created_at: '2026-08-25T09:02:00.000Z' }]
+    expect(latestActiveWorkoutAction(cancelled, 'today')).toBeUndefined()
+    const restarted = [...cancelled, { id: 'new-draft', conversation_id: 'today', turn_id: 'new-draft', author: 'assistant', content: 'Новая тренировка', action: draft, created_at: '2026-08-25T09:03:00.000Z' }]
+    expect(latestActiveWorkoutAction(restarted, 'today')?.message.id).toBe('new-draft')
   })
 
   it('ignores legacy active tools when the chat is temporarily workout-only', () => {
