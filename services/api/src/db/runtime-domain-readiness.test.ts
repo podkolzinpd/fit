@@ -1,62 +1,77 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { DatabaseConnection, DatabasePool } from './types.js'
+import type { PilotClientsReader } from '../pilot-clients-reader.js'
 import { inspectRuntimeDomainReadiness } from './runtime-domain-readiness.js'
+import { PilotSessionInvalidError } from './yandex-pilot-transaction.js'
 
-const ACTOR_ID = 'c9f75482-117d-4532-8f67-6c3d9b9f4a5e'
+const SESSION_TOKEN = 's'.repeat(43)
 
-function buildPool(domainError: Error): {
-  pool: DatabasePool
-  query: ReturnType<typeof vi.fn>
-  release: ReturnType<typeof vi.fn>
+function buildReader(error?: Error): {
+  reader: PilotClientsReader
+  readClients: ReturnType<typeof vi.fn>
 } {
-  const query = vi.fn((text: string) => {
-    if (text === 'select * from public.list_client_overviews($1)') {
-      return Promise.reject(domainError)
-    }
-    return Promise.resolve([])
-  })
-  const release = vi.fn()
-  const connection: DatabaseConnection = { query, release }
-  return {
-    pool: {
-      connect: vi.fn().mockResolvedValue(connection),
-      end: vi.fn().mockResolvedValue(undefined),
-    },
-    query,
-    release,
-  }
+  const readClients = error === undefined
+    ? vi.fn().mockResolvedValue({ accessMode: 'read_only', clients: [] })
+    : vi.fn().mockRejectedValue(error)
+  return { reader: { readClients }, readClients }
 }
 
 describe('runtime domain readiness', () => {
-  it('executes the clients read model as the stage actor and returns a safe SQL code', async () => {
+  it('executes the clients read model with the exact stage session token', async () => {
+    const clients = buildReader()
+
+    const result = await inspectRuntimeDomainReadiness(
+      clients.reader,
+      SESSION_TOKEN,
+    )
+
+    expect(result).toEqual({ ready: true })
+    expect(clients.readClients).toHaveBeenCalledWith(SESSION_TOKEN)
+  })
+
+  it('returns a safe SQL code from session resolution or the clients query', async () => {
     const privateError = Object.assign(
       new Error('private relation and connection details'),
       { code: '42501' },
     )
-    const database = buildPool(privateError)
+    const clients = buildReader(privateError)
 
-    const result = await inspectRuntimeDomainReadiness(database.pool, ACTOR_ID)
+    const result = await inspectRuntimeDomainReadiness(
+      clients.reader,
+      SESSION_TOKEN,
+    )
 
     expect(result).toEqual({
       ready: false,
       category: 'permission',
       code: '42501',
     })
-    expect(database.query).toHaveBeenCalledWith('begin')
-    expect(database.query).toHaveBeenCalledWith(
-      "select set_config('request.jwt.claim.sub', $1, true)",
-      [ACTOR_ID],
-    )
-    expect(database.query).toHaveBeenCalledWith('rollback')
-    expect(database.release).toHaveBeenCalledOnce()
     expect(JSON.stringify(result)).not.toContain('private relation')
   })
 
-  it('normalizes application failures without exposing their message', async () => {
-    const database = buildPool(new TypeError('private row value'))
+  it('identifies a rejected fixture session without exposing the token', async () => {
+    const clients = buildReader(new PilotSessionInvalidError())
 
-    const result = await inspectRuntimeDomainReadiness(database.pool, ACTOR_ID)
+    const result = await inspectRuntimeDomainReadiness(
+      clients.reader,
+      SESSION_TOKEN,
+    )
+
+    expect(result).toEqual({
+      ready: false,
+      category: 'authentication',
+      code: 'PILOT_SESSION_INVALID',
+    })
+    expect(JSON.stringify(result)).not.toContain(SESSION_TOKEN)
+  })
+
+  it('normalizes application failures without exposing their message', async () => {
+    const clients = buildReader(new TypeError('private row value'))
+
+    const result = await inspectRuntimeDomainReadiness(
+      clients.reader,
+      SESSION_TOKEN,
+    )
 
     expect(result).toEqual({
       ready: false,
