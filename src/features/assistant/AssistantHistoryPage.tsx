@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { ChevronRightIcon } from '../../shared/icons'
 import { useAuth } from '../../app/auth-context'
+import { useAppViewport } from '../../app/app-viewport'
 import { assistantRepository, type AssistantOrchestratorAction } from '../../data/repositories/assistant.repository'
 import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
 import { VoiceInputButton, type VoiceInputPhase } from '../voice-input'
@@ -18,11 +19,13 @@ import { AssistantInlineSummaryCard } from './AssistantInlineSummary'
 import { parseAssistantInlineSummary } from './assistant-inline-summary'
 import { assistantActionView } from './assistant-action-view'
 import { AssistantWorkoutDraftSurface } from './AssistantWorkoutDraftSurface'
+import { anchorAssistantViewport } from './assistant-viewport'
 
 type FailedTurn = { turnId: string; message: string }
 
 export function AssistantHistoryPage() {
   const { actor } = useAuth()
+  const { keyboardOpen } = useAppViewport()
   const queryClient = useQueryClient()
   const [conversationId, setConversationId] = useState<string>()
   const [todayConversationId, setTodayConversationId] = useState<string>()
@@ -116,8 +119,26 @@ export function AssistantHistoryPage() {
     if (!conversationId || loadingMessages) return
     const thread = threadRef.current
     const scrollContainer = thread?.closest<HTMLElement>('.content')
-    if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight
-  }, [conversationId, lastMessageId, loadingMessages])
+    if (!thread || !scrollContainer) return
+
+    let frame = 0
+    const anchor = () => anchorAssistantViewport(thread, scrollContainer, keyboardOpen)
+    const scheduleAnchor = () => {
+      window.cancelAnimationFrame(frame)
+      frame = window.requestAnimationFrame(anchor)
+    }
+
+    anchor()
+    if (keyboardOpen) {
+      window.visualViewport?.addEventListener('resize', scheduleAnchor)
+      window.visualViewport?.addEventListener('scroll', scheduleAnchor)
+    }
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.visualViewport?.removeEventListener('resize', scheduleAnchor)
+      window.visualViewport?.removeEventListener('scroll', scheduleAnchor)
+    }
+  }, [conversationId, keyboardOpen, lastMessageId, loadingMessages])
 
   function selectConversation(id: string) {
     if (sending || voiceActive || id === conversationId) return
