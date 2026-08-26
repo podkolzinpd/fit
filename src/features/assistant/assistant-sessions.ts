@@ -36,6 +36,14 @@ export type AssistantActionMessage = {
   action: AssistantOrchestratorAction
 }
 
+const legacyWorkoutOnlyReply = 'Сейчас в чате можно только добавить тренировку. Напишите «добавь тренировку» и укажите клиента, упражнения, подходы, повторы и вес.'
+
+export function compactAssistantContent(content: string): string {
+  return content.trim() === legacyWorkoutOnlyReply
+    ? 'Сейчас я помогаю только записывать тренировки.'
+    : content
+}
+
 export function conversationLocalDate(conversation: Pick<AssistantConversation, 'created_at'>, timezone?: string): LocalDate {
   return todayInTimeZone(timezone, new Date(conversation.created_at))
 }

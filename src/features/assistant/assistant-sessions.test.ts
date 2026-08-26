@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AssistantOrchestratorAction } from '../../data/repositories/assistant.repository'
 import type { LocalDate } from '../../shared/local-date'
-import { conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isInteractiveAssistantAction, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveAssistantAction, latestActiveWorkoutAction, mergeAssistantMessages, selectTodayConversation } from './assistant-sessions'
+import { compactAssistantContent, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isInteractiveAssistantAction, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveAssistantAction, latestActiveWorkoutAction, mergeAssistantMessages, selectTodayConversation } from './assistant-sessions'
 
 const conversations = [
   { id: 'old', title: null, created_at: '2026-08-24T18:00:00.000Z' },
@@ -10,6 +10,10 @@ const conversations = [
 ]
 
 describe('assistant sessions', () => {
+  it('compacts the legacy workout-only wall in persisted history', () => {
+    expect(compactAssistantContent('Сейчас в чате можно только добавить тренировку. Напишите «добавь тренировку» и укажите клиента, упражнения, подходы, повторы и вес.')).toBe('Сейчас я помогаю только записывать тренировки.')
+    expect(compactAssistantContent('Привет!')).toBe('Привет!')
+  })
   it('groups conversations by the actor local date and selects the newest today', () => {
     const groups = groupAssistantConversations(conversations, 'Europe/Moscow', '2026-08-25' as LocalDate)
     expect(groups.map((group) => [group.date, group.conversations.map((item) => item.id)])).toEqual([

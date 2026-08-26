@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
+const completionUrl = 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion'
 const releaseSha = process.env.RELEASE_SHA?.trim() || 'unknown'
 const assistantSystemPrompt = 'Ты безопасный ассистент фитнес-приложения. Не ставь диагнозов и не давай опасных рекомендаций. Любое write-действие только как предложенная карточка с подтверждением; никогда не утверждай, что данные уже сохранены.'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -33,7 +34,12 @@ const executableCapabilities: readonly AssistantCapability[] = [
   { title: 'Подготовить запись тренировки', description: 'для выбранного клиента и открыть её в существующем разборе упражнений' },
 ]
 
-const workoutOnlyReply = 'Сейчас в чате можно только добавить тренировку. Напишите «добавь тренировку» и укажите клиента, упражнения, подходы, повторы и вес.'
+const smallTalkSchema = {
+  type: 'object', additionalProperties: false, required: ['reply', 'action'], properties: {
+    reply: { type: 'string' },
+    action: { type: 'null' },
+  },
+}
 
 class HttpError extends Error {
   constructor(readonly status: number, readonly code: string) { super(code) }
@@ -43,6 +49,21 @@ function required(name: string): string {
   const value = process.env[name]?.trim()
   if (!value) throw new HttpError(503, 'service_unavailable')
   return value
+}
+
+async function yandexIamToken(): Promise<string> {
+  let response: Response
+  try {
+    response = await fetch('http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token', {
+      headers: { 'Metadata-Flavor': 'Google' },
+    })
+  } catch {
+    throw new HttpError(503, 'orchestrator_auth_unavailable')
+  }
+  if (!response.ok) throw new HttpError(503, 'orchestrator_auth_unavailable')
+  const body = await response.json() as { access_token?: unknown }
+  if (typeof body.access_token !== 'string' || !body.access_token) throw new HttpError(503, 'orchestrator_auth_unavailable')
+  return body.access_token
 }
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -573,8 +594,26 @@ export function summaryPeriodFromMessage(message: string, now = new Date()): Sum
 }
 
 export function assistantCapabilitiesReply(): string {
-  if (executableCapabilities.length === 0) return 'Пока я не выполняю действий в приложении. Могу только коротко пообщаться.'
-  return `Сейчас я могу:\n${executableCapabilities.map((capability) => `• ${capability.title} — ${capability.description}`).join('\n')}`
+  if (executableCapabilities.length === 0) return 'Могу коротко пообщаться.'
+  return 'Могу коротко пообщаться и записать тренировку — целиком или по одному упражнению, текстом или голосом.'
+}
+
+export function assistantSmallTalkPrompt(history: readonly { author: string; content: string }[], informal: boolean): string {
+  return [
+    'Ты дружелюбная минимальная болталка фитнес-приложения. Отвечай по-русски одним коротким предложением, максимум двумя.',
+    `Обращайся к пользователю на ${informal ? 'ты' : 'вы'}.`,
+    'Всегда возвращай action=null. Никогда не создавай карточки и не обещай изменить данные.',
+    'Не повторяй инструкцию про доступные функции без прямого вопроса пользователя. На приветствие отвечай естественным приветствием.',
+    'Не ставь диагнозов и не давай опасных советов. При боли или травме кратко рекомендуй обратиться к врачу или профильному специалисту.',
+    `Недавняя история:\n${history.slice(-6).map((entry) => `${entry.author === 'user' ? 'Пользователь' : 'Ассистент'}: ${entry.content}`).join('\n')}`,
+  ].join('\n\n')
+}
+
+export function assistantSmallTalkFallback(message: string): string {
+  const normalized = normalizeAssistantMessage(message)
+  if (/^(?:привет|здравствуй|здравствуйте|доброе утро|добрый день|добрый вечер|хай|hello)$/u.test(normalized)) return 'Привет! Чем помочь?'
+  if (/^(?:спасибо|благодарю|спс)$/u.test(normalized)) return 'Пожалуйста!'
+  return 'Я на связи — можем немного пообщаться или записать тренировку.'
 }
 
 export function assistantModelMessages(prompt: string): Array<{ role: 'system' | 'user'; text: string }> {
@@ -680,8 +719,31 @@ export async function runAssistantTurn(authorization: string, command: Assistant
     console.info('assistant_workout_draft_reply_persisted', { operationId: turnId, releaseSha, status: workoutDraft.action?.status })
     return persistAssistantResponse(service, command.conversationId, turnId, workoutDraft)
   }
-  const result: AssistantTurnResponse = { reply: workoutOnlyReply, action: null }
-  console.info('assistant_workout_only_reply_persisted', { operationId: turnId, releaseSha })
+  const history = [...(rows ?? [])].reverse().flatMap((row): { author: string; content: string }[] =>
+    typeof row.author === 'string' && typeof row.content === 'string' ? [{ author: row.author, content: row.content.slice(0, 1_000) }] : [])
+  let result: AssistantTurnResponse = { reply: assistantSmallTalkFallback(command.message), action: null }
+  try {
+    const iamToken = await yandexIamToken()
+    const response = await fetch(completionUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${iamToken}` },
+      body: JSON.stringify({
+        modelUri: `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`,
+        completionOptions: { stream: false, temperature: 0.3, maxTokens: '100' },
+        jsonSchema: { schema: smallTalkSchema },
+        messages: assistantModelMessages(assistantSmallTalkPrompt(history, usesInformalAddress(command.message))),
+      }),
+    })
+    if (!response.ok) throw new Error(`small_talk_http_${response.status}`)
+    const payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }> } }
+    const raw = JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? '') as unknown
+    const modelResult = validateEnabledAssistantTurnResponse(raw)
+    if (!modelResult || modelResult.action !== null) throw new Error('small_talk_invalid_response')
+    result = modelResult
+  } catch (error) {
+    console.warn('assistant_small_talk_fallback', { operationId: turnId, releaseSha, reason: error instanceof Error ? error.message : 'unknown' })
+  }
+  console.info('assistant_small_talk_reply_persisted', { operationId: turnId, releaseSha })
   return persistAssistantResponse(service, command.conversationId, turnId, result)
 }
 
