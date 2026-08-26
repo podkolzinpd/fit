@@ -135,6 +135,7 @@ jobs:
           -target=yandex_iam_service_account_iam_member.api_deployer
           -target=yandex_iam_service_account_iam_member.migration_deployer
           -target=yandex_lockbox_secret_iam_member.api_connection_secret_reader
+          -target=yandex_lockbox_secret_iam_member.migration_api_connection_secret_reader
           -target=yandex_lockbox_secret_iam_member.migration_connection_secret_reader
       - name: Verify runtime identity permissions are effective
         working-directory: infra/yandex
@@ -203,6 +204,30 @@ jobs:
           ' stage-workout-fixture-response.json >/dev/null
           jq -r '"Prepared synthetic fixtures for " + (.seededTrainerCount | tostring) + " stage trainer(s)."' \
             stage-workout-fixture-response.json
+      - name: Verify the API runtime database identity before deployment
+        working-directory: infra/yandex
+        run: |
+          migration_url=$(terraform output -raw migration_container_url)
+          status=$(curl --silent --show-error \
+            --output runtime-database-readiness-response.json --write-out '%{http_code}' \
+            --request POST --header "Authorization: Bearer $YC_TOKEN" \
+            "${migration_url%/}/stage/runtime-database/readiness")
+          if test "$status" != 200; then
+            if jq -e '
+              .status == "runtime_database_not_ready"
+              and (.category | IN("authentication", "permission", "network", "tls", "unknown"))
+              and (.code == "unknown" or (.code | test("^[A-Z0-9_]{2,64}$")))
+            ' runtime-database-readiness-response.json >/dev/null 2>&1; then
+              jq -r '"Runtime database preflight failed: category=" + .category + ", code=" + .code' \
+                runtime-database-readiness-response.json >&2
+            else
+              echo "Runtime database preflight returned HTTP $status without safe diagnostics." >&2
+            fi
+            echo 'The API revision was not changed.' >&2
+            exit 1
+          fi
+          jq -e '.status == "runtime_database_ready"' \
+            runtime-database-readiness-response.json >/dev/null
       - name: Re-plan after migration and enforce policy
         working-directory: infra/yandex
         run: |
@@ -255,11 +280,31 @@ jobs:
           api_url=$(terraform output -raw api_container_url)
           health=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/health")
-          ready=$(curl --fail --silent --show-error --retry 44 --retry-max-time 90 \
-            --retry-all-errors --retry-delay 2 \
-            --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/ready")
           jq -e '.status == "ok"' <<<"$health" >/dev/null
-          jq -e '.status == "ready"' <<<"$ready" >/dev/null
+          readiness_deadline=$(( $(date +%s) + 90 ))
+          while true; do
+            : > api-readiness-response.json
+            readiness_status=000
+            if readiness_status=$(curl --silent --show-error --max-time 12 \
+              --output api-readiness-response.json --write-out '%{http_code}' \
+              --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/ready"); then
+              if test "$readiness_status" = 200 \
+                && jq -e '.status == "ready"' api-readiness-response.json >/dev/null 2>&1; then
+                break
+              fi
+            fi
+            now=$(date +%s)
+            if test "$now" -ge "$readiness_deadline"; then
+              echo "API readiness did not succeed within 90 seconds; last HTTP status: $readiness_status." >&2
+              exit 1
+            fi
+            remaining=$(( readiness_deadline - now ))
+            if test "$remaining" -lt 2; then
+              sleep "$remaining"
+            else
+              sleep 2
+            fi
+          done
           fixture_token=$(jq -er '.session.token' stage-workout-fixture-response.json)
           client_fixture_token=$(jq -er '.clientSession.token' stage-workout-fixture-response.json)
           clients=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \

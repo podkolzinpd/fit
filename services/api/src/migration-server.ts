@@ -47,11 +47,25 @@ const stageDatabaseAccessEnabled =
 if (stageDatabaseAccessEnabled && process.env.APP_ENV !== 'stage') {
   throw new Error('Stage database access can be enabled only in stage')
 }
+const stageRuntimeDatabasePreflightEnabled =
+  process.env.STAGE_RUNTIME_DATABASE_PREFLIGHT_ENABLED === 'true'
+if (stageRuntimeDatabasePreflightEnabled && process.env.APP_ENV !== 'stage') {
+  throw new Error('Runtime database preflight can be enabled only in stage')
+}
 const privateFeaturePool = pilotEnrollmentEnabled
   || stageWorkoutFixtureEnabled
   || stageDatabaseAccessEnabled
   ? new PgDatabasePool(databaseConfig)
   : undefined
+const runtimeDatabaseConfig = stageRuntimeDatabasePreflightEnabled
+  ? buildDatabaseConnectionConfig('DATABASE')
+  : undefined
+if (stageRuntimeDatabasePreflightEnabled && runtimeDatabaseConfig === undefined) {
+  throw new Error('Runtime database is required for stage preflight')
+}
+const runtimeDatabasePool = runtimeDatabaseConfig === undefined
+  ? undefined
+  : new PgDatabasePool(runtimeDatabaseConfig)
 const yandexClientId = process.env.YANDEX_OAUTH_CLIENT_ID
 if (pilotEnrollmentEnabled && yandexClientId === undefined) {
   throw new Error('YANDEX_OAUTH_CLIENT_ID is required for pilot enrollment')
@@ -81,6 +95,7 @@ const app = buildMigrationApp({
           privateFeaturePool,
         ),
       }),
+  ...(runtimeDatabasePool === undefined ? {} : { runtimeDatabasePool }),
   runMigrations: async () => {
     const migrations = await runner({
       advisoryLockMode: 'fail',
@@ -97,8 +112,13 @@ const app = buildMigrationApp({
   },
 })
 
-if (privateFeaturePool !== undefined) {
-  app.addHook('onClose', async () => privateFeaturePool.end())
+if (privateFeaturePool !== undefined || runtimeDatabasePool !== undefined) {
+  app.addHook('onClose', async () => {
+    await Promise.all([
+      privateFeaturePool?.end(),
+      runtimeDatabasePool?.end(),
+    ])
+  })
 }
 
 try {
