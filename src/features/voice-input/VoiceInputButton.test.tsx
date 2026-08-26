@@ -170,4 +170,92 @@ describe('VoiceInputButton', () => {
 
     await waitFor(() => expect(screen.queryByText(/Текст добавлен в заметку/)).not.toBeInTheDocument())
   })
+
+  it('publishes a cumulative interim snapshot and replaces the previous partial hypothesis', async () => {
+    const user = userEvent.setup()
+    let onPartial!: (text: string) => void
+    let onFinal!: (text: string) => void
+    const onInterimTranscript = vi.fn()
+    const onTranscript = vi.fn()
+    render(<VoiceInputButton
+      variant="hero"
+      idleLabel="Надиктовать тренировку"
+      onTranscript={onTranscript}
+      onInterimTranscript={onInterimTranscript}
+      source="today"
+      streamingFactory={() => ({
+        start: vi.fn((partial: (text: string) => void, final: (text: string) => void) => { onPartial = partial; onFinal = final; return Promise.resolve() }),
+        stop: vi.fn().mockResolvedValue(undefined),
+        rotate: vi.fn(),
+      })}
+    />)
+
+    await user.click(screen.getByRole('button', { name: 'Надиктовать тренировку' }))
+    onPartial('жим')
+    onPartial('жим лёжа')
+    expect(onInterimTranscript).toHaveBeenNthCalledWith(1, 'жим')
+    expect(onInterimTranscript).toHaveBeenNthCalledWith(2, 'жим лёжа')
+
+    onFinal('жим лёжа 3 по 10')
+    onPartial('присед')
+    expect(onInterimTranscript).toHaveBeenLastCalledWith('жим лёжа 3 по 10 присед')
+    await user.click(screen.getByRole('button', { name: /Завершить запись/ }))
+    await waitFor(() => expect(onTranscript).toHaveBeenCalledWith('жим лёжа 3 по 10 присед'))
+  })
+
+  it('accumulates final streaming segments into one terminal transcript', async () => {
+    const user = userEvent.setup()
+    let onFinal!: (text: string) => void
+    const onTranscript = vi.fn()
+    render(<VoiceInputButton
+      variant="icon"
+      idleLabel="Голосовой ввод"
+      onTranscript={onTranscript}
+      source="assistant"
+      streamingFactory={() => ({
+        start: vi.fn((_partial: (text: string) => void, final: (text: string) => void) => { onFinal = final; return Promise.resolve() }),
+        stop: vi.fn().mockResolvedValue(undefined),
+        rotate: vi.fn(),
+      })}
+    />)
+
+    await user.click(screen.getByRole('button', { name: 'Голосовой ввод' }))
+    onFinal('жим лёжа 3 по 10')
+    onFinal('присед 3 по 12')
+    await user.click(screen.getByRole('button', { name: /Завершить голосовой ввод/ }))
+
+    await waitFor(() => expect(onTranscript).toHaveBeenCalledWith('жим лёжа 3 по 10 присед 3 по 12'))
+  })
+
+  it('ignores stale streaming callbacks after cancellation', async () => {
+    const user = userEvent.setup()
+    let onPartial!: (text: string) => void
+    let onFinal!: (text: string) => void
+    const onInterimTranscript = vi.fn()
+    const onTranscript = vi.fn()
+    const onCancel = vi.fn()
+    render(<VoiceInputButton
+      variant="hero"
+      idleLabel="Надиктовать тренировку"
+      onTranscript={onTranscript}
+      onInterimTranscript={onInterimTranscript}
+      onCancel={onCancel}
+      source="today"
+      streamingFactory={() => ({
+        start: vi.fn((partial: (text: string) => void, final: (text: string) => void) => { onPartial = partial; onFinal = final; return Promise.resolve() }),
+        stop: vi.fn().mockResolvedValue(undefined),
+        rotate: vi.fn(),
+      })}
+    />)
+
+    await user.click(screen.getByRole('button', { name: 'Надиктовать тренировку' }))
+    onPartial('старый фрагмент')
+    await user.click(screen.getByRole('button', { name: 'Отменить' }))
+    onPartial('после отмены')
+    onFinal('после отмены')
+
+    expect(onCancel).toHaveBeenCalledOnce()
+    expect(onInterimTranscript).toHaveBeenCalledOnce()
+    expect(onTranscript).not.toHaveBeenCalled()
+  })
 })

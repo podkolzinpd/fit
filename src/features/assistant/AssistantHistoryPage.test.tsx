@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
-import { appendWorkoutParse, appendedWorkoutTranscript, assistantWorkoutSaveInput, enqueueWorkoutParse, removeWorkoutParseSource, replaceWorkoutParseSource, resolveWorkoutParseSource, updateWorkoutParseMetrics } from './workout-draft'
+import { appendAssistantTranscript, appendWorkoutParse, appendedWorkoutTranscript, assistantWorkoutSaveInput, enqueueWorkoutParse, removeWorkoutParseSource, replaceWorkoutParseSource, resolveWorkoutParseSource, updateWorkoutParseMetrics } from './workout-draft'
 import { assistantActionView } from './assistant-action-view'
 
 const benchPress = {
@@ -9,6 +9,10 @@ const benchPress = {
 } as ExerciseSnapshot
 
 describe('assistant program draft saving', () => {
+  it('keeps existing typed text while live voice snapshots replace their own interim tail', () => {
+    expect(appendAssistantTranscript('Запиши тренировку Сан Санычу', 'жим')).toBe('Запиши тренировку Сан Санычу\nжим')
+    expect(appendAssistantTranscript('Запиши тренировку Сан Санычу', 'жим лёжа 3 по 10')).toBe('Запиши тренировку Сан Санычу\nжим лёжа 3 по 10')
+  })
   it('routes every designed assistant flow to a structured card instead of the generic preview', () => {
     expect(assistantActionView({ tool: 'record_workout', payload: { step: 'workout' } })).toBe('workout-collection')
     expect(assistantActionView({ tool: 'record_workout', payload: { step: 'confirm' } })).toBe('workout-confirm')
