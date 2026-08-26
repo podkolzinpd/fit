@@ -1,4 +1,4 @@
-// schema-sha256: 957ee94b16a39422c8f56c4e5d2b27f37221ce43e7b322f2c89d209bbb191a89
+// schema-sha256: 42ca8e46b0c62e0c5a28678b165de40667206af8435747d1c7f6fd27289d49d3
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -66,6 +66,10 @@ export type Database = {
           kind: string
           message: string
           screen_path: string
+          tracker_issue_key: string | null
+          tracker_last_error: string | null
+          tracker_request_id: number | null
+          tracker_sync_attempts: number
           user_agent: string
           user_id: string
         }
@@ -78,6 +82,10 @@ export type Database = {
           kind: string
           message: string
           screen_path: string
+          tracker_issue_key?: string | null
+          tracker_last_error?: string | null
+          tracker_request_id?: number | null
+          tracker_sync_attempts?: number
           user_agent: string
           user_id: string
         }
@@ -90,6 +98,10 @@ export type Database = {
           kind?: string
           message?: string
           screen_path?: string
+          tracker_issue_key?: string | null
+          tracker_last_error?: string | null
+          tracker_request_id?: number | null
+          tracker_sync_attempts?: number
           user_agent?: string
           user_id?: string
         }
