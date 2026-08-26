@@ -13,6 +13,7 @@ import {
   StageDatabaseReaderNotReadyError,
   type StageDatabaseReaderAccessManager,
 } from './db/stage-database-reader-access.js'
+import type { DatabaseConnection, DatabasePool } from './db/types.js'
 import { buildMigrationApp } from './migration-app.js'
 
 const apps: ReturnType<typeof buildMigrationApp>[] = []
@@ -49,6 +50,80 @@ describe('migration endpoint', () => {
     expect(response.statusCode).toBe(500)
     expect(response.json()).toEqual({ status: 'migration_failed' })
     expect(response.body).not.toContain('secret')
+  })
+})
+
+describe('stage runtime database readiness', () => {
+  function buildRuntimePool(error?: unknown): DatabasePool {
+    const connection: DatabaseConnection = {
+      query: error === undefined
+        ? vi.fn().mockResolvedValue([])
+        : vi.fn().mockRejectedValue(error),
+      release: vi.fn(),
+    }
+    return {
+      connect: vi.fn().mockResolvedValue(connection),
+      end: vi.fn().mockResolvedValue(undefined),
+    }
+  }
+
+  it('does not expose the route unless a runtime pool is configured', async () => {
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/runtime-database/readiness',
+    })
+
+    expect(response.statusCode).toBe(404)
+  })
+
+  it('confirms the exact runtime connection before API deployment', async () => {
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+      runtimeDatabasePool: buildRuntimePool(),
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/runtime-database/readiness',
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ status: 'runtime_database_ready' })
+  })
+
+  it('returns only a safe failure category and code', async () => {
+    const failure = Object.assign(
+      new Error('postgresql://fit_api:secret@private-host'),
+      { code: '28P01' },
+    )
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+      runtimeDatabasePool: buildRuntimePool(failure),
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/runtime-database/readiness',
+    })
+
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual({
+      status: 'runtime_database_not_ready',
+      category: 'authentication',
+      code: '28P01',
+    })
+    expect(response.body).not.toContain('secret')
+    expect(response.body).not.toContain('private-host')
   })
 })
 

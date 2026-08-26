@@ -5,16 +5,17 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-26
-Проверенный базовый `main`: `dbdd788` (`YAFIT-371: заменить схему тела на анатомическую (#585)`)
+Проверенный базовый `main`: `fbea329` (`fix(yandex): harden stage readiness diagnostics (#587)`)
 
 ## Активное изменение
 
-- Stage run `32906794265` применил `000018`, но новая API revision вернула `503`
-  на DB readiness и была автоматически откачена. Текущая stage revision здорова;
-  production и пользовательские маршруты не пострадали.
-- Диагностический slice оставляет ответ `/ready` закрытым, но пишет только
-  нормализованный PostgreSQL/network code без message, host, user или secret.
-  Workflow ждёт готовность private DB до 90 секунд и сохраняет прежний rollback.
+- После merge #587 stage run `32959100724` успешно применил миграции и fixture,
+  но кандидат API снова вернул `503` на DB readiness и был автоматически
+  откачен на `bbak2bq6iopc8lcpnbe8`. Production не пострадал.
+- Активный infrastructure slice проверяет до API deployment именно соединение
+  `fit_api` через private migration runner. В CI выходят только безопасные
+  category/code; ошибка останавливает run до создания API revision. Поздний
+  `/ready` использует явный 90-секундный wall-clock deadline и прежний rollback.
 
 ## Последняя проверенная продуктовая точка
 
@@ -73,7 +74,7 @@
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
   exercises, полный workout lifecycle и post-workout работают на stage.
   Миграции `000001–000018` доставлены автоматически; API с нативными AI-
-  контрактами ожидает повторного безопасного deployment после readiness fix.
+  контрактами ожидает повторного deployment после runtime preflight.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
 - Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
@@ -89,26 +90,21 @@
 
 ## Проверки активной ветки
 
-- В Yandex Cloud откатившаяся revision принимала запросы, но `/ready` не мог
-  подключиться к PostgreSQL; DB host/user, network и Lockbox version совпадали с
-  рабочей revision. Тот же новый API локально прошёл `/health` и `/ready`.
-- `npm run check` зелёный: 778 frontend, 162 API и 54 infra/policy теста,
-  lint, typecheck и production build. Ответ readiness и логи не раскрывают
-  исходный error message либо произвольный dependency code.
-- Для YAFIT-368 зелёные 44 целевых теста геометрии/карты тела, мобильные
-  сценарии 390/430 px, Chromium visual и обе WebKit-половины CI.
-- Для YAFIT-371 зелёные 32 целевых теста настройки и геометрии, WebKit-сценарии
-  схемы на 390/430 px, светлые и тёмные visual baseline; полный `npm run check`
-  также зелёный.
+- `npm run check` зелёный: 785 frontend, 177 API и 57 infra/policy тестов,
+  lint, typecheck и production build. Targeted runtime-preflight suite также
+  зелёный.
+- Private preflight не возвращает message, host, user, password или произвольный
+  dependency code; публичный `/ready` по-прежнему отвечает только `not_ready`.
 - Assistant release применяет чистую цепочку Supabase; 624 SQL/RLS-теста
   зелёные, включая exact-once turn/action, cross-tenant запреты и атомарный
   rollback всей программы при ошибке одного элемента.
 
 ## Ближайший порядок
 
-1. Доставить readiness fix, проверить реальный error code при повторном сбое либо
-   зелёную API revision; затем выполнить summary-list и один контролируемый AI
-   generation/parse smoke без логирования исходного текста.
+1. Доставить private runtime preflight. Если `fit_api` не подключается, исправить
+   конкретную safe category до API deployment; при успехе получить зелёную API
+   revision и выполнить summary-list плюс один контролируемый AI generation/parse
+   smoke без логирования исходного текста.
 2. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
 3. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению

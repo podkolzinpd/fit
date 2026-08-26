@@ -328,7 +328,10 @@ describe('readiness endpoint', () => {
     expect(response.json()).toEqual({ status: 'not_ready' })
     expect(response.body).not.toContain('connection failed')
     expect(warn).toHaveBeenCalledWith(
-      { databaseErrorCode: '28P01' },
+      {
+        databaseErrorCategory: 'authentication',
+        databaseErrorCode: '28P01',
+      },
       'Database readiness check failed',
     )
     expect(JSON.stringify(warn.mock.calls)).not.toContain('private diagnostics')
@@ -346,7 +349,10 @@ describe('readiness endpoint', () => {
     await app.inject({ method: 'GET', url: '/ready' })
 
     expect(warn).toHaveBeenCalledWith(
-      { databaseErrorCode: 'unknown' },
+      {
+        databaseErrorCategory: 'unknown',
+        databaseErrorCode: 'unknown',
+      },
       'Database readiness check failed',
     )
     expect(JSON.stringify(warn.mock.calls)).not.toContain('unsafe')

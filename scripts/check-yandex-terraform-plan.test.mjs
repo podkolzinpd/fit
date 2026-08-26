@@ -309,6 +309,48 @@ describe('Yandex Terraform plan policy', () => {
     assert.equal(result.status, 0)
   })
 
+  test('allows the one-time private runtime preflight secret grant', () => {
+    const result = runPolicy(
+      [
+        {
+          address:
+            'yandex_lockbox_secret_iam_member.migration_api_connection_secret_reader[0]',
+          change: {
+            actions: ['create'],
+            after: {
+              member: 'serviceAccount:ajeprivatepreflight',
+              role: 'lockbox.payloadViewer',
+            },
+          },
+        },
+      ],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(result.status, 0)
+  })
+
+  test('rejects broader access through the runtime preflight grant', () => {
+    const result = runPolicy(
+      [
+        {
+          address:
+            'yandex_lockbox_secret_iam_member.migration_api_connection_secret_reader[0]',
+          change: {
+            actions: ['create'],
+            after: {
+              member: 'system:allUsers',
+              role: 'lockbox.admin',
+            },
+          },
+        },
+      ],
+      { automaticStageUpdate: true },
+    )
+
+    assert.notEqual(result.status, 0)
+  })
+
   test('keeps the migration runner private even with the API review flag', () => {
     const result = runPolicy(
       [

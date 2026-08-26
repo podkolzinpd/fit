@@ -39,6 +39,8 @@ const automaticLockboxAddresses = new Set([
   'yandex_lockbox_secret.database_owner_url',
   'yandex_lockbox_secret.database_url',
 ])
+const runtimePreflightSecretAccessAddress =
+  'yandex_lockbox_secret_iam_member.migration_api_connection_secret_reader[0]'
 const costSensitiveContainerFields = [
   'memory',
   'cores',
@@ -127,6 +129,11 @@ const isAutomaticStageChange = (resource) => {
   const actions = resource.change.actions.join(',')
   if (actions === 'create') {
     return isExactPublicApiBinding(resource)
+      || (
+        resource.address === runtimePreflightSecretAccessAddress
+        && resource.change.after?.role === 'lockbox.payloadViewer'
+        && /^serviceAccount:[a-z0-9]+$/u.test(resource.change.after?.member ?? '')
+      )
   }
   if (actions !== 'update') {
     return false

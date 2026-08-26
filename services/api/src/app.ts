@@ -25,7 +25,8 @@ import {
   readVersionedClientCardRequest,
   readVersionedCustomExerciseRequest,
 } from './domain-request.js'
-import type { DatabaseConnection, DatabasePool } from './db/types.js'
+import type { DatabasePool } from './db/types.js'
+import { inspectDatabaseReadiness } from './db/database-readiness.js'
 import type { PilotClientsReader } from './pilot-clients-reader.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
@@ -72,16 +73,6 @@ import {
 } from './progress-request.js'
 
 export type LegacySummaryHandler = (request: Request) => Promise<Response>
-
-function safeDatabaseErrorCode(error: unknown): string {
-  if (typeof error !== 'object' || error === null || !('code' in error)) {
-    return 'unknown'
-  }
-  const code = Reflect.get(error, 'code')
-  return typeof code === 'string' && /^[A-Z0-9_]{2,32}$/u.test(code)
-    ? code
-    : 'unknown'
-}
 
 interface BuildAppOptions {
   allowedOrigins?: readonly string[]
@@ -311,20 +302,17 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return reply.code(503).send({ status: 'not_ready' })
     }
 
-    let connection: DatabaseConnection | undefined
-    try {
-      connection = await options.databasePool.connect()
-      await connection.query('select 1')
-      return { status: 'ready' }
-    } catch (error) {
-      app.log.warn(
-        { databaseErrorCode: safeDatabaseErrorCode(error) },
-        'Database readiness check failed',
-      )
-      return reply.code(503).send({ status: 'not_ready' })
-    } finally {
-      connection?.release()
-    }
+    const readiness = await inspectDatabaseReadiness(options.databasePool)
+    if (readiness.ready) return { status: 'ready' }
+
+    app.log.warn(
+      {
+        databaseErrorCategory: readiness.category,
+        databaseErrorCode: readiness.code,
+      },
+      'Database readiness check failed',
+    )
+    return reply.code(503).send({ status: 'not_ready' })
   })
 
   async function sendPilotProfile(token: string, reply: FastifyReply) {

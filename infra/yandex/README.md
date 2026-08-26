@@ -15,7 +15,9 @@ database password, OAuth secret or Terraform state.
 - one least-privilege runtime service account;
 - direct references to the generated Connection Manager Lockbox secrets;
 - a private cold migration runner invoked only by the OIDC-backed deployment
-  identity before an API revision is changed.
+  identity before an API revision is changed. The runner uses the owner identity
+  for migrations and separately probes the exact `fit_api` runtime identity
+  before an API revision can be created.
 
 The container is private by default. Stage delivery enables browser invocation
 only after Yandex ID validation and the read-only rollout allowlist are present.
@@ -26,7 +28,8 @@ The migration runner is always private.
 The first infrastructure bootstrap is manual and reviewed. Steady-state stage
 delivery is owned by `.github/workflows/deploy-yandex-stage.yml`: OIDC
 authentication, immutable image push, locked forward migrations, final
-Terraform plan/apply, readiness checks and automatic image rollback.
+Terraform plan/apply, private runtime-database preflight, bounded readiness
+checks and automatic image rollback.
 
 The only long-lived CI credentials are repository secrets containing the
 dedicated S3 access key and secret for the private Terraform state bucket.
