@@ -5,20 +5,20 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-26
-Проверенный базовый `main`: `6691510` (`fix(yandex): preflight clients read model (#595)`)
+Проверенный базовый `main`: `0725ec0` (`fix(yandex): preflight pilot session (#596)`)
 
 ## Активное изменение
 
-- После merge #595 stage run `32976543551` подтвердил миграции, fixture, прямой
-  clients read-model preflight, `/health` и `/ready`, но первый
-  `GET /v1/clients` девять раз вернул `503`; rollback восстановил
-  `bbak2bq6iopc8lcpnbe8`, production не пострадал. Значит runtime connection,
-  схема, `list_client_overviews` и Node.js row mapping исправны, а оставшийся
-  разрыв находится в разрешении пилотной сессии.
-- Активный follow-up передаёт свежий fixture token в private preflight и
-  выполняет точный путь `DatabasePilotClientsReader`: hash →
-  `resolve_yandex_pilot_session` → actor context → clients read model. CI
-  получает только safe category/code, а при ошибке API revision не создаётся.
+- Повторный attempt stage run `32980358030` после merge #596 подтвердил полный
+  private путь с тем же fixture token: hash → `resolve_yandex_pilot_session` →
+  actor context → clients read model. После deployment API `/health` и `/ready`
+  прошли, но первый публичный `GET /v1/clients` девять раз вернул безликий
+  `503`; rollback восстановил `bbak2bq6iopc8lcpnbe8`, production не пострадал.
+  PostgreSQL, runtime credential, session и доменный reader тем самым исключены.
+- Активный follow-up добавляет immutable release ID в `/health` и безопасные
+  category/code headers в clients error. Следующий workflow отличит stale
+  revision routing, Fastify database/application error и 503 входного proxy без
+  зависимости от отсутствующего application stdout.
 
 ## Последняя проверенная продуктовая точка
 
