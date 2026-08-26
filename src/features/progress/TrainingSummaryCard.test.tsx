@@ -210,7 +210,8 @@ describe('Training summary card states', () => {
     expect(document.querySelector('.body-progress-zone')).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Подробный анализ' }))
     expect((await screen.findAllByText(/Рабочий вес: 50 → 68 кг/))[0]).toBeVisible()
-    expect(screen.getAllByText('0')).toHaveLength(2)
+    expect(screen.getByText('6')).toBeVisible()
+    expect(screen.getByText('3/5')).toBeVisible()
     expect(screen.getByText('недель с тренировками')).toBeVisible()
     expect(screen.queryByText('1,1 в неделю')).toBeNull()
     expect(screen.getByRole('button', { name: '1 месяц' })).toBeVisible()
@@ -259,8 +260,9 @@ describe('Training summary card states', () => {
 
     const comparison = (await screen.findByRole('heading', { name: 'Изменения к предыдущему периоду' })).closest('section')
     expect(comparison).not.toBeNull()
-    expect(within(comparison!).getAllByText('+1')).toHaveLength(2)
-    expect(within(comparison!).getByText('+2')).toBeVisible()
+    expect(within(comparison!).getByText('+1')).toBeVisible()
+    expect(within(comparison!).getByText('+1')).toBeVisible()
+    expect(within(comparison!).queryByText('+2')).toBeNull()
     expect(screen.getByRole('heading', { name: 'Набрать мышечную массу и укрепить спину' })).toBeVisible()
     expect(screen.getByText('Вес: 80 → 81,5 кг (+1,5 кг)')).toBeVisible()
     expect(screen.getByText('Целевые мышцы получили 3 подтверждённых подхода; в плане было 4.')).toBeVisible()
@@ -291,7 +293,13 @@ describe('Training summary card states', () => {
     const updated = {
       ...trainerSummary,
       id: 'summary-2',
-      trainer: { ...trainerSummary.trainer, headline: 'В жиме лёжа рабочий вес вырос на 20%.' },
+      metrics: {
+        ...trainerSummary.metrics,
+        progressFacts: [{
+          ...trainerSummary.metrics.progressFacts[0]!,
+          changes: [{ metric: 'max_weight' as const, from: 50, to: 72, changePercent: 44, favorable: true }],
+        }],
+      },
       generatedAt: '2026-08-20T10:00:00Z',
     }
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
@@ -302,11 +310,27 @@ describe('Training summary card states', () => {
 
     render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    expect(await screen.findByText(trainerSummary.trainer.headline)).toBeVisible()
+    expect((await screen.findAllByText('+36%'))[0]).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Обновить' }))
-    expect(await screen.findByText(updated.trainer.headline)).toBeVisible()
+    expect((await screen.findAllByText('+44%'))[0]).toBeVisible()
     expect(screen.getByText('Анализ обновлён')).toHaveAttribute('role', 'status')
     expect(repositories.listForTrainer).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps role-specific planning actions and the trainer publication status explicit', async () => {
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForClient.mockResolvedValue([publishedSummary])
+
+    const client = render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+    expect(await screen.findByRole('link', { name: 'Запланировать тренировку' })).toHaveAttribute('href', '/workouts/new')
+    client.unmount()
+
+    repositories.listForTrainer.mockResolvedValue([trainerSummary])
+    render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByText('Доступно клиенту')).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Запланировать тренировку' })).toHaveAttribute('href', '/workouts/new?client=client-1')
+    expect(screen.getByRole('button', { name: 'Версия для спортсмена' })).toBeVisible()
   })
 
   it('keeps the trainer card after a refresh error and confirms a successful retry', async () => {
@@ -319,12 +343,12 @@ describe('Training summary card states', () => {
 
     render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    expect(await screen.findByText(trainerSummary.trainer.headline)).toBeVisible()
+    expect((await screen.findAllByText('+36%'))[0]).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Обновить' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Не получилось обновить анализ')
     await user.click(screen.getByRole('button', { name: 'Обновить' }))
     expect(await screen.findByText('Анализ уже актуален')).toHaveAttribute('role', 'status')
-    expect(screen.getByText(trainerSummary.trainer.headline)).toBeVisible()
+    expect(screen.getAllByText('+36%')[0]).toBeVisible()
   })
 
   it('shows the trainer body map without exposing the client figure choice', async () => {
@@ -347,8 +371,8 @@ describe('Training summary card states', () => {
     await user.click(screen.getByRole('button', { name: 'Нагрузка' }))
     expect(await screen.findByLabelText('Верх спины. Доля всех выполненных подходов: 67%')).toBeVisible()
     expect(repositories.workouts).toHaveBeenCalledWith(
-      trainerSummary.periodStart,
-      trainerSummary.periodEnd,
+      localDate('2026-06-18'),
+      localDate('2026-10-10'),
       'client-1',
     )
   })

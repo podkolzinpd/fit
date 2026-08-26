@@ -1940,6 +1940,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-progress-card .ai-progress-stats.count-2 { grid-template-columns:repeat(2, minmax(0,1fr)) }
 .client-progress-card .ai-progress-stats.count-3 { grid-template-columns:repeat(3, minmax(0,1fr)) }
 .client-progress-card .ai-progress-stats span { overflow:visible; text-overflow:clip; white-space:normal }
+.progress-story-hero { display:grid; gap:4px; padding:var(--space-4) var(--card-padding); border-block:1px solid var(--ai-divider); background:linear-gradient(145deg,color-mix(in srgb,var(--success-surface) 32%,var(--ai-subtle-surface)),var(--ai-subtle-surface)) }
+.progress-story-hero > span { color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label); text-transform:uppercase }
+.progress-story-hero > strong { color:var(--success-fg); font-size:clamp(34px,10vw,44px); font-variant-numeric:tabular-nums; font-weight:var(--weight-bold); letter-spacing:-.035em; line-height:1 }
+.progress-story-hero h3 { margin:2px 0 0; overflow-wrap:anywhere; font-size:var(--type-section-size); line-height:var(--leading-tight) }
+.progress-story-hero p { margin:0; overflow-wrap:anywhere; color:var(--muted); font-size:var(--type-caption-size); font-variant-numeric:tabular-nums; line-height:var(--leading-snug) }
+.progress-story-hero.empty { min-height:132px; align-content:center; text-align:center }
+.progress-story-hero.empty h3 { font-size:var(--type-body-size) }
 .client-progress-wins { display:grid; gap:10px; margin:var(--space-3) var(--card-padding) 0; padding-bottom:var(--space-3); border-bottom:1px solid var(--ai-divider) }
 .client-progress-wins h3, .client-progress-next h3, .client-progress-insight h3, .client-progress-details-section h3 { margin:0; font-size:var(--type-body-size); line-height:var(--leading-tight) }
 .client-progress-wins > div { display:grid; gap:9px }
@@ -1966,6 +1973,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-progress-goal-story ul { display:grid; gap:6px; margin:2px 0 0; padding:0; list-style:none }
 .client-progress-goal-story li { position:relative; padding-left:16px; font-size:var(--type-caption-size); line-height:var(--leading-body) }
 .client-progress-goal-story li::before { content:'✓'; position:absolute; left:0; color:var(--success-strong); font-weight:var(--weight-bold) }
+.progress-story-plan-evidence { display:grid; gap:2px; margin-top:4px; padding-top:var(--space-2); border-top:1px solid var(--ai-divider) }
+.progress-story-plan-evidence > span { color:var(--muted); font-size:var(--type-micro-size); font-weight:var(--weight-semibold); letter-spacing:0; text-transform:none }
+.progress-story-plan-evidence p { color:var(--fg-strong) }
 .client-progress-goal-story.empty { border-bottom:0; padding:var(--space-3); border:1px solid var(--ai-divider); border-radius:var(--radius-md); background:var(--surface-muted) }
 .client-progress-story-state { margin:var(--space-3) var(--card-padding) 0; color:var(--muted); font-size:var(--type-caption-size) }
 .client-progress-upcoming { display:grid; gap:6px; margin:var(--space-3) var(--card-padding) 0; padding:var(--space-3); border:1px solid var(--accent-surface-border); border-radius:var(--radius-md); background:var(--accent-surface) }
@@ -1973,6 +1983,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-progress-upcoming article { display:flex; min-width:0; align-items:baseline; justify-content:space-between; gap:10px }
 .client-progress-upcoming article strong { min-width:0; overflow-wrap:anywhere; font-size:var(--type-caption-size); line-height:var(--leading-snug) }
 .client-progress-upcoming article span { flex:0 0 auto; color:var(--muted); font-size:var(--type-micro-size); font-variant-numeric:tabular-nums }
+.client-progress-upcoming > .link { width:fit-content; min-height:36px; margin-top:2px; padding:5px 0; font-size:var(--type-caption-size); font-weight:var(--weight-bold) }
+.progress-story-attention { display:flex; align-items:flex-start; gap:9px; margin:var(--space-3) var(--card-padding) 0; padding:10px 11px; border:1px solid var(--ai-attention-border); border-radius:var(--radius-md); background:var(--ai-attention-surface) }
+.progress-story-attention > span { width:20px; height:20px; display:grid; place-items:center; flex:0 0 auto; border-radius:50%; color:#1b140b; background:#eab65d; font-size:12px; font-weight:900 }
+.progress-story-attention > div { min-width:0; display:grid; gap:4px }
+.progress-story-attention strong { color:var(--ai-attention-fg); font-size:var(--type-caption-size); letter-spacing:var(--tracking-label); text-transform:uppercase }
+.progress-story-attention p { margin:0; overflow-wrap:anywhere; color:var(--ai-attention-fg); font-size:var(--type-caption-size); line-height:var(--leading-body) }
 .client-progress-details-toggle { display:flex; justify-content:flex-start; margin:var(--space-2) var(--card-padding) 0 }
 .client-progress-details-toggle .link { min-height:var(--control-height-compact); padding:var(--space-1) 0; color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold) }
 .client-progress-details-section { display:grid; gap:var(--space-2) }
@@ -1980,6 +1996,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-progress-details-section ul { display:grid; gap:var(--space-2); margin:0; padding-left:18px }
 .client-progress-details-section li { color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
 .client-progress-card .ai-progress-goal { margin-top:0; padding-top:var(--space-3) }
+@media (min-width:700px) {
+  .trainer-progress-story-card .progress-story-hero { grid-template-columns:auto minmax(0,1fr); column-gap:var(--space-3); align-items:end }
+  .trainer-progress-story-card .progress-story-hero > span { grid-column:1 / -1 }
+  .trainer-progress-story-card .progress-story-hero > strong { grid-row:2 / span 2; font-size:40px }
+}
 .client-encouragement { display: flex; align-items: flex-start; gap: 9px; margin: var(--space-3) var(--card-padding) 0; padding-top: var(--space-3); border-top: 1px solid var(--client-ai-note-border) }
 .client-encouragement > span { color: var(--client-ai-note-icon) }
 .client-encouragement p { margin: 0; color: var(--client-ai-note-fg); font-size: 12px; line-height: 1.45 }
