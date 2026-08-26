@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allowsAssistantAction, assistantCapabilitiesReply, assistantModelMessages, createClientTurn, createProgramTurn, extractWorkoutTranscript, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, isTurnIdReuse, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse, validateEnabledAssistantTurnResponse } from './index.js'
+import { allowsAssistantAction, assistantCapabilitiesReply, assistantModelMessages, assistantSmallTalkFallback, assistantSmallTalkPrompt, createClientTurn, createProgramTurn, extractWorkoutTranscript, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, isTurnIdReuse, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse, validateEnabledAssistantTurnResponse } from './index.js'
 
 describe('assistant orchestrator contract', () => {
   it('sends one bounded user prompt after the system message', () => {
@@ -39,8 +39,18 @@ describe('assistant orchestrator contract', () => {
     expect(isAssistantCapabilityQuestion('что ты умеешь?')).toBe(true)
     expect(isAssistantCapabilityQuestion('какие функции вообще есть?')).toBe(true)
     expect(isAssistantCapabilityQuestion('привет')).toBe(false)
-    expect(assistantCapabilitiesReply()).toContain('Подготовить запись тренировки')
+    expect(assistantCapabilitiesReply()).toContain('записать тренировку')
     expect(assistantCapabilitiesReply()).not.toContain('программу')
+  })
+
+  it('keeps non-workout chat minimal and strictly action-free', () => {
+    expect(assistantSmallTalkFallback('привет')).toBe('Привет! Чем помочь?')
+    expect(assistantSmallTalkFallback('спасибо')).toBe('Пожалуйста!')
+    expect(assistantSmallTalkFallback('как дела?')).toBe('Я на связи — можем немного пообщаться или записать тренировку.')
+    const prompt = assistantSmallTalkPrompt([{ author: 'user', content: 'привет' }], true)
+    expect(prompt).toContain('одним коротким предложением')
+    expect(prompt).toContain('Всегда возвращай action=null')
+    expect(prompt).toContain('На приветствие отвечай естественным приветствием')
   })
 
   it('recognizes summary requests, periods and informal address deterministically', () => {

@@ -13,7 +13,7 @@ import { parseWorkoutWithLlm } from '../workouts/llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
 import { appendAssistantTranscript, appendWorkoutParse, appendedWorkoutTranscript, assistantWorkoutSaveInput, enqueueWorkoutParse, removeWorkoutParseSource, resolveWorkoutParseSource, updateWorkoutParseMetrics, type WorkoutParseQueue } from './workout-draft'
-import { conversationLocalDate, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveWorkoutAction, mergeAssistantMessages, selectTodayConversation, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
+import { compactAssistantContent, conversationLocalDate, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveWorkoutAction, mergeAssistantMessages, selectTodayConversation, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
 import { AssistantInlineSummaryCard } from './AssistantInlineSummary'
 import { parseAssistantInlineSummary } from './assistant-inline-summary'
 import { assistantActionView } from './assistant-action-view'
@@ -346,10 +346,11 @@ export function AssistantHistoryPage() {
 }
 
 function AssistantMessageContent({ content }: { content: string }) {
-  const lines = content.split('\n').map((line) => line.trim()).filter(Boolean)
+  const displayContent = compactAssistantContent(content)
+  const lines = displayContent.split('\n').map((line) => line.trim()).filter(Boolean)
   const bullets = lines.filter((line) => line.startsWith('• '))
   if (bullets.length) return <div className="assistant-message-copy"><p>{lines.find((line) => !line.startsWith('• '))}</p><ul>{bullets.map((line) => <li key={line}>{line.slice(2)}</li>)}</ul></div>
-  return <p>{content}</p>
+  return <p>{displayContent}</p>
 }
 
 type SummaryPayload = { step: string; clientId?: string; clientName?: string; transcript?: string; candidates?: { id: string; fullName: string }[]; options?: string[]; periodStart?: string; periodEnd?: string; periodLabel?: string; missing?: string[]; goal?: string | null; brief?: string }
