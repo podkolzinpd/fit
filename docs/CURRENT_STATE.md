@@ -5,16 +5,17 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-26
-Проверенный базовый `main`: `71f4f2e` (`fix(yandex): wait for API bootstrap (#593)`)
+Проверенный базовый `main`: `9707356` (`fix(yandex): log safe clients diagnostics (#594)`)
 
 ## Активное изменение
 
-- После merge #593 stage run `32969024828` подтвердил private соединение
-  `fit_api`, миграции, fixture, `/health` и `/ready`. Первый доменный smoke
-  `GET /v1/clients` девять раз вернул `503`; кандидат автоматически откачен на
-  `bbak2bq6iopc8lcpnbe8`, production не пострадал.
-- Активный follow-up добавляет только безопасные category/code diagnostics для
-  ошибки clients query. Ответ API, данные, права и инфраструктура не меняются.
+- После merge #594 stage run `32973211119` снова подтвердил миграции, fixture,
+  `/health` и `/ready`, но `GET /v1/clients` вернул `503`; rollback восстановил
+  `bbak2bq6iopc8lcpnbe8`, production не пострадал. Application stdout не попал
+  в журнал Serverless Container, а PostgreSQL не зарегистрировал SQL `ERROR`.
+- Активный follow-up переносит реальный clients read-model probe в private
+  runner до API deployment. CI получает только safe category/code, а при
+  ошибке кандидат и rollback больше не создаются.
 
 ## Последняя проверенная продуктовая точка
 

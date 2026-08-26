@@ -37,10 +37,12 @@ After the one-time bootstrap, a release is performed only by
    applies all pending forward migrations under an advisory lock. A failure
    stops the release before the API changes. After migrations and fixtures, the
    same private runner opens a separate connection using the exact `fit_api`
-   runtime credential and executes `select 1`. Authentication, permission,
-   network and TLS failures are reduced to a safe category and normalized code
-   in CI; host, user, password and error message are never returned. A failed
-   runtime preflight stops before an API revision is created.
+   runtime credential and executes the real `list_client_overviews` read model
+   inside the synthetic stage actor transaction. This checks connection,
+   actor context, SQL permissions, the deployed schema and Node.js row mapping
+   before the API revision changes. Failures are reduced to a safe category and
+   normalized code in CI; host, user, password, rows and error message are never
+   returned. A failed runtime preflight stops before an API revision is created.
 6. Terraform generates a fresh plan and the workflow deploys the API revision
    through the same REST API. Terraform refreshes state immediately after each
    direct deployment and refuses to continue if either container still differs
@@ -128,7 +130,7 @@ only the password entry into the matching container:
 
 - `fit_owner` is available only to the private migration runner;
 - `fit_api` is available to the API runtime and to the private migration runner
-  solely for the pre-deployment connectivity probe.
+  solely for the pre-deployment domain-readiness probe.
 
 Host, port, database and user are non-secret environment variables. TLS uses
 the committed Yandex Cloud CA bundle and certificate verification. No

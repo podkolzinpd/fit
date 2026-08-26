@@ -5,8 +5,12 @@ import { runner } from 'node-pg-migrate'
 import { YandexIdentityClient } from './auth/yandex-identity.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
+import { inspectRuntimeDomainReadiness } from './db/runtime-domain-readiness.js'
 import { DatabaseStageDatabaseReaderAccessManager } from './db/stage-database-reader-access.js'
-import { DatabaseStageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
+import {
+  DatabaseStageWorkoutFixtureLoader,
+  STAGE_SMOKE_PROFILE_ID,
+} from './db/stage-workout-fixture.js'
 import { DatabasePilotEnroller } from './db/yandex-pilot-enrollment.js'
 import { buildMigrationApp } from './migration-app.js'
 
@@ -95,7 +99,14 @@ const app = buildMigrationApp({
           privateFeaturePool,
         ),
       }),
-  ...(runtimeDatabasePool === undefined ? {} : { runtimeDatabasePool }),
+  ...(runtimeDatabasePool === undefined
+    ? {}
+    : {
+        runtimeDatabaseReadiness: () => inspectRuntimeDomainReadiness(
+          runtimeDatabasePool,
+          STAGE_SMOKE_PROFILE_ID,
+        ),
+      }),
   runMigrations: async () => {
     const migrations = await runner({
       advisoryLockMode: 'fail',
