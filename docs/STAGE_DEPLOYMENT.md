@@ -45,11 +45,13 @@ After the one-time bootstrap, a release is performed only by
    through the same REST API. Terraform refreshes state immediately after each
    direct deployment and refuses to continue if either container still differs
    from the reviewed configuration. Private `/health` and `/ready` checks must
-   pass. The readiness loop uses an explicit 90-second wall-clock deadline, not
-   client retry defaults. A readiness failure rolls back to the exact previous revision. If the
-   plan contains no container change, the active revision is reused. The stage
-   API receives a public invocation binding only through the exact reviewed
-   Terraform resource; the migration runner never receives one.
+   pass. One bootstrap loop gives the gateway `/health` and database `/ready`
+   checks a shared explicit 90-second wall-clock deadline instead of relying on
+   shorter client retry defaults. A bootstrap failure rolls back to the exact
+   previous revision. If the plan contains no container change, the active
+   revision is reused. The stage API receives a public invocation binding only
+   through the exact reviewed Terraform resource; the migration runner never
+   receives one.
 
 The migration runner has no provisioned instances and costs nothing while
 idle. It stays private, has concurrency one and can be invoked only by the

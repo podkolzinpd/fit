@@ -58,12 +58,22 @@ test('keeps enough time for the bounded three-attempt summary contract', () => {
   assert.match(workflow, /^  TF_VAR_api_execution_timeout: '120s'$/m)
 })
 
-test('allows private database connectivity to settle before rolling back the API', () => {
+test('allows the API gateway and database readiness to settle before rollback', () => {
   assert.match(
     workflow,
-    /readiness_deadline=\$\(\( \$\(date \+%s\) \+ 90 \)\)/,
+    /bootstrap_deadline=\$\(\( \$\(date \+%s\) \+ 90 \)\)/,
   )
-  assert.match(workflow, /API readiness did not succeed within 90 seconds/)
+  assert.match(workflow, /api-health-response\.json/)
+  assert.match(workflow, /api-readiness-response\.json/)
+  assert.match(workflow, /API bootstrap did not succeed within 90 seconds/)
+  assert.ok(
+    workflow.indexOf('"${api_url%/}/health"')
+      < workflow.indexOf('"${api_url%/}/ready"'),
+  )
+  assert.doesNotMatch(
+    workflow,
+    /health=\$\(curl[\s\S]*?--retry 8[\s\S]*?\/health"\)/,
+  )
 })
 
 test('probes the fit_api identity privately before changing the API revision', () => {
