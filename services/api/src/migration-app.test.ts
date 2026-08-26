@@ -13,7 +13,6 @@ import {
   StageDatabaseReaderNotReadyError,
   type StageDatabaseReaderAccessManager,
 } from './db/stage-database-reader-access.js'
-import type { DatabaseConnection, DatabasePool } from './db/types.js'
 import { buildMigrationApp } from './migration-app.js'
 
 const apps: ReturnType<typeof buildMigrationApp>[] = []
@@ -54,19 +53,6 @@ describe('migration endpoint', () => {
 })
 
 describe('stage runtime database readiness', () => {
-  function buildRuntimePool(error?: unknown): DatabasePool {
-    const connection: DatabaseConnection = {
-      query: error === undefined
-        ? vi.fn().mockResolvedValue([])
-        : vi.fn().mockRejectedValue(error),
-      release: vi.fn(),
-    }
-    return {
-      connect: vi.fn().mockResolvedValue(connection),
-      end: vi.fn().mockResolvedValue(undefined),
-    }
-  }
-
   it('does not expose the route unless a runtime pool is configured', async () => {
     const app = buildMigrationApp({
       logger: false,
@@ -86,7 +72,7 @@ describe('stage runtime database readiness', () => {
     const app = buildMigrationApp({
       logger: false,
       runMigrations: () => Promise.resolve([]),
-      runtimeDatabasePool: buildRuntimePool(),
+      runtimeDatabaseReadiness: () => Promise.resolve({ ready: true }),
     })
     apps.push(app)
 
@@ -100,14 +86,14 @@ describe('stage runtime database readiness', () => {
   })
 
   it('returns only a safe failure category and code', async () => {
-    const failure = Object.assign(
-      new Error('postgresql://fit_api:secret@private-host'),
-      { code: '28P01' },
-    )
     const app = buildMigrationApp({
       logger: false,
       runMigrations: () => Promise.resolve([]),
-      runtimeDatabasePool: buildRuntimePool(failure),
+      runtimeDatabaseReadiness: () => Promise.resolve({
+        ready: false,
+        category: 'authentication',
+        code: '28P01',
+      }),
     })
     apps.push(app)
 
