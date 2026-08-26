@@ -1087,6 +1087,60 @@ describe('read-only pilot clients endpoint', () => {
     expect(expired.json()).toEqual({ error: 'unauthorized' })
     expect(reservedAuthorizationHeader.statusCode).toBe(401)
   })
+
+  it('logs only safe diagnostics when the clients query fails', async () => {
+    const databaseError = Object.assign(
+      new Error('private client data and database connection details'),
+      { code: '42501' },
+    )
+    const clients = buildClientsReader(databaseError)
+    const app = buildApp({ pilotClientsReader: clients.pilotClientsReader, logger: false })
+    apps.push(app)
+    const warn = vi.spyOn(app.log, 'warn')
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/clients',
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual({ error: 'service_unavailable' })
+    expect(warn).toHaveBeenCalledWith(
+      {
+        databaseErrorCategory: 'permission',
+        databaseErrorCode: '42501',
+      },
+      'Pilot clients query failed',
+    )
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('private client data')
+    expect(response.body).not.toContain('42501')
+  })
+
+  it('does not log an arbitrary clients-query error code', async () => {
+    const databaseError = Object.assign(new Error('private diagnostics'), {
+      code: 'unsafe\nvalue',
+    })
+    const clients = buildClientsReader(databaseError)
+    const app = buildApp({ pilotClientsReader: clients.pilotClientsReader, logger: false })
+    apps.push(app)
+    const warn = vi.spyOn(app.log, 'warn')
+
+    await app.inject({
+      method: 'GET',
+      url: '/v1/clients',
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+    })
+
+    expect(warn).toHaveBeenCalledWith(
+      {
+        databaseErrorCategory: 'unknown',
+        databaseErrorCode: 'unknown',
+      },
+      'Pilot clients query failed',
+    )
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('unsafe')
+  })
 })
 
 describe('read-only pilot connections endpoint', () => {
