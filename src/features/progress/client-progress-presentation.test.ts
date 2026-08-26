@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { ProgressEntry, PublishedTrainingSummary, TrainingProgressFact, Workout } from '../../shared/domain'
+import type { ProgressEntry, PublishedTrainingSummary, TrainingProgressFact, TrainingSummary, Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
-import { clientProgressPresentation } from './client-progress-presentation'
+import { clientProgressPresentation, progressStoryPresentation } from './client-progress-presentation'
 
 function summary(progressFacts: TrainingProgressFact[] = []): PublishedTrainingSummary {
   return {
@@ -31,19 +31,24 @@ function workout(id: string, date: string, confirmed: number, planned = confirme
 }
 
 describe('clientProgressPresentation', () => {
-  it('compares real workouts and confirmed sets with the previous period', () => {
+  it('compares real workouts and one measurable exercise result with the previous period', () => {
+    const currentFirst = workout('current-1', '2026-08-03', 3)
+    const currentSecond = workout('current-2', '2026-08-10', 3)
+    const previous = workout('previous-1', '2026-07-10', 2)
+    currentFirst.exercises[0]!.sets.forEach((set) => { set.fact.weightKg = 24 })
+    currentSecond.exercises[0]!.sets.forEach((set) => { set.fact.weightKg = 25 })
     const result = clientProgressPresentation(summary(), {
-      currentWorkouts: [workout('current-1', '2026-08-03', 3), workout('current-2', '2026-08-10', 3)],
-      previousWorkouts: [workout('previous-1', '2026-07-10', 2)],
+      currentWorkouts: [currentFirst, currentSecond],
+      previousWorkouts: [previous],
     })
 
     expect(result.comparison?.items).toEqual(expect.arrayContaining([
       { value: '+1', label: 'тренировка к предыдущему периоду', tone: 'positive' },
-      { value: '+4', label: 'подтверждённых подходов к предыдущему периоду', tone: 'positive' },
+      { value: '+25%', label: 'Жим гантелей лёжа: рабочий вес 20 → 25 кг', tone: 'positive' },
     ]))
     expect(result.stats.slice(0, 2)).toEqual([
       { value: '2', label: 'тренировки' },
-      { value: '2', label: 'недели с тренировками' },
+      { value: '2/6', label: 'недель с тренировками' },
     ])
   })
 
@@ -65,7 +70,8 @@ describe('clientProgressPresentation', () => {
 
     expect(result.goal).toEqual({
       title: 'Набрать мышечную массу и улучшить грудь',
-      evidence: ['Вес: 80 → 81,5 кг (+1,5 кг)', 'Целевые мышцы получили 2 подтверждённых подхода; в плане было 3.'],
+      evidence: ['Вес: 80 → 81,5 кг (+1,5 кг)'],
+      planEvidence: 'Целевые мышцы получили 2 подтверждённых подхода; в плане было 3.',
     })
   })
 
@@ -81,10 +87,89 @@ describe('clientProgressPresentation', () => {
     })
   })
 
-  it('does not invent comparison, goal movement or next step without data', () => {
+  it('keeps an honest comparison baseline without inventing goal movement or a next step', () => {
     const result = clientProgressPresentation(summary())
-    expect(result.comparison).toBeUndefined()
+    expect(result.comparison).toEqual({
+      title: 'Сравнение периодов',
+      items: [],
+      emptyMessage: 'Текущий период сохранён как отправная точка. Сравнение появится, когда накопится следующий сопоставимый период.',
+    })
     expect(result.goal).toBeUndefined()
     expect(result.nextWorkout).toBeUndefined()
+  })
+
+  it('keeps only evidence-based orientations and removes generic filler', () => {
+    const value = summary([{
+      exerciseName: 'Гиперэкстензия', kind: 'strength', sessionCount: 1, changes: [],
+    }])
+    value.summary.nextSteps = [
+      'Поддерживать регулярность тренировок.',
+      'Собрать данные о количестве повторений в гиперэкстензии.',
+      'На следующей тренировке выполнить 3 подтверждённых подхода.',
+      'Слушать своё тело.',
+    ]
+
+    const result = clientProgressPresentation(value)
+
+    expect(result.orientations).toEqual([
+      'Собрать данные о количестве повторений в гиперэкстензии.',
+      'На следующей тренировке выполнить 3 подтверждённых подхода.',
+    ])
+  })
+
+  it('counts a partially completed workout as completed while keeping only confirmed sets', () => {
+    const result = clientProgressPresentation(summary(), {
+      currentWorkouts: [workout('partial', '2026-08-10', 2, 3)],
+    })
+
+    expect(result.stats[0]).toEqual({ value: '1', label: 'тренировка' })
+    expect(result.goal).toBeUndefined()
+  })
+
+  it('builds the same factual story for the client and trainer roles', () => {
+    const published = summary()
+    const trainer: TrainingSummary = {
+      id: 'summary-1', clientId: published.clientId,
+      periodStart: published.periodStart, periodEnd: published.periodEnd,
+      trainer: { headline: 'Внутренний вывод', progress: [], consistency: 'Ритм', attention: [] },
+      client: published.summary, metrics: published.metrics,
+      generatedAt: published.generatedAt, version: 1, published: true,
+    }
+    const options = {
+      currentWorkouts: [workout('current', '2026-08-10', 2, 3)],
+      previousWorkouts: [workout('previous', '2026-07-10', 1)],
+      today: localDate('2026-08-26'),
+    }
+
+    const client = progressStoryPresentation(published, { ...options, role: 'client' })
+    const trainerView = progressStoryPresentation(trainer, { ...options, role: 'trainer' })
+
+    expect(trainerView.hero).toEqual(client.hero)
+    expect(trainerView.stats).toEqual(client.stats)
+    expect(trainerView.wins).toEqual(client.wins)
+    expect(trainerView.comparison).toEqual(client.comparison)
+  })
+
+  it('keeps old published summaries useful before structured facts were introduced', () => {
+    const legacy = summary()
+    legacy.summary = {
+      headline: 'За последний месяц рабочий вес в жиме вырос на 4%.',
+      achievements: ['Жим лёжа: рабочий вес вырос с 72 до 75 кг.', 'Приседания: объём сохранился на уровне прошлого месяца.'],
+      consistency: 'За четыре недели выполнено 4 тренировки.',
+      encouragement: 'Первый заметный сдвиг уже есть.',
+    }
+
+    const result = clientProgressPresentation(legacy, { currentWorkouts: [] })
+
+    expect(result.hero).toEqual({
+      value: '+4%',
+      exerciseName: 'Жим лёжа',
+      detail: 'Рабочий вес: 72 → 75 кг · +4%',
+    })
+    expect(result.stats).toEqual([
+      { value: '3', label: 'тренировки' },
+      { value: '3/6', label: 'недель с тренировками' },
+      { value: '1', label: 'упражнение улучшено' },
+    ])
   })
 })
