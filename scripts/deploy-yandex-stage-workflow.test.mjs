@@ -61,7 +61,32 @@ test('keeps enough time for the bounded three-attempt summary contract', () => {
 test('allows private database connectivity to settle before rolling back the API', () => {
   assert.match(
     workflow,
-    /ready=\$\(curl[\s\S]*?--retry 44 --retry-max-time 90[\s\S]*?\/ready"\)/,
+    /readiness_deadline=\$\(\( \$\(date \+%s\) \+ 90 \)\)/,
+  )
+  assert.match(workflow, /API readiness did not succeed within 90 seconds/)
+})
+
+test('probes the fit_api identity privately before changing the API revision', () => {
+  const fixtureIndex = workflow.indexOf('- name: Prepare idempotent stage workout fixture')
+  const preflightIndex = workflow.indexOf(
+    '- name: Verify the API runtime database identity before deployment',
+  )
+  const deployIndex = workflow.indexOf('- name: Deploy the API revision')
+
+  assert.ok(preflightIndex > fixtureIndex)
+  assert.ok(deployIndex > preflightIndex)
+  assert.match(workflow, /\/stage\/runtime-database\/readiness/)
+  assert.match(workflow, /Runtime database preflight failed: category=/)
+  assert.match(workflow, /The API revision was not changed/)
+  assert.match(
+    workflow,
+    /-target=yandex_lockbox_secret_iam_member\.migration_api_connection_secret_reader/,
+  )
+  assert.match(containerTerraform, /STAGE_RUNTIME_DATABASE_PREFLIGHT_ENABLED/)
+  assert.match(containerTerraform, /environment_variable = "DATABASE_PASSWORD"/)
+  assert.match(
+    databaseTerraform,
+    /resource "yandex_lockbox_secret_iam_member" "migration_api_connection_secret_reader"/,
   )
 })
 

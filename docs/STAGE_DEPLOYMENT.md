@@ -35,20 +35,28 @@ After the one-time bootstrap, a release is performed only by
    Serverless Containers REST `DeployRevision` request and deploys the
    candidate image only to the private migration runner. `POST /migrate`
    applies all pending forward migrations under an advisory lock. A failure
-   stops the release before the API changes.
+   stops the release before the API changes. After migrations and fixtures, the
+   same private runner opens a separate connection using the exact `fit_api`
+   runtime credential and executes `select 1`. Authentication, permission,
+   network and TLS failures are reduced to a safe category and normalized code
+   in CI; host, user, password and error message are never returned. A failed
+   runtime preflight stops before an API revision is created.
 6. Terraform generates a fresh plan and the workflow deploys the API revision
    through the same REST API. Terraform refreshes state immediately after each
    direct deployment and refuses to continue if either container still differs
    from the reviewed configuration. Private `/health` and `/ready` checks must
-   pass. A readiness failure rolls back to the exact previous revision. If the
+   pass. The readiness loop uses an explicit 90-second wall-clock deadline, not
+   client retry defaults. A readiness failure rolls back to the exact previous revision. If the
    plan contains no container change, the active revision is reused. The stage
    API receives a public invocation binding only through the exact reviewed
    Terraform resource; the migration runner never receives one.
 
 The migration runner has no provisioned instances and costs nothing while
 idle. It stays private, has concurrency one and can be invoked only by the
-OIDC-backed deployment service account. The runtime API service account cannot
-read the migration owner's password.
+OIDC-backed deployment service account. Its runtime service account can read
+the owner credential for migrations and the runtime credential only for the
+private preflight. The API runtime service account cannot read the migration
+owner's password.
 
 Serverless Container revision deployment deliberately uses the documented REST
 API instead of the Terraform provider. Provider `DeployRevision` can return a
@@ -117,7 +125,8 @@ Connection Manager. Terraform reads only their Lockbox metadata and injects
 only the password entry into the matching container:
 
 - `fit_owner` is available only to the private migration runner;
-- `fit_api` is available only to the API runtime.
+- `fit_api` is available to the API runtime and to the private migration runner
+  solely for the pre-deployment connectivity probe.
 
 Host, port, database and user are non-secret environment variables. TLS uses
 the committed Yandex Cloud CA bundle and certificate verification. No

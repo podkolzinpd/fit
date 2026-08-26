@@ -125,16 +125,22 @@ resource "yandex_serverless_container" "migration" {
     command = ["node", "dist/migration-server.js"]
     environment = merge(
       {
-        APP_ENV                          = var.environment
-        LOG_LEVEL                        = "info"
-        MIGRATION_DATABASE_HOST          = yandex_mdb_postgresql_cluster_v2.fit.hosts["primary"].fqdn
-        MIGRATION_DATABASE_PORT          = "6432"
-        MIGRATION_DATABASE_NAME          = yandex_mdb_postgresql_database.fit.name
-        MIGRATION_DATABASE_USER          = yandex_mdb_postgresql_user.owner.name
-        MIGRATION_DATABASE_SSL_ROOT_CERT = "/app/certs/yandex-cloud-ca.pem"
-        YANDEX_PILOT_ENROLLMENT_ENABLED  = var.environment == "stage" && var.yandex_oauth_client_id != null ? "true" : "false"
-        STAGE_WORKOUT_FIXTURES_ENABLED   = var.environment == "stage" ? "true" : "false"
-        STAGE_DATABASE_ACCESS_ENABLED    = var.environment == "stage" ? "true" : "false"
+        APP_ENV                                  = var.environment
+        LOG_LEVEL                                = "info"
+        MIGRATION_DATABASE_HOST                  = yandex_mdb_postgresql_cluster_v2.fit.hosts["primary"].fqdn
+        MIGRATION_DATABASE_PORT                  = "6432"
+        MIGRATION_DATABASE_NAME                  = yandex_mdb_postgresql_database.fit.name
+        MIGRATION_DATABASE_USER                  = yandex_mdb_postgresql_user.owner.name
+        MIGRATION_DATABASE_SSL_ROOT_CERT         = "/app/certs/yandex-cloud-ca.pem"
+        DATABASE_HOST                            = yandex_mdb_postgresql_cluster_v2.fit.hosts["primary"].fqdn
+        DATABASE_PORT                            = "6432"
+        DATABASE_NAME                            = yandex_mdb_postgresql_database.fit.name
+        DATABASE_USER                            = yandex_mdb_postgresql_user.api.name
+        DATABASE_SSL_ROOT_CERT                   = "/app/certs/yandex-cloud-ca.pem"
+        YANDEX_PILOT_ENROLLMENT_ENABLED          = var.environment == "stage" && var.yandex_oauth_client_id != null ? "true" : "false"
+        STAGE_WORKOUT_FIXTURES_ENABLED           = var.environment == "stage" ? "true" : "false"
+        STAGE_DATABASE_ACCESS_ENABLED            = var.environment == "stage" ? "true" : "false"
+        STAGE_RUNTIME_DATABASE_PREFLIGHT_ENABLED = var.environment == "stage" ? "true" : "false"
       },
       var.yandex_oauth_client_id == null ? {} : {
         YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id
@@ -149,6 +155,13 @@ resource "yandex_serverless_container" "migration" {
     environment_variable = "MIGRATION_DATABASE_PASSWORD"
   }
 
+  secrets {
+    id                   = data.yandex_connectionmanager_connection.api.lockbox_secret.id
+    version_id           = data.yandex_connectionmanager_connection.api.lockbox_secret.version
+    key                  = data.yandex_connectionmanager_connection.api.params.postgresql.auth.user_password.password.lockbox_secret_key
+    environment_variable = "DATABASE_PASSWORD"
+  }
+
   log_options {
     folder_id = var.folder_id
     min_level = "INFO"
@@ -158,6 +171,7 @@ resource "yandex_serverless_container" "migration" {
     yandex_container_registry_iam_binding.api_image_puller,
     yandex_iam_service_account_iam_member.deployer_self_use,
     yandex_iam_service_account_iam_member.migration_deployer,
+    yandex_lockbox_secret_iam_member.migration_api_connection_secret_reader,
     yandex_lockbox_secret_iam_member.migration_connection_secret_reader,
   ]
 }
