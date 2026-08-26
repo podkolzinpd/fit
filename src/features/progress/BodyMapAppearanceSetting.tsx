@@ -13,13 +13,13 @@ const LABELS: Record<BodyMapDisplayMode, string> = {
 export function BodyMapAppearanceSetting({ viewerUserId, role, clientId, gender }: {
   viewerUserId: string
   role: AccountRole
-  clientId: string
+  clientId?: string
   gender: Gender | null
 }) {
   const mode = useBodyMapDisplayMode(viewerUserId, role, clientId, gender)
-  const options: readonly BodyMapDisplayMode[] = gender ? ['real', 'scheme'] : ['scheme']
+  const options: readonly BodyMapDisplayMode[] = role === 'trainer' || gender ? ['real', 'scheme'] : ['scheme']
   const hint = role === 'trainer'
-    ? 'Выбор действует только для этого спортсмена'
+    ? 'Ваш выбор для карт прогресса спортсменов'
     : 'Личный выбор — тренер его не увидит'
   return <section className="body-map-appearance-setting" aria-label="Вид карты тела">
     <div>
@@ -38,6 +38,6 @@ export function BodyMapAppearanceSetting({ viewerUserId, role, clientId, gender 
         {LABELS[option]}
       </button>)}
     </div>
-    {!gender && <small>Для реальной фигуры укажите пол спортсмена</small>}
+    {!gender && role === 'client' && <small>Для реальной фигуры укажите пол спортсмена</small>}
   </section>
 }

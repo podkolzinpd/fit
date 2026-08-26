@@ -36,27 +36,27 @@ describe('BodyMapAppearanceSetting', () => {
     expect(window.localStorage.getItem('fit.bodyMapDisplay.client.client-1.client-1')).toBe('scheme')
   })
 
-  it('renders a trainer choice scoped to the current client', async () => {
+  it('renders one trainer account choice for progress maps', async () => {
     const user = userEvent.setup()
     render(<BodyMapAppearanceSetting
       viewerUserId="trainer-1"
       role="trainer"
-      clientId="client-2"
-      gender="male"
+      gender={null}
     />)
 
     expect(screen.getByText('Фигура на карте тела')).toBeInTheDocument()
-    expect(screen.getByText('Выбор действует только для этого спортсмена')).toBeInTheDocument()
+    expect(screen.getByText('Ваш выбор для карт прогресса спортсменов')).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Реальная фигура' })).toHaveAttribute('aria-checked', 'true')
 
     await user.click(screen.getByRole('radio', { name: 'Схема' }))
 
-    expect(window.localStorage.getItem('fit.bodyMapDisplay.trainer.trainer-1.client-2')).toBe('scheme')
+    expect(window.localStorage.getItem('fit.bodyMapDisplay.trainer.trainer-1.account')).toBe('scheme')
   })
 
   it('uses only the scheme when the client gender is unknown', () => {
     render(<BodyMapAppearanceSetting
-      viewerUserId="trainer-1"
-      role="trainer"
+      viewerUserId="client-3"
+      role="client"
       clientId="client-3"
       gender={null}
     />)
