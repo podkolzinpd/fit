@@ -3,7 +3,7 @@ import type { ExerciseSnapshot } from '../../shared/domain'
 
 export type WorkoutParseResponse = {
   items: Array<{ sourceText: string; exerciseRef: string; confidence: number; sets: Array<{ weightKg?: number; reps?: number; durationMin?: number; distanceKm?: number }> }>
-  unmatched: Array<{ sourceText: string; reason: string; suggestedExerciseRefs: string[] }>
+  unmatched: Array<{ sourceText: string; reason: string; suggestedExerciseRefs: string[]; sets?: Array<{ weightKg?: number; reps?: number; durationMin?: number; distanceKm?: number }> }>
 }
 
 const parserUrl = 'https://functions.yandexcloud.net/d4eicdja8le8ivq53u9f'

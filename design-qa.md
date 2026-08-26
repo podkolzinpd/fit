@@ -1,27 +1,27 @@
-# Assistant mobile design QA
+# Assistant workout card — Product Design QA
 
-## Target
+## Target and adaptation
 
-- Product Design workout and progress direction: `/Users/a-goltsov/.codex/generated_images/01a038b4-06ef-70e0-8499-41d823e9f2a6/exec-d2dd26b5-6d1f-41df-9cc8-9c1ac24e8188.png`
-- Product Design client voice extraction direction: `/Users/a-goltsov/.codex/generated_images/01a038b4-06ef-70e0-8499-41d823e9f2a6/exec-266c6b6f-a7ae-4e2d-942a-779f3cc126d4.png`
-- Product Design program direction: `/Users/a-goltsov/.codex/generated_images/01a038b4-06ef-70e0-8499-41d823e9f2a6/exec-a25c1161-ef91-41df-ab2f-11c3a7cf1ace.png`
+- Source: `/Users/a-goltsov/.codex/generated_images/01a038b4-06ef-70e0-8499-41d823e9f2a6/exec-d2dd26b5-6d1f-41df-9cc8-9c1ac24e8188.png`.
+- The source shows a dedicated workout editor. The implemented target is its in-chat mobile adaptation requested by the product owner: the same structured rows, date/time, editable metrics, low-confidence choices and final confirmation live in the active context card instead of navigating away.
 
-## Implementation captures
+## Verified implementation
 
-WebKit 26.5, light theme, 390 px wide:
+- Production surface: `src/features/assistant/AssistantWorkoutDraftSurface.tsx`.
+- The capture used the exported production surface rendered by the assistant flow, not a hand-written DOM copy. The temporary capture route was removed after QA.
+- WebKit 26.5, iPhone 13 profile, 390 × 844 CSS px: `/private/tmp/fit-assistant-workout-actual-3.png`.
+- Side-by-side source and implementation input: `/private/tmp/fit-assistant-comparison.png`.
 
-- workout collection: `/private/tmp/fit-assistant-workout.png` at 390 × 844
-- parsed workout with exercise choice: `/private/tmp/fit-assistant-parsed.png` at 390 × 844
-- extracted client draft: `/private/tmp/fit-assistant-client.png` at 390 × 844
-- compact program draft: `/private/tmp/fit-assistant-program.png` at 390 × 844
-- open keyboard state: `/private/tmp/fit-assistant-keyboard.png` at 390 × 508
+## Findings
 
-The capture harness used the production component DOM classes and `src/styles.css`; it was removed after capture.
+- Resolved: the previous implementation showed a raw transcript and an intermediate parsing CTA instead of the designed structured editor.
+- Resolved: date and local fill time are visible and editable in the card.
+- Resolved: every cumulative dictation tail appends a new structured exercise without replacing earlier rows.
+- Resolved: sets, reps and weight are editable in place; rows can be removed.
+- Resolved: an ambiguous `жим лёжа` keeps its parsed metrics while asking the trainer to choose barbell or dumbbells.
+- Resolved: the full two-exercise ambiguity state fits the 390 × 844 WebKit viewport without horizontal overflow; the final action remains visible.
+- Intentional mobile-chat adaptation: drag handles and a separate manual-add row from the full-page source are omitted because ordering is append-only in chat and the persistent chat composer is the add control.
 
-## Findings history
-
-1. Initial implementation still rendered generic action previews, a promotional workout card, and a fully expanded program form. The iOS keyboard left the full-height assistant grid active.
-2. First WebKit pass confirmed the new structured cards and fixed keyboard layout, but found that the sticky composer covered long workout output and the first program session opened as a wall of fields.
-3. Final pass uses a non-overlay composer, collapsed program sessions, structured workout rows, inline ambiguity choices, compact client fields, and a dedicated keyboard layout. No horizontal overflow or clipped controls were observed in the captured states.
+No open P0, P1 or P2 visual or interaction findings.
 
 final result: passed
