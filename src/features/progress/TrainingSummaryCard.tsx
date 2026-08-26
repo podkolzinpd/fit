@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { goalsRepository } from '../../data/repositories/goals.repository'
+import { progressRepository } from '../../data/repositories/progress.repository'
 import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
 import { workoutsRepository } from '../../data/repositories/workouts.repository'
 import type {
@@ -14,10 +15,9 @@ import type {
   TrainingProgressFact,
 } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
-import { formatLocalDate, normalizeTimeZone, todayInTimeZone, type LocalDate } from '../../shared/local-date'
+import { addDays, daysBetween, formatLocalDate, normalizeTimeZone, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
-import { ClientProgressGoalSection } from './ClientProgressGoalSection'
 import { TrainingBodyProgressMap } from './ClientBodyProgressMap'
 import { clientProgressPresentation } from './client-progress-presentation'
 import { progressFactChangeLabel } from './progress-facts'
@@ -380,11 +380,27 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
     if (!availablePeriods.includes(period)) setPeriod('1m')
   }, [availablePeriods, period])
   const summary = summaryPeriodMatch(query.data ?? [], period, today)
-  const workoutRange = summaryPeriodRange(period, today)
+  const workoutRange = summary
+    ? { start: summary.periodStart, end: summary.periodEnd }
+    : summaryPeriodRange(period, today)
+  const periodDays = summary ? daysBetween(summary.periodStart, summary.periodEnd) + 1 : 0
+  const previousRange = summary ? {
+    start: addDays(summary.periodStart, -periodDays),
+    end: addDays(summary.periodStart, -1),
+  } : null
+  const storyRange = {
+    start: previousRange?.start ?? workoutRange.start,
+    end: addDays(today, 45),
+  }
   const workouts = useQuery({
-    queryKey: ['client-progress-body-map-workouts', clientId, workoutRange.start, workoutRange.end],
-    queryFn: () => workoutsRepository.list(workoutRange.start, workoutRange.end, clientId),
-    enabled: ready,
+    queryKey: ['client-progress-story-workouts', clientId, storyRange.start, storyRange.end],
+    queryFn: () => workoutsRepository.list(storyRange.start, storyRange.end, clientId),
+    enabled: ready && Boolean(summary),
+  })
+  const measurements = useQuery({
+    queryKey: ['client-progress-story-measurements', clientId],
+    queryFn: () => progressRepository.list(clientId),
+    enabled: ready && Boolean(summary),
   })
   const goal = useQuery({
     queryKey: ['client-goal', clientId],
@@ -408,6 +424,12 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
     setGenerationMessage(null)
     setPeriod(nextPeriod)
   }
+  const currentWorkouts = workouts.data?.filter((workout) =>
+    workout.workoutDate >= workoutRange.start && workout.workoutDate <= workoutRange.end)
+  const previousWorkouts = previousRange ? workouts.data?.filter((workout) =>
+    workout.workoutDate >= previousRange.start && workout.workoutDate <= previousRange.end) : undefined
+  const upcomingWorkouts = workouts.data?.filter((workout) =>
+    workout.workoutDate >= today && workout.workoutDate <= storyRange.end)
 
   return <section className="ai-progress-card client-progress-card" aria-label="Прогресс тренировок" aria-busy={loading}>
     <SummaryHeader client />
@@ -426,7 +448,10 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
           goalLoading={goal.isLoading}
           goalError={goal.error}
           onGoalRetry={() => void goal.refetch()}
-          workouts={workouts.data ?? []}
+          currentWorkouts={currentWorkouts}
+          previousWorkouts={previousWorkouts}
+          upcomingWorkouts={upcomingWorkouts}
+          measurements={measurements.data ?? []}
           workoutsLoading={workouts.isLoading}
           workoutsError={workouts.error}
           onWorkoutsRetry={() => void workouts.refetch()}
@@ -456,7 +481,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
   </section>
 }
 
-function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalLoading, goalError, onGoalRetry, workouts, workoutsLoading, workoutsError, onWorkoutsRetry }: {
+function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalLoading, goalError, onGoalRetry, currentWorkouts, previousWorkouts, upcomingWorkouts, measurements, workoutsLoading, workoutsError, onWorkoutsRetry }: {
   summary: PublishedTrainingSummary
   goal: ClientGoal | null | undefined
   profileGoal?: string | null
@@ -465,17 +490,28 @@ function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalL
   goalLoading: boolean
   goalError: Error | null
   onGoalRetry: () => void
-  workouts: Awaited<ReturnType<typeof workoutsRepository.list>>
+  currentWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
+  previousWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
+  upcomingWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
+  measurements: Awaited<ReturnType<typeof progressRepository.list>>
   workoutsLoading: boolean
   workoutsError: Error | null
   onWorkoutsRetry: () => void
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
-  const presentation = clientProgressPresentation(summary)
+  const presentation = clientProgressPresentation(summary, {
+    currentWorkouts,
+    previousWorkouts,
+    upcomingWorkouts,
+    measurements,
+    goal,
+    profileGoal,
+    today,
+  })
   return <>
     <TrainingBodyProgressMap
       summary={summary}
-      workouts={workouts}
+      workouts={currentWorkouts ?? []}
       clientId={summary.clientId}
       clientGender={gender}
       loadLoading={workoutsLoading}
@@ -485,27 +521,33 @@ function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalL
     <div className={`ai-progress-stats count-${presentation.stats.length}`}>
       {presentation.stats.map((stat) => <div key={stat.label}><strong>{stat.value}</strong><span>{stat.label}</span></div>)}
     </div>
-    {presentation.wins.length > 0 && <section className="client-progress-wins" aria-labelledby="client-progress-wins-title">
-      <h3 id="client-progress-wins-title">Твои достижения</h3>
-      <div>{presentation.wins.map((win) => <article key={win.title}><span aria-hidden="true" /><div><strong>{win.title}</strong><p>{win.detail}</p></div></article>)}</div>
+    {presentation.comparison && <section className="client-progress-comparison" aria-labelledby="client-progress-comparison-title">
+      <h3 id="client-progress-comparison-title">{presentation.comparison.title}</h3>
+      <div>{presentation.comparison.items.map((item) => <article key={item.label} className={item.tone}>
+        <strong>{item.value}</strong><span>{item.label}</span>
+      </article>)}</div>
     </section>}
-    <ClientProgressGoalSection
-      goal={goal}
-      profileGoal={profileGoal}
-      today={today}
-      loading={goalLoading}
-      error={goalError}
-      alignment={summary.summary.goalAlignment}
-      onRetry={onGoalRetry}
-    />
-    {presentation.nextStep && <section className="client-progress-next" aria-labelledby="client-progress-next-title">
-      <span>Следующий ориентир</span>
-      <h3 id="client-progress-next-title">На следующей тренировке</h3>
-      <p>{formatSummaryText(presentation.nextStep)}</p>
+    {goalLoading && <section className="client-progress-story-state" role="status">Проверяем данные цели…</section>}
+    {goalError && <section className="client-progress-story-state" role="alert">Не удалось загрузить цель. <button type="button" className="link" onClick={onGoalRetry}>Повторить</button></section>}
+    {!goalLoading && !goalError && presentation.goal && <section className="client-progress-goal-story" aria-labelledby="client-progress-goal-story-title">
+      <span>Для твоей цели</span>
+      <h3 id="client-progress-goal-story-title">{presentation.goal.title}</h3>
+      {presentation.goal.evidence.length > 0
+        ? <ul>{presentation.goal.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
+        : <p>Цель сохранена. Первое измеримое изменение появится здесь после сопоставимых результатов.</p>}
     </section>}
-    {presentation.insight && <section className="client-progress-insight" aria-labelledby="client-progress-insight-title">
-      <h3 id="client-progress-insight-title">Главное сейчас</h3>
-      <p>{presentation.insight}</p>
+    {!goalLoading && !goalError && !presentation.goal && <section className="client-progress-goal-story empty" aria-labelledby="client-progress-goal-story-title">
+      <span>Для твоей цели</span><h3 id="client-progress-goal-story-title">Добавь свой ориентир</h3>
+      <p>Тогда прогресс будет связан с тем результатом, ради которого ты тренируешься.</p>
+      <a className="link" href="/me/edit">Добавить цель</a>
+    </section>}
+    {presentation.nextWorkout && <section className="client-progress-upcoming" aria-labelledby="client-progress-upcoming-title">
+      <span>Ближайший план</span>
+      <h3 id="client-progress-upcoming-title">{presentation.nextWorkout.date}</h3>
+      {presentation.nextWorkout.title !== 'Ближайшая тренировка' && <p>{presentation.nextWorkout.title}</p>}
+      <div>{presentation.nextWorkout.exercises.map((exercise) => <article key={exercise.name}>
+        <strong>{exercise.name}</strong>{exercise.plan && <span>{exercise.plan}</span>}
+      </article>)}</div>
     </section>}
     <div className="client-progress-details-toggle">
       <button type="button" className="link" onClick={() => setDetailsOpen(true)}>Подробный анализ</button>
