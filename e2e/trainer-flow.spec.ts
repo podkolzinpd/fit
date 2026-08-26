@@ -783,6 +783,53 @@ test('schedule shows week strip and hour grid with day/week navigation', async (
   await expect(page.getByRole('button', { name: 'Сегодня' })).toBeDisabled()
 })
 
+test('расписание: тренировка без времени остаётся видимой после фокуса часовой сетки', async ({ page }, testInfo) => {
+  const clientName = `Без времени ${testInfo.workerIndex}-${Date.now()}`
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByLabel('Имя').fill(clientName)
+  await fillNewClientProfile(page)
+  await page.getByLabel('Начальный вес, кг').fill('80')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: clientName })).toBeVisible()
+
+  await page.goto('/schedule')
+  await page.locator('a[href^="/workouts/new?date="]').click()
+  await selectClient(page, clientName)
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
+  await page.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await page.getByRole('button', { name: /Присед со штангой/ }).first().click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+
+  await page.goto('/schedule')
+  const untimed = page.locator('.schedule-untimed-section')
+  await expect(untimed).toBeVisible()
+  await expect(untimed.getByText('Без времени', { exact: true })).toBeVisible()
+  await expect(untimed).toContainText(clientName)
+  await expect(untimed).toContainText('Присед со штангой')
+  await page.locator('.day-grid-scroll').evaluate((scroller) => { scroller.scrollTop = 480 })
+  const placement = await untimed.evaluate((section) => {
+    const scroller = document.querySelector<HTMLElement>('.day-grid-scroll')
+    if (!scroller) return null
+    const sectionRect = section.getBoundingClientRect()
+    const scrollerRect = scroller.getBoundingClientRect()
+    return {
+      beforeScroller: sectionRect.bottom <= scrollerRect.top + 1,
+      gridWasScrolled: scroller.scrollTop > 0,
+    }
+  })
+  expect(placement).toEqual({ beforeScroller: true, gridWasScrolled: true })
+})
+
 test('расписание: создание тренировки из расписания с датой выбранного дня', async ({ page }, testInfo) => {
   const clientName = `Расписание ${testInfo.workerIndex}-${Date.now()}`
   await page.goto('/auth')
