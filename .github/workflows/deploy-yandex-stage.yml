@@ -285,11 +285,15 @@ jobs:
           readiness_status=not_checked
           while true; do
             : > api-health-response.json
+            : > api-health-headers.txt
             if health_status=$(curl --silent --show-error --max-time 12 \
+              --dump-header api-health-headers.txt \
               --output api-health-response.json --write-out '%{http_code}' \
               --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/health"); then
               if test "$health_status" = 200 \
-                && jq -e '.status == "ok"' api-health-response.json >/dev/null 2>&1; then
+                && jq -e --arg release_id "$API_IMAGE_TAG" \
+                  '.status == "ok" and .releaseId == $release_id' \
+                  api-health-response.json >/dev/null 2>&1; then
                 : > api-readiness-response.json
                 readiness_status=000
                 if readiness_status=$(curl --silent --show-error --max-time 12 \
@@ -304,7 +308,8 @@ jobs:
             fi
             now=$(date +%s)
             if test "$now" -ge "$bootstrap_deadline"; then
-              echo "API bootstrap did not succeed within 90 seconds; health HTTP status: $health_status; readiness HTTP status: $readiness_status." >&2
+              observed_release=$(jq -r '.releaseId // "missing"' api-health-response.json 2>/dev/null || echo invalid)
+              echo "API bootstrap did not reach release $API_IMAGE_TAG within 90 seconds; observed release: $observed_release; health HTTP status: $health_status; readiness HTTP status: $readiness_status." >&2
               exit 1
             fi
             remaining=$(( bootstrap_deadline - now ))
@@ -316,10 +321,19 @@ jobs:
           done
           fixture_token=$(jq -er '.session.token' stage-workout-fixture-response.json)
           client_fixture_token=$(jq -er '.clientSession.token' stage-workout-fixture-response.json)
-          clients=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
+          clients_status=$(curl --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
+            --output clients-response.json --dump-header clients-response-headers.txt \
+            --write-out '%{http_code}' \
             --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Pilot-Session: $fixture_token" \
             "${api_url%/}/v1/clients")
+          if test "$clients_status" != 200; then
+            error_category=$(awk 'tolower($1) == "x-fit-error-category:" {gsub("\\r", "", $2); value=$2} END {print value}' clients-response-headers.txt)
+            error_code=$(awk 'tolower($1) == "x-fit-error-code:" {gsub("\\r", "", $2); value=$2} END {print value}' clients-response-headers.txt)
+            echo "First clients smoke failed: HTTP $clients_status; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}." >&2
+            exit 1
+          fi
+          clients=$(cat clients-response.json)
           jq -e '
             .accessMode == "read_only"
             and (.clients | any(

@@ -33,6 +33,7 @@ resource "yandex_serverless_container" "api" {
     environment = merge(
       {
         APP_ENV                = var.environment
+        FIT_RELEASE_ID         = var.api_image_tag
         LOG_LEVEL              = "info"
         DATABASE_HOST          = yandex_mdb_postgresql_cluster_v2.fit.hosts["primary"].fqdn
         DATABASE_PORT          = "6432"

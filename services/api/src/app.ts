@@ -96,6 +96,7 @@ interface BuildAppOptions {
   legacyWorkoutParser?: LegacyWorkoutParser
   legacySummaryHandler?: LegacySummaryHandler
   logger?: boolean
+  releaseId?: string
 }
 
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
@@ -127,7 +128,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
   })
 
-  app.get('/health', () => ({ status: 'ok' }))
+  app.get('/health', () => ({
+    status: 'ok',
+    ...(options.releaseId === undefined ? {} : { releaseId: options.releaseId }),
+  }))
 
   app.post('/v1/legacy/parse-workout', async (request, reply) => {
     const actorToken = request.headers['x-supabase-authorization']
@@ -453,7 +457,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         },
         'Pilot clients query failed',
       )
-      return reply.code(503).send({ error: 'service_unavailable' })
+      return reply
+        .header('x-fit-error-category', diagnostics.category)
+        .header('x-fit-error-code', diagnostics.code)
+        .code(503)
+        .send({ error: 'service_unavailable' })
     }
   })
 

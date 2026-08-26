@@ -132,6 +132,9 @@ const legacySummaryHandler =
 const app = buildApp(
   {
     allowedOrigins: parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS),
+    ...(process.env.FIT_RELEASE_ID === undefined
+      ? {}
+      : { releaseId: process.env.FIT_RELEASE_ID }),
     ...(databasePool === undefined ? {} : { databasePool }),
     ...(identityProvider === undefined ? {} : { identityProvider }),
     ...(oauthCodeProvider === undefined ? {} : { oauthCodeProvider }),

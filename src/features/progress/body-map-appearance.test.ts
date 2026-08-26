@@ -33,11 +33,12 @@ describe('body map display', () => {
     expect(resolveBodyFigureVariant('scheme', 'female')).toBe('neutral')
   })
 
-  it('keeps trainer choices separate for every client', () => {
+  it('uses one trainer account choice across clients', () => {
     setBodyMapDisplayMode('trainer-1', 'trainer', 'client-1', 'scheme')
 
     expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-1', 'female')).toBe('scheme')
-    expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-2', 'male')).toBe('real')
+    expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-2', 'male')).toBe('scheme')
+    expect(storage.get('fit.bodyMapDisplay.trainer.trainer-1.account')).toBe('scheme')
   })
 
   it('keeps trainer and client choices private for the same subject', () => {
@@ -54,5 +55,10 @@ describe('body map display', () => {
 
     expect(getBodyMapDisplayMode('client-1', 'client', 'client-1', 'female')).toBe('scheme')
     expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-1', 'male')).toBe('real')
+  })
+
+  it('defaults the trainer account to real figures before a preference is saved', () => {
+    expect(getBodyMapDisplayMode('trainer-1', 'trainer', undefined, null)).toBe('real')
+    expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-1', 'female')).toBe('real')
   })
 })
