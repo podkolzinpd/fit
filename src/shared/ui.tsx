@@ -81,12 +81,12 @@ export function Field({ label, error, children }: PropsWithChildren<{ label: str
   return <label className="field"><span>{label}</span>{children}{error && <small className="error">{error}</small>}</label>
 }
 
-export function Switch({ label, checked, onChange }: {
-  label: string; checked: boolean; onChange: (checked: boolean) => void
+export function Switch({ label, checked, onChange, disabled }: {
+  label: string; checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean
 }) {
   return <label className="switch-row">
     <span className="switch-label">{label}</span>
-    <input className="switch-input" role="switch" type="checkbox" checked={checked}
+    <input className="switch-input" role="switch" type="checkbox" checked={checked} disabled={disabled}
       onChange={(event) => onChange(event.target.checked)} />
     <span className="switch-control" aria-hidden="true" />
   </label>

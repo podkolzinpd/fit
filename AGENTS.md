@@ -78,6 +78,39 @@
 - FK обязательны для aggregate children; snapshot/optional links могут быть логическими UUID.
 - Архивные записи не участвуют в новых операциях, но история остаётся читаемой.
 
+## Push-уведомления пользователям
+
+Архитектура (введена в `20260826190000_push_notifications.sql`, первый сценарий —
+`workout_reminder`): **producer → dispatcher → sender**. Producer — SQL-функция
+per сценарий в `private`, кладёт строки в `private.push_notifications_outbox`.
+Dispatcher (`private.dispatch_push_notifications`/`finalize_push_notifications`,
+общие, не трогать под новый сценарий) шлёт пачку в Cloud Function
+`fit-send-push-notifications` (`services/api/src/push-notifications/`,
+деплой — `.github/workflows/deploy-yandex-push-function.yml`). Sender шифрует
+и реально отправляет через Web Push API (`web-push`) — это единственное
+место, куда идёт настоящий сетевой вызов; шифрование ECDH/VAPID не делается
+в SQL.
+
+Новый сценарий уведомления — это:
+1. Одна SQL-функция-producer в новой миграции (`private.enqueue_<scenario>()`),
+   которая инсертит в `private.push_notifications_outbox` с уникальным `kind`
+   и dedupe-ключом `(kind, user_id, data)`. Обязательно фильтровать по
+   `exists (select 1 from public.push_subscriptions ...)` и по
+   `notification_preferences` (opt-out модель — отсутствие строки = включено).
+2. `select cron.schedule(...)` под нужную частоту опроса — не переиспользовать
+   расписание другого сценария, если триггер другой природы.
+3. Ничего не менять в dispatcher/finalize/Cloud Function — они уже общие для
+   всех `kind`.
+4. Если сценарий — новый текст пуша, добавить его прямо в producer (`title`/`body`);
+   отдельного реестра шаблонов нет, простая конкатенация в SQL.
+5. Тесты — pgTAP на producer (idempotency, opt-out, отсутствие подписки) по
+   образцу `0061_push_notifications.test.sql`.
+
+MVP-ограничение: одна активная push-подписка на пользователя
+(`push_subscriptions.user_id` — primary key, не отдельная таблица per-device).
+Мульти-device — сознательно не в первой итерации, не расширять без отдельного
+решения.
+
 ## Качество и безопасность
 
 - Не используйте `select('*')`, `any`, небезопасные casts и проглоченные ошибки.
