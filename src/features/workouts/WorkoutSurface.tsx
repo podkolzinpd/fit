@@ -87,7 +87,7 @@ export function WorkoutSetRow({ state, className = '', children }: PropsWithChil
 }
 
 const ACTION_VARIANT_CLASSES: Record<WorkoutActionVariant, string> = {
-  primary: '',
+  primary: 'primary',
   secondary: 'secondary',
   tertiary: 'link',
   destructive: 'secondary danger',

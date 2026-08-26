@@ -61,7 +61,7 @@ export function AuthPage() {
       <Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>
       <Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required /></Field>
       {error && <p className="error" role="alert">{error}</p>}
-      <button disabled={busy}>{busy ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}</button>
+      <button className="primary" disabled={busy}>{busy ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}</button>
     </form>
     <button className="secondary auth-google" onClick={() => void authRepository.signInWithGoogle(mode === 'register' ? role : 'trainer')}>Продолжить с Google</button>
     {yandexPilotConfig && <button className="secondary auth-yandex" disabled={yandexBusy} onClick={() => {
@@ -287,7 +287,7 @@ export function ForgotPasswordPage() {
     try { await authRepository.resetPassword(String(new FormData(event.currentTarget).get('email'))); setMessage('Ссылка отправлена, если такой аккаунт существует.') }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Ошибка') }
   }
-  return <main className="auth-screen auth-entry"><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">ДОСТУП К АККАУНТУ</p><h1>Восстановление пароля</h1><p className="muted">Отправим ссылку на ваш email.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>{error && <p className="error">{error}</p>}{message && <p className="success">{message}</p>}<button>Отправить ссылку</button></form><Link className="auth-back-link" to="/auth">Вернуться ко входу</Link></main>
+  return <main className="auth-screen auth-entry"><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">ДОСТУП К АККАУНТУ</p><h1>Восстановление пароля</h1><p className="muted">Отправим ссылку на ваш email.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>{error && <p className="error">{error}</p>}{message && <p className="success">{message}</p>}<button className="primary">Отправить ссылку</button></form><Link className="auth-back-link" to="/auth">Вернуться ко входу</Link></main>
 }
 
 export function ResetPasswordPage() {
@@ -297,7 +297,7 @@ export function ResetPasswordPage() {
     try { await authRepository.updatePassword(String(new FormData(event.currentTarget).get('password'))); navigate('/') }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Ошибка') }
   }
-  return <main className="auth-screen auth-entry"><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">БЕЗОПАСНОСТЬ</p><h1>Новый пароль</h1><p className="muted">Выберите новый пароль для входа в FIT.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete="new-password" required /></Field>{error && <p className="error">{error}</p>}<button>Сохранить</button></form></main>
+  return <main className="auth-screen auth-entry"><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">БЕЗОПАСНОСТЬ</p><h1>Новый пароль</h1><p className="muted">Выберите новый пароль для входа в FIT.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete="new-password" required /></Field>{error && <p className="error">{error}</p>}<button className="primary">Сохранить</button></form></main>
 }
 
 export function AuthCallbackPage() {

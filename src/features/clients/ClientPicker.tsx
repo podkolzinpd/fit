@@ -104,7 +104,7 @@ export function ClientPicker({ userId, clients, selectedId, onChange, label = '�
           <p>Укажите имя — остальные данные можно заполнить позже.</p>
           <label className="field">Имя клиента<input aria-label="Имя нового клиента" value={name} onChange={(event) => setName(event.target.value)} placeholder="Например, Анна Смирнова" autoFocus /></label>
           {createError && <p className="error">{createError}</p>}
-          <button type="button" disabled={name.trim().length < 2 || creatingClient} onClick={() => void createClient()}>{creatingClient ? 'Создаю…' : 'Создать и выбрать'}</button>
+          <button type="button" className="primary" disabled={name.trim().length < 2 || creatingClient} onClick={() => void createClient()}>{creatingClient ? 'Создаю…' : 'Создать и выбрать'}</button>
         </div> : <>
           <input className="picker-search" aria-label="Поиск клиента" placeholder="Имя клиента" value={search} onChange={(event) => setSearch(event.target.value)} autoFocus />
           {loading && <p className="state">Загружаем клиентов…</p>}

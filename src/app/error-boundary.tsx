@@ -32,7 +32,7 @@ export class AppErrorBoundary extends Component<Props, State> {
       <p>Ваши данные сохранены. Попробуйте открыть экран ещё раз или обновите приложение.</p>
       <div className="app-render-error-actions">
         <button type="button" className="secondary" onClick={this.retry}>Попробовать снова</button>
-        <button type="button" onClick={this.reload}>Обновить приложение</button>
+        <button type="button" className="secondary" onClick={this.reload}>Обновить приложение</button>
       </div>
     </main>
   }

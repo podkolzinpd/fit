@@ -53,7 +53,7 @@ export function TrainerFirstRun({ creating, error, onCreate }: {
       <label htmlFor="first-client-name">Имя клиента</label>
       <div>
         <input id="first-client-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Например, Антон" autoComplete="off" />
-        <button disabled={creating}>{creating ? 'Добавляем…' : 'Добавить первого клиента'}</button>
+        <button className="primary" disabled={creating}>{creating ? 'Добавляем…' : 'Добавить первого клиента'}</button>
       </div>
       {(validation || error) && <p className="error" role="alert">{validation ?? error?.message}</p>}
     </form>

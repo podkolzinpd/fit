@@ -53,7 +53,7 @@ function GoalCreate({ clientId, initialTitle, onCreated }: {
     </Field>
     <Field label="Дата достижения"><input type="date" {...form.register('targetDate')} /></Field>
     {mutation.error && <p className="error">{mutation.error.message}</p>}
-    <div className="actions"><button disabled={mutation.isPending}>Создать цель</button></div>
+    <div className="actions"><button className="primary" disabled={mutation.isPending}>Создать цель</button></div>
   </form>
 }
 
@@ -113,7 +113,7 @@ function GoalEditForm({ goal, onSaved, onCancel }: { goal: ClientGoal; onSaved: 
     </Field>
     <Field label="Дата достижения"><input type="date" {...form.register('targetDate')} /></Field>
     {mutation.error && <p className="error">{mutation.error.message}</p>}
-    <div className="actions"><button type="button" className="secondary" onClick={onCancel}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
+    <div className="actions"><button type="button" className="secondary" onClick={onCancel}>Отмена</button><button className="primary" disabled={mutation.isPending}>Сохранить</button></div>
   </form>
 }
 
@@ -174,6 +174,6 @@ function StageForm({ goalId, stage, position, defaultStart, targetDate, onSaved,
     </div>
     {targetDate && <p className="muted stage-hint">Этап должен уложиться до даты цели ({formatLocalDateShort(localDate(targetDate))}).</p>}
     {mutation.error && <p className="error">{mutation.error.message}</p>}
-    <div className="actions"><button type="button" className="secondary" onClick={onCancel}>Отмена</button><button disabled={mutation.isPending}>{stage ? 'Сохранить' : 'Добавить этап'}</button></div>
+    <div className="actions"><button type="button" className="secondary" onClick={onCancel}>Отмена</button><button className="primary" disabled={mutation.isPending}>{stage ? 'Сохранить' : 'Добавить этап'}</button></div>
   </form>
 }

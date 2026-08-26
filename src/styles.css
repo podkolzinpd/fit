@@ -293,7 +293,13 @@
 body { margin: 0; min-height: 100dvh; background: var(--bg); }
 ::selection { color: white; background: var(--selection) }
 button, input, textarea, select { font: inherit }
-button, .button { border: 1px solid var(--accent-border); border-radius: var(--radius-md); background: var(--accent-grad); color: var(--on-accent); padding: 11px 16px; cursor: pointer; text-decoration: none; font-weight: var(--weight-semibold); line-height: 1.2; text-align: center; box-shadow: 0 8px 22px var(--accent-shadow) }
+/* Кнопка по умолчанию — нейтральное действие. Коралл зарезервирован для одной
+   явной primary-кнопки текущего экрана/состояния: это не даёт служебным,
+   навигационным и повторным действиям визуально спорить с главным CTA. */
+button, .button { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--secondary-bg, #2d2a35); color: var(--secondary-fg, #e3dee8); padding: 11px 16px; cursor: pointer; text-decoration: none; font-weight: var(--weight-semibold); line-height: 1.2; text-align: center; box-shadow: none }
+button:hover, .button:hover { background: var(--secondary-hover) }
+button.primary, .button.primary { border-color: var(--accent-border); background: var(--accent-grad); color: var(--on-accent); box-shadow: 0 8px 22px var(--accent-shadow) }
+button.primary:hover, .button.primary:hover { background: var(--accent-grad); filter: brightness(1.025) }
 button:disabled { opacity: .55; cursor: default }
 a { color: var(--accent-weak) }
 h1, h2, h3, strong { color: var(--fg-strong) }
@@ -407,7 +413,7 @@ p { margin: 6px 0 }
 /* Tertiary-действия не конкурируют с единственной primary-кнопкой экрана.
    Коралл появляется при наведении/фокусе; destructive всегда остаётся красным. */
 .link { border: 0; background: transparent; color: var(--tertiary-fg); padding: 4px; font-weight: var(--weight-medium); box-shadow: none }
-.link:hover, .link:focus-visible { color: var(--accent-weak) }
+.link:hover, .link:focus-visible { background: transparent; color: var(--accent-weak) }
 .danger { color: var(--danger) }
 .link.danger, .link.danger:hover, .link.danger:focus-visible { color: var(--danger) }
 .danger.secondary { border-color: var(--danger-border); background: var(--danger-surface); color: var(--danger) }

@@ -148,7 +148,7 @@ function ConfirmDialog({ message, confirmLabel = 'Подтвердить', cance
         <p className="modal-message">{message}</p>
         <div className="actions">
           <button type="button" className="secondary" onClick={onCancel}>{cancelLabel}</button>
-          <button type="button" ref={confirmRef} className={danger ? 'danger' : undefined} onClick={onConfirm}>{confirmLabel}</button>
+          <button type="button" ref={confirmRef} className={danger ? 'danger secondary' : 'primary'} onClick={onConfirm}>{confirmLabel}</button>
         </div>
       </div>
     </div>,

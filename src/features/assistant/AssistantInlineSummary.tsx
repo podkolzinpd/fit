@@ -20,6 +20,6 @@ export function AssistantInlineSummaryCard({ summary, onSave, saving, saved }: {
     {summary.trainer.progress.length > 0 && <div className="assistant-inline-summary-section"><small>Динамика</small><ul>{summary.trainer.progress.map((point) => <li key={point}>{point}</li>)}</ul></div>}
     {summary.trainer.consistency && <div className="assistant-inline-summary-section"><small>Регулярность</small><p>{summary.trainer.consistency}</p></div>}
     {summary.trainer.attention.length > 0 && <div className="assistant-inline-summary-section"><small>Внимание</small><ul>{summary.trainer.attention.map((point) => <li key={point}>{point}</li>)}</ul></div>}
-    <button type="button" onClick={onSave} disabled={saving || saved}>{saved ? 'Сохранено в прогресс' : saving ? 'Сохраняю…' : 'Сохранить в прогресс'}</button>
+    <button type="button" className="primary" onClick={onSave} disabled={saving || saved}>{saved ? 'Сохранено в прогресс' : saving ? 'Сохраняю…' : 'Сохранить в прогресс'}</button>
   </section>
 }
