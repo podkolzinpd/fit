@@ -56,6 +56,7 @@ export function requireExerciseConfirmation(response: WorkoutParseResponse, cata
         ? 'Нужно уточнить вариант упражнения'
         : 'Нужно выбрать упражнение: модель не уверена в совпадении',
       suggestedExerciseRefs: candidates,
+      sets: item.sets,
     }
   })
   const uncertainSources = new Set(uncertain.map((item) => sourceKey(item.sourceText)))
