@@ -62,7 +62,7 @@ describe('formatLlmWorkoutText', () => {
       items: [{ sourceText: 'жим лёжа 3 по 10', exerciseRef: 'barbell-bench', confidence: 0.96, sets: [{ weightKg: 50, reps: 10 }] }], unmatched: [],
     }, choices)).toEqual({
       items: [],
-      unmatched: [{ sourceText: 'жим лёжа 3 по 10', reason: 'Нужно выбрать упражнение: модель не уверена в совпадении', suggestedExerciseRefs: ['barbell-bench', 'dumbbell-bench'] }],
+      unmatched: [{ sourceText: 'жим лёжа 3 по 10', reason: 'Нужно выбрать упражнение: модель не уверена в совпадении', suggestedExerciseRefs: ['barbell-bench', 'dumbbell-bench'], sets: [{ weightKg: 50, reps: 10 }] }],
     })
   })
 
@@ -76,7 +76,7 @@ describe('formatLlmWorkoutText', () => {
       items: [{ sourceText: 'жим лёжа 3 по 10', exerciseRef: 'barbell-bench', confidence: 0.99, sets: [{ weightKg: 50, reps: 10 }] }], unmatched: [],
     }, choices, { requireLocalDisambiguation: true })).toEqual({
       items: [],
-      unmatched: [{ sourceText: 'жим лёжа 3 по 10', reason: 'Нужно уточнить вариант упражнения', suggestedExerciseRefs: ['barbell-bench', 'dumbbell-bench'] }],
+      unmatched: [{ sourceText: 'жим лёжа 3 по 10', reason: 'Нужно уточнить вариант упражнения', suggestedExerciseRefs: ['barbell-bench', 'dumbbell-bench'], sets: [{ weightKg: 50, reps: 10 }] }],
     })
   })
 

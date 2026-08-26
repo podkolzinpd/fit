@@ -10,6 +10,7 @@ import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
 import { AssistantHistoryPage } from '../features/assistant'
+import { AssistantDesignPreview } from '../features/assistant/AssistantDesignPreview'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
 
 function Protected() {
@@ -47,6 +48,7 @@ function AssistantPage() {
 }
 
 const router = createBrowserRouter([
+  ...(import.meta.env.DEV ? [{ path: '/__design/assistant-workout', element: <AssistantDesignPreview /> }] : []),
   { path: '/auth', element: <AuthPage /> },
   { path: '/auth/forgot', element: <ForgotPasswordPage /> },
   { path: '/auth/reset', element: <ResetPasswordPage /> },

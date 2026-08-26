@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
-import { appendWorkoutParse, assistantWorkoutSaveInput, enqueueWorkoutParse, replaceWorkoutParseSource } from './workout-draft'
+import { appendWorkoutParse, appendedWorkoutTranscript, assistantWorkoutSaveInput, enqueueWorkoutParse, removeWorkoutParseSource, replaceWorkoutParseSource, resolveWorkoutParseSource, updateWorkoutParseMetrics } from './workout-draft'
 import { assistantActionView } from './assistant-action-view'
 
 const benchPress = {
@@ -36,6 +36,26 @@ describe('assistant program draft saving', () => {
     const resolved = replaceWorkoutParseSource(existing, 'Тяга', { items: [{ sourceText: 'Тяга', exerciseRef: 'row', confidence: 1, sets: [] }], unmatched: [] })
     expect(resolved.items.map((item) => item.sourceText)).toEqual(['Жим', 'Тяга'])
     expect(resolved.unmatched).toEqual([])
+  })
+
+  it('keeps parsed values when the trainer resolves an ambiguous exercise', () => {
+    const existing = { items: [], unmatched: [{ sourceText: 'Жим лежа 100 кг 3 по 15', reason: 'Нужно уточнить', suggestedExerciseRefs: ['barbell-bench-press', 'dumbbell-bench-press'], sets: [{ reps: 15, weightKg: 100 }, { reps: 15, weightKg: 100 }, { reps: 15, weightKg: 100 }] }] }
+    const resolved = resolveWorkoutParseSource(existing, 'Жим лежа 100 кг 3 по 15', 'barbell-bench-press')
+    expect(resolved.unmatched).toEqual([])
+    expect(resolved.items[0]).toMatchObject({ exerciseRef: 'barbell-bench-press', sets: [{ reps: 15, weightKg: 100 }, { reps: 15, weightKg: 100 }, { reps: 15, weightKg: 100 }] })
+  })
+
+  it('edits structured workout metrics and removes only the requested row', () => {
+    const existing = { items: [{ sourceText: 'Жим', exerciseRef: 'barbell-bench-press', confidence: 1, sets: [{ reps: 10, weightKg: 50 }] }, { sourceText: 'Тяга', exerciseRef: 'row', confidence: 1, sets: [{}] }], unmatched: [] }
+    const edited = updateWorkoutParseMetrics(existing, 'Жим', { setCount: 3, reps: 12, weightKg: 55 })
+    expect(edited.items[0]?.sets).toEqual([{ reps: 12, weightKg: 55 }, { reps: 12, weightKg: 55 }, { reps: 12, weightKg: 55 }])
+    expect(removeWorkoutParseSource(edited, 'Жим').items.map((item) => item.sourceText)).toEqual(['Тяга'])
+  })
+
+  it('extracts only the newly dictated tail from a cumulative transcript', () => {
+    expect(appendedWorkoutTranscript('жим лежа 3 по 10', 'жим лежа 3 по 10\nприсед 3 по 12')).toBe('присед 3 по 12')
+    expect(appendedWorkoutTranscript('жим лежа 3 по 10', 'жим лежа 3 по 10')).toBe('')
+    expect(appendedWorkoutTranscript('старый фрагмент', 'тяга 4 по 8')).toBe('тяга 4 по 8')
   })
 
   it('serializes workout parsing fragments instead of dropping a concurrent append', async () => {
