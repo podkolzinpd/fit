@@ -73,6 +73,16 @@ import {
 
 export type LegacySummaryHandler = (request: Request) => Promise<Response>
 
+function safeDatabaseErrorCode(error: unknown): string {
+  if (typeof error !== 'object' || error === null || !('code' in error)) {
+    return 'unknown'
+  }
+  const code = Reflect.get(error, 'code')
+  return typeof code === 'string' && /^[A-Z0-9_]{2,32}$/u.test(code)
+    ? code
+    : 'unknown'
+}
+
 interface BuildAppOptions {
   allowedOrigins?: readonly string[]
   databasePool?: DatabasePool
@@ -306,7 +316,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       connection = await options.databasePool.connect()
       await connection.query('select 1')
       return { status: 'ready' }
-    } catch {
+    } catch (error) {
+      app.log.warn(
+        { databaseErrorCode: safeDatabaseErrorCode(error) },
+        'Database readiness check failed',
+      )
       return reply.code(503).send({ status: 'not_ready' })
     } finally {
       connection?.release()

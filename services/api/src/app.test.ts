@@ -267,7 +267,7 @@ describe('browser pilot CORS', () => {
   })
 })
 
-function buildDatabasePool(options: { connectFails?: boolean } = {}): {
+function buildDatabasePool(options: { connectError?: Error } = {}): {
   connection: DatabaseConnection
   pool: DatabasePool
   query: ReturnType<typeof vi.fn>
@@ -280,8 +280,8 @@ function buildDatabasePool(options: { connectFails?: boolean } = {}): {
     release,
   }
   const pool: DatabasePool = {
-    connect: options.connectFails
-      ? vi.fn().mockRejectedValue(new Error('connection failed'))
+    connect: options.connectError !== undefined
+      ? vi.fn().mockRejectedValue(options.connectError)
       : vi.fn().mockResolvedValue(connection),
     end: vi.fn().mockResolvedValue(undefined),
   }
@@ -313,15 +313,43 @@ describe('readiness endpoint', () => {
   })
 
   it('does not expose database connection errors', async () => {
-    const database = buildDatabasePool({ connectFails: true })
+    const connectionError = Object.assign(
+      new Error('connection failed with private diagnostics'),
+      { code: '28P01' },
+    )
+    const database = buildDatabasePool({ connectError: connectionError })
     const app = buildApp({ databasePool: database.pool, logger: false })
     apps.push(app)
+    const warn = vi.spyOn(app.log, 'warn')
 
     const response = await app.inject({ method: 'GET', url: '/ready' })
 
     expect(response.statusCode).toBe(503)
     expect(response.json()).toEqual({ status: 'not_ready' })
     expect(response.body).not.toContain('connection failed')
+    expect(warn).toHaveBeenCalledWith(
+      { databaseErrorCode: '28P01' },
+      'Database readiness check failed',
+    )
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('private diagnostics')
+  })
+
+  it('does not log an arbitrary error code from a failed dependency', async () => {
+    const connectionError = Object.assign(new Error('private diagnostics'), {
+      code: 'unsafe\nvalue',
+    })
+    const database = buildDatabasePool({ connectError: connectionError })
+    const app = buildApp({ databasePool: database.pool, logger: false })
+    apps.push(app)
+    const warn = vi.spyOn(app.log, 'warn')
+
+    await app.inject({ method: 'GET', url: '/ready' })
+
+    expect(warn).toHaveBeenCalledWith(
+      { databaseErrorCode: 'unknown' },
+      'Database readiness check failed',
+    )
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('unsafe')
   })
 })
 

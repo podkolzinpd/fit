@@ -255,7 +255,8 @@ jobs:
           api_url=$(terraform output -raw api_container_url)
           health=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/health")
-          ready=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
+          ready=$(curl --fail --silent --show-error --retry 44 --retry-max-time 90 \
+            --retry-all-errors --retry-delay 2 \
             --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/ready")
           jq -e '.status == "ok"' <<<"$health" >/dev/null
           jq -e '.status == "ready"' <<<"$ready" >/dev/null
