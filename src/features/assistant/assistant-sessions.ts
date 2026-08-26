@@ -92,6 +92,11 @@ export function latestActiveAssistantAction(messages: readonly AssistantMessage[
   return message?.action ? { message, action: message.action } : undefined
 }
 
+export function latestActiveWorkoutAction(messages: readonly AssistantMessage[], conversationId?: string): AssistantActionMessage | undefined {
+  const latest = latestActiveAssistantAction(messages, conversationId)
+  return latest?.action.tool === 'record_workout' ? latest : undefined
+}
+
 export function filterTerminalAssistantMessages(messages: readonly AssistantMessage[]): AssistantMessage[] {
   return messages.flatMap((message) => {
     if (!message.action || isInteractiveAssistantAction(message.action)) return [message]

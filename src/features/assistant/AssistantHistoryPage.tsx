@@ -4,17 +4,16 @@ import { ChevronRightIcon } from '../../shared/icons'
 import { useAuth } from '../../app/auth-context'
 import { assistantRepository, type AssistantOrchestratorAction } from '../../data/repositories/assistant.repository'
 import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
-import { VoiceInputButton } from '../voice-input'
+import { VoiceInputButton, type VoiceInputPhase } from '../voice-input'
 import { clientSchema } from '../../shared/validation'
 import { currentTimeInTimeZone, formatLocalDate, todayInTimeZone } from '../../shared/local-date'
 import type { ExerciseSnapshot, WorkoutDraft } from '../../shared/domain'
 import { useExerciseCatalog } from '../exercises'
-import { WorkoutComposer } from '../workouts/WorkoutComposer'
 import { parseWorkoutWithLlm } from '../workouts/llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
-import { appendWorkoutParse, appendedWorkoutTranscript, assistantWorkoutSaveInput, enqueueWorkoutParse, removeWorkoutParseSource, replaceWorkoutParseSource, resolveWorkoutParseSource, updateWorkoutParseMetrics, type WorkoutParseQueue } from './workout-draft'
-import { conversationLocalDate, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveAssistantAction, mergeAssistantMessages, selectTodayConversation, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
+import { appendAssistantTranscript, appendWorkoutParse, appendedWorkoutTranscript, assistantWorkoutSaveInput, enqueueWorkoutParse, removeWorkoutParseSource, resolveWorkoutParseSource, updateWorkoutParseMetrics, type WorkoutParseQueue } from './workout-draft'
+import { conversationLocalDate, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveWorkoutAction, mergeAssistantMessages, selectTodayConversation, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
 import { AssistantInlineSummaryCard } from './AssistantInlineSummary'
 import { parseAssistantInlineSummary } from './assistant-inline-summary'
 import { assistantActionView } from './assistant-action-view'
@@ -35,6 +34,7 @@ export function AssistantHistoryPage() {
   const [error, setError] = useState<string>()
   const [failedTurn, setFailedTurn] = useState<FailedTurn>()
   const [sending, setSending] = useState(false)
+  const [voicePhase, setVoicePhase] = useState<VoiceInputPhase>('idle')
   const [runningSummaryIds, setRunningSummaryIds] = useState<string[]>([])
   const [completedSummaryIds, setCompletedSummaryIds] = useState<string[]>([])
   const [runningClientIds, setRunningClientIds] = useState<string[]>([])
@@ -45,6 +45,8 @@ export function AssistantHistoryPage() {
   const conversationRef = useRef<string | undefined>(undefined)
   const loadSequence = useRef(0)
   const threadRef = useRef<HTMLElement>(null)
+  const voiceBaseTextRef = useRef('')
+  const voiceConversationRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     let cancelled = false
@@ -103,6 +105,7 @@ export function AssistantHistoryPage() {
   }, [conversationId])
 
   const readOnly = isReadOnlyConversation(conversationId, todayConversationId)
+  const voiceActive = voicePhase !== 'idle'
   const today = todayInTimeZone(actor?.timezone)
   const historyConversations = conversations.filter((conversation) => conversation.id !== todayConversationId)
   const conversationGroups = groupAssistantConversations(historyConversations, actor?.timezone, today)
@@ -116,7 +119,7 @@ export function AssistantHistoryPage() {
   }, [conversationId, lastMessageId, loadingMessages])
 
   function selectConversation(id: string) {
-    if (sending || id === conversationId) return
+    if (sending || voiceActive || id === conversationId) return
     ++loadSequence.current
     conversationRef.current = id
     setHistoryOpen(false)
@@ -248,7 +251,7 @@ export function AssistantHistoryPage() {
     }
   }
 
-  const latestActiveAction = readOnly ? undefined : latestActiveAssistantAction(messages, conversationId)
+  const latestActiveAction = readOnly ? undefined : latestActiveWorkoutAction(messages, conversationId)
   const visibleMessages = filterTerminalAssistantMessages(messages)
 
   useEffect(() => {
@@ -313,11 +316,31 @@ export function AssistantHistoryPage() {
     </section>}
     <form className="assistant-composer" autoComplete="off" onSubmit={(event) => { event.preventDefault(); void send() }}>
       <label className="sr-only" htmlFor="assistant-history-message">Сообщение ассистенту</label>
-      <input id="assistant-history-message" name="assistant-prompt" autoComplete="off" value={text} onChange={(event) => setText(event.target.value)} placeholder="Напишите сообщение" disabled={!conversationId || readOnly || sending} />
-      <VoiceInputButton variant="icon" source="assistant" idleLabel="Голосовой ввод" disabled={!conversationId || readOnly || sending} showTranscriptStatus={false} onTranscript={async (transcript) => {
-        await send(transcript)
-      }} />
-      <button type="submit" className="assistant-icon-button" disabled={!conversationId || readOnly || sending} aria-label="Отправить сообщение"><ChevronRightIcon /></button>
+      <input id="assistant-history-message" name="assistant-prompt" autoComplete="off" value={text} onChange={(event) => setText(event.target.value)} placeholder="Опишите тренировку" disabled={!conversationId || readOnly || sending || voiceActive} />
+      <VoiceInputButton
+        variant="icon"
+        source="assistant"
+        idleLabel="Голосовой ввод"
+        disabled={!conversationId || readOnly || sending}
+        showTranscriptStatus={false}
+        onPhaseChange={setVoicePhase}
+        onStart={() => {
+          voiceBaseTextRef.current = text
+          voiceConversationRef.current = conversationId
+        }}
+        onInterimTranscript={(transcript) => {
+          if (conversationRef.current !== voiceConversationRef.current) return
+          setText(appendAssistantTranscript(voiceBaseTextRef.current, transcript))
+        }}
+        onTranscript={(transcript) => {
+          if (conversationRef.current !== voiceConversationRef.current) return
+          setText(appendAssistantTranscript(voiceBaseTextRef.current, transcript))
+        }}
+        onCancel={() => {
+          if (conversationRef.current === voiceConversationRef.current) setText(voiceBaseTextRef.current)
+        }}
+      />
+      <button type="submit" className="assistant-icon-button" disabled={!conversationId || readOnly || sending || voiceActive || !text.trim()} aria-label="Отправить сообщение"><ChevronRightIcon /></button>
     </form>
   </main>
 }
@@ -430,12 +453,10 @@ function parsedWorkoutExercises(result: WorkoutParseResponse, catalog: readonly 
 
 function AssistantWorkoutDraftCard({ mode, payload, timezone, onCancel, onApply, onSaved, onFinish }: { mode: 'collecting' | 'confirm'; payload: WorkoutDraftPayload; timezone?: string; onCancel: () => void; onApply: (input: object) => Promise<void>; onSaved: () => void; onFinish?: () => void }) {
   const catalog = useExerciseCatalog()
-  const [fragmentText, setFragmentText] = useState('')
   const [rawFragments, setRawFragments] = useState<string[]>([])
   const [workoutDate, setWorkoutDate] = useState<string>(() => todayInTimeZone(timezone))
   const [startTime, setStartTime] = useState(() => currentTimeInTimeZone(timezone))
   const [result, setResult] = useState<WorkoutParseResponse>()
-  const [initialParsed, setInitialParsed] = useState(false)
   const [parsing, setParsing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string>()
@@ -444,24 +465,21 @@ function AssistantWorkoutDraftCard({ mode, payload, timezone, onCancel, onApply,
   const parsedTranscript = useRef('')
   const parseQueue = useRef<WorkoutParseQueue>({ current: Promise.resolve() })
 
-  function parseFragment(fragment: string, receipt = true, replaceSource?: string, inputValue?: string): Promise<void> {
+  function parseFragment(fragment: string, receipt = true): Promise<void> {
     const normalized = fragment.trim()
     if (!normalized) return Promise.resolve()
     return enqueueWorkoutParse(parseQueue.current, async () => {
       if (catalog.loading) {
-        setFragmentText((current) => current.trim() || normalized)
         setError('Каталог упражнений ещё загружается. Попробуйте распознать фрагмент ещё раз.')
         return
       }
       setParsing(true); setError(undefined)
       try {
         const next = await parseWorkoutWithLlm(normalized, catalog.exercises, { requireLocalDisambiguation: true })
-        setResult((current) => replaceSource && current ? replaceWorkoutParseSource(current, replaceSource, next) : appendWorkoutParse(current, next))
+        setResult((current) => appendWorkoutParse(current, next))
         if (receipt) setRawFragments((current) => [...current, normalized])
-        if (inputValue !== undefined) setFragmentText((current) => current.trim() === inputValue.trim() ? '' : current)
         if (!next.items.length && !next.unmatched.length) setError('Не удалось распознать упражнение. Уточните диктовку и попробуйте ещё раз.')
       } catch {
-        setFragmentText((current) => current.trim() ? current : normalized)
         setError('Не удалось обработать диктовку. Исходный текст сохранён — попробуйте ещё раз.')
       }
       finally { setParsing(false) }
@@ -474,7 +492,6 @@ function AssistantWorkoutDraftCard({ mode, payload, timezone, onCancel, onApply,
     const fragment = appendedWorkoutTranscript(parsedTranscript.current, transcript)
     parsedTranscript.current = transcript
     if (!fragment) return
-    setInitialParsed(true)
     void parseFragment(fragment, true)
   }, [catalog.loading, payload.transcript])
 
@@ -502,7 +519,7 @@ function AssistantWorkoutDraftCard({ mode, payload, timezone, onCancel, onApply,
     setResult((current) => current ? removeWorkoutParseSource(current, sourceText) : current)
   }
   const canFinish = Boolean(result?.items.length && unmatched.length === 0 && !parsing && !catalog.loading)
-  return <AssistantWorkoutDraftSurface mode={mode} clientName={payload.clientName} workoutDate={workoutDate} startTime={startTime} rawFragments={rawFragments} result={result} catalog={catalog.exercises} parsing={parsing} catalogLoading={catalog.loading} error={error} saving={saving} saved={saved} canFinish={canFinish} onDateChange={setWorkoutDate} onTimeChange={setStartTime} onChoose={chooseExercise} onUpdateMetrics={updateMetrics} onRemove={removeExercise} onSave={() => void save()} onFinish={onFinish} onCancel={onCancel} composer={mode === 'confirm' ? <WorkoutComposer name="assistant-workout-fragment" source="assistant_workout" value={fragmentText} label="Добавить упражнение" voiceLabel="Надиктовать упражнение" showVoice onValueChange={(value) => { setFragmentText(value); if (value.trim()) setError(undefined) }} onClear={() => setFragmentText('')} onTranscriptAppended={({ value, transcript }) => parseFragment(transcript, true, undefined, value)} primaryAction={<button type="button" className="primary" onClick={() => void parseFragment(fragmentText, true, undefined, fragmentText)} disabled={!fragmentText.trim() || catalog.loading || parsing}>{catalog.loading ? 'Загружаю каталог…' : parsing ? 'Распознаю…' : error ? 'Распознать снова' : initialParsed ? 'Добавить упражнение' : 'Распознать упражнения'}</button>} /> : undefined} />
+  return <AssistantWorkoutDraftSurface mode={mode} clientName={payload.clientName} workoutDate={workoutDate} startTime={startTime} rawFragments={rawFragments} result={result} catalog={catalog.exercises} parsing={parsing} catalogLoading={catalog.loading} error={error} saving={saving} saved={saved} canFinish={canFinish} onDateChange={setWorkoutDate} onTimeChange={setStartTime} onChoose={chooseExercise} onUpdateMetrics={updateMetrics} onRemove={removeExercise} onSave={() => void save()} onFinish={onFinish} onCancel={onCancel} />
 }
 
 function ClientDraftCard({ payload, onCancel, onConfirm, running, completed }: { payload: ClientDraftPayload; onCancel: () => void; onConfirm: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {

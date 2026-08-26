@@ -10,6 +10,8 @@ export type VoiceInputPhase = 'idle' | 'requesting' | 'recording' | 'preparing' 
 
 interface VoiceInputButtonProps {
   onTranscript: (text: string) => void | (() => void) | Promise<void | (() => void)>
+  /** Cumulative transcript snapshot while a streaming session is recording. */
+  onInterimTranscript?: (text: string) => void
   source: string
   recorderFactory?: () => AudioRecorder
   recognizerFactory?: () => SpeechRecognizer
@@ -20,6 +22,7 @@ interface VoiceInputButtonProps {
   variant?: 'inline' | 'hero' | 'icon'
   onPhaseChange?: (phase: VoiceInputPhase) => void
   onStart?: () => void
+  onCancel?: () => void
   streamingFactory?: () => StreamingSpeechSession
   startupTimeoutMs?: number
   disabled?: boolean
@@ -28,6 +31,7 @@ interface VoiceInputButtonProps {
 
 export function VoiceInputButton({
   onTranscript,
+  onInterimTranscript,
   source,
   recorderFactory = () => new BrowserAudioRecorder(),
   recognizerFactory = () => new WhisperCppRecognizer(),
@@ -38,6 +42,7 @@ export function VoiceInputButton({
   variant = 'inline',
   onPhaseChange,
   onStart,
+  onCancel,
   streamingFactory = () => new SpeechKitStreamingSession(),
   startupTimeoutMs = 30_000,
   disabled = false,
@@ -56,11 +61,15 @@ export function VoiceInputButton({
   const mountedRef = useRef(true)
   const streamingRef = useRef<StreamingSpeechSession | null>(null)
   const streamingTextRef = useRef('')
+  const streamingInterimTextRef = useRef('')
+  const sessionGenerationRef = useRef(0)
+  const isCurrentSession = (sessionId: number) => mountedRef.current && sessionGenerationRef.current === sessionId
 
   useEffect(() => {
     mountedRef.current = true
     return () => {
       mountedRef.current = false
+      sessionGenerationRef.current += 1
       clearTimers(intervalRef, timeoutRef)
       recorderRef.current?.cancel()
       void streamingRef.current?.stop()
@@ -72,6 +81,7 @@ export function VoiceInputButton({
 
   async function startRecording() {
     if (disabled) return
+    const sessionId = ++sessionGenerationRef.current
     onStart?.()
     setMessage(null)
     setUndo(null)
@@ -80,18 +90,38 @@ export function VoiceInputButton({
     {
       const streaming = streamingFactory()
       streamingTextRef.current = ''
+      streamingInterimTextRef.current = ''
       try {
         await withTimeout(
-          streaming.start((text) => { if (mountedRef.current && variant !== 'icon') setMessage(`Сейчас распознаю: ${text}`) }, (text) => { streamingTextRef.current += `${streamingTextRef.current ? ' ' : ''}${text}` }),
+          streaming.start(
+            (text) => {
+              if (!isCurrentSession(sessionId)) return
+              streamingInterimTextRef.current = text.trim()
+              const cumulative = joinStreamingTranscript(streamingTextRef.current, streamingInterimTextRef.current)
+              onInterimTranscript?.(cumulative)
+              if (variant !== 'icon') setMessage(`Сейчас распознаю: ${text}`)
+            },
+            (text) => {
+              if (!isCurrentSession(sessionId)) return
+              streamingTextRef.current = joinStreamingTranscript(streamingTextRef.current, text)
+              streamingInterimTextRef.current = ''
+              onInterimTranscript?.(streamingTextRef.current)
+            },
+          ),
           startupTimeoutMs,
         )
+        if (!isCurrentSession(sessionId)) {
+          await streaming.stop()
+          return
+        }
         streamingRef.current = streaming
         setElapsedSeconds(0); setPhase('recording')
         intervalRef.current = window.setInterval(() => setElapsedSeconds((seconds) => seconds + 1), 1_000)
-        timeoutRef.current = window.setTimeout(() => void rotateStreaming(), maxDurationMs)
+        timeoutRef.current = window.setTimeout(() => void rotateStreaming(sessionId), maxDurationMs)
         return
       } catch (error) {
         await streaming.stop()
+        if (!isCurrentSession(sessionId)) return
         if (isMicrophoneStartFailure(error)) {
           if (mountedRef.current) {
             setMessage(recordingErrorMessage(error))
@@ -101,10 +131,12 @@ export function VoiceInputButton({
         }
       }
     }
+    if (!isCurrentSession(sessionId)) return
+    const recorderSessionId = ++sessionGenerationRef.current
     const recorder = recorderFactory()
     try {
       await recorder.start()
-      if (!mountedRef.current) {
+      if (!isCurrentSession(recorderSessionId)) {
         recorder.cancel()
         return
       }
@@ -112,44 +144,62 @@ export function VoiceInputButton({
       setElapsedSeconds(0)
       setPhase('recording')
       intervalRef.current = window.setInterval(() => setElapsedSeconds((seconds) => seconds + 1), 1_000)
-      timeoutRef.current = window.setTimeout(() => void finishRecording(), maxDurationMs)
+      timeoutRef.current = window.setTimeout(() => void finishRecording(recorderSessionId), maxDurationMs)
     } catch (error) {
       recorder.cancel()
-      if (!mountedRef.current) return
+      if (!isCurrentSession(recorderSessionId)) return
       setMessage(recordingErrorMessage(error))
       setPhase('idle')
     }
   }
 
-  async function finishStreaming() {
-    if (!streamingRef.current || stoppingRef.current) return
+  async function finishStreaming(sessionId = sessionGenerationRef.current) {
+    if (!streamingRef.current || stoppingRef.current || !isCurrentSession(sessionId)) return
     stoppingRef.current = true; clearTimers(intervalRef, timeoutRef)
     const streaming = streamingRef.current; streamingRef.current = null
-    try { await streaming.stop(); const text = streamingTextRef.current.trim(); if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.'); setPhase('transcribing'); const revert = await onTranscript(text); setUndo(() => revert ?? null); setMessage(variant === 'hero' || !showTranscriptStatus ? null : 'Текст добавлен в заметку. Проверьте его перед сохранением.') }
-    catch (error) { if (mountedRef.current) setMessage(error instanceof Error ? error.message : 'Не удалось распознать запись.') }
-    finally { stoppingRef.current = false; if (mountedRef.current) setPhase('idle') }
-  }
-
-  async function rotateStreaming() {
-    const streaming = streamingRef.current
-    if (!streaming || stoppingRef.current) return
+    const wasCurrent = isCurrentSession(sessionId)
     try {
-      await streaming.rotate()
-      timeoutRef.current = window.setTimeout(() => void rotateStreaming(), maxDurationMs)
+      await streaming.stop()
+      if (!wasCurrent || !isCurrentSession(sessionId)) return
+      const text = joinStreamingTranscript(streamingTextRef.current, streamingInterimTextRef.current).trim()
+      streamingInterimTextRef.current = ''
+      sessionGenerationRef.current += 1
+      if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.')
+      setPhase('transcribing')
+      const revert = await onTranscript(text)
+      if (!mountedRef.current) return
+      setUndo(() => revert ?? null)
+      setMessage(variant === 'hero' || !showTranscriptStatus ? null : 'Текст добавлен в заметку. Проверьте его перед сохранением.')
     } catch (error) {
-      if (mountedRef.current) setMessage(error instanceof Error ? error.message : 'Не удалось продолжить распознавание.')
+      if (mountedRef.current && wasCurrent) setMessage(error instanceof Error ? error.message : 'Не удалось распознать запись.')
+    } finally {
+      stoppingRef.current = false
+      if (mountedRef.current && wasCurrent) setPhase('idle')
     }
   }
 
-  async function finishRecording() {
-    if (stoppingRef.current || !recorderRef.current) return
+  async function rotateStreaming(sessionId = sessionGenerationRef.current) {
+    const streaming = streamingRef.current
+    if (!streaming || stoppingRef.current || !isCurrentSession(sessionId)) return
+    try {
+      await streaming.rotate()
+      if (isCurrentSession(sessionId) && streamingRef.current === streaming) timeoutRef.current = window.setTimeout(() => void rotateStreaming(sessionId), maxDurationMs)
+    } catch (error) {
+      if (isCurrentSession(sessionId)) setMessage(error instanceof Error ? error.message : 'Не удалось продолжить распознавание.')
+    }
+  }
+
+  async function finishRecording(sessionId = sessionGenerationRef.current) {
+    if (stoppingRef.current || !recorderRef.current || !isCurrentSession(sessionId)) return
     stoppingRef.current = true
     clearTimers(intervalRef, timeoutRef)
     const recorder = recorderRef.current
     recorderRef.current = null
+    const wasCurrent = isCurrentSession(sessionId)
     try {
       setPhase('preparing')
       const pcm = await decodeAudio(await recorder.stop())
+      if (!isCurrentSession(sessionId)) return
       const recognizer = recognizerRef.current ?? recognizerFactory()
       recognizerRef.current = recognizer
       setPhase('loading')
@@ -159,22 +209,26 @@ export function VoiceInputButton({
         if (mountedRef.current) setProgress(Math.max(0, Math.min(100, Math.round(value))))
       })
       if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.')
-      if (!mountedRef.current) return
+      if (!isCurrentSession(sessionId)) return
+      sessionGenerationRef.current += 1
       const revert = await onTranscript(text)
-      setUndo(() => revert ?? null)
-      setMessage(variant === 'hero' || !showTranscriptStatus ? null : 'Текст добавлен в заметку. Проверьте его перед сохранением.')
+      if (mountedRef.current) {
+        setUndo(() => revert ?? null)
+        setMessage(variant === 'hero' || !showTranscriptStatus ? null : 'Текст добавлен в заметку. Проверьте его перед сохранением.')
+      }
     } catch (error) {
-      if (!mountedRef.current) return
+      if (!mountedRef.current || !wasCurrent) return
       setMessage(error instanceof Error ? error.message : 'Не удалось распознать запись.')
     } finally {
       stoppingRef.current = false
-      if (mountedRef.current) setPhase('idle')
+      if (mountedRef.current && wasCurrent) setPhase('idle')
     }
   }
 
   const recording = phase === 'recording'
   const busy = phase !== 'idle' && !recording
   function cancelRecording() {
+    sessionGenerationRef.current += 1
     clearTimers(intervalRef, timeoutRef)
     recorderRef.current?.cancel()
     recorderRef.current = null
@@ -182,11 +236,13 @@ export function VoiceInputButton({
     streamingRef.current = null
     if (streaming) void streaming.stop()
     streamingTextRef.current = ''
+    streamingInterimTextRef.current = ''
     stoppingRef.current = false
     setElapsedSeconds(0)
     setProgress(0)
     setMessage(null)
     setPhase('idle')
+    onCancel?.()
   }
 
   if (variant === 'hero') return <section className={`voice-action voice-action-${phase}`} aria-live="polite">
@@ -277,6 +333,13 @@ function recordingErrorMessage(error: unknown) {
     return 'Нет доступа к микрофону. Разрешите его в настройках Fit или браузера и попробуйте снова.'
   }
   return error instanceof Error ? error.message : 'Не удалось включить микрофон.'
+}
+
+function joinStreamingTranscript(committed: string, next: string): string {
+  const normalized = next.trim()
+  if (!normalized) return committed
+  const existing = committed.trim()
+  return existing ? `${existing} ${normalized}` : normalized
 }
 
 function isMicrophoneStartFailure(error: unknown) {
