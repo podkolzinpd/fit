@@ -278,27 +278,34 @@ jobs:
         working-directory: infra/yandex
         run: |
           api_url=$(terraform output -raw api_container_url)
-          health=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
-            --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/health")
-          jq -e '.status == "ok"' <<<"$health" >/dev/null
-          readiness_deadline=$(( $(date +%s) + 90 ))
+          bootstrap_deadline=$(( $(date +%s) + 90 ))
+          health_status=000
+          readiness_status=not_checked
           while true; do
-            : > api-readiness-response.json
-            readiness_status=000
-            if readiness_status=$(curl --silent --show-error --max-time 12 \
-              --output api-readiness-response.json --write-out '%{http_code}' \
-              --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/ready"); then
-              if test "$readiness_status" = 200 \
-                && jq -e '.status == "ready"' api-readiness-response.json >/dev/null 2>&1; then
-                break
+            : > api-health-response.json
+            if health_status=$(curl --silent --show-error --max-time 12 \
+              --output api-health-response.json --write-out '%{http_code}' \
+              --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/health"); then
+              if test "$health_status" = 200 \
+                && jq -e '.status == "ok"' api-health-response.json >/dev/null 2>&1; then
+                : > api-readiness-response.json
+                readiness_status=000
+                if readiness_status=$(curl --silent --show-error --max-time 12 \
+                  --output api-readiness-response.json --write-out '%{http_code}' \
+                  --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/ready"); then
+                  if test "$readiness_status" = 200 \
+                    && jq -e '.status == "ready"' api-readiness-response.json >/dev/null 2>&1; then
+                    break
+                  fi
+                fi
               fi
             fi
             now=$(date +%s)
-            if test "$now" -ge "$readiness_deadline"; then
-              echo "API readiness did not succeed within 90 seconds; last HTTP status: $readiness_status." >&2
+            if test "$now" -ge "$bootstrap_deadline"; then
+              echo "API bootstrap did not succeed within 90 seconds; health HTTP status: $health_status; readiness HTTP status: $readiness_status." >&2
               exit 1
             fi
-            remaining=$(( readiness_deadline - now ))
+            remaining=$(( bootstrap_deadline - now ))
             if test "$remaining" -lt 2; then
               sleep "$remaining"
             else
