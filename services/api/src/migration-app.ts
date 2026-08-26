@@ -11,8 +11,7 @@ import {
   type PilotEnroller,
 } from './db/yandex-pilot-enrollment.js'
 import type { StageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
-import type { DatabasePool } from './db/types.js'
-import { inspectDatabaseReadiness } from './db/database-readiness.js'
+import type { DatabaseReadinessResult } from './db/database-readiness.js'
 import {
   StageDatabaseReaderNotReadyError,
   type StageDatabaseReaderAccessAction,
@@ -29,7 +28,7 @@ interface BuildMigrationAppOptions {
   logger?: boolean
   pilotEnrollment?: PilotEnrollmentOptions
   runMigrations: () => Promise<readonly string[]>
-  runtimeDatabasePool?: DatabasePool
+  runtimeDatabaseReadiness?: () => Promise<DatabaseReadinessResult>
   stageWorkoutFixture?: StageWorkoutFixtureLoader
 }
 
@@ -84,10 +83,10 @@ export function buildMigrationApp(
     }
   })
 
-  if (options.runtimeDatabasePool !== undefined) {
-    const runtimeDatabasePool = options.runtimeDatabasePool
+  if (options.runtimeDatabaseReadiness !== undefined) {
+    const runtimeDatabaseReadiness = options.runtimeDatabaseReadiness
     app.post('/stage/runtime-database/readiness', async (_request, reply) => {
-      const readiness = await inspectDatabaseReadiness(runtimeDatabasePool)
+      const readiness = await runtimeDatabaseReadiness()
       if (readiness.ready) return { status: 'runtime_database_ready' }
 
       return reply.code(503).send({
