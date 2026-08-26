@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allowsAssistantAction, assistantCapabilitiesReply, assistantModelMessages, createClientTurn, createProgramTurn, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, isTurnIdReuse, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse } from './index.js'
+import { allowsAssistantAction, assistantCapabilitiesReply, assistantModelMessages, createClientTurn, createProgramTurn, extractWorkoutTranscript, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, isTurnIdReuse, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse, validateEnabledAssistantTurnResponse } from './index.js'
 
 describe('assistant orchestrator contract', () => {
   it('sends one bounded user prompt after the system message', () => {
@@ -39,7 +39,8 @@ describe('assistant orchestrator contract', () => {
     expect(isAssistantCapabilityQuestion('что ты умеешь?')).toBe(true)
     expect(isAssistantCapabilityQuestion('какие функции вообще есть?')).toBe(true)
     expect(isAssistantCapabilityQuestion('привет')).toBe(false)
-    expect(assistantCapabilitiesReply()).toContain('Сформировать сводку прогресса')
+    expect(assistantCapabilitiesReply()).toContain('Подготовить запись тренировки')
+    expect(assistantCapabilitiesReply()).not.toContain('программу')
   })
 
   it('recognizes summary requests, periods and informal address deterministically', () => {
@@ -131,6 +132,44 @@ describe('assistant orchestrator contract', () => {
       tool: 'record_workout', status: 'needs_input', payload: { step: 'workout', clientId: 'client-1', clientName: 'Сан Саныч', transcript: '' },
     })
     expect(result?.reply).toContain('по одному или все сразу')
+  })
+
+  it('recognizes natural workout-entry commands and keeps questions out', () => {
+    const clients = [{ id: 'client-1', fullName: 'Сан Саныч', goal: null, ageYears: null, heightCm: null, gender: null }]
+    for (const command of [
+      'Заполни тренировку для Сан Саныча: жим лёжа 3 по 10 80 кг',
+      'Создай запись тренировки для Сан Саныча: жим лёжа 3 по 10 80 кг',
+      'Собери тренировку для Сан Саныча: жим лёжа 3 по 10 80 кг',
+      'Давай внесём тренировку Сан Саныча: жим лёжа 3 по 10 80 кг',
+      'Хочу добавить тренировку Сан Саныча: жим лёжа 3 по 10 80 кг',
+    ]) {
+      expect(recordWorkoutTurn(command, clients, null)?.action).toMatchObject({ tool: 'record_workout', payload: { step: 'workout', clientId: 'client-1' } })
+    }
+    expect(recordWorkoutTurn('Как делать присед?', clients, null)).toBeUndefined()
+    expect(recordWorkoutTurn('Не записывай тренировку', clients, null)).toBeUndefined()
+  })
+
+  it('extracts only exercises from a one-shot command and client mention', () => {
+    const client = { id: 'client-1', fullName: 'Сан Саныч', goal: null, ageYears: null, heightCm: null, gender: null }
+    expect(extractWorkoutTranscript('Запиши тренировку для Сан Саныча жим лёжа 3 по 10 80 кг', client)).toBe('жим лёжа 3 по 10 80 кг')
+    expect(extractWorkoutTranscript('Заполни тренировку Сан Санычу жим лёжа 3 по 10 80 кг', client)).toBe('жим лёжа 3 по 10 80 кг')
+    const result = recordWorkoutTurn('Запиши тренировку для Сан Саныча: жим лёжа 3 по 10 80 кг; присед 3 по 8 100 кг', [client], null)
+    expect(result?.action?.payload).toMatchObject({ transcript: 'жим лёжа 3 по 10 80 кг; присед 3 по 8 100 кг' })
+  })
+
+  it('continues a confirmed workout with a new fragment and starts a fresh proposal on done', () => {
+    const clients = [{ id: 'client-1', fullName: 'Сан Саныч', goal: null, ageYears: null, heightCm: null, gender: null }]
+    const confirmed = { tool: 'record_workout', status: 'proposed', title: 'Проверьте', description: 'Проверьте', payload: { step: 'confirm', clientId: 'client-1', clientName: 'Сан Саныч', transcript: 'жим лёжа 3 по 10 80 кг' } }
+    const appended = recordWorkoutTurn('Добавь присед 3 по 8 100 кг', clients, confirmed)
+    expect(appended?.action).toMatchObject({ status: 'needs_input', payload: { step: 'workout', clientId: 'client-1', transcript: 'жим лёжа 3 по 10 80 кг\nприсед 3 по 8 100 кг' } })
+    const fresh = recordWorkoutTurn('готово', clients, appended?.action)
+    expect(fresh?.action).toMatchObject({ status: 'proposed', payload: { step: 'confirm', transcript: 'жим лёжа 3 по 10 80 кг\nприсед 3 по 8 100 кг' } })
+  })
+
+  it('gates new model responses to record_workout while retaining the legacy validator', () => {
+    const program = { reply: 'Программа', action: { tool: 'create_program_draft', status: 'needs_input', title: 'Программа', description: 'Уточню', payload: {} } }
+    expect(validateAssistantTurnResponse(program)?.action?.tool).toBe('create_program_draft')
+    expect(validateEnabledAssistantTurnResponse(program)).toBeUndefined()
   })
 
   it('collects a complete brief before proposing a training program', () => {
