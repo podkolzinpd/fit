@@ -5,16 +5,16 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-26
-Проверенный базовый `main`: `885e2e6` (`Progress: единый экран для клиента и тренера (#591)`)
+Проверенный базовый `main`: `71f4f2e` (`fix(yandex): wait for API bootstrap (#593)`)
 
 ## Активное изменение
 
-- После merge #592 stage run `32962751043` подтвердил private соединение
-  `fit_api`, применил миграции и fixture, но старый `/health` retry завершился
-  примерно через 20 секунд на gateway `503`. Кандидат был автоматически откачен
-  на `bbak2bq6iopc8lcpnbe8`; production не пострадал.
-- Активный follow-up даёт `/health` и `/ready` общий явный 90-секундный deadline.
-  Safe runtime preflight и rollback сохраняются без изменения.
+- После merge #593 stage run `32969024828` подтвердил private соединение
+  `fit_api`, миграции, fixture, `/health` и `/ready`. Первый доменный smoke
+  `GET /v1/clients` девять раз вернул `503`; кандидат автоматически откачен на
+  `bbak2bq6iopc8lcpnbe8`, production не пострадал.
+- Активный follow-up добавляет только безопасные category/code diagnostics для
+  ошибки clients query. Ответ API, данные, права и инфраструктура не меняются.
 
 ## Последняя проверенная продуктовая точка
 
@@ -97,9 +97,9 @@
 
 ## Ближайший порядок
 
-1. Доставить общий health/readiness bootstrap deadline, получить зелёную API
-   revision и выполнить summary-list плюс один контролируемый AI generation/parse
-   smoke без логирования исходного текста.
+1. Получить безопасный код ошибки первого clients smoke, устранить доказанную
+   причину, получить зелёную API revision и выполнить summary-list плюс один
+   контролируемый AI generation/parse smoke без логирования исходного текста.
 2. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
 3. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению
