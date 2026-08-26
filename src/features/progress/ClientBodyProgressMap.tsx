@@ -12,6 +12,7 @@ import {
   type BodyMapZone,
 } from './body-progress-map'
 import {
+  bodyFigureCanvas,
   bodyFigureClipBox,
   bodyFigureViewBox,
   bodyZoneShapes,
@@ -32,7 +33,7 @@ const BODY_FIGURES: Record<BodyFigureVariant, { image: string; alt: Record<BodyF
     alt: { front: 'Атлетичная женщина, вид спереди', back: 'Атлетичная женщина, вид сзади' },
   },
   neutral: {
-    image: '/illustrations/body-progress-athlete-neutral.svg',
+    image: '/illustrations/body-progress-anatomical.png',
     alt: { front: 'Анатомическая схема мышц, вид спереди', back: 'Анатомическая схема мышц, вид сзади' },
   },
 }
@@ -134,10 +135,12 @@ function MapPanel({ data, selected, variant, side, discovering, onSideChange, on
   onShowDetails: () => void
 }) {
   const figure = BODY_FIGURES[variant]
-  const clipBox = bodyFigureClipBox(side)
+  const canvas = bodyFigureCanvas(variant)
+  const clipBox = bodyFigureClipBox(variant, side)
   const clipId = `body-progress-clip-${useId().replace(/:/g, '')}`
   const maskId = `body-progress-mask-${useId().replace(/:/g, '')}`
   const filterId = `body-progress-soft-${useId().replace(/:/g, '')}`
+  const darkFigureFilterId = `body-progress-dark-figure-${useId().replace(/:/g, '')}`
   const swipeStartX = useRef<number | null>(null)
   const visibleSecondary = selected?.details[0]
   const hiddenCount = selected ? Math.max(0, selected.details.length - 1) : 0
@@ -175,15 +178,25 @@ function MapPanel({ data, selected, variant, side, discovering, onSideChange, on
             <clipPath id={clipId} clipPathUnits="userSpaceOnUse">
               <rect {...clipBox} />
             </clipPath>
-            <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="952" height="1000" style={{ maskType: 'alpha' }}>
-              <image href={figure.image} width="952" height="1000" preserveAspectRatio="none" clipPath={`url(#${clipId})`} />
+            <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width={canvas.width} height={canvas.height} style={{ maskType: 'alpha' }}>
+              <image href={figure.image} width={canvas.width} height={canvas.height} preserveAspectRatio="none" clipPath={`url(#${clipId})`} />
             </mask>
             <filter id={filterId} x="-18%" y="-18%" width="136%" height="136%" colorInterpolationFilters="sRGB">
               <feGaussianBlur stdDeviation="2.5" />
             </filter>
+            {variant === 'neutral' && <filter id={darkFigureFilterId} colorInterpolationFilters="sRGB">
+              <feComponentTransfer>
+                <feFuncR type="table" tableValues="0.9 0.08" />
+                <feFuncG type="table" tableValues="0.9 0.08" />
+                <feFuncB type="table" tableValues="0.9 0.08" />
+              </feComponentTransfer>
+            </filter>}
           </defs>
-          <image href={figure.image} width="952" height="1000" preserveAspectRatio="none" clipPath={`url(#${clipId})`} aria-hidden="true" />
-          <g mask={`url(#${maskId})`}>
+          {variant === 'neutral' ? <>
+            <image className="body-progress-figure-image body-progress-figure-image-light" href={figure.image} width={canvas.width} height={canvas.height} preserveAspectRatio="none" clipPath={`url(#${clipId})`} aria-hidden="true" />
+            <image className="body-progress-figure-image body-progress-figure-image-dark" href={figure.image} width={canvas.width} height={canvas.height} preserveAspectRatio="none" clipPath={`url(#${clipId})`} filter={`url(#${darkFigureFilterId})`} aria-hidden="true" />
+          </> : <image className="body-progress-figure-image" href={figure.image} width={canvas.width} height={canvas.height} preserveAspectRatio="none" clipPath={`url(#${clipId})`} aria-hidden="true" />}
+          <g mask={variant === 'neutral' ? undefined : `url(#${maskId})`}>
             {regionsBySide[side].map((region, index) => <BodyRegion
               key={region.group}
               region={region}
