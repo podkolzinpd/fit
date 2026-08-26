@@ -43,7 +43,7 @@ describe('workout surface contract', () => {
   })
 
   it.each([
-    ['primary', ''],
+    ['primary', 'primary'],
     ['secondary', 'secondary'],
     ['tertiary', 'link'],
     ['destructive', 'danger'],

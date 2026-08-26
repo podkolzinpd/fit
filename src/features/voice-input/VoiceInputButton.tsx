@@ -206,7 +206,7 @@ export function VoiceInputButton({
       {recording ? <StopIcon /> : <MicIcon />}
       <span className="voice-action-ring" aria-hidden="true" />
     </button>
-    {recording ? <div className="voice-action-recording-controls"><button type="button" className="wide" onClick={() => void (streamingRef.current ? finishStreaming() : finishRecording())}>Готово</button><button type="button" className="link" onClick={cancelRecording}>Отменить</button></div> : <div className="voice-action-label">{!busy && <strong>{idleLabel}</strong>}{busy && <span>Это займёт несколько секунд</span>}</div>}
+    {recording ? <div className="voice-action-recording-controls"><button type="button" className="primary wide" onClick={() => void (streamingRef.current ? finishStreaming() : finishRecording())}>Готово</button><button type="button" className="link" onClick={cancelRecording}>Отменить</button></div> : <div className="voice-action-label">{!busy && <strong>{idleLabel}</strong>}{busy && <span>Это займёт несколько секунд</span>}</div>}
     {message && !message.startsWith('Сейчас распознаю:') && <div className="voice-action-error" role="alert"><strong>{message}</strong></div>}
   </section>
 

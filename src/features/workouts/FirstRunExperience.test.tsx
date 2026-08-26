@@ -16,7 +16,9 @@ describe('first-run experience', () => {
     const onCreate = vi.fn().mockResolvedValue(undefined)
     render(<TrainerFirstRun creating={false} error={null} onCreate={onCreate} />)
     fireEvent.change(screen.getByLabelText('Имя клиента'), { target: { value: ' Антон ' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Добавить первого клиента' }))
+    const create = screen.getByRole('button', { name: 'Добавить первого клиента' })
+    expect(create).toHaveClass('primary')
+    fireEvent.click(create)
     await waitFor(() => expect(onCreate).toHaveBeenCalledWith('Антон'))
   })
 

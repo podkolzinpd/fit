@@ -52,7 +52,7 @@ export function WearableHealthCard({ source = nativeHealthSource }: { source?: W
   return <section className="wearable-card" aria-labelledby="wearable-title">
     <div className="wearable-card-head"><div><p className="eyebrow">ДАННЫЕ С ЧАСОВ</p><h2 id="wearable-title">Активность и восстановление</h2></div>{state.kind === 'ready' && <button className="link" onClick={() => void connect()}>Обновить</button>}</div>
     {state.kind === 'checking' && <p className="muted">Проверяем доступность…</p>}
-    {state.kind === 'idle' && <div className="wearable-empty"><strong>Подключите Apple Health</strong><p>Fit прочитает только сон, шаги, активную энергию, пульс покоя и HRV. Данные пока остаются на устройстве.</p><button onClick={() => void connect()}>Подключить</button></div>}
+    {state.kind === 'idle' && <div className="wearable-empty"><strong>Подключите Apple Health</strong><p>Fit прочитает только сон, шаги, активную энергию, пульс покоя и HRV. Данные пока остаются на устройстве.</p><button className="primary" onClick={() => void connect()}>Подключить</button></div>}
     {state.kind === 'loading' && <p className="muted" role="status">Читаем данные здоровья…</p>}
     {state.kind === 'error' && <div className="wearable-empty"><p className="error">{state.message}</p><button className="secondary" onClick={() => void connect()}>Повторить</button></div>}
     {state.kind === 'ready' && <><div className="wearable-metrics">

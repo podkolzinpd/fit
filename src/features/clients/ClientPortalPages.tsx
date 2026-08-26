@@ -43,7 +43,7 @@ export function MyWorkoutsPage() {
   const historyItems = pastItems.history
   const hasWorkouts = upcomingItems.length > 0 || pastItems.needsDecision.length > 0 || historyItems.length > 0
   return <Page className="client-workouts-page" title="Мои тренировки" action={mine.data && hasWorkouts && <Link className="button" to="/workouts/new">Добавить</Link>}><AsyncView loading={mine.isLoading || upcoming.isLoading || history.isLoading || trainers.isLoading} error={mine.error ?? upcoming.error ?? history.error ?? trainers.error} empty={!mine.data} onRetry={() => { void mine.refetch(); void upcoming.refetch(); void history.refetch(); void trainers.refetch() }}
-    emptyTitle="Сначала создайте личную карточку" emptyDescription="Она нужна, чтобы добавлять самостоятельные тренировки и получать назначения тренера." emptyAction={<Link className="button" to="/me">Создать карточку</Link>}>
+    emptyTitle="Сначала создайте личную карточку" emptyDescription="Она нужна, чтобы добавлять самостоятельные тренировки и получать назначения тренера." emptyAction={<Link className="button primary" to="/me">Создать карточку</Link>}>
     {mine.data && (hasWorkouts ? <div className="client-workouts-stack">
       {upcomingItems.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div><div className="cards client-workout-cards">{upcomingItems.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p className="muted">{clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)}</p><WorkoutExercisesSummary workout={workout} maxItems={2} /></div><WorkoutStatusBadge workout={workout} /></Link>)}</div></section>}
       {pastItems.needsDecision.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РАНЕЕ ЗАПЛАНИРОВАНО</p><h2>Выберите действие</h2></div><div className="cards client-workout-cards">{pastItems.needsDecision.map((workout) => <PastWorkoutPlanCard key={workout.id} workout={workout} contextLabel={clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)} returnTo="/me/workouts" />)}</div></section>}
@@ -97,7 +97,7 @@ export function MyProgressPage() {
     if (await confirm({ message: `Удалить замер за ${formatLocalDate(entry.recordedOn)}? Это действие нельзя отменить.`, confirmLabel: 'Удалить', danger: true })) remove.mutate(entry)
   }
   return <Page className="client-progress-page" title="Мой прогресс"><AsyncView loading={mine.isLoading || entries.isLoading || metrics.isLoading} error={mine.error ?? entries.error ?? metrics.error} empty={!mine.data} onRetry={() => { void mine.refetch(); void entries.refetch(); void metrics.refetch() }}
-    emptyTitle="Сначала создайте личную карточку" emptyDescription="Она связывает тренировки, замеры и анализ прогресса в одном профиле." emptyAction={<Link className="button" to="/me">Создать карточку</Link>}>
+    emptyTitle="Сначала создайте личную карточку" emptyDescription="Она связывает тренировки, замеры и анализ прогресса в одном профиле." emptyAction={<Link className="button primary" to="/me">Создать карточку</Link>}>
     {entries.data && mine.data && <div className="client-progress-stack"><ClientTrainingSummaryCard clientId={mine.data.id} profileGoal={mine.data.goal} gender={mine.data.gender} />
       <RunningProgressCard clientId={mine.data.id} />
       <section className="client-progress-measurement">
@@ -133,7 +133,7 @@ function ClientProgressForm({ entry, metrics, today, busy, error, onSubmit, onCa
       ? <Field key={row.metric.id} label={`${row.metric.name}${row.metric.unit ? `, ${row.metric.unit}` : ''}`}><ClientMetricInput metric={row.metric} entry={entry} /></Field>
       : <Field key={row.base} label={`${row.base}${row.unit ? `, ${row.unit}` : ''}`}><div className="measure-pair">{row.left && <ClientMetricInput metric={row.left} entry={entry} placeholder="Л" />}{row.right && <ClientMetricInput metric={row.right} entry={entry} placeholder="П" />}</div></Field>)}
     <Field label="Заметка"><textarea name="notes" defaultValue={entry?.notes} /></Field>
-    {error && <p className="error">{error.message}</p>}<div className="actions">{onCancel && <button type="button" className="secondary" onClick={onCancel}>Отмена</button>}<button disabled={busy}>{busy ? 'Сохраняем…' : 'Сохранить замер'}</button></div>
+    {error && <p className="error">{error.message}</p>}<div className="actions">{onCancel && <button type="button" className="secondary" onClick={onCancel}>Отмена</button>}<button className="primary" disabled={busy}>{busy ? 'Сохраняем…' : 'Сохранить замер'}</button></div>
   </form></section>
 }
 
