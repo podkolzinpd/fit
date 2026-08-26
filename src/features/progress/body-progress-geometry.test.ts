@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { bodyFigureClipBox, bodyFigureVariant, bodyFigureViewBox, bodyZoneShapes, bodyZoneSides } from './body-progress-geometry'
+import {
+  bodyFigureCanvas,
+  bodyFigureClipBox,
+  bodyFigureVariant,
+  bodyFigureViewBox,
+  bodyZoneShapes,
+  bodyZoneSides,
+} from './body-progress-geometry'
 
 describe('body progress geometry', () => {
   it('uses a deterministic neutral figure when gender is missing', () => {
@@ -45,9 +52,14 @@ describe('body progress geometry', () => {
     expect(bodyFigureViewBox('male', 'back')).toBe('441 0 476 1000')
     expect(bodyFigureViewBox('female', 'front')).toBe('9 0 476 1000')
     expect(bodyFigureViewBox('female', 'back')).toBe('475 0 476 1000')
-    expect(bodyFigureViewBox('neutral', 'front')).toBe('0 0 476 1000')
-    expect(bodyFigureViewBox('neutral', 'back')).toBe('476 0 476 1000')
-    expect(bodyFigureClipBox('front')).toEqual({ x: 0, y: 0, width: 476, height: 1000 })
-    expect(bodyFigureClipBox('back')).toEqual({ x: 476, y: 0, width: 476, height: 1000 })
+    expect(bodyFigureViewBox('neutral', 'front')).toBe('226 0 500 1052')
+    expect(bodyFigureViewBox('neutral', 'back')).toBe('768 0 500 1052')
+    expect(bodyFigureClipBox('male', 'front')).toEqual({ x: 0, y: 0, width: 476, height: 1000 })
+    expect(bodyFigureClipBox('female', 'back')).toEqual({ x: 476, y: 0, width: 476, height: 1000 })
+    expect(bodyFigureClipBox('neutral', 'front')).toEqual({ x: 226, y: 0, width: 500, height: 1052 })
+    expect(bodyFigureClipBox('neutral', 'back')).toEqual({ x: 768, y: 0, width: 500, height: 1052 })
+    expect(bodyFigureCanvas('neutral')).toEqual({ width: 1495, height: 1052 })
+    expect(bodyZoneShapes('neutral', 'chest', 'front').every((shape) => shape.cx < 747.5)).toBe(true)
+    expect(bodyZoneShapes('neutral', 'upper_back', 'back').every((shape) => shape.cx >= 747.5)).toBe(true)
   })
 })

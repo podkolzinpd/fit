@@ -13,6 +13,11 @@ export interface BodyZoneShape {
 export type BodyFigureVariant = Gender | 'neutral'
 export type BodyFigureSide = 'front' | 'back'
 
+export interface BodyFigureCanvas {
+  width: number
+  height: number
+}
+
 type BodyZoneGeometry = Record<BodyMapZone, readonly BodyZoneShape[]>
 
 const male: BodyZoneGeometry = {
@@ -83,86 +88,90 @@ const female: BodyZoneGeometry = {
   ],
 }
 
-// Схематичная фигура использует точные контуры мышечных зон, а не широкие
-// круговые пятна. cx/cy/rx/ry остаются как геометрические границы для
-// определения стороны тела и доступной области нажатия.
-const neutralFrontShoulders: readonly BodyZoneShape[] = [
-  { cx: 151, cy: 244, rx: 32, ry: 41, path: 'M119 253C121 222 139 203 169 203C178 209 184 219 186 232C174 258 151 276 127 278C121 271 118 262 119 253Z' },
-  { cx: 325, cy: 244, rx: 32, ry: 41, path: 'M357 253C355 222 337 203 307 203C298 209 292 219 290 232C302 258 325 276 349 278C355 271 358 262 357 253Z' },
-]
-const neutralFrontChest: readonly BodyZoneShape[] = [
-  { cx: 199, cy: 274, rx: 38, ry: 41, path: 'M161 248C178 232 207 226 235 238V298C209 313 179 305 163 285C158 274 158 260 161 248Z' },
-  { cx: 277, cy: 274, rx: 38, ry: 41, path: 'M315 248C298 232 269 226 241 238V298C267 313 297 305 313 285C318 274 318 260 315 248Z' },
-]
-const neutralFrontBiceps: readonly BodyZoneShape[] = [
-  { cx: 112, cy: 345, rx: 23, ry: 64, path: 'M127 282C112 285 101 297 96 316L88 368C86 389 93 407 108 409C123 401 132 381 134 357L136 310C136 296 133 287 127 282Z' },
-  { cx: 364, cy: 345, rx: 23, ry: 64, path: 'M349 282C364 285 375 297 380 316L388 368C390 389 383 407 368 409C353 401 344 381 342 357L340 310C340 296 343 287 349 282Z' },
-]
-const neutralFrontForearms: readonly BodyZoneShape[] = [
-  { cx: 82, cy: 459, rx: 24, ry: 72, path: 'M100 399C87 397 76 407 70 427L57 481C52 503 58 524 72 531C87 527 96 512 99 490L106 431C108 416 106 405 100 399Z' },
-  { cx: 394, cy: 459, rx: 24, ry: 72, path: 'M376 399C389 397 400 407 406 427L419 481C424 503 418 524 404 531C389 527 380 512 377 490L370 431C368 416 370 405 376 399Z' },
-]
-const neutralFrontCore: readonly BodyZoneShape[] = [
-  { cx: 238, cy: 398, rx: 62, ry: 98, path: 'M183 307C202 320 218 324 238 324C258 324 274 320 293 307L300 390C296 438 279 477 252 496H224C197 477 180 438 176 390L183 307Z' },
-]
-const neutralFrontQuadriceps: readonly BodyZoneShape[] = [
-  { cx: 193, cy: 651, rx: 43, ry: 112, path: 'M158 541C181 528 209 532 227 548L226 657C222 707 207 751 185 763C163 746 153 703 151 654L158 541Z' },
-  { cx: 283, cy: 651, rx: 43, ry: 112, path: 'M318 541C295 528 267 532 249 548L250 657C254 707 269 751 291 763C313 746 323 703 325 654L318 541Z' },
-]
-const neutralFrontInnerThigh: readonly BodyZoneShape[] = [
-  { cx: 222, cy: 649, rx: 20, ry: 106, path: 'M211 548C223 553 231 563 237 580L232 683C230 719 220 747 208 757C201 724 201 683 204 642L211 548Z' },
-  { cx: 254, cy: 649, rx: 20, ry: 106, path: 'M265 548C253 553 245 563 239 580L244 683C246 719 256 747 268 757C275 724 275 683 272 642L265 548Z' },
-]
-const neutralFrontOuterThigh: readonly BodyZoneShape[] = [
-  { cx: 172, cy: 651, rx: 27, ry: 108, path: 'M157 543C144 566 139 605 142 652C145 702 156 742 178 761C187 711 188 658 184 604C182 576 172 554 157 543Z' },
-  { cx: 304, cy: 651, rx: 27, ry: 108, path: 'M319 543C332 566 337 605 334 652C331 702 320 742 298 761C289 711 288 658 292 604C294 576 304 554 319 543Z' },
-]
-const neutralBackTriceps: readonly BodyZoneShape[] = [
-  { cx: 588, cy: 345, rx: 23, ry: 64, path: 'M603 282C588 285 577 297 572 316L564 368C562 389 569 407 584 409C599 401 608 381 610 357L612 310C612 296 609 287 603 282Z' },
-  { cx: 840, cy: 345, rx: 23, ry: 64, path: 'M825 282C840 285 851 297 856 316L864 368C866 389 859 407 844 409C829 401 820 381 818 357L816 310C816 296 819 287 825 282Z' },
-]
-const neutralBackUpper: readonly BodyZoneShape[] = [
-  { cx: 676, cy: 278, rx: 61, ry: 78, path: 'M675 196C641 205 613 220 598 246C606 292 631 326 675 349V196Z' },
-  { cx: 752, cy: 278, rx: 61, ry: 78, path: 'M753 196C787 205 815 220 830 246C822 292 797 326 753 349V196Z' },
-]
-const neutralBackLower: readonly BodyZoneShape[] = [
-  { cx: 684, cy: 411, rx: 35, ry: 69, path: 'M675 344C645 361 633 392 641 433C649 459 664 479 684 490C700 447 701 399 693 353L675 344Z' },
-  { cx: 744, cy: 411, rx: 35, ry: 69, path: 'M753 344C783 361 795 392 787 433C779 459 764 479 744 490C728 447 727 399 735 353L753 344Z' },
-]
-const neutralBackGlutes: readonly BodyZoneShape[] = [
-  { cx: 674, cy: 535, rx: 48, ry: 48, path: 'M631 507C654 492 689 494 711 513C710 551 696 577 672 585C646 578 630 550 631 507Z' },
-  { cx: 754, cy: 535, rx: 48, ry: 48, path: 'M797 507C774 492 739 494 717 513C718 551 732 577 756 585C782 578 798 550 797 507Z' },
-]
-const neutralBackHamstrings: readonly BodyZoneShape[] = [
-  { cx: 670, cy: 679, rx: 39, ry: 101, path: 'M637 574C661 566 687 570 704 589L701 699C696 744 683 775 665 785C644 762 635 724 633 679L637 574Z' },
-  { cx: 758, cy: 679, rx: 39, ry: 101, path: 'M791 574C767 566 741 570 724 589L727 699C732 744 745 775 763 785C784 762 793 724 795 679L791 574Z' },
-]
-const neutralBackCalves: readonly BodyZoneShape[] = [
-  { cx: 663, cy: 834, rx: 31, ry: 87, path: 'M642 759C659 750 678 755 688 774L692 844C688 888 677 922 661 933C645 913 636 879 635 842L642 759Z' },
-  { cx: 765, cy: 834, rx: 31, ry: 87, path: 'M786 759C769 750 750 755 740 774L736 844C740 888 751 922 767 933C783 913 792 879 793 842L786 759Z' },
-]
-
-const neutral: BodyZoneGeometry = {
-  chest: neutralFrontChest,
-  shoulders: neutralFrontShoulders,
-  biceps: neutralFrontBiceps,
-  triceps: neutralBackTriceps,
-  forearms: neutralFrontForearms,
-  core: neutralFrontCore,
-  upper_back: neutralBackUpper,
-  lower_back: neutralBackLower,
-  glutes: neutralBackGlutes,
-  quadriceps: neutralFrontQuadriceps,
-  hamstrings: neutralBackHamstrings,
-  calves: neutralBackCalves,
-  inner_thigh: neutralFrontInnerThigh,
-  outer_thigh: neutralFrontOuterThigh,
-  arms: [...neutralFrontBiceps, ...neutralFrontForearms, ...neutralBackTriceps],
-  legs: [...neutralFrontQuadriceps, ...neutralFrontInnerThigh, ...neutralFrontOuterThigh, ...neutralBackHamstrings, ...neutralBackCalves],
-  back: [...neutralBackUpper, ...neutralBackLower],
+// Геометрия согласованной анатомической схемы задана прямо в координатах
+// итогового 1495x1052 изображения. Она не наследует пропорции старой
+// схематичной «куклы»: каждая зона лежит на соответствующем сегменте мышц.
+const anatomicalNeutral: BodyZoneGeometry = {
+  chest: [
+    { cx: 428, cy: 266, rx: 50, ry: 52 },
+    { cx: 516, cy: 266, rx: 50, ry: 52 },
+  ],
+  shoulders: [
+    { cx: 374, cy: 233, rx: 45, ry: 42, rotate: 18 },
+    { cx: 570, cy: 233, rx: 45, ry: 42, rotate: -18 },
+  ],
+  biceps: [
+    { cx: 351, cy: 335, rx: 30, ry: 68, rotate: 9 },
+    { cx: 593, cy: 335, rx: 30, ry: 68, rotate: -9 },
+  ],
+  triceps: [
+    { cx: 874, cy: 334, rx: 30, ry: 68, rotate: -9 },
+    { cx: 1161, cy: 334, rx: 30, ry: 68, rotate: 9 },
+  ],
+  forearms: [
+    { cx: 306, cy: 468, rx: 24, ry: 77, rotate: 13 },
+    { cx: 638, cy: 468, rx: 24, ry: 77, rotate: -13 },
+  ],
+  core: [
+    { cx: 472, cy: 409, rx: 55, ry: 104 },
+  ],
+  upper_back: [
+    { cx: 965, cy: 226, rx: 64, ry: 97, path: 'M986 130C959 142 928 164 901 185C927 207 954 242 979 286L1005 323V145C999 138 993 133 986 130Z' },
+    { cx: 1071, cy: 226, rx: 64, ry: 97, path: 'M1050 130C1077 142 1108 164 1135 185C1109 207 1082 242 1057 286L1031 323V145C1037 138 1043 133 1050 130Z' },
+    { cx: 955, cy: 352, rx: 55, ry: 113, path: 'M923 248C946 230 967 239 981 274L1008 331L1007 361L952 465C925 446 906 405 901 353C899 311 907 273 923 248Z' },
+    { cx: 1081, cy: 352, rx: 55, ry: 113, path: 'M1113 248C1090 230 1069 239 1055 274L1028 331L1029 361L1084 465C1111 446 1130 405 1135 353C1137 311 1129 273 1113 248Z' },
+  ],
+  lower_back: [
+    { cx: 980, cy: 454, rx: 42, ry: 80, rotate: -8 },
+    { cx: 1056, cy: 454, rx: 42, ry: 80, rotate: 8 },
+  ],
+  glutes: [
+    { cx: 966, cy: 549, rx: 55, ry: 55 },
+    { cx: 1070, cy: 549, rx: 55, ry: 55 },
+  ],
+  quadriceps: [
+    { cx: 419, cy: 639, rx: 48, ry: 112 },
+    { cx: 526, cy: 639, rx: 48, ry: 112 },
+  ],
+  hamstrings: [
+    { cx: 965, cy: 680, rx: 43, ry: 112 },
+    { cx: 1071, cy: 680, rx: 43, ry: 112 },
+  ],
+  calves: [
+    { cx: 961, cy: 838, rx: 35, ry: 94 },
+    { cx: 1075, cy: 838, rx: 35, ry: 94 },
+  ],
+  inner_thigh: [
+    { cx: 457, cy: 640, rx: 24, ry: 108, rotate: -3 },
+    { cx: 487, cy: 640, rx: 24, ry: 108, rotate: 3 },
+  ],
+  outer_thigh: [
+    { cx: 397, cy: 640, rx: 31, ry: 110, rotate: 4 },
+    { cx: 547, cy: 640, rx: 31, ry: 110, rotate: -4 },
+  ],
+  arms: [
+    { cx: 351, cy: 335, rx: 32, ry: 71, rotate: 9 },
+    { cx: 593, cy: 335, rx: 32, ry: 71, rotate: -9 },
+    { cx: 306, cy: 468, rx: 25, ry: 80, rotate: 13 },
+    { cx: 638, cy: 468, rx: 25, ry: 80, rotate: -13 },
+    { cx: 874, cy: 334, rx: 32, ry: 71, rotate: -9 },
+    { cx: 1161, cy: 334, rx: 32, ry: 71, rotate: 9 },
+  ],
+  legs: [
+    { cx: 419, cy: 734, rx: 51, ry: 211 },
+    { cx: 526, cy: 734, rx: 51, ry: 211 },
+    { cx: 965, cy: 744, rx: 48, ry: 205 },
+    { cx: 1071, cy: 744, rx: 48, ry: 205 },
+  ],
+  back: [
+    { cx: 952, cy: 310, rx: 70, ry: 95, rotate: -12 },
+    { cx: 1084, cy: 310, rx: 70, ry: 95, rotate: 12 },
+    { cx: 980, cy: 454, rx: 43, ry: 82, rotate: -8 },
+    { cx: 1056, cy: 454, rx: 43, ry: 82, rotate: 8 },
+  ],
 }
 
-const geometries: Record<BodyFigureVariant, BodyZoneGeometry> = { male, female, neutral }
+const geometries: Record<BodyFigureVariant, BodyZoneGeometry> = { male, female, neutral: anatomicalNeutral }
 
 // Центры фигур внутри исходных 952×1000 ассетов различаются. Кадрируем каждый
 // ракурс вокруг его реального центра, чтобы изображение и SVG-маски оставались
@@ -170,7 +179,19 @@ const geometries: Record<BodyFigureVariant, BodyZoneGeometry> = { male, female, 
 const figureCenters: Record<BodyFigureVariant, Record<BodyFigureSide, number>> = {
   male: { front: 280, back: 679 },
   female: { front: 247, back: 713 },
-  neutral: { front: 238, back: 714 },
+  neutral: { front: 476, back: 1018 },
+}
+
+const figureCanvases: Record<BodyFigureVariant, BodyFigureCanvas> = {
+  male: { width: 952, height: 1000 },
+  female: { width: 952, height: 1000 },
+  neutral: { width: 1495, height: 1052 },
+}
+
+const figureViewportWidths: Record<BodyFigureVariant, number> = {
+  male: 476,
+  female: 476,
+  neutral: 500,
 }
 
 export function bodyFigureVariant(gender: Gender | null): BodyFigureVariant {
@@ -184,7 +205,8 @@ export function bodyZoneShapes(
 ): readonly BodyZoneShape[] {
   const shapes = geometries[variant][zone]
   if (!side) return shapes
-  return shapes.filter((shape) => side === 'front' ? shape.cx < 476 : shape.cx >= 476)
+  const sideSplit = variant === 'neutral' ? 747.5 : 476
+  return shapes.filter((shape) => side === 'front' ? shape.cx < sideSplit : shape.cx >= sideSplit)
 }
 
 export function bodyZoneSides(variant: BodyFigureVariant, zone: BodyMapZone): readonly BodyFigureSide[] {
@@ -192,10 +214,26 @@ export function bodyZoneSides(variant: BodyFigureVariant, zone: BodyMapZone): re
 }
 
 export function bodyFigureViewBox(variant: BodyFigureVariant, side: BodyFigureSide): string {
-  const x = figureCenters[variant][side] - 238
-  return `${x} 0 476 1000`
+  const canvas = figureCanvases[variant]
+  const width = figureViewportWidths[variant]
+  const x = figureCenters[variant][side] - width / 2
+  return `${x} 0 ${width} ${canvas.height}`
 }
 
-export function bodyFigureClipBox(side: BodyFigureSide) {
-  return { x: side === 'front' ? 0 : 476, y: 0, width: 476, height: 1000 } as const
+export function bodyFigureClipBox(variant: BodyFigureVariant, side: BodyFigureSide) {
+  const canvas = figureCanvases[variant]
+  if (variant !== 'neutral') {
+    return { x: side === 'front' ? 0 : 476, y: 0, width: 476, height: canvas.height } as const
+  }
+  const width = figureViewportWidths[variant]
+  return {
+    x: figureCenters[variant][side] - width / 2,
+    y: 0,
+    width,
+    height: canvas.height,
+  } as const
+}
+
+export function bodyFigureCanvas(variant: BodyFigureVariant): BodyFigureCanvas {
+  return figureCanvases[variant]
 }
