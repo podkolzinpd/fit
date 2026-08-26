@@ -37,12 +37,15 @@ After the one-time bootstrap, a release is performed only by
    applies all pending forward migrations under an advisory lock. A failure
    stops the release before the API changes. After migrations and fixtures, the
    same private runner opens a separate connection using the exact `fit_api`
-   runtime credential and executes the real `list_client_overviews` read model
-   inside the synthetic stage actor transaction. This checks connection,
-   actor context, SQL permissions, the deployed schema and Node.js row mapping
-   before the API revision changes. Failures are reduced to a safe category and
-   normalized code in CI; host, user, password, rows and error message are never
-   returned. A failed runtime preflight stops before an API revision is created.
+   runtime credential and sends the fresh synthetic pilot session through the
+   same `DatabasePilotClientsReader` used by `GET /v1/clients`. This checks the
+   token hash, `resolve_yandex_pilot_session`, actor context,
+   `list_client_overviews`, SQL permissions, the deployed schema and Node.js row
+   mapping before the API revision changes. Failures are reduced to a safe
+   category and normalized code in CI; token, host, user, password, rows and
+   error message are never returned. A rejected fixture session is reported as
+   `authentication/PILOT_SESSION_INVALID`. A failed runtime preflight stops
+   before an API revision is created.
 6. Terraform generates a fresh plan and the workflow deploys the API revision
    through the same REST API. Terraform refreshes state immediately after each
    direct deployment and refuses to continue if either container still differs

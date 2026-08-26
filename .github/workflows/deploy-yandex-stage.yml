@@ -208,9 +208,11 @@ jobs:
         working-directory: infra/yandex
         run: |
           migration_url=$(terraform output -raw migration_container_url)
+          fixture_token=$(jq -er '.session.token' stage-workout-fixture-response.json)
           status=$(curl --silent --show-error \
             --output runtime-database-readiness-response.json --write-out '%{http_code}' \
             --request POST --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $fixture_token" \
             "${migration_url%/}/stage/runtime-database/readiness")
           if test "$status" != 200; then
             if jq -e '

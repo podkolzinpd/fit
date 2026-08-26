@@ -5,17 +5,20 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-26
-Проверенный базовый `main`: `9707356` (`fix(yandex): log safe clients diagnostics (#594)`)
+Проверенный базовый `main`: `6691510` (`fix(yandex): preflight clients read model (#595)`)
 
 ## Активное изменение
 
-- После merge #594 stage run `32973211119` снова подтвердил миграции, fixture,
-  `/health` и `/ready`, но `GET /v1/clients` вернул `503`; rollback восстановил
-  `bbak2bq6iopc8lcpnbe8`, production не пострадал. Application stdout не попал
-  в журнал Serverless Container, а PostgreSQL не зарегистрировал SQL `ERROR`.
-- Активный follow-up переносит реальный clients read-model probe в private
-  runner до API deployment. CI получает только safe category/code, а при
-  ошибке кандидат и rollback больше не создаются.
+- После merge #595 stage run `32976543551` подтвердил миграции, fixture, прямой
+  clients read-model preflight, `/health` и `/ready`, но первый
+  `GET /v1/clients` девять раз вернул `503`; rollback восстановил
+  `bbak2bq6iopc8lcpnbe8`, production не пострадал. Значит runtime connection,
+  схема, `list_client_overviews` и Node.js row mapping исправны, а оставшийся
+  разрыв находится в разрешении пилотной сессии.
+- Активный follow-up передаёт свежий fixture token в private preflight и
+  выполняет точный путь `DatabasePilotClientsReader`: hash →
+  `resolve_yandex_pilot_session` → actor context → clients read model. CI
+  получает только safe category/code, а при ошибке API revision не создаётся.
 
 ## Последняя проверенная продуктовая точка
 

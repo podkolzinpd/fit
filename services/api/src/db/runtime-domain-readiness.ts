@@ -1,23 +1,25 @@
-import { readAccessibleClients } from '../clients.js'
-import { withActorTransaction } from './actor-transaction.js'
+import type { PilotClientsReader } from '../pilot-clients-reader.js'
+import { PilotSessionInvalidError } from './yandex-pilot-transaction.js'
 import {
   type DatabaseReadinessResult,
   safeDatabaseErrorDiagnostics,
 } from './database-readiness.js'
-import type { DatabasePool } from './types.js'
 
 export async function inspectRuntimeDomainReadiness(
-  pool: DatabasePool,
-  actorId: string,
+  clientsReader: PilotClientsReader,
+  sessionToken: string,
 ): Promise<DatabaseReadinessResult> {
   try {
-    await withActorTransaction(
-      pool,
-      actorId,
-      (client) => readAccessibleClients(client),
-    )
+    await clientsReader.readClients(sessionToken)
     return { ready: true }
   } catch (error) {
+    if (error instanceof PilotSessionInvalidError) {
+      return {
+        ready: false,
+        category: 'authentication',
+        code: 'PILOT_SESSION_INVALID',
+      }
+    }
     return {
       ready: false,
       ...safeDatabaseErrorDiagnostics(error),
