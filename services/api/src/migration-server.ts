@@ -7,12 +7,10 @@ import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
 import { inspectRuntimeDomainReadiness } from './db/runtime-domain-readiness.js'
 import { DatabaseStageDatabaseReaderAccessManager } from './db/stage-database-reader-access.js'
-import {
-  DatabaseStageWorkoutFixtureLoader,
-  STAGE_SMOKE_PROFILE_ID,
-} from './db/stage-workout-fixture.js'
+import { DatabaseStageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
 import { DatabasePilotEnroller } from './db/yandex-pilot-enrollment.js'
 import { buildMigrationApp } from './migration-app.js'
+import { DatabasePilotClientsReader } from './pilot-clients-reader.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -70,6 +68,9 @@ if (stageRuntimeDatabasePreflightEnabled && runtimeDatabaseConfig === undefined)
 const runtimeDatabasePool = runtimeDatabaseConfig === undefined
   ? undefined
   : new PgDatabasePool(runtimeDatabaseConfig)
+const runtimeClientsReader = runtimeDatabasePool === undefined
+  ? undefined
+  : new DatabasePilotClientsReader(runtimeDatabasePool)
 const yandexClientId = process.env.YANDEX_OAUTH_CLIENT_ID
 if (pilotEnrollmentEnabled && yandexClientId === undefined) {
   throw new Error('YANDEX_OAUTH_CLIENT_ID is required for pilot enrollment')
@@ -99,13 +100,11 @@ const app = buildMigrationApp({
           privateFeaturePool,
         ),
       }),
-  ...(runtimeDatabasePool === undefined
+  ...(runtimeClientsReader === undefined
     ? {}
     : {
-        runtimeDatabaseReadiness: () => inspectRuntimeDomainReadiness(
-          runtimeDatabasePool,
-          STAGE_SMOKE_PROFILE_ID,
-        ),
+        runtimeDatabaseReadiness: (sessionToken: string) =>
+          inspectRuntimeDomainReadiness(runtimeClientsReader, sessionToken),
       }),
   runMigrations: async () => {
     const migrations = await runner({

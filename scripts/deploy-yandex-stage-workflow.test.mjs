@@ -86,6 +86,8 @@ test('probes the fit_api identity privately before changing the API revision', (
   assert.ok(preflightIndex > fixtureIndex)
   assert.ok(deployIndex > preflightIndex)
   assert.match(workflow, /\/stage\/runtime-database\/readiness/)
+  assert.match(workflow, /fixture_token=\$\(jq -er '\.session\.token'/)
+  assert.match(workflow, /X-Fit-Pilot-Session: \$fixture_token/)
   assert.match(workflow, /Runtime database preflight failed: category=/)
   assert.match(workflow, /The API revision was not changed/)
   assert.match(

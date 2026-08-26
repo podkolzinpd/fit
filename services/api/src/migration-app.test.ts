@@ -69,10 +69,31 @@ describe('stage runtime database readiness', () => {
   })
 
   it('confirms the exact runtime connection before API deployment', async () => {
+    const runtimeDatabaseReadiness = vi.fn().mockResolvedValue({ ready: true })
     const app = buildMigrationApp({
       logger: false,
       runMigrations: () => Promise.resolve([]),
-      runtimeDatabaseReadiness: () => Promise.resolve({ ready: true }),
+      runtimeDatabaseReadiness,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/runtime-database/readiness',
+      headers: { 'x-fit-pilot-session': 'stage-session-token' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ status: 'runtime_database_ready' })
+    expect(runtimeDatabaseReadiness).toHaveBeenCalledWith('stage-session-token')
+  })
+
+  it('requires a pilot session without exposing the readiness probe', async () => {
+    const runtimeDatabaseReadiness = vi.fn().mockResolvedValue({ ready: true })
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+      runtimeDatabaseReadiness,
     })
     apps.push(app)
 
@@ -81,8 +102,9 @@ describe('stage runtime database readiness', () => {
       url: '/stage/runtime-database/readiness',
     })
 
-    expect(response.statusCode).toBe(200)
-    expect(response.json()).toEqual({ status: 'runtime_database_ready' })
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ status: 'invalid_request' })
+    expect(runtimeDatabaseReadiness).not.toHaveBeenCalled()
   })
 
   it('returns only a safe failure category and code', async () => {
@@ -100,6 +122,7 @@ describe('stage runtime database readiness', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/stage/runtime-database/readiness',
+      headers: { 'x-fit-pilot-session': 'stage-session-token' },
     })
 
     expect(response.statusCode).toBe(503)

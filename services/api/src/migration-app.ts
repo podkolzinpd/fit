@@ -28,7 +28,7 @@ interface BuildMigrationAppOptions {
   logger?: boolean
   pilotEnrollment?: PilotEnrollmentOptions
   runMigrations: () => Promise<readonly string[]>
-  runtimeDatabaseReadiness?: () => Promise<DatabaseReadinessResult>
+  runtimeDatabaseReadiness?: (sessionToken: string) => Promise<DatabaseReadinessResult>
   stageWorkoutFixture?: StageWorkoutFixtureLoader
 }
 
@@ -85,8 +85,12 @@ export function buildMigrationApp(
 
   if (options.runtimeDatabaseReadiness !== undefined) {
     const runtimeDatabaseReadiness = options.runtimeDatabaseReadiness
-    app.post('/stage/runtime-database/readiness', async (_request, reply) => {
-      const readiness = await runtimeDatabaseReadiness()
+    app.post('/stage/runtime-database/readiness', async (request, reply) => {
+      const sessionToken = request.headers['x-fit-pilot-session']
+      if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+        return reply.code(400).send({ status: 'invalid_request' })
+      }
+      const readiness = await runtimeDatabaseReadiness(sessionToken)
       if (readiness.ready) return { status: 'runtime_database_ready' }
 
       return reply.code(503).send({
