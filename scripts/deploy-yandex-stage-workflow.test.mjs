@@ -64,8 +64,10 @@ test('allows the API gateway and database readiness to settle before rollback', 
     /bootstrap_deadline=\$\(\( \$\(date \+%s\) \+ 90 \)\)/,
   )
   assert.match(workflow, /api-health-response\.json/)
+  assert.match(workflow, /\.releaseId == \$release_id/)
+  assert.match(workflow, /observed release:/)
   assert.match(workflow, /api-readiness-response\.json/)
-  assert.match(workflow, /API bootstrap did not succeed within 90 seconds/)
+  assert.match(workflow, /API bootstrap did not reach release/)
   assert.ok(
     workflow.indexOf('"${api_url%/}/health"')
       < workflow.indexOf('"${api_url%/}/ready"'),
@@ -89,6 +91,9 @@ test('probes the fit_api identity privately before changing the API revision', (
   assert.match(workflow, /fixture_token=\$\(jq -er '\.session\.token'/)
   assert.match(workflow, /X-Fit-Pilot-Session: \$fixture_token/)
   assert.match(workflow, /Runtime database preflight failed: category=/)
+  assert.match(workflow, /First clients smoke failed: HTTP/)
+  assert.match(workflow, /x-fit-error-category:/)
+  assert.match(workflow, /x-fit-error-code:/)
   assert.match(workflow, /The API revision was not changed/)
   assert.match(
     workflow,

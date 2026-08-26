@@ -57,6 +57,19 @@ describe('health endpoint', () => {
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual({ status: 'ok' })
   })
+
+  it('reports the immutable release when the runtime provides it', async () => {
+    const app = buildApp({ logger: false, releaseId: 'api-tree-hash' })
+    apps.push(app)
+
+    const response = await app.inject({ method: 'GET', url: '/health' })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      status: 'ok',
+      releaseId: 'api-tree-hash',
+    })
+  })
 })
 
 describe('legacy Supabase function bridge', () => {
@@ -1106,6 +1119,8 @@ describe('read-only pilot clients endpoint', () => {
 
     expect(response.statusCode).toBe(503)
     expect(response.json()).toEqual({ error: 'service_unavailable' })
+    expect(response.headers['x-fit-error-category']).toBe('permission')
+    expect(response.headers['x-fit-error-code']).toBe('42501')
     expect(warn).toHaveBeenCalledWith(
       {
         databaseErrorCategory: 'permission',
@@ -1126,7 +1141,7 @@ describe('read-only pilot clients endpoint', () => {
     apps.push(app)
     const warn = vi.spyOn(app.log, 'warn')
 
-    await app.inject({
+    const response = await app.inject({
       method: 'GET',
       url: '/v1/clients',
       headers: { 'x-fit-pilot-session': 's'.repeat(43) },
@@ -1139,6 +1154,8 @@ describe('read-only pilot clients endpoint', () => {
       },
       'Pilot clients query failed',
     )
+    expect(response.headers['x-fit-error-category']).toBe('unknown')
+    expect(response.headers['x-fit-error-code']).toBe('unknown')
     expect(JSON.stringify(warn.mock.calls)).not.toContain('unsafe')
   })
 })

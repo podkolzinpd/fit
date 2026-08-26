@@ -49,10 +49,13 @@ After the one-time bootstrap, a release is performed only by
 6. Terraform generates a fresh plan and the workflow deploys the API revision
    through the same REST API. Terraform refreshes state immediately after each
    direct deployment and refuses to continue if either container still differs
-   from the reviewed configuration. Private `/health` and `/ready` checks must
-   pass. One bootstrap loop gives the gateway `/health` and database `/ready`
-   checks a shared explicit 90-second wall-clock deadline instead of relying on
-   shorter client retry defaults. A bootstrap failure rolls back to the exact
+   from the reviewed configuration. `/health` must return the immutable API tree
+   hash expected by the workflow before `/ready` and domain smoke can begin, so
+   a stale public route cannot be mistaken for the new candidate. The first
+   clients request exposes only normalized diagnostic headers on failure; their
+   absence identifies an ingress/proxy-generated response. One bootstrap loop
+   gives the gateway `/health` and database `/ready` checks a shared explicit
+   90-second wall-clock deadline. A bootstrap failure rolls back to the exact
    previous revision. If the plan contains no container change, the active
    revision is reused. The stage API receives a public invocation binding only
    through the exact reviewed Terraform resource; the migration runner never
