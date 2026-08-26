@@ -10,13 +10,14 @@ import { currentTimeInTimeZone, formatLocalDate, todayInTimeZone } from '../../s
 import type { ExerciseSnapshot, WorkoutDraft } from '../../shared/domain'
 import { useExerciseCatalog } from '../exercises'
 import { WorkoutComposer } from '../workouts/WorkoutComposer'
-import { formatLlmWorkoutText, parseWorkoutWithLlm } from '../workouts/llm-workout-parser'
+import { parseWorkoutWithLlm } from '../workouts/llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
 import { appendWorkoutParse, assistantWorkoutSaveInput, enqueueWorkoutParse, replaceWorkoutParseSource, type WorkoutParseQueue } from './workout-draft'
 import { conversationLocalDate, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveAssistantAction, mergeAssistantMessages, selectTodayConversation, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
 import { AssistantInlineSummaryCard } from './AssistantInlineSummary'
 import { parseAssistantInlineSummary } from './assistant-inline-summary'
+import { assistantActionView } from './assistant-action-view'
 
 type FailedTurn = { turnId: string; message: string }
 
@@ -327,8 +328,8 @@ function AssistantMessageContent({ content }: { content: string }) {
   return <p>{content}</p>
 }
 
-type SummaryPayload = { step: string; clientId?: string; clientName?: string; transcript?: string; candidates?: { id: string; fullName: string }[]; options?: string[]; periodStart?: string; periodEnd?: string; periodLabel?: string }
-type ClientDraftPayload = { step: string; fullName: string; gender: 'male' | 'female'; ageYears: number; heightCm: number; goal?: string; initialWeightKg?: number }
+type SummaryPayload = { step: string; clientId?: string; clientName?: string; transcript?: string; candidates?: { id: string; fullName: string }[]; options?: string[]; periodStart?: string; periodEnd?: string; periodLabel?: string; missing?: string[]; goal?: string | null; brief?: string }
+type ClientDraftPayload = { step: string; fullName: string; gender?: 'male' | 'female'; ageYears?: number; heightCm?: number; goal?: string; initialWeightKg?: number; missing?: string[] }
 type WorkoutDraftPayload = { step: string; clientId: string; clientName: string; transcript?: string }
 type ProgramDraftPayload = { step: string; clientId: string; clientName: string; goal?: string | null; brief: string; sessions: unknown[] }
 
@@ -341,27 +342,49 @@ function summaryPayload(action: AssistantOrchestratorAction): { clientId: string
 
 function AssistantAction({ action, timezone, onWorkoutSaved, onApplyAction, onSuggestion, onCancel, onConfirm, onConfirmClient, running, completed }: { action: AssistantOrchestratorAction; timezone?: string; onWorkoutSaved: () => void; onApplyAction: (input: object) => Promise<void>; onSuggestion: (value: string) => void; onCancel: () => void; onConfirm: () => void; onConfirmClient: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {
   const payload = action.payload as SummaryPayload
-  if (action.tool === 'create_client_draft' && payload.step === 'confirm') return <ClientDraftCard payload={payload as ClientDraftPayload} onCancel={onCancel} onConfirm={onConfirmClient} running={running} completed={completed} />
-  if (action.tool === 'record_workout' && payload.step === 'confirm') return <AssistantWorkoutDraftCard key={`${action.id ?? 'workout'}-${payload.clientId}`} payload={payload as WorkoutDraftPayload} timezone={timezone} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} />
-  if (action.tool === 'record_workout' && payload.step === 'workout') return <WorkoutCollectionCard payload={payload as WorkoutDraftPayload} onSuggestion={onSuggestion} onCancel={onCancel} />
-  if (action.tool === 'create_program_draft' && payload.step === 'confirm') return <ProgramDraftCard payload={payload as ProgramDraftPayload} timezone={timezone} onApply={onApplyAction} onSaved={onWorkoutSaved} onCancel={onCancel} />
-  if (action.tool !== 'summarize_progress') return <ActionPreview action={action} onCancel={onCancel} />
-  if (payload.step === 'client' && Array.isArray(payload.candidates)) return <SummaryClientChoices candidates={payload.candidates} onSuggestion={onSuggestion} onCancel={onCancel} />
-  if (payload.step === 'period' && typeof payload.clientName === 'string' && Array.isArray(payload.options)) return <SummaryPeriodChoices clientName={payload.clientName} options={payload.options} onSuggestion={onSuggestion} onCancel={onCancel} />
-  if (summaryPayload(action) !== undefined) return <div className="assistant-progress-preview"><strong>{action.title}</strong><span>{action.description}</span><button type="button" onClick={onConfirm} disabled={running || completed}>{completed ? 'Сводка сформирована' : running ? 'Формирую…' : 'Сформировать сводку'}</button>{!completed && <CancelActionButton onCancel={onCancel} />}<small>Будут использованы только завершённые тренировки за выбранный период.</small></div>
+  const view = assistantActionView({ tool: action.tool, payload: action.payload })
+  if (view === 'client-collection') return <ClientCollectionCard payload={payload as ClientDraftPayload} onSuggestion={onSuggestion} onCancel={onCancel} />
+  if (view === 'client-confirm') return <ClientDraftCard payload={payload as ClientDraftPayload} onCancel={onCancel} onConfirm={onConfirmClient} running={running} completed={completed} />
+  if (view === 'client-choices') return <AssistantClientChoices tool={action.tool} candidates={payload.candidates ?? []} onSuggestion={onSuggestion} onCancel={onCancel} />
+  if (view === 'workout-confirm') return <AssistantWorkoutDraftCard key={`${action.id ?? 'workout'}-${payload.clientId}`} payload={payload as WorkoutDraftPayload} timezone={timezone} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} />
+  if (view === 'workout-collection') return <WorkoutCollectionCard payload={payload as WorkoutDraftPayload} onSuggestion={onSuggestion} onCancel={onCancel} />
+  if (view === 'program-brief') return <ProgramBriefCard payload={payload} onCancel={onCancel} />
+  if (view === 'program-confirm') return <ProgramDraftCard payload={payload as ProgramDraftPayload} timezone={timezone} onApply={onApplyAction} onSaved={onWorkoutSaved} onCancel={onCancel} />
+  if (view === 'summary-period' && typeof payload.clientName === 'string' && Array.isArray(payload.options)) return <SummaryPeriodChoices clientName={payload.clientName} options={payload.options} onSuggestion={onSuggestion} onCancel={onCancel} />
+  if (view === 'summary-confirm' && summaryPayload(action) !== undefined) return <div className="assistant-progress-preview"><strong>{action.title}</strong><span>{action.description}</span><button type="button" onClick={onConfirm} disabled={running || completed}>{completed ? 'Сводка сформирована' : running ? 'Формирую…' : 'Сформировать сводку'}</button>{!completed && <CancelActionButton onCancel={onCancel} />}<small>Будут использованы только завершённые тренировки за выбранный период.</small></div>
   return <ActionPreview action={action} onCancel={onCancel} />
 }
 
 function WorkoutCollectionCard({ payload, onSuggestion, onCancel }: { payload: WorkoutDraftPayload; onSuggestion: (value: string) => void; onCancel: () => void }) {
   const transcript = payload.transcript?.trim() ?? ''
-  return <div className="assistant-workout-collection">
-    <small>Новая тренировка</small>
-    <strong>{payload.clientName}</strong>
+  return <div className="assistant-flow-card assistant-workout-collection">
+    <header><span><small>Черновик тренировки</small><strong>{payload.clientName}</strong></span><span className="assistant-flow-status">Диктовка</span></header>
     {transcript
-      ? <div className="assistant-workout-transcript"><small>Уже добавлено</small><p>{transcript}</p></div>
-      : <p>Диктуйте упражнения по одному или все сразу — предыдущие фрагменты не пропадут.</p>}
-    {transcript && <button type="button" onClick={() => onSuggestion('Готово, разобрать тренировку')}>Распознать упражнения</button>}
-    <small>{transcript ? 'Можно надиктовать следующее упражнение обычным сообщением.' : 'Например: «Жим лёжа, 3 подхода по 10 повторений, 50 кг».'}</small>
+      ? <div className="assistant-workout-transcript"><small>Собрано из сообщений</small><p>{transcript}</p></div>
+      : <div className="assistant-flow-empty"><strong>Назовите первое упражнение</strong><span>Например: «жим лёжа, 3 по 10, 50 кг»</span></div>}
+    <p className="assistant-flow-guidance">Продолжайте диктовать по одному упражнению — каждый новый фрагмент добавится в этот черновик.</p>
+    <div className="assistant-flow-actions">{transcript && <button type="button" onClick={() => onSuggestion('Готово, разобрать тренировку')}>Разобрать тренировку</button>}<CancelActionButton onCancel={onCancel} /></div>
+  </div>
+}
+
+function ProgramBriefCard({ payload, onCancel }: { payload: SummaryPayload; onCancel: () => void }) {
+  return <div className="assistant-flow-card">
+    <header><span><small>Новая программа</small><strong>{payload.clientName}</strong></span><span className="assistant-flow-status">Сбор данных</span></header>
+    {payload.goal && <div className="assistant-flow-fact"><small>Цель из карточки</small><strong>{payload.goal}</strong></div>}
+    <div className="assistant-flow-checklist" aria-label="Что нужно уточнить"><span>Опыт тренировок</span><span>Ограничения</span><span>Доступные дни</span></div>
+    <p className="assistant-flow-guidance">Ответьте одним сообщением или надиктуйте опыт, ограничения и удобные дни.</p>
+    <CancelActionButton onCancel={onCancel} />
+  </div>
+}
+
+function ClientCollectionCard({ payload, onSuggestion, onCancel }: { payload: ClientDraftPayload; onSuggestion: (value: string) => void; onCancel: () => void }) {
+  const facts = [payload.gender && (payload.gender === 'female' ? 'Женщина' : 'Мужчина'), payload.ageYears && `${payload.ageYears} лет`, payload.heightCm && `${payload.heightCm} см`, payload.initialWeightKg && `${payload.initialWeightKg} кг`].filter(Boolean)
+  return <div className="assistant-flow-card">
+    <header><span><small>Новый клиент</small><strong>{payload.fullName || 'Карточка клиента'}</strong></span><span className="assistant-flow-status">Диктовка</span></header>
+    {facts.length > 0 && <div className="assistant-flow-checklist complete">{facts.map((fact) => <span key={String(fact)}>{fact}</span>)}</div>}
+    {payload.goal && <div className="assistant-flow-fact"><small>Цель</small><strong>{payload.goal}</strong></div>}
+    <div className="assistant-flow-empty"><strong>{payload.step === 'name' ? 'Назовите клиента и данные' : 'Дополните карточку'}</strong><span>{payload.step === 'name' ? 'Имя, пол, возраст, рост, цель и вес можно надиктовать сразу.' : 'Можно отправить только недостающие значения — уже распознанные сохранятся.'}</span></div>
+    {payload.step === 'profile' && !payload.gender && <div className="assistant-choice-chips"><button type="button" onClick={() => onSuggestion('женщина')}>Женщина</button><button type="button" onClick={() => onSuggestion('мужчина')}>Мужчина</button></div>}
     <CancelActionButton onCancel={onCancel} />
   </div>
 }
@@ -387,7 +410,17 @@ function ProgramDraftCard({ payload, timezone, onApply, onSaved, onCancel }: { p
     } catch { setError('Не удалось добавить программу в расписание. Попробуйте ещё раз.') }
     finally { setSaving(false) }
   }
-  return <div className="assistant-program-draft" aria-label={`Черновик программы ${payload.clientName}`}><strong>Программа · {payload.clientName}</strong><small>{payload.goal ? `Цель: ${payload.goal}` : 'Цель уточнена в анкете'}</small>{sessions.map((session, index) => <fieldset key={`${session.day}-${index}`}><label>Дата<input type="date" value={dates[index] ?? ''} onChange={(event) => setDates((current) => current.map((value, position) => position === index ? event.target.value : value))} /></label><label>Название<input value={session.title} onChange={(event) => setSessions((current) => current.map((item, position) => position === index ? { ...item, title: event.target.value } : item))} /></label><div className="assistant-program-exercises">{session.exercises.map((exercise, exerciseIndex) => <div key={exerciseIndex} className="assistant-program-exercise"><label>Упражнение<input value={exercise.name} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { name: event.target.value }))} /></label><label>Подходы<input type="number" min="1" max="8" value={exercise.sets} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { sets: Number(event.target.value) }))} /></label><label>Повторы<input type="number" min="1" value={exercise.reps ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { reps: optionalProgramNumber(event.target.value) }))} /></label><label>Вес, кг<input type="number" min="0" step="0.5" value={exercise.weightKg ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { weightKg: optionalProgramNumber(event.target.value) }))} /></label><label>Время, мин<input type="number" min="0" step="1" value={exercise.durationMin ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { durationMin: optionalProgramNumber(event.target.value) }))} /></label><label>Дистанция, км<input type="number" min="0" step="0.1" value={exercise.distanceKm ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { distanceKm: optionalProgramNumber(event.target.value) }))} /></label></div>)}</div></fieldset>)}{error && <p className="assistant-card-hint" role="alert">{error}</p>}<button type="button" onClick={() => void save()} disabled={catalog.loading || saving || saved}>{saved ? 'Программа добавлена в расписание' : saving ? 'Добавляю…' : 'Добавить в расписание'}</button>{!saved && <CancelActionButton onCancel={onCancel} />}</div>
+  return <div className="assistant-flow-card assistant-program-card" aria-label={`Черновик программы ${payload.clientName}`}>
+    <header><span><small>Программа тренировок</small><strong>{payload.clientName}</strong></span><span className="assistant-flow-status">{sessions.length} трен.</span></header>
+    {payload.goal && <div className="assistant-flow-fact"><small>Цель</small><strong>{payload.goal}</strong></div>}
+    <div className="assistant-program-sessions">{sessions.map((session, index) => <details key={`${session.day}-${index}`}>
+      <summary><span><strong>{session.title || `Тренировка ${index + 1}`}</strong><small>{session.exercises.length} упражнений · {dates[index]}</small></span><b>Изменить</b></summary>
+      <div className="assistant-program-session-fields"><label>Дата<input type="date" value={dates[index] ?? ''} onChange={(event) => setDates((current) => current.map((value, position) => position === index ? event.target.value : value))} /></label><label>Название<input value={session.title} onChange={(event) => setSessions((current) => current.map((item, position) => position === index ? { ...item, title: event.target.value } : item))} /></label></div>
+      <div className="assistant-program-exercises">{session.exercises.map((exercise, exerciseIndex) => <div key={exerciseIndex} className="assistant-program-exercise"><label className="assistant-program-exercise-name">Упражнение<input value={exercise.name} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { name: event.target.value }))} /></label><label>Подх.<input type="number" min="1" max="8" value={exercise.sets} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { sets: Number(event.target.value) }))} /></label><label>Повт.<input type="number" min="1" value={exercise.reps ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { reps: optionalProgramNumber(event.target.value) }))} /></label><label>Кг<input type="number" min="0" step="0.5" value={exercise.weightKg ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { weightKg: optionalProgramNumber(event.target.value) }))} /></label><label>Мин.<input type="number" min="0" step="1" value={exercise.durationMin ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { durationMin: optionalProgramNumber(event.target.value) }))} /></label><label>Км<input type="number" min="0" step="0.1" value={exercise.distanceKm ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { distanceKm: optionalProgramNumber(event.target.value) }))} /></label></div>)}</div>
+    </details>)}</div>
+    {error && <p className="assistant-card-hint" role="alert">{error}</p>}
+    <div className="assistant-flow-actions"><button type="button" onClick={() => void save()} disabled={catalog.loading || saving || saved}>{saved ? 'Добавлено в расписание' : saving ? 'Добавляю…' : 'Добавить в расписание'}</button>{!saved && <CancelActionButton onCancel={onCancel} />}</div>
+  </div>
 }
 
 function parsedWorkoutExercises(result: WorkoutParseResponse, catalog: readonly ExerciseSnapshot[]): WorkoutDraft['exercises'] {
@@ -481,7 +514,7 @@ function AssistantWorkoutDraftCard({ payload, timezone, onCancel, onApply, onSav
     <div className="assistant-workout-meta"><label>Дата<input type="date" value={workoutDate} onChange={(event) => setWorkoutDate(event.target.value)} /></label><label>Время<input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label></div>
     {rawFragments.length > 0 && <details className="assistant-workout-receipt"><summary>Получено фрагментов: {rawFragments.length}</summary><div>{rawFragments.map((fragment, index) => <p key={`${fragment}-${index}`}>{fragment}</p>)}</div></details>}
     <WorkoutComposer name="assistant-workout-fragment" source="assistant_workout" value={fragmentText} label="Добавить упражнение" voiceLabel="Надиктовать упражнение" showVoice onValueChange={(value) => { setFragmentText(value); if (value.trim()) setError(undefined) }} onClear={() => setFragmentText('')} onTranscriptAppended={({ value, transcript }) => parseFragment(transcript, true, undefined, value)} primaryAction={<button type="button" onClick={() => void parseFragment(fragmentText, true, undefined, fragmentText)} disabled={!fragmentText.trim() || catalog.loading || parsing}>{catalog.loading ? 'Загружаю каталог…' : parsing ? 'Распознаю…' : error ? 'Распознать снова' : initialParsed ? 'Добавить упражнение' : 'Распознать упражнения'}</button>} />
-    {result && <div className="assistant-progress-preview"><strong>Результат разбора</strong><span>{formatLlmWorkoutText(result, catalog.exercises) || 'Упражнения не распознаны'}</span>{unmatched.map((item) => <div key={item.sourceText} className="assistant-exercise-choice"><small>Нужно уточнить</small><strong>{item.sourceText}</strong><span>{item.reason}</span><div>{item.suggestedExerciseRefs.map((ref) => { const exercise = catalog.exercises.find((candidate) => candidate.ref === ref); return <button key={ref} type="button" onClick={() => chooseExercise(item.sourceText, ref)}>{exercise?.name ?? 'Вариант упражнения'}{exercise?.equipment ? <small>{exercise.equipment}</small> : null}</button> })}</div></div>)}{unmatched.length > 0 && <small>Выберите вариант — исходные подходы, повторы и вес останутся в тексте.</small>}{!unmatched.length && result.items.length > 0 && <button type="button" onClick={() => void save()} disabled={saving || saved}>{saved ? 'Тренировка сохранена' : saving ? 'Сохраняю…' : 'Сохранить тренировку'}</button>}</div>}
+    {result && <div className="assistant-workout-result"><header><span><small>Распознано</small><strong>{result.items.length + unmatched.length} упражнений</strong></span><span className="assistant-flow-status">Проверьте</span></header><div className="assistant-workout-result-list">{result.items.map((item) => { const exercise = catalog.exercises.find((candidate) => candidate.ref === item.exerciseRef); const firstSet = item.sets[0]; return <div key={`${item.exerciseRef}-${item.sourceText}`} className="assistant-workout-result-row"><span><strong>{exercise?.name ?? item.sourceText}</strong><small>{exercise?.equipment || 'Упражнение распознано'}</small></span><div>{item.sets.length > 0 && <b>{item.sets.length}<small>подх.</small></b>}{firstSet?.reps !== undefined && <b>{firstSet.reps}<small>повт.</small></b>}{firstSet?.weightKg !== undefined && <b>{firstSet.weightKg}<small>кг</small></b>}</div></div> })}{unmatched.map((item) => <div key={item.sourceText} className="assistant-exercise-choice"><small>Нужно уточнить упражнение</small><strong>{item.sourceText}</strong><span>{item.reason}</span><div>{item.suggestedExerciseRefs.map((ref) => { const exercise = catalog.exercises.find((candidate) => candidate.ref === ref); return <button key={ref} type="button" onClick={() => chooseExercise(item.sourceText, ref)}>{exercise?.name ?? 'Вариант упражнения'}{exercise?.equipment ? <small>{exercise.equipment}</small> : null}</button> })}</div></div>)}</div>{unmatched.length > 0 && <small>Выберите точное упражнение — подходы, повторы и вес сохранятся.</small>}{!unmatched.length && result.items.length > 0 && <button type="button" onClick={() => void save()} disabled={saving || saved}>{saved ? 'Тренировка сохранена' : saving ? 'Сохраняю…' : 'Сохранить тренировку'}</button>}</div>}
     {error && <p className="assistant-card-hint" role="alert">{error}</p>}
     {!saved && <CancelActionButton onCancel={onCancel} />}
   </div>
@@ -489,7 +522,8 @@ function AssistantWorkoutDraftCard({ payload, timezone, onCancel, onApply, onSav
 
 function ClientDraftCard({ payload, onCancel, onConfirm, running, completed }: { payload: ClientDraftPayload; onCancel: () => void; onConfirm: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {
   const [draft, setDraft] = useState(payload)
-  return <div className="assistant-program-draft"><strong>Карточка клиента</strong><label>Имя<input value={draft.fullName} onChange={(event) => setDraft({ ...draft, fullName: event.target.value })} /></label><label>Пол<select value={draft.gender} onChange={(event) => setDraft({ ...draft, gender: event.target.value as ClientDraftPayload['gender'] })}><option value="female">Женский</option><option value="male">Мужской</option></select></label><label>Возраст<input type="number" value={draft.ageYears} onChange={(event) => setDraft({ ...draft, ageYears: Number(event.target.value) })} /></label><label>Рост, см<input type="number" value={draft.heightCm} onChange={(event) => setDraft({ ...draft, heightCm: Number(event.target.value) })} /></label><label>Цель (необязательно)<input value={draft.goal ?? ''} onChange={(event) => setDraft({ ...draft, goal: event.target.value })} /></label><button type="button" onClick={() => onConfirm(draft)} disabled={running || completed}>{completed ? 'Клиент создан' : running ? 'Создаю…' : 'Создать клиента'}</button>{!completed && <CancelActionButton onCancel={onCancel} />}</div>
+  const ready = Boolean(draft.fullName.trim() && draft.gender && draft.ageYears && draft.heightCm)
+  return <div className="assistant-flow-card assistant-client-draft"><header><span><small>Карточка клиента</small><strong>Проверьте данные</strong></span><span className="assistant-flow-status">Черновик</span></header><div className="assistant-client-fields"><label className="wide">Имя<input value={draft.fullName} onChange={(event) => setDraft({ ...draft, fullName: event.target.value })} /></label><label>Пол<select value={draft.gender ?? ''} onChange={(event) => setDraft({ ...draft, gender: event.target.value as ClientDraftPayload['gender'] })}><option value="" disabled>Выберите</option><option value="female">Женский</option><option value="male">Мужской</option></select></label><label>Возраст<input type="number" value={draft.ageYears ?? ''} onChange={(event) => setDraft({ ...draft, ageYears: Number(event.target.value) || undefined })} /></label><label>Рост, см<input type="number" value={draft.heightCm ?? ''} onChange={(event) => setDraft({ ...draft, heightCm: Number(event.target.value) || undefined })} /></label><label>Вес, кг<input type="number" step="0.1" value={draft.initialWeightKg ?? ''} onChange={(event) => setDraft({ ...draft, initialWeightKg: Number(event.target.value) || undefined })} /></label><label className="wide">Цель<input value={draft.goal ?? ''} onChange={(event) => setDraft({ ...draft, goal: event.target.value })} /></label></div><div className="assistant-flow-actions"><button type="button" onClick={() => onConfirm(draft)} disabled={!ready || running || completed}>{completed ? 'Клиент создан' : running ? 'Создаю…' : 'Создать клиента'}</button>{!completed && <CancelActionButton onCancel={onCancel} />}</div></div>
 }
 
 function ActionPreview({ action, onCancel }: { action: AssistantOrchestratorAction; onCancel: () => void }) {
@@ -500,8 +534,9 @@ function CancelActionButton({ onCancel }: { onCancel: () => void }) {
   return <button type="button" className="assistant-action-cancel" onClick={onCancel}>Отменить сценарий</button>
 }
 
-function SummaryClientChoices({ candidates, onSuggestion, onCancel }: { candidates: { id: string; fullName: string }[]; onSuggestion: (value: string) => void; onCancel: () => void }) {
-  return <div className="assistant-progress-preview"><strong>Совпадения</strong><table className="assistant-choice-table"><tbody>{candidates.map((candidate) => <tr key={candidate.id}><td>{candidate.fullName}</td><td><button type="button" onClick={() => onSuggestion(`Сводка прогресса для ${candidate.fullName}`)}>Выбрать</button></td></tr>)}</tbody></table><CancelActionButton onCancel={onCancel} /></div>
+function AssistantClientChoices({ tool, candidates, onSuggestion, onCancel }: { tool: AssistantOrchestratorAction['tool']; candidates: { id: string; fullName: string }[]; onSuggestion: (value: string) => void; onCancel: () => void }) {
+  const prefix = tool === 'summarize_progress' ? 'Сводка прогресса для' : tool === 'record_workout' ? 'Записать тренировку для' : 'Подготовить программу для'
+  return <div className="assistant-flow-card"><header><span><small>Уточните клиента</small><strong>Нашла несколько совпадений</strong></span></header><div className="assistant-client-choices">{candidates.map((candidate) => <button key={candidate.id} type="button" onClick={() => onSuggestion(`${prefix} ${candidate.fullName}`)}><strong>{candidate.fullName}</strong><span>Выбрать</span></button>)}</div><CancelActionButton onCancel={onCancel} /></div>
 }
 
 function SummaryPeriodChoices({ clientName, options, onSuggestion, onCancel }: { clientName: string; options: string[]; onSuggestion: (value: string) => void; onCancel: () => void }) {
