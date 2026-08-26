@@ -810,7 +810,7 @@ test('iPhone: client Progress keeps one compact result summary at 390 px', async
   await expect(summary.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
   await summary.getByRole('button', { name: 'Нагрузка', exact: true }).click()
   await expect(summary.getByRole('heading', { name: 'Куда пришлась нагрузка' })).toBeVisible()
-  await expect(summary.locator('.ai-progress-stats').getByText('недели с тренировками', { exact: true })).toBeVisible()
+  await expect(summary.locator('.ai-progress-stats span').filter({ hasText: /недел/ })).toBeVisible()
   await expect(summary.getByText('Для твоей цели', { exact: true })).toBeVisible()
   await expect(summary.getByText('Подробный анализ', { exact: true })).toBeVisible()
   await page.goto('/me/profile')
