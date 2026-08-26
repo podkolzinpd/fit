@@ -44,6 +44,14 @@ function classifyDatabaseError(code: string): DatabaseReadinessFailureCategory {
   return 'unknown'
 }
 
+export function safeDatabaseErrorDiagnostics(error: unknown): Readonly<{
+  category: DatabaseReadinessFailureCategory
+  code: string
+}> {
+  const code = safeDatabaseErrorCode(error)
+  return { category: classifyDatabaseError(code), code }
+}
+
 export async function inspectDatabaseReadiness(
   pool: DatabasePool,
 ): Promise<DatabaseReadinessResult> {
@@ -53,11 +61,10 @@ export async function inspectDatabaseReadiness(
     await connection.query('select 1')
     return { ready: true }
   } catch (error) {
-    const code = safeDatabaseErrorCode(error)
+    const diagnostics = safeDatabaseErrorDiagnostics(error)
     return {
       ready: false,
-      category: classifyDatabaseError(code),
-      code,
+      ...diagnostics,
     }
   } finally {
     connection?.release()

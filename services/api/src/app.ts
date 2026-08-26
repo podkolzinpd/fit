@@ -26,7 +26,10 @@ import {
   readVersionedCustomExerciseRequest,
 } from './domain-request.js'
 import type { DatabasePool } from './db/types.js'
-import { inspectDatabaseReadiness } from './db/database-readiness.js'
+import {
+  inspectDatabaseReadiness,
+  safeDatabaseErrorDiagnostics,
+} from './db/database-readiness.js'
 import type { PilotClientsReader } from './pilot-clients-reader.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
@@ -442,6 +445,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       if (error instanceof PilotSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })
       }
+      const diagnostics = safeDatabaseErrorDiagnostics(error)
+      app.log.warn(
+        {
+          databaseErrorCategory: diagnostics.category,
+          databaseErrorCode: diagnostics.code,
+        },
+        'Pilot clients query failed',
+      )
       return reply.code(503).send({ error: 'service_unavailable' })
     }
   })
