@@ -13,8 +13,9 @@ function storageKey(
   role: AccountRole | undefined,
   clientId: string | undefined,
 ) {
-  return viewerUserId && role && clientId
-    ? `${STORAGE_PREFIX}${role}.${viewerUserId}.${clientId}`
+  const scope = role === 'trainer' ? 'account' : clientId
+  return viewerUserId && role && scope
+    ? `${STORAGE_PREFIX}${role}.${viewerUserId}.${scope}`
     : undefined
 }
 
@@ -32,8 +33,11 @@ function legacyDisplayMode(value: string | null): BodyMapDisplayMode | null {
   return null
 }
 
-export function defaultBodyMapDisplayMode(gender: Gender | null): BodyMapDisplayMode {
-  return gender ? 'real' : 'scheme'
+export function defaultBodyMapDisplayMode(
+  gender: Gender | null,
+  role?: AccountRole,
+): BodyMapDisplayMode {
+  return role === 'trainer' || gender ? 'real' : 'scheme'
 }
 
 export function resolveBodyFigureVariant(mode: BodyMapDisplayMode, gender: Gender | null): BodyFigureVariant {
@@ -46,7 +50,7 @@ export function getBodyMapDisplayMode(
   clientId: string | undefined,
   gender: Gender | null,
 ): BodyMapDisplayMode {
-  const fallback = defaultBodyMapDisplayMode(gender)
+  const fallback = defaultBodyMapDisplayMode(gender, role)
   const key = storageKey(viewerUserId, role, clientId)
   if (typeof window === 'undefined' || !key) return fallback
   try {
@@ -72,7 +76,7 @@ export function getBodyMapDisplayMode(
 export function setBodyMapDisplayMode(
   viewerUserId: string,
   role: AccountRole,
-  clientId: string,
+  clientId: string | undefined,
   mode: BodyMapDisplayMode,
 ) {
   try {
@@ -107,8 +111,8 @@ export function useBodyMapDisplayMode(
     [clientId, gender, role, viewerUserId],
   )
   const getServerSnapshot = useCallback(
-    () => defaultBodyMapDisplayMode(gender),
-    [gender],
+    () => defaultBodyMapDisplayMode(gender, role),
+    [gender, role],
   )
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 }

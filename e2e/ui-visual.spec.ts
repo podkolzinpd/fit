@@ -179,9 +179,14 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await expect(page.getByRole('region', { name: 'Сводка по спортсмену' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Запланировать тренировку' })).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Разделы спортсмена' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Разделы спортсмена' }).getByRole('link')).toHaveCount(2)
+  await expect(page.getByRole('region', { name: 'Вид карты тела' })).toHaveCount(0)
   await expect(page.getByText('БЛИЖАЙШЕЕ')).toHaveCount(0)
   await expectVisualBaseline(page, 'trainer-client-detail.png')
+
+  await page.goto('/profile')
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toBeVisible()
+  await expect(page.getByText('Ваш выбор для карт прогресса спортсменов')).toBeVisible()
   await page.getByRole('radio', { name: 'Схема' }).click()
 
   await page.goto('/schedule')
