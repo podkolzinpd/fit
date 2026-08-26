@@ -17,6 +17,7 @@ const repositories = vi.hoisted(() => ({
   publish: vi.fn(),
   unpublish: vi.fn(),
   goal: vi.fn(),
+  progress: vi.fn(),
   workouts: vi.fn(),
 }))
 vi.mock('../../app/auth-context', () => ({
@@ -34,6 +35,9 @@ vi.mock('../../data/repositories/training-summaries.repository', () => ({
 }))
 vi.mock('../../data/repositories/goals.repository', () => ({
   goalsRepository: { get: repositories.goal },
+}))
+vi.mock('../../data/repositories/progress.repository', () => ({
+  progressRepository: { list: repositories.progress },
 }))
 vi.mock('../../data/repositories/workouts.repository', () => ({
   workoutsRepository: { list: repositories.workouts },
@@ -157,6 +161,7 @@ describe('Training summary card states', () => {
   beforeEach(() => {
     Object.values(repositories).forEach((mock) => mock.mockReset())
     repositories.goal.mockResolvedValue(null)
+    repositories.progress.mockResolvedValue([])
     repositories.workouts.mockResolvedValue([])
   })
 
@@ -205,14 +210,64 @@ describe('Training summary card states', () => {
     expect(document.querySelector('.body-progress-zone')).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Подробный анализ' }))
     expect((await screen.findAllByText(/Рабочий вес: 50 → 68 кг/))[0]).toBeVisible()
-    expect(screen.getByText('3')).toBeVisible()
-    expect(screen.getByText('недели с тренировками')).toBeVisible()
+    expect(screen.getAllByText('0')).toHaveLength(2)
+    expect(screen.getByText('недель с тренировками')).toBeVisible()
     expect(screen.queryByText('1,1 в неделю')).toBeNull()
     expect(screen.getByRole('button', { name: '1 месяц' })).toBeVisible()
     expect(screen.queryByRole('button', { name: '3 месяца' })).toBeNull()
     expect(screen.queryByRole('button', { name: '6 месяцев' })).toBeNull()
     expect(screen.getByRole('link', { name: 'Добавить цель' })).toBeVisible()
     expect(document.body).not.toHaveTextContent(/custom_metric_key|workouts_per_week/)
+  })
+
+  it('turns the client summary into a factual period, goal and upcoming-plan story', async () => {
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForClient.mockResolvedValue([publishedSummary])
+    repositories.goal.mockResolvedValue({
+      id: 'goal-1', clientId: 'client-1', title: 'Набрать мышечную массу и укрепить спину',
+      targetDate: null, status: 'active', version: 1, stages: [],
+    })
+    repositories.progress.mockResolvedValue([{
+      id: 'measurement-1', clientId: 'client-1', createdBy: 'client-1',
+      recordedOn: localDate('2026-07-20'), weightKg: 80, customMetrics: [], version: 1,
+    }, {
+      id: 'measurement-2', clientId: 'client-1', createdBy: 'client-1',
+      recordedOn: localDate('2026-08-20'), weightKg: 81.5, customMetrics: [], version: 1,
+    }])
+    repositories.workouts.mockResolvedValue([{
+      id: 'previous', clientId: 'client-1', workoutDate: localDate('2026-07-10'), status: 'done',
+      exercises: [{ name: 'Тяга верхнего блока', muscleGroup: 'back', sets: [{ confirmedAt: '2026-07-10T10:00:00Z' }] }],
+    }, {
+      id: 'current-1', clientId: 'client-1', workoutDate: localDate('2026-08-10'), status: 'done',
+      exercises: [{ name: 'Тяга верхнего блока', muscleGroup: 'back', sets: [
+        { confirmedAt: '2026-08-10T10:00:00Z' }, { confirmedAt: '2026-08-10T10:01:00Z' },
+      ] }],
+    }, {
+      id: 'current-2', clientId: 'client-1', workoutDate: localDate('2026-08-17'), status: 'done',
+      exercises: [{ name: 'Тяга нижнего блока', muscleGroup: 'back', sets: [
+        { confirmedAt: '2026-08-17T10:00:00Z' }, { confirmedAt: null },
+      ] }],
+    }, {
+      id: 'next', clientId: 'client-1', workoutDate: localDate('2026-08-28'), startTime: '18:30',
+      status: 'planned', stageTitle: 'Спина и плечи', exercises: [{
+        name: 'Тяга верхнего блока', muscleGroup: 'back',
+        sets: [{ weightKg: 70, reps: 10 }, { weightKg: 70, reps: 10 }, { weightKg: 70, reps: 10 }],
+      }],
+    }] as Workout[])
+
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    const comparison = (await screen.findByRole('heading', { name: 'Изменения к предыдущему периоду' })).closest('section')
+    expect(comparison).not.toBeNull()
+    expect(within(comparison!).getAllByText('+1')).toHaveLength(2)
+    expect(within(comparison!).getByText('+2')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Набрать мышечную массу и укрепить спину' })).toBeVisible()
+    expect(screen.getByText('Вес: 80 → 81,5 кг (+1,5 кг)')).toBeVisible()
+    expect(screen.getByText('Целевые мышцы получили 3 подтверждённых подхода; в плане было 4.')).toBeVisible()
+    expect(screen.getByRole('heading', { name: '28 августа 2026 г. · 18:30' })).toBeVisible()
+    expect(screen.getByText('Спина и плечи')).toBeVisible()
+    expect(screen.getByText('3 × 70 кг × 10 повт.')).toBeVisible()
+    expect(document.body).not.toHaveTextContent('Прогресс уже заметен, ты на верном пути')
   })
 
   it('keeps the readable legacy fallback when structured progress facts are absent', async () => {
