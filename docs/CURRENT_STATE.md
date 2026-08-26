@@ -49,10 +49,10 @@
 - Сохранённые тренировки используют компактную хронику упражнений с раскрытием
   подходов и отдельной кнопкой истории; копирование и удаление находятся в меню.
 - Общая ИИ-сводка и production-разбор тренировки вызываются через Yandex Cloud
-  Functions. Локальный разбор — в локальном Supabase. `app_feedback`: sync в
-  Tracker остановлен (Яндекс блокирует robot OAuth с внешних IP, обход требует
-  TVM+SDR — не делаем); команда читает через `analytics.app_feedback`, как
-  `client_overview`/`trainers_metrics`.
+  Functions. Локальный разбор — в локальном Supabase. `app_feedback`: Tracker
+  sync остановлен (robot OAuth блокирован с внешних IP, TVM+SDR не делаем);
+  команда читает через `analytics.app_feedback` и получает push в Telegram
+  раз в минуту (`notify-app-feedback-telegram`, no-op без vault-секретов).
 - Assistant pilot trainer-only: `/assistant` защищён `TrainerOnly`, client nav и
   client route exposure убраны. Turns принимают `turnId`; history/action state
   сохраняются durable, proposed actions подтверждаются узкими RPC с owner/RLS,
@@ -108,8 +108,8 @@
   контроль: 791 frontend, 181 API, 57 infra/policy, lint, typecheck, build.
 - Readiness diagnostics из актуального `main` сохраняет закрытый `/ready`,
   нормализованные коды без чувствительных данных и автоматический rollback.
-- `analytics.app_feedback` подтверждён: 7 целевых pgTAP-тестов, полный набор
-  SQL/RLS-тестов, `lint`/`typecheck`/`db:types:check` зелёные.
+- `analytics.app_feedback` и Telegram-нотификатор подтверждены: 7 + 16
+  целевых pgTAP-тестов, полный SQL/RLS-набор, lint/typecheck/db:types:check зелёные.
 - Assistant release применяет чистую цепочку Supabase; 624 SQL/RLS-теста
   зелёные, включая exact-once turn/action, cross-tenant запреты и атомарный
   rollback всей программы при ошибке одного элемента.
