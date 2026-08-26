@@ -89,7 +89,8 @@ describe('ClientHomeOverview', () => {
     expect(screen.getByText('СЕГОДНЯ')).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Тренировка по плану' })).toBeVisible()
     expect(screen.getByText('3 упражнения · Гребной тренажёр, Жим гантелей лёжа и ещё 1')).toBeVisible()
-    expect(screen.getByRole('link', { name: 'Открыть план' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Открыть план' })).toHaveClass('secondary')
+    expect(screen.getByRole('link', { name: 'Открыть план' })).not.toHaveClass('primary')
     expect(screen.getByRole('heading', { name: '1 из 1 по плану' })).toBeVisible()
     expect(screen.getByText('Всего состоялось 3 тренировки · 2 самостоятельно')).toBeVisible()
     expect(screen.queryByText(/часть упражнений не выполнена/i)).not.toBeInTheDocument()
@@ -98,6 +99,12 @@ describe('ClientHomeOverview', () => {
     expect(screen.getByRole('heading', { name: 'Вернуться к бегу' })).toBeVisible()
     expect(screen.queryByText('—')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Своя тренировка' })).toBeVisible()
+  })
+
+  it('reserves the filled primary action for continuing an active workout', () => {
+    const active = workout({ id: 'active', status: 'in_progress', startedAt: '2026-08-16T08:00:00Z' })
+    render(<MemoryRouter><ClientHomeOverview today={today} workouts={[active]} regularity={[]} goal={null} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Своя тренировка</button>} /></MemoryRouter>)
+    expect(screen.getByRole('link', { name: 'Продолжить' })).toHaveClass('primary')
   })
 
   it('names tomorrow instead of presenting a future assignment as current', () => {

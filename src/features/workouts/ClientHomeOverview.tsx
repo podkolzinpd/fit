@@ -111,7 +111,7 @@ function NextActionCard({ next, today }: { next: NextWorkout; today: LocalDate }
     <h2 id="client-home-next-title">{active ? 'Продолжите тренировку' : 'Тренировка по плану'}</h2>
     <p className="client-home-next-time">{workoutTiming(next.workout, today)}</p>
     <strong className="client-home-next-exercises">{exerciseSummary(next.workout)}</strong>
-    <Link className="button wide" to={active ? `/workouts/${next.workout.id}/live` : `/workouts/${next.workout.id}`} state={{ returnTo: '/me' }}>
+    <Link className={`button wide${active ? ' primary' : ' secondary'}`} to={active ? `/workouts/${next.workout.id}/live` : `/workouts/${next.workout.id}`} state={{ returnTo: '/me' }}>
       {active ? 'Продолжить' : 'Открыть план'}
     </Link>
   </section>

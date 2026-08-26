@@ -57,6 +57,6 @@ export function AppFeedbackForm({ onClose }: { onClose: () => void }) {
     </label>
     <p className="app-feedback-context">Экран, роль и версия приложения добавятся автоматически.</p>
     <SaveStatus status={submitting ? 'saving' : submissionError ? 'error' : 'idle'} error={submissionError ?? undefined} />
-    <div className="actions"><button type="button" className="secondary" onClick={onClose}>Отмена</button><button disabled={submitting || message.trim().length < 3}>Отправить</button></div>
+    <div className="actions"><button type="button" className="secondary" onClick={onClose}>Отмена</button><button className="primary" disabled={submitting || message.trim().length < 3}>Отправить</button></div>
   </form>
 }

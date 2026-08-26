@@ -472,7 +472,7 @@ function ClientCopyEditor({ summary, clientId, onChanged }: {
         disabled={unpublish.isPending}
         onClick={() => unpublish.mutate()}
       >Скрыть</button>}
-      <button disabled={publish.isPending || unpublish.isPending}>
+      <button className="primary" disabled={publish.isPending || unpublish.isPending}>
         {summary.published ? 'Сохранить клиентскую версию' : 'Сохранить версию'}
       </button>
     </div>

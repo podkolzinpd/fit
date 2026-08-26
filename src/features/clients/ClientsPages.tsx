@@ -153,7 +153,7 @@ function ClientForm({
         <Controller control={form.control} name="privateNote" render={({ field }) => <VoiceNoteField name={field.name} source="client_form" label="Личная заметка" value={field.value ?? ''} onValueChange={field.onChange} />} />
       </section>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions">{onCancel && <button type="button" className="secondary" disabled={mutation.isPending} onClick={onCancel}>Отмена</button>}<button disabled={mutation.isPending} aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : createMode === 'self' && !existing ? 'Создать карточку' : 'Сохранить'}</button></div>
+      <div className="actions">{onCancel && <button type="button" className="secondary" disabled={mutation.isPending} onClick={onCancel}>Отмена</button>}<button className="primary" disabled={mutation.isPending} aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : createMode === 'self' && !existing ? 'Создать карточку' : 'Сохранить'}</button></div>
     </form>
   return embedded ? contents : <Page title={existing ? 'Редактировать клиента' : 'Новый клиент'}>{contents}</Page>
 }
@@ -218,7 +218,7 @@ function ClientGoalBlock({ client }: { client: Client }) {
     <form className="stack" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate({ goal: values.goal }))(event)}>
       <Field label="Цель"><textarea rows={3} placeholder="Например: похудеть к отпуску, −8 кг" {...form.register('goal')} /></Field>
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions"><button type="button" className="secondary" onClick={() => setEditingText(false)}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
+      <div className="actions"><button type="button" className="secondary" onClick={() => setEditingText(false)}>Отмена</button><button className="primary" disabled={mutation.isPending}>Сохранить</button></div>
     </form>
   </section>
   return <section className="goal-block">
@@ -243,7 +243,7 @@ function ClientNoteBlock({ client }: { client: Client }) {
         <VoiceNoteField name={field.name} source="client_form" label="Заметка" value={field.value} onValueChange={field.onChange} />
       } />
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions"><button type="button" className="secondary" onClick={() => setEditing(false)}>Отмена</button><button disabled={mutation.isPending}>Сохранить</button></div>
+      <div className="actions"><button type="button" className="secondary" onClick={() => setEditing(false)}>Отмена</button><button className="primary" disabled={mutation.isPending}>Сохранить</button></div>
     </form>
   </section>
   return <section className="goal-block client-note-block">
