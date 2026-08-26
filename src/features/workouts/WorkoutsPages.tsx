@@ -126,10 +126,22 @@ export function SchedulePage() {
     </div>
   }>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
+      {untimed.length > 0 && <section className="schedule-untimed-section" aria-labelledby="schedule-untimed-title">
+        <div className="schedule-untimed-heading">
+          <strong id="schedule-untimed-title">Без времени</strong>
+          <span>{workoutCountLabel(untimed.length)}</span>
+        </div>
+        <div className="day-untimed">{untimed.map((workout) => (
+          <Link key={workout.id} className="schedule-untimed-card" to={`/workouts/${workout.id}`}>
+            <span className="schedule-untimed-copy">
+              <strong>{workout.clientName}</strong>
+              <span>{scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}</span>
+            </span>
+            <WorkoutStatusBadge workout={workout} />
+          </Link>
+        ))}</div>
+      </section>}
       <div className="day-grid-scroll" ref={scrollRef}>
-        {untimed.length > 0 && <div className="day-untimed">{untimed.map((workout) => (
-          <Link key={workout.id} className="card" to={`/workouts/${workout.id}`}><div><strong>{workout.clientName}</strong><p>{exerciseSummary(workout).map((e) => e.name).join(', ') || 'без упражнений'}</p></div><WorkoutStatusBadge workout={workout} /></Link>
-        ))}</div>}
         <div className="day-grid" style={{ height: HOURS.length * HOUR_HEIGHT }}>
           {HOURS.map((hour) => (
             <div key={hour} className="day-grid-hour" style={{ top: hour * HOUR_HEIGHT }}>
