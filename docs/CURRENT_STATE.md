@@ -4,29 +4,20 @@
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
 
-Обновлено: 2026-08-26
-Проверенный базовый `main`: `2412a02` (`feat(analytics): expose app_feedback to the team via DataLens (#600)`)
+Обновлено: 2026-08-27
+Проверенный базовый `main`: `874d644` (`YAFIT-376: пересобрать мобильное расписание тренера (#603)`)
 
 ## Активное изменение
 
-- Клиентское и тренерское приложения переходят на единый контракт действий:
-  нейтральная кнопка по умолчанию, один заполненный коралловый `primary` только
-  для главного подтверждения текущего шага. Навигация, история, настройки,
-  фильтры и обзорные действия больше не конкурируют с ним.
-- Голосовой ввод на главных экранах, WorkoutCta, сохранение plan/fact, Live,
-  формы профиля, цели, замеров и ассистента проверяются как единая система;
-  продуктовая логика и данные не меняются.
-
-- Повторный attempt stage run `32980358030` после merge #596 подтвердил полный
-  private путь с тем же fixture token: hash → `resolve_yandex_pilot_session` →
-  actor context → clients read model. После deployment API `/health` и `/ready`
-  прошли, но первый публичный `GET /v1/clients` девять раз вернул безликий
-  `503`; rollback восстановил `bbak2bq6iopc8lcpnbe8`, production не пострадал.
-  PostgreSQL, runtime credential, session и доменный reader тем самым исключены.
-- Активный follow-up добавляет immutable release ID в `/health` и безопасные
-  category/code headers в clients error. Следующий workflow отличит stale
-  revision routing, Fastify database/application error и 503 входного proxy без
-  зависимости от отсутствующего application stdout.
+- Stage run `33009868939` после merge #599 подтвердил новую immutable API
+  revision через `releaseId`: `/health`, `/ready` и публичный `GET /v1/clients`
+  прошли. Следующий `GET /v1/connections` девять раз вернул `503`; автоматический
+  rollback восстановил `bbak2bq6iopc8lcpnbe8`, production не пострадал.
+- Активный follow-up переносит exact `DatabasePilotConnectionsReader` в private
+  runtime preflight с тем же fixture token и добавляет только безопасные
+  `check/category/code` в preflight и category/code headers в публичный ответ.
+  Следующий workflow остановится до переключения API и назовёт точный класс
+  connections-ошибки без SQL, PII, токена и connection details.
 
 ## Последняя проверенная продуктовая точка
 
@@ -103,25 +94,14 @@
   использовать Supabase; Yandex stage не меняет остальные вкладки приложения.
 
 ## Проверки активной ветки
-- Для единой иерархии действий клиента и тренера зелёные 792 frontend-теста,
-  185 API-тестов и 57 infra/policy-проверок, lint, typecheck, покрытие и
-  production build. Visual-сценарии клиента на 390/430 px и ближайшего плана
-  приняты; голосовая главная сохранена, горизонтального overflow и серых полос
-  нет. Тесты запущены с явным локальным Supabase, чтобы `.env.local` не
-  подменял безопасный тестовый адрес.
-- Для карточки спортсмена зелёные 9 целевых unit-тестов и typecheck. Полный
-  контроль: 791 frontend, 181 API, 57 infra/policy, lint, typecheck, build.
+- Для connections diagnostics зелёный полный `npm run check`: 797 frontend,
+  187 API и 57 infra/policy-тестов, lint, typecheck, coverage и production build.
 - Readiness diagnostics из актуального `main` сохраняет закрытый `/ready`,
   нормализованные коды без чувствительных данных и автоматический rollback.
-- `analytics.app_feedback` и Telegram-нотификатор подтверждены: 7 + 16
-  целевых pgTAP-тестов, полный SQL/RLS-набор, lint/typecheck/db:types:check зелёные.
-- Assistant release применяет чистую цепочку Supabase; 624 SQL/RLS-теста
-  зелёные, включая exact-once turn/action, cross-tenant запреты и атомарный
-  rollback всей программы при ошибке одного элемента.
 
 ## Ближайший порядок
 
-1. Получить безопасный код ошибки первого clients smoke, устранить доказанную
+1. Получить безопасный код ошибки connections preflight, устранить доказанную
    причину, получить зелёную API revision и выполнить summary-list плюс один
    контролируемый AI generation/parse smoke без логирования исходного текста.
 2. После полного tenant-контракта провести две миграционные репетиции; только

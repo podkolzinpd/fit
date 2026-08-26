@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PublishedTrainingSummary, TrainingSummary, Workout } from '../../shared/domain'
-import { localDate } from '../../shared/local-date'
+import { addDays, localDate, todayInTimeZone } from '../../shared/local-date'
 import { ClientProgressGoalSection } from './ClientProgressGoalSection'
 import { ClientTrainingSummaryCard, TrainerTrainingSummaryCard } from './TrainingSummaryCard'
 
@@ -372,7 +372,7 @@ describe('Training summary card states', () => {
     expect(await screen.findByLabelText('Верх спины. Доля всех выполненных подходов: 67%')).toBeVisible()
     expect(repositories.workouts).toHaveBeenCalledWith(
       localDate('2026-06-18'),
-      localDate('2026-10-10'),
+      addDays(todayInTimeZone('Europe/Moscow'), 45),
       'client-1',
     )
   })
