@@ -9,13 +9,12 @@
 
 ## Активное изменение
 
-- После merge #587 stage run `32959100724` успешно применил миграции и fixture,
-  но кандидат API снова вернул `503` на DB readiness и был автоматически
-  откачен на `bbak2bq6iopc8lcpnbe8`. Production не пострадал.
-- Активный infrastructure slice проверяет до API deployment именно соединение
-  `fit_api` через private migration runner. В CI выходят только безопасные
-  category/code; ошибка останавливает run до создания API revision. Поздний
-  `/ready` использует явный 90-секундный wall-clock deadline и прежний rollback.
+- После merge #592 stage run `32962751043` подтвердил private соединение
+  `fit_api`, применил миграции и fixture, но старый `/health` retry завершился
+  примерно через 20 секунд на gateway `503`. Кандидат был автоматически откачен
+  на `bbak2bq6iopc8lcpnbe8`; production не пострадал.
+- Активный follow-up даёт `/health` и `/ready` общий явный 90-секундный deadline.
+  Safe runtime preflight и rollback сохраняются без изменения.
 
 ## Последняя проверенная продуктовая точка
 
@@ -101,8 +100,7 @@
 
 ## Ближайший порядок
 
-1. Доставить private runtime preflight. Если `fit_api` не подключается, исправить
-   конкретную safe category до API deployment; при успехе получить зелёную API
+1. Доставить общий health/readiness bootstrap deadline, получить зелёную API
    revision и выполнить summary-list плюс один контролируемый AI generation/parse
    smoke без логирования исходного текста.
 2. После полного tenant-контракта провести две миграционные репетиции; только
