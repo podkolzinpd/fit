@@ -8,7 +8,7 @@
 ## Verified implementation
 
 - Production surface: `src/features/assistant/AssistantWorkoutDraftSurface.tsx`.
-- The same surface is rendered by the assistant flow and by the development-only visual route; the QA capture is not a hand-written DOM copy.
+- The capture used the exported production surface rendered by the assistant flow, not a hand-written DOM copy. The temporary capture route was removed after QA.
 - WebKit 26.5, iPhone 13 profile, 390 × 844 CSS px: `/private/tmp/fit-assistant-workout-actual-3.png`.
 - Side-by-side source and implementation input: `/private/tmp/fit-assistant-comparison.png`.
 
