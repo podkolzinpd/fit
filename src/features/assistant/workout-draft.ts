@@ -1,6 +1,13 @@
 import type { WorkoutDraft } from '../../shared/domain'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 
+export function appendAssistantTranscript(current: string, transcript: string): string {
+  const next = transcript.trim()
+  if (!next) return current
+  const existing = current.trimEnd()
+  return existing ? `${existing}\n${next}` : next
+}
+
 export type WorkoutParseQueue = { current: Promise<void> }
 
 export function enqueueWorkoutParse(queue: WorkoutParseQueue, task: () => Promise<void>): Promise<void> {

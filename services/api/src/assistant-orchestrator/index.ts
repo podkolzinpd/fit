@@ -1,10 +1,14 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-const completionUrl = 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion'
 const releaseSha = process.env.RELEASE_SHA?.trim() || 'unknown'
 const assistantSystemPrompt = 'Ты безопасный ассистент фитнес-приложения. Не ставь диагнозов и не давай опасных рекомендаций. Любое write-действие только как предложенная карточка с подтверждением; никогда не утверждай, что данные уже сохранены.'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const tools = ['record_workout', 'create_client_draft', 'create_program_draft', 'schedule_program', 'summarize_progress'] as const
+// The database/action RPCs intentionally retain the complete historical union.
+// The chat surface is temporarily narrower: a new turn may only prepare a
+// workout record. Keeping these as two lists prevents old history from being
+// unreadable while making the runtime gate explicit.
+const enabledTools = ['record_workout'] as const
 type Tool = typeof tools[number]
 
 export type AssistantTurnRequest = { conversationId: string; message: string; turnId?: string }
@@ -26,50 +30,19 @@ export type ClientDraft = {
 // Add a capability here only together with its implemented confirmation handler.
 // This list is the sole source for answers about what the assistant can do.
 const executableCapabilities: readonly AssistantCapability[] = [
-  { title: 'Сформировать сводку прогресса', description: 'по завершённым тренировкам выбранного клиента за период' },
-  { title: 'Создать карточку клиента', description: 'после уточнения данных и вашего подтверждения' },
   { title: 'Подготовить запись тренировки', description: 'для выбранного клиента и открыть её в существующем разборе упражнений' },
-  { title: 'Подготовить программу тренировок', description: 'после анкеты и вашего подтверждения' },
 ]
+
+const workoutOnlyReply = 'Сейчас в чате можно только добавить тренировку. Напишите «добавь тренировку» и укажите клиента, упражнения, подходы, повторы и вес.'
 
 class HttpError extends Error {
   constructor(readonly status: number, readonly code: string) { super(code) }
-}
-
-const schema = {
-  type: 'object', additionalProperties: false, required: ['reply', 'action'], properties: {
-    reply: { type: 'string' },
-    action: {
-      anyOf: [
-        { type: 'null' },
-        { type: 'object', additionalProperties: false, required: ['tool', 'status', 'title', 'description', 'payload'], properties: {
-          tool: { type: 'string', enum: tools }, status: { type: 'string', enum: ['needs_input', 'proposed'] },
-          title: { type: 'string' }, description: { type: 'string' }, payload: { type: 'object' },
-        } },
-      ],
-    },
-  },
 }
 
 function required(name: string): string {
   const value = process.env[name]?.trim()
   if (!value) throw new HttpError(503, 'service_unavailable')
   return value
-}
-
-async function yandexIamToken(): Promise<string> {
-  let response: Response
-  try {
-    response = await fetch('http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token', {
-      headers: { 'Metadata-Flavor': 'Google' },
-    })
-  } catch {
-    throw new HttpError(503, 'orchestrator_auth_unavailable')
-  }
-  if (!response.ok) throw new HttpError(503, 'orchestrator_auth_unavailable')
-  const body = await response.json() as { access_token?: unknown }
-  if (typeof body.access_token !== 'string' || !body.access_token) throw new HttpError(503, 'orchestrator_auth_unavailable')
-  return body.access_token
 }
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -85,13 +58,6 @@ type ClientContextRow = {
   gender: string | null
 }
 
-type ProgressContextRow = {
-  clientId: string
-  periodStart: string
-  periodEnd: string
-  summary: string
-}
-
 function clientContextRows(value: unknown): ClientContextRow[] {
   if (!Array.isArray(value)) return []
   return value.flatMap((row): ClientContextRow[] => {
@@ -103,25 +69,6 @@ function clientContextRows(value: unknown): ClientContextRow[] {
       ageYears: typeof row.age_years === 'number' ? row.age_years : null,
       heightCm: typeof row.height_cm === 'number' || typeof row.height_cm === 'string' ? row.height_cm : null,
       gender: typeof row.gender === 'string' ? row.gender : null,
-    }]
-  })
-}
-
-function progressContextRows(value: unknown): ProgressContextRow[] {
-  if (!Array.isArray(value)) return []
-  return value.flatMap((row): ProgressContextRow[] => {
-    if (
-      !record(row)
-      || typeof row.client_id !== 'string'
-      || typeof row.period_start !== 'string'
-      || typeof row.period_end !== 'string'
-      || typeof row.summary !== 'string'
-    ) return []
-    return [{
-      clientId: row.client_id,
-      periodStart: row.period_start,
-      periodEnd: row.period_end,
-      summary: row.summary,
     }]
   })
 }
@@ -226,16 +173,21 @@ export function isTurnIdReuse(existingContent: unknown, requestedContent: string
   return typeof existingContent === 'string' && existingContent !== requestedContent
 }
 
-export function validateAssistantTurnResponse(value: unknown): AssistantTurnResponse | undefined {
+export function validateAssistantTurnResponse(value: unknown, allowedTools: readonly Tool[] = tools): AssistantTurnResponse | undefined {
   if (!record(value) || typeof value.reply !== 'string' || value.reply.trim().length === 0 || value.reply.length > 4_000) return undefined
   if (value.action === null) return { reply: value.reply.trim(), action: null }
   if (!record(value.action)) return undefined
   const { id, tool, status, title, description, payload } = value.action
-  if (!tools.includes(tool as Tool) || (status !== 'needs_input' && status !== 'proposed') || typeof title !== 'string' || typeof description !== 'string' || !record(payload)) return undefined
+  if (!allowedTools.includes(tool as Tool) || (status !== 'needs_input' && status !== 'proposed') || typeof title !== 'string' || typeof description !== 'string' || !record(payload)) return undefined
   if (!title.trim() || !description.trim() || title.length > 200 || description.length > 1_000) return undefined
   if (status === 'proposed' && !validProposedPayload(tool as Tool, payload)) return undefined
   if (id !== undefined && (typeof id !== 'string' || !UUID.test(id))) return undefined
   return { reply: value.reply.trim(), action: { ...(id === undefined ? {} : { id }), tool: tool as Tool, status, title: title.trim(), description: description.trim(), payload } }
+}
+
+/** Validation gate for new chat turns; legacy stored actions use the full union. */
+export function validateEnabledAssistantTurnResponse(value: unknown): AssistantTurnResponse | undefined {
+  return validateAssistantTurnResponse(value, enabledTools)
 }
 
 function validProposedPayload(tool: Tool, payload: Record<string, unknown>): boolean {
@@ -266,17 +218,6 @@ function validProgramPayload(payload: Record<string, unknown>): boolean {
       return ['reps', 'weightKg', 'durationMin', 'distanceKm'].every((field) => exercise[field] === undefined || (typeof exercise[field] === 'number' && Number.isFinite(exercise[field]) && exercise[field] > 0))
     })
   })
-}
-
-function isGeneratedProgramForSelectedClient(result: AssistantTurnResponse, generatedDraft: AssistantTurnResponse | undefined): boolean {
-  const expected = actionRecord(generatedDraft?.action?.payload)
-  const actual = actionRecord(result.action?.payload)
-  return result.action?.tool === 'create_program_draft'
-    && result.action.status === 'proposed'
-    && expected?.step === 'generate'
-    && actual?.step === 'confirm'
-    && actual.clientId === expected.clientId
-    && actual.clientName === expected.clientName
 }
 
 export function allowsAssistantAction(message: string): boolean {
@@ -420,6 +361,11 @@ function workoutTextProvided(message: string): boolean {
   return /\d/u.test(normalized) || ['подход', 'жим', 'тяга', 'присед', 'выпад', 'планка', 'бег', 'тяг', 'разведен'].some((stem) => normalized.includes(stem))
 }
 
+function isNonWorkoutRequest(message: string): boolean {
+  const normalized = normalizeAssistantMessage(message)
+  return ['клиент', 'программ', 'расписан', 'календар', 'сводк', 'прогресс', 'динамик'].some((stem) => normalized.includes(stem))
+}
+
 function isWorkoutCollectionComplete(message: string): boolean {
   const normalized = normalizeAssistantMessage(message)
   return [
@@ -437,14 +383,66 @@ function appendWorkoutFragment(transcript: string, fragment: string): string | u
   return next.length <= 4_000 ? next : undefined
 }
 
+function isWorkoutRecordCancellation(message: string): boolean {
+  if (isSummaryCancellation(message)) return true
+  const normalized = normalizeAssistantMessage(message)
+  return /не\s+(?:надо|нужно|хочу)?\s*(?:добавля|занос|внос|запис|сохран|фиксир|отмеч|оформ|разбира|подготов|продикт)/u.test(normalized)
+}
+
 function isWorkoutRecordRequest(message: string): boolean {
   const normalized = normalizeAssistantMessage(message)
-  // «Подготовить запись тренировки» — такой же явный вход в существующий
-  // разбор тренировки, как «записать» или «разобрать». Не отправляем его в
-  // свободный LLM-диалог: сначала детерминированно уточняем клиента и текст.
-  const asksToRecord = ['запиши', 'записать', 'зафиксируй', 'зафиксировать', 'разбери', 'разобрать', 'продиктуй', 'продиктовать'].some((verb) => normalized.includes(verb))
-    || normalized.includes('подготов')
-  return asksToRecord && ['тренировк', 'упражнен', 'подход', 'жим', 'тяга', 'присед', 'бег'].some((stem) => normalized.includes(stem))
+  if (isWorkoutRecordCancellation(message)) return false
+  // These are deliberately broad Russian stems: the command is a natural
+  // chat utterance, not a fixed button label. The object check keeps ordinary
+  // uses of words such as «добавь» out of this flow.
+  const asksToRecord = [
+    'добав', 'занес', 'внес', 'запис', 'запиш', 'сохран', 'зафикс', 'фиксир', 'отмет',
+    'оформ', 'разбер', 'разбира', 'подготов', 'продикт', 'заполн', 'собер', 'созда',
+    'внесен', 'добавлен',
+  ].some((stem) => normalized.split(' ').some((word) => word.startsWith(stem)))
+  const workoutObject = ['тренировк', 'заняти', 'тренинг', 'упражнен', 'подход', 'сет', 'повтор', 'вес', 'нагруз', 'кардио', 'жим', 'тяга', 'присед', 'бег'].some((stem) => normalized.includes(stem))
+  return asksToRecord && workoutObject
+}
+
+/** Remove a known client mention while retaining the original dictated text. */
+function stripWorkoutClient(value: string, client: ClientContextRow): string {
+  const clientWords = normalizeAssistantMessage(client.fullName).split(' ').filter(Boolean)
+  if (!clientWords.length) return value
+  const words = [...value.matchAll(/[\p{L}]+/gu)]
+  for (let index = 0; index + clientWords.length <= words.length; index += 1) {
+    const matches = clientWords.every((clientWord, offset) => {
+      const actual = normalizeAssistantMessage(words[index + offset]?.[0] ?? '')
+      return actual === clientWord || actual.startsWith(clientWord) || clientWord.startsWith(actual)
+    })
+    if (matches) {
+      const start = words[index]?.index ?? 0
+      const endWord = words[index + clientWords.length - 1]
+      const end = (endWord?.index ?? value.length) + (endWord?.[0].length ?? 0)
+      return `${value.slice(0, start)} ${value.slice(end)}`.replace(/\s+/gu, ' ').trim()
+    }
+  }
+  return value
+}
+
+/** Remove only command framing; exercise names and their values stay intact. */
+function stripWorkoutCommandPrefix(value: string): string {
+  let result = value.trim().replace(/^[\s,:;—-]+|[\s,:;—-]+$/gu, '')
+  result = result.replace(/^(?:(?:давай|можно|хочу|нужно|надо|пожалуйста)\s+)+/iu, '')
+  result = result.replace(/^(?:добав\p{L}*|занес\p{L}*|внес\p{L}*|запис\p{L}*|запиш\p{L}*|сохран\p{L}*|зафикс\p{L}*|фиксир\p{L}*|отмет\p{L}*|оформ\p{L}*|разбер\p{L}*|подготов\p{L}*|продикт\p{L}*|заполн\p{L}*|собер\p{L}*|созда\p{L}*)\s+/iu, '')
+  result = result.replace(/^(?:(?:мне|нам|сюда|сегодня|эту|этом)\s+)+/iu, '')
+  result = result.replace(/^(?:запис\p{L}*|внесен\p{L}*|добавлен\p{L}*|факт)\s+/iu, '')
+  result = result.replace(/^(?:тренировк\p{L}*|заняти\p{L}*|тренинг\p{L}*|упражнен\p{L}*|тренировочн\p{L}*)\s*/iu, '')
+  result = result.replace(/^для\s+/iu, '')
+  result = result.replace(/^(?:клиент\p{L}*|клиенту)\s*/iu, '')
+  return result.replace(/^[\s,:;—-]+|[\s,:;—-]+$/gu, '').trim()
+}
+
+export function extractWorkoutTranscript(message: string, client?: ClientContextRow): string {
+  let value = message.trim()
+  const colon = value.indexOf(':')
+  if (colon >= 0) value = value.slice(colon + 1)
+  if (client) value = stripWorkoutClient(value, client)
+  return stripWorkoutCommandPrefix(value)
 }
 
 /**
@@ -457,12 +455,19 @@ export function recordWorkoutTurn(
   latestAction: unknown,
 ): AssistantTurnResponse | undefined {
   const previousAction = actionRecord(latestAction)
-  const continuation = previousAction?.tool === 'record_workout'
-  if (!isWorkoutRecordRequest(message) && !continuation) return undefined
-  if (continuation && isSummaryCancellation(message)) return { reply: 'Хорошо, запись тренировки отменена.', action: null }
-
   const previousPayload = actionRecord(previousAction?.payload)
   const previousStep = previousPayload?.step
+  const previousWorkout = previousAction?.tool === 'record_workout'
+  const explicitRequest = isWorkoutRecordRequest(message)
+  const likelyFragment = !isNonWorkoutRequest(message) && workoutTextProvided(extractWorkoutTranscript(message))
+  if (previousWorkout && isWorkoutRecordCancellation(message)) return { reply: 'Хорошо, запись тренировки отменена.', action: null }
+  const continuation = previousWorkout && (
+    previousStep === 'client'
+    || previousStep === 'workout'
+    || (previousStep === 'confirm' && (explicitRequest || likelyFragment))
+  )
+  if (!explicitRequest && !continuation) return undefined
+
   const candidates = workoutCandidatesFromAction(latestAction)
   const selectedByNumber = normalizeAssistantMessage(message).match(/^(?:выбрать )?(\d{1,2})$/u)
   const numberedClient = selectedByNumber === null ? undefined : candidates[Number(selectedByNumber[1]) - 1]
@@ -471,7 +476,7 @@ export function recordWorkoutTurn(
     : clients.filter((client) => client.id === numberedClient.id)
   const selectedClient = matches.length === 1
     ? matches[0]
-    : previousStep === 'workout' ? summaryClientFromAction(latestAction, clients) : undefined
+    : (previousStep === 'workout' || (previousStep === 'confirm' && continuation)) ? summaryClientFromAction(latestAction, clients) : undefined
 
   if (matches.length > 1) {
     return workoutAction('Выберите клиента', 'Нашла несколько клиентов с таким именем. Выберите одного из списка.', 'needs_input', {
@@ -493,7 +498,9 @@ export function recordWorkoutTurn(
     })
   }
   if (previousStep === 'workout') {
-    const nextTranscript = appendWorkoutFragment(collectedTranscript, message)
+    const fragment = extractWorkoutTranscript(message, selectedClient)
+    if (!fragment || isNonWorkoutRequest(message)) return undefined
+    const nextTranscript = appendWorkoutFragment(collectedTranscript, fragment)
     if (nextTranscript === undefined) {
       return workoutAction('Черновик заполнен', 'Текст достиг лимита. Перейдите к разбору или отмените сценарий.', 'needs_input', {
         step: 'workout', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: collectedTranscript,
@@ -503,13 +510,27 @@ export function recordWorkoutTurn(
       step: 'workout', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: nextTranscript,
     })
   }
+  if (previousStep === 'confirm' && continuation) {
+    const fragment = extractWorkoutTranscript(message, selectedClient)
+    const nextTranscript = appendWorkoutFragment(collectedTranscript, fragment)
+    if (!fragment || nextTranscript === undefined) return undefined
+    return workoutAction('Продолжайте диктовку', 'Добавила новый фрагмент. Продиктуйте следующее упражнение или перейдите к разбору.', 'needs_input', {
+      step: 'workout', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: nextTranscript,
+    })
+  }
   if (!workoutTextProvided(message)) {
     return workoutAction('Новая тренировка', `Клиент: ${selectedClient.fullName}. Диктуйте упражнения по одному или все сразу.`, 'needs_input', {
       step: 'workout', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: '',
     })
   }
+  const fragment = extractWorkoutTranscript(message, selectedClient)
+  if (!fragment || !workoutTextProvided(fragment)) {
+    return workoutAction('Добавьте упражнения', 'Сначала напишите или продиктуйте хотя бы одно упражнение.', 'needs_input', {
+      step: 'workout', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: collectedTranscript,
+    })
+  }
   return workoutAction('Продолжайте диктовку', 'Добавила первый фрагмент. Продиктуйте следующее упражнение или перейдите к разбору.', 'needs_input', {
-    step: 'workout', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: message.trim(),
+    step: 'workout', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: fragment,
   })
 }
 
@@ -554,27 +575,6 @@ export function summaryPeriodFromMessage(message: string, now = new Date()): Sum
 export function assistantCapabilitiesReply(): string {
   if (executableCapabilities.length === 0) return 'Пока я не выполняю действий в приложении. Могу только коротко пообщаться.'
   return `Сейчас я могу:\n${executableCapabilities.map((capability) => `• ${capability.title} — ${capability.description}`).join('\n')}`
-}
-
-function modelPrompt(history: readonly { author: string; content: string }[], clientContext: string, progressContext: string, shortChat: boolean, informal: boolean): string {
-  if (shortChat) return [
-    'Ты дружелюбная, но очень краткая болталка фитнес-приложения. Отвечай по-русски не более чем двумя короткими предложениями.',
-    `Обращайся к пользователю на ${informal ? 'ты' : 'вы'}.`,
-    'Всегда возвращай action=null. Не перечисляй функции приложения и не обещай выполнить действие.',
-    'Не ставь диагнозов и не давай опасных советов про боль, травмы, лекарства, голодание или экстремальные нагрузки. При боли или травме рекомендуй обратиться к врачу/специалисту.',
-    `Недавняя история:\n${history.slice(-6).map((entry) => `${entry.author === 'user' ? 'Пользователь' : 'Ассистент'}: ${entry.content}`).join('\n')}`,
-  ].join('\n\n')
-  return [
-    'Ты ассистент фитнес-приложения. Отвечай по-русски, кратко и доброжелательно.',
-    `Обращайся к пользователю на ${informal ? 'ты' : 'вы'}.`,
-    'Возвращай action=null по умолчанию: для приветствий, разговорных реплик, вопросов о твоих возможностях и любых общих вопросов. Карточка действия допустима только когда пользователь явно просит выполнить или подготовить конкретную функцию приложения.',
-    'Ты можешь только уточнить запрос или предложить одно типизированное действие из schema. Никогда не утверждай, что запись уже создана, тренировка сохранена или расписание изменено.',
-    'Для программы сначала собери цель, опыт, ограничения и доступные дни. Не давай медицинских диагнозов; при рисках направляй к специалисту.',
-    'Для write-действия верни status=needs_input или proposed. Сводка прогресса — read-only. Не выдумывай факты о клиенте.',
-    `Доступные клиенты тренера (используй только эти факты):\n${clientContext || 'Нет доступных клиентов.'}`,
-    `Последние готовые сводки прогресса (если их нет — предложи сформировать сводку, не выдумывай выводы):\n${progressContext || 'Нет готовых сводок.'}`,
-    `История:\n${history.map((entry) => `${entry.author === 'user' ? 'Пользователь' : 'Ассистент'}: ${entry.content}`).join('\n')}`,
-  ].join('\n\n')
 }
 
 export function assistantModelMessages(prompt: string): Array<{ role: 'system' | 'user'; text: string }> {
@@ -671,88 +671,17 @@ export async function runAssistantTurn(authorization: string, command: Assistant
     .select('id,full_name,goal,age_years,height_cm,gender').eq('trainer_id', user.id).is('archived_at', null).order('full_name').limit(50)
   if (clientsError) throw new HttpError(503, 'context_unavailable')
   const clientRows = clientContextRows(clients)
-  const clientContext = clientRows.map((client) =>
-    `${client.fullName} (id: ${client.id}; цель: ${client.goal ?? 'не указана'}; возраст: ${client.ageYears ?? 'не указан'}; рост: ${client.heightCm ?? 'не указан'}; пол: ${client.gender ?? 'не указан'})`,
-  ).join('\n')
-  const clientIds = clientRows.map((client) => client.id)
-  const { data: summaries, error: summariesError } = clientIds.length === 0
-    ? { data: [], error: null }
-    : await service.from('client_training_summaries')
-      .select('client_id,period_start,period_end,summary,generated_at')
-      .eq('trainer_id', user.id).in('client_id', clientIds)
-      .order('generated_at', { ascending: false }).limit(20)
-  if (summariesError) throw new HttpError(503, 'context_unavailable')
-  const namesById = new Map(clientRows.map((client) => [client.id, client.fullName]))
-  const progressContext = progressContextRows(summaries).map((summary) =>
-    `${namesById.get(summary.clientId) ?? summary.clientId}; ${summary.periodStart}—${summary.periodEnd}: ${summary.summary.slice(0, 1_500)}`,
-  ).join('\n')
-
   const { data: rows, error: historyError } = await service.from('assistant_messages')
     .select('author,content,action').eq('conversation_id', command.conversationId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(20)
   if (historyError) throw new HttpError(503, 'history_unavailable')
   const latestAssistantAction: unknown = (rows ?? []).find((row) => row.author === 'assistant')?.action
-  const clientDraft = createClientTurn(command.message, latestAssistantAction)
-  if (clientDraft !== undefined) {
-    console.info('assistant_client_draft_reply_persisted', { operationId: turnId, releaseSha, status: clientDraft.action?.status })
-    return persistAssistantResponse(service, command.conversationId, turnId, clientDraft)
-  }
   const workoutDraft = recordWorkoutTurn(command.message, clientRows, latestAssistantAction)
   if (workoutDraft !== undefined) {
     console.info('assistant_workout_draft_reply_persisted', { operationId: turnId, releaseSha, status: workoutDraft.action?.status })
     return persistAssistantResponse(service, command.conversationId, turnId, workoutDraft)
   }
-  const programDraft = createProgramTurn(command.message, clientRows, latestAssistantAction)
-  const programBriefReady = programDraft?.action?.tool === 'create_program_draft' && programDraft.action.payload.step === 'generate'
-  if (programDraft !== undefined && !programBriefReady) {
-    return persistAssistantResponse(service, command.conversationId, turnId, programDraft)
-  }
-  const summary = summaryTurn(command.message, clientRows, latestAssistantAction, new Date())
-  if (summary !== undefined) {
-    console.info('assistant_summary_flow_reply_persisted', { operationId: turnId, releaseSha, status: summary.action?.status })
-    return persistAssistantResponse(service, command.conversationId, turnId, summary)
-  }
-  const history = [...(rows ?? [])].reverse().flatMap((row): { author: string; content: string }[] =>
-    typeof row.author === 'string' && typeof row.content === 'string' ? [{ author: row.author, content: row.content.slice(0, 4_000) }] : [])
-
-  let response: Response
-  try {
-    const iamToken = await yandexIamToken()
-    response = await fetch(completionUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${iamToken}` },
-      body: JSON.stringify({
-        modelUri: `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`,
-        completionOptions: { stream: false, temperature: 0.2, maxTokens: (allowsAssistantAction(command.message) || programBriefReady) ? '1200' : '120' }, jsonSchema: { schema },
-        messages: assistantModelMessages(`${modelPrompt(history, clientContext, progressContext, !(allowsAssistantAction(command.message) || programBriefReady), usesInformalAddress(command.message))}${programBriefReady ? `\n\nСформируй именно action=create_program_draft, status=proposed. В payload обязательно верни step=confirm, clientId, clientName, goal, brief и sessions: массив до 4 тренировок с полями title, day, exercises. Каждое exercises — объект {name, exerciseRef?, sets, reps?, weightKg?, durationMin?, distanceKm?}. Если у тебя есть канонический exerciseRef, верни его и не выдумывай ref; UI дополнительно проверит его по каталогу. name — понятное название упражнения; sets — целое 1..8. Для силовых обязательно указывай reps, вес добавляй только если он обоснован. Для кардио укажи durationMin или distanceKm. Не утверждай, что программа сохранена.` : ''}`),
-      }),
-    })
-  } catch (error) {
-    if (error instanceof HttpError) throw error
-    throw new HttpError(502, 'orchestrator_unavailable')
-  }
-  if (!response.ok) {
-    console.warn('assistant_model_response_failed', { status: response.status })
-    throw new HttpError(502, 'orchestrator_unavailable')
-  }
-  let raw: unknown
-  try {
-    const payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }> } }
-    raw = JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? '')
-  } catch {
-    throw new HttpError(502, 'orchestrator_invalid_response')
-  }
-  const modelResult = validateAssistantTurnResponse(raw)
-  if (!modelResult) throw new HttpError(502, 'orchestrator_invalid_response')
-  // The deterministic dialog owns the target client. The model only fills in
-  // sessions and may not switch a confirmed program to another client.
-  if (programBriefReady && !isGeneratedProgramForSelectedClient(modelResult, programDraft)) {
-    throw new HttpError(502, 'orchestrator_invalid_response')
-  }
-  const result = allowsAssistantAction(command.message) || programBriefReady
-    ? modelResult
-    : { ...modelResult, action: null }
-  if (modelResult.action !== null && result.action === null) console.info('assistant_action_suppressed_for_small_talk')
-  console.info('assistant_turn_persisted', { operationId: turnId, releaseSha, hasAction: result.action !== null })
+  const result: AssistantTurnResponse = { reply: workoutOnlyReply, action: null }
+  console.info('assistant_workout_only_reply_persisted', { operationId: turnId, releaseSha })
   return persistAssistantResponse(service, command.conversationId, turnId, result)
 }
 

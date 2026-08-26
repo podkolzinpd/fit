@@ -27,7 +27,11 @@ describe('assistant workout production surface', () => {
   it('edits rows and resolves an ambiguous exercise without losing values', async () => {
     const user = userEvent.setup()
     render(<InteractiveSurface />)
+    expect(screen.getByText('Черновик тренировки')).toBeInTheDocument()
+    expect(screen.getByText('Дата')).toBeInTheDocument()
+    expect(screen.getByText('Время')).toBeInTheDocument()
     const submit = screen.getByRole('button', { name: 'Проверить и сохранить' })
+    expect(submit).toHaveClass('primary')
     expect(submit).toBeDisabled()
 
     await user.clear(screen.getAllByLabelText('Вес')[0]!)
@@ -59,5 +63,11 @@ describe('assistant workout production surface', () => {
     rerender(<AssistantWorkoutDraftSurface mode="confirm" clientName="Сан Саныч" workoutDate="2026-08-26" startTime="10:43" rawFragments={['жим']} result={resolved} catalog={catalog} parsing={false} catalogLoading={false} saving={false} saved canFinish {...callbacks} />)
     expect(screen.getByRole('button', { name: 'Тренировка сохранена' })).toBeDisabled()
     expect(screen.queryByRole('button', { name: 'Отменить сценарий' })).not.toBeInTheDocument()
+  })
+
+  it('keeps a supplied composer in the collecting card for dictated text', () => {
+    render(<AssistantWorkoutDraftSurface mode="collecting" clientName="Сан Саныч" workoutDate="2026-08-26" startTime="10:43" rawFragments={['присед']} catalog={catalog} parsing={false} catalogLoading={false} saving={false} saved={false} canFinish={false} composer={<textarea aria-label="Текст диктовки" value="присед 3 по 15 80 кг" readOnly />} onDateChange={vi.fn()} onTimeChange={vi.fn()} onChoose={vi.fn()} onUpdateMetrics={vi.fn()} onRemove={vi.fn()} onSave={vi.fn()} onFinish={vi.fn()} onCancel={vi.fn()} />)
+    expect(screen.getByRole('textbox', { name: 'Текст диктовки' })).toHaveValue('присед 3 по 15 80 кг')
+    expect(screen.getByText('Надиктуйте следующее упражнение — оно добавится сюда.')).toBeInTheDocument()
   })
 })
