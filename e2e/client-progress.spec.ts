@@ -49,11 +49,11 @@ test('trainer reviews the client copy separately from internal attention items',
   await page.getByRole('button', { name: 'Войти' }).click()
   await expect(page).toHaveURL(/\/today$/)
   await page.goto('/profile')
-  await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0)
-  await page.goto('/clients/11111111-1111-4111-8111-111111111111')
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toBeVisible()
   await expect(page.getByRole('radio', { name: 'Реальная фигура' })).toBeChecked()
   await page.getByRole('radio', { name: 'Схема' }).click()
+  await page.goto('/clients/11111111-1111-4111-8111-111111111111')
+  await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0)
   await page.goto('/progress/11111111-1111-4111-8111-111111111111')
 
   await expect(page.getByRole('heading', { name: 'Прогресс', exact: true })).toBeVisible()
