@@ -12,7 +12,7 @@ import { useExerciseCatalog } from '../exercises'
 import { parseWorkoutWithLlm } from '../workouts/llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
-import { appendAssistantTranscript, appendWorkoutParse, appendedWorkoutTranscript, assistantWorkoutSaveInput, enqueueWorkoutParse, removeWorkoutParseSource, resolveWorkoutParseSource, updateWorkoutParseMetrics, type WorkoutParseQueue } from './workout-draft'
+import { appendAssistantTranscript, appendWorkoutParse, appendedWorkoutTranscript, assistantWorkoutDraftKey, assistantWorkoutSaveInput, clearAssistantWorkoutDraft, enqueueWorkoutParse, readAssistantWorkoutDraft, removeWorkoutParseSource, resolveWorkoutParseSource, updateWorkoutParseMetrics, writeAssistantWorkoutDraft, type WorkoutParseQueue } from './workout-draft'
 import { compactAssistantContent, conversationLocalDate, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveWorkoutAction, mergeAssistantMessages, selectTodayConversation, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
 import { AssistantInlineSummaryCard } from './AssistantInlineSummary'
 import { parseAssistantInlineSummary } from './assistant-inline-summary'
@@ -47,6 +47,7 @@ export function AssistantHistoryPage() {
   const threadRef = useRef<HTMLElement>(null)
   const voiceBaseTextRef = useRef('')
   const voiceConversationRef = useRef<string | undefined>(undefined)
+  const composerInputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -189,7 +190,10 @@ export function AssistantHistoryPage() {
   }
 
   async function cancelAction(messageId: string, action: AssistantOrchestratorAction): Promise<boolean> {
-    if (!action.id) return true
+    if (!action.id) {
+      setMessages((current) => current.map((message) => message.id !== messageId || message.action === null ? message : { ...message, action: { ...message.action, lifecycleStatus: 'cancelled' } }))
+      return true
+    }
     const version = actionVersions[action.id] ?? 1
     const result = await assistantRepository.cancelAction(action.id, version)
     if (result.error) { setError('Не удалось отменить операцию. Обновите страницу и попробуйте ещё раз.'); return false }
@@ -252,7 +256,14 @@ export function AssistantHistoryPage() {
   }
 
   const latestActiveAction = readOnly ? undefined : latestActiveWorkoutAction(messages, conversationId)
+  const workoutDraftStorageKey = latestActiveAction && actor && conversationId
+    ? assistantWorkoutDraftKey(actor.userId, conversationId, String((latestActiveAction.action.payload as WorkoutDraftPayload).clientId ?? 'unknown'))
+    : undefined
   const visibleMessages = filterTerminalAssistantMessages(messages)
+
+  useEffect(() => {
+    if (!text && composerInputRef.current) composerInputRef.current.style.height = 'auto'
+  }, [text])
 
   useEffect(() => {
     const summaries = messages.flatMap((message) => {
@@ -305,6 +316,7 @@ export function AssistantHistoryPage() {
           ? parseAssistantInlineSummary(message.action.result)
           : undefined
         if (inlineSummary) return <article key={message.id} className="assistant-message assistant-message-assistant"><AssistantInlineSummaryCard summary={inlineSummary} onSave={() => void saveInlineSummary(message.id, inlineSummary.summaryId, inlineSummary.clientId)} saving={savingSummaryIds.includes(message.id)} saved={savedSummaryIds.includes(message.id) || inlineSummary.saved === true} /></article>
+        if (message.action?.tool === 'record_workout' && message.action.lifecycleStatus === 'applied') return <article key={message.id} className="assistant-message assistant-message-assistant"><AssistantWorkoutSavedCard action={message.action} /></article>
         const showContent = !message.action || message.content.trim() !== message.action.description.trim() || (message.action.tool === 'summarize_progress' && message.action.lifecycleStatus === 'applied')
         if (!showContent) return null
         return <article key={message.id} className="assistant-message assistant-message-assistant"><AssistantMessageContent content={message.content} /></article>
@@ -312,14 +324,15 @@ export function AssistantHistoryPage() {
       {error && <div className="assistant-card-hint" role="alert"><span>{error}</span>{failedTurn && <button type="button" onClick={() => void send(undefined, failedTurn)} disabled={sending}>Повторить отправку</button>}</div>}
     </section>
     {latestActiveAction && <section className="assistant-context-panel" aria-label="Текущий контекст ассистента">
-      <AssistantAction action={latestActiveAction.action} timezone={actor?.timezone} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onApplyAction={(input) => applyAction(latestActiveAction.message.id, latestActiveAction.action, input)} onSuggestion={(value) => void send(value)} onCancel={() => { void (async () => { const cancelled = await cancelAction(latestActiveAction.message.id, latestActiveAction.action); if (cancelled && !latestActiveAction.action.id) await send('Отменить') })() }} onConfirm={() => void confirmSummary(latestActiveAction.message.id, latestActiveAction.action)} onConfirmClient={(draft) => void confirmClient(latestActiveAction.message.id, latestActiveAction.action, draft)} running={runningSummaryIds.includes(latestActiveAction.message.id) || runningClientIds.includes(latestActiveAction.message.id)} completed={completedSummaryIds.includes(latestActiveAction.message.id) || completedClientIds.includes(latestActiveAction.message.id) || latestActiveAction.action.lifecycleStatus === 'applied'} />
+      <AssistantAction action={latestActiveAction.action} timezone={actor?.timezone} workoutDraftStorageKey={workoutDraftStorageKey} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onApplyAction={(input) => applyAction(latestActiveAction.message.id, latestActiveAction.action, input)} onSuggestion={(value) => void send(value)} onCancel={() => { void (async () => { const cancelled = await cancelAction(latestActiveAction.message.id, latestActiveAction.action); if (!cancelled) return; if (workoutDraftStorageKey) clearAssistantWorkoutDraft(workoutDraftStorageKey); if (!latestActiveAction.action.id) await send('Отменить') })() }} onConfirm={() => void confirmSummary(latestActiveAction.message.id, latestActiveAction.action)} onConfirmClient={(draft) => void confirmClient(latestActiveAction.message.id, latestActiveAction.action, draft)} running={runningSummaryIds.includes(latestActiveAction.message.id) || runningClientIds.includes(latestActiveAction.message.id)} completed={completedSummaryIds.includes(latestActiveAction.message.id) || completedClientIds.includes(latestActiveAction.message.id) || latestActiveAction.action.lifecycleStatus === 'applied'} />
     </section>}
     <form className="assistant-composer" autoComplete="off" onSubmit={(event) => { event.preventDefault(); void send() }}>
       <label className="sr-only" htmlFor="assistant-history-message">Сообщение ассистенту</label>
-      <input id="assistant-history-message" name="assistant-prompt" autoComplete="off" value={text} onChange={(event) => setText(event.target.value)} placeholder="Опишите тренировку" disabled={!conversationId || readOnly || sending || voiceActive} />
+      <textarea ref={composerInputRef} id="assistant-history-message" name="assistant-prompt" autoComplete="off" rows={1} value={text} onChange={(event) => setText(event.target.value)} onInput={(event) => { event.currentTarget.style.height = 'auto'; event.currentTarget.style.height = `${Math.min(event.currentTarget.scrollHeight, 112)}px` }} placeholder="Опишите тренировку" disabled={!conversationId || readOnly || sending || voiceActive} />
       <VoiceInputButton
         variant="icon"
         source="assistant"
+        startupTimeoutMs={8_000}
         idleLabel="Голосовой ввод"
         disabled={!conversationId || readOnly || sending}
         showTranscriptStatus={false}
@@ -365,14 +378,14 @@ function summaryPayload(action: AssistantOrchestratorAction): { clientId: string
     : undefined
 }
 
-function AssistantAction({ action, timezone, onWorkoutSaved, onApplyAction, onSuggestion, onCancel, onConfirm, onConfirmClient, running, completed }: { action: AssistantOrchestratorAction; timezone?: string; onWorkoutSaved: () => void; onApplyAction: (input: object) => Promise<void>; onSuggestion: (value: string) => void; onCancel: () => void; onConfirm: () => void; onConfirmClient: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {
+function AssistantAction({ action, timezone, workoutDraftStorageKey, onWorkoutSaved, onApplyAction, onSuggestion, onCancel, onConfirm, onConfirmClient, running, completed }: { action: AssistantOrchestratorAction; timezone?: string; workoutDraftStorageKey?: string; onWorkoutSaved: () => void; onApplyAction: (input: object) => Promise<void>; onSuggestion: (value: string) => void; onCancel: () => void; onConfirm: () => void; onConfirmClient: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {
   const payload = action.payload as SummaryPayload
   const view = assistantActionView({ tool: action.tool, payload: action.payload })
   if (view === 'client-collection') return <ClientCollectionCard payload={payload as ClientDraftPayload} onSuggestion={onSuggestion} onCancel={onCancel} />
   if (view === 'client-confirm') return <ClientDraftCard payload={payload as ClientDraftPayload} onCancel={onCancel} onConfirm={onConfirmClient} running={running} completed={completed} />
   if (view === 'client-choices') return <AssistantClientChoices tool={action.tool} candidates={payload.candidates ?? []} onSuggestion={onSuggestion} onCancel={onCancel} />
-  if (view === 'workout-confirm') return <AssistantWorkoutDraftCard key={`workout-${payload.clientId}`} mode="confirm" payload={payload as WorkoutDraftPayload} timezone={timezone} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} />
-  if (view === 'workout-collection') return <AssistantWorkoutDraftCard key={`workout-${payload.clientId}`} mode="collecting" payload={payload as WorkoutDraftPayload} timezone={timezone} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} onFinish={() => onSuggestion('Готово, разобрать тренировку')} />
+  if (view === 'workout-confirm') return <AssistantWorkoutDraftCard key={`workout-${payload.clientId}`} mode="confirm" payload={payload as WorkoutDraftPayload} timezone={timezone} storageKey={workoutDraftStorageKey} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} />
+  if (view === 'workout-collection') return <AssistantWorkoutDraftCard key={`workout-${payload.clientId}`} mode="collecting" payload={payload as WorkoutDraftPayload} timezone={timezone} storageKey={workoutDraftStorageKey} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} onFinish={() => onSuggestion('Готово, разобрать тренировку')} />
   if (view === 'program-brief') return <ProgramBriefCard payload={payload} onCancel={onCancel} />
   if (view === 'program-confirm') return <ProgramDraftCard payload={payload as ProgramDraftPayload} timezone={timezone} onApply={onApplyAction} onSaved={onWorkoutSaved} onCancel={onCancel} />
   if (view === 'summary-period' && typeof payload.clientName === 'string' && Array.isArray(payload.options)) return <SummaryPeriodChoices clientName={payload.clientName} options={payload.options} onSuggestion={onSuggestion} onCancel={onCancel} />
@@ -452,18 +465,19 @@ function parsedWorkoutExercises(result: WorkoutParseResponse, catalog: readonly 
   })
 }
 
-function AssistantWorkoutDraftCard({ mode, payload, timezone, onCancel, onApply, onSaved, onFinish }: { mode: 'collecting' | 'confirm'; payload: WorkoutDraftPayload; timezone?: string; onCancel: () => void; onApply: (input: object) => Promise<void>; onSaved: () => void; onFinish?: () => void }) {
+function AssistantWorkoutDraftCard({ mode, payload, timezone, storageKey, onCancel, onApply, onSaved, onFinish }: { mode: 'collecting' | 'confirm'; payload: WorkoutDraftPayload; timezone?: string; storageKey?: string; onCancel: () => void; onApply: (input: object) => Promise<void>; onSaved: () => void; onFinish?: () => void }) {
   const catalog = useExerciseCatalog()
-  const [rawFragments, setRawFragments] = useState<string[]>([])
-  const [workoutDate, setWorkoutDate] = useState<string>(() => todayInTimeZone(timezone))
-  const [startTime, setStartTime] = useState(() => currentTimeInTimeZone(timezone))
-  const [result, setResult] = useState<WorkoutParseResponse>()
+  const [restored] = useState(() => storageKey ? readAssistantWorkoutDraft(storageKey) : undefined)
+  const [rawFragments, setRawFragments] = useState<string[]>(() => restored?.rawFragments ?? [])
+  const [workoutDate, setWorkoutDate] = useState<string>(() => restored?.workoutDate ?? todayInTimeZone(timezone))
+  const [startTime, setStartTime] = useState(() => restored?.startTime ?? currentTimeInTimeZone(timezone))
+  const [result, setResult] = useState<WorkoutParseResponse | undefined>(() => restored?.result)
   const [parsing, setParsing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string>()
   const [saved, setSaved] = useState(false)
-  const [requestId] = useState(() => crypto.randomUUID())
-  const parsedTranscript = useRef('')
+  const [requestId] = useState(() => restored?.requestId ?? crypto.randomUUID())
+  const parsedTranscript = useRef(restored?.transcript ?? '')
   const parseQueue = useRef<WorkoutParseQueue>({ current: Promise.resolve() })
 
   function parseFragment(fragment: string, receipt = true): Promise<void> {
@@ -496,6 +510,11 @@ function AssistantWorkoutDraftCard({ mode, payload, timezone, onCancel, onApply,
     void parseFragment(fragment, true)
   }, [catalog.loading, payload.transcript])
 
+  useEffect(() => {
+    if (!storageKey || saved) return
+    writeAssistantWorkoutDraft(storageKey, { transcript: parsedTranscript.current, rawFragments, workoutDate, startTime, requestId, result })
+  }, [rawFragments, requestId, result, saved, startTime, storageKey, workoutDate])
+
   async function save() {
     if (!result || result.unmatched.length || saving || saved) return
     const exercises = parsedWorkoutExercises(result, catalog.exercises)
@@ -503,6 +522,7 @@ function AssistantWorkoutDraftCard({ mode, payload, timezone, onCancel, onApply,
     setSaving(true); setError(undefined)
     try {
       await onApply(assistantWorkoutSaveInput(requestId, payload.clientId, workoutDate, startTime, exercises))
+      if (storageKey) clearAssistantWorkoutDraft(storageKey)
       setSaved(true); onSaved()
     } catch { setError('Не удалось сохранить тренировку. Проверьте данные и попробуйте ещё раз.') }
     finally { setSaving(false) }
@@ -521,6 +541,11 @@ function AssistantWorkoutDraftCard({ mode, payload, timezone, onCancel, onApply,
   }
   const canFinish = Boolean(result?.items.length && unmatched.length === 0 && !parsing && !catalog.loading)
   return <AssistantWorkoutDraftSurface mode={mode} clientName={payload.clientName} workoutDate={workoutDate} startTime={startTime} rawFragments={rawFragments} result={result} catalog={catalog.exercises} parsing={parsing} catalogLoading={catalog.loading} error={error} saving={saving} saved={saved} canFinish={canFinish} onDateChange={setWorkoutDate} onTimeChange={setStartTime} onChoose={chooseExercise} onUpdateMetrics={updateMetrics} onRemove={removeExercise} onSave={() => void save()} onFinish={onFinish} onCancel={onCancel} />
+}
+
+function AssistantWorkoutSavedCard({ action }: { action: AssistantOrchestratorAction }) {
+  const payload = action.payload as Partial<WorkoutDraftPayload>
+  return <div className="assistant-workout-saved" role="status"><span aria-hidden="true">✓</span><div><strong>Тренировка сохранена</strong>{payload.clientName && <small>{payload.clientName}</small>}</div></div>
 }
 
 function ClientDraftCard({ payload, onCancel, onConfirm, running, completed }: { payload: ClientDraftPayload; onCancel: () => void; onConfirm: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {
