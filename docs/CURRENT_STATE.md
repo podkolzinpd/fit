@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-26
-Проверенный базовый `main`: `0725ec0` (`fix(yandex): preflight pilot session (#596)`)
+Проверенный базовый `main`: `3d0ec05` (`fix(yandex): identify API smoke failures (#599)`)
 
 ## Активное изменение
 
@@ -41,8 +41,10 @@
 - Сохранённые тренировки используют компактную хронику упражнений с раскрытием
   подходов и отдельной кнопкой истории; копирование и удаление находятся в меню.
 - Общая ИИ-сводка и production-разбор тренировки вызываются через Yandex Cloud
-  Functions. Локальный разбор остаётся в локальном Supabase. Форма обратной связи
-  сохраняет сообщения в `app_feedback`; канал уведомлений решается отдельно.
+  Functions. Локальный разбор — в локальном Supabase. `app_feedback`: sync в
+  Tracker остановлен (Яндекс блокирует robot OAuth с внешних IP, обход требует
+  TVM+SDR — не делаем); команда читает через `analytics.app_feedback`, как
+  `client_overview`/`trainers_metrics`.
 - Assistant pilot trainer-only: `/assistant` защищён `TrainerOnly`, client nav и
   client route exposure убраны. Turns принимают `turnId`; history/action state
   сохраняются durable, proposed actions подтверждаются узкими RPC с owner/RLS,
@@ -71,9 +73,9 @@
   доставляются автоматически через GitHub OIDC, private runner и forward-only
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
-  exercises, полный workout lifecycle и post-workout работают на stage.
-  Миграции `000001–000018` доставлены автоматически; API с нативными AI-
-  контрактами ожидает повторного deployment после runtime preflight.
+  exercises, полный workout lifecycle и post-workout работают на stage
+  (миграции `000001–000018`); API с нативными AI-контрактами ждёт повторного
+  deployment после runtime preflight.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
 - Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
@@ -88,22 +90,12 @@
   использовать Supabase; Yandex stage не меняет остальные вкладки приложения.
 
 ## Проверки активной ветки
-- Для карточки спортсмена зелёные 9 целевых unit-тестов, typecheck и trainer
-  visual-сценарий. Вручную приняты 390/430 px, светлая и тёмная темы, длинная
-  цель, отсутствие горизонтального переполнения и корректность всех маршрутов.
-  Полный контроль зелёный: 791 frontend, 181 API и 57 infra/policy проверок,
-  lint, typecheck и production build.
-- Для единого Client/Trainer Progress зелёные 26 целевых unit-тестов, два
-  мобильных Chromium-сценария и visual-приёмка Client 390/430 и Trainer 1440 px.
-  Полный `npm run check` зелёный: 790 frontend, 166 API и 54 infra/policy
-  проверки, lint, typecheck и production build.
+- Для карточки спортсмена зелёные 9 целевых unit-тестов и typecheck. Полный
+  контроль: 791 frontend, 181 API, 57 infra/policy, lint, typecheck, build.
 - Readiness diagnostics из актуального `main` сохраняет закрытый `/ready`,
   нормализованные коды без чувствительных данных и автоматический rollback.
-- Для YAFIT-368 зелёные 44 целевых теста геометрии/карты тела, мобильные
-  сценарии 390/430 px, Chromium visual и обе WebKit-половины CI.
-- Для YAFIT-371 зелёные 32 целевых теста настройки и геометрии, WebKit-сценарии
-  схемы на 390/430 px, светлые и тёмные visual baseline; полный `npm run check`
-  также зелёный.
+- `analytics.app_feedback` подтверждён: 7 целевых pgTAP-тестов, полный набор
+  SQL/RLS-тестов, `lint`/`typecheck`/`db:types:check` зелёные.
 - Assistant release применяет чистую цепочку Supabase; 624 SQL/RLS-теста
   зелёные, включая exact-once turn/action, cross-tenant запреты и атомарный
   rollback всей программы при ошибке одного элемента.
@@ -120,9 +112,9 @@
 
 ## Отложено
 
-- `YAFIT-333/334` отложены; `YAFIT-335/337` завершены.
-- `YAFIT-245` не начинать без отдельного решения и описания рисков.
-- `YAFIT-234` (SpeechKit relay) отложен; голосовой путь не менять.
-- `YAFIT-235` — Webvisor сохранён для исследовательских метрик.
+- `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать
+  без отдельного решения и описания рисков. `YAFIT-234` (SpeechKit relay)
+  отложен, голосовой путь не менять. `YAFIT-235` — Webvisor сохранён для
+  исследовательских метрик.
 - Новые виды спорта, питание, социальные функции, внешние носимые устройства и
   дополнительные ИИ-блоки не брать до завершения P0/P1 и пилота.
