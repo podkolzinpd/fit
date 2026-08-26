@@ -58,6 +58,13 @@ test('keeps enough time for the bounded three-attempt summary contract', () => {
   assert.match(workflow, /^  TF_VAR_api_execution_timeout: '120s'$/m)
 })
 
+test('allows private database connectivity to settle before rolling back the API', () => {
+  assert.match(
+    workflow,
+    /ready=\$\(curl[\s\S]*?--retry 44 --retry-max-time 90[\s\S]*?\/ready"\)/,
+  )
+})
+
 test('loads synthetic fixtures and verifies every read model through the runtime API', () => {
   const migrationIndex = workflow.indexOf('- name: Apply all pending migrations')
   const fixtureIndex = workflow.indexOf('- name: Prepare idempotent stage workout fixture')

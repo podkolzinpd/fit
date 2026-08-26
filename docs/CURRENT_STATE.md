@@ -5,18 +5,16 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-26
-Проверенный базовый `main`: `e8af424` (`feat(progress): add independent anatomical body map (#580)`)
+Проверенный базовый `main`: `c3f05b9` (`Simplify assistant sessions and history (#581)`)
 
 ## Активное изменение
 
-- Отдельный Yandex slice переносит два оставшихся Supabase Edge Function
-  контракта: AI-сводку и разбор диктовки. Приглашения уже обслуживает нативный
-  invitation API; production Supabase routes не переключаются.
-- Миграция `000018` хранит внутреннюю и физически отдельную безопасную клиентскую
-  сводку. Goal и активный stage входят в fingerprint/model input, а исходные
-  имена, контакты, заметки и замеры в модель не передаются.
-- Pilot-session API читает каталог упражнений и факты из Yandex PostgreSQL,
-  вызывает YandexGPT и сохраняет результат через узкий security-definer контракт.
+- Stage run `32906794265` применил `000018`, но новая API revision вернула `503`
+  на DB readiness и была автоматически откачена. Текущая stage revision здорова;
+  production и пользовательские маршруты не пострадали.
+- Диагностический slice оставляет ответ `/ready` закрытым, но пишет только
+  нормализованный PostgreSQL/network code без message, host, user или secret.
+  Workflow ждёт готовность private DB до 90 секунд и сохраняет прежний rollback.
 
 ## Последняя проверенная продуктовая точка
 
@@ -66,8 +64,8 @@
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
   exercises, полный workout lifecycle и post-workout работают на stage.
-  Миграции `000001–000017` и API revision доставлены автоматически; текущий PR
-  добавляет `000018` training summaries и нативные AI function contracts.
+  Миграции `000001–000018` доставлены автоматически; API с нативными AI-
+  контрактами ожидает повторного безопасного deployment после readiness fix.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
 - Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
@@ -83,13 +81,12 @@
 
 ## Проверки активной ветки
 
-- Stage run `32867438764` автоматически доставил `000017`, fixture, API revision,
-  health/readiness и client-overview smoke без ручного применения миграций.
-- Локальный Yandex PostgreSQL 17 применил `000018`; 23 интеграционных actor/RLS-
-  теста зелёные, включая trainer/client separation, safe publication и outsider
-  denial. `npm run check` зелёный: 760 frontend, 161 API и 53 infra/policy
-  проверки, lint, typecheck и production build. Чистый Supabase reset и 624
-  SQL/RLS-теста зелёные; production-цепочка не изменена.
+- В Yandex Cloud откатившаяся revision принимала запросы, но `/ready` не мог
+  подключиться к PostgreSQL; DB host/user, network и Lockbox version совпадали с
+  рабочей revision. Тот же новый API локально прошёл `/health` и `/ready`.
+- `npm run check` зелёный: 778 frontend, 162 API и 54 infra/policy теста,
+  lint, typecheck и production build. Ответ readiness и логи не раскрывают
+  исходный error message либо произвольный dependency code.
 - Для YAFIT-368 зелёные 44 целевых теста геометрии/карты тела, мобильные
   сценарии 390/430 px, Chromium visual и обе WebKit-половины CI.
 - Для YAFIT-371 зелёные 32 целевых теста настройки и геометрии, WebKit-сценарии
@@ -101,8 +98,9 @@
 
 ## Ближайший порядок
 
-1. Доставить `000018` и проверить summary-list stage smoke; отдельно выполнить
-   один контролируемый AI generation/parse smoke без логирования исходного текста.
+1. Доставить readiness fix, проверить реальный error code при повторном сбое либо
+   зелёную API revision; затем выполнить summary-list и один контролируемый AI
+   generation/parse smoke без логирования исходного текста.
 2. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
 3. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению
