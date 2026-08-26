@@ -13,7 +13,7 @@ import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDe
 import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
-  addDays, dayOfMonth, formatLocalDate, localDate, startOfWeek, todayInTimeZone, weekdayShort,
+  addDays, currentTimeInTimeZone, dayOfMonth, formatLocalDate, formatMonth, localDate, todayInTimeZone, weekdayShort,
   type LocalDate,
 } from '../../shared/local-date'
 import { AsyncView, Coachmark, Field, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
@@ -43,10 +43,11 @@ import { parseRunDurationInput, runDistanceKmFromInput, runDistanceLabel, runPac
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
 import { WorkoutCompletionCard } from './WorkoutCompletionCard'
-import { AddIcon, CloseIcon, HistoryIcon, RecordIcon } from '../../shared/icons'
+import { BackIcon, ChevronRightIcon, CloseIcon, HistoryIcon, RecordIcon, ScheduleIcon } from '../../shared/icons'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
 import { chronicleExercisePreview } from './workout-chronicle'
+import { formatScheduleDateLabel, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes } from './schedule-presentation'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -68,8 +69,8 @@ export function SchedulePage() {
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
   const selected = params.get('date') ? localDate(params.get('date')!) : today
-  const weekStart = startOfWeek(selected)
-  const weekDays = useMemo(() => HOURS.slice(0, 7).map((offset) => addDays(weekStart, offset)), [weekStart])
+  const weekStart = mondayWeekStart(selected)
+  const weekDays = HOURS.slice(0, 7).map((offset) => addDays(weekStart, offset))
   const scrollRef = useRef<HTMLDivElement>(null)
 
   function selectDate(date: LocalDate) { setParams({ date }) }
@@ -83,42 +84,47 @@ export function SchedulePage() {
   })
   const items = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data])
   const totalCount = query.data?.pages[0]?.totalCount ?? 0
-  const timed = items.filter((workout) => workout.startTime).sort((a, b) => minutesOf(a.startTime!) - minutesOf(b.startTime!))
-  const untimed = items.filter((workout) => !workout.startTime)
+  const timed = useMemo(() => items.filter((workout) => workout.startTime).sort((a, b) => minutesOf(a.startTime!) - minutesOf(b.startTime!)), [items])
+  const untimed = useMemo(() => items.filter((workout) => !workout.startTime), [items])
 
   useEffect(() => {
     if (query.isLoading || !scrollRef.current) return
-    const firstStart = timed[0] ? minutesOf(timed[0].startTime!.slice(0, 5)) : 7 * 60
-    scrollRef.current.scrollTop = (Math.min(firstStart, 7 * 60) / 60) * HOUR_HEIGHT
-  }, [query.isLoading, selected])
+    const focusMinutes = scheduleFocusMinutes(timed, currentTimeInTimeZone(actor?.timezone))
+    // Оставляем первую видимую часовую отметку целиком внутри viewport:
+    // подпись линии визуально поднята на 6 px относительно самой линии.
+    scrollRef.current.scrollTop = Math.max(0, (focusMinutes / 60) * HOUR_HEIGHT - 44)
+  }, [actor?.timezone, query.isLoading, selected, timed])
 
   return <Page className="schedule-page" title="Расписание" action={
-     <div className="schedule-actions">
-       <span className="schedule-count">{query.isLoading ? 'Загружаем…' : workoutCountLabel(totalCount)}</span>
-       <button type="button" className="secondary schedule-today" disabled={selected === today} onClick={() => selectDate(today)}>Сегодня</button>
-       <div className="schedule-actions-right">
-        {/* ＋ первой и с увеличенным зазором: на iOS нативный input[type=date]
-            под 📅 раздувает свою tap-зону за CSS-границы и перехватывает соседний
-            тап — из-за этого по ＋ открывался календарь. Разводим и убираем
-            inset:0 у инпута (см. .schedule-jump input в styles.css). */}
-        <Link className="schedule-add" to={`/workouts/new?date=${selected}`} aria-label="Новая тренировка"><AddIcon /></Link>
-        <label className="schedule-jump" aria-label="Выбрать дату">📅<input type="date" value={selected} onChange={(event) => event.target.value && selectDate(localDate(event.target.value))} /></label>
-       </div>
+    <div className="schedule-controls">
+      <div className="schedule-month-row">
+        <strong>{formatMonth(selected)}</strong>
+        <div className="schedule-month-actions">
+          <button type="button" className="schedule-today" disabled={selected === today} onClick={() => selectDate(today)}>Сегодня</button>
+          <label className="schedule-jump" aria-label="Выбрать дату"><ScheduleIcon /><input type="date" value={selected} onChange={(event) => event.target.value && selectDate(localDate(event.target.value))} /></label>
+        </div>
+      </div>
+      <div className="week-nav">
+        <button type="button" className="week-arrow" aria-label="Предыдущая неделя" onClick={() => shiftWeek(-1)}><BackIcon /></button>
+        <div className="week-strip">
+          {weekDays.map((day) => (
+            <button key={day} type="button" className={`week-day${day === selected ? ' active' : ''}${day === today && day !== selected ? ' is-today' : ''}`} onClick={() => selectDate(day)}>
+              <span className="day-label">{weekdayShort(day)}</span>
+              <span className="day-num">{dayOfMonth(day)}</span>
+            </button>
+          ))}
+        </div>
+        <button type="button" className="week-arrow" aria-label="Следующая неделя" onClick={() => shiftWeek(1)}><ChevronRightIcon /></button>
+      </div>
+      <div className="schedule-selected-row">
+        <div className="schedule-selected-date">
+          <strong>{formatScheduleDateLabel(selected)}</strong>
+          <span>{query.isLoading ? 'Загружаем…' : workoutCountLabel(totalCount)}</span>
+        </div>
+        <Link className="button secondary schedule-plan" to={`/workouts/new?date=${selected}`}>Запланировать</Link>
+      </div>
     </div>
   }>
-    <div className="week-nav">
-      <button type="button" className="secondary week-arrow" aria-label="Предыдущая неделя" onClick={() => shiftWeek(-1)}>‹</button>
-      <div className="week-strip">
-        {weekDays.map((day) => (
-          <button key={day} type="button" className={day === selected ? 'week-day active' : 'week-day'} onClick={() => selectDate(day)}>
-            <span className="day-label">{weekdayShort(day)}</span>
-            <span className={day === today ? 'day-num today' : 'day-num'}>{dayOfMonth(day)}</span>
-          </button>
-        ))}
-      </div>
-      <button type="button" className="secondary week-arrow" aria-label="Следующая неделя" onClick={() => shiftWeek(1)}>›</button>
-    </div>
-
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       <div className="day-grid-scroll" ref={scrollRef}>
         {untimed.length > 0 && <div className="day-untimed">{untimed.map((workout) => (
@@ -135,19 +141,16 @@ export function SchedulePage() {
             const startMin = minutesOf(workout.startTime!.slice(0, 5))
             const endMin = workout.endTime ? minutesOf(workout.endTime.slice(0, 5)) : startMin + 60
             const top = (startMin / 60) * HOUR_HEIGHT
-            const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 28)
-            // Плашка: время и имя клиента в одну строку, ниже — упражнения
-            // столбиком (до двух, дальше «…»).
+            const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 52)
             const names = exerciseSummary(workout).map((e) => e.name)
-            return <Link key={workout.id} className={`day-grid-event ${workout.status}`} style={{ top, height }} to={`/workouts/${workout.id}`}>
+            const status = scheduleEventStatus(workout, today)
+            return <Link key={workout.id} className={`day-grid-event schedule-event-${status.tone}`} style={{ top, height }} to={`/workouts/${workout.id}`}>
               <span className="day-grid-event-top">
                 <span className="day-grid-event-time">{eventTime(workout)}</span>
                 <span className="day-grid-event-name">{workout.clientName}</span>
+                <span className="day-grid-event-status">{status.label}</span>
               </span>
-              {names.length > 0 && <span className="day-grid-event-groups">
-                {names.slice(0, 2).map((name, i) => <span key={i} className="day-grid-event-exercise">{name}</span>)}
-                {names.length > 2 && <span className="day-grid-event-exercise">…</span>}
-              </span>}
+              <span className="day-grid-event-summary">{scheduleExerciseLine(names)}</span>
             </Link>
           })}
          </div>
