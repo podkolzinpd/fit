@@ -89,6 +89,12 @@ describe('AppLayout navigation', () => {
     expect(screen.queryByRole('navigation', { name: 'Основная навигация' })).not.toBeInTheDocument()
     expect(document.querySelector('.phone-frame')).toHaveClass('live-session-shell')
   })
+
+  it('помечает ассистента как отдельную viewport-оболочку', () => {
+    authState.role = 'trainer'
+    renderLayout('/assistant')
+    expect(document.querySelector('.phone-frame')).toHaveClass('assistant-shell')
+  })
 })
 
 describe('AppLayout: пилот тёмной палитры', () => {
