@@ -1272,13 +1272,13 @@ function formatElapsed(seconds: number): string {
   return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`
 }
 
-function WorkoutTimer({ startedAt }: { startedAt: string | null }) {
+function WorkoutTimer({ startedAt, resting = false }: { startedAt: string | null; resting?: boolean }) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
   }, [])
-  const className = 'live-timer'
+  const className = `live-timer${resting ? ' resting' : ''}`
   if (!startedAt) return <span className={className}><span className="live-dot-mark" aria-hidden="true" />LIVE</span>
   const elapsed = Math.max(0, Math.floor((now - Date.parse(startedAt)) / 1000))
   return <span className={className}><span className="live-dot-mark" aria-hidden="true" />{formatElapsed(elapsed)}</span>
@@ -1724,7 +1724,7 @@ export function LiveWorkoutPage() {
         return (
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
         <div className="live-pinned">
-          <WorkoutTimer startedAt={query.data.startedAt ?? null} />
+          <WorkoutTimer startedAt={query.data.startedAt ?? null} resting={restActive} />
           {restRemaining !== null && <div className="rest-timer">
             <strong>Отдых {formatRest(restRemaining)}</strong>
             <div className="rest-controls">
@@ -1777,12 +1777,12 @@ export function LiveWorkoutPage() {
               const firstPlan = exercise.sets.map((set) => planLine(exercise.inputKind, set)).find(Boolean)
               const countLabel = exercise.sets.length === 1 ? 'подход' : exercise.sets.length < 5 ? 'подхода' : 'подходов'
               return <WorkoutExercise key={exercise.id} state="upcoming" className="live-exercise-upcoming">
-                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<><WorkoutStatus state="upcoming" />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
                 <p className="live-upcoming-summary"><span>{exercise.sets.length} {countLabel}</span>{firstPlan && <span>План: {firstPlan}</span>}</p>
               </WorkoutExercise>
             }
             return <WorkoutExercise key={exercise.id} state={blockStatus === 'done' ? 'completed' : blockStatus} className={`live-exercise ${blockStatus}`}>
-              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<><WorkoutStatus state={blockStatus === 'done' ? 'completed' : blockStatus} />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
+              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
               {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
