@@ -87,6 +87,27 @@ test('assistant composer stays contained and keeps accessible controls on mobile
   }
 })
 
+test('assistant page has no decorative accent glow in light and dark themes', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+
+  for (const theme of ['theme-light', 'theme-dark']) {
+    await page.setContent(assistantMarkup())
+    await page.locator('html').evaluate((element, nextTheme) => {
+      element.setAttribute('class', nextTheme)
+      document.querySelector('.phone-frame')?.classList.remove('theme-light', 'theme-dark')
+      document.querySelector('.phone-frame')?.classList.add(nextTheme)
+    }, theme)
+
+    const decoration = await page.locator('.assistant-page').evaluate((element) => {
+      const style = getComputedStyle(element, '::after')
+      return { content: style.content, backgroundImage: style.backgroundImage }
+    })
+
+    expect(decoration.content).toBe('none')
+    expect(decoration.backgroundImage).toBe('none')
+  }
+})
+
 test('mobile assistant pins the composer to the shrunken keyboard viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.setContent(assistantMarkup())
