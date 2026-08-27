@@ -28,6 +28,7 @@ import { DatabasePilotConnectionsReader } from '../pilot-connections-reader.js'
 import { DatabasePilotSessionIssuer } from '../pilot-session.js'
 import { DatabasePilotTrainingDataReader } from '../pilot-training-data-reader.js'
 import type { PlannedWorkoutDraft } from '../planned-workout-request.js'
+import { DatabasePilotProgressData } from '../progress-data.js'
 import { readAccessibleTrainingData } from '../training-data.js'
 import {
   appendLiveExercise,
@@ -1218,6 +1219,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
       const first = await loader.load()
       expect(first.seededTrainerCount).toBeGreaterThanOrEqual(2)
+      expect(first.clientId).toBe(
+        stageWorkoutFixtureIds(STAGE_SMOKE_PROFILE_ID).clientId,
+      )
       expect(first.sessionToken).toMatch(/^[A-Za-z0-9_-]{43}$/)
       expect(first.sessionExpiresAt).toBe(expectedExpiry.toISOString())
       expect(first.clientSessionToken).toMatch(/^[A-Za-z0-9_-]{43}$/)
@@ -1225,6 +1229,17 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
       const smokeData = await reader.readTrainingData(first.sessionToken)
       const smokeIds = stageWorkoutFixtureIds(STAGE_SMOKE_PROFILE_ID)
+      const progressData = new DatabasePilotProgressData(runtimePool)
+      const progressBundle = await progressData.readBundle(
+        first.sessionToken,
+        first.clientId,
+      )
+      expect(progressBundle).toMatchObject({
+        entries: [{ id: smokeIds.progressId, clientId: smokeIds.clientId }],
+        customMetrics: [{ id: smokeIds.progressMetricId }],
+        goal: { id: smokeIds.goalId },
+      })
+      expect(JSON.stringify(progressBundle).length).toBeGreaterThan(0)
       expect(smokeData).toEqual({
         accessMode: 'read_only',
         customExercises: [

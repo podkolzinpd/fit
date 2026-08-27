@@ -15,7 +15,7 @@ export type RuntimeDomainReadinessCheck =
   | 'progress'
 
 export type RuntimeDomainReadinessResult =
-  | Readonly<{ ready: true }>
+  | Readonly<{ ready: true; progressResponseBytes: number }>
   | Readonly<{
       ready: false
       check: RuntimeDomainReadinessCheck
@@ -56,19 +56,19 @@ export async function inspectRuntimeDomainReadiness(
   trainingDataReader: PilotTrainingDataReader,
   progressData: Pick<PilotProgressData, 'readBundle'>,
   sessionToken: string,
+  clientId: string,
 ): Promise<RuntimeDomainReadinessResult> {
   const clients = await inspectReadModel(
     'clients',
     () => clientsReader.readClients(sessionToken),
   )
   if (!clients.ready) return clients
-  const clientId = clients.value.clients[0]?.id
-  if (clientId === undefined) {
+  if (!clients.value.clients.some((client) => client.id === clientId)) {
     return {
       ready: false,
       check: 'clients',
       category: 'unknown',
-      code: 'NO_ACCESSIBLE_CLIENT',
+      code: 'FIXTURE_CLIENT_NOT_ACCESSIBLE',
     }
   }
 
@@ -88,5 +88,28 @@ export async function inspectRuntimeDomainReadiness(
     'progress',
     () => progressData.readBundle(sessionToken, clientId),
   )
-  return progress.ready ? { ready: true } : progress
+  if (!progress.ready) return progress
+
+  try {
+    const response = JSON.stringify(progress.value)
+    if (response === undefined) {
+      return {
+        ready: false,
+        check: 'progress',
+        category: 'unknown',
+        code: 'PROGRESS_RESPONSE_NOT_SERIALIZABLE',
+      }
+    }
+    return {
+      ready: true,
+      progressResponseBytes: Buffer.byteLength(response, 'utf8'),
+    }
+  } catch {
+    return {
+      ready: false,
+      check: 'progress',
+      category: 'unknown',
+      code: 'PROGRESS_RESPONSE_NOT_SERIALIZABLE',
+    }
+  }
 }

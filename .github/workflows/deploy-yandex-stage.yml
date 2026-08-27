@@ -199,6 +199,7 @@ jobs:
             and (.seededTrainerCount | type == "number" and . >= 1)
             and (.session.token | test("^[A-Za-z0-9_-]{43}$"))
             and (.session.expiresAt | type == "string")
+            and (.session.clientId | test("^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"; "i"))
             and (.clientSession.token | test("^[A-Za-z0-9_-]{43}$"))
             and (.clientSession.expiresAt | type == "string")
           ' stage-workout-fixture-response.json >/dev/null
@@ -209,10 +210,12 @@ jobs:
         run: |
           migration_url=$(terraform output -raw migration_container_url)
           fixture_token=$(jq -er '.session.token' stage-workout-fixture-response.json)
+          fixture_client_id=$(jq -er '.session.clientId' stage-workout-fixture-response.json)
           status=$(curl --silent --show-error \
             --output runtime-database-readiness-response.json --write-out '%{http_code}' \
             --request POST --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Pilot-Session: $fixture_token" \
+            --header "X-Fit-Stage-Client-Id: $fixture_client_id" \
             "${migration_url%/}/stage/runtime-database/readiness")
           if test "$status" != 200; then
             if jq -e '
@@ -229,8 +232,13 @@ jobs:
             echo 'The API revision was not changed.' >&2
             exit 1
           fi
-          jq -e '.status == "runtime_database_ready"' \
+          jq -e '
+            .status == "runtime_database_ready"
+            and (.progressResponseBytes | type == "number" and . > 0)
+          ' \
             runtime-database-readiness-response.json >/dev/null
+          jq -r '"Runtime database preflight passed for the exact fixture client; serialized progress bytes=" + (.progressResponseBytes | tostring)' \
+            runtime-database-readiness-response.json
       - name: Re-plan after migration and enforce policy
         working-directory: infra/yandex
         run: |
@@ -282,6 +290,7 @@ jobs:
         run: |
           api_url=$(terraform output -raw api_container_url)
           bootstrap_deadline=$(( $(date +%s) + 90 ))
+          candidate_streak=0
           health_status=000
           readiness_status=not_checked
           while true; do
@@ -302,10 +311,21 @@ jobs:
                   --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/ready"); then
                   if test "$readiness_status" = 200 \
                     && jq -e '.status == "ready"' api-readiness-response.json >/dev/null 2>&1; then
-                    break
+                    candidate_streak=$(( candidate_streak + 1 ))
+                    if test "$candidate_streak" -ge 5; then
+                      break
+                    fi
+                  else
+                    candidate_streak=0
                   fi
+                else
+                  candidate_streak=0
                 fi
+              else
+                candidate_streak=0
               fi
+            else
+              candidate_streak=0
             fi
             now=$(date +%s)
             if test "$now" -ge "$bootstrap_deadline"; then
@@ -330,8 +350,8 @@ jobs:
             --header "X-Fit-Pilot-Session: $fixture_token" \
             "${api_url%/}/v1/clients") || clients_curl_exit=$?
           if test "$clients_status" != 200; then
-            error_category=$(awk 'tolower($1) == "x-fit-error-category:" {gsub("\\r", "", $2); value=$2} END {print value}' clients-response-headers.txt)
-            error_code=$(awk 'tolower($1) == "x-fit-error-code:" {gsub("\\r", "", $2); value=$2} END {print value}' clients-response-headers.txt)
+            error_category=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-error-category:" {gsub("\\r", "", $2); value=$2} END {print value}' clients-response-headers.txt)
+            error_code=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-error-code:" {gsub("\\r", "", $2); value=$2} END {print value}' clients-response-headers.txt)
             echo "First clients smoke failed: HTTP ${clients_status:-000}; curl_exit=$clients_curl_exit; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}." >&2
             exit 1
           fi
@@ -357,8 +377,8 @@ jobs:
             --header "X-Fit-Pilot-Session: $fixture_token" \
             "${api_url%/}/v1/connections") || connections_curl_exit=$?
           if test "$connections_status" != 200; then
-            error_category=$(awk 'tolower($1) == "x-fit-error-category:" {gsub("\\r", "", $2); value=$2} END {print value}' connections-response-headers.txt)
-            error_code=$(awk 'tolower($1) == "x-fit-error-code:" {gsub("\\r", "", $2); value=$2} END {print value}' connections-response-headers.txt)
+            error_category=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-error-category:" {gsub("\\r", "", $2); value=$2} END {print value}' connections-response-headers.txt)
+            error_code=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-error-code:" {gsub("\\r", "", $2); value=$2} END {print value}' connections-response-headers.txt)
             echo "Connections smoke failed: HTTP ${connections_status:-000}; curl_exit=$connections_curl_exit; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}." >&2
             exit 1
           fi
@@ -377,9 +397,9 @@ jobs:
           }
           report_stage_smoke_failure() {
             command_exit=$?
-            error_category=$(awk 'tolower($1) == "x-fit-error-category:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
-            error_code=$(awk 'tolower($1) == "x-fit-error-code:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
-            observed_release=$(awk 'tolower($1) == "x-fit-release-id:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
+            error_category=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-error-category:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
+            error_code=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-error-code:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
+            observed_release=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-release-id:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
             echo "Stage smoke failed: check=${stage_smoke_check:-unknown}; command_exit=$command_exit; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}; release=${observed_release:-proxy_or_unknown}; expected_release=$API_IMAGE_TAG." >&2
           }
           trap report_stage_smoke_failure ERR
