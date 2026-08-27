@@ -44,6 +44,23 @@ test('mobile assistant pins the conversation tail and composer above the tab bar
   expect(composer!.y - (message!.y + message!.height)).toBeLessThanOrEqual(24)
 })
 
+test('assistant aligns user and assistant messages by role', async ({ page }) => {
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await page.setContent(assistantMarkup())
+
+    const thread = await page.locator('.assistant-thread').boundingBox()
+    const userMessage = await page.locator('.assistant-message-user').boundingBox()
+    const assistantMessage = await page.locator('.assistant-message-assistant').boundingBox()
+
+    expect(thread).not.toBeNull()
+    expect(userMessage).not.toBeNull()
+    expect(assistantMessage).not.toBeNull()
+    expect(Math.abs((userMessage!.x + userMessage!.width) - (thread!.x + thread!.width))).toBeLessThanOrEqual(3)
+    expect(Math.abs(assistantMessage!.x - thread!.x)).toBeLessThanOrEqual(3)
+  }
+})
+
 test('mobile assistant pins the composer to the shrunken keyboard viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.setContent(assistantMarkup())
