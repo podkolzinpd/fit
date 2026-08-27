@@ -16,7 +16,7 @@ import {
   addDays, currentTimeInTimeZone, dayOfMonth, formatLocalDate, formatMonth, localDate, todayInTimeZone, weekdayShort,
   type LocalDate,
 } from '../../shared/local-date'
-import { AsyncView, Coachmark, Field, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
+import { AsyncView, Coachmark, EmptyState, Field, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
 import { ExerciseImage, ExercisePicker, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { clientWorkoutAuthorLabel, ClientPicker, type ClientPickerSelection } from '../clients'
 import { VoiceNoteField } from '../voice-input'
@@ -305,7 +305,11 @@ export function ClientWorkoutsPage() {
     return <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientAuthored ? 'Создано клиентом' : null} />
   })}</div></section>}
       <LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} />
-    </div> : <Link className="button wide trainer-history-plan" to={`/workouts/new?client=${clientId}`}>Запланировать тренировку</Link>}
+    </div> : <EmptyState
+      title="Тренировка для клиента"
+      description="Составьте план или сразу запишите готовый результат."
+      action={<Link className="button secondary" to={`/workouts/new?client=${clientId}`}>Запланировать тренировку</Link>}
+    />}
   </AsyncView></Page>
 }
 

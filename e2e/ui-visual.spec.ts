@@ -153,6 +153,8 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
 
   await page.goto('/me/workouts')
   await expect(page.getByRole('heading', { name: 'Мои тренировки' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
+  await expect(page.getByText('Добавьте упражнения голосом, текстом или из каталога.')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Добавить тренировку' })).toBeVisible()
   await expectVisualBaseline(page, `client-workouts-${process.platform}.png`)
 })
