@@ -93,6 +93,16 @@ test('probes the fit_api identity privately before changing the API revision', (
   assert.match(workflow, /Runtime database preflight failed: check=/)
   assert.match(workflow, /First clients smoke failed: HTTP/)
   assert.match(workflow, /Connections smoke failed: HTTP/)
+  assert.match(
+    workflow,
+    /clients_status=\$\(curl[\s\S]*?\/v1\/clients"\) \|\| clients_curl_exit=\$\?/,
+  )
+  assert.match(
+    workflow,
+    /connections_status=\$\(curl[\s\S]*?\/v1\/connections"\) \|\| connections_curl_exit=\$\?/,
+  )
+  assert.match(workflow, /curl_exit=\$clients_curl_exit/)
+  assert.match(workflow, /curl_exit=\$connections_curl_exit/)
   assert.match(workflow, /x-fit-error-category:/)
   assert.match(workflow, /x-fit-error-code:/)
   assert.match(workflow, /The API revision was not changed/)
