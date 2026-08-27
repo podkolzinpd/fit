@@ -140,7 +140,12 @@ test('today: быстрый старт ведёт к единому выбору
   await expect(page.getByRole('textbox', { name: 'Тренировка' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Разобрать тренировку' })).toBeDisabled()
+  const disabledParse = page.getByRole('button', { name: 'Разобрать тренировку' })
+  await expect(disabledParse).toBeDisabled()
+  expect(await disabledParse.evaluate((button) => {
+    const style = getComputedStyle(button)
+    return { background: style.backgroundColor, color: style.color, opacity: style.opacity }
+  })).toEqual({ background: 'rgb(242, 238, 232)', color: 'rgb(108, 113, 122)', opacity: '1' })
   await mockWorkoutParser(page, [
     { sourceText: 'Присед со штангой 3×8 — 80 кг', exerciseRef: 'barbell-squat', confidence: 1, sets: [{ weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }] },
     { sourceText: 'Планка 3×45 сек', exerciseRef: 'plank', confidence: 1, sets: [{ durationMin: 0.75 }, { durationMin: 0.75 }, { durationMin: 0.75 }] },
