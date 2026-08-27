@@ -1,4 +1,4 @@
-// schema-sha256: 9205bc698b02d1be3550bc1944a496008009531059322c9b5c82da2d7654506f
+// schema-sha256: dd88b5ee28b1afa20284b6c4ff306dd4f5d91641426fd4cb4b6aea5848887b73
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -419,6 +419,77 @@ export type Database = {
           },
         ]
       }
+      client_merge_operations: {
+        Row: {
+          actor_id: string
+          completed_at: string | null
+          created_at: string
+          dependency_counts_after: Json
+          dependency_counts_before: Json
+          error_code: string | null
+          id: string
+          invitation_id: string | null
+          source_client_id: string
+          status: string
+          target_client_id: string
+        }
+        Insert: {
+          actor_id: string
+          completed_at?: string | null
+          created_at?: string
+          dependency_counts_after?: Json
+          dependency_counts_before?: Json
+          error_code?: string | null
+          id?: string
+          invitation_id?: string | null
+          source_client_id: string
+          status?: string
+          target_client_id: string
+        }
+        Update: {
+          actor_id?: string
+          completed_at?: string | null
+          created_at?: string
+          dependency_counts_after?: Json
+          dependency_counts_before?: Json
+          error_code?: string | null
+          id?: string
+          invitation_id?: string | null
+          source_client_id?: string
+          status?: string
+          target_client_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_merge_operations_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_merge_operations_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "client_invitations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_merge_operations_source_client_id_fkey"
+            columns: ["source_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_merge_operations_target_client_id_fkey"
+            columns: ["target_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_private_details: {
         Row: {
           client_id: string
@@ -645,6 +716,84 @@ export type Database = {
           },
         ]
       }
+      client_trainer_relationships: {
+        Row: {
+          client_id: string
+          connected_at: string
+          connected_by: string
+          created_at: string
+          disconnected_at: string | null
+          disconnected_by: string | null
+          id: string
+          source_invitation_id: string | null
+          status: string
+          trainer_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          connected_at?: string
+          connected_by: string
+          created_at?: string
+          disconnected_at?: string | null
+          disconnected_by?: string | null
+          id?: string
+          source_invitation_id?: string | null
+          status?: string
+          trainer_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          connected_at?: string
+          connected_by?: string
+          created_at?: string
+          disconnected_at?: string | null
+          disconnected_by?: string | null
+          id?: string
+          source_invitation_id?: string | null
+          status?: string
+          trainer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_trainer_relationships_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_trainer_relationships_connected_by_fkey"
+            columns: ["connected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_trainer_relationships_disconnected_by_fkey"
+            columns: ["disconnected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_trainer_relationships_source_invitation_id_fkey"
+            columns: ["source_invitation_id"]
+            isOneToOne: false
+            referencedRelation: "client_invitations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_trainer_relationships_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
       client_trainers: {
         Row: {
           alias: string | null
@@ -773,6 +922,7 @@ export type Database = {
           goal: string | null
           height_cm: number | null
           id: string
+          merged_into_client_id: string | null
           trainer_id: string
           updated_at: string
           version: number
@@ -788,6 +938,7 @@ export type Database = {
           goal?: string | null
           height_cm?: number | null
           id?: string
+          merged_into_client_id?: string | null
           trainer_id: string
           updated_at?: string
           version?: number
@@ -803,11 +954,19 @@ export type Database = {
           goal?: string | null
           height_cm?: number | null
           id?: string
+          merged_into_client_id?: string | null
           trainer_id?: string
           updated_at?: string
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "clients_merged_into_client_id_fkey"
+            columns: ["merged_into_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clients_partition_owner_fk"
             columns: ["trainer_id"]
