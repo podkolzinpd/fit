@@ -13,6 +13,7 @@ import { buildMigrationApp } from './migration-app.js'
 import { DatabasePilotClientsReader } from './pilot-clients-reader.js'
 import { DatabasePilotConnectionsReader } from './pilot-connections-reader.js'
 import { DatabasePilotTrainingDataReader } from './pilot-training-data-reader.js'
+import { DatabasePilotProgressData } from './progress-data.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -79,6 +80,9 @@ const runtimeConnectionsReader = runtimeDatabasePool === undefined
 const runtimeTrainingDataReader = runtimeDatabasePool === undefined
   ? undefined
   : new DatabasePilotTrainingDataReader(runtimeDatabasePool)
+const runtimeProgressData = runtimeDatabasePool === undefined
+  ? undefined
+  : new DatabasePilotProgressData(runtimeDatabasePool)
 const yandexClientId = process.env.YANDEX_OAUTH_CLIENT_ID
 if (pilotEnrollmentEnabled && yandexClientId === undefined) {
   throw new Error('YANDEX_OAUTH_CLIENT_ID is required for pilot enrollment')
@@ -111,6 +115,7 @@ const app = buildMigrationApp({
   ...(runtimeClientsReader === undefined
     || runtimeConnectionsReader === undefined
     || runtimeTrainingDataReader === undefined
+    || runtimeProgressData === undefined
     ? {}
     : {
         runtimeDatabaseReadiness: (sessionToken: string) =>
@@ -118,6 +123,7 @@ const app = buildMigrationApp({
             runtimeClientsReader,
             runtimeConnectionsReader,
             runtimeTrainingDataReader,
+            runtimeProgressData,
             sessionToken,
           ),
       }),

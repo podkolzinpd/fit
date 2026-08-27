@@ -84,7 +84,11 @@
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
   exercises, workout lifecycle и post-workout работают на stage (миграции
-  `000001–000018`); API с AI-контрактами ждёт deployment после runtime preflight.
+  `000001–000018`). Последний candidate API в run `33084954506` прошёл private
+  preflight для clients/connections/training-data, но публичный progress bundle
+  вернул 503; rollback сохранил предыдущую рабочую revision. Следующая доставка
+  выполняет тот же progress bundle в private preflight до переключения revision
+  и отмечает каждый публичный ответ неизменяемым release ID.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
 - Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
@@ -98,15 +102,17 @@
   не выполнен: production frontend/tenant на Supabase, остальные вкладки без изменений.
 
 ## Проверки активной ветки
-- Полный `npm run check` зелёный: 838 frontend, 214 API и 57 infra/policy-
+- Полный `npm run check` зелёный: 838 frontend, 217 API и 57 infra/policy-
   тестов, lint, typecheck, coverage и production build.
 - Диагностика сохраняет закрытый `/ready`, нормализованные коды без
   чувствительных данных и автоматический rollback.
 
 ## Ближайший порядок
 
-1. Получить безопасный код ошибки training-data preflight, устранить доказанную
-   причину, получить зелёную API revision и выполнить summary-list плюс один
+1. Получить безопасный результат progress preflight: исправить конкретный SQL/
+   permission code либо, если private query зелёный, сверить release ID ответа
+   и устранить доказанную проблему маршрутизации. Затем получить зелёную API
+   revision и выполнить summary-list плюс один
    контролируемый AI generation/parse smoke без логирования исходного текста.
 2. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
