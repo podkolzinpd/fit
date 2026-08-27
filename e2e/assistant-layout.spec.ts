@@ -66,6 +66,55 @@ test('assistant aligns user and assistant messages by role', async ({ page }) =>
   }
 })
 
+test('assistant keeps one turn close and separates the next turn', async ({ page }) => {
+  for (const width of [390, 430]) {
+    for (const theme of ['theme-light', 'theme-dark']) {
+      await page.setViewportSize({ width, height: 844 })
+      await page.setContent(assistantMarkup())
+      await page.locator('html').evaluate((element, nextTheme) => {
+        element.setAttribute('class', nextTheme)
+        document.querySelector('.phone-frame')?.classList.remove('theme-light', 'theme-dark')
+        document.querySelector('.phone-frame')?.classList.add(nextTheme)
+      }, theme)
+
+      await page.locator('.assistant-thread').evaluate((element) => {
+        const nextUser = document.createElement('article')
+        nextUser.className = 'assistant-message assistant-message-user'
+        nextUser.dataset.testid = 'next-user-message'
+        nextUser.innerHTML = '<p>А теперь перенеси тренировку</p>'
+        element.append(nextUser)
+
+        const nextAssistant = document.createElement('article')
+        nextAssistant.className = 'assistant-message assistant-message-assistant'
+        nextAssistant.dataset.testid = 'next-assistant-message'
+        nextAssistant.innerHTML = '<p>На какой день перенести?</p>'
+        element.append(nextAssistant)
+      })
+
+      const user = await page.getByTestId('short-user-message').boundingBox()
+      const assistant = await page.getByTestId('last-message').boundingBox()
+      const nextUser = await page.getByTestId('next-user-message').boundingBox()
+      const nextAssistant = await page.getByTestId('next-assistant-message').boundingBox()
+      expect(user).not.toBeNull()
+      expect(assistant).not.toBeNull()
+      expect(nextUser).not.toBeNull()
+      expect(nextAssistant).not.toBeNull()
+
+      const firstPairGap = assistant!.y - (user!.y + user!.height)
+      const betweenTurnsGap = nextUser!.y - (assistant!.y + assistant!.height)
+      const secondPairGap = nextAssistant!.y - (nextUser!.y + nextUser!.height)
+
+      expect(firstPairGap).toBeGreaterThanOrEqual(7)
+      expect(firstPairGap).toBeLessThanOrEqual(9)
+      expect(secondPairGap).toBeGreaterThanOrEqual(7)
+      expect(secondPairGap).toBeLessThanOrEqual(9)
+      expect(betweenTurnsGap).toBeGreaterThanOrEqual(15)
+      expect(betweenTurnsGap).toBeLessThanOrEqual(17)
+      expect(betweenTurnsGap).toBeGreaterThan(firstPairGap)
+    }
+  }
+})
+
 test('assistant message types have distinct hierarchy on mobile', async ({ page }) => {
   for (const width of [390, 430]) {
     for (const theme of ['theme-light', 'theme-dark']) {
