@@ -9,6 +9,7 @@ import { PilotSessionInvalidError } from './yandex-pilot-transaction.js'
 
 const SESSION_TOKEN = 's'.repeat(43)
 const CLIENT_ID = '10000000-0000-4000-8000-000000000001'
+const OTHER_CLIENT_ID = '10000000-0000-4000-8000-000000000002'
 
 function buildClientsReader(error?: Error): {
   reader: PilotClientsReader
@@ -21,15 +22,6 @@ function buildClientsReader(error?: Error): {
       })
     : vi.fn().mockRejectedValue(error)
   return { reader: { readClients }, readClients }
-}
-
-function buildEmptyClientsReader(): PilotClientsReader {
-  return {
-    readClients: vi.fn().mockResolvedValue({
-      accessMode: 'read_only',
-      clients: [],
-    }),
-  }
 }
 
 function buildProgressData(error?: Error): {
@@ -85,9 +77,17 @@ describe('runtime domain readiness', () => {
       trainingData.reader,
       progress.data,
       SESSION_TOKEN,
+      CLIENT_ID,
     )
 
-    expect(result).toEqual({ ready: true })
+    expect(result).toEqual({
+      ready: true,
+      progressResponseBytes: Buffer.byteLength(JSON.stringify({
+        entries: [],
+        customMetrics: [],
+        goal: null,
+      })),
+    })
     expect(clients.readClients).toHaveBeenCalledWith(SESSION_TOKEN)
     expect(connections.readConnections).toHaveBeenCalledWith(SESSION_TOKEN)
     expect(trainingData.readTrainingData).toHaveBeenCalledWith(SESSION_TOKEN)
@@ -110,6 +110,7 @@ describe('runtime domain readiness', () => {
       trainingData.reader,
       progress.data,
       SESSION_TOKEN,
+      CLIENT_ID,
     )
 
     expect(result).toEqual({
@@ -123,24 +124,31 @@ describe('runtime domain readiness', () => {
     expect(JSON.stringify(result)).not.toContain('private relation')
   })
 
-  it('stops safely when the fixture session has no accessible client', async () => {
+  it('does not substitute another accessible client for the exact fixture client', async () => {
     const connections = buildConnectionsReader()
     const trainingData = buildTrainingDataReader()
     const progress = buildProgressData()
+    const clients: PilotClientsReader = {
+      readClients: vi.fn().mockResolvedValue({
+        accessMode: 'read_only',
+        clients: [{ id: OTHER_CLIENT_ID }],
+      }),
+    }
 
     const result = await inspectRuntimeDomainReadiness(
-      buildEmptyClientsReader(),
+      clients,
       connections.reader,
       trainingData.reader,
       progress.data,
       SESSION_TOKEN,
+      CLIENT_ID,
     )
 
     expect(result).toEqual({
       ready: false,
       check: 'clients',
       category: 'unknown',
-      code: 'NO_ACCESSIBLE_CLIENT',
+      code: 'FIXTURE_CLIENT_NOT_ACCESSIBLE',
     })
     expect(connections.readConnections).not.toHaveBeenCalled()
     expect(trainingData.readTrainingData).not.toHaveBeenCalled()
@@ -163,6 +171,7 @@ describe('runtime domain readiness', () => {
       trainingData.reader,
       progress.data,
       SESSION_TOKEN,
+      CLIENT_ID,
     )
 
     expect(result).toEqual({
@@ -191,6 +200,7 @@ describe('runtime domain readiness', () => {
       trainingData.reader,
       progress.data,
       SESSION_TOKEN,
+      CLIENT_ID,
     )
 
     expect(result).toEqual({
@@ -219,6 +229,7 @@ describe('runtime domain readiness', () => {
       trainingData.reader,
       progress.data,
       SESSION_TOKEN,
+      CLIENT_ID,
     )
 
     expect(result).toEqual({
@@ -243,6 +254,7 @@ describe('runtime domain readiness', () => {
       trainingData.reader,
       progress.data,
       SESSION_TOKEN,
+      CLIENT_ID,
     )
 
     expect(result).toEqual({
@@ -266,6 +278,7 @@ describe('runtime domain readiness', () => {
       trainingData.reader,
       progress.data,
       SESSION_TOKEN,
+      CLIENT_ID,
     )
 
     expect(result).toEqual({
@@ -275,5 +288,30 @@ describe('runtime domain readiness', () => {
       code: 'unknown',
     })
     expect(JSON.stringify(result)).not.toContain('private row value')
+  })
+
+  it('rejects a progress response that cannot be serialized before deployment', async () => {
+    const clients = buildClientsReader()
+    const connections = buildConnectionsReader()
+    const trainingData = buildTrainingDataReader()
+    const cyclic: { self?: unknown } = {}
+    cyclic.self = cyclic
+    const readBundle = vi.fn().mockResolvedValue(cyclic)
+
+    const result = await inspectRuntimeDomainReadiness(
+      clients.reader,
+      connections.reader,
+      trainingData.reader,
+      { readBundle },
+      SESSION_TOKEN,
+      CLIENT_ID,
+    )
+
+    expect(result).toEqual({
+      ready: false,
+      check: 'progress',
+      category: 'unknown',
+      code: 'PROGRESS_RESPONSE_NOT_SERIALIZABLE',
+    })
   })
 })

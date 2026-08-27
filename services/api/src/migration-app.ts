@@ -30,11 +30,14 @@ interface BuildMigrationAppOptions {
   runMigrations: () => Promise<readonly string[]>
   runtimeDatabaseReadiness?: (
     sessionToken: string,
+    clientId: string,
   ) => Promise<RuntimeDomainReadinessResult>
   stageWorkoutFixture?: StageWorkoutFixtureLoader
 }
 
 const DATABASE_USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._@-]{0,62}$/
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 function readDatabaseReaderAccessRequest(body: unknown): {
   action: StageDatabaseReaderAccessAction
@@ -89,11 +92,22 @@ export function buildMigrationApp(
     const runtimeDatabaseReadiness = options.runtimeDatabaseReadiness
     app.post('/stage/runtime-database/readiness', async (request, reply) => {
       const sessionToken = request.headers['x-fit-pilot-session']
-      if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      const clientId = request.headers['x-fit-stage-client-id']
+      if (
+        typeof sessionToken !== 'string'
+        || sessionToken.length === 0
+        || typeof clientId !== 'string'
+        || !UUID_PATTERN.test(clientId)
+      ) {
         return reply.code(400).send({ status: 'invalid_request' })
       }
-      const readiness = await runtimeDatabaseReadiness(sessionToken)
-      if (readiness.ready) return { status: 'runtime_database_ready' }
+      const readiness = await runtimeDatabaseReadiness(sessionToken, clientId)
+      if (readiness.ready) {
+        return {
+          status: 'runtime_database_ready',
+          progressResponseBytes: readiness.progressResponseBytes,
+        }
+      }
 
       return reply.code(503).send({
         status: 'runtime_database_not_ready',
@@ -177,6 +191,7 @@ export function buildMigrationApp(
           session: {
             token: result.sessionToken,
             expiresAt: result.sessionExpiresAt,
+            clientId: result.clientId,
           },
           clientSession: {
             token: result.clientSessionToken,
