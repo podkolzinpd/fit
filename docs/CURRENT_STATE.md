@@ -5,19 +5,18 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-27
-Проверенный базовый `main`: `d75fc42` (`feat(assistant): add useful first-entry state (#619)`)
+Проверенный базовый `main`: `b6e9001` (`fix(yandex): preflight connections read model (#605)`)
 
 ## Активное изменение
 
-- Stage run `33009868939` после merge #599 подтвердил новую immutable API
-  revision через `releaseId`: `/health`, `/ready` и публичный `GET /v1/clients`
-  прошли. Следующий `GET /v1/connections` девять раз вернул `503`; автоматический
-  rollback восстановил `bbak2bq6iopc8lcpnbe8`, production не пострадал.
-- Активный follow-up переносит exact `DatabasePilotConnectionsReader` в private
-  runtime preflight с тем же fixture token и добавляет только безопасные
-  `check/category/code` в preflight и category/code headers в публичный ответ.
-  Следующий workflow остановится до переключения API и назовёт точный класс
-  connections-ошибки без SQL, PII, токена и connection details.
+- Stage run `33056294898` после merge #605 подтвердил private connections
+  preflight, новую immutable revision, `/health`, `/ready` и `GET /v1/clients`.
+  Публичный `GET /v1/connections` вернул `503`; rollback восстановил
+  `bbak2bq6iopc8lcpnbe8`, production не пострадал.
+- `curl --retry` завершился кодом `22` прямо в command substitution, поэтому
+  `bash -e` не дошёл до чтения безопасных response headers. Активный follow-up
+  сохраняет HTTP status и curl exit раздельно, не меняя retry/rollback; следующий
+  автоматический run выведет только `curl_exit/category/code`, без PII и секретов.
 
 ## Последняя проверенная продуктовая точка
 
@@ -98,8 +97,8 @@
   не выполнен: production frontend/tenant на Supabase, остальные вкладки без изменений.
 
 ## Проверки активной ветки
-- Для connections diagnostics зелёный полный `npm run check`: 797 frontend,
-  187 API и 57 infra/policy-тестов, lint, typecheck, coverage и production build.
+- Для curl diagnostics зелёный полный `npm run check`: 836 frontend,
+  211 API и 57 infra/policy-тестов, lint, typecheck, coverage и production build.
 - Readiness diagnostics из актуального `main` сохраняет закрытый `/ready`,
   нормализованные коды без чувствительных данных и автоматический rollback.
 

@@ -322,16 +322,17 @@ jobs:
           done
           fixture_token=$(jq -er '.session.token' stage-workout-fixture-response.json)
           client_fixture_token=$(jq -er '.clientSession.token' stage-workout-fixture-response.json)
+          clients_curl_exit=0
           clients_status=$(curl --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --output clients-response.json --dump-header clients-response-headers.txt \
             --write-out '%{http_code}' \
             --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Pilot-Session: $fixture_token" \
-            "${api_url%/}/v1/clients")
+            "${api_url%/}/v1/clients") || clients_curl_exit=$?
           if test "$clients_status" != 200; then
             error_category=$(awk 'tolower($1) == "x-fit-error-category:" {gsub("\\r", "", $2); value=$2} END {print value}' clients-response-headers.txt)
             error_code=$(awk 'tolower($1) == "x-fit-error-code:" {gsub("\\r", "", $2); value=$2} END {print value}' clients-response-headers.txt)
-            echo "First clients smoke failed: HTTP $clients_status; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}." >&2
+            echo "First clients smoke failed: HTTP ${clients_status:-000}; curl_exit=$clients_curl_exit; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}." >&2
             exit 1
           fi
           clients=$(cat clients-response.json)
@@ -348,16 +349,17 @@ jobs:
               and (.activity.needsAttention | type) == "boolean"
             ))
           ' <<<"$clients" >/dev/null
+          connections_curl_exit=0
           connections_status=$(curl --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --output connections-response.json --dump-header connections-response-headers.txt \
             --write-out '%{http_code}' \
             --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Pilot-Session: $fixture_token" \
-            "${api_url%/}/v1/connections")
+            "${api_url%/}/v1/connections") || connections_curl_exit=$?
           if test "$connections_status" != 200; then
             error_category=$(awk 'tolower($1) == "x-fit-error-category:" {gsub("\\r", "", $2); value=$2} END {print value}' connections-response-headers.txt)
             error_code=$(awk 'tolower($1) == "x-fit-error-code:" {gsub("\\r", "", $2); value=$2} END {print value}' connections-response-headers.txt)
-            echo "Connections smoke failed: HTTP $connections_status; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}." >&2
+            echo "Connections smoke failed: HTTP ${connections_status:-000}; curl_exit=$connections_curl_exit; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}." >&2
             exit 1
           fi
           connections=$(cat connections-response.json)
