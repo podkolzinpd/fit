@@ -498,16 +498,30 @@ export function recordWorkoutTurn(
   const selectedClient = matches.length === 1
     ? matches[0]
     : (previousStep === 'workout' || (previousStep === 'confirm' && continuation)) ? summaryClientFromAction(latestAction, clients) : undefined
+  const pendingTranscript = previousStep === 'client'
+    ? workoutTranscript(previousPayload?.transcript)
+    : explicitRequest
+      ? extractWorkoutTranscript(message)
+      : ''
 
   if (matches.length > 1) {
     return workoutAction('Выберите клиента', 'Нашла несколько клиентов с таким именем. Выберите одного из списка.', 'needs_input', {
       step: 'client', candidates: matches.map(({ id, fullName }) => ({ id, fullName })),
+      ...(workoutTextProvided(pendingTranscript) ? { transcript: pendingTranscript } : {}),
     })
   }
   if (!selectedClient) {
-    return workoutAction('Уточните клиента', 'Для кого записать тренировку? Напишите имя или фамилию клиента.', 'needs_input', { step: 'client' })
+    return workoutAction('Уточните клиента', 'Для кого записать тренировку? Напишите имя или фамилию клиента.', 'needs_input', {
+      step: 'client',
+      ...(workoutTextProvided(pendingTranscript) ? { transcript: pendingTranscript } : {}),
+    })
   }
   const collectedTranscript = workoutTranscript(previousPayload?.transcript)
+  if (previousStep === 'client' && collectedTranscript) {
+    return workoutAction('Продолжайте диктовку', 'Сохранила уже продиктованное упражнение. Продиктуйте следующее или перейдите к разбору.', 'needs_input', {
+      step: 'workout', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: collectedTranscript,
+    })
+  }
   if (previousStep === 'workout' && isWorkoutCollectionComplete(message)) {
     if (!collectedTranscript) {
       return workoutAction('Добавьте упражнения', 'Сначала напишите или продиктуйте хотя бы одно упражнение.', 'needs_input', {
