@@ -19,6 +19,7 @@ import { AssistantInlineSummaryCard } from './AssistantInlineSummary'
 import { parseAssistantInlineSummary } from './assistant-inline-summary'
 import { assistantActionView } from './assistant-action-view'
 import { AssistantWorkoutDraftSurface } from './AssistantWorkoutDraftSurface'
+import { AssistantFirstEntry } from './AssistantFirstEntry'
 import { anchorAssistantViewport } from './assistant-viewport'
 
 type FailedTurn = { turnId: string; message: string }
@@ -287,6 +288,17 @@ export function AssistantHistoryPage() {
     if (!text && composerInputRef.current) composerInputRef.current.style.height = 'auto'
   }, [text])
 
+  function chooseStarterPrompt(prompt: string) {
+    setText(prompt)
+    window.requestAnimationFrame(() => {
+      const input = composerInputRef.current
+      if (!input) return
+      input.focus()
+      input.style.height = 'auto'
+      input.style.height = `${Math.min(input.scrollHeight, 112)}px`
+    })
+  }
+
   useEffect(() => {
     const summaries = messages.flatMap((message) => {
       if (message.action?.tool !== 'summarize_progress' || message.action.lifecycleStatus !== 'applied') return []
@@ -329,6 +341,7 @@ export function AssistantHistoryPage() {
     </section>
     <section ref={threadRef} className="assistant-thread" aria-label="Диалог с ассистентом">
       {loadingMessages && <p className="assistant-thread-status">Загружаю сессию…</p>}
+      {!loadingMessages && conversationId && visibleMessages.length === 0 && !latestActiveAction && !readOnly && <AssistantFirstEntry onChoose={chooseStarterPrompt} />}
       {visibleMessages.map((message) => {
         if (message.author === 'user') {
           if (isWorkoutDictationReceipt(message, messages)) return <article key={message.id} className="assistant-workout-user-receipt"><details><summary>Диктовка · фрагмент добавлен</summary><p>{message.content}</p></details></article>
