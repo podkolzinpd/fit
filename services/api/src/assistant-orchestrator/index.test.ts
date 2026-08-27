@@ -137,7 +137,7 @@ describe('assistant orchestrator contract', () => {
 
   it('keeps dictated exercises while the trainer clarifies the client', () => {
     const clients = [{ id: 'client-1', fullName: 'Анна Смирнова', goal: null, ageYears: null, heightCm: null, gender: null }]
-    const clarification = recordWorkoutTurn('Запиши Анне Смирновой тренировку: жим гантелей лёжа 3 по 10 по 20 кг', clients, null)
+    const clarification = recordWorkoutTurn('Запиши тренировку: жим гантелей лёжа 3 по 10 по 20 кг', clients, null)
     expect(clarification?.action).toMatchObject({
       tool: 'record_workout', status: 'needs_input',
       payload: { step: 'client', transcript: 'жим гантелей лёжа 3 по 10 по 20 кг' },
@@ -152,6 +152,35 @@ describe('assistant orchestrator contract', () => {
       },
     })
     expect(selected?.reply).toContain('Сохранила уже продиктованное')
+  })
+
+  it('matches Russian client names in natural inflected commands', () => {
+    const clients = [{ id: 'client-1', fullName: 'Анна Смирнова', goal: 'Набрать силу', ageYears: 32, heightCm: 168, gender: 'female' }]
+
+    const workout = recordWorkoutTurn('Запиши Анне Смирновой тренировку: жим гантелей лёжа 3 по 10 по 20 кг', clients, null)
+    expect(workout?.action).toMatchObject({
+      tool: 'record_workout', status: 'needs_input',
+      payload: {
+        step: 'workout', clientId: 'client-1', clientName: 'Анна Смирнова',
+        transcript: 'жим гантелей лёжа 3 по 10 по 20 кг',
+      },
+    })
+
+    const summary = summaryTurn('Покажи прогресс Анны Смирновой за последние 30 дней', clients, null, new Date('2026-08-27T12:00:00Z'))
+    expect(summary?.action).toMatchObject({ tool: 'summarize_progress', status: 'proposed', payload: { step: 'confirm', clientId: 'client-1' } })
+
+    const program = createProgramTurn('Составь программу Анне Смирновой', clients, null)
+    expect(program?.action).toMatchObject({ tool: 'create_program_draft', status: 'needs_input', payload: { step: 'brief', clientId: 'client-1' } })
+  })
+
+  it('keeps inflected-name matches explicit when more than one client fits', () => {
+    const clients = [
+      { id: 'client-1', fullName: 'Анна Смирнова', goal: null, ageYears: null, heightCm: null, gender: null },
+      { id: 'client-2', fullName: 'Анна Петрова', goal: null, ageYears: null, heightCm: null, gender: null },
+    ]
+    const result = recordWorkoutTurn('Запиши Анне тренировку: присед 3 по 10 40 кг', clients, null)
+    expect(result?.action).toMatchObject({ tool: 'record_workout', status: 'needs_input', payload: { step: 'client' } })
+    expect(result?.action?.payload).toMatchObject({ candidates: [{ id: 'client-1' }, { id: 'client-2' }] })
   })
 
   it('keeps a request to prepare a workout in the deterministic recording flow', () => {
