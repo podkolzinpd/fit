@@ -449,19 +449,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       if (error instanceof PilotSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })
       }
-      const diagnostics = safeDatabaseErrorDiagnostics(error)
-      app.log.warn(
-        {
-          databaseErrorCategory: diagnostics.category,
-          databaseErrorCode: diagnostics.code,
-        },
-        'Pilot clients query failed',
-      )
-      return reply
-        .header('x-fit-error-category', diagnostics.category)
-        .header('x-fit-error-code', diagnostics.code)
-        .code(503)
-        .send({ error: 'service_unavailable' })
+      return sendSafeDatabaseFailure(reply, error, 'Pilot clients query failed')
     }
   })
 
@@ -482,19 +470,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       if (error instanceof PilotSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })
       }
-      const diagnostics = safeDatabaseErrorDiagnostics(error)
-      app.log.warn(
-        {
-          databaseErrorCategory: diagnostics.category,
-          databaseErrorCode: diagnostics.code,
-        },
-        'Pilot connections query failed',
-      )
-      return reply
-        .header('x-fit-error-category', diagnostics.category)
-        .header('x-fit-error-code', diagnostics.code)
-        .code(503)
-        .send({ error: 'service_unavailable' })
+      return sendSafeDatabaseFailure(reply, error, 'Pilot connections query failed')
     }
   })
 
@@ -515,7 +491,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       if (error instanceof PilotSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })
       }
-      return reply.code(503).send({ error: 'service_unavailable' })
+      return sendSafeDatabaseFailure(reply, error, 'Pilot training data query failed')
     }
   })
 
@@ -627,6 +603,26 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
   }
 
+  function sendSafeDatabaseFailure(
+    reply: FastifyReply,
+    error: unknown,
+    message: string,
+  ) {
+    const diagnostics = safeDatabaseErrorDiagnostics(error)
+    app.log.warn(
+      {
+        databaseErrorCategory: diagnostics.category,
+        databaseErrorCode: diagnostics.code,
+      },
+      message,
+    )
+    return reply
+      .header('x-fit-error-category', diagnostics.category)
+      .header('x-fit-error-code', diagnostics.code)
+      .code(503)
+      .send({ error: 'service_unavailable' })
+  }
+
   async function sendPilotCommand<Result>(
     reply: FastifyReply,
     work: () => Promise<Result>,
@@ -677,7 +673,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         }
         return reply.code(422).send({ error: 'invalid_workout' })
       }
-      return reply.code(503).send({ error: 'service_unavailable' })
+      return sendSafeDatabaseFailure(reply, error, 'Pilot command failed')
     }
   }
 
