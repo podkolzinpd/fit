@@ -493,9 +493,13 @@ p { margin: 6px 0 }
 .assistant-design-preview { width:min(100%, 390px); min-height:100vh; margin:0 auto; padding:24px 14px; background:var(--bg); color:var(--fg); }
 .assistant-page > * { position:relative; z-index:1; }
 .assistant-local-note { margin:0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug); }
-.assistant-thread { grid-area:thread; display:flex; flex-direction:column; gap:var(--space-4); min-height:0; padding:2px 2px 8px 0; }
+.assistant-thread { grid-area:thread; display:flex; flex-direction:column; gap:8px; min-height:0; padding:2px 2px 8px 0; }
 .assistant-thread::before { content:""; margin-top:auto; }
 .assistant-thread-status { margin:0; color:var(--muted); font-size:var(--type-caption-size); }
+.assistant-message-assistant + .assistant-message-user,
+.assistant-message-result + .assistant-message-user,
+.assistant-message-error + .assistant-message-user,
+.assistant-workout-user-receipt + .assistant-message-user { margin-top:8px; }
 .assistant-first-entry { align-self:center; width:min(100%, 360px); display:grid; grid-template-columns:44px minmax(0, 1fr); gap:12px; padding:18px 2px 8px; }
 .assistant-first-entry-icon { display:grid; place-items:center; width:44px; height:44px; border:1px solid var(--success-border); border-radius:15px; background:var(--success-surface); color:var(--success-fg); }
 .assistant-first-entry-icon svg { width:24px; height:24px; }
