@@ -689,7 +689,11 @@ p { margin: 6px 0 }
 .assistant-reset { grid-column:1 / -1; justify-self:center; min-height:auto; padding:4px 8px; border:0; background:transparent; color:var(--muted); box-shadow:none; font-size:var(--type-caption-size); }
 .assistant-reset:hover { color:var(--fg); }
 @media (max-width: 480px) {
-  .assistant-composer { position:static; }
+  .assistant-shell .content { overflow:hidden; }
+  .assistant-shell .assistant-page { height:100%; min-height:0; grid-template-rows:auto minmax(0, 1fr) auto auto; overflow:hidden; }
+  .assistant-shell .assistant-thread { overflow-y:auto; overscroll-behavior:contain; }
+  .assistant-shell .assistant-context-panel { max-height:min(58vh, 520px); overflow-y:auto; }
+  .assistant-shell .assistant-composer { position:static; margin-top:0; }
   .phone-frame.keyboard-open .assistant-page { height:100%; min-height:0; grid-template-rows:minmax(0, 1fr) auto auto; gap:8px; padding-top:0; padding-bottom:0; overflow:hidden; }
   .phone-frame.keyboard-open .assistant-session-switcher { display:none; }
   .phone-frame.keyboard-open .assistant-thread { overflow-y:auto; overscroll-behavior:contain; padding-top:8px; }

@@ -122,7 +122,8 @@ export function AssistantHistoryPage() {
     if (!thread || !scrollContainer) return
 
     let frame = 0
-    const anchor = () => anchorAssistantViewport(thread, scrollContainer, keyboardOpen)
+    const mobileLayout = window.matchMedia('(max-width: 480px)').matches
+    const anchor = () => anchorAssistantViewport(thread, scrollContainer, mobileLayout)
     const scheduleAnchor = () => {
       window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(anchor)
