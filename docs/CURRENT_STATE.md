@@ -5,18 +5,17 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-27
-Проверенный базовый `main`: `b6e9001` (`fix(yandex): preflight connections read model (#605)`)
+Проверенный базовый `main`: `50b1bde` (`fix(yandex): preserve smoke diagnostics after curl retries (#621)`)
 
 ## Активное изменение
 
-- Stage run `33056294898` после merge #605 подтвердил private connections
-  preflight, новую immutable revision, `/health`, `/ready` и `GET /v1/clients`.
-  Публичный `GET /v1/connections` вернул `503`; rollback восстановил
+- Stage run `33079881472` подтвердил private clients/connections preflight,
+  новую revision, `/health`, `/ready`, `/v1/clients` и `/v1/connections`.
+  Следующий `/v1/training-data` вернул `503`; rollback безопасно восстановил
   `bbak2bq6iopc8lcpnbe8`, production не пострадал.
-- `curl --retry` завершился кодом `22` прямо в command substitution, поэтому
-  `bash -e` не дошёл до чтения безопасных response headers. Активный follow-up
-  сохраняет HTTP status и curl exit раздельно, не меняя retry/rollback; следующий
-  автоматический run выведет только `curl_exit/category/code`, без PII и секретов.
+- Активный follow-up добавляет training-data в private preflight до deployment
+  и единый safe failure context для всех последующих smoke-групп. Логи содержат
+  только check/exit/category/code; retry и автоматический rollback сохранены.
 
 ## Последняя проверенная продуктовая точка
 
@@ -99,14 +98,14 @@
   не выполнен: production frontend/tenant на Supabase, остальные вкладки без изменений.
 
 ## Проверки активной ветки
-- Для curl diagnostics зелёный полный `npm run check`: 836 frontend,
-  211 API и 57 infra/policy-тестов, lint, typecheck, coverage и production build.
-- Readiness diagnostics из актуального `main` сохраняет закрытый `/ready`,
-  нормализованные коды без чувствительных данных и автоматический rollback.
+- Полный `npm run check` зелёный: 838 frontend, 214 API и 57 infra/policy-
+  тестов, lint, typecheck, coverage и production build.
+- Диагностика сохраняет закрытый `/ready`, нормализованные коды без
+  чувствительных данных и автоматический rollback.
 
 ## Ближайший порядок
 
-1. Получить безопасный код ошибки connections preflight, устранить доказанную
+1. Получить безопасный код ошибки training-data preflight, устранить доказанную
    причину, получить зелёную API revision и выполнить summary-list плюс один
    контролируемый AI generation/parse smoke без логирования исходного текста.
 2. После полного tenant-контракта провести две миграционные репетиции; только
