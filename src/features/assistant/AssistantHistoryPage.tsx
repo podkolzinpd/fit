@@ -14,7 +14,7 @@ import { parseWorkoutWithLlm } from '../workouts/llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
 import { appendAssistantTranscript, appendWorkoutParse, appendedWorkoutTranscript, assistantWorkoutDraftKey, assistantWorkoutSaveInput, clearAssistantWorkoutDraft, enqueueWorkoutParse, readAssistantWorkoutDraft, removeWorkoutParseSource, resolveWorkoutParseSource, updateWorkoutParseMetrics, writeAssistantWorkoutDraft, type WorkoutParseQueue } from './workout-draft'
-import { compactAssistantContent, conversationLocalDate, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveWorkoutAction, mergeAssistantMessages, selectTodayConversation, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
+import { compactAssistantContent, conversationLocalDate, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, groupWorkoutDictationReceipts, isReadOnlyConversation, latestActiveWorkoutAction, mergeAssistantMessages, selectTodayConversation, workoutDictationFragmentLabel, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
 import { AssistantInlineSummaryCard } from './AssistantInlineSummary'
 import { parseAssistantInlineSummary } from './assistant-inline-summary'
 import { assistantActionView } from './assistant-action-view'
@@ -283,6 +283,9 @@ export function AssistantHistoryPage() {
     ? assistantWorkoutDraftKey(actor.userId, conversationId, String((latestActiveAction.action.payload as WorkoutDraftPayload).clientId ?? 'unknown'))
     : undefined
   const visibleMessages = filterTerminalAssistantMessages(messages)
+  const dictationReceiptGroups = groupWorkoutDictationReceipts(visibleMessages, messages)
+  const dictationReceiptGroupByFirstMessage = new Map(dictationReceiptGroups.map((group) => [group.firstMessageId, group]))
+  const groupedDictationMessageIds = new Set(dictationReceiptGroups.flatMap((group) => group.messageIds.slice(1)))
 
   useEffect(() => {
     if (!text && composerInputRef.current) composerInputRef.current.style.height = 'auto'
@@ -344,7 +347,9 @@ export function AssistantHistoryPage() {
       {!loadingMessages && conversationId && visibleMessages.length === 0 && !latestActiveAction && !readOnly && <AssistantFirstEntry onChoose={chooseStarterPrompt} />}
       {visibleMessages.map((message) => {
         if (message.author === 'user') {
-          if (isWorkoutDictationReceipt(message, messages)) return <article key={message.id} className="assistant-workout-user-receipt"><details><summary>Диктовка · фрагмент добавлен</summary><p>{message.content}</p></details></article>
+          if (groupedDictationMessageIds.has(message.id)) return null
+          const dictationGroup = dictationReceiptGroupByFirstMessage.get(message.id)
+          if (dictationGroup) return <article key={message.id} className="assistant-workout-user-receipt"><details><summary>Диктовка · {workoutDictationFragmentLabel(dictationGroup.fragments.length)}</summary><ol>{dictationGroup.fragments.map((fragment, index) => <li key={`${message.id}-${index}`}>{fragment}</li>)}</ol></details></article>
           return <article key={message.id} className="assistant-message assistant-message-user"><p>{message.content}</p></article>
         }
         const inlineSummary = message.action?.tool === 'summarize_progress' && message.action.lifecycleStatus === 'applied'

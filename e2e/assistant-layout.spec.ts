@@ -13,6 +13,9 @@ function assistantMarkup() {
             <main class="assistant-page">
               <section class="assistant-session-switcher"><div class="assistant-session-bar"><strong>Сегодня</strong></div></section>
               <section class="assistant-thread">
+                <article class="assistant-workout-user-receipt" data-testid="dictation-summary">
+                  <details><summary>Диктовка · 3 фрагмента</summary><ol><li>Жим лёжа 3 по 10</li><li>Тяга верхнего блока 3 по 12</li><li>Планка 45 секунд</li></ol></details>
+                </article>
                 <article class="assistant-message assistant-message-user" data-testid="short-user-message"><p>Отменить</p></article>
                 <article class="assistant-message assistant-message-assistant" data-testid="last-message"><p>Хорошо, запись тренировки отменена.</p></article>
               </section>
@@ -146,6 +149,34 @@ test('user messages stay compact, calm and readable on mobile', async ({ page })
       expect(Math.abs((longBox!.x + longBox!.width) - (threadBox!.x + threadBox!.width))).toBeLessThanOrEqual(3)
       expect(shortStyle.backgroundImage).toBe('none')
       expect(shortStyle.boxShadow).toBe('none')
+    }
+  }
+})
+
+test('dictation fragments use one compact full-width expandable receipt', async ({ page }) => {
+  for (const width of [390, 430]) {
+    for (const theme of ['theme-light', 'theme-dark']) {
+      await page.setViewportSize({ width, height: 844 })
+      await page.setContent(assistantMarkup())
+      await page.locator('html').evaluate((element, nextTheme) => {
+        element.setAttribute('class', nextTheme)
+        document.querySelector('.phone-frame')?.classList.remove('theme-light', 'theme-dark')
+        document.querySelector('.phone-frame')?.classList.add(nextTheme)
+      }, theme)
+
+      const thread = await page.locator('.assistant-thread').boundingBox()
+      const receipt = page.getByTestId('dictation-summary')
+      const receiptBox = await receipt.boundingBox()
+
+      expect(thread).not.toBeNull()
+      expect(receiptBox).not.toBeNull()
+      expect(Math.abs(receiptBox!.x - thread!.x)).toBeLessThanOrEqual(3)
+      expect(Math.abs(receiptBox!.width - thread!.width)).toBeLessThanOrEqual(3)
+      await expect(receipt.locator('summary')).toHaveText('Диктовка · 3 фрагмента')
+      await expect(receipt.locator('li')).toHaveCount(3)
+      await expect(receipt.locator('ol')).toBeHidden()
+      await receipt.locator('summary').click()
+      await expect(receipt.locator('ol')).toBeVisible()
     }
   }
 })
