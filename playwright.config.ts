@@ -12,7 +12,7 @@ export default defineConfig({
     { name: 'mobile-chromium', testIgnore: [/.*\.webkit\.spec\.ts/, /ui-visual\.spec\.ts/], use: { ...devices['Pixel 7'] } },
     // Отдельный iPhone smoke покрывает реальный движок iOS и ширину 390 px,
     // не дублируя полный Chromium-набор. Он обязателен и локально, и в CI.
-    { name: 'iphone-13-webkit', testMatch: /.*\.webkit\.spec\.ts/, use: { ...devices['iPhone 13'] } },
+    { name: 'iphone-13-webkit', testMatch: [/.*\.webkit\.spec\.ts/, /assistant-layout\.spec\.ts/], use: { ...devices['iPhone 13'] } },
     // Три узких профиля визуальной приёмки: два клиентских мобильных размера
     // и фактический desktop viewport тренера. Они запускают только один smoke,
     // поэтому не размножают весь поведенческий e2e-набор.

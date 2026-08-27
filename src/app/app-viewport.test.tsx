@@ -9,6 +9,7 @@ function installMobileViewport(height = 844) {
   const listeners = new Map<string, Set<ViewportListener>>()
   const viewport = {
     height,
+    offsetTop: 0,
     addEventListener: (name: string, listener: ViewportListener) => {
       const group = listeners.get(name) ?? new Set<ViewportListener>()
       group.add(listener)
@@ -46,6 +47,7 @@ afterEach(() => {
   document.documentElement.classList.remove('app-keyboard-open')
   document.documentElement.style.removeProperty('--app-viewport-height')
   document.documentElement.style.removeProperty('--app-visible-height')
+  document.documentElement.style.removeProperty('--app-viewport-offset-top')
 })
 
 describe('AppViewportProvider', () => {
@@ -66,12 +68,14 @@ describe('AppViewportProvider', () => {
     const input = screen.getByRole('textbox', { name: 'Ответ' })
     act(() => input.focus())
     mobileViewport.viewport.height = 508
+    mobileViewport.viewport.offsetTop = 336
     mobileViewport.setInnerHeight(508)
     act(() => mobileViewport.emit('resize'))
 
     expect(screen.getByText('keyboard')).toBeInTheDocument()
     expect(document.documentElement).toHaveClass('app-keyboard-open')
     expect(document.documentElement.style.getPropertyValue('--app-visible-height')).toBe('508px')
+    expect(document.documentElement.style.getPropertyValue('--app-viewport-offset-top')).toBe('336px')
 
     act(() => input.blur())
     // Самый неприятный порядок WebKit: после blur приходит ещё один resize с
@@ -83,6 +87,7 @@ describe('AppViewportProvider', () => {
     expect(document.documentElement).not.toHaveClass('app-keyboard-open')
     expect(document.documentElement.style.getPropertyValue('--app-viewport-height')).toBe('844px')
     expect(document.documentElement.style.getPropertyValue('--app-visible-height')).toBe('844px')
+    expect(document.documentElement.style.getPropertyValue('--app-viewport-offset-top')).toBe('0px')
     expect(mobileViewport.scrollTo).toHaveBeenCalledWith(0, 0)
   })
 })
