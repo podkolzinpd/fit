@@ -265,6 +265,8 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   const clientDetailUrl = page.url()
   await page.getByRole('link', { name: 'История тренировок', exact: true }).click()
   const emptyHistoryAction = page.getByRole('link', { name: 'Запланировать тренировку' })
+  await expect(page.getByRole('heading', { name: 'Тренировка для клиента' })).toBeVisible()
+  await expect(page.getByText('Составьте план или сразу запишите готовый результат.')).toBeVisible()
   await expect(emptyHistoryAction).toHaveCount(1)
   await expect(emptyHistoryAction.locator('svg')).toHaveCount(0)
   await expect(page.getByText('История пока пуста')).toHaveCount(0)
