@@ -718,6 +718,11 @@ export function WorkoutDetailPage() {
     setRescheduleTime(workout?.startTime?.slice(0, 5) ?? '')
     setDecisionSheet('reschedule')
   }
+  const manageMenuInHeader = Boolean(clientMode && canManage && workout && !done)
+  const workoutManageItems = [
+    { label: 'Копировать тренировку', onClick: () => navigate(`/workouts/new?copy=${workoutId}`) },
+    { label: 'Удалить тренировку', danger: true, disabled: remove.isPending, onClick: () => { void requestWorkoutRemoval() } },
+  ]
   return <Page title="Тренировка" hideTitle className="workout-detail-page" back={backTo}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       {!clientMode && navigationState?.firstPlanClient && <section className="first-plan-success" aria-labelledby="first-plan-success-title">
@@ -731,6 +736,7 @@ export function WorkoutDetailPage() {
       {justCompleted && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={clientMode} clientId={workout.clientId} />}
       <WorkoutHeader eyebrow={clientMode ? 'ВАША ТРЕНИРОВКА' : 'ТРЕНИРОВКА КЛИЕНТА'} title={clientMode ? 'Ваша тренировка' : workout.clientName} state={detailState}
         statusLabel={statusPresentation?.label}
+        action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
         meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span>{clientMode && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · только просмотр</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />
       {plannedActions && canExecute && <div className="workout-detail-primary-actions">
         {workout.workoutDate < today ? <Coachmark id="missed-workout-actions-2026-08" userId={actor?.userId} title="План можно закрыть спокойно" description="Запишите результат, перенесите тренировку или сохраните, что она не состоялась.">
@@ -776,10 +782,7 @@ export function WorkoutDetailPage() {
       {workout.notes && <section className="workout-review workout-review-readonly"><div className="workout-review-head"><div><p className="eyebrow">{clientMode && !clientOwned ? 'ОТ ТРЕНЕРА' : 'К ТРЕНИРОВКЕ'}</p><h2>{clientMode && !clientOwned ? 'Инструкции' : 'Заметка'}</h2></div></div><p className="workout-review-text">{workout.notes}</p></section>}
       {canManage && <div className="actions workout-detail-actions">
         {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
-        <OverflowMenu label="Другие действия с тренировкой" items={[
-          { label: 'Копировать тренировку', onClick: () => navigate(`/workouts/new?copy=${workoutId}`) },
-          { label: 'Удалить тренировку', danger: true, disabled: remove.isPending, onClick: () => { void requestWorkoutRemoval() } },
-        ]} />
+        {!manageMenuInHeader && <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} />}
       </div>}
       {clientAuthoredReadOnly && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Скопировать и отправить план</Link></div>}
       {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Создать свою копию</Link></div>}
