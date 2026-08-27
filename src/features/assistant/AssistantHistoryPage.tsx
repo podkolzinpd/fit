@@ -349,21 +349,21 @@ export function AssistantHistoryPage() {
         if (message.author === 'user') {
           if (groupedDictationMessageIds.has(message.id)) return null
           const dictationGroup = dictationReceiptGroupByFirstMessage.get(message.id)
-          if (dictationGroup) return <article key={message.id} className="assistant-workout-user-receipt"><details><summary>Диктовка · {workoutDictationFragmentLabel(dictationGroup.fragments.length)}</summary><ol>{dictationGroup.fragments.map((fragment, index) => <li key={`${message.id}-${index}`}>{fragment}</li>)}</ol></details></article>
-          return <article key={message.id} className="assistant-message assistant-message-user"><p>{message.content}</p></article>
+          if (dictationGroup) return <article key={message.id} className="assistant-workout-user-receipt" data-message-kind="action-result"><details><summary>Диктовка · {workoutDictationFragmentLabel(dictationGroup.fragments.length)}</summary><ol>{dictationGroup.fragments.map((fragment, index) => <li key={`${message.id}-${index}`}>{fragment}</li>)}</ol></details></article>
+          return <article key={message.id} className="assistant-message assistant-message-user" data-message-kind="user"><p>{message.content}</p></article>
         }
         const inlineSummary = message.action?.tool === 'summarize_progress' && message.action.lifecycleStatus === 'applied'
           ? parseAssistantInlineSummary(message.action.result)
           : undefined
-        if (inlineSummary) return <article key={message.id} className="assistant-message assistant-message-assistant"><AssistantInlineSummaryCard summary={inlineSummary} onSave={() => void saveInlineSummary(message.id, inlineSummary.summaryId, inlineSummary.clientId)} saving={savingSummaryIds.includes(message.id)} saved={savedSummaryIds.includes(message.id) || inlineSummary.saved === true} /></article>
-        if (message.action?.tool === 'record_workout' && message.action.lifecycleStatus === 'applied') return <article key={message.id} className="assistant-message assistant-message-assistant"><AssistantWorkoutSavedCard action={message.action} /></article>
+        if (inlineSummary) return <article key={message.id} className="assistant-message assistant-message-result" data-message-kind="action-result"><AssistantInlineSummaryCard summary={inlineSummary} onSave={() => void saveInlineSummary(message.id, inlineSummary.summaryId, inlineSummary.clientId)} saving={savingSummaryIds.includes(message.id)} saved={savedSummaryIds.includes(message.id) || inlineSummary.saved === true} /></article>
+        if (message.action?.tool === 'record_workout' && message.action.lifecycleStatus === 'applied') return <article key={message.id} className="assistant-message assistant-message-result" data-message-kind="action-result"><AssistantWorkoutSavedCard action={message.action} /></article>
         const showContent = !message.action || message.content.trim() !== message.action.description.trim() || (message.action.tool === 'summarize_progress' && message.action.lifecycleStatus === 'applied')
         if (!showContent) return null
-        return <article key={message.id} className="assistant-message assistant-message-assistant"><AssistantMessageContent content={message.content} /></article>
+        return <article key={message.id} className="assistant-message assistant-message-assistant" data-message-kind="assistant"><AssistantMessageContent content={message.content} /></article>
       })}
-      {error && <div className="assistant-card-hint" role="alert"><span>{error}</span>{failedTurn && <button type="button" onClick={() => void send(undefined, failedTurn)} disabled={sending}>Повторить отправку</button>}</div>}
+      {error && <div className="assistant-message-error" data-message-kind="error" role="alert"><span>{error}</span>{failedTurn && <button type="button" onClick={() => void send(undefined, failedTurn)} disabled={sending}>Повторить</button>}</div>}
     </section>
-    {latestActiveAction && <section className="assistant-context-panel" aria-label="Текущий контекст ассистента">
+    {latestActiveAction && <section className="assistant-context-panel" data-message-kind="action-result" aria-label="Текущий контекст ассистента">
       <AssistantAction action={latestActiveAction.action} timezone={actor?.timezone} workoutDraftStorageKey={workoutDraftStorageKey} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onApplyAction={(input) => applyAction(latestActiveAction.message.id, latestActiveAction.action, input)} onSuggestion={(value) => void send(value)} onCancel={() => { void (async () => { const cancelled = await cancelAction(latestActiveAction.message.id, latestActiveAction.action); if (!cancelled) return; if (workoutDraftStorageKey) clearAssistantWorkoutDraft(workoutDraftStorageKey); if (!latestActiveAction.action.id) await send('Отменить') })() }} onConfirm={() => void confirmSummary(latestActiveAction.message.id, latestActiveAction.action)} onConfirmClient={(draft) => void confirmClient(latestActiveAction.message.id, latestActiveAction.action, draft)} running={runningSummaryIds.includes(latestActiveAction.message.id) || runningClientIds.includes(latestActiveAction.message.id)} completed={completedSummaryIds.includes(latestActiveAction.message.id) || completedClientIds.includes(latestActiveAction.message.id) || latestActiveAction.action.lifecycleStatus === 'applied'} />
     </section>}
     <form className="assistant-composer" autoComplete="off" onSubmit={(event) => { event.preventDefault(); void send() }}>
