@@ -445,7 +445,7 @@ jobs:
             | select(.fullName == "Тестовый клиент Yandex stage")
             | .id
           ' <<<"$clients")
-          stage_smoke_check=progress-read-models
+          stage_smoke_check=progress-bundle
           progress=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Pilot-Session: $fixture_token" \
@@ -465,6 +465,7 @@ jobs:
             | select(.notes == "Синтетическая проверка переноса Yandex stage")
             | .exercises[] | select(.source == "custom") | .ref
           ' <<<"$training")
+          stage_smoke_check=exercise-progress
           exercise_progress=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --get --data-urlencode "limit=20" \
             --header "Authorization: Bearer $YC_TOKEN" \
@@ -477,6 +478,7 @@ jobs:
               and .isPrimaryPr == true
             ))
           ' <<<"$exercise_progress" >/dev/null
+          stage_smoke_check=running-progress
           running_progress=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --get --data-urlencode "from=2026-08-01" --data-urlencode "to=2026-08-31" \
             --header "Authorization: Bearer $YC_TOKEN" \
@@ -485,6 +487,7 @@ jobs:
           jq -e '
             (.sessions | any(.distanceKm == 5.2 and .durationSec == 1740))
           ' <<<"$running_progress" >/dev/null
+          stage_smoke_check=workout-chronicle
           chronicle=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Pilot-Session: $fixture_token" \
@@ -496,6 +499,7 @@ jobs:
               and .durationSec == 3600 and .hasPr == true
             ))
           ' <<<"$chronicle" >/dev/null
+          stage_smoke_check=training-summaries
           summaries=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Pilot-Session: $fixture_token" \

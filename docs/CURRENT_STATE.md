@@ -5,19 +5,16 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-27
-Проверенный базовый `main`: `878fa17` (`fix(yandex): preflight progress before stage deploy (#631)`)
+Проверенный базовый `main`: `28b7690` (`fix(yandex): verify exact stage candidate progress (#632)`)
 
 ## Активное изменение
 
-- Stage run `33088844710` дошёл до candidate release
-  `2ca2f732e25123b793dbaa61f9c80a8a83f8b05f`, но progress smoke вернул `503`;
-  автоматический rollback сохранил предыдущую рабочую revision, production не
-  пострадал. Проверка оказалась неточной: private preflight читал первого
-  доступного клиента, а публичный smoke — детерминированного fixture-клиента.
-- Активный follow-up передаёт в private preflight точный fixture client ID,
-  проверяет сериализацию progress bundle и требует пять последовательных
-  `/health`+`/ready` от candidate release. Диагностика читает только последний
-  HTTP header block после retry; автоматический rollback сохранён.
+- PR `#632` подтвердил exact candidate и fixture client. Stage run `33093878852`
+  прошёл миграции и DB preflight, затем безопасно откатился после быстрого `503`.
+- Логи и порядок smoke-запросов локализовали причину: чтение сохранённых
+  `training-summaries` ошибочно зависело от `YANDEX_CLOUD_API_KEY`, хотя GET
+  использует только PostgreSQL. Активный follow-up разделяет DB reader и AI
+  generator; smoke получает отдельное имя для каждого progress endpoint.
 
 ## Последняя проверенная продуктовая точка
 
@@ -86,10 +83,9 @@
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
   exercises, workout lifecycle и post-workout работают на stage (миграции
-  `000001–000018`). Последний candidate API в run `33088844710` вернул `503` на
-  progress smoke после неточного private preflight; rollback сохранил предыдущую
-  рабочую revision. Следующая доставка проверяет точного fixture-клиента и ждёт
-  устойчивого распространения candidate release до публичного smoke.
+  `000001–000018`). Run `33093878852` доказал, что exact candidate и все DB
+  read models готовы; публичный smoke откатил revision из-за ошибочной AI-config
+  зависимости у summary list. Production остался на предыдущей revision.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
 - Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
@@ -103,18 +99,15 @@
   не выполнен: production frontend/tenant на Supabase, остальные вкладки без изменений.
 
 ## Проверки активной ветки
-- Полный `npm run check` зелёный: 838 frontend, 218 API и 57 infra/policy-
-  тестов, lint, typecheck, coverage и production build. Локальный PostgreSQL 17
-  через Podman проверил точный fixture progress bundle: 23 integration-теста
-  зелёные. Supabase SQL/RLS: 697 тестов зелёные; generated types актуальны.
-- Диагностика сохраняет закрытый `/ready`, безопасные коды без чувствительных
-  данных и автоматический rollback.
+- Полный `npm run check` зелёный: lint, typecheck, production build, 838 frontend,
+  219 API и 57 infra/policy-тестов. 23 DB integration-теста корректно пропущены
+  без локального PostgreSQL. Автоматический rollback сохранён.
 
 ## Ближайший порядок
 
-1. Доставить exact-client progress preflight, получить зелёную API revision и
-   выполнить summary-list плюс один
-   контролируемый AI generation/parse smoke без логирования исходного текста.
+1. Доставить независимый summary reader, получить зелёную API revision и затем
+   выполнить один контролируемый AI generation/parse smoke без логирования
+   исходного текста.
 2. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
 3. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению

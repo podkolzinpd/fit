@@ -50,10 +50,16 @@ export interface TrainingSummaryRequest {
   force: boolean
 }
 
-export interface PilotTrainingSummaries {
-  generate(sessionToken: string, request: TrainingSummaryRequest): Promise<unknown>
+export interface PilotTrainingSummaryReader {
   list(sessionToken: string, clientId: string): Promise<unknown[]>
 }
+
+export interface PilotTrainingSummaryGenerator {
+  generate(sessionToken: string, request: TrainingSummaryRequest): Promise<unknown>
+}
+
+export interface PilotTrainingSummaries
+  extends PilotTrainingSummaryReader, PilotTrainingSummaryGenerator {}
 
 function tokenHash(sessionToken: string): string {
   const result = hashPilotSessionToken(sessionToken)
