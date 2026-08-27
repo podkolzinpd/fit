@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AssistantOrchestratorAction } from '../../data/repositories/assistant.repository'
 import type { LocalDate } from '../../shared/local-date'
-import { compactAssistantContent, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, isInteractiveAssistantAction, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveAssistantAction, latestActiveWorkoutAction, mergeAssistantMessages, selectTodayConversation } from './assistant-sessions'
+import { compactAssistantContent, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, groupWorkoutDictationReceipts, isInteractiveAssistantAction, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveAssistantAction, latestActiveWorkoutAction, mergeAssistantMessages, selectTodayConversation, workoutDictationFragmentLabel } from './assistant-sessions'
 
 const conversations = [
   { id: 'old', title: null, created_at: '2026-08-24T18:00:00.000Z' },
@@ -110,5 +110,28 @@ describe('assistant sessions', () => {
     expect(isWorkoutDictationReceipt(user, [user, workout])).toBe(true)
     expect(isWorkoutDictationReceipt({ ...user, turn_id: 'other' }, [user, workout])).toBe(false)
     expect(isWorkoutDictationReceipt(user, [user, { ...workout, action: { ...workout.action, payload: { step: 'confirm', transcript: 'жим лёжа' } } }])).toBe(false)
+  })
+
+  it('groups consecutive workout dictation receipts and keeps separate workout turns apart', () => {
+    const userOne = { id: 'user-1', conversation_id: 'today', turn_id: 'turn-1', author: 'user', content: 'жим лёжа', action: null, created_at: '2026-08-25T09:04:00.000Z' }
+    const actionOne = { id: 'assistant-1', conversation_id: 'today', turn_id: 'turn-1', author: 'assistant', content: 'Добавила', action: { tool: 'record_workout' as const, status: 'needs_input' as const, title: 'Тренировка', description: 'Добавила', payload: { step: 'workout', transcript: 'жим лёжа' } }, created_at: '2026-08-25T09:04:01.000Z' }
+    const userTwo = { ...userOne, id: 'user-2', turn_id: 'turn-2', content: 'приседания' }
+    const actionTwo = { ...actionOne, id: 'assistant-2', turn_id: 'turn-2', action: { ...actionOne.action, payload: { step: 'workout', transcript: 'приседания' } } }
+    const cancelled = { id: 'cancelled', conversation_id: 'today', turn_id: 'turn-3', author: 'assistant', content: 'Хорошо, запись тренировки отменена.', action: null, created_at: '2026-08-25T09:05:00.000Z' }
+    const userThree = { ...userOne, id: 'user-3', turn_id: 'turn-4', content: 'планка' }
+    const actionThree = { ...actionOne, id: 'assistant-3', turn_id: 'turn-4', action: { ...actionOne.action, payload: { step: 'workout', transcript: 'планка' } } }
+    const allMessages = [userOne, actionOne, userTwo, actionTwo, cancelled, userThree, actionThree]
+
+    expect(groupWorkoutDictationReceipts(allMessages, allMessages)).toEqual([
+      { firstMessageId: 'user-1', messageIds: ['user-1', 'user-2'], fragments: ['жим лёжа', 'приседания'] },
+      { firstMessageId: 'user-3', messageIds: ['user-3'], fragments: ['планка'] },
+    ])
+  })
+
+  it('formats Russian dictation fragment counts', () => {
+    expect(workoutDictationFragmentLabel(1)).toBe('1 фрагмент')
+    expect(workoutDictationFragmentLabel(3)).toBe('3 фрагмента')
+    expect(workoutDictationFragmentLabel(12)).toBe('12 фрагментов')
+    expect(workoutDictationFragmentLabel(21)).toBe('21 фрагмент')
   })
 })
