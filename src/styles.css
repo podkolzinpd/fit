@@ -1906,8 +1906,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .ai-progress-periods.period-count-1 { width: min(180px, calc(100% - 2 * var(--card-padding))); grid-template-columns: 1fr }
 .ai-progress-periods.period-count-2 { grid-template-columns: repeat(2, 1fr) }
 .ai-progress-periods.period-count-3 { grid-template-columns: repeat(3, 1fr) }
-.ai-progress-periods button { min-height: var(--control-height-compact); padding: 7px var(--space-1); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--muted); box-shadow: none; font-size: var(--type-caption-size) }
-.ai-progress-periods button.active { background: var(--accent); color: white; box-shadow: 0 6px 18px #e0542f5c }
+.ai-progress-periods button { min-height: var(--control-height-compact); padding: 7px var(--space-1); border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--muted); box-shadow: none; font-size: var(--type-caption-size) }
+.ai-progress-periods button.active { border-color: color-mix(in srgb, var(--accent) 28%, var(--ai-divider)); background: var(--surface-raised); color: var(--accent-strong); box-shadow: 0 1px 5px color-mix(in srgb, var(--fg-strong) 9%, transparent) }
 .ai-progress-hero { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--card-padding); border-block: 1px solid var(--ai-divider); background: var(--ai-subtle-surface) }
 .ai-progress-hero span, .ai-progress-regularity span { color: var(--accent-weak); font-size: var(--type-caption-size); font-weight: var(--weight-bold); letter-spacing: var(--tracking-label); text-transform: uppercase }
 .ai-progress-hero strong { min-width: 0; overflow-wrap: anywhere; font-size: var(--type-body-size); line-height: var(--leading-body) }
@@ -1994,7 +1994,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-progress-card .ai-progress-periods { width:min(320px, calc(100% - 2 * var(--card-padding))); margin-bottom:var(--space-2); padding:2px; border-color:color-mix(in srgb, var(--ai-divider) 72%, transparent); box-shadow:none }
 .client-progress-card .ai-progress-periods.period-count-1 { width:min(140px, calc(100% - 2 * var(--card-padding))) }
 .client-progress-card .ai-progress-periods button { min-height:34px; padding:5px var(--space-2) }
-.client-progress-card .ai-progress-periods button.active { box-shadow:0 3px 10px color-mix(in srgb, var(--accent) 22%, transparent) }
 .body-progress-map { display:grid; gap:var(--space-3); padding:var(--space-3) var(--card-padding) var(--space-4); border-block:1px solid var(--ai-divider); background:linear-gradient(155deg, color-mix(in srgb, var(--success-surface) 52%, var(--surface-raised)), var(--ai-stat-surface) 70%) }
 .body-progress-map > header { min-width:0; display:grid; gap:var(--space-3) }
 .body-progress-map > header > div:first-child { min-width:0 }
@@ -2671,7 +2670,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   filter: none;
 }
 .theme-dark-pilot .exercise.current .live-confirm { box-shadow: 0 8px 22px var(--accent-shadow) }
-.theme-dark-pilot .ai-progress-periods button.active { box-shadow: 0 6px 18px var(--accent-shadow) }
 .theme-dark-pilot .client-welcome { border-color: var(--border); background: var(--card-grad) }
 .theme-dark-pilot .client-access-card { background: var(--surface-raised) }
 .theme-dark-pilot .client-access-card.connected { border-color: var(--success-border); background: var(--success-surface) }
