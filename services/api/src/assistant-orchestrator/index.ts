@@ -112,13 +112,47 @@ function summaryClientFromAction(value: unknown, clients: readonly ClientContext
   return typeof clientId === 'string' ? clients.find((client) => client.id === clientId) : undefined
 }
 
+const russianNameEndings = ['ыми', 'ими', 'ого', 'ему', 'ому', 'ой', 'ей', 'ом', 'ем', 'ах', 'ях', 'ам', 'ям', 'у', 'ю', 'а', 'я', 'е', 'и', 'ы', 'й'] as const
+
+/**
+ * Build conservative lookup keys for common Russian name cases. This is not a
+ * general fuzzy matcher: only grammatical endings and the occasional fleeting
+ * «е» are removed, so similarly spelled clients are still returned as an
+ * explicit choice instead of being guessed.
+ */
+function russianNameKeys(value: string): Set<string> {
+  const normalized = normalizeAssistantMessage(value)
+  const keys = new Set<string>()
+  const add = (key: string) => {
+    if (key.length >= 3) {
+      keys.add(key)
+      keys.add(key.replace(/ь/gu, ''))
+    }
+  }
+  add(normalized)
+  for (const ending of russianNameEndings) {
+    if (normalized.length - ending.length >= 3 && normalized.endsWith(ending)) add(normalized.slice(0, -ending.length))
+  }
+  for (const key of [...keys]) {
+    if (/е[^аеёиоуыэюя]$/u.test(key)) add(`${key.slice(0, -2)}${key.slice(-1)}`)
+  }
+  return keys
+}
+
+function clientNameWordMatches(actual: string, expected: string): boolean {
+  if (actual === expected || actual.startsWith(expected) || expected.startsWith(actual)) return true
+  const actualKeys = russianNameKeys(actual)
+  const expectedKeys = russianNameKeys(expected)
+  return [...actualKeys].some((key) => expectedKeys.has(key))
+}
+
 function matchingSummaryClients(message: string, clients: readonly ClientContextRow[]): ClientContextRow[] {
   const ignored = new Set(['сводка', 'прогресс', 'динамика', 'сделай', 'сделать', 'покажи', 'показать', 'за', 'для', 'клиента'])
   const words = normalizeAssistantMessage(message).split(' ').filter((word) => word.length >= 3 && !ignored.has(word))
   if (words.length === 0) return []
   return clients.filter((client) => {
     const clientWords = normalizeAssistantMessage(client.fullName).split(' ').filter((word) => word.length >= 3)
-    return clientWords.some((clientWord) => words.some((word) => word.startsWith(clientWord) || clientWord.startsWith(word)))
+    return clientWords.some((clientWord) => words.some((word) => clientNameWordMatches(word, clientWord)))
   })
 }
 
@@ -433,7 +467,7 @@ function stripWorkoutClient(value: string, client: ClientContextRow): string {
   for (let index = 0; index + clientWords.length <= words.length; index += 1) {
     const matches = clientWords.every((clientWord, offset) => {
       const actual = normalizeAssistantMessage(words[index + offset]?.[0] ?? '')
-      return actual === clientWord || actual.startsWith(clientWord) || clientWord.startsWith(actual)
+      return clientNameWordMatches(actual, clientWord)
     })
     if (matches) {
       const start = words[index]?.index ?? 0
