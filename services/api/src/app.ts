@@ -106,6 +106,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const allowedOrigins = new Set(options.allowedOrigins ?? [])
 
   app.addHook('onRequest', async (request, reply) => {
+    if (options.releaseId !== undefined) {
+      reply.header('x-fit-release-id', options.releaseId)
+    }
     const origin = request.headers.origin
     if (origin !== undefined && !allowedOrigins.has(origin)) {
       return reply.code(403).send({ error: 'origin_not_allowed' })
@@ -117,6 +120,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         .header(
           'access-control-allow-headers',
           'authorization, content-type, x-fit-pilot-session, x-supabase-authorization',
+        )
+        .header(
+          'access-control-expose-headers',
+          'x-fit-release-id, x-fit-error-category, x-fit-error-code',
         )
         .header('vary', 'Origin')
     }
@@ -505,7 +512,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return reply.code(400).send({ error: 'invalid_request' })
     }
     const data = options.pilotProgressData
-    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    if (data === undefined) {
+      return reply
+        .header('x-fit-error-category', 'configuration')
+        .header('x-fit-error-code', 'PILOT_PROGRESS_DATA_UNAVAILABLE')
+        .code(503)
+        .send({ error: 'service_unavailable' })
+    }
     return sendPilotCommand(reply, () => data.readBundle(sessionToken, clientId),
       (result) => reply.header('cache-control', 'no-store').send(result))
   })

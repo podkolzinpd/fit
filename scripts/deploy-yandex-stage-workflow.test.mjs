@@ -91,7 +91,7 @@ test('probes the fit_api identity privately before changing the API revision', (
   assert.match(workflow, /fixture_token=\$\(jq -er '\.session\.token'/)
   assert.match(workflow, /X-Fit-Pilot-Session: \$fixture_token/)
   assert.match(workflow, /Runtime database preflight failed: check=/)
-  assert.match(workflow, /IN\("clients", "connections", "training-data"\)/)
+  assert.match(workflow, /IN\("clients", "connections", "training-data", "progress"\)/)
   assert.match(workflow, /First clients smoke failed: HTTP/)
   assert.match(workflow, /Connections smoke failed: HTTP/)
   assert.match(
@@ -106,11 +106,13 @@ test('probes the fit_api identity privately before changing the API revision', (
   assert.match(workflow, /curl_exit=\$connections_curl_exit/)
   assert.match(workflow, /x-fit-error-category:/)
   assert.match(workflow, /x-fit-error-code:/)
+  assert.match(workflow, /x-fit-release-id:/)
   assert.match(workflow, /stage_smoke_headers=stage-smoke-last-headers\.txt/)
   assert.match(workflow, /command curl --dump-header "\$stage_smoke_headers" "\$@"/)
   assert.match(workflow, /trap report_stage_smoke_failure ERR/)
   assert.match(workflow, /Stage smoke failed: check=\$\{stage_smoke_check:-unknown\}/)
   assert.match(workflow, /command_exit=\$command_exit/)
+  assert.match(workflow, /expected_release=\$API_IMAGE_TAG/)
   for (const check of [
     'training-data',
     'progress-read-models',
