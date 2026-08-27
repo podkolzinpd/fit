@@ -217,7 +217,7 @@ jobs:
           if test "$status" != 200; then
             if jq -e '
               .status == "runtime_database_not_ready"
-              and (.check | IN("clients", "connections"))
+              and (.check | IN("clients", "connections", "training-data"))
               and (.category | IN("authentication", "permission", "network", "tls", "unknown"))
               and (.code == "unknown" or (.code | test("^[A-Z0-9_]{2,64}$")))
             ' runtime-database-readiness-response.json >/dev/null 2>&1; then
@@ -368,6 +368,20 @@ jobs:
             and (.memberships | any(.isRoot == true))
             and (.invitations | type == "array")
           ' <<<"$connections" >/dev/null
+          stage_smoke_headers=stage-smoke-last-headers.txt
+          stage_smoke_check=training-data
+          : > "$stage_smoke_headers"
+          curl() {
+            : > "$stage_smoke_headers"
+            command curl --dump-header "$stage_smoke_headers" "$@"
+          }
+          report_stage_smoke_failure() {
+            command_exit=$?
+            error_category=$(awk 'tolower($1) == "x-fit-error-category:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
+            error_code=$(awk 'tolower($1) == "x-fit-error-code:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
+            echo "Stage smoke failed: check=${stage_smoke_check:-unknown}; command_exit=$command_exit; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}." >&2
+          }
+          trap report_stage_smoke_failure ERR
           training=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Pilot-Session: $fixture_token" \
@@ -410,6 +424,7 @@ jobs:
             | select(.fullName == "Тестовый клиент Yandex stage")
             | .id
           ' <<<"$clients")
+          stage_smoke_check=progress-read-models
           progress=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Pilot-Session: $fixture_token" \
@@ -465,6 +480,7 @@ jobs:
             --header "X-Fit-Pilot-Session: $fixture_token" \
             "${api_url%/}/v1/clients/$client_id/training-summaries")
           jq -e '.summaries | type == "array"' <<<"$summaries" >/dev/null
+          stage_smoke_check=post-workout
           post_workout_id=$(jq -er '
             .workouts[]
             | select(.notes == "Синтетическая проверка переноса Yandex stage")
@@ -623,6 +639,7 @@ jobs:
             | select(.name == "Тестовая тяга Yandex stage")
             | .id
           ' <<<"$training")
+          stage_smoke_check=client-domain
           domain_client_payload=$(jq -cn '{
             fullName: "Синтетический клиент domain smoke",
             gender: "female",
@@ -701,6 +718,7 @@ jobs:
             "${api_url%/}/v1/clients/$domain_client_id/archive")
           test "$(jq -er '.client.version' <<<"$domain_client_restored")" = 4
 
+          stage_smoke_check=exercise-domain
           domain_exercise_payload=$(jq -cn '{
             name: "Синтетическое упражнение domain smoke",
             muscleGroup: "legs",
@@ -758,6 +776,7 @@ jobs:
             "${api_url%/}/v1/custom-exercises/$domain_exercise_id/archive")
           test "$(jq -er '.exercise.version' <<<"$domain_exercise_restored")" = 4
           test "$(jq -er '.exercise.archivedAt == null' <<<"$domain_exercise_restored")" = true
+          stage_smoke_check=planned-workout-lifecycle
           create_payload=$(jq -cn \
             --arg client_id "$client_id" \
             --arg custom_exercise_id "$custom_exercise_id" \
@@ -864,6 +883,7 @@ jobs:
           jq -e --arg workout_id "$workout_id" '
             all(.workouts[]; .id != $workout_id)
           ' <<<"$after_delete" >/dev/null
+          stage_smoke_check=completed-workout-lifecycle
           completed_request_id=$(cat /proc/sys/kernel/random/uuid)
           completed_payload=$(jq -c \
             --arg request_id "$completed_request_id" '
@@ -945,6 +965,7 @@ jobs:
             --header "Content-Type: application/json" \
             --data '{"expectedVersion":3}' \
             "${api_url%/}/v1/workouts/$completed_workout_id" >/dev/null
+          stage_smoke_check=missed-workout-lifecycle
           missed_payload=$(jq -c '
             .workoutDate = "2000-01-01"
             | .startTime = "10:00"
@@ -999,6 +1020,7 @@ jobs:
             --header "Content-Type: application/json" \
             --data '{"expectedVersion":3}' \
             "${api_url%/}/v1/workouts/$missed_workout_id" >/dev/null
+          stage_smoke_check=assignment-results
           result_payload=$(jq -c '
             .workoutDate = "2000-01-02"
             | .startTime = null
@@ -1060,6 +1082,7 @@ jobs:
             --header "Content-Type: application/json" \
             --data '{"expectedVersion":3}' \
             "${api_url%/}/v1/workouts/$result_workout_id" >/dev/null
+          stage_smoke_check=live-workout-lifecycle
           live_payload=$(jq -c '
             .notes = "Синтетическая проверка versioned mutation live"
           ' <<<"$create_payload")

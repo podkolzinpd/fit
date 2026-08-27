@@ -1276,6 +1276,40 @@ describe('read-only pilot training data endpoint', () => {
     expect(expired.statusCode).toBe(401)
     expect(expired.json()).toEqual({ error: 'unauthorized' })
   })
+
+  it('returns and logs only safe diagnostics when training data fails', async () => {
+    const databaseError = Object.assign(
+      new Error('private workout and database connection details'),
+      { code: '42501' },
+    )
+    const trainingData = buildTrainingDataReader(databaseError)
+    const app = buildApp({
+      pilotTrainingDataReader: trainingData.pilotTrainingDataReader,
+      logger: false,
+    })
+    apps.push(app)
+    const warn = vi.spyOn(app.log, 'warn')
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/training-data',
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual({ error: 'service_unavailable' })
+    expect(response.headers['x-fit-error-category']).toBe('permission')
+    expect(response.headers['x-fit-error-code']).toBe('42501')
+    expect(warn).toHaveBeenCalledWith(
+      {
+        databaseErrorCategory: 'permission',
+        databaseErrorCode: '42501',
+      },
+      'Pilot training data query failed',
+    )
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('private workout')
+    expect(response.body).not.toContain('42501')
+  })
 })
 
 describe('pilot progress and goals endpoints', () => {
@@ -1331,6 +1365,38 @@ describe('pilot progress and goals endpoints', () => {
     expect(cursor.statusCode).toBe(400)
     expect(write.statusCode).toBe(400)
     expect(progress.saveProgress).not.toHaveBeenCalled()
+  })
+
+  it('returns only safe diagnostics for an unexpected domain command failure', async () => {
+    const databaseError = Object.assign(
+      new Error('private progress and connection details'),
+      { code: '42501' },
+    )
+    const progress = buildProgressData()
+    progress.readBundle.mockRejectedValue(databaseError)
+    const app = buildApp({ pilotProgressData: progress.pilotProgressData, logger: false })
+    apps.push(app)
+    const warn = vi.spyOn(app.log, 'warn')
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/v1/clients/${clientId}/progress`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual({ error: 'service_unavailable' })
+    expect(response.headers['x-fit-error-category']).toBe('permission')
+    expect(response.headers['x-fit-error-code']).toBe('42501')
+    expect(warn).toHaveBeenCalledWith(
+      {
+        databaseErrorCategory: 'permission',
+        databaseErrorCode: '42501',
+      },
+      'Pilot command failed',
+    )
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('private progress')
+    expect(response.body).not.toContain('42501')
   })
 })
 

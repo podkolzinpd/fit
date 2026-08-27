@@ -1,12 +1,16 @@
 import type { PilotClientsReader } from '../pilot-clients-reader.js'
 import type { PilotConnectionsReader } from '../pilot-connections-reader.js'
+import type { PilotTrainingDataReader } from '../pilot-training-data-reader.js'
 import { PilotSessionInvalidError } from './yandex-pilot-transaction.js'
 import {
   type DatabaseReadinessFailureCategory,
   safeDatabaseErrorDiagnostics,
 } from './database-readiness.js'
 
-export type RuntimeDomainReadinessCheck = 'clients' | 'connections'
+export type RuntimeDomainReadinessCheck =
+  | 'clients'
+  | 'connections'
+  | 'training-data'
 
 export type RuntimeDomainReadinessResult =
   | Readonly<{ ready: true }>
@@ -44,6 +48,7 @@ async function inspectReadModel(
 export async function inspectRuntimeDomainReadiness(
   clientsReader: PilotClientsReader,
   connectionsReader: PilotConnectionsReader,
+  trainingDataReader: PilotTrainingDataReader,
   sessionToken: string,
 ): Promise<RuntimeDomainReadinessResult> {
   const clients = await inspectReadModel(
@@ -52,8 +57,14 @@ export async function inspectRuntimeDomainReadiness(
   )
   if (!clients.ready) return clients
 
-  return inspectReadModel(
+  const connections = await inspectReadModel(
     'connections',
     () => connectionsReader.readConnections(sessionToken),
+  )
+  if (!connections.ready) return connections
+
+  return inspectReadModel(
+    'training-data',
+    () => trainingDataReader.readTrainingData(sessionToken),
   )
 }

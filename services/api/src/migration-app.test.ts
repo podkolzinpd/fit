@@ -113,7 +113,7 @@ describe('stage runtime database readiness', () => {
       runMigrations: () => Promise.resolve([]),
       runtimeDatabaseReadiness: () => Promise.resolve({
         ready: false,
-        check: 'connections',
+        check: 'training-data',
         category: 'authentication',
         code: '28P01',
       }),
@@ -129,7 +129,7 @@ describe('stage runtime database readiness', () => {
     expect(response.statusCode).toBe(503)
     expect(response.json()).toEqual({
       status: 'runtime_database_not_ready',
-      check: 'connections',
+      check: 'training-data',
       category: 'authentication',
       code: '28P01',
     })
