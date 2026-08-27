@@ -1072,7 +1072,12 @@ test('iPhone: пустую тренировку нельзя сохранить 
   await page.goto('/workouts/new')
 
   await expect(page.getByText('Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Сохранить план', exact: true })).toBeDisabled()
+  const disabledSave = page.getByRole('button', { name: 'Сохранить план', exact: true })
+  await expect(disabledSave).toBeDisabled()
+  expect(await disabledSave.evaluate((button) => {
+    const style = getComputedStyle(button)
+    return { background: style.backgroundColor, color: style.color, opacity: style.opacity }
+  })).toEqual({ background: 'rgb(242, 238, 232)', color: 'rgb(108, 113, 122)', opacity: '1' })
   await expect(page.getByRole('button', { name: 'Выбрать упражнения' })).toBeVisible()
   await expectNoHorizontalOverflow(page)
 })

@@ -2656,6 +2656,18 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .theme-dark-pilot .attention { background: var(--danger-surface) }
 .theme-dark-pilot .goal-stages-hint { background: var(--surface-sunken) }
 .theme-dark-pilot .today-primary-cta { border-color: var(--accent-border); background: var(--accent-grad) }
+/* В пустой форме действия ещё недоступны, поэтому не выглядят как ослабленный
+   primary CTA. Коралл появляется только после того, как действие стало
+   доступно; правило намеренно ограничено двумя экранами создания тренировки. */
+.today-primary-cta:disabled,
+.workout-form-page .workout-cta[data-variant='primary']:disabled {
+  opacity: 1;
+  border-color: var(--border);
+  background: var(--surface-sunken);
+  color: var(--muted);
+  box-shadow: none;
+  filter: none;
+}
 .theme-dark-pilot .exercise.current .live-confirm { box-shadow: 0 8px 22px var(--accent-shadow) }
 .theme-dark-pilot .ai-progress-periods button.active { box-shadow: 0 6px 18px var(--accent-shadow) }
 .theme-dark-pilot .client-welcome { border-color: var(--border); background: var(--card-grad) }
