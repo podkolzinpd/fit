@@ -217,7 +217,7 @@ jobs:
           if test "$status" != 200; then
             if jq -e '
               .status == "runtime_database_not_ready"
-              and (.check | IN("clients", "connections", "training-data"))
+              and (.check | IN("clients", "connections", "training-data", "progress"))
               and (.category | IN("authentication", "permission", "network", "tls", "unknown"))
               and (.code == "unknown" or (.code | test("^[A-Z0-9_]{2,64}$")))
             ' runtime-database-readiness-response.json >/dev/null 2>&1; then
@@ -379,7 +379,8 @@ jobs:
             command_exit=$?
             error_category=$(awk 'tolower($1) == "x-fit-error-category:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
             error_code=$(awk 'tolower($1) == "x-fit-error-code:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
-            echo "Stage smoke failed: check=${stage_smoke_check:-unknown}; command_exit=$command_exit; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}." >&2
+            observed_release=$(awk 'tolower($1) == "x-fit-release-id:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
+            echo "Stage smoke failed: check=${stage_smoke_check:-unknown}; command_exit=$command_exit; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}; release=${observed_release:-proxy_or_unknown}; expected_release=$API_IMAGE_TAG." >&2
           }
           trap report_stage_smoke_failure ERR
           training=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \

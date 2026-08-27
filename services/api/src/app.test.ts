@@ -69,6 +69,7 @@ describe('health endpoint', () => {
       status: 'ok',
       releaseId: 'api-tree-hash',
     })
+    expect(response.headers['x-fit-release-id']).toBe('api-tree-hash')
   })
 })
 
@@ -262,6 +263,8 @@ describe('browser pilot CORS', () => {
     expect(preflight.headers['access-control-allow-methods']).toContain('PUT')
     expect(preflight.headers['access-control-allow-headers']).toContain('authorization')
     expect(preflight.headers['access-control-allow-headers']).toContain('x-fit-pilot-session')
+    expect(preflight.headers['access-control-expose-headers']).toContain('x-fit-release-id')
+    expect(preflight.headers['access-control-expose-headers']).toContain('x-fit-error-code')
 
     const rejected = await app.inject({
       method: 'OPTIONS',
@@ -1315,6 +1318,24 @@ describe('read-only pilot training data endpoint', () => {
 describe('pilot progress and goals endpoints', () => {
   const sessionToken = 's'.repeat(43)
   const clientId = CLIENTS_RESPONSE.clients[0]!.id
+
+  it('identifies a missing progress dependency without exposing runtime details', async () => {
+    const app = buildApp({ logger: false, releaseId: 'candidate-release' })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/v1/clients/${clientId}/progress`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual({ error: 'service_unavailable' })
+    expect(response.headers['x-fit-error-category']).toBe('configuration')
+    expect(response.headers['x-fit-error-code'])
+      .toBe('PILOT_PROGRESS_DATA_UNAVAILABLE')
+    expect(response.headers['x-fit-release-id']).toBe('candidate-release')
+  })
 
   it('returns the shared progress bundle and creates a validated atomic entry', async () => {
     const progress = buildProgressData()
