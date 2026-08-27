@@ -135,6 +135,25 @@ describe('assistant orchestrator contract', () => {
     expect(recordWorkoutTurn('отмена', clients, draft?.action)).toEqual({ reply: 'Хорошо, запись тренировки отменена.', action: null })
   })
 
+  it('keeps dictated exercises while the trainer clarifies the client', () => {
+    const clients = [{ id: 'client-1', fullName: 'Анна Смирнова', goal: null, ageYears: null, heightCm: null, gender: null }]
+    const clarification = recordWorkoutTurn('Запиши Анне Смирновой тренировку: жим гантелей лёжа 3 по 10 по 20 кг', clients, null)
+    expect(clarification?.action).toMatchObject({
+      tool: 'record_workout', status: 'needs_input',
+      payload: { step: 'client', transcript: 'жим гантелей лёжа 3 по 10 по 20 кг' },
+    })
+
+    const selected = recordWorkoutTurn('Анна Смирнова', clients, clarification?.action)
+    expect(selected?.action).toMatchObject({
+      tool: 'record_workout', status: 'needs_input',
+      payload: {
+        step: 'workout', clientId: 'client-1', clientName: 'Анна Смирнова',
+        transcript: 'жим гантелей лёжа 3 по 10 по 20 кг',
+      },
+    })
+    expect(selected?.reply).toContain('Сохранила уже продиктованное')
+  })
+
   it('keeps a request to prepare a workout in the deterministic recording flow', () => {
     const clients = [{ id: 'client-1', fullName: 'Сан Саныч', goal: null, ageYears: null, heightCm: null, gender: null }]
     const result = recordWorkoutTurn('Давай подготовим запись тренировки для Сан Саныча', clients, null)
