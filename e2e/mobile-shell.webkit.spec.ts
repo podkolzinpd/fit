@@ -321,6 +321,45 @@ test('iPhone: новое имя профиля сохраняется после
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: меню собственного плана клиента находится в шапке на 390 и 430 px', async ({ page }, testInfo) => {
+  testInfo.setTimeout(60_000)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/auth')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Тип аккаунта').selectOption('client')
+  await page.getByLabel('Имя').fill('Клиент с планом')
+  await page.getByLabel('Email').fill(`client-plan-menu-${testInfo.workerIndex}-${Date.now()}@fit.local`)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page).toHaveURL(/\/me$/)
+
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
+
+  await page.goto('/workouts/new')
+  await addExercise(page, 'Присед со штангой', true)
+  await page.getByLabel('Вес, подход 1').fill('40')
+  await page.getByLabel('Повторы, подход 1').fill('10')
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+
+  const headerMenu = page.locator('.workout-header-side').getByRole('button', { name: 'Другие действия с тренировкой' })
+  await expect(headerMenu).toBeVisible()
+  await expect(page.locator('.workout-detail-actions').getByRole('button', { name: 'Другие действия с тренировкой' })).toHaveCount(0)
+  await expect(page.locator('.workout-detail-actions').getByRole('link', { name: 'Изменить', exact: true })).toBeVisible()
+  await headerMenu.click()
+  await expect(page.getByRole('menuitem', { name: 'Копировать тренировку' })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Удалить тренировку' })).toHaveClass(/danger/)
+  await expectOverflowMenuAboveBars(page)
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('client-plan-header-menu-390.png'), fullPage: true })
+
+  await headerMenu.click()
+  await page.setViewportSize({ width: 430, height: 932 })
+  await expect(headerMenu).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('client-plan-header-menu-430.png'), fullPage: true })
+})
+
 test('iPhone: client voice-first home сохраняет тренировку только себе, а Cancel профиля не мутирует данные на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
