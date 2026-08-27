@@ -482,7 +482,19 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       if (error instanceof PilotSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })
       }
-      return reply.code(503).send({ error: 'service_unavailable' })
+      const diagnostics = safeDatabaseErrorDiagnostics(error)
+      app.log.warn(
+        {
+          databaseErrorCategory: diagnostics.category,
+          databaseErrorCode: diagnostics.code,
+        },
+        'Pilot connections query failed',
+      )
+      return reply
+        .header('x-fit-error-category', diagnostics.category)
+        .header('x-fit-error-code', diagnostics.code)
+        .code(503)
+        .send({ error: 'service_unavailable' })
     }
   })
 

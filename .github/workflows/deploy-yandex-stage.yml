@@ -217,10 +217,11 @@ jobs:
           if test "$status" != 200; then
             if jq -e '
               .status == "runtime_database_not_ready"
+              and (.check | IN("clients", "connections"))
               and (.category | IN("authentication", "permission", "network", "tls", "unknown"))
               and (.code == "unknown" or (.code | test("^[A-Z0-9_]{2,64}$")))
             ' runtime-database-readiness-response.json >/dev/null 2>&1; then
-              jq -r '"Runtime database preflight failed: category=" + .category + ", code=" + .code' \
+              jq -r '"Runtime database preflight failed: check=" + .check + ", category=" + .category + ", code=" + .code' \
                 runtime-database-readiness-response.json >&2
             else
               echo "Runtime database preflight returned HTTP $status without safe diagnostics." >&2
@@ -347,10 +348,19 @@ jobs:
               and (.activity.needsAttention | type) == "boolean"
             ))
           ' <<<"$clients" >/dev/null
-          connections=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
+          connections_status=$(curl --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
+            --output connections-response.json --dump-header connections-response-headers.txt \
+            --write-out '%{http_code}' \
             --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Pilot-Session: $fixture_token" \
             "${api_url%/}/v1/connections")
+          if test "$connections_status" != 200; then
+            error_category=$(awk 'tolower($1) == "x-fit-error-category:" {gsub("\\r", "", $2); value=$2} END {print value}' connections-response-headers.txt)
+            error_code=$(awk 'tolower($1) == "x-fit-error-code:" {gsub("\\r", "", $2); value=$2} END {print value}' connections-response-headers.txt)
+            echo "Connections smoke failed: HTTP $connections_status; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}." >&2
+            exit 1
+          fi
+          connections=$(cat connections-response.json)
           jq -e '
             .accessMode == "read_only"
             and (.memberships | any(.isRoot == true))

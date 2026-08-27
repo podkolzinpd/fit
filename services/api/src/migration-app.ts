@@ -11,7 +11,7 @@ import {
   type PilotEnroller,
 } from './db/yandex-pilot-enrollment.js'
 import type { StageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
-import type { DatabaseReadinessResult } from './db/database-readiness.js'
+import type { RuntimeDomainReadinessResult } from './db/runtime-domain-readiness.js'
 import {
   StageDatabaseReaderNotReadyError,
   type StageDatabaseReaderAccessAction,
@@ -28,7 +28,9 @@ interface BuildMigrationAppOptions {
   logger?: boolean
   pilotEnrollment?: PilotEnrollmentOptions
   runMigrations: () => Promise<readonly string[]>
-  runtimeDatabaseReadiness?: (sessionToken: string) => Promise<DatabaseReadinessResult>
+  runtimeDatabaseReadiness?: (
+    sessionToken: string,
+  ) => Promise<RuntimeDomainReadinessResult>
   stageWorkoutFixture?: StageWorkoutFixtureLoader
 }
 
@@ -95,6 +97,7 @@ export function buildMigrationApp(
 
       return reply.code(503).send({
         status: 'runtime_database_not_ready',
+        check: readiness.check,
         category: readiness.category,
         code: readiness.code,
       })
