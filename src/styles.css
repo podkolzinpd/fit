@@ -523,6 +523,8 @@ p { margin: 6px 0 }
 .assistant-session-history button:hover, .assistant-session-history button.selected { border-color:var(--accent-surface-border); background:var(--accent-surface); }
 .assistant-session-history button small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--type-caption-size); }
 .assistant-message.assistant-message-assistant { align-self:flex-start; width:min(100%, 320px); padding:0; color:var(--fg); background:transparent; border:0; box-shadow:none; }
+.assistant-message.assistant-message-result { align-self:stretch; width:100%; max-width:none; padding:0; color:var(--fg); background:transparent; border:0; border-radius:0; box-shadow:none; }
+.assistant-message-result > * { width:100%; max-width:none; box-sizing:border-box; }
 .assistant-message { align-self:flex-end; width:fit-content; max-width:min(75%, 320px); padding:12px 14px; border:1px solid var(--accent-surface-border); border-radius:20px 20px 6px 20px; background:var(--accent-surface); color:var(--accent-strong); box-shadow:none; overflow-wrap:anywhere; }
 .assistant-message p { margin:0; font-size:17px; line-height:1.28; }
 .assistant-message-edit { min-height:auto; margin-top:var(--space-2); padding:0; border:0; background:transparent; color:inherit; box-shadow:none; font-size:var(--type-caption-size); text-decoration:underline; }
@@ -687,11 +689,13 @@ p { margin: 6px 0 }
 .assistant-add-set svg { width:18px; height:18px; }
 .assistant-save-workout { min-height:48px; }
 .assistant-card-hint { margin:0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug); }
+.assistant-message-error { align-self:stretch; display:grid; gap:var(--space-2); width:100%; padding:10px 12px; border:1px solid var(--danger-border); border-radius:var(--radius-sm); background:var(--danger-surface); color:var(--danger); font-size:var(--type-caption-size); line-height:var(--leading-snug); }
+.assistant-message-error button { justify-self:start; min-height:40px; padding:8px 12px; border-color:var(--danger-border); background:var(--surface-raised); color:var(--danger); box-shadow:none; font-size:var(--type-caption-size); }
 .assistant-composer { grid-area:composer; position:static; width:100%; min-width:0; box-sizing:border-box; display:grid; grid-template-columns:minmax(0, 1fr) 48px 48px; align-items:end; gap:var(--space-2); margin-top:var(--space-2); padding:6px; border:1px solid var(--border); border-radius:30px; background:color-mix(in srgb, var(--surface-raised) 96%, var(--input)); box-shadow:var(--shadow-soft); }
 .assistant-composer textarea, .assistant-composer > input { width:100%; min-width:0; min-height:48px; max-height:112px; box-sizing:border-box; overflow-y:auto; resize:none; border:0; border-radius:24px; background:transparent; color:var(--fg); padding:12px var(--space-3); font:inherit; font-size:var(--type-body-size); line-height:1.35; }
 .assistant-composer textarea:focus, .assistant-composer > input:focus { outline:2px solid var(--accent-ring); outline-offset:-2px; }
-.assistant-workout-saved { display:flex; align-items:center; gap:var(--space-3); padding:var(--space-3) var(--space-4); border:1px solid var(--accent-border); border-radius:var(--radius-lg); background:var(--surface-raised); }
-.assistant-workout-saved > span { display:grid; place-items:center; width:32px; height:32px; border-radius:50%; background:var(--accent-soft); color:var(--accent-strong); font-weight:800; }
+.assistant-workout-saved { display:flex; align-items:center; gap:var(--space-3); padding:var(--space-3) var(--space-4); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); }
+.assistant-workout-saved > span { display:grid; place-items:center; width:32px; height:32px; border-radius:50%; background:var(--success-surface); color:var(--success-fg); font-weight:800; }
 .assistant-workout-saved > div { display:grid; gap:2px; }
 .assistant-workout-saved small { color:var(--muted); }
 .assistant-icon-button { display:grid; place-items:center; width:48px; min-height:48px; padding:0; border-radius:50%; }

@@ -13,11 +13,13 @@ function assistantMarkup() {
             <main class="assistant-page">
               <section class="assistant-session-switcher"><div class="assistant-session-bar"><strong>Сегодня</strong></div></section>
               <section class="assistant-thread">
-                <article class="assistant-workout-user-receipt" data-testid="dictation-summary">
+                <article class="assistant-workout-user-receipt" data-message-kind="action-result" data-testid="dictation-summary">
                   <details><summary>Диктовка · 3 фрагмента</summary><ol><li>Жим лёжа 3 по 10</li><li>Тяга верхнего блока 3 по 12</li><li>Планка 45 секунд</li></ol></details>
                 </article>
-                <article class="assistant-message assistant-message-user" data-testid="short-user-message"><p>Отменить</p></article>
-                <article class="assistant-message assistant-message-assistant" data-testid="last-message"><p>Хорошо, запись тренировки отменена.</p></article>
+                <article class="assistant-message assistant-message-result" data-message-kind="action-result" data-testid="action-result"><div class="assistant-workout-saved"><span>✓</span><div><strong>Тренировка сохранена</strong><small>Антоха</small></div></div></article>
+                <div class="assistant-message-error" data-message-kind="error" role="alert" data-testid="message-error"><span>Не удалось получить ответ ассистента.</span><button type="button">Повторить</button></div>
+                <article class="assistant-message assistant-message-user" data-message-kind="user" data-testid="short-user-message"><p>Отменить</p></article>
+                <article class="assistant-message assistant-message-assistant" data-message-kind="assistant" data-testid="last-message"><p>Хорошо, запись тренировки отменена.</p></article>
               </section>
               <form class="assistant-composer" data-testid="composer">
                 <textarea aria-label="Сообщение ассистенту" placeholder="Опишите тренировку"></textarea>
@@ -61,6 +63,54 @@ test('assistant aligns user and assistant messages by role', async ({ page }) =>
     expect(assistantMessage).not.toBeNull()
     expect(Math.abs((userMessage!.x + userMessage!.width) - (thread!.x + thread!.width))).toBeLessThanOrEqual(3)
     expect(Math.abs(assistantMessage!.x - thread!.x)).toBeLessThanOrEqual(3)
+  }
+})
+
+test('assistant message types have distinct hierarchy on mobile', async ({ page }) => {
+  for (const width of [390, 430]) {
+    for (const theme of ['theme-light', 'theme-dark']) {
+      await page.setViewportSize({ width, height: 844 })
+      await page.setContent(assistantMarkup())
+      await page.locator('html').evaluate((element, nextTheme) => {
+        element.setAttribute('class', nextTheme)
+        document.querySelector('.phone-frame')?.classList.remove('theme-light', 'theme-dark')
+        document.querySelector('.phone-frame')?.classList.add(nextTheme)
+      }, theme)
+
+      const threadBox = await page.locator('.assistant-thread').boundingBox()
+      const user = page.locator('[data-message-kind="user"]')
+      const assistant = page.locator('[data-message-kind="assistant"]')
+      const result = page.getByTestId('action-result')
+      const error = page.getByTestId('message-error')
+      const userBox = await user.boundingBox()
+      const assistantBox = await assistant.boundingBox()
+      const resultBox = await result.boundingBox()
+      const errorBox = await error.boundingBox()
+      const resultStyle = await result.locator('.assistant-workout-saved').evaluate((element) => {
+        const style = getComputedStyle(element)
+        return { background: style.backgroundColor, border: style.borderColor }
+      })
+      const errorStyle = await error.evaluate((element) => {
+        const style = getComputedStyle(element)
+        return { background: style.backgroundColor, border: style.borderColor, color: style.color }
+      })
+
+      expect(threadBox).not.toBeNull()
+      expect(userBox).not.toBeNull()
+      expect(assistantBox).not.toBeNull()
+      expect(resultBox).not.toBeNull()
+      expect(errorBox).not.toBeNull()
+      expect(Math.abs((userBox!.x + userBox!.width) - (threadBox!.x + threadBox!.width))).toBeLessThanOrEqual(3)
+      expect(Math.abs(assistantBox!.x - threadBox!.x)).toBeLessThanOrEqual(3)
+      expect(Math.abs(resultBox!.x - threadBox!.x)).toBeLessThanOrEqual(3)
+      expect(Math.abs(resultBox!.width - threadBox!.width)).toBeLessThanOrEqual(3)
+      expect(Math.abs(errorBox!.x - threadBox!.x)).toBeLessThanOrEqual(3)
+      expect(Math.abs(errorBox!.width - threadBox!.width)).toBeLessThanOrEqual(3)
+      expect(resultStyle.background).not.toBe('rgba(0, 0, 0, 0)')
+      expect(resultStyle.border).not.toBe(errorStyle.border)
+      expect(errorStyle.background).not.toBe(resultStyle.background)
+      expect(errorStyle.color).not.toBe(await assistant.evaluate((element) => getComputedStyle(element).color))
+    }
   }
 })
 
