@@ -47,9 +47,10 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
       recoveryTimersRef.current = []
     }
 
-    const applyDimensions = (height: number, visibleHeight: number) => {
+    const applyDimensions = (height: number, visibleHeight: number, offsetTop = 0) => {
       root.style.setProperty('--app-viewport-height', `${height}px`)
       root.style.setProperty('--app-visible-height', `${visibleHeight}px`)
+      root.style.setProperty('--app-viewport-offset-top', `${offsetTop}px`)
     }
 
     const recover = () => {
@@ -74,6 +75,7 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
         root.classList.remove('app-keyboard-open')
         root.style.removeProperty('--app-viewport-height')
         root.style.removeProperty('--app-visible-height')
+        root.style.removeProperty('--app-viewport-offset-top')
         return
       }
 
@@ -88,7 +90,11 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
         stableHeightRef.current = Math.round(Math.max(window.innerHeight, visualHeight))
       }
 
-      applyDimensions(stableHeightRef.current, nextKeyboardOpen ? metrics.visibleHeight : stableHeightRef.current)
+      applyDimensions(
+        stableHeightRef.current,
+        nextKeyboardOpen ? metrics.visibleHeight : stableHeightRef.current,
+        nextKeyboardOpen ? Math.round(viewport?.offsetTop ?? 0) : 0,
+      )
       setKeyboardOpen(nextKeyboardOpen)
       root.classList.toggle('app-keyboard-open', nextKeyboardOpen)
       if (!nextKeyboardOpen) resetRootScroll()
@@ -130,6 +136,7 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
       root.classList.remove('app-keyboard-open')
       root.style.removeProperty('--app-viewport-height')
       root.style.removeProperty('--app-visible-height')
+      root.style.removeProperty('--app-viewport-offset-top')
     }
   }, [])
 

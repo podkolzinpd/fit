@@ -51,6 +51,7 @@ test('mobile assistant pins the composer to the shrunken keyboard viewport', asy
     element.classList.add('app-keyboard-open')
     element.style.setProperty('--app-visible-height', '508px')
     element.style.setProperty('--app-viewport-height', '844px')
+    element.style.setProperty('--app-viewport-offset-top', '336px')
   })
   await page.locator('.phone-frame').evaluate((element) => element.classList.add('keyboard-open'))
 
@@ -61,6 +62,7 @@ test('mobile assistant pins the composer to the shrunken keyboard viewport', asy
   expect(composer).not.toBeNull()
   expect(message).not.toBeNull()
   expect(frame).not.toBeNull()
+  expect(frame!.y).toBe(336)
   expect(frame!.y + frame!.height - (composer!.y + composer!.height)).toBeLessThanOrEqual(8)
   expect(composer!.y - (message!.y + message!.height)).toBeLessThanOrEqual(24)
   await expect(page.getByTestId('tabbar')).toBeHidden()
