@@ -13,7 +13,7 @@ function assistantMarkup() {
             <main class="assistant-page">
               <section class="assistant-session-switcher"><div class="assistant-session-bar"><strong>Сегодня</strong></div></section>
               <section class="assistant-thread">
-                <article class="assistant-message assistant-message-user"><p>Отменить</p></article>
+                <article class="assistant-message assistant-message-user" data-testid="short-user-message"><p>Отменить</p></article>
                 <article class="assistant-message assistant-message-assistant" data-testid="last-message"><p>Хорошо, запись тренировки отменена.</p></article>
               </section>
               <form class="assistant-composer" data-testid="composer">
@@ -105,6 +105,48 @@ test('assistant page has no decorative accent glow in light and dark themes', as
 
     expect(decoration.content).toBe('none')
     expect(decoration.backgroundImage).toBe('none')
+  }
+})
+
+test('user messages stay compact, calm and readable on mobile', async ({ page }) => {
+  for (const width of [390, 430]) {
+    for (const theme of ['theme-light', 'theme-dark']) {
+      await page.setViewportSize({ width, height: 844 })
+      await page.setContent(assistantMarkup())
+      await page.locator('html').evaluate((element, nextTheme) => {
+        element.setAttribute('class', nextTheme)
+        document.querySelector('.phone-frame')?.classList.remove('theme-light', 'theme-dark')
+        document.querySelector('.phone-frame')?.classList.add(nextTheme)
+      }, theme)
+
+      const thread = page.locator('.assistant-thread')
+      const shortMessage = page.getByTestId('short-user-message')
+      await thread.evaluate((element) => {
+        const message = document.createElement('article')
+        message.className = 'assistant-message assistant-message-user'
+        message.dataset.testid = 'long-user-message'
+        message.innerHTML = '<p>Запланируй клиенту силовую тренировку на следующую среду вечером</p>'
+        element.append(message)
+      })
+
+      const threadBox = await thread.boundingBox()
+      const shortBox = await shortMessage.boundingBox()
+      const longBox = await page.getByTestId('long-user-message').boundingBox()
+      const shortStyle = await shortMessage.evaluate((element) => {
+        const style = getComputedStyle(element)
+        return { backgroundImage: style.backgroundImage, boxShadow: style.boxShadow }
+      })
+
+      expect(threadBox).not.toBeNull()
+      expect(shortBox).not.toBeNull()
+      expect(longBox).not.toBeNull()
+      expect(shortBox!.width).toBeLessThan(longBox!.width)
+      expect(longBox!.width).toBeLessThanOrEqual(threadBox!.width * 0.75 + 1)
+      expect(Math.abs((shortBox!.x + shortBox!.width) - (threadBox!.x + threadBox!.width))).toBeLessThanOrEqual(3)
+      expect(Math.abs((longBox!.x + longBox!.width) - (threadBox!.x + threadBox!.width))).toBeLessThanOrEqual(3)
+      expect(shortStyle.backgroundImage).toBe('none')
+      expect(shortStyle.boxShadow).toBe('none')
+    }
   }
 })
 
