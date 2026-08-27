@@ -5,20 +5,19 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-27
-Проверенный базовый `main`: `dc1e377` (`Ассистент: понимать склонённые имена клиентов (#618)`)
+Проверенный базовый `main`: `d75fc42` (`feat(assistant): add useful first-entry state (#619)`)
 
 ## Активное изменение
 
-- Пустая текущая сессия ассистента объясняет основной сценарий и предлагает
-  три безопасных старта: запись тренировки, сводку прогресса и справку.
-  Выбор только подставляет редактируемый пример и не отправляет запрос сам.
-- Stage run `32980358030` (после merge #596) подтвердил полный private путь
-  (hash → `resolve_yandex_pilot_session` → actor context → clients read model),
-  но публичный `GET /v1/clients` вернул безликий `503`; rollback на
-  `bbak2bq6iopc8lcpnbe8` прошёл чисто. PostgreSQL, runtime credential, session
-  и доменный reader исключены. Follow-up: immutable release ID в `/health` и
-  безопасные category/code headers в clients error, чтобы отличить stale
-  revision routing, Fastify error и 503 входного proxy без application stdout.
+- Stage run `33009868939` после merge #599 подтвердил новую immutable API
+  revision через `releaseId`: `/health`, `/ready` и публичный `GET /v1/clients`
+  прошли. Следующий `GET /v1/connections` девять раз вернул `503`; автоматический
+  rollback восстановил `bbak2bq6iopc8lcpnbe8`, production не пострадал.
+- Активный follow-up переносит exact `DatabasePilotConnectionsReader` в private
+  runtime preflight с тем же fixture token и добавляет только безопасные
+  `check/category/code` в preflight и category/code headers в публичный ответ.
+  Следующий workflow остановится до переключения API и назовёт точный класс
+  connections-ошибки без SQL, PII, токена и connection details.
 
 ## Последняя проверенная продуктовая точка
 
@@ -75,8 +74,7 @@
   показывают время/клиента/состав/статус; шкала фокусируется на ближайшей или
   текущей тренировке, а планы без времени остаются видны отдельным блоком над
   прокручиваемой шкалой.
-- Ассистент умеет подготовить в чате черновик программы, показать расписание и
-  создать тренировки только после явного подтверждения пользователя.
+- Ассистент создаёт черновик программы, расписание и тренировки только после подтверждения.
 
 ## Инфраструктура и Yandex Cloud
 
@@ -100,19 +98,15 @@
   не выполнен: production frontend/tenant на Supabase, остальные вкладки без изменений.
 
 ## Проверки активной ветки
-- Для единой иерархии действий и мобильного расписания тренера зелёные
-  792+ frontend-тестов, 185 API-тестов, 57 infra/policy-проверок, lint,
-  typecheck, покрытие и production build. Тесты — с явным локальным Supabase.
-- `analytics.app_feedback`, Telegram-нотификатор, push `workout_reminder`
-  подтверждены: 7 + 16 + 21 целевых pgTAP-тестов, полный SQL/RLS-набор;
-  push Cloud Function — 16 vitest-тестов в `services/api`, lint/typecheck зелёные.
-- Assistant release применяет чистую цепочку Supabase; 624 SQL/RLS-теста
-  зелёные, включая exact-once turn/action и атомарный program rollback.
+- Для connections diagnostics зелёный полный `npm run check`: 797 frontend,
+  187 API и 57 infra/policy-тестов, lint, typecheck, coverage и production build.
+- Readiness diagnostics из актуального `main` сохраняет закрытый `/ready`,
+  нормализованные коды без чувствительных данных и автоматический rollback.
 
 ## Ближайший порядок
 
-1. Получить безопасный код ошибки первого clients smoke, устранить причину,
-   получить зелёную API revision и выполнить summary-list плюс один
+1. Получить безопасный код ошибки connections preflight, устранить доказанную
+   причину, получить зелёную API revision и выполнить summary-list плюс один
    контролируемый AI generation/parse smoke без логирования исходного текста.
 2. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
@@ -122,7 +116,5 @@
 ## Отложено
 
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать
-  без отдельного решения. `YAFIT-234` (SpeechKit relay) отложен, голосовой путь
-  не менять. `YAFIT-235` — Webvisor для исследовательских метрик.
-- Новые виды спорта, питание, социальные функции, внешние носимые устройства и
-  дополнительные ИИ-блоки не брать до завершения P0/P1 и пилота.
+  без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor для исследований.
+- Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.

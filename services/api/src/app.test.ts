@@ -1200,6 +1200,40 @@ describe('read-only pilot connections endpoint', () => {
     expect(expired.statusCode).toBe(401)
     expect(expired.json()).toEqual({ error: 'unauthorized' })
   })
+
+  it('returns and logs only safe diagnostics when the connections query fails', async () => {
+    const databaseError = Object.assign(
+      new Error('private invitation and database connection details'),
+      { code: '42501' },
+    )
+    const connections = buildConnectionsReader(databaseError)
+    const app = buildApp({
+      pilotConnectionsReader: connections.pilotConnectionsReader,
+      logger: false,
+    })
+    apps.push(app)
+    const warn = vi.spyOn(app.log, 'warn')
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/connections',
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual({ error: 'service_unavailable' })
+    expect(response.headers['x-fit-error-category']).toBe('permission')
+    expect(response.headers['x-fit-error-code']).toBe('42501')
+    expect(warn).toHaveBeenCalledWith(
+      {
+        databaseErrorCategory: 'permission',
+        databaseErrorCode: '42501',
+      },
+      'Pilot connections query failed',
+    )
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('private invitation')
+    expect(response.body).not.toContain('42501')
+  })
 })
 
 describe('read-only pilot training data endpoint', () => {

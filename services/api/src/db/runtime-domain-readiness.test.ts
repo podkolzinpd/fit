@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import type { PilotClientsReader } from '../pilot-clients-reader.js'
+import type { PilotConnectionsReader } from '../pilot-connections-reader.js'
 import { inspectRuntimeDomainReadiness } from './runtime-domain-readiness.js'
 import { PilotSessionInvalidError } from './yandex-pilot-transaction.js'
 
 const SESSION_TOKEN = 's'.repeat(43)
 
-function buildReader(error?: Error): {
+function buildClientsReader(error?: Error): {
   reader: PilotClientsReader
   readClients: ReturnType<typeof vi.fn>
 } {
@@ -16,17 +17,34 @@ function buildReader(error?: Error): {
   return { reader: { readClients }, readClients }
 }
 
+function buildConnectionsReader(error?: Error): {
+  reader: PilotConnectionsReader
+  readConnections: ReturnType<typeof vi.fn>
+} {
+  const readConnections = error === undefined
+    ? vi.fn().mockResolvedValue({
+        accessMode: 'read_only',
+        memberships: [],
+        invitations: [],
+      })
+    : vi.fn().mockRejectedValue(error)
+  return { reader: { readConnections }, readConnections }
+}
+
 describe('runtime domain readiness', () => {
-  it('executes the clients read model with the exact stage session token', async () => {
-    const clients = buildReader()
+  it('executes both public read models with the exact stage session token', async () => {
+    const clients = buildClientsReader()
+    const connections = buildConnectionsReader()
 
     const result = await inspectRuntimeDomainReadiness(
       clients.reader,
+      connections.reader,
       SESSION_TOKEN,
     )
 
     expect(result).toEqual({ ready: true })
     expect(clients.readClients).toHaveBeenCalledWith(SESSION_TOKEN)
+    expect(connections.readConnections).toHaveBeenCalledWith(SESSION_TOKEN)
   })
 
   it('returns a safe SQL code from session resolution or the clients query', async () => {
@@ -34,31 +52,61 @@ describe('runtime domain readiness', () => {
       new Error('private relation and connection details'),
       { code: '42501' },
     )
-    const clients = buildReader(privateError)
+    const clients = buildClientsReader(privateError)
+    const connections = buildConnectionsReader()
 
     const result = await inspectRuntimeDomainReadiness(
       clients.reader,
+      connections.reader,
       SESSION_TOKEN,
     )
 
     expect(result).toEqual({
       ready: false,
+      check: 'clients',
       category: 'permission',
       code: '42501',
     })
+    expect(connections.readConnections).not.toHaveBeenCalled()
     expect(JSON.stringify(result)).not.toContain('private relation')
   })
 
-  it('identifies a rejected fixture session without exposing the token', async () => {
-    const clients = buildReader(new PilotSessionInvalidError())
+  it('identifies the connections read model without exposing its failure', async () => {
+    const privateError = Object.assign(
+      new Error('private invitations and membership data'),
+      { code: '42501' },
+    )
+    const clients = buildClientsReader()
+    const connections = buildConnectionsReader(privateError)
 
     const result = await inspectRuntimeDomainReadiness(
       clients.reader,
+      connections.reader,
       SESSION_TOKEN,
     )
 
     expect(result).toEqual({
       ready: false,
+      check: 'connections',
+      category: 'permission',
+      code: '42501',
+    })
+    expect(JSON.stringify(result)).not.toContain('private invitations')
+  })
+
+  it('identifies a rejected fixture session without exposing the token', async () => {
+    const clients = buildClientsReader(new PilotSessionInvalidError())
+    const connections = buildConnectionsReader()
+
+    const result = await inspectRuntimeDomainReadiness(
+      clients.reader,
+      connections.reader,
+      SESSION_TOKEN,
+    )
+
+    expect(result).toEqual({
+      ready: false,
+      check: 'clients',
       category: 'authentication',
       code: 'PILOT_SESSION_INVALID',
     })
@@ -66,15 +114,18 @@ describe('runtime domain readiness', () => {
   })
 
   it('normalizes application failures without exposing their message', async () => {
-    const clients = buildReader(new TypeError('private row value'))
+    const clients = buildClientsReader(new TypeError('private row value'))
+    const connections = buildConnectionsReader()
 
     const result = await inspectRuntimeDomainReadiness(
       clients.reader,
+      connections.reader,
       SESSION_TOKEN,
     )
 
     expect(result).toEqual({
       ready: false,
+      check: 'clients',
       category: 'unknown',
       code: 'unknown',
     })
