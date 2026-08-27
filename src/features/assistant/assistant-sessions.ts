@@ -136,6 +136,52 @@ export function isWorkoutDictationReceipt(message: AssistantMessage, messages: r
   })
 }
 
+export type WorkoutDictationReceiptGroup = {
+  firstMessageId: string
+  messageIds: string[]
+  fragments: string[]
+}
+
+export function groupWorkoutDictationReceipts(
+  visibleMessages: readonly AssistantMessage[],
+  allMessages: readonly AssistantMessage[],
+): WorkoutDictationReceiptGroup[] {
+  const groups: WorkoutDictationReceiptGroup[] = []
+  let current: WorkoutDictationReceiptGroup | undefined
+
+  visibleMessages.forEach((message) => {
+    if (isWorkoutDictationReceipt(message, allMessages)) {
+      if (!current) {
+        current = { firstMessageId: message.id, messageIds: [], fragments: [] }
+        groups.push(current)
+      }
+      current.messageIds.push(message.id)
+      current.fragments.push(message.content.trim())
+      return
+    }
+
+    const payload = message.action?.payload
+    const isHiddenWorkoutActionEcho = message.author === 'assistant'
+      && message.action?.tool === 'record_workout'
+      && isInteractiveAssistantAction(message.action)
+      && payload?.step === 'workout'
+      && message.content.trim() === message.action.description.trim()
+
+    if (!isHiddenWorkoutActionEcho) current = undefined
+  })
+
+  return groups
+}
+
+export function workoutDictationFragmentLabel(count: number): string {
+  const mod100 = count % 100
+  const mod10 = count % 10
+  if (mod100 >= 11 && mod100 <= 14) return `${count} фрагментов`
+  if (mod10 === 1) return `${count} фрагмент`
+  if (mod10 >= 2 && mod10 <= 4) return `${count} фрагмента`
+  return `${count} фрагментов`
+}
+
 export function isReadOnlyConversation(selectedId: string | undefined, todayId: string | undefined): boolean {
   return selectedId !== undefined && todayId !== undefined && selectedId !== todayId
 }
