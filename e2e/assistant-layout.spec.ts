@@ -154,11 +154,40 @@ test('assistant message types have distinct hierarchy on mobile', async ({ page 
       expect(Math.abs(resultBox!.x - threadBox!.x)).toBeLessThanOrEqual(3)
       expect(Math.abs(resultBox!.width - threadBox!.width)).toBeLessThanOrEqual(3)
       expect(Math.abs(errorBox!.x - threadBox!.x)).toBeLessThanOrEqual(3)
-      expect(Math.abs(errorBox!.width - threadBox!.width)).toBeLessThanOrEqual(3)
+      expect(errorBox!.width).toBeLessThanOrEqual(threadBox!.width)
       expect(resultStyle.background).not.toBe('rgba(0, 0, 0, 0)')
       expect(resultStyle.border).not.toBe(errorStyle.border)
       expect(errorStyle.background).not.toBe(resultStyle.background)
       expect(errorStyle.color).not.toBe(await assistant.evaluate((element) => getComputedStyle(element).color))
+    }
+  }
+})
+
+test('assistant keeps retry next to a compact error on mobile', async ({ page }) => {
+  for (const width of [390, 430]) {
+    for (const theme of ['theme-light', 'theme-dark']) {
+      await page.setViewportSize({ width, height: 844 })
+      await page.setContent(assistantMarkup())
+      await page.locator('html').evaluate((element, nextTheme) => {
+        element.setAttribute('class', nextTheme)
+        document.querySelector('.phone-frame')?.classList.remove('theme-light', 'theme-dark')
+        document.querySelector('.phone-frame')?.classList.add(nextTheme)
+      }, theme)
+
+      const thread = await page.locator('.assistant-thread').boundingBox()
+      const error = await page.getByTestId('message-error').boundingBox()
+      const message = await page.getByTestId('message-error').locator('span').boundingBox()
+      const retry = await page.getByTestId('message-error').getByRole('button', { name: 'Повторить' }).boundingBox()
+
+      expect(thread).not.toBeNull()
+      expect(error).not.toBeNull()
+      expect(message).not.toBeNull()
+      expect(retry).not.toBeNull()
+      expect(error!.width).toBeLessThan(thread!.width)
+      expect(retry!.x).toBeGreaterThanOrEqual(message!.x + message!.width)
+      expect(retry!.y).toBeGreaterThanOrEqual(error!.y)
+      expect(retry!.y + retry!.height).toBeLessThanOrEqual(error!.y + error!.height)
+      expect(retry!.height).toBeGreaterThanOrEqual(40)
     }
   }
 })

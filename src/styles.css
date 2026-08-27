@@ -693,8 +693,9 @@ p { margin: 6px 0 }
 .assistant-add-set svg { width:18px; height:18px; }
 .assistant-save-workout { min-height:48px; }
 .assistant-card-hint { margin:0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug); }
-.assistant-message-error { align-self:stretch; display:grid; gap:var(--space-2); width:100%; padding:10px 12px; border:1px solid var(--danger-border); border-radius:var(--radius-sm); background:var(--danger-surface); color:var(--danger); font-size:var(--type-caption-size); line-height:var(--leading-snug); }
-.assistant-message-error button { justify-self:start; min-height:40px; padding:8px 12px; border-color:var(--danger-border); background:var(--surface-raised); color:var(--danger); box-shadow:none; font-size:var(--type-caption-size); }
+.assistant-message-error { align-self:flex-start; display:inline-flex; align-items:center; gap:var(--space-2); width:fit-content; max-width:100%; padding:8px 10px; border:1px solid var(--danger-border); border-radius:var(--radius-sm); background:var(--danger-surface); color:var(--danger); font-size:var(--type-caption-size); line-height:var(--leading-snug); }
+.assistant-message-error span { min-width:0; }
+.assistant-message-error button { flex:0 0 auto; min-height:40px; padding:7px 10px; border-color:var(--danger-border); background:var(--surface-raised); color:var(--danger); box-shadow:none; font-size:var(--type-caption-size); }
 .assistant-composer { grid-area:composer; position:static; width:100%; min-width:0; box-sizing:border-box; display:grid; grid-template-columns:minmax(0, 1fr) 48px 48px; align-items:end; gap:var(--space-2); margin-top:var(--space-2); padding:6px; border:1px solid var(--border); border-radius:30px; background:color-mix(in srgb, var(--surface-raised) 96%, var(--input)); box-shadow:var(--shadow-soft); }
 .assistant-composer textarea, .assistant-composer > input { width:100%; min-width:0; min-height:48px; max-height:112px; box-sizing:border-box; overflow-y:auto; resize:none; border:0; border-radius:24px; background:transparent; color:var(--fg); padding:12px var(--space-3); font:inherit; font-size:var(--type-body-size); line-height:1.35; }
 .assistant-composer textarea:focus, .assistant-composer > input:focus { outline:2px solid var(--accent-ring); outline-offset:-2px; }
