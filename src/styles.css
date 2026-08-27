@@ -523,8 +523,8 @@ p { margin: 6px 0 }
 .assistant-session-history button { display:grid; gap:2px; min-height:44px; padding:8px 10px; border:1px solid transparent; border-radius:var(--radius-sm); background:transparent; color:var(--fg); text-align:left; box-shadow:none; }
 .assistant-session-history button:hover, .assistant-session-history button.selected { border-color:var(--accent-surface-border); background:var(--accent-surface); }
 .assistant-session-history button small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--type-caption-size); }
-.assistant-message.assistant-message-assistant { justify-self:start; width:min(100%, 320px); padding:0; color:var(--fg); background:transparent; border:0; box-shadow:none; }
-.assistant-message { justify-self:end; width:min(100%, 252px); padding:var(--space-4); border:1px solid var(--accent-border); border-radius:24px 24px 6px 24px; background:var(--accent-grad); color:var(--on-accent); box-shadow:0 10px 26px var(--accent-shadow); }
+.assistant-message.assistant-message-assistant { align-self:flex-start; width:min(100%, 320px); padding:0; color:var(--fg); background:transparent; border:0; box-shadow:none; }
+.assistant-message { align-self:flex-end; width:min(100%, 252px); padding:var(--space-4); border:1px solid var(--accent-border); border-radius:24px 24px 6px 24px; background:var(--accent-grad); color:var(--on-accent); box-shadow:0 10px 26px var(--accent-shadow); }
 .assistant-message p { margin:0; font-size:17px; line-height:1.28; }
 .assistant-message-edit { min-height:auto; margin-top:var(--space-2); padding:0; border:0; background:transparent; color:inherit; box-shadow:none; font-size:var(--type-caption-size); text-decoration:underline; }
 .assistant-thinking { display:flex; align-items:center; gap:var(--space-2); margin:0; color:var(--muted); font-size:var(--type-body-size); }
