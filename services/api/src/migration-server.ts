@@ -118,13 +118,14 @@ const app = buildMigrationApp({
     || runtimeProgressData === undefined
     ? {}
     : {
-        runtimeDatabaseReadiness: (sessionToken: string) =>
+        runtimeDatabaseReadiness: (sessionToken: string, clientId: string) =>
           inspectRuntimeDomainReadiness(
             runtimeClientsReader,
             runtimeConnectionsReader,
             runtimeTrainingDataReader,
             runtimeProgressData,
             sessionToken,
+            clientId,
           ),
       }),
   runMigrations: async () => {

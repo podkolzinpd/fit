@@ -33,6 +33,7 @@ export interface StageWorkoutFixtureIds {
 
 export interface StageWorkoutFixtureResult {
   seededTrainerCount: number
+  clientId: string
   sessionToken: string
   sessionExpiresAt: string
   clientSessionToken: string
@@ -392,6 +393,7 @@ implements StageWorkoutFixtureLoader {
       await connection.query('commit')
       return {
         seededTrainerCount: trainers.length,
+        clientId: smokeIds.clientId,
         sessionToken: session.raw,
         sessionExpiresAt: expiresAt.toISOString(),
         clientSessionToken: clientSession.raw,

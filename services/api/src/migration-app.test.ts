@@ -16,6 +16,7 @@ import {
 import { buildMigrationApp } from './migration-app.js'
 
 const apps: ReturnType<typeof buildMigrationApp>[] = []
+const STAGE_CLIENT_ID = '10000000-0000-4000-8000-000000000001'
 
 afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()))
@@ -69,7 +70,10 @@ describe('stage runtime database readiness', () => {
   })
 
   it('confirms the exact runtime connection before API deployment', async () => {
-    const runtimeDatabaseReadiness = vi.fn().mockResolvedValue({ ready: true })
+    const runtimeDatabaseReadiness = vi.fn().mockResolvedValue({
+      ready: true,
+      progressResponseBytes: 123,
+    })
     const app = buildMigrationApp({
       logger: false,
       runMigrations: () => Promise.resolve([]),
@@ -80,16 +84,28 @@ describe('stage runtime database readiness', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/stage/runtime-database/readiness',
-      headers: { 'x-fit-pilot-session': 'stage-session-token' },
+      headers: {
+        'x-fit-pilot-session': 'stage-session-token',
+        'x-fit-stage-client-id': STAGE_CLIENT_ID,
+      },
     })
 
     expect(response.statusCode).toBe(200)
-    expect(response.json()).toEqual({ status: 'runtime_database_ready' })
-    expect(runtimeDatabaseReadiness).toHaveBeenCalledWith('stage-session-token')
+    expect(response.json()).toEqual({
+      status: 'runtime_database_ready',
+      progressResponseBytes: 123,
+    })
+    expect(runtimeDatabaseReadiness).toHaveBeenCalledWith(
+      'stage-session-token',
+      STAGE_CLIENT_ID,
+    )
   })
 
   it('requires a pilot session without exposing the readiness probe', async () => {
-    const runtimeDatabaseReadiness = vi.fn().mockResolvedValue({ ready: true })
+    const runtimeDatabaseReadiness = vi.fn().mockResolvedValue({
+      ready: true,
+      progressResponseBytes: 123,
+    })
     const app = buildMigrationApp({
       logger: false,
       runMigrations: () => Promise.resolve([]),
@@ -123,7 +139,10 @@ describe('stage runtime database readiness', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/stage/runtime-database/readiness',
-      headers: { 'x-fit-pilot-session': 'stage-session-token' },
+      headers: {
+        'x-fit-pilot-session': 'stage-session-token',
+        'x-fit-stage-client-id': STAGE_CLIENT_ID,
+      },
     })
 
     expect(response.statusCode).toBe(503)
@@ -253,6 +272,7 @@ describe('stage workout fixture', () => {
   it('returns an ephemeral session without exposing database details', async () => {
     const load = vi.fn().mockResolvedValue({
       seededTrainerCount: 2,
+      clientId: STAGE_CLIENT_ID,
       sessionToken: 's'.repeat(43),
       sessionExpiresAt: '2026-08-22T12:15:00.000Z',
       clientSessionToken: 'c'.repeat(43),
@@ -277,6 +297,7 @@ describe('stage workout fixture', () => {
       session: {
         token: 's'.repeat(43),
         expiresAt: '2026-08-22T12:15:00.000Z',
+        clientId: STAGE_CLIENT_ID,
       },
       clientSession: {
         token: 'c'.repeat(43),
