@@ -36,6 +36,14 @@ export type AssistantActionMessage = {
   action: AssistantOrchestratorAction
 }
 
+const legacyWorkoutOnlyReply = 'Сейчас в чате можно только добавить тренировку. Напишите «добавь тренировку» и укажите клиента, упражнения, подходы, повторы и вес.'
+
+export function compactAssistantContent(content: string): string {
+  return content.trim() === legacyWorkoutOnlyReply
+    ? 'Сейчас я помогаю только записывать тренировки.'
+    : content
+}
+
 export function conversationLocalDate(conversation: Pick<AssistantConversation, 'created_at'>, timezone?: string): LocalDate {
   return todayInTimeZone(timezone, new Date(conversation.created_at))
 }
@@ -92,10 +100,29 @@ export function latestActiveAssistantAction(messages: readonly AssistantMessage[
   return message?.action ? { message, action: message.action } : undefined
 }
 
+export function latestActiveWorkoutAction(messages: readonly AssistantMessage[], conversationId?: string): AssistantActionMessage | undefined {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]
+    if (!message || message.conversation_id !== conversationId) continue
+    if (message.action) {
+      if (message.action.tool !== 'record_workout') return undefined
+      return isInteractiveAssistantAction(message.action) ? { message, action: message.action } : undefined
+    }
+    if (isWorkoutTerminalReply(message)) return undefined
+  }
+  return undefined
+}
+
+function isWorkoutTerminalReply(message: AssistantMessage): boolean {
+  if (message.author !== 'assistant' || message.action !== null) return false
+  const content = message.content.trim().toLocaleLowerCase('ru-RU')
+  return content.includes('запись тренировки отменена') || content.includes('тренировка сохранена')
+}
+
 export function filterTerminalAssistantMessages(messages: readonly AssistantMessage[]): AssistantMessage[] {
   return messages.flatMap((message) => {
     if (!message.action || isInteractiveAssistantAction(message.action)) return [message]
-    if (message.action.tool === 'summarize_progress' && message.action.lifecycleStatus === 'applied') return [message]
+    if ((message.action.tool === 'summarize_progress' || message.action.tool === 'record_workout') && message.action.lifecycleStatus === 'applied') return [message]
     return message.content.trim() === message.action.description.trim() ? [] : [{ ...message, action: null }]
   })
 }

@@ -201,11 +201,25 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('button', { name: 'Начать' }).click()
   // Крупный таймер тренировки по центру над подходами, идущий от старта (мм:сс).
   await expect(page.locator('.live-timer')).toContainText(/\d\d:\d\d/)
+  await expect(page.locator('.live-session-header .workout-status')).toHaveCount(1)
+  await expect(page.locator('.live-exercise-head .workout-status')).toHaveCount(0)
+  await expect(page.locator('.live-timer')).not.toHaveClass(/resting/)
+  const neutralTimerBackground = await page.locator('.live-timer').evaluate((element) => getComputedStyle(element).backgroundColor)
   // Текущий подход раскрыт для ввода, следующий — компактной строкой.
   await expect(page.locator('.live-set-table')).toHaveCount(1)
   await expect(page.locator('.live-set-table > .live-set')).toHaveCount(1)
   await expect(page.locator('.live-set-table > .live-set-compact')).toHaveCount(1)
-  await expect(page.getByRole('button', { name: 'Ввести подход 2' })).toBeVisible()
+  const compactInputAction = page.getByRole('button', { name: 'Ввести подход 2' })
+  await expect(compactInputAction).toBeVisible()
+  const compactActionStyle = await compactInputAction.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return { backgroundColor: style.backgroundColor, color: style.color, height: element.getBoundingClientRect().height }
+  })
+  expect(compactActionStyle.backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
+  expect(compactActionStyle.color).toBe('rgb(255, 255, 255)')
+  expect(compactActionStyle.height).toBeGreaterThanOrEqual(44)
+  const addSetBackground = await page.getByRole('button', { name: '＋ Подход' }).evaluate((element) => getComputedStyle(element).backgroundColor)
+  expect(addSetBackground).toBe('rgba(0, 0, 0, 0)')
   // Факт сразу начинается с плановых значений; тренер правит число напрямую.
   await expect(page.getByLabel('Фактический вес').first()).toHaveValue('40')
   await expect(page.getByLabel('Фактические повторы').first()).toHaveValue('10')
@@ -218,6 +232,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // Подтверждённый подход становится компактной строкой с зафиксированным фактом.
   await expect(page.locator('.live-set-compact.confirmed')).toContainText('42.5 кг')
   await expect(page.getByText(/Отдых 1:30/)).toBeVisible()
+  await expect(page.locator('.live-timer')).toHaveClass(/resting/)
+  await expect.poll(() => page.locator('.live-timer').evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe(neutralTimerBackground)
   // Отдых считается от абсолютного времени: через ~2 с значение должно уменьшиться.
   await expect(page.getByText(/Отдых 1:2\d/)).toBeVisible({ timeout: 4000 })
   // Дедлайн переживает reload: тренер может вернуться к live после перехода
@@ -781,6 +797,53 @@ test('schedule shows week strip and hour grid with day/week navigation', async (
   await page.getByRole('button', { name: 'Сегодня' }).click()
   await expect(page.locator('.week-day .day-num').first()).toHaveText(firstDayBefore)
   await expect(page.getByRole('button', { name: 'Сегодня' })).toBeDisabled()
+})
+
+test('расписание: тренировка без времени остаётся видимой после фокуса часовой сетки', async ({ page }, testInfo) => {
+  const clientName = `Без времени ${testInfo.workerIndex}-${Date.now()}`
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/clients')
+
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByLabel('Имя').fill(clientName)
+  await fillNewClientProfile(page)
+  await page.getByLabel('Начальный вес, кг').fill('80')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: clientName })).toBeVisible()
+
+  await page.goto('/schedule')
+  await page.locator('a[href^="/workouts/new?date="]').click()
+  await selectClient(page, clientName)
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
+  await page.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await page.getByRole('button', { name: /Присед со штангой/ }).first().click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+
+  await page.goto('/schedule')
+  const untimed = page.locator('.schedule-untimed-section')
+  await expect(untimed).toBeVisible()
+  await expect(untimed.getByText('Без времени', { exact: true })).toBeVisible()
+  await expect(untimed).toContainText(clientName)
+  await expect(untimed).toContainText('Присед со штангой')
+  await page.locator('.day-grid-scroll').evaluate((scroller) => { scroller.scrollTop = 480 })
+  const placement = await untimed.evaluate((section) => {
+    const scroller = document.querySelector<HTMLElement>('.day-grid-scroll')
+    if (!scroller) return null
+    const sectionRect = section.getBoundingClientRect()
+    const scrollerRect = scroller.getBoundingClientRect()
+    return {
+      beforeScroller: sectionRect.bottom <= scrollerRect.top + 1,
+      gridWasScrolled: scroller.scrollTop > 0,
+    }
+  })
+  expect(placement).toEqual({ beforeScroller: true, gridWasScrolled: true })
 })
 
 test('расписание: создание тренировки из расписания с датой выбранного дня', async ({ page }, testInfo) => {

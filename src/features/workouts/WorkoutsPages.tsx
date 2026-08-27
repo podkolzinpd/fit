@@ -16,7 +16,7 @@ import {
   addDays, currentTimeInTimeZone, dayOfMonth, formatLocalDate, formatMonth, localDate, todayInTimeZone, weekdayShort,
   type LocalDate,
 } from '../../shared/local-date'
-import { AsyncView, Coachmark, Field, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
+import { AsyncView, Coachmark, EmptyState, Field, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
 import { ExerciseImage, ExercisePicker, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { clientWorkoutAuthorLabel, ClientPicker, type ClientPickerSelection } from '../clients'
 import { VoiceNoteField } from '../voice-input'
@@ -126,10 +126,22 @@ export function SchedulePage() {
     </div>
   }>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
+      {untimed.length > 0 && <section className="schedule-untimed-section" aria-labelledby="schedule-untimed-title">
+        <div className="schedule-untimed-heading">
+          <strong id="schedule-untimed-title">Без времени</strong>
+          <span>{workoutCountLabel(untimed.length)}</span>
+        </div>
+        <div className="day-untimed">{untimed.map((workout) => (
+          <Link key={workout.id} className="schedule-untimed-card" to={`/workouts/${workout.id}`}>
+            <span className="schedule-untimed-copy">
+              <strong>{workout.clientName}</strong>
+              <span>{scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}</span>
+            </span>
+            <WorkoutStatusBadge workout={workout} />
+          </Link>
+        ))}</div>
+      </section>}
       <div className="day-grid-scroll" ref={scrollRef}>
-        {untimed.length > 0 && <div className="day-untimed">{untimed.map((workout) => (
-          <Link key={workout.id} className="card" to={`/workouts/${workout.id}`}><div><strong>{workout.clientName}</strong><p>{exerciseSummary(workout).map((e) => e.name).join(', ') || 'без упражнений'}</p></div><WorkoutStatusBadge workout={workout} /></Link>
-        ))}</div>}
         <div className="day-grid" style={{ height: HOURS.length * HOUR_HEIGHT }}>
           {HOURS.map((hour) => (
             <div key={hour} className="day-grid-hour" style={{ top: hour * HOUR_HEIGHT }}>
@@ -293,7 +305,11 @@ export function ClientWorkoutsPage() {
     return <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientAuthored ? 'Создано клиентом' : null} />
   })}</div></section>}
       <LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} />
-    </div> : <Link className="button wide trainer-history-plan" to={`/workouts/new?client=${clientId}`}>Запланировать тренировку</Link>}
+    </div> : <EmptyState
+      title="Тренировка для клиента"
+      description="Составьте план или сразу запишите готовый результат."
+      action={<Link className="button secondary" to={`/workouts/new?client=${clientId}`}>Запланировать тренировку</Link>}
+    />}
   </AsyncView></Page>
 }
 
@@ -706,6 +722,11 @@ export function WorkoutDetailPage() {
     setRescheduleTime(workout?.startTime?.slice(0, 5) ?? '')
     setDecisionSheet('reschedule')
   }
+  const manageMenuInHeader = Boolean(clientMode && canManage && workout && !done)
+  const workoutManageItems = [
+    { label: 'Копировать тренировку', onClick: () => navigate(`/workouts/new?copy=${workoutId}`) },
+    { label: 'Удалить тренировку', danger: true, disabled: remove.isPending, onClick: () => { void requestWorkoutRemoval() } },
+  ]
   return <Page title="Тренировка" hideTitle className="workout-detail-page" back={backTo}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       {!clientMode && navigationState?.firstPlanClient && <section className="first-plan-success" aria-labelledby="first-plan-success-title">
@@ -719,6 +740,7 @@ export function WorkoutDetailPage() {
       {justCompleted && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={clientMode} clientId={workout.clientId} />}
       <WorkoutHeader eyebrow={clientMode ? 'ВАША ТРЕНИРОВКА' : 'ТРЕНИРОВКА КЛИЕНТА'} title={clientMode ? 'Ваша тренировка' : workout.clientName} state={detailState}
         statusLabel={statusPresentation?.label}
+        action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
         meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span>{clientMode && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · только просмотр</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />
       {plannedActions && canExecute && <div className="workout-detail-primary-actions">
         {workout.workoutDate < today ? <Coachmark id="missed-workout-actions-2026-08" userId={actor?.userId} title="План можно закрыть спокойно" description="Запишите результат, перенесите тренировку или сохраните, что она не состоялась.">
@@ -764,10 +786,7 @@ export function WorkoutDetailPage() {
       {workout.notes && <section className="workout-review workout-review-readonly"><div className="workout-review-head"><div><p className="eyebrow">{clientMode && !clientOwned ? 'ОТ ТРЕНЕРА' : 'К ТРЕНИРОВКЕ'}</p><h2>{clientMode && !clientOwned ? 'Инструкции' : 'Заметка'}</h2></div></div><p className="workout-review-text">{workout.notes}</p></section>}
       {canManage && <div className="actions workout-detail-actions">
         {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
-        <OverflowMenu label="Другие действия с тренировкой" items={[
-          { label: 'Копировать тренировку', onClick: () => navigate(`/workouts/new?copy=${workoutId}`) },
-          { label: 'Удалить тренировку', danger: true, disabled: remove.isPending, onClick: () => { void requestWorkoutRemoval() } },
-        ]} />
+        {!manageMenuInHeader && <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} />}
       </div>}
       {clientAuthoredReadOnly && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Скопировать и отправить план</Link></div>}
       {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Создать свою копию</Link></div>}
@@ -1260,13 +1279,13 @@ function formatElapsed(seconds: number): string {
   return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`
 }
 
-function WorkoutTimer({ startedAt }: { startedAt: string | null }) {
+function WorkoutTimer({ startedAt, resting = false }: { startedAt: string | null; resting?: boolean }) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
   }, [])
-  const className = 'live-timer'
+  const className = `live-timer${resting ? ' resting' : ''}`
   if (!startedAt) return <span className={className}><span className="live-dot-mark" aria-hidden="true" />LIVE</span>
   const elapsed = Math.max(0, Math.floor((now - Date.parse(startedAt)) / 1000))
   return <span className={className}><span className="live-dot-mark" aria-hidden="true" />{formatElapsed(elapsed)}</span>
@@ -1712,7 +1731,7 @@ export function LiveWorkoutPage() {
         return (
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
         <div className="live-pinned">
-          <WorkoutTimer startedAt={query.data.startedAt ?? null} />
+          <WorkoutTimer startedAt={query.data.startedAt ?? null} resting={restActive} />
           {restRemaining !== null && <div className="rest-timer">
             <strong>Отдых {formatRest(restRemaining)}</strong>
             <div className="rest-controls">
@@ -1765,12 +1784,12 @@ export function LiveWorkoutPage() {
               const firstPlan = exercise.sets.map((set) => planLine(exercise.inputKind, set)).find(Boolean)
               const countLabel = exercise.sets.length === 1 ? 'подход' : exercise.sets.length < 5 ? 'подхода' : 'подходов'
               return <WorkoutExercise key={exercise.id} state="upcoming" className="live-exercise-upcoming">
-                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<><WorkoutStatus state="upcoming" />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
                 <p className="live-upcoming-summary"><span>{exercise.sets.length} {countLabel}</span>{firstPlan && <span>План: {firstPlan}</span>}</p>
               </WorkoutExercise>
             }
             return <WorkoutExercise key={exercise.id} state={blockStatus === 'done' ? 'completed' : blockStatus} className={`live-exercise ${blockStatus}`}>
-              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<><WorkoutStatus state={blockStatus === 'done' ? 'completed' : blockStatus} />{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
+              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
               {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}

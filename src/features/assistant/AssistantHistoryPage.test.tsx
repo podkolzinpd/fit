@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
-import { appendWorkoutParse, appendedWorkoutTranscript, assistantWorkoutSaveInput, enqueueWorkoutParse, removeWorkoutParseSource, replaceWorkoutParseSource, resolveWorkoutParseSource, updateWorkoutParseMetrics } from './workout-draft'
+import { appendAssistantTranscript, appendWorkoutParse, appendedWorkoutTranscript, assistantWorkoutDraftKey, assistantWorkoutSaveInput, clearAssistantWorkoutDraft, enqueueWorkoutParse, readAssistantWorkoutDraft, removeWorkoutParseSource, replaceWorkoutParseSource, resolveWorkoutParseSource, updateWorkoutParseMetrics, writeAssistantWorkoutDraft } from './workout-draft'
 import { assistantActionView } from './assistant-action-view'
 
 const benchPress = {
@@ -9,6 +9,10 @@ const benchPress = {
 } as ExerciseSnapshot
 
 describe('assistant program draft saving', () => {
+  it('keeps existing typed text while live voice snapshots replace their own interim tail', () => {
+    expect(appendAssistantTranscript('Запиши тренировку Сан Санычу', 'жим')).toBe('Запиши тренировку Сан Санычу\nжим')
+    expect(appendAssistantTranscript('Запиши тренировку Сан Санычу', 'жим лёжа 3 по 10')).toBe('Запиши тренировку Сан Санычу\nжим лёжа 3 по 10')
+  })
   it('routes every designed assistant flow to a structured card instead of the generic preview', () => {
     expect(assistantActionView({ tool: 'record_workout', payload: { step: 'workout' } })).toBe('workout-collection')
     expect(assistantActionView({ tool: 'record_workout', payload: { step: 'confirm' } })).toBe('workout-confirm')
@@ -23,6 +27,24 @@ describe('assistant program draft saving', () => {
     expect(assistantWorkoutSaveInput('request-1', 'client-1', '2026-08-25', '17:07', [])).toEqual({
       workout: { requestId: 'request-1', clientId: 'client-1', workoutDate: '2026-08-25', startTime: '17:07', exercises: [] },
     })
+  })
+
+  it('restores date, time, parsed rows and request id for the same workout draft', () => {
+    const storage = new Map<string, string>()
+    const localStorage = {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => { storage.set(key, value) },
+      removeItem: (key: string) => { storage.delete(key) },
+    }
+    const key = assistantWorkoutDraftKey('trainer-1', 'conversation-1', 'client-1')
+    const snapshot = {
+      transcript: 'жим лёжа 3 по 10', rawFragments: ['жим лёжа 3 по 10'], workoutDate: '2026-08-26', startTime: '01:45', requestId: 'request-1',
+      result: { items: [{ sourceText: 'жим лёжа 3 по 10', exerciseRef: 'barbell-bench-press', confidence: 1, sets: [{ reps: 10, weightKg: 55 }] }], unmatched: [] },
+    }
+    writeAssistantWorkoutDraft(key, snapshot, localStorage)
+    expect(readAssistantWorkoutDraft(key, localStorage)).toEqual(snapshot)
+    clearAssistantWorkoutDraft(key, localStorage)
+    expect(readAssistantWorkoutDraft(key, localStorage)).toBeUndefined()
   })
 
   it('appends a newly recognized fragment without replacing the existing structured draft', () => {

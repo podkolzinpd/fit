@@ -1,0 +1,141 @@
+name: Deploy production Yandex push notifications function
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-yandex-push-function.yml'
+      - 'scripts/verify-yandex-function-release.mjs'
+      - 'scripts/verify-yandex-function-release.test.mjs'
+      - 'services/api/package.json'
+      - 'services/api/package-lock.json'
+      - 'services/api/src/push-notifications/**'
+      - 'services/api/src/yandex-push-notifications-function.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: production-yandex-push-function
+  cancel-in-progress: false
+
+env:
+  YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
+  YC_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  PUSH_FUNCTION_NAME: fit-send-push-notifications
+  PUSH_RUNTIME_SA_NAME: fit-send-push-notifications
+  PUSH_LOCKBOX_NAME: fit-send-push-notifications-secrets
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+
+      - name: Build the Node function package
+        run: |
+          npm ci --prefix services/api
+          npm --prefix services/api run typecheck
+          npm --prefix services/api run test
+          npm --prefix services/api run build
+          rm -rf .yandex-push-package
+          mkdir -p .yandex-push-package
+          cp services/api/package.json services/api/package-lock.json .yandex-push-package/
+          cp -R services/api/dist .yandex-push-package/dist
+
+      - name: Install Yandex Cloud CLI
+        run: |
+          curl --fail --silent --show-error --location \
+            https://storage.yandexcloud.net/yandexcloud-yc/install.sh \
+            --output /tmp/install-yc.sh
+          bash /tmp/install-yc.sh -i "$HOME/yandex-cloud" -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Exchange GitHub OIDC token for Yandex Cloud IAM token
+        run: scripts/yandex-github-oidc.sh
+
+      - name: Resolve the existing immutable Lockbox version
+        run: |
+          set -euo pipefail
+          lockbox=$(yc lockbox secret get \
+            --name "$PUSH_LOCKBOX_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --format json)
+          lockbox_id=$(jq -er '.id' <<<"$lockbox")
+          lockbox_version_id=$(jq -er '.current_version.id' <<<"$lockbox")
+
+          for required_key in \
+            PUSH_DISPATCH_SECRET \
+            VAPID_PUBLIC_KEY \
+            VAPID_PRIVATE_KEY \
+            VAPID_SUBJECT; do
+            jq -e --arg required_key "$required_key" \
+              '.current_version.payload_entry_keys | index($required_key) != null' \
+              <<<"$lockbox" >/dev/null
+          done
+
+          echo "PUSH_LOCKBOX_ID=$lockbox_id" >> "$GITHUB_ENV"
+          echo "PUSH_LOCKBOX_VERSION_ID=$lockbox_version_id" >> "$GITHUB_ENV"
+
+      - name: Create runtime identity and grant only required access
+        run: |
+          set -euo pipefail
+          if runtime_sa_id=$(yc iam service-account get --name "$PUSH_RUNTIME_SA_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id' 2>/dev/null); then
+            :
+          else
+            runtime_sa_id=$(yc iam service-account create --name "$PUSH_RUNTIME_SA_NAME" \
+              --description 'Runtime identity for production Fit push notifications' \
+              --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
+          fi
+          yc lockbox secret add-access-binding "$PUSH_LOCKBOX_ID" \
+            --role lockbox.payloadViewer --service-account-id "$runtime_sa_id"
+          echo "PUSH_RUNTIME_SA_ID=$runtime_sa_id" >> "$GITHUB_ENV"
+
+      - name: Create or update the push notifications function
+        run: |
+          set -euo pipefail
+          if ! yc serverless function get --name "$PUSH_FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
+            yc serverless function create "$PUSH_FUNCTION_NAME" \
+              --description 'Production Fit Web Push sender, called by pg_cron dispatch with a shared secret' \
+              --folder-id "$YC_FOLDER_ID"
+          fi
+          previous_version_id=$(yc serverless function version get-by-tag \
+            --function-name "$PUSH_FUNCTION_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --tag '$latest' \
+            --format json 2>/dev/null | jq -r '.id // empty' || true)
+          version=$(yc serverless function version create \
+            --function-name "$PUSH_FUNCTION_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --runtime nodejs22 \
+            --entrypoint dist/yandex-push-notifications-function.handler \
+            --memory 256MB \
+            --execution-timeout 30s \
+            --service-account-id "$PUSH_RUNTIME_SA_ID" \
+            --source-path .yandex-push-package \
+            --secret id="$PUSH_LOCKBOX_ID",version-id="$PUSH_LOCKBOX_VERSION_ID",key=PUSH_DISPATCH_SECRET,environment-variable=PUSH_DISPATCH_SECRET \
+            --secret id="$PUSH_LOCKBOX_ID",version-id="$PUSH_LOCKBOX_VERSION_ID",key=VAPID_PUBLIC_KEY,environment-variable=VAPID_PUBLIC_KEY \
+            --secret id="$PUSH_LOCKBOX_ID",version-id="$PUSH_LOCKBOX_VERSION_ID",key=VAPID_PRIVATE_KEY,environment-variable=VAPID_PRIVATE_KEY \
+            --secret id="$PUSH_LOCKBOX_ID",version-id="$PUSH_LOCKBOX_VERSION_ID",key=VAPID_SUBJECT,environment-variable=VAPID_SUBJECT \
+            --format json)
+          echo "PUSH_PREVIOUS_VERSION_ID=$previous_version_id" >> "$GITHUB_ENV"
+          echo "PUSH_CANDIDATE_VERSION_ID=$(jq -er '.id' <<<"$version")" >> "$GITHUB_ENV"
+
+      - name: Verify the candidate and roll back on smoke failure
+        run: |
+          set -euo pipefail
+          node scripts/verify-yandex-function-release.mjs \
+            --function-name "$PUSH_FUNCTION_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --expected-version-id "$PUSH_CANDIDATE_VERSION_ID" \
+            --previous-version-id "$PUSH_PREVIOUS_VERSION_ID" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
