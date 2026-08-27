@@ -61,6 +61,32 @@ test('assistant aligns user and assistant messages by role', async ({ page }) =>
   }
 })
 
+test('assistant composer stays contained and keeps accessible controls on mobile', async ({ page }) => {
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await page.setContent(assistantMarkup())
+
+    const composer = await page.getByTestId('composer').boundingBox()
+    const textarea = await page.getByRole('textbox', { name: 'Сообщение ассистенту' }).boundingBox()
+    const buttons = await page.locator('.assistant-composer .assistant-icon-button').all()
+
+    expect(composer).not.toBeNull()
+    expect(textarea).not.toBeNull()
+    expect(composer!.x).toBeGreaterThanOrEqual(16)
+    expect(width - (composer!.x + composer!.width)).toBeGreaterThanOrEqual(16)
+    expect(textarea!.x).toBeGreaterThanOrEqual(composer!.x)
+    expect(textarea!.x + textarea!.width).toBeLessThanOrEqual(composer!.x + composer!.width)
+
+    for (const button of buttons) {
+      const box = await button.boundingBox()
+      expect(box).not.toBeNull()
+      expect(box!.width).toBeGreaterThanOrEqual(44)
+      expect(box!.height).toBeGreaterThanOrEqual(44)
+      expect(box!.x + box!.width).toBeLessThanOrEqual(composer!.x + composer!.width)
+    }
+  }
+})
+
 test('mobile assistant pins the composer to the shrunken keyboard viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.setContent(assistantMarkup())
@@ -81,6 +107,8 @@ test('mobile assistant pins the composer to the shrunken keyboard viewport', asy
   expect(frame).not.toBeNull()
   expect(frame!.y).toBe(336)
   expect(frame!.y + frame!.height - (composer!.y + composer!.height)).toBeLessThanOrEqual(8)
+  expect(composer!.x).toBeGreaterThanOrEqual(16)
+  expect(390 - (composer!.x + composer!.width)).toBeGreaterThanOrEqual(16)
   expect(composer!.y - (message!.y + message!.height)).toBeLessThanOrEqual(24)
   await expect(page.getByTestId('tabbar')).toBeHidden()
 })

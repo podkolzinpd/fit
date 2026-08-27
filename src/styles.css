@@ -687,14 +687,14 @@ p { margin: 6px 0 }
 .assistant-add-set svg { width:18px; height:18px; }
 .assistant-save-workout { min-height:48px; }
 .assistant-card-hint { margin:0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug); }
-.assistant-composer { grid-area:composer; position:static; display:grid; grid-template-columns:minmax(0, 1fr) 46px 46px; gap:var(--space-2); margin-top:var(--space-2); padding:var(--space-3) 0 calc(var(--space-3) + env(safe-area-inset-bottom)); background:linear-gradient(180deg, transparent, var(--bg) 20%); }
-.assistant-composer textarea { min-width:0; min-height:52px; max-height:112px; overflow-y:auto; resize:none; border:1px solid var(--border); border-radius:26px; background:var(--surface-raised); color:var(--fg); padding:13px var(--space-4); font:inherit; font-size:var(--type-body-size); line-height:1.35; }
-.assistant-composer textarea:focus { outline:3px solid var(--accent-ring); border-color:var(--accent-strong); }
+.assistant-composer { grid-area:composer; position:static; width:100%; min-width:0; box-sizing:border-box; display:grid; grid-template-columns:minmax(0, 1fr) 48px 48px; align-items:end; gap:var(--space-2); margin-top:var(--space-2); padding:6px; border:1px solid var(--border); border-radius:30px; background:color-mix(in srgb, var(--surface-raised) 96%, var(--input)); box-shadow:var(--shadow-soft); }
+.assistant-composer textarea, .assistant-composer > input { width:100%; min-width:0; min-height:48px; max-height:112px; box-sizing:border-box; overflow-y:auto; resize:none; border:0; border-radius:24px; background:transparent; color:var(--fg); padding:12px var(--space-3); font:inherit; font-size:var(--type-body-size); line-height:1.35; }
+.assistant-composer textarea:focus, .assistant-composer > input:focus { outline:2px solid var(--accent-ring); outline-offset:-2px; }
 .assistant-workout-saved { display:flex; align-items:center; gap:var(--space-3); padding:var(--space-3) var(--space-4); border:1px solid var(--accent-border); border-radius:var(--radius-lg); background:var(--surface-raised); }
 .assistant-workout-saved > span { display:grid; place-items:center; width:32px; height:32px; border-radius:50%; background:var(--accent-soft); color:var(--accent-strong); font-weight:800; }
 .assistant-workout-saved > div { display:grid; gap:2px; }
 .assistant-workout-saved small { color:var(--muted); }
-.assistant-icon-button { display:grid; place-items:center; width:46px; min-height:52px; padding:0; border-radius:50%; }
+.assistant-icon-button { display:grid; place-items:center; width:48px; min-height:48px; padding:0; border-radius:50%; }
 .assistant-icon-button svg { width:22px; height:22px; }
 .assistant-reset { grid-column:1 / -1; justify-self:center; min-height:auto; padding:4px 8px; border:0; background:transparent; color:var(--muted); box-shadow:none; font-size:var(--type-caption-size); }
 .assistant-reset:hover { color:var(--fg); }
@@ -704,13 +704,13 @@ p { margin: 6px 0 }
   .assistant-shell .assistant-page { height:100%; min-height:0; grid-template-rows:auto minmax(0, 1fr) auto auto; padding-bottom:0; overflow:hidden; }
   .assistant-shell .assistant-thread { overflow-y:auto; overscroll-behavior:contain; }
   .assistant-shell .assistant-context-panel { max-height:min(58vh, 520px); overflow-y:auto; }
-  .assistant-shell .assistant-composer { position:static; margin-top:0; padding-bottom:var(--space-3); }
+  .assistant-shell .assistant-composer { position:static; margin-top:0; padding:6px; }
   .phone-frame.keyboard-open .assistant-page { height:100%; min-height:0; grid-template-areas:"thread" "context" "composer"; grid-template-rows:minmax(0, 1fr) auto auto; gap:8px; padding-top:0; padding-bottom:0; overflow:hidden; }
   .phone-frame.keyboard-open .assistant-page:not(:has(> .assistant-context-panel)) { grid-template-areas:"thread" "composer"; grid-template-rows:minmax(0, 1fr) auto; }
   .phone-frame.keyboard-open .assistant-session-switcher { display:none; }
   .phone-frame.keyboard-open .assistant-thread { overflow-y:auto; overscroll-behavior:contain; padding-top:8px; }
   .phone-frame.keyboard-open .assistant-context-panel { max-height:42vh; overflow-y:auto; padding:10px; }
-  .phone-frame.keyboard-open .assistant-composer { position:static; margin:0; padding:8px 0 0; background:var(--bg); }
+  .phone-frame.keyboard-open .assistant-composer { position:static; margin:0; padding:6px; background:color-mix(in srgb, var(--surface-raised) 96%, var(--input)); }
   .phone-frame.keyboard-open .assistant-page::after { display:none; }
 }
 /* Workout dictation card: the surface is intentionally generous enough to read
