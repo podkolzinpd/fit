@@ -1656,10 +1656,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise.current { border-color: var(--neutral-current-border); background: var(--neutral-current) }
 .circuit-round.done .exercise, .circuit-round.done .exercise.confirmed { border-color: var(--success-border); background: transparent }
 .live-dot { color: var(--live-indicator); font-weight: 800; font-size: 13px }
-.live-timer { min-height: var(--control-height-compact); display: inline-flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3); border: 1px solid var(--accent-surface-border); border-radius: var(--radius-pill); background: var(--live-warm); color: var(--fg); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; font-size: var(--text-ui) }
+.live-timer { min-height: var(--control-height-compact); display: inline-flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--surface-sunken); color: var(--fg); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; font-size: var(--text-ui) }
+.live-timer.resting { border-color: var(--accent-surface-border); background: var(--live-warm) }
 /* Закреплённый блок live: таймер + отдых под ним, оба прилипают вверху вместе. */
 .live-pinned { position: sticky; top: 0; z-index: 3; margin: 0 0 14px; display: flex; flex-direction: column; gap: 8px; padding: 4px 0; background: var(--surface); }
-.live-dot-mark { width: 8px; height: 8px; border-radius: 50%; background: var(--live-indicator); box-shadow: 0 0 0 0 var(--live-indicator-ring); animation: live-pulse 1.6s ease-out infinite }
+.live-dot-mark { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); box-shadow: none }
+.live-timer.resting .live-dot-mark { background: var(--live-indicator); box-shadow: 0 0 0 0 var(--live-indicator-ring); animation: live-pulse 1.6s ease-out infinite }
 @keyframes live-pulse { 0% { box-shadow: 0 0 0 0 var(--live-indicator-ring) } 70%, 100% { box-shadow: 0 0 0 6px transparent } }
 .rest-controls { display: flex; align-items: center; gap: 8px }
 .rest-step { min-height: 44px; padding: 8px 12px; border: 1px solid var(--accent-surface-border); border-radius: 10px; background: var(--accent-surface); color: var(--fg); font-weight: 700; font-size: 14px; cursor: pointer }
@@ -1674,8 +1676,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .set-edit, .set-remove { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center }
 /* Добавление следующего подхода — вторичное действие: оно не должно конкурировать
    с вводом значений и подтверждением текущего подхода. */
-.live-exercise-head ~ .live-add-set { width:auto; min-height:30px; margin:4px 0 0; padding:2px 0; border:0; background:transparent; color:var(--accent-strong); box-shadow:none; font-size:var(--type-body-size); font-weight:var(--weight-semibold) }
-.live-exercise-head ~ .live-add-set:hover { background:transparent; color:var(--accent-label) }
+.live-exercise-head ~ .live-add-set { width:auto; min-height:30px; margin:4px 0 0; padding:2px 0; border:0; background:transparent; color:var(--fg); box-shadow:none; font-size:var(--type-body-size); font-weight:var(--weight-semibold) }
+.live-exercise-head ~ .live-add-set:hover { background:transparent; color:var(--muted) }
 
 /* В live контент занимает всю высоту (таб-бар скрыт); снизу оставляем место
    под закреплённую панель «Завершить», чтобы она не перекрывала последнее упр. */
@@ -1735,8 +1737,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-set-compact-values { min-width:0; display:flex; flex-direction:column; gap:1px; overflow:hidden }
 .live-set-compact-values strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--fg); font-size:var(--type-body-size) }
 .live-set-compact-values small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:var(--type-caption-size) }
-.live-set-compact-action { min-height:36px; padding:4px 2px; color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); text-align:center }
-.live-set-compact.confirmed .live-set-compact-action { color:var(--success-fg); font-size:18px }
+.live-set-compact-action { min-height:44px; padding:6px 8px; border-radius:var(--radius-sm); background:var(--accent); color:#fff; font-size:var(--type-caption-size); font-weight:var(--weight-bold); text-align:center }
+.live-set-compact.confirmed .live-set-compact-action { min-height:44px; padding:4px 2px; background:transparent; color:var(--success-fg); font-size:18px }
 .live-set-grid { position:relative; display:grid; grid-template-columns:28px minmax(0, 1fr) minmax(0, 1fr) 44px; gap:6px; min-height:50px; padding:5px 0; border-top:0 }
 .live-set-number { min-height:44px }
 .live-set .set-head { min-height:auto; font-size:var(--type-caption-size); line-height:var(--leading-snug) }
