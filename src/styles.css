@@ -491,7 +491,6 @@ p { margin: 6px 0 }
 .assistant-page { position:relative; display:grid; grid-template-areas:"session" "thread" "context" "composer"; grid-template-rows:auto minmax(0, 1fr) auto auto; align-content:stretch; min-height:100%; gap:var(--space-4); padding:10px var(--space-4) calc(106px + env(safe-area-inset-bottom)); color:var(--fg); }
 .assistant-page:not(:has(> .assistant-context-panel)) { grid-template-areas:"session" "thread" "composer"; grid-template-rows:auto minmax(0, 1fr) auto; }
 .assistant-design-preview { width:min(100%, 390px); min-height:100vh; margin:0 auto; padding:24px 14px; background:var(--bg); color:var(--fg); }
-.assistant-page::after { content:""; position:absolute; z-index:0; right:-24%; bottom:-10%; width:86%; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle, color-mix(in srgb, var(--accent) 45%, transparent) 0, var(--accent-ring) 43%, transparent 71%); pointer-events:none; filter:blur(12px); }
 .assistant-page > * { position:relative; z-index:1; }
 .assistant-local-note { margin:0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug); }
 .assistant-thread { grid-area:thread; display:flex; flex-direction:column; gap:var(--space-4); min-height:0; padding:2px 2px 8px 0; }
@@ -711,7 +710,6 @@ p { margin: 6px 0 }
   .phone-frame.keyboard-open .assistant-thread { overflow-y:auto; overscroll-behavior:contain; padding-top:8px; }
   .phone-frame.keyboard-open .assistant-context-panel { max-height:42vh; overflow-y:auto; padding:10px; }
   .phone-frame.keyboard-open .assistant-composer { position:static; margin:0; padding:6px; background:color-mix(in srgb, var(--surface-raised) 96%, var(--input)); }
-  .phone-frame.keyboard-open .assistant-page::after { display:none; }
 }
 /* Workout dictation card: the surface is intentionally generous enough to read
    and edit on a 390px client viewport. Keep all colors semantic so the same
