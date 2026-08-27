@@ -6,7 +6,7 @@ function scrollAnchor(scrollHeight: number, scrollTop = 0) {
 }
 
 describe('assistant viewport anchoring', () => {
-  it('keeps the outer page fixed and anchors the thread tail above the keyboard', () => {
+  it('keeps the outer mobile page fixed and anchors the thread tail to the composer', () => {
     const thread = scrollAnchor(840, 0)
     const content = scrollAnchor(1_400, 620)
 
@@ -16,7 +16,7 @@ describe('assistant viewport anchoring', () => {
     expect(thread.scrollTop).toBe(840)
   })
 
-  it('uses the normal page scroll when the keyboard is closed', () => {
+  it('uses the normal page scroll outside the contained mobile layout', () => {
     const thread = scrollAnchor(840, 120)
     const content = scrollAnchor(1_400, 0)
 

@@ -40,6 +40,7 @@ export function AppLayout() {
   const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   const liveSession = /\/live$/.test(pathname)
   const workoutForm = pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname)
+  const assistant = pathname === '/assistant'
   const immersive = liveSession || workoutForm || todayStep
   const contentClass = immersive ? 'content content-immersive' : 'content'
 
@@ -49,6 +50,7 @@ export function AppLayout() {
     redesignedStart && pathname === '/today' ? 'today-start-shell' : '',
     liveSession ? 'live-session-shell' : '',
     workoutForm ? 'workout-form-shell' : '',
+    assistant ? 'assistant-shell' : '',
     keyboardOpen ? 'keyboard-open' : '',
   ].filter(Boolean).join(' ')
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">

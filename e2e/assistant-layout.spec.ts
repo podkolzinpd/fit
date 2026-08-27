@@ -1,0 +1,67 @@
+import { readFileSync } from 'node:fs'
+import { test, expect } from '@playwright/test'
+
+const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8')
+
+function assistantMarkup() {
+  return `<!doctype html>
+    <html class="theme-light">
+      <head><meta name="viewport" content="width=device-width, initial-scale=1"><style>${styles}</style></head>
+      <body><div id="root">
+        <div class="phone-frame theme-light assistant-shell">
+          <div class="content">
+            <main class="assistant-page">
+              <section class="assistant-session-switcher"><div class="assistant-session-bar"><strong>Сегодня</strong></div></section>
+              <section class="assistant-thread">
+                <article class="assistant-message assistant-message-user"><p>Отменить</p></article>
+                <article class="assistant-message assistant-message-assistant" data-testid="last-message"><p>Хорошо, запись тренировки отменена.</p></article>
+              </section>
+              <form class="assistant-composer" data-testid="composer">
+                <textarea aria-label="Сообщение ассистенту" placeholder="Опишите тренировку"></textarea>
+                <button class="assistant-icon-button" type="button">М</button>
+                <button class="assistant-icon-button" type="button">→</button>
+              </form>
+            </main>
+          </div>
+          <nav class="tab-bar trainer-tab-bar" data-testid="tabbar"><a>Сегодня</a><a>Клиенты</a><a>Ассистент</a><a>Расписание</a></nav>
+        </div>
+      </div></body>
+    </html>`
+}
+
+test('mobile assistant pins the conversation tail and composer above the tab bar', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.setContent(assistantMarkup())
+
+  const composer = await page.getByTestId('composer').boundingBox()
+  const message = await page.getByTestId('last-message').boundingBox()
+  const tabbar = await page.getByTestId('tabbar').boundingBox()
+
+  expect(composer).not.toBeNull()
+  expect(message).not.toBeNull()
+  expect(tabbar).not.toBeNull()
+  expect(tabbar!.y - (composer!.y + composer!.height)).toBeLessThanOrEqual(16)
+  expect(composer!.y - (message!.y + message!.height)).toBeLessThanOrEqual(24)
+})
+
+test('mobile assistant pins the composer to the shrunken keyboard viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.setContent(assistantMarkup())
+  await page.locator('html').evaluate((element) => {
+    element.classList.add('app-keyboard-open')
+    element.style.setProperty('--app-visible-height', '508px')
+    element.style.setProperty('--app-viewport-height', '844px')
+  })
+  await page.locator('.phone-frame').evaluate((element) => element.classList.add('keyboard-open'))
+
+  const composer = await page.getByTestId('composer').boundingBox()
+  const message = await page.getByTestId('last-message').boundingBox()
+  const frame = await page.locator('.phone-frame').boundingBox()
+
+  expect(composer).not.toBeNull()
+  expect(message).not.toBeNull()
+  expect(frame).not.toBeNull()
+  expect(frame!.y + frame!.height - (composer!.y + composer!.height)).toBeLessThanOrEqual(8)
+  expect(composer!.y - (message!.y + message!.height)).toBeLessThanOrEqual(24)
+  await expect(page.getByTestId('tabbar')).toBeHidden()
+})
