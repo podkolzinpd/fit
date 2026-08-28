@@ -1,4 +1,4 @@
-import type { AccountRole, SessionActor, TrainerActor } from '../../shared/domain'
+import type { AccountRole, SessionActor, SessionFeatureFlags, TrainerActor } from '../../shared/domain'
 import { isValidTimeZone, normalizeTimeZone, systemTimeZone } from '../../shared/local-date'
 import { authQueries } from '../queries/auth.queries'
 import { repositoryError } from './error'
@@ -11,6 +11,14 @@ function isTransientNetworkError(error: unknown): boolean {
     || (error instanceof Error && NETWORK_ERROR.test(error.message))
     || (typeof error === 'object' && error !== null && 'message' in error
       && typeof error.message === 'string' && NETWORK_ERROR.test(error.message))
+}
+
+function sessionFeatureFlags(result: Awaited<ReturnType<typeof authQueries.getFeatureFlags>>): SessionFeatureFlags {
+  return {
+    // Missing rows and read failures are intentionally safe: preview access
+    // disappears without blocking authentication or exposing the new UI.
+    monochromePreview: !result.error && result.data?.monochrome_preview === true,
+  }
 }
 
 async function retrySignInAfterNetworkBlip(email: string, password: string) {
@@ -59,9 +67,10 @@ export const authRepository = {
     if (error) throw repositoryError(error)
   },
   async initialize(user: { id: string; email?: string; user_metadata: Record<string, unknown> }): Promise<SessionActor> {
-    const [linkedClient, existing] = await Promise.all([
+    const [linkedClient, existing, featureFlagResult] = await Promise.all([
       authQueries.getLinkedClient(user.id),
       authQueries.getProfile(user.id),
+      authQueries.getFeatureFlags(user.id),
     ])
     if (linkedClient.error) throw repositoryError(linkedClient.error)
     if (existing.error) throw repositoryError(existing.error)
@@ -75,6 +84,7 @@ export const authRepository = {
         firstName: firstName || null,
         lastName: lastNameParts.join(' ') || null,
         timezone: normalizeTimeZone(existing.data?.timezone),
+        featureFlags: sessionFeatureFlags(featureFlagResult),
         clientId: linkedClient.data.id,
         trainerId: linkedClient.data.trainer_id,
         fullName: linkedClient.data.full_name,
@@ -110,6 +120,7 @@ export const authRepository = {
       firstName: profileData.first_name,
       lastName: profileData.last_name,
       timezone: normalizeTimeZone(profileData.timezone),
+      featureFlags: sessionFeatureFlags(featureFlagResult),
     }
   },
   async updateProfile(actor: TrainerActor): Promise<TrainerActor> {
