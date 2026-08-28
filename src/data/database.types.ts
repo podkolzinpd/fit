@@ -1,4 +1,4 @@
-// schema-sha256: 1855e3efe833d4aba1f8d2ed3ab7191d7b8bf7ec31f5f32f8f16a6e7386b20bc
+// schema-sha256: 8cc072bcdc31931c27a584df6aa673888cc3e99a47061eb2fac3101924ae0af2
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1822,6 +1822,7 @@ export type Database = {
           published_id: string
         }[]
       }
+      reconnect_client_trainer: { Args: { p_code: string }; Returns: string }
       record_planned_workout_result: {
         Args: { p_expected_version: number; p_workout: Json }
         Returns: string
