@@ -32,15 +32,15 @@ resource "yandex_serverless_container" "api" {
     url = "cr.yandex/${yandex_container_repository.api.name}:${var.api_image_tag}"
     environment = merge(
       {
-        APP_ENV                = var.environment
-        FIT_RELEASE_ID         = var.api_image_tag
-        LOG_LEVEL              = "info"
-        DATABASE_HOST          = yandex_mdb_postgresql_cluster_v2.fit.hosts["primary"].fqdn
-        DATABASE_PORT          = "6432"
-        DATABASE_NAME          = yandex_mdb_postgresql_database.fit.name
-        DATABASE_USER          = yandex_mdb_postgresql_user.api.name
-        DATABASE_SSL_ROOT_CERT = "/app/certs/yandex-cloud-ca.pem"
-        YANDEX_CLOUD_FOLDER_ID = var.folder_id
+        APP_ENV                             = var.environment
+        FIT_RELEASE_ID                      = var.api_image_tag
+        LOG_LEVEL                           = "info"
+        DATABASE_HOST                       = yandex_mdb_postgresql_cluster_v2.fit.hosts["primary"].fqdn
+        DATABASE_PORT                       = "6432"
+        DATABASE_NAME                       = yandex_mdb_postgresql_database.fit.name
+        DATABASE_USER                       = yandex_mdb_postgresql_user.api.name
+        DATABASE_SSL_ROOT_CERT              = "/app/certs/yandex-cloud-ca.pem"
+        YANDEX_CLOUD_FOLDER_ID              = var.folder_id
         YANDEX_CLOUD_USE_METADATA_IAM_TOKEN = "true"
       },
       var.yandex_oauth_client_id == null ? {} : {
