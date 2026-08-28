@@ -440,7 +440,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.getByText('Ваши самостоятельные тренировки сохранены. Планы тренера уже доступны в кабинете.')).toBeVisible()
   await page.getByRole('button', { name: 'Открыть кабинет' }).click()
   await expect(page).toHaveURL(/\/me$/)
-  await expect(page.getByText(/Доброе .+, Самостоятельный клиент/)).toBeVisible()
+  await expect(page.getByText(/^(?:Доброе утро|Добрый день|Добрый вечер), Самостоятельный клиент/)).toBeVisible()
   await expect(page.getByRole('region', { name: 'Тренировка по плану' })).toContainText('Свободный бег')
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
 

@@ -10,12 +10,6 @@ resource "yandex_iam_service_account" "migration" {
   description = "Temporary runtime identity for reviewed PostgreSQL migrations"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "api_ai_user" {
-  folder_id = var.folder_id
-  role      = "ai.languageModels.user"
-  member    = "serviceAccount:${yandex_iam_service_account.api.id}"
-}
-
 resource "yandex_iam_service_account_iam_member" "deployer_self_use" {
   count = var.deployer_member == null ? 0 : 1
 

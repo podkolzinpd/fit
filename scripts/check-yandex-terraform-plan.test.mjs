@@ -330,8 +330,8 @@ describe('Yandex Terraform plan policy', () => {
     assert.equal(result.status, 0)
   })
 
-  test('allows only the API runtime language-model role automatically', () => {
-    const accepted = runPolicy(
+  test('blocks folder IAM changes from the ordinary deploy identity', () => {
+    const result = runPolicy(
       [{
         address: 'yandex_resourcemanager_folder_iam_member.api_ai_user',
         change: {
@@ -344,22 +344,12 @@ describe('Yandex Terraform plan policy', () => {
       }],
       { automaticStageUpdate: true },
     )
-    const rejected = runPolicy(
-      [{
-        address: 'yandex_resourcemanager_folder_iam_member.api_ai_user',
-        change: {
-          actions: ['create'],
-          after: {
-            member: 'serviceAccount:ajeapiruntime',
-            role: 'editor',
-          },
-        },
-      }],
-      { automaticStageUpdate: true },
-    )
 
-    assert.equal(accepted.status, 0)
-    assert.notEqual(rejected.status, 0)
+    assert.notEqual(result.status, 0)
+    assert.match(
+      result.stderr,
+      /Automatic stage deploy contains new or cost-sensitive infrastructure changes/,
+    )
   })
 
   test('rejects broader access through the runtime preflight grant', () => {

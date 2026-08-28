@@ -84,7 +84,6 @@ resource "yandex_serverless_container" "api" {
     yandex_container_registry_iam_binding.api_image_puller,
     yandex_iam_service_account_iam_member.deployer_self_use,
     yandex_iam_service_account_iam_member.api_deployer,
-    yandex_resourcemanager_folder_iam_member.api_ai_user,
     yandex_lockbox_secret_iam_member.api_connection_secret_reader,
     yandex_lockbox_secret_iam_member.legacy_supabase_bridge_reader,
   ]
