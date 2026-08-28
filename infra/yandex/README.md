@@ -90,6 +90,13 @@ make no paid model request. The two synthetic AI scenarios run only through
 the manually dispatched `smoke-yandex-stage-ai.yml` workflow after the exact
 `RUN_PAID_AI_SMOKE` confirmation; bounded model retries can add requests.
 
+Before the first native AI deployment, a folder administrator grants
+`ai.languageModels.user` once to the existing `fit-stage-api` service account.
+This folder-level bootstrap binding is deliberately outside Terraform: the
+OIDC deployer must not receive `resource-manager.admin` or be able to expand
+its own permissions. Ordinary deploys remain automatic after this one-time
+grant, and the controlled AI smoke verifies the effective runtime permission.
+
 To enable this bridge on an isolated stage, a security administrator creates an
 existing Lockbox version with exactly these payload keys:
 

@@ -41,8 +41,6 @@ const automaticLockboxAddresses = new Set([
 ])
 const runtimePreflightSecretAccessAddress =
   'yandex_lockbox_secret_iam_member.migration_api_connection_secret_reader[0]'
-const apiAiRoleAddress =
-  'yandex_resourcemanager_folder_iam_member.api_ai_user'
 const costSensitiveContainerFields = [
   'memory',
   'cores',
@@ -131,11 +129,6 @@ const isAutomaticStageChange = (resource) => {
   const actions = resource.change.actions.join(',')
   if (actions === 'create') {
     return isExactPublicApiBinding(resource)
-      || (
-        resource.address === apiAiRoleAddress
-        && resource.change.after?.role === 'ai.languageModels.user'
-        && /^serviceAccount:[a-z0-9]+$/u.test(resource.change.after?.member ?? '')
-      )
       || (
         resource.address === runtimePreflightSecretAccessAddress
         && resource.change.after?.role === 'lockbox.payloadViewer'
