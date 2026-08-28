@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 
 const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8')
 
-function assistantMarkup() {
+function assistantMarkup(context = '') {
   return `<!doctype html>
     <html class="theme-light">
       <head><meta name="viewport" content="width=device-width, initial-scale=1"><style>${styles}</style></head>
@@ -21,6 +21,7 @@ function assistantMarkup() {
                 <article class="assistant-message assistant-message-user" data-message-kind="user" data-testid="short-user-message"><p>Отменить</p></article>
                 <article class="assistant-message assistant-message-assistant" data-message-kind="assistant" data-testid="last-message"><p>Хорошо, запись тренировки отменена.</p></article>
               </section>
+              ${context}
               <form class="assistant-composer" data-testid="composer">
                 <textarea aria-label="Сообщение ассистенту" placeholder="Опишите тренировку"></textarea>
                 <button class="assistant-icon-button" type="button">М</button>
@@ -32,6 +33,21 @@ function assistantMarkup() {
         </div>
       </div></body>
     </html>`
+}
+
+function workoutContextMarkup() {
+  return `<section class="assistant-context-panel" data-testid="workout-context">
+    <div class="assistant-flow-card assistant-program-draft assistant-workout-draft" aria-label="Черновик тренировки Тестик">
+      <header class="assistant-workout-header"><span class="assistant-workout-heading"><small>Черновик тренировки</small><strong>Тестик</strong></span><span class="assistant-flow-status">Диктовка</span></header>
+      <div class="assistant-workout-meta"><label><span>Дата</span><input type="date" value="2026-08-28"></label><label><span>Время</span><input type="time" value="19:30"></label></div>
+      <span class="assistant-workout-fragment-count">Диктовка · 1 фрагмент</span>
+      <div class="assistant-workout-result"><div class="assistant-workout-result-list">
+        <div class="assistant-workout-result-row"><span class="assistant-workout-exercise-name"><strong>Жим лёжа (Штанга)</strong><small>Штанга</small></span><div class="assistant-workout-metrics" aria-label="Параметры упражнения"><label><input aria-label="Подходы" type="number" value="3"><small>подх.</small></label><label><input aria-label="Повторы" type="number" value="10"><small>повт.</small></label><label><input aria-label="Вес" type="number" value="50"><small>кг</small></label></div><button type="button" class="assistant-workout-remove" aria-label="Удалить Жим лёжа (Штанга)">×</button></div>
+      </div></div>
+      <p class="assistant-flow-guidance">Надиктуйте следующее упражнение — оно добавится сюда.</p>
+      <div class="assistant-flow-actions"><button type="button" class="primary">Проверить и сохранить</button><button type="button" class="assistant-action-cancel">Отменить сценарий</button></div>
+    </div>
+  </section>`
 }
 
 test('mobile assistant pins the conversation tail and composer above the tab bar', async ({ page }) => {
@@ -214,6 +230,42 @@ test('assistant composer stays contained and keeps accessible controls on mobile
       expect(box!.width).toBeGreaterThanOrEqual(44)
       expect(box!.height).toBeGreaterThanOrEqual(44)
       expect(box!.x + box!.width).toBeLessThanOrEqual(composer!.x + composer!.width)
+    }
+  }
+})
+
+test('assistant keeps the primary workout action visible before inner scrolling', async ({ page }) => {
+  for (const { width, height } of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {
+    for (const theme of ['theme-light', 'theme-dark']) {
+      await page.setViewportSize({ width, height })
+      await page.setContent(assistantMarkup(workoutContextMarkup()))
+      await page.locator('html').evaluate((element, nextTheme) => {
+        element.setAttribute('class', nextTheme)
+        document.querySelector('.phone-frame')?.classList.remove('theme-light', 'theme-dark')
+        document.querySelector('.phone-frame')?.classList.add(nextTheme)
+      }, theme)
+
+      const context = await page.getByTestId('workout-context').boundingBox()
+      const primary = await page.getByRole('button', { name: 'Проверить и сохранить' }).boundingBox()
+      const cancel = await page.getByRole('button', { name: 'Отменить сценарий' }).boundingBox()
+      const composer = await page.getByTestId('composer').boundingBox()
+      const overflow = await page.getByTestId('workout-context').evaluate((element) => ({
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+        scrollTop: element.scrollTop,
+      }))
+      const pageWidth = await page.evaluate(() => document.documentElement.scrollWidth)
+
+      expect(context).not.toBeNull()
+      expect(primary).not.toBeNull()
+      expect(cancel).not.toBeNull()
+      expect(composer).not.toBeNull()
+      expect(overflow.scrollTop).toBe(0)
+      expect(primary!.y + primary!.height).toBeLessThanOrEqual(context!.y + context!.height + 1)
+      expect(primary!.y + primary!.height).toBeLessThanOrEqual(composer!.y)
+      expect(overflow.scrollHeight).toBeGreaterThanOrEqual(overflow.clientHeight)
+      expect(context!.y + context!.height).toBeLessThanOrEqual(composer!.y)
+      expect(pageWidth).toBe(width)
     }
   }
 })
