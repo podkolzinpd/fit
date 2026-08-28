@@ -243,6 +243,100 @@ test('invitation links reject the wrong role and revoked code without consuming 
   await expect(page.getByRole('alert')).toHaveText('Приглашение недействительно или срок его действия истёк. Попросите новый код.')
 })
 
+test('client safely switches trainers after an explicit disconnect', async ({ page }, testInfo) => {
+  testInfo.setTimeout(180_000)
+  const suffix = `${testInfo.workerIndex}-${Date.now()}`
+
+  async function registerTrainer(name: string, email: string) {
+    await page.goto('/auth')
+    await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+    await page.getByLabel('Имя').fill(name)
+    await page.getByLabel('Email').fill(email)
+    await page.getByLabel('Пароль').fill('FitLocal123!')
+    await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+    await expect(page).toHaveURL(/\/(today|profile)$/)
+  }
+
+  async function createClientInvitation(clientName: string) {
+    await page.goto('/clients')
+    await page.getByRole('link', { name: 'Добавить' }).click()
+    await page.getByLabel('Имя').fill(clientName)
+    await fillClientProfileDetails(page)
+    await page.getByLabel('Начальный вес, кг').fill('60')
+    await Promise.all([
+      page.waitForURL(/\/clients\/[0-9a-f-]+$/),
+      page.getByRole('button', { name: 'Сохранить' }).click(),
+    ])
+    await page.getByRole('button', { name: 'Пригласить клиента' }).click()
+    const code = (await page.getByText(/Код клиента:/).textContent())?.match(/[A-F0-9]{12}/)?.[0]
+    expect(code).toBeTruthy()
+    return code!
+  }
+
+  async function logoutTrainer() {
+    await page.goto('/profile')
+    await page.getByRole('button', { name: 'Выйти' }).click()
+    await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
+  }
+
+  await registerTrainer('Первый тренер', `reconnect-first-${suffix}@fit.local`)
+  const firstCode = await createClientInvitation('Клиент первого тренера')
+  await logoutTrainer()
+
+  await registerTrainer('Второй тренер', `reconnect-second-${suffix}@fit.local`)
+  const secondCode = await createClientInvitation('Клиент второго тренера')
+  await logoutTrainer()
+
+  await page.goto(`/join?code=${firstCode}`)
+  await expect(page).toHaveURL(/\/auth$/)
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Тип аккаунта').selectOption('client')
+  await page.getByLabel('Имя').fill('Самостоятельный клиент')
+  await page.getByLabel('Email').fill(`reconnect-client-${suffix}@fit.local`)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренер пригласил вас в Fit' })).toBeVisible()
+  await page.getByRole('button', { name: 'Подключиться и открыть план' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренер подключён' })).toBeVisible()
+  await page.getByRole('button', { name: 'Открыть кабинет' }).click()
+  await page.goto('/me/profile')
+  await expect(page.getByText('Первый тренер', { exact: true })).toBeVisible()
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/join')
+  await page.getByLabel('Код приглашения').fill(secondCode)
+  await page.getByRole('button', { name: 'Присоединиться' }).click()
+  await expect(page).toHaveURL(new RegExp(`/join\\?code=${secondCode}$`))
+  const conflict = page.getByRole('alert')
+  await expect(conflict).toContainText('Сначала отключите текущего тренера')
+  await expect(conflict).toContainText('Ваш аккаунт, тренировки, замеры и цели сохранятся.')
+  await expect(page.getByRole('button', { name: 'Сначала отключите тренера' })).toBeDisabled()
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('reconnect-conflict-390.png'), fullPage: true })
+
+  await conflict.getByRole('link', { name: 'Открыть профиль' }).click()
+  await expect(page).toHaveURL(/\/me\/profile$/)
+  await page.getByRole('button', { name: 'Отключить' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отключить' }).click()
+  await expect(page.getByRole('status')).toContainText('Ваш аккаунт, тренировки, замеры и цели сохранены.')
+  await expect(page.getByText('Сейчас вы занимаетесь самостоятельно.')).toBeVisible()
+
+  await page.goBack()
+  await expect(page).toHaveURL(new RegExp(`/join\\?code=${secondCode}$`))
+  await expect(page.getByRole('heading', { name: 'Тренер пригласил вас в Fit' })).toBeVisible()
+  await page.getByRole('button', { name: 'Подключиться и открыть план' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренер подключён' })).toBeVisible()
+  await page.getByRole('button', { name: 'Открыть кабинет' }).click()
+
+  await page.setViewportSize({ width: 430, height: 932 })
+  await page.goto('/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await expect(page.getByText('Второй тренер', { exact: true })).toBeVisible()
+  await expect(page.getByText('Первый тренер', { exact: true })).toHaveCount(0)
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('reconnect-success-430-dark.png'), fullPage: true })
+})
+
 test('trainer invitation links a client account', async ({ page }, testInfo) => {
   testInfo.setTimeout(300_000)
   const suffix = `${testInfo.workerIndex}-${Date.now()}`

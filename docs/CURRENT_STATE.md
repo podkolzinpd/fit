@@ -5,12 +5,12 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-28
-Проверенный базовый `main`: `2f0d1e2` (`feat yandex: add controlled stage AI smoke (#641)`)
+Проверенный базовый `main`: `87cc2d4` (`YAFIT-390: безопасное переподключение тренера (#642)`)
 
 ## Активное изменение
 
-- Run `33158653732` не смог создать folder IAM binding: OIDC deployer намеренно
-  без `resource-manager.admin`; точная AI-роль остаётся одноразовым bootstrap.
+- Safe reconnect сохраняет самостоятельную карточку; legacy ownership возвращает контролируемый конфликт без скрытого переноса.
+- Run `33158653732` не создал folder IAM binding: OIDC deployer намеренно без `resource-manager.admin`; AI-роль остаётся bootstrap.
 
 ## Последняя проверенная продуктовая точка
 

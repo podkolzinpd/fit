@@ -31,6 +31,23 @@ async function enrich(row: NonNullable<ClientRow>): Promise<Client> {
   }
 }
 
+const MAX_CLIENT_MERGE_DEPTH = 8
+
+async function resolveClientId(id: string): Promise<string> {
+  let currentId = id
+  const visited = new Set<string>()
+  for (let depth = 0; depth < MAX_CLIENT_MERGE_DEPTH; depth += 1) {
+    if (visited.has(currentId)) throw new Error('Не удалось открыть актуальную карточку клиента')
+    visited.add(currentId)
+    const result = await clientQueries.get(currentId)
+    if (result.error) throw repositoryError(result.error)
+    const mergedIntoClientId = result.data.merged_into_client_id
+    if (!mergedIntoClientId) return currentId
+    currentId = mergedIntoClientId
+  }
+  throw new Error('Не удалось открыть актуальную карточку клиента')
+}
+
 export const clientsRepository = {
   async getMine(): Promise<Client | null> {
     const result = await clientQueries.getMine()
@@ -45,6 +62,7 @@ export const clientsRepository = {
       archivedAt: row.archived_at, version: row.version, membershipVersion: null,
     }
   },
+  resolveId: resolveClientId,
   async list(includeArchived = false): Promise<Client[]> {
     const result = await clientQueries.list(includeArchived)
     if (result.error) throw repositoryError(result.error)
@@ -59,10 +77,11 @@ export const clientsRepository = {
     }))
   },
   async get(id: string): Promise<Client> {
+    const canonicalId = await resolveClientId(id)
     const ownResult = await clientQueries.getMine()
     if (ownResult.error) throw repositoryError(ownResult.error)
     const ownRow: MyClientRow | undefined = ownResult.data[0]
-    if (ownRow?.id === id) {
+    if (ownRow?.id === canonicalId) {
       return {
         id: ownRow.id, hasAccount: true, fullName: ownRow.full_name, canonicalFullName: ownRow.full_name,
         gender: ownRow.gender as Gender | null,
@@ -74,7 +93,7 @@ export const clientsRepository = {
     }
     const result = await clientQueries.list(true)
     if (result.error) throw repositoryError(result.error)
-    const client = result.data.map(fromListRow).find((item) => item.id === id)
+    const client = result.data.map(fromListRow).find((item) => item.id === canonicalId)
     if (!client) throw new Error('Карточка клиента не найдена')
     return client
   },

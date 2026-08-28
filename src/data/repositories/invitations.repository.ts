@@ -30,6 +30,11 @@ export const invitationsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
+  async reconnect(code: string): Promise<string> {
+    const result = await invitationQueries.reconnect(code.trim().toUpperCase())
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
   async list(clientId: string): Promise<ClientInvitation[]> {
     const result = await invitationQueries.list(clientId)
     if (result.error) throw repositoryError(result.error)

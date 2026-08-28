@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const queries = vi.hoisted(() => ({ disconnectTrainer: vi.fn() }))
+const queries = vi.hoisted(() => ({ disconnectTrainer: vi.fn(), reconnect: vi.fn() }))
 vi.mock('../queries/invitations.queries', () => ({ invitationQueries: queries }))
 
 import { invitationsRepository } from './invitations.repository'
@@ -40,6 +40,29 @@ describe('invitationsRepository.disconnectTrainer', () => {
     await expect(invitationsRepository.disconnectTrainer('client-1')).rejects.toMatchObject({
       code: 'client_requires_safe_migration',
       message: 'Сейчас отключить тренера безопасно не получилось. Ваши данные не изменены. Попробуйте позже или напишите в поддержку.',
+    })
+  })
+})
+
+describe('invitationsRepository.reconnect', () => {
+  beforeEach(() => queries.reconnect.mockReset())
+
+  it('normalizes the invitation code and returns the canonical client', async () => {
+    queries.reconnect.mockResolvedValue({ data: 'client-1', error: null })
+
+    await expect(invitationsRepository.reconnect(' abcd1234efgh ')).resolves.toBe('client-1')
+    expect(queries.reconnect).toHaveBeenCalledWith('ABCD1234EFGH')
+  })
+
+  it('maps the explicit disconnect conflict', async () => {
+    queries.reconnect.mockResolvedValue({
+      data: null,
+      error: { code: 'PT409', message: 'trainer_disconnect_required' },
+    })
+
+    await expect(invitationsRepository.reconnect('ABCD1234EFGH')).rejects.toMatchObject({
+      code: 'trainer_disconnect_required',
+      message: 'Сначала отключите текущего тренера в профиле. Ваши тренировки и результаты сохранятся.',
     })
   })
 })
