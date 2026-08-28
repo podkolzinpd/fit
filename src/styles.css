@@ -561,10 +561,10 @@ p { margin: 6px 0 }
 .assistant-context-panel > .assistant-workout-collection, .assistant-context-panel > .assistant-completion-card, .assistant-context-panel > .assistant-program-draft, .assistant-context-panel > .assistant-progress-preview { padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
 .assistant-context-panel > .assistant-flow-card { padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
 .assistant-flow-card { min-width:0; display:grid; gap:12px; padding:16px; border:1px solid var(--accent-surface-border); border-radius:20px; background:var(--surface-raised); box-shadow:var(--shadow-soft); }
-.assistant-flow-card > header, .assistant-workout-result > header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
-.assistant-flow-card > header > span:first-child, .assistant-workout-result > header > span:first-child { min-width:0; display:grid; gap:3px; }
-.assistant-flow-card > header small, .assistant-workout-result > header small { color:var(--accent-strong); font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
-.assistant-flow-card > header strong, .assistant-workout-result > header strong { overflow:hidden; text-overflow:ellipsis; font-size:19px; line-height:1.2; }
+.assistant-flow-card > header, .assistant-workout-draft-content > header, .assistant-workout-result > header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.assistant-flow-card > header > span:first-child, .assistant-workout-draft-content > header > span:first-child, .assistant-workout-result > header > span:first-child { min-width:0; display:grid; gap:3px; }
+.assistant-flow-card > header small, .assistant-workout-draft-content > header small, .assistant-workout-result > header small { color:var(--accent-strong); font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+.assistant-flow-card > header strong, .assistant-workout-draft-content > header strong, .assistant-workout-result > header strong { overflow:hidden; text-overflow:ellipsis; font-size:19px; line-height:1.2; }
 .assistant-flow-status { flex:0 0 auto; padding:5px 8px; border-radius:99px; background:var(--accent-surface); color:var(--accent-strong); font-size:11px; font-weight:750; }
 .assistant-flow-guidance { margin:0; color:var(--muted); font-size:13px; line-height:1.4; }
 .assistant-flow-empty, .assistant-flow-fact { display:grid; gap:3px; padding:11px 12px; border-radius:14px; background:var(--input); }
@@ -623,7 +623,8 @@ p { margin: 6px 0 }
 .assistant-workout-recognition-state { display:grid; gap:4px; padding:14px; border:1px dashed var(--border); border-radius:14px; background:var(--input); }
 .assistant-workout-recognition-state strong { font-size:14px; }
 .assistant-workout-recognition-state span { color:var(--muted); font-size:12px; line-height:1.4; }
-.assistant-workout-draft > .assistant-flow-guidance { padding-inline:2px; }
+.assistant-workout-draft-content { display:contents; }
+.assistant-workout-draft-content > .assistant-flow-guidance { padding-inline:2px; }
 .assistant-workout-draft > .assistant-flow-actions { justify-content:space-between; }
 .assistant-workout-result-list { display:grid; gap:8px; }
 .assistant-workout-result-row { min-width:0; display:grid; grid-template-columns:minmax(76px,1fr) auto 22px; align-items:center; gap:6px; padding:8px; border:1px solid var(--border); border-radius:13px; background:var(--input); }
@@ -711,14 +712,19 @@ p { margin: 6px 0 }
   .assistant-shell .content { overflow:hidden; }
   .phone-frame.assistant-shell.keyboard-open .content:not(.content-immersive) { padding-bottom:0; }
   .assistant-shell .assistant-page { height:100%; min-height:0; grid-template-rows:auto minmax(0, 1fr) auto auto; padding-bottom:0; overflow:hidden; }
+  .assistant-shell .assistant-page:has(> .assistant-context-panel) { grid-template-rows:auto minmax(0, 1fr) minmax(0, min(78vh, 660px)) auto; }
   .assistant-shell .assistant-thread { overflow-y:auto; overscroll-behavior:contain; }
-  .assistant-shell .assistant-context-panel { max-height:min(78vh, 660px); overflow-y:auto; }
+  .assistant-shell .assistant-context-panel { min-height:0; max-height:min(78vh, 660px); overflow-y:auto; }
+  .assistant-shell .assistant-context-panel:has(> .assistant-workout-draft) { overflow:hidden; }
+  .assistant-shell .assistant-context-panel > .assistant-workout-draft { min-height:0; height:100%; box-sizing:border-box; grid-template-rows:minmax(0, 1fr) auto; overflow:hidden; }
+  .assistant-shell .assistant-workout-draft-content { display:grid; min-height:0; gap:20px; overflow-y:auto; overscroll-behavior:contain; }
   .assistant-shell .assistant-composer { position:static; margin-top:0; padding:6px; }
   .phone-frame.keyboard-open .assistant-page { height:100%; min-height:0; grid-template-areas:"thread" "context" "composer"; grid-template-rows:minmax(0, 1fr) auto auto; gap:8px; padding-top:0; padding-bottom:0; overflow:hidden; }
   .phone-frame.keyboard-open .assistant-page:not(:has(> .assistant-context-panel)) { grid-template-areas:"thread" "composer"; grid-template-rows:minmax(0, 1fr) auto; }
   .phone-frame.keyboard-open .assistant-session-switcher { display:none; }
   .phone-frame.keyboard-open .assistant-thread { overflow-y:auto; overscroll-behavior:contain; padding-top:8px; }
   .phone-frame.keyboard-open .assistant-context-panel { max-height:42vh; overflow-y:auto; padding:10px; }
+  .phone-frame.keyboard-open .assistant-context-panel:has(> .assistant-workout-draft) { overflow:hidden; }
   .phone-frame.keyboard-open .assistant-composer { position:static; margin:0; padding:6px; background:color-mix(in srgb, var(--surface-raised) 96%, var(--input)); }
 }
 /* Workout dictation card: the surface is intentionally generous enough to read
@@ -773,15 +779,15 @@ p { margin: 6px 0 }
 .assistant-exercise-options button strong { margin:0; font-size:inherit; line-height:inherit; }
 .assistant-exercise-options button small { font-size:16px; line-height:1.2; }
 .assistant-exercise-options button:first-child { background:var(--accent-grad); color:var(--on-accent); }
-.assistant-workout-draft > .workout-composer { gap:12px; }
-.assistant-workout-draft > .workout-composer .workout-composer-card { border:2px solid var(--border); border-radius:20px; background:var(--surface-raised); }
-.assistant-workout-draft > .workout-composer .voice-note-field > label { font-size:16px; }
-.assistant-workout-draft > .workout-composer .voice-note-field textarea { min-height:110px; font-size:18px; }
-.assistant-workout-draft > .workout-composer .workout-composer-actions { gap:10px; }
-.assistant-workout-draft > .assistant-flow-guidance { padding-inline:4px; color:var(--muted); font-size:20px; line-height:1.35; }
-.assistant-workout-draft > .assistant-flow-actions { display:grid; justify-items:start; gap:20px; }
+.assistant-workout-draft-content > .workout-composer { gap:12px; }
+.assistant-workout-draft-content > .workout-composer .workout-composer-card { border:2px solid var(--border); border-radius:20px; background:var(--surface-raised); }
+.assistant-workout-draft-content > .workout-composer .voice-note-field > label { font-size:16px; }
+.assistant-workout-draft-content > .workout-composer .voice-note-field textarea { min-height:110px; font-size:18px; }
+.assistant-workout-draft-content > .workout-composer .workout-composer-actions { gap:10px; }
+.assistant-workout-draft-content > .assistant-flow-guidance { padding-inline:4px; color:var(--muted); font-size:20px; line-height:1.35; }
+.assistant-workout-draft > .assistant-flow-actions { display:grid; justify-items:start; gap:20px; padding-top:10px; }
 .assistant-workout-draft > .assistant-flow-actions > .primary,
-.assistant-workout-draft > .assistant-workout-result > .primary { width:min(100%, 320px); min-height:58px; padding:12px 18px; border-radius:20px; font-size:20px; font-weight:800; }
+.assistant-workout-draft-content > .assistant-workout-result > .primary { width:min(100%, 320px); min-height:58px; padding:12px 18px; border-radius:20px; font-size:20px; font-weight:800; }
 .assistant-workout-draft > .assistant-flow-actions .assistant-action-cancel { min-height:42px; padding:4px 0; font-size:18px; }
 @media (max-width:360px) {
   .assistant-context-panel:has(> .assistant-workout-draft) > .assistant-flow-card.assistant-workout-draft { padding-inline:12px; }
