@@ -5,19 +5,20 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-29
-Проверенный базовый `main`: `6b025d3` (`docs: accept monochrome UI identity v1 (#650)`)
+Проверенный базовый `main`: `f5cb786` (`feat: add server monochrome preview flag (#651)`)
 
 ## Активное изменение
 
 - Foundation UI Identity v1 принята и зафиксирована в production-документации;
   продуктовые экраны ещё не мигрированы.
-- Готовится отдельный server-managed флаг `monochrome_preview`: default OFF,
+- Server-managed `monochrome_preview` доставлен в production: default OFF,
   чтение только собственной строки через RLS, изменение только серверной ролью.
-  Два согласованных тестовых аккаунта включаются миграцией через Auth UUID;
-  email не попадает во frontend, routing или UI-условия.
-- Сначала отдельно доставляется схема БД, затем frontend-чтение флага, и только
-  после этого — последовательные route-scoped миграции Client Home, Live и
-  Progress. Пользователи без флага сохраняют прежний интерфейс.
+  Два согласованных тестовых аккаунта включены миграцией через Auth UUID.
+- Активная задача добавляет в authenticated actor только runtime-read с
+  fail-closed mapping: отсутствующая строка, `false` или ошибка дают OFF.
+  Email не попадает во frontend, routing или UI-условия; экраны ещё не меняются.
+- После runtime-read начинаются отдельные route-scoped миграции Client Home,
+  Live и Progress. Пользователи без флага сохраняют прежний интерфейс.
 
 ## Последняя проверенная продуктовая точка
 
@@ -104,12 +105,11 @@
   на Supabase; полный cutover не выполнен.
 
 ## Проверки активной ветки
-- Чистая локальная база через Podman применяет всю цепочку миграций с новым
-  флагом. 69 pgTAP-файлов / 821 проверка зелёные, включая default OFF, RLS и
-  запрет authenticated-пользователю менять флаг.
-- Полная проектная проверка зелёная: 857 frontend-тестов, 225 API-тестов,
-  61 infra/policy-тест, lint, typecheck, schema hash и production build.
-  Production migration подтверждается только database deploy после merge.
+- Production database deploy нового флага и связанный Vercel deploy зелёные.
+  Локально чистая база прошла 69 pgTAP-файлов / 821 проверку.
+- Runtime-read: 14 целевых auth/session-тестов зелёные. Полный прогон также
+  зелёный: 859 frontend, 225 API и 61 infra/policy-тест, lint, typecheck,
+  schema hash и production build.
 
 ## Ближайший порядок
 

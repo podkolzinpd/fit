@@ -1,6 +1,6 @@
 # Fit — production rollout Foundation UI Identity v1
 
-Статус: **server flag foundation in progress**.
+Статус: **server flag deployed; authenticated runtime read in progress**.
 
 ## Контракт
 
@@ -30,3 +30,11 @@
 - route gating;
 - Client Home, Live и Progress;
 - глобальное включение новой айдентики.
+
+## Runtime mapping
+
+- Authenticated session читает только `monochrome_preview` собственной строки.
+- Значение `true` преобразуется в `actor.featureFlags.monochromePreview`.
+- Отсутствующая строка, `false` или ошибка чтения дают `false` и не блокируют
+  вход в приложение.
+- Само наличие runtime-флага не меняет UI: каждый экран подключается отдельно.

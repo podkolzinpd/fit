@@ -30,6 +30,10 @@ export const authQueries = {
     .select('profile_id')
     .eq('profile_id', userId)
     .maybeSingle(),
+  getFeatureFlags: (userId: string) => supabase.from('user_feature_flags')
+    .select('monochrome_preview')
+    .eq('user_id', userId)
+    .maybeSingle(),
   getProfile: (id: string) => supabase.from('profiles')
     .select('id,account_role,first_name,last_name,timezone,created_at,updated_at').eq('id', id).maybeSingle(),
   updateProfile: (id: string, values: { first_name: string | null; last_name: string | null; timezone: string }) =>
