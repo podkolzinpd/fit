@@ -241,7 +241,7 @@ test('invitation links reject the wrong role and revoked code without consuming 
 })
 
 test('trainer invitation links a client account', async ({ page }, testInfo) => {
-  testInfo.setTimeout(120_000)
+  testInfo.setTimeout(300_000)
   const suffix = `${testInfo.workerIndex}-${Date.now()}`
   const trainerEmail = `invite-trainer-${suffix}@fit.local`
   const clientEmail = `invite-client-${suffix}@fit.local`
@@ -300,14 +300,54 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page).toHaveURL(/\/me$/)
   await expect(page.getByRole('heading', { name: 'Тренируйтесь и следите за прогрессом' })).toBeVisible()
 
+  // Быстрый старт создаёт собственную карточку самостоятельного клиента.
+  // После этого профиль дополняется обязательными данными, как в реальном
+  // первом входе, и только затем записывается исходная тренировка.
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await page.goto('/me/profile')
+  await page.getByRole('link', { name: 'Изменить данные' }).click()
+  await page.getByLabel('Имя').fill('Самостоятельный клиент')
+  await fillClientProfileDetails(page)
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByText(/Самостоятельный клиент/)).toBeVisible()
+
+  // Реальный проблемный путь: до привязки к тренеру клиент уже тренировался
+  // самостоятельно. Его карточка и завершённый факт должны остаться
+  // каноническими после ввода кода тренера.
+  await page.goto('/me/workouts')
+  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Бег/ }).click()
+  await page.locator('[data-running-format="free"]').click()
+  await Promise.all([
+    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Сохранить' }).click(),
+  ])
+  const preAttachWorkoutUrl = page.url()
+  const preAttachWorkoutPath = new URL(preAttachWorkoutUrl).pathname
+  await page.getByRole('button', { name: 'Начать тренировку' }).click()
+  await page.getByLabel('Фактическое время').fill('20:00')
+  await page.getByLabel('Фактическая дистанция').fill('3')
+  await page.getByRole('button', { name: 'Готово, отдых' }).click()
+  await page.getByRole('button', { name: 'Завершить тренировку' }).click()
+  await Promise.all([
+    page.waitForURL(preAttachWorkoutUrl),
+    page.getByRole('button', { name: 'Завершить', exact: true }).click(),
+  ])
+  await expect(page.getByText(/3 км × 20:00 · темп 6:40\/км/)).toBeVisible()
+
   await page.goto('/join')
   await page.getByLabel('Код приглашения').fill(code!)
   await page.getByRole('button', { name: 'Присоединиться' }).click()
   await expect(page).toHaveURL(/\/me$/)
-  await expect(page.getByText(/Связанный клиент/)).toBeVisible()
+  await expect(page.getByText(/Доброе .+, Самостоятельный клиент/)).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Тренировка по плану' })).toContainText('Свободный бег')
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
 
   await page.goto('/me/workouts')
+  await expect(page.locator(`a[href="${preAttachWorkoutPath}"]`)).toBeVisible()
+  await expect(page.locator(`a[href="${new URL(workoutUrl).pathname}"]`)).toBeVisible()
+
   await page.getByRole('link', { name: 'Добавить' }).click()
   await expect(page.getByLabel('Клиент')).toHaveCount(0)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
@@ -385,7 +425,12 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
-  await page.goto(`${clientDetailUrl}/workouts`)
+  await page.goto('/clients')
+  // В кабинете тренера карточка сохраняет заданное им имя клиента. После
+  // объединения она ведёт к канонической записи самостоятельного клиента.
+  const canonicalClientHref = await page.getByRole('link', { name: /Связанный клиент/ }).getAttribute('href')
+  expect(canonicalClientHref).toMatch(/^\/clients\/[0-9a-f-]+$/)
+  await page.goto(`${canonicalClientHref}/workouts`)
   const clientAuthoredCard = page.locator(`a[href="${ownWorkoutPath}"]`)
   await expect(clientAuthoredCard).toContainText('Создано клиентом')
   await clientAuthoredCard.click()

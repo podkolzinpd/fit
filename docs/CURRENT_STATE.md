@@ -4,20 +4,18 @@
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
 
-Обновлено: 2026-08-27
-Проверенный базовый `main`: `878fa17` (`fix(yandex): preflight progress before stage deploy (#631)`)
+Обновлено: 2026-08-28
+Проверенный базовый `main`: `d3f84dc` (`feat: add client trainer relationship foundation (#634)`)
 
 ## Активное изменение
 
-- Stage run `33088844710` дошёл до candidate release
-  `2ca2f732e25123b793dbaa61f9c80a8a83f8b05f`, но progress smoke вернул `503`;
-  автоматический rollback сохранил предыдущую рабочую revision, production не
-  пострадал. Проверка оказалась неточной: private preflight читал первого
-  доступного клиента, а публичный smoke — детерминированного fixture-клиента.
-- Активный follow-up передаёт в private preflight точный fixture client ID,
-  проверяет сериализацию progress bundle и требует пять последовательных
-  `/health`+`/ready` от candidate release. Диагностика читает только последний
-  HTTP header block после retry; автоматический rollback сохранён.
+- Атомарная привязка самостоятельного клиента к заранее созданной тренером
+  карточке готова к отдельному PR. Самостоятельная карточка остаётся
+  канонической; данные тренера переносятся в неё одной транзакцией с сохранением
+  авторства, исходная карточка архивируется с redirect, повтор кода идемпотентен.
+- Сквозной мобильный сценарий проверяет самостоятельный факт до привязки,
+  назначение тренера, общую историю после объединения и новое назначение после
+  привязки. UI отключения и смены тренера в это изменение не входят.
 
 ## Последняя проверенная продуктовая точка
 
@@ -104,11 +102,11 @@
 
 ## Проверки активной ветки
 - Полный `npm run check` зелёный: 838 frontend, 218 API и 57 infra/policy-
-  тестов, lint, typecheck, coverage и production build. Локальный PostgreSQL 17
-  через Podman проверил точный fixture progress bundle: 23 integration-теста
-  зелёные. Supabase SQL/RLS: 697 тестов зелёные; generated types актуальны.
-- Диагностика сохраняет закрытый `/ready`, безопасные коды без чувствительных
-  данных и автоматический rollback.
+  тестов, lint, typecheck, coverage и production build. Supabase SQL/RLS:
+  753 теста зелёные; generated types актуальны.
+- Целевой Playwright-сценарий `trainer invitation links a client account`
+  зелёный в mobile Chromium. Чистый PostgreSQL 17 через Podman применяет все
+  20 API-миграций; функция объединения, ограничения и trigger проверены.
 
 ## Ближайший порядок
 
