@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-29
-Проверенный базовый `main`: `cf1193e` (`YAFIT-411: keep assistant primary action visible (#647)`)
+Проверенный базовый `main`: `6383a7f` (`YAFIT-413: stabilize upcoming workout test date (#648)`)
 
 ## Активное изменение
 
