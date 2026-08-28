@@ -555,4 +555,34 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // кнопкой в диалоге.
   await page.getByRole('alertdialog').getByRole('button', { name: 'Покинуть' }).click()
   await expect(page).toHaveURL(/\/clients$/)
+
+  // Клиент отключает основного тренера из профиля. На узком светлом экране
+  // сначала проверяем понятное подтверждение, затем на 430 px в тёмной теме —
+  // сам результат. Самостоятельная история остаётся доступна.
+  await page.goto('/profile')
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await page.getByLabel('Email').fill(clientEmail)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/me$/)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/me/profile')
+  await page.getByRole('button', { name: 'Отключить' }).click()
+  const disconnectDialog = page.getByRole('alertdialog')
+  await expect(disconnectDialog).toContainText('Ваш аккаунт, история тренировок, замеры и цели сохранятся.')
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await disconnectDialog.getByRole('button', { name: 'Отмена' }).click()
+
+  await page.setViewportSize({ width: 430, height: 932 })
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.getByRole('button', { name: 'Отключить' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отключить' }).click()
+  await expect(page.getByRole('status')).toContainText('Ваш аккаунт, тренировки, замеры и цели сохранены.')
+  await expect(page.getByText('Сейчас вы занимаетесь самостоятельно.')).toBeVisible()
+  await expect(page.getByText('Основной тренер')).toHaveCount(0)
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+
+  await page.goto('/me/workouts')
+  await expect(page.locator(`a[href="${preAttachWorkoutPath}"]`)).toBeVisible()
+  await expect(page.locator(`a[href="${sentPlanPath}"]`)).toBeVisible()
 })
