@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PublishedTrainingSummary, TrainingSummary, Workout } from '../../shared/domain'
 import { addDays, localDate, todayInTimeZone } from '../../shared/local-date'
 import { ClientProgressGoalSection } from './ClientProgressGoalSection'
@@ -43,6 +43,10 @@ vi.mock('../../data/repositories/workouts.repository', () => ({
   workoutsRepository: { list: repositories.workouts },
 }))
 vi.mock('../../shared/yandex-metrika', () => ({ trackGoal: vi.fn() }))
+
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 function wrapper(queryClient: QueryClient) {
   return function QueryWrapper({ children }: { children: ReactNode }) {
@@ -222,6 +226,8 @@ describe('Training summary card states', () => {
   })
 
   it('turns the client summary into a factual period, goal and upcoming-plan story', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-08-27T12:00:00Z'))
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
     repositories.listForClient.mockResolvedValue([publishedSummary])
     repositories.goal.mockResolvedValue({
