@@ -9,10 +9,9 @@
 
 ## Активное изменение
 
-- Текущая ветка включает native stage AI без статического ключа: runtime service
-  account получает короткоживущий IAM token из metadata. Отдельный ручной smoke
-  проверяет один synthetic parse и одну forced summary generation; обычный
-  deploy не делает платных AI-запросов.
+- Native stage AI использует runtime service account и короткоживущий metadata
+  IAM token вместо статического ключа. Ручной smoke проверяет synthetic parse и
+  forced summary generation; обычный deploy не делает платных AI-запросов.
 
 ## Последняя проверенная продуктовая точка
 
@@ -91,14 +90,15 @@
   pilot UI read-only. Client/custom-exercise и Planned/Live writes — только
   через stage API, production routing не затрагивают.
 - Реальный invite → join → leave/remove smoke на двух Yandex ID — внешняя
-  stage-проверка; локальный lifecycle и RLS-матрица зелёные. Полный cutover
-  не выполнен: production frontend/tenant на Supabase, остальные вкладки без изменений.
+  stage-проверка; локальный lifecycle и RLS-матрица зелёные. Production остаётся
+  на Supabase; полный cutover не выполнен.
 
 ## Проверки активной ветки
-- Полный `npm run check` зелёный: 845 frontend, 225 API и 60 infra/policy-
+- Полный `npm run check` зелёный: 845 frontend, 225 API и 61 infra/policy-
   тестов, lint, typecheck, coverage и production build. Policy проверяет точную
   IAM-роль, запрет автоматического paid AI, ручное подтверждение smoke и
-  отсутствие выгрузки его ответов.
+  отсутствие выгрузки его ответов. Feature-ветка валидирует Terraform без
+  remote state/OIDC; remote plan и apply остаются только на `main`.
 - Целевой Playwright-сценарий `trainer invitation links a client account`
   зелёный в mobile Chromium. Чистая база через Podman применяет миграции;
   отключение и переподключение, сохранность истории, права доступа,

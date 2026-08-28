@@ -113,6 +113,9 @@ Pull-request CI never applies Terraform. A merge to `main` creates a plan and
 automatically deploys only when policy confirms an existing API/migration image
 update with no new paid resource, resize, identity change, delete or replacement.
 Every other infrastructure plan stops before image push, migration or apply.
+Feature branches initialize Terraform without the remote backend and validate
+the configuration without Yandex OIDC or state credentials; remote plan and
+apply remain restricted to `main`.
 
 ## Current intentional limits
 
