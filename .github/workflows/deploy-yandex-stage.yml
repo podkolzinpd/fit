@@ -341,6 +341,7 @@ jobs:
             fi
           done
           fixture_token=$(jq -er '.session.token' stage-workout-fixture-response.json)
+          fixture_client_id=$(jq -er '.session.clientId' stage-workout-fixture-response.json)
           client_fixture_token=$(jq -er '.clientSession.token' stage-workout-fixture-response.json)
           clients_curl_exit=0
           clients_status=$(curl --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
@@ -356,10 +357,11 @@ jobs:
             exit 1
           fi
           clients=$(cat clients-response.json)
-          jq -e '
+          jq -e --arg fixture_client_id "$fixture_client_id" '
             .accessMode == "read_only"
             and (.clients | any(
-              .fullName == "Тестовый клиент Yandex stage"
+              .id == $fixture_client_id
+              and .fullName == "Тестовый клиент Yandex stage"
               and .canonicalFullName == "Тестовый клиент Yandex stage"
               and .currentWeightKg == 64.5
               and .activity.doneCount >= 1
@@ -440,11 +442,7 @@ jobs:
             and (.attention | length == 0)
             and (.attentionPreferences | type == "array")
           ' <<<"$training" >/dev/null
-          client_id=$(jq -er '
-            .clients[]
-            | select(.fullName == "Тестовый клиент Yandex stage")
-            | .id
-          ' <<<"$clients")
+          client_id="$fixture_client_id"
           stage_smoke_check=progress-bundle
           progress=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --header "Authorization: Bearer $YC_TOKEN" \

@@ -311,6 +311,12 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
          where name = 'Тестовая тяга Yandex stage'`,
       )
       await ownerPool.query(
+        `delete from public.client_trainer_relationships
+         where client_id in (
+           select id from public.clients where full_name = 'Тестовый клиент Yandex stage'
+         )`,
+      )
+      await ownerPool.query(
         `delete from public.clients
          where full_name = 'Тестовый клиент Yandex stage'`,
       )
@@ -329,6 +335,10 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
       // Keep the persistent local Podman database deterministic across reruns.
       // The lifecycle scenario recreates these fixtures later in the suite.
+      await ownerPool.query(
+        'delete from public.client_trainer_relationships where client_id = $1',
+        [LIFECYCLE_CLIENT_ID],
+      )
       await ownerPool.query(
         'delete from public.clients where id = $1',
         [LIFECYCLE_CLIENT_ID],
@@ -1080,7 +1090,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await expect(
         withActorTransaction(runtimePool, LIFECYCLE_CLIENT_ACTOR_ID, (client) =>
           claimClientInvitation(client, secondInvitation.code)),
-      ).rejects.toMatchObject({ failure: 'not_found' })
+      ).resolves.toBe(LIFECYCLE_CLIENT_ID)
 
       const trainerInvitation = await withActorTransaction(
         runtimePool,

@@ -164,8 +164,18 @@ test('loads synthetic fixtures and verifies every read model through the runtime
   assert.match(workflow, /\/stage\/fixtures\/workout-read-model/)
   assert.match(workflow, /chmod 600 stage-workout-fixture-response\.json/)
   assert.match(workflow, /X-Fit-Pilot-Session: \$fixture_token/)
+  assert.match(
+    workflow,
+    /fixture_client_id=\$\(jq -er '\.session\.clientId' stage-workout-fixture-response\.json\)/,
+  )
   assert.match(workflow, /\/v1\/clients/)
   assert.match(workflow, /Тестовый клиент Yandex stage/)
+  assert.match(workflow, /\.id == \$fixture_client_id/)
+  assert.match(workflow, /client_id="\$fixture_client_id"/)
+  assert.doesNotMatch(
+    workflow,
+    /client_id=\$\(jq -er '[\s\S]*?select\(\.fullName == "Тестовый клиент Yandex stage"\)/,
+  )
   assert.match(workflow, /\/v1\/connections/)
   assert.match(workflow, /\.memberships \| any\(\.isRoot == true\)/)
   assert.match(workflow, /\/v1\/training-data/)
