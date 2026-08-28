@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Fit — dark palette preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./monochrome-typography.css">
+</head>
+<body>
+  <main class="fit-type-preview">
+    <header class="fit-type-intro">
+      <p class="fit-type-kicker">GATE 1 · TASK 4</p>
+      <h1>Тёмная монохромная палитра</h1>
+      <p>Изолированный specimen. Утверждённые типографика Onest и светлая
+        палитра не меняются — проверяются только нейтральные роли тёмной темы.</p>
+    </header>
+
+    <section class="fit-light-palette" aria-labelledby="fit-light-palette-title">
+      <header class="fit-light-palette-head">
+        <div>
+          <span class="fit-type-meta">LIGHT FOUNDATION</span>
+          <h2 class="fit-type-title" id="fit-light-palette-title">Тёплый графит без coral и purple</h2>
+        </div>
+        <p class="fit-type-body">Цвет задаёт только иерархию фона, поверхностей и текста. Семантические success, warning и danger в эту задачу не входят.</p>
+      </header>
+
+      <div class="fit-light-token-grid">
+        <article class="fit-light-token fit-light-token-bg"><i aria-hidden="true"></i><span><b>App background</b><code>#FBFAF7</code></span></article>
+        <article class="fit-light-token fit-light-token-fg"><i aria-hidden="true"></i><span><b>Main graphite</b><code>#242426</code></span></article>
+        <article class="fit-light-token fit-light-token-on-primary"><i aria-hidden="true"></i><span><b>On graphite</b><code>#F6F2EA</code></span></article>
+        <article class="fit-light-token fit-light-token-raised"><i aria-hidden="true"></i><span><b>Raised</b><code>#F7F5F1</code></span></article>
+        <article class="fit-light-token fit-light-token-surface"><i aria-hidden="true"></i><span><b>Grouped surface</b><code>#EFEDE8</code></span></article>
+        <article class="fit-light-token fit-light-token-input"><i aria-hidden="true"></i><span><b>Sunken / field</b><code>#E5E2DC</code></span></article>
+        <article class="fit-light-token fit-light-token-divider"><i aria-hidden="true"></i><span><b>Divider</b><code>#DEDBD4</code></span></article>
+        <article class="fit-light-token fit-light-token-muted"><i aria-hidden="true"></i><span><b>Secondary on bg</b><code>#74736F</code></span></article>
+        <article class="fit-light-token fit-light-token-muted-strong"><i aria-hidden="true"></i><span><b>Secondary strong</b><code>#666560</code></span></article>
+      </div>
+
+      <div class="fit-light-contrast-grid" aria-label="Контраст ключевых сочетаний">
+        <p><b>14.84:1</b><span>graphite / background</span></p>
+        <p class="fit-light-inverse"><b>13.88:1</b><span>milk / graphite</span></p>
+        <p class="fit-light-secondary"><b>4.55:1</b><span>secondary / background</span></p>
+        <p class="fit-light-secondary-strong"><b>4.52:1 min</b><span>secondary strong / fields</span></p>
+      </div>
+    </section>
+
+    <section class="fit-dark-palette" aria-labelledby="fit-dark-palette-title">
+      <header class="fit-dark-palette-head">
+        <div>
+          <span class="fit-type-meta">DARK FOUNDATION</span>
+          <h2 class="fit-type-title" id="fit-dark-palette-title">Молочный на глубоком графите</h2>
+        </div>
+        <p class="fit-type-body">Фон не уходит в чистый чёрный, а три уровня поверхности остаются различимыми без glow, градиентов и цветных акцентов.</p>
+      </header>
+
+      <div class="fit-dark-token-grid">
+        <article class="fit-dark-token fit-dark-token-bg"><i aria-hidden="true"></i><span><b>App background</b><code>#111214</code></span></article>
+        <article class="fit-dark-token fit-dark-token-milk"><i aria-hidden="true"></i><span><b>Main milk</b><code>#F1EDE6</code></span></article>
+        <article class="fit-dark-token fit-dark-token-on-primary"><i aria-hidden="true"></i><span><b>On milk</b><code>#171719</code></span></article>
+        <article class="fit-dark-token fit-dark-token-surface"><i aria-hidden="true"></i><span><b>Grouped surface</b><code>#1D1E21</code></span></article>
+        <article class="fit-dark-token fit-dark-token-raised"><i aria-hidden="true"></i><span><b>Raised</b><code>#26272B</code></span></article>
+        <article class="fit-dark-token fit-dark-token-input"><i aria-hidden="true"></i><span><b>Sunken / field</b><code>#191A1D</code></span></article>
+        <article class="fit-dark-token fit-dark-token-divider"><i aria-hidden="true"></i><span><b>Divider</b><code>#303136</code></span></article>
+        <article class="fit-dark-token fit-dark-token-muted"><i aria-hidden="true"></i><span><b>Secondary</b><code>#999A9F</code></span></article>
+      </div>
+
+      <div class="fit-dark-contrast-grid" aria-label="Контраст ключевых сочетаний тёмной темы">
+        <p><b>16.06:1</b><span>milk / background</span></p>
+        <p class="fit-dark-inverse"><b>15.34:1</b><span>on-milk / milk</span></p>
+        <p class="fit-dark-secondary"><b>6.67:1</b><span>secondary / background</span></p>
+        <p class="fit-dark-secondary-surface"><b>5.31:1 min</b><span>secondary / all surfaces</span></p>
+      </div>
+    </section>
+
+    <section class="fit-type-grid" aria-label="Сравнение типографики на мобильных ширинах">
+      <article class="fit-type-sheet fit-type-sheet-light" aria-labelledby="fit-type-light-title">
+        <header class="fit-type-sheet-head">
+          <span>FIT LIGHT · 390 PX</span>
+          <b>Accepted control</b>
+        </header>
+
+        <div class="fit-type-sample">
+          <span class="fit-type-meta">DISPLAY · 24 / 600</span>
+          <h2 class="fit-type-display" id="fit-type-light-title">Сегодня</h2>
+        </div>
+
+        <div class="fit-type-sample">
+          <span class="fit-type-meta">TITLE · 18 / 600</span>
+          <h3 class="fit-type-title">Следующая тренировка</h3>
+        </div>
+
+        <div class="fit-type-sample">
+          <span class="fit-type-meta">SECTION · 16 / 600</span>
+          <h4 class="fit-type-section">Тренируйтесь и следите за прогрессом</h4>
+        </div>
+
+        <div class="fit-type-sample">
+          <span class="fit-type-meta">BODY · 14 / 400</span>
+          <p class="fit-type-body">Записывайте результаты, наблюдайте за изменениями и занимайтесь самостоятельно или с тренером.</p>
+        </div>
+
+        <div class="fit-type-pair">
+          <div class="fit-type-sample">
+            <span class="fit-type-meta">UI · 14 / 500</span>
+            <p class="fit-type-ui">Продолжить тренировку</p>
+          </div>
+          <div class="fit-type-sample">
+            <span class="fit-type-meta">CAPTION · 12 / 500</span>
+            <p class="fit-type-caption">Сегодня, 18:30 · без времени</p>
+          </div>
+        </div>
+
+        <div class="fit-type-number-row">
+          <div>
+            <span class="fit-type-meta">NUMERIC · 18 / 600</span>
+            <strong class="fit-type-numeric">12 501</strong>
+          </div>
+          <div>
+            <span class="fit-type-meta">KEY NUMBER · 48 / 600</span>
+            <strong class="fit-type-key-number">146</strong>
+          </div>
+        </div>
+
+        <div class="fit-type-sample fit-type-wrap-test">
+          <span class="fit-type-meta">ПРОВЕРКА ПЕРЕНОСА</span>
+          <p class="fit-type-title">Тренировка для восстановления подвижности плечевого сустава</p>
+        </div>
+
+        <div class="fit-type-editable">
+          <label for="fit-type-input-light">EDITABLE · 16 / 400</label>
+          <input id="fit-type-input-light" value="Жим лёжа 3 × 10 — 40 кг" readonly>
+          <textarea aria-label="Комментарий, светлая проверка" readonly>Комментарий к тренировке остаётся читаемым и не вызывает iOS zoom.</textarea>
+        </div>
+      </article>
+
+      <article class="fit-type-sheet fit-type-sheet-dark" aria-labelledby="fit-type-dark-title">
+        <header class="fit-type-sheet-head">
+          <span>DARK · 430 PX</span>
+          <b>Accepted</b>
+        </header>
+
+        <div class="fit-type-sample">
+          <span class="fit-type-meta">DISPLAY · 24 / 600</span>
+          <h2 class="fit-type-display" id="fit-type-dark-title">Сегодня</h2>
+        </div>
+
+        <div class="fit-type-sample">
+          <span class="fit-type-meta">TITLE · 18 / 600</span>
+          <h3 class="fit-type-title">Следующая тренировка</h3>
+        </div>
+
+        <div class="fit-type-sample">
+          <span class="fit-type-meta">SECTION · 16 / 600</span>
+          <h4 class="fit-type-section">Тренируйтесь и следите за прогрессом</h4>
+        </div>
+
+        <div class="fit-type-sample">
+          <span class="fit-type-meta">BODY · 14 / 400</span>
+          <p class="fit-type-body">Записывайте результаты, наблюдайте за изменениями и занимайтесь самостоятельно или с тренером.</p>
+        </div>
+
+        <div class="fit-type-pair">
+          <div class="fit-type-sample">
+            <span class="fit-type-meta">UI · 14 / 500</span>
+            <p class="fit-type-ui">Продолжить тренировку</p>
+          </div>
+          <div class="fit-type-sample">
+            <span class="fit-type-meta">CAPTION · 12 / 500</span>
+            <p class="fit-type-caption">Сегодня, 18:30 · без времени</p>
+          </div>
+        </div>
+
+        <div class="fit-type-number-row">
+          <div>
+            <span class="fit-type-meta">NUMERIC · 18 / 600</span>
+            <strong class="fit-type-numeric">12 501</strong>
+          </div>
+          <div>
+            <span class="fit-type-meta">KEY NUMBER · 48 / 600</span>
+            <strong class="fit-type-key-number">146</strong>
+          </div>
+        </div>
+
+        <div class="fit-type-sample fit-type-wrap-test">
+          <span class="fit-type-meta">ПРОВЕРКА ПЕРЕНОСА</span>
+          <p class="fit-type-title">Тренировка для восстановления подвижности плечевого сустава</p>
+        </div>
+
+        <div class="fit-type-editable">
+          <label for="fit-type-input-dark">EDITABLE · 16 / 400</label>
+          <input id="fit-type-input-dark" value="Жим лёжа 3 × 10 — 40 кг" readonly>
+          <textarea aria-label="Комментарий, тёмная проверка" readonly>Комментарий к тренировке остаётся читаемым и не вызывает iOS zoom.</textarea>
+        </div>
+      </article>
+    </section>
+
+    <footer class="fit-type-notes">
+      <strong>Принято</strong>
+      <p>Тёмная foundation утверждена вместе с единым secondary #999A9F. Dark
+        проверяется отдельно и не считается автоматической инверсией light.</p>
+      <p>Типографика задачи 2 и обе палитры заблокированы. Product CSS не
+        подключён.</p>
+    </footer>
+  </main>
+</body>
+</html>

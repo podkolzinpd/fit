@@ -138,7 +138,9 @@ MVP-ограничение: одна активная push-подписка на
 These rules apply to every UI task in addition to the architectural and product
 rules above. The current product is the starting point; a generated component,
 Figma frame, screenshot, or external registry is reference material, not a new
-source of truth by itself.
+source of truth by itself. Every UI task must also read `docs/UI_TASK_PROMPT.md`
+and `docs/UI_IDENTITY.md`; `docs/UI_DESIGN_SYSTEM.md` describes the current
+implementation that is being migrated.
 
 ## EXISTING SYSTEM FIRST
 
@@ -160,10 +162,14 @@ code must be reduced to Fit tokens, accessibility conventions, and actual need.
 
 ## DO NOT INVENT A NEW DESIGN LANGUAGE
 
-Use the current light-premium palette, system typography, semantic tokens,
-surface hierarchy, radii, shadows, and interaction patterns documented in
-`docs/UI_DESIGN_SYSTEM.md`. Do not introduce a second token system, Tailwind,
-new fonts, new brand colors, or a parallel component kit inside a feature task.
+Use the approved MONOCHROME PERFORMANCE direction from `docs/UI_IDENTITY.md`:
+warm graphite `#242426` in light, background `#111214` and milk `#F1EDE6` in
+dark, Onest, compact typography and semantic color only for real state or data.
+Apply it through the existing semantic token and component system. Preserve
+the current screen's information architecture and behavior using
+`docs/UI_DESIGN_SYSTEM.md` and real baselines. Do not create feature-local
+palettes, a second token system, Tailwind, an unrelated font, a new brand color,
+or a parallel component kit.
 
 ## AVOID AI-GENERATED UI
 

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Fit — shell, navigation and icons preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./monochrome-typography.css">
+  <link rel="stylesheet" href="./monochrome-actions-forms.css">
+  <link rel="stylesheet" href="./monochrome-shell-navigation.css">
+</head>
+<body>
+  <main class="fit-type-preview fit-shell-preview">
+    <svg class="fit-icon-defs" aria-hidden="true">
+      <symbol id="fit-icon-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7"/><path d="M5.5 9v11h13V9M9.5 20v-6h5v6"/></symbol>
+      <symbol id="fit-icon-today" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.1 2.4 2.4 5.2-5.2"/></symbol>
+      <symbol id="fit-icon-clients" viewBox="0 0 24 24"><path d="M16 20v-1.7c0-2.2-1.8-4-4-4H6.5c-2.2 0-4 1.8-4 4V20"/><circle cx="9.25" cy="7.4" r="3.4"/><path d="M15.2 4.2a3.4 3.4 0 0 1 0 6.5M17.2 14.5c2.4.35 4.3 1.95 4.3 4V20"/></symbol>
+      <symbol id="fit-icon-assistant" viewBox="0 0 24 24"><path d="m12 3 1.4 4.1L17.5 8.5l-4.1 1.4L12 14l-1.4-4.1-4.1-1.4 4.1-1.4L12 3Z"/><path d="m18.2 14.2.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7.7-2.1Z"/></symbol>
+      <symbol id="fit-icon-schedule" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M7.5 2.5v4M16.5 2.5v4M3 9h18"/><path d="M7.5 13h.01M12 13h.01M16.5 13h.01M7.5 17h.01M12 17h.01"/></symbol>
+      <symbol id="fit-icon-analytics" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/><path d="m4 7 5-3 6 5 5-4"/></symbol>
+      <symbol id="fit-icon-profile" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21c.6-4 3.2-6.3 7.5-6.3s6.9 2.3 7.5 6.3"/></symbol>
+      <symbol id="fit-icon-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+      <symbol id="fit-icon-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1" class="fit-icon-fill"/><circle cx="12" cy="12" r="1" class="fit-icon-fill"/><circle cx="19" cy="12" r="1" class="fit-icon-fill"/></symbol>
+      <symbol id="fit-icon-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+      <symbol id="fit-icon-check" viewBox="0 0 24 24"><path d="m5 12.5 4.2 4.2L19 7"/></symbol>
+      <symbol id="fit-icon-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5M12 16.5h.01"/></symbol>
+      <symbol id="fit-icon-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10.5v6M12 7.5h.01"/></symbol>
+    </svg>
+
+    <header class="fit-type-intro fit-component-intro">
+      <p class="fit-type-kicker">GATE 1 · TASK 7</p>
+      <h1>Shell, navigation и Fit icons</h1>
+      <p>Последняя foundation matrix. Проверяются реальный phone-frame,
+        page headers, client/trainer bottom navigation, active/focus states и
+        единый outline SVG-set — без миграции продуктовых экранов.</p>
+    </header>
+
+    <aside class="fit-component-lock" aria-label="Заблокированные решения">
+      <b>Foundation locked</b>
+      <span>Typography + palettes</span>
+      <span>Actions + forms</span>
+      <span>Surfaces + states</span>
+      <span>Semantic colors</span>
+    </aside>
+
+    <section class="fit-shell-grid" aria-label="Сравнение shell и navigation в светлой и тёмной теме">
+      <article class="fit-component-sheet fit-shell-sheet fit-component-light" aria-labelledby="fit-shell-light-title">
+        <header class="fit-component-sheet-head"><div><span class="fit-component-meta">LIGHT · 390 PX</span><h2 id="fit-shell-light-title">Client shell</h2></div><b>Accepted</b></header>
+
+        <section class="fit-shell-section" aria-labelledby="fit-light-frame-title">
+          <header class="fit-shell-section-head"><div><span class="fit-component-meta">PHONE FRAME + CLIENT NAV</span><h3 id="fit-light-frame-title">Реальная архитектура из четырёх разделов</h3></div><p>Bottom bar — часть layout, не плавающая glass-капсула.</p></header>
+          <div class="fit-phone-frame">
+            <div class="fit-phone-safe-area" aria-hidden="true"></div>
+            <div class="fit-phone-content">
+              <header class="fit-page-header"><h4>Сегодня</h4><button class="fit-header-icon" type="button" aria-label="Профиль"><svg aria-hidden="true"><use href="#fit-icon-profile"/></svg></button></header>
+              <div class="fit-route-placeholder" aria-label="Область продуктового экрана намеренно не проектируется"><span class="fit-component-meta">ROUTE CONTENT · OUT OF SCOPE</span><i></i><i></i><i></i></div>
+            </div>
+            <nav class="fit-bottom-nav" aria-label="Основная навигация клиента, светлая тема">
+              <a class="is-active" aria-current="page" href="#fit-shell-light-title"><span><svg aria-hidden="true"><use href="#fit-icon-home"/></svg></span>Кабинет</a>
+              <a href="#fit-shell-light-title"><span><svg aria-hidden="true"><use href="#fit-icon-schedule"/></svg></span>Тренировки</a>
+              <a href="#fit-shell-light-title"><span><svg aria-hidden="true"><use href="#fit-icon-analytics"/></svg></span>Прогресс</a>
+              <a href="#fit-shell-light-title"><span><svg aria-hidden="true"><use href="#fit-icon-profile"/></svg></span>Профиль</a>
+            </nav>
+          </div>
+        </section>
+
+        <section class="fit-shell-section" aria-labelledby="fit-light-headers-title">
+          <header class="fit-shell-section-head"><div><span class="fit-component-meta">PAGE HEADERS</span><h3 id="fit-light-headers-title">Default и centered</h3></div><p>44 px system actions, title 24/600.</p></header>
+          <div class="fit-header-matrix">
+            <header class="fit-page-header"><h4>Мои тренировки</h4><button class="fit-header-icon" type="button" aria-label="Профиль"><svg aria-hidden="true"><use href="#fit-icon-profile"/></svg></button></header>
+            <header class="fit-page-header fit-page-header-centered"><button class="fit-header-icon" type="button" aria-label="Назад"><svg aria-hidden="true"><use href="#fit-icon-back"/></svg></button><h4>Тренировка</h4><button class="fit-header-icon" type="button" aria-label="Ещё действия"><svg aria-hidden="true"><use href="#fit-icon-more"/></svg></button></header>
+          </div>
+        </section>
+
+        <section class="fit-shell-section" aria-labelledby="fit-light-trainer-title">
+          <header class="fit-shell-section-head"><div><span class="fit-component-meta">TRAINER NAV · ASSISTANT PILOT</span><h3 id="fit-light-trainer-title">Текущий компактный shell</h3></div><p>Три базовые вкладки, Assistant — четвёртая только по allowlist.</p></header>
+          <nav class="fit-bottom-nav fit-trainer-nav" aria-label="Основная навигация тренера, светлая тема">
+            <a class="is-active is-focus" aria-current="page" href="#fit-light-trainer-title"><span><svg aria-hidden="true"><use href="#fit-icon-today"/></svg></span>Сегодня</a>
+            <a href="#fit-light-trainer-title"><span><svg aria-hidden="true"><use href="#fit-icon-clients"/></svg></span>Клиенты</a>
+            <a href="#fit-light-trainer-title"><span><svg aria-hidden="true"><use href="#fit-icon-assistant"/></svg></span>Ассистент</a>
+            <a href="#fit-light-trainer-title"><span><svg aria-hidden="true"><use href="#fit-icon-schedule"/></svg></span>Расписание</a>
+          </nav>
+        </section>
+
+        <section class="fit-shell-section" aria-labelledby="fit-light-icons-title">
+          <header class="fit-shell-section-head"><div><span class="fit-component-meta">FIT SVG SET · STROKE 1.8</span><h3 id="fit-light-icons-title">Navigation и system actions</h3></div><p>Текстовое имя остаётся источником доступного смысла.</p></header>
+          <div class="fit-icon-grid">
+            <div><svg aria-hidden="true"><use href="#fit-icon-home"/></svg><span>Home</span></div><div><svg aria-hidden="true"><use href="#fit-icon-today"/></svg><span>Today</span></div><div><svg aria-hidden="true"><use href="#fit-icon-clients"/></svg><span>Clients</span></div><div><svg aria-hidden="true"><use href="#fit-icon-assistant"/></svg><span>Assistant</span></div><div><svg aria-hidden="true"><use href="#fit-icon-schedule"/></svg><span>Schedule</span></div><div><svg aria-hidden="true"><use href="#fit-icon-analytics"/></svg><span>Progress</span></div><div><svg aria-hidden="true"><use href="#fit-icon-profile"/></svg><span>Profile</span></div>
+          </div>
+          <div class="fit-system-icons"><div><svg aria-hidden="true"><use href="#fit-icon-back"/></svg><span>Back</span></div><div><svg aria-hidden="true"><use href="#fit-icon-more"/></svg><span>More</span></div><div><svg aria-hidden="true"><use href="#fit-icon-chevron"/></svg><span>Open</span></div><div class="fit-icon-success"><svg aria-hidden="true"><use href="#fit-icon-check"/></svg><span>Saved</span></div><div class="fit-icon-danger"><svg aria-hidden="true"><use href="#fit-icon-alert"/></svg><span>Error</span></div><div><svg aria-hidden="true"><use href="#fit-icon-info"/></svg><span>Info</span></div></div>
+        </section>
+      </article>
+
+      <article class="fit-component-sheet fit-shell-sheet fit-component-dark" aria-labelledby="fit-shell-dark-title">
+        <header class="fit-component-sheet-head"><div><span class="fit-component-meta">DARK · 430 PX</span><h2 id="fit-shell-dark-title">Client shell</h2></div><b>Accepted</b></header>
+
+        <section class="fit-shell-section" aria-labelledby="fit-dark-frame-title">
+          <header class="fit-shell-section-head"><div><span class="fit-component-meta">PHONE FRAME + CLIENT NAV</span><h3 id="fit-dark-frame-title">Та же архитектура и геометрия</h3></div><p>Dark active state проверяется отдельно.</p></header>
+          <div class="fit-phone-frame"><div class="fit-phone-safe-area" aria-hidden="true"></div><div class="fit-phone-content"><header class="fit-page-header"><h4>Сегодня</h4><button class="fit-header-icon" type="button" aria-label="Профиль"><svg aria-hidden="true"><use href="#fit-icon-profile"/></svg></button></header><div class="fit-route-placeholder" aria-label="Область продуктового экрана намеренно не проектируется"><span class="fit-component-meta">ROUTE CONTENT · OUT OF SCOPE</span><i></i><i></i><i></i></div></div><nav class="fit-bottom-nav" aria-label="Основная навигация клиента, тёмная тема"><a class="is-active" aria-current="page" href="#fit-shell-dark-title"><span><svg aria-hidden="true"><use href="#fit-icon-home"/></svg></span>Кабинет</a><a href="#fit-shell-dark-title"><span><svg aria-hidden="true"><use href="#fit-icon-schedule"/></svg></span>Тренировки</a><a href="#fit-shell-dark-title"><span><svg aria-hidden="true"><use href="#fit-icon-analytics"/></svg></span>Прогресс</a><a href="#fit-shell-dark-title"><span><svg aria-hidden="true"><use href="#fit-icon-profile"/></svg></span>Профиль</a></nav></div>
+        </section>
+
+        <section class="fit-shell-section" aria-labelledby="fit-dark-headers-title"><header class="fit-shell-section-head"><div><span class="fit-component-meta">PAGE HEADERS</span><h3 id="fit-dark-headers-title">Default и centered</h3></div><p>Те же roles, размеры и targets.</p></header><div class="fit-header-matrix"><header class="fit-page-header"><h4>Мои тренировки</h4><button class="fit-header-icon" type="button" aria-label="Профиль"><svg aria-hidden="true"><use href="#fit-icon-profile"/></svg></button></header><header class="fit-page-header fit-page-header-centered"><button class="fit-header-icon" type="button" aria-label="Назад"><svg aria-hidden="true"><use href="#fit-icon-back"/></svg></button><h4>Тренировка</h4><button class="fit-header-icon" type="button" aria-label="Ещё действия"><svg aria-hidden="true"><use href="#fit-icon-more"/></svg></button></header></div></section>
+
+        <section class="fit-shell-section" aria-labelledby="fit-dark-trainer-title"><header class="fit-shell-section-head"><div><span class="fit-component-meta">TRAINER NAV · ASSISTANT PILOT</span><h3 id="fit-dark-trainer-title">Текущий компактный shell</h3></div><p>Role и allowlist не меняются дизайном.</p></header><nav class="fit-bottom-nav fit-trainer-nav" aria-label="Основная навигация тренера, тёмная тема"><a class="is-active is-focus" aria-current="page" href="#fit-dark-trainer-title"><span><svg aria-hidden="true"><use href="#fit-icon-today"/></svg></span>Сегодня</a><a href="#fit-dark-trainer-title"><span><svg aria-hidden="true"><use href="#fit-icon-clients"/></svg></span>Клиенты</a><a href="#fit-dark-trainer-title"><span><svg aria-hidden="true"><use href="#fit-icon-assistant"/></svg></span>Ассистент</a><a href="#fit-dark-trainer-title"><span><svg aria-hidden="true"><use href="#fit-icon-schedule"/></svg></span>Расписание</a></nav></section>
+
+        <section class="fit-shell-section" aria-labelledby="fit-dark-icons-title"><header class="fit-shell-section-head"><div><span class="fit-component-meta">FIT SVG SET · STROKE 1.8</span><h3 id="fit-dark-icons-title">Navigation и system actions</h3></div><p>Dark использует тот же набор SVG.</p></header><div class="fit-icon-grid"><div><svg aria-hidden="true"><use href="#fit-icon-home"/></svg><span>Home</span></div><div><svg aria-hidden="true"><use href="#fit-icon-today"/></svg><span>Today</span></div><div><svg aria-hidden="true"><use href="#fit-icon-clients"/></svg><span>Clients</span></div><div><svg aria-hidden="true"><use href="#fit-icon-assistant"/></svg><span>Assistant</span></div><div><svg aria-hidden="true"><use href="#fit-icon-schedule"/></svg><span>Schedule</span></div><div><svg aria-hidden="true"><use href="#fit-icon-analytics"/></svg><span>Progress</span></div><div><svg aria-hidden="true"><use href="#fit-icon-profile"/></svg><span>Profile</span></div></div><div class="fit-system-icons"><div><svg aria-hidden="true"><use href="#fit-icon-back"/></svg><span>Back</span></div><div><svg aria-hidden="true"><use href="#fit-icon-more"/></svg><span>More</span></div><div><svg aria-hidden="true"><use href="#fit-icon-chevron"/></svg><span>Open</span></div><div class="fit-icon-success"><svg aria-hidden="true"><use href="#fit-icon-check"/></svg><span>Saved</span></div><div class="fit-icon-danger"><svg aria-hidden="true"><use href="#fit-icon-alert"/></svg><span>Error</span></div><div><svg aria-hidden="true"><use href="#fit-icon-info"/></svg><span>Info</span></div></div></section>
+      </article>
+    </section>
+
+    <footer class="fit-type-notes fit-component-notes">
+      <strong>Foundation UI Identity v1 принята</strong>
+      <p>Phone-frame, headers, client/trainer navigation, active/focus states,
+        safe-area и Fit SVG-set. Navigation скрывается в реальных immersive,
+        Live и keyboard-open сценариях — отдельная навигация для них не создаётся.</p>
+      <p>Набор задач 2–7 стал базой поэтапной миграции реальных экранов.</p>
+    </footer>
+  </main>
+</body>
+</html>

@@ -1,0 +1,466 @@
+@charset "UTF-8";
+
+.fit-surface-preview .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.fit-surface-preview {
+  width: min(100%, 1080px);
+}
+
+.fit-surface-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 390px) minmax(0, 430px);
+  align-items: start;
+  justify-content: center;
+  gap: 24px;
+}
+
+.fit-surface-sheet.fit-component-light {
+  --state-success: var(--fit-light-success);
+  --state-danger: var(--fit-light-danger);
+  --overlay-scrim: rgb(17 18 20 / 56%);
+}
+
+.fit-surface-sheet.fit-component-dark {
+  --state-success: var(--fit-dark-success);
+  --state-danger: var(--fit-dark-danger);
+  --overlay-scrim: rgb(17 18 20 / 72%);
+}
+
+.fit-surface-section {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--cmp-surface);
+}
+
+.fit-surface-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fit-surface-section-head > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.fit-surface-section-head h3,
+.fit-surface-section-head p,
+.fit-surface-card h4,
+.fit-surface-card p,
+.fit-surface-card small,
+.fit-bottom-sheet h4,
+.fit-dialog h4,
+.fit-dialog p,
+.fit-state-panel h4,
+.fit-state-panel p,
+.fit-save-status {
+  margin: 0;
+}
+
+.fit-surface-section-head h3 {
+  font-size: var(--fit-type-section);
+  font-weight: 600;
+  line-height: 1.28;
+  letter-spacing: -.01em;
+}
+
+.fit-surface-section-head > p {
+  max-width: 145px;
+  color: var(--cmp-muted-on-surface);
+  font-size: var(--fit-type-caption);
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.fit-surface-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--cmp-divider);
+  border-radius: 18px;
+  background: var(--cmp-raised);
+}
+
+.fit-surface-card.is-active {
+  border: 2px solid var(--cmp-fg);
+  padding: 15px;
+}
+
+.fit-surface-card > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fit-surface-card > header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.fit-surface-card h4,
+.fit-bottom-sheet h4,
+.fit-dialog h4,
+.fit-state-panel h4 {
+  font-size: var(--fit-type-ui);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.fit-surface-card p,
+.fit-dialog p,
+.fit-state-panel p {
+  font-size: var(--fit-type-body);
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.fit-surface-card small {
+  color: var(--cmp-muted-on-surface);
+  font-size: var(--fit-type-caption);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.fit-status-pill {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border: 1px solid var(--cmp-divider);
+  border-radius: 999px;
+  background: var(--cmp-input);
+  color: var(--cmp-muted-on-surface);
+  font-size: var(--fit-type-caption);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.fit-overlay-stage {
+  min-height: 260px;
+  overflow: hidden;
+  display: flex;
+  padding: 16px;
+  border: 1px solid var(--cmp-divider);
+  border-radius: 18px;
+  background: var(--overlay-scrim);
+}
+
+.fit-sheet-stage {
+  align-items: flex-end;
+}
+
+.fit-bottom-sheet,
+.fit-dialog,
+.fit-overflow-list {
+  border: 1px solid var(--cmp-divider);
+  background: var(--cmp-raised);
+  color: var(--cmp-fg);
+}
+
+.fit-bottom-sheet {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  border-radius: 20px 20px 12px 12px;
+}
+
+.fit-bottom-sheet > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fit-bottom-sheet > header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.fit-icon-action {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--cmp-divider);
+  border-radius: 14px;
+  background: var(--cmp-surface);
+  color: var(--cmp-fg);
+}
+
+.fit-icon-action svg,
+.fit-state-mark svg,
+.fit-dialog-mark svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fit-sheet-search {
+  display: grid;
+  gap: 5px;
+  color: var(--cmp-muted-on-surface);
+  font-size: var(--fit-type-caption);
+  font-weight: 500;
+}
+
+.fit-sheet-search input {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--cmp-divider);
+  border-radius: 14px;
+  background: var(--cmp-input);
+  color: var(--cmp-fg);
+  font: 400 16px/1.4 "Onest", -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
+}
+
+.fit-picker-row {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border: 0;
+  border-top: 1px solid var(--cmp-divider);
+  background: transparent;
+  color: var(--cmp-fg);
+  text-align: left;
+}
+
+.fit-picker-row > span {
+  display: grid;
+  gap: 3px;
+}
+
+.fit-picker-row b {
+  font-size: var(--fit-type-ui);
+  font-weight: 500;
+}
+
+.fit-picker-row small {
+  color: var(--cmp-muted-on-surface);
+  font-size: var(--fit-type-caption);
+  font-weight: 500;
+}
+
+.fit-picker-row > i {
+  width: 8px;
+  height: 8px;
+  border-top: 1.8px solid currentColor;
+  border-right: 1.8px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.fit-dialog-stage {
+  align-items: center;
+  justify-content: center;
+}
+
+.fit-dialog {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 310px);
+  padding: 18px;
+  border-radius: 18px;
+}
+
+.fit-dialog-mark {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+}
+
+.fit-dialog p {
+  color: var(--cmp-muted-on-surface);
+}
+
+.fit-dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.fit-action-danger {
+  color: var(--state-danger);
+}
+
+.fit-menu-stage {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  min-height: 230px;
+  padding: 12px;
+  border: 1px solid var(--cmp-divider);
+  border-radius: 18px;
+  background: var(--cmp-bg);
+}
+
+.fit-overflow-list {
+  width: min(100%, 260px);
+  padding: 6px;
+  border-radius: 14px;
+}
+
+.fit-overflow-list button {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--cmp-fg);
+  font: 500 var(--fit-type-ui)/1.3 "Onest", -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
+  text-align: left;
+}
+
+.fit-danger,
+.fit-overflow-list button.fit-danger {
+  color: var(--state-danger);
+}
+
+.fit-success {
+  color: var(--state-success);
+}
+
+.fit-state-matrix {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.fit-loading-panel,
+.fit-state-panel {
+  min-width: 0;
+  min-height: 170px;
+  padding: 14px;
+  border: 1px solid var(--cmp-divider);
+  border-radius: 18px;
+  background: var(--cmp-raised);
+}
+
+.fit-loading-panel {
+  display: grid;
+  align-content: center;
+  gap: 10px;
+}
+
+.fit-loading-panel > div {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--cmp-surface);
+}
+
+.fit-loading-panel i {
+  height: 10px;
+  border-radius: 10px;
+  background: var(--cmp-input);
+}
+
+.fit-loading-panel i:first-child {
+  width: 64%;
+}
+
+.fit-state-panel {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.fit-state-mark {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  color: var(--cmp-muted-on-surface);
+}
+
+.fit-state-panel p {
+  color: var(--cmp-muted-on-surface);
+}
+
+.fit-state-panel .fit-action {
+  align-self: end;
+  margin-top: 4px;
+}
+
+.fit-save-list {
+  display: grid;
+  gap: 8px;
+}
+
+.fit-save-status {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--cmp-divider);
+  border-radius: 14px;
+  background: var(--cmp-raised);
+  font-size: var(--fit-type-ui);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.fit-save-status .fit-state-mark {
+  width: 20px;
+  height: 20px;
+}
+
+@media (max-width: 900px) {
+  .fit-surface-grid {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .fit-surface-sheet {
+    max-width: 430px;
+  }
+}
+
+@media (max-width: 480px) {
+  .fit-surface-section {
+    padding: 14px;
+  }
+
+  .fit-surface-section-head {
+    display: grid;
+  }
+
+  .fit-surface-section-head > p {
+    max-width: none;
+    text-align: left;
+  }
+
+  .fit-state-matrix,
+  .fit-dialog-actions {
+    grid-template-columns: 1fr;
+  }
+}
