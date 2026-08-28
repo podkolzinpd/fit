@@ -5,12 +5,16 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-28
-Проверенный базовый `main`: `87cc2d4` (`YAFIT-390: безопасное переподключение тренера (#642)`)
+Проверенный базовый `main`: `82dca29` (`YAFIT-410: show all active assistant actions (#644)`)
 
 ## Активное изменение
 
-- Safe reconnect сохраняет самостоятельную карточку; legacy ownership возвращает контролируемый конфликт без скрытого переноса.
-- Run `33158653732` не создал folder IAM binding: OIDC deployer намеренно без `resource-manager.admin`; AI-роль остаётся bootstrap.
+- Production Push Function bootstrap создаёт отсутствующий immutable Lockbox
+  только при подтверждённом `NOT_FOUND`; VAPID private key и dispatch secret не
+  покидают одноразовый GitHub runner и Yandex Lockbox. Ошибки IAM не маскируются.
+- После первого зелёного deploy публичный VAPID key из summary нужно передать в
+  `VITE_VAPID_PUBLIC_KEY`, а URL функции и тот же dispatch secret — в Supabase
+  Vault; это отдельная контролируемая настройка реальной доставки.
 
 ## Последняя проверенная продуктовая точка
 
