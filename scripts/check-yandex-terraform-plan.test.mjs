@@ -330,6 +330,38 @@ describe('Yandex Terraform plan policy', () => {
     assert.equal(result.status, 0)
   })
 
+  test('allows only the API runtime language-model role automatically', () => {
+    const accepted = runPolicy(
+      [{
+        address: 'yandex_resourcemanager_folder_iam_member.api_ai_user',
+        change: {
+          actions: ['create'],
+          after: {
+            member: 'serviceAccount:ajeapiruntime',
+            role: 'ai.languageModels.user',
+          },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+    const rejected = runPolicy(
+      [{
+        address: 'yandex_resourcemanager_folder_iam_member.api_ai_user',
+        change: {
+          actions: ['create'],
+          after: {
+            member: 'serviceAccount:ajeapiruntime',
+            role: 'editor',
+          },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(accepted.status, 0)
+    assert.notEqual(rejected.status, 0)
+  })
+
   test('rejects broader access through the runtime preflight grant', () => {
     const result = runPolicy(
       [

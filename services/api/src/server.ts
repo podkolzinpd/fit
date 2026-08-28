@@ -18,6 +18,7 @@ import { SupabaseWorkoutParser } from './legacy-workout-parser.js'
 import { YandexWorkoutParser } from './legacy-workout-parser.js'
 import { readSupabaseBridgeConfig, SupabaseBridge } from './supabase-bridge.js'
 import { summarizeClientTraining } from './legacy-summary/index.js'
+import { buildYandexAiAuthorization } from './yandex-ai-authorization.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -92,15 +93,16 @@ const pilotProgressData =
   databasePool === undefined
     ? undefined
     : new DatabasePilotProgressData(databasePool)
+const yandexAiAuthorization = buildYandexAiAuthorization()
 const pilotWorkoutParser =
   databasePool === undefined
-    || process.env.YANDEX_CLOUD_API_KEY === undefined
+    || yandexAiAuthorization === undefined
     || process.env.YANDEX_CLOUD_FOLDER_ID === undefined
     ? undefined
     : new DatabasePilotWorkoutParser(
         databasePool,
         new YandexWorkoutParser(
-          process.env.YANDEX_CLOUD_API_KEY,
+          yandexAiAuthorization,
           process.env.YANDEX_CLOUD_FOLDER_ID,
           process.env.YANDEX_CLOUD_MODEL_ID,
         ),
@@ -108,10 +110,10 @@ const pilotWorkoutParser =
 const pilotTrainingSummaryReader =
   databasePool === undefined
     ? undefined
-    : new DatabasePilotTrainingSummaries(databasePool)
+    : new DatabasePilotTrainingSummaries(databasePool, yandexAiAuthorization)
 const pilotTrainingSummaryGenerator =
   databasePool === undefined
-    || process.env.YANDEX_CLOUD_API_KEY === undefined
+    || yandexAiAuthorization === undefined
     || process.env.YANDEX_CLOUD_FOLDER_ID === undefined
     ? undefined
     : pilotTrainingSummaryReader

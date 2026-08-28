@@ -282,6 +282,23 @@ test('supports a plan-only stage diagnostic that cannot deploy resources', () =>
   )
 })
 
+test('validates feature branches without expanding the main-only Yandex OIDC trust', () => {
+  const validateIndex = workflow.indexOf('name: Validate Terraform configuration')
+  const planIndex = workflow.indexOf('name: Review Terraform plan')
+  const oidcIndex = workflow.indexOf('name: Exchange GitHub OIDC token for a short-lived IAM token')
+
+  assert.ok(validateIndex >= 0)
+  assert.ok(planIndex > validateIndex)
+  assert.ok(oidcIndex > planIndex)
+  assert.match(workflow, /name: Review Terraform plan[\s\S]*?if: github\.ref == 'refs\/heads\/main'/)
+  assert.match(workflow, /terraform init -backend=false/)
+  assert.match(workflow, /name: Validate Terraform configuration[\s\S]*?terraform validate/)
+  assert.doesNotMatch(
+    workflow.slice(validateIndex, planIndex),
+    /YC_TFSTATE_(?:ACCESS_KEY_ID|SECRET_ACCESS_KEY)/,
+  )
+})
+
 test('preserves reviewed WebSQL access instead of creating PostgreSQL drift', () => {
   assert.match(databaseTerraform, /^      web_sql\s+= true$/m)
 })

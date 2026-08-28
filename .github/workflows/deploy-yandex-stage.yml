@@ -44,13 +44,42 @@ env:
   TF_VAR_api_invoker_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
   YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
-  AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_TFSTATE_SECRET_ACCESS_KEY }}
 
 jobs:
+  validate:
+    name: Validate Terraform configuration
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          terraform_wrapper: false
+      - uses: actions/cache@v4
+        with:
+          path: .terraform-provider-cache
+          key: terraform-yandex-${{ runner.os }}-${{ hashFiles('infra/yandex/.terraform.lock.hcl') }}
+      - name: Prepare Terraform provider cache
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+      - name: Initialize Terraform without remote state
+        working-directory: infra/yandex
+        run: terraform init -backend=false
+      - name: Validate Terraform
+        working-directory: infra/yandex
+        run: |
+          terraform fmt -check
+          terraform validate
+
   plan:
     name: Review Terraform plan
+    needs: validate
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_TFSTATE_SECRET_ACCESS_KEY }}
     steps:
       - uses: actions/checkout@v4
       - name: Resolve immutable API image tag
@@ -77,11 +106,6 @@ jobs:
           -backend-config=backend.hcl.example
           -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }}
           -backend-config=key=fit/stage/terraform.tfstate
-      - name: Validate Terraform
-        working-directory: infra/yandex
-        run: |
-          terraform fmt -check
-          terraform validate
       - name: Create reviewed plan
         working-directory: infra/yandex
         run: |
@@ -99,6 +123,9 @@ jobs:
     needs: plan
     if: github.ref == 'refs/heads/main' && inputs.plan_only != true
     runs-on: ubuntu-24.04
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_TFSTATE_SECRET_ACCESS_KEY }}
     steps:
       - uses: actions/checkout@v4
       - name: Resolve immutable API image tag

@@ -19,6 +19,7 @@ import { buildTrainingGoalContext } from './legacy-summary/summary-goal.js'
 import { buildSummaryModelInput } from './legacy-summary/summary-model-input.js'
 import { buildSummaryProgressFacts } from './legacy-summary/summary-progress-facts.js'
 import { PROMPT_VERSION } from './legacy-summary/summary-contract.js'
+import type { YandexAiAuthorization } from './yandex-ai-authorization.js'
 
 const MAX_SOURCE_ROWS = 1000
 
@@ -78,7 +79,10 @@ function asNumber(value: unknown): number | null {
 }
 
 export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
-  constructor(private readonly pool: DatabasePool) {}
+  constructor(
+    private readonly pool: DatabasePool,
+    private readonly authorization?: YandexAiAuthorization,
+  ) {}
 
   async list(sessionToken: string, clientId: string): Promise<unknown[]> {
     return withYandexPilotSessionTransaction(this.pool, tokenHash(sessionToken), async (client) => {
@@ -135,7 +139,7 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
       buildSummaryModelInput(source.trainingData),
       source.trainingData.period.start,
       source.trainingData.period.end,
-      { requestId },
+      { requestId, ...(this.authorization === undefined ? {} : { authorization: this.authorization }) },
     )
     const generatedAt = new Date().toISOString()
     const displayMetrics = {
