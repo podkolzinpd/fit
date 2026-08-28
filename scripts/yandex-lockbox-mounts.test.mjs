@@ -36,4 +36,12 @@ test('pins every Yandex Cloud Lockbox mount to an immutable version', () => {
   assert.match(summary, /\.current_version\.id/)
   assert.doesNotMatch(summary, /api\.supabase\.com\/v1\/projects\/\$SUPABASE_PROJECT_ID\/secrets/)
   assert.doesNotMatch(summary, /lockbox secret add-version/)
+
+  const push = readFileSync(join(workflowsDirectory, 'deploy-yandex-push-function.yml'), 'utf8')
+  assert.match(push, /Resolve or bootstrap the immutable Lockbox version/)
+  assert.match(push, /elif grep -qiE 'NOT_FOUND\|not found'/)
+  assert.match(push, /lockbox secret create[\s\S]*?--deletion-protection[\s\S]*?--payload - < "\$payload_file"/)
+  assert.match(push, /randomBytes\(32\)\.toString\('base64url'\)/)
+  assert.match(push, /webPush\.generateVAPIDKeys\(\)/)
+  assert.doesNotMatch(push, /lockbox secret add-version/)
 })

@@ -28,6 +28,7 @@ env:
   PUSH_FUNCTION_NAME: fit-send-push-notifications
   PUSH_RUNTIME_SA_NAME: fit-send-push-notifications
   PUSH_LOCKBOX_NAME: fit-send-push-notifications-secrets
+  PUSH_VAPID_SUBJECT: https://github.com/podkolzinpd/fit
 
 jobs:
   deploy:
@@ -63,13 +64,60 @@ jobs:
       - name: Exchange GitHub OIDC token for Yandex Cloud IAM token
         run: scripts/yandex-github-oidc.sh
 
-      - name: Resolve the existing immutable Lockbox version
+      - name: Resolve or bootstrap the immutable Lockbox version
+        id: push_lockbox
         run: |
           set -euo pipefail
-          lockbox=$(yc lockbox secret get \
-            --name "$PUSH_LOCKBOX_NAME" \
-            --folder-id "$YC_FOLDER_ID" \
-            --format json)
+          lockbox_error_file=$(mktemp)
+          payload_file=$(mktemp)
+          trap 'rm -f "$lockbox_error_file" "$payload_file"' EXIT
+
+          if lockbox=$(yc lockbox secret get \
+              --name "$PUSH_LOCKBOX_NAME" \
+              --folder-id "$YC_FOLDER_ID" \
+              --format json 2>"$lockbox_error_file"); then
+            echo "created=false" >> "$GITHUB_OUTPUT"
+          elif grep -qiE 'NOT_FOUND|not found' "$lockbox_error_file"; then
+            (
+              cd services/api
+              PUSH_PAYLOAD_FILE="$payload_file" \
+              VAPID_SUBJECT="$PUSH_VAPID_SUBJECT" \
+              GITHUB_OUTPUT="$GITHUB_OUTPUT" \
+                node --input-type=module <<'NODE'
+          import { randomBytes } from 'node:crypto'
+          import { appendFileSync, writeFileSync } from 'node:fs'
+          import webPush from 'web-push'
+
+          const vapid = webPush.generateVAPIDKeys()
+          const payload = [
+            { key: 'PUSH_DISPATCH_SECRET', text_value: randomBytes(32).toString('base64url') },
+            { key: 'VAPID_PUBLIC_KEY', text_value: vapid.publicKey },
+            { key: 'VAPID_PRIVATE_KEY', text_value: vapid.privateKey },
+            { key: 'VAPID_SUBJECT', text_value: process.env.VAPID_SUBJECT },
+          ]
+
+          writeFileSync(process.env.PUSH_PAYLOAD_FILE, JSON.stringify(payload), { mode: 0o600 })
+          appendFileSync(process.env.GITHUB_OUTPUT, `created=true\nvapid_public_key=${vapid.publicKey}\n`)
+          NODE
+            )
+
+            yc lockbox secret create \
+              --name "$PUSH_LOCKBOX_NAME" \
+              --description 'Immutable production secrets for the Fit Web Push sender' \
+              --folder-id "$YC_FOLDER_ID" \
+              --deletion-protection \
+              --payload - < "$payload_file" \
+              --format json >/dev/null
+
+            lockbox=$(yc lockbox secret get \
+              --name "$PUSH_LOCKBOX_NAME" \
+              --folder-id "$YC_FOLDER_ID" \
+              --format json)
+          else
+            cat "$lockbox_error_file" >&2
+            exit 1
+          fi
+
           lockbox_id=$(jq -er '.id' <<<"$lockbox")
           lockbox_version_id=$(jq -er '.current_version.id' <<<"$lockbox")
 
@@ -85,6 +133,20 @@ jobs:
 
           echo "PUSH_LOCKBOX_ID=$lockbox_id" >> "$GITHUB_ENV"
           echo "PUSH_LOCKBOX_VERSION_ID=$lockbox_version_id" >> "$GITHUB_ENV"
+
+      - name: Record the generated public browser key
+        if: steps.push_lockbox.outputs.created == 'true'
+        env:
+          VAPID_PUBLIC_KEY: ${{ steps.push_lockbox.outputs.vapid_public_key }}
+        run: |
+          {
+            echo '### Push Lockbox bootstrapped'
+            echo
+            echo 'The private VAPID key and dispatch secret were written only to Yandex Lockbox.'
+            echo 'Configure the browser with this non-secret value:'
+            echo
+            echo "\`VITE_VAPID_PUBLIC_KEY=$VAPID_PUBLIC_KEY\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create runtime identity and grant only required access
         run: |
