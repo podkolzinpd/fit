@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Fit — surfaces and states preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./monochrome-typography.css">
+  <link rel="stylesheet" href="./monochrome-actions-forms.css">
+  <link rel="stylesheet" href="./monochrome-surfaces-states.css">
+</head>
+<body>
+  <main class="fit-type-preview fit-surface-preview">
+    <header class="fit-type-intro fit-component-intro">
+      <p class="fit-type-kicker">GATE 1 · TASK 6</p>
+      <h1>Surfaces и реальные состояния</h1>
+      <p>Изолированная component matrix на основе существующих Fit-примитивов.
+        Проверяются cards, sheet, dialog, overflow menu, loading, empty, info,
+        error/retry и SaveStatus — без продуктовых экранов.</p>
+    </header>
+
+    <aside class="fit-component-lock" aria-label="Заблокированные решения">
+      <b>Foundation locked</b>
+      <span>Typography accepted</span>
+      <span>Light / dark accepted</span>
+      <span>Actions / forms accepted</span>
+      <span>Success / danger accepted</span>
+    </aside>
+
+    <section class="fit-surface-grid" aria-label="Сравнение surfaces и states в светлой и тёмной теме">
+      <article class="fit-component-sheet fit-surface-sheet fit-component-light" aria-labelledby="fit-surface-light-title">
+        <header class="fit-component-sheet-head">
+          <div>
+            <span class="fit-component-meta">LIGHT · 390 PX</span>
+            <h2 id="fit-surface-light-title">Тёплый графит</h2>
+          </div>
+          <b>Accepted</b>
+        </header>
+
+        <section class="fit-surface-section" aria-labelledby="fit-light-cards-title">
+          <header class="fit-surface-section-head">
+            <div><span class="fit-component-meta">CARDS</span><h3 id="fit-light-cards-title">Один объект — одна поверхность</h3></div>
+            <p>Active state подтверждается текстом и контуром.</p>
+          </header>
+
+          <article class="fit-surface-card">
+            <header><div><span class="fit-component-meta">СЛЕДУЮЩАЯ ТРЕНИРОВКА</span><h4>Силовая тренировка</h4></div><span class="fit-status-pill">План</span></header>
+            <p>Сегодня · 18:30</p>
+            <small>6 упражнений · около 55 минут</small>
+          </article>
+
+          <article class="fit-surface-card is-active">
+            <header><div><span class="fit-component-meta">ИДЁТ СЕЙЧАС</span><h4>Тренировка начата</h4></div><span class="fit-status-pill">Активна</span></header>
+            <p>Последний подход сохранён 2 минуты назад.</p>
+            <button class="fit-action fit-action-primary" type="button">Продолжить тренировку</button>
+          </article>
+        </section>
+
+        <section class="fit-surface-section" aria-labelledby="fit-light-overlays-title">
+          <header class="fit-surface-section-head">
+            <div><span class="fit-component-meta">OVERLAYS</span><h3 id="fit-light-overlays-title">Sheet, dialog и menu</h3></div>
+            <p>Depth создаётся surface-контрастом и scrim, без shadow/glow.</p>
+          </header>
+
+          <div class="fit-overlay-stage fit-sheet-stage">
+            <section class="fit-bottom-sheet" role="dialog" aria-modal="true" aria-label="Выбор клиента, светлая тема">
+              <header><div><span class="fit-component-meta">ВЫБОР КЛИЕНТА</span><h4>Кому назначить</h4></div><button class="fit-icon-action" type="button" aria-label="Закрыть"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header>
+              <label class="fit-sheet-search"><span>Поиск</span><input value="Анна" readonly></label>
+              <button class="fit-picker-row" type="button"><span><b>Анна Смирнова</b><small>Последняя тренировка вчера</small></span><i aria-hidden="true"></i></button>
+            </section>
+          </div>
+
+          <div class="fit-overlay-stage fit-dialog-stage">
+            <section class="fit-dialog" role="alertdialog" aria-modal="true" aria-label="Удалить тренировку?">
+              <span class="fit-dialog-mark fit-danger" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5M12 16.5h.01" /></svg></span>
+              <h4>Удалить тренировку?</h4>
+              <p>Это действие нельзя отменить.</p>
+              <div class="fit-dialog-actions"><button class="fit-action fit-action-secondary" type="button">Отмена</button><button class="fit-action fit-action-destructive fit-action-danger" type="button">Удалить</button></div>
+            </section>
+          </div>
+
+          <div class="fit-menu-stage">
+            <button class="fit-icon-action" type="button" aria-label="Ещё действия" aria-haspopup="menu" aria-expanded="true"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></svg></button>
+            <div class="fit-overflow-list" role="menu">
+              <button type="button" role="menuitem">Изменить порядок</button>
+              <button type="button" role="menuitem">Настройки упражнения</button>
+              <button class="fit-danger" type="button" role="menuitem">Удалить</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="fit-surface-section" aria-labelledby="fit-light-states-title">
+          <header class="fit-surface-section-head">
+            <div><span class="fit-component-meta">ASYNC + STATE PANEL</span><h3 id="fit-light-states-title">Только достижимые состояния</h3></div>
+          </header>
+
+          <div class="fit-state-matrix">
+            <section class="fit-loading-panel" role="status" aria-label="Загрузка"><span class="sr-only">Загрузка…</span><div><i></i><i></i></div><div><i></i><i></i></div></section>
+            <section class="fit-state-panel" role="status"><span class="fit-state-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg></span><h4>История пока пуста</h4><p>Результаты появятся после тренировки.</p></section>
+            <section class="fit-state-panel" role="status"><span class="fit-state-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 10.5v6M12 7.5h.01" /></svg></span><h4>Редактирование недоступно</h4><p>Назначенную тренером тренировку может менять только тренер.</p><button class="fit-action fit-action-secondary" type="button">Вернуться</button></section>
+            <section class="fit-state-panel fit-state-error" role="alert"><span class="fit-state-mark fit-danger" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5M12 16.5h.01" /></svg></span><h4>Не удалось загрузить данные</h4><p>Сеть недоступна.</p><button class="fit-action fit-action-secondary" type="button">Повторить</button></section>
+          </div>
+        </section>
+
+        <section class="fit-surface-section" aria-labelledby="fit-light-save-title">
+          <header class="fit-surface-section-head"><div><span class="fit-component-meta">SAVE STATUS</span><h3 id="fit-light-save-title">Сохранение без отдельного success-screen</h3></div></header>
+          <div class="fit-save-list">
+            <p class="fit-save-status" role="status"><span class="fit-state-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5" /></svg></span>Сохраняем…</p>
+            <p class="fit-save-status fit-success" role="status"><span class="fit-state-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.2 4.2L19 7" /></svg></span>Сохранено</p>
+            <p class="fit-save-status fit-danger" role="alert"><span class="fit-state-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5M12 16.5h.01" /></svg></span>Сеть недоступна</p>
+          </div>
+        </section>
+      </article>
+
+      <article class="fit-component-sheet fit-surface-sheet fit-component-dark" aria-labelledby="fit-surface-dark-title">
+        <header class="fit-component-sheet-head">
+          <div><span class="fit-component-meta">DARK · 430 PX</span><h2 id="fit-surface-dark-title">Молочный на графите</h2></div>
+          <b>Accepted</b>
+        </header>
+
+        <section class="fit-surface-section" aria-labelledby="fit-dark-cards-title">
+          <header class="fit-surface-section-head"><div><span class="fit-component-meta">CARDS</span><h3 id="fit-dark-cards-title">Один объект — одна поверхность</h3></div><p>Dark hierarchy проверяется отдельно.</p></header>
+          <article class="fit-surface-card"><header><div><span class="fit-component-meta">СЛЕДУЮЩАЯ ТРЕНИРОВКА</span><h4>Силовая тренировка</h4></div><span class="fit-status-pill">План</span></header><p>Сегодня · 18:30</p><small>6 упражнений · около 55 минут</small></article>
+          <article class="fit-surface-card is-active"><header><div><span class="fit-component-meta">ИДЁТ СЕЙЧАС</span><h4>Тренировка начата</h4></div><span class="fit-status-pill">Активна</span></header><p>Последний подход сохранён 2 минуты назад.</p><button class="fit-action fit-action-primary" type="button">Продолжить тренировку</button></article>
+        </section>
+
+        <section class="fit-surface-section" aria-labelledby="fit-dark-overlays-title">
+          <header class="fit-surface-section-head"><div><span class="fit-component-meta">OVERLAYS</span><h3 id="fit-dark-overlays-title">Sheet, dialog и menu</h3></div><p>Surface-контраст проверяется отдельно от light.</p></header>
+          <div class="fit-overlay-stage fit-sheet-stage"><section class="fit-bottom-sheet" role="dialog" aria-modal="true" aria-label="Выбор клиента, тёмная тема"><header><div><span class="fit-component-meta">ВЫБОР КЛИЕНТА</span><h4>Кому назначить</h4></div><button class="fit-icon-action" type="button" aria-label="Закрыть"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button></header><label class="fit-sheet-search"><span>Поиск</span><input value="Анна" readonly></label><button class="fit-picker-row" type="button"><span><b>Анна Смирнова</b><small>Последняя тренировка вчера</small></span><i aria-hidden="true"></i></button></section></div>
+          <div class="fit-overlay-stage fit-dialog-stage"><section class="fit-dialog" role="alertdialog" aria-modal="true" aria-label="Удалить тренировку?"><span class="fit-dialog-mark fit-danger" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5M12 16.5h.01" /></svg></span><h4>Удалить тренировку?</h4><p>Это действие нельзя отменить.</p><div class="fit-dialog-actions"><button class="fit-action fit-action-secondary" type="button">Отмена</button><button class="fit-action fit-action-destructive fit-action-danger" type="button">Удалить</button></div></section></div>
+          <div class="fit-menu-stage"><button class="fit-icon-action" type="button" aria-label="Ещё действия" aria-haspopup="menu" aria-expanded="true"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></svg></button><div class="fit-overflow-list" role="menu"><button type="button" role="menuitem">Изменить порядок</button><button type="button" role="menuitem">Настройки упражнения</button><button class="fit-danger" type="button" role="menuitem">Удалить</button></div></div>
+        </section>
+
+        <section class="fit-surface-section" aria-labelledby="fit-dark-states-title">
+          <header class="fit-surface-section-head"><div><span class="fit-component-meta">ASYNC + STATE PANEL</span><h3 id="fit-dark-states-title">Только достижимые состояния</h3></div></header>
+          <div class="fit-state-matrix">
+            <section class="fit-loading-panel" role="status" aria-label="Загрузка"><span class="sr-only">Загрузка…</span><div><i></i><i></i></div><div><i></i><i></i></div></section>
+            <section class="fit-state-panel" role="status"><span class="fit-state-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg></span><h4>История пока пуста</h4><p>Результаты появятся после тренировки.</p></section>
+            <section class="fit-state-panel" role="status"><span class="fit-state-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 10.5v6M12 7.5h.01" /></svg></span><h4>Редактирование недоступно</h4><p>Назначенную тренером тренировку может менять только тренер.</p><button class="fit-action fit-action-secondary" type="button">Вернуться</button></section>
+            <section class="fit-state-panel fit-state-error" role="alert"><span class="fit-state-mark fit-danger" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5M12 16.5h.01" /></svg></span><h4>Не удалось загрузить данные</h4><p>Сеть недоступна.</p><button class="fit-action fit-action-secondary" type="button">Повторить</button></section>
+          </div>
+        </section>
+
+        <section class="fit-surface-section" aria-labelledby="fit-dark-save-title">
+          <header class="fit-surface-section-head"><div><span class="fit-component-meta">SAVE STATUS</span><h3 id="fit-dark-save-title">Сохранение без отдельного success-screen</h3></div></header>
+          <div class="fit-save-list"><p class="fit-save-status" role="status"><span class="fit-state-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5" /></svg></span>Сохраняем…</p><p class="fit-save-status fit-success" role="status"><span class="fit-state-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.2 4.2L19 7" /></svg></span>Сохранено</p><p class="fit-save-status fit-danger" role="alert"><span class="fit-state-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5M12 16.5h.01" /></svg></span>Сеть недоступна</p></div>
+        </section>
+      </article>
+    </section>
+
+    <footer class="fit-type-notes fit-component-notes">
+      <strong>Проверяем в этой задаче</strong>
+      <p>Surface hierarchy, active card, depth sheet/dialog/menu без теней,
+        реальные loading/empty/info/error/retry и SaveStatus. Success и danger
+        — единственные новые semantic-кандидаты.</p>
+      <p>Не проверяем navigation, shell, data-series colors или композицию
+        продуктового экрана. Typography, palettes и actions/forms locked.</p>
+    </footer>
+  </main>
+</body>
+</html>

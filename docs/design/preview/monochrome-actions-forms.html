@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Fit — actions and forms preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./monochrome-typography.css">
+  <link rel="stylesheet" href="./monochrome-actions-forms.css">
+</head>
+<body>
+  <main class="fit-type-preview fit-component-preview">
+    <header class="fit-type-intro fit-component-intro">
+      <p class="fit-type-kicker">GATE 1 · TASK 5</p>
+      <h1>Действия и формы</h1>
+      <p>Изолированная component matrix. Проверяются иерархия действий,
+        геометрия controls и реальные состояния в принятых light / dark
+        foundation. Продуктовые экраны не подключены.</p>
+    </header>
+
+    <aside class="fit-component-lock" aria-label="Заблокированные решения">
+      <b>Foundation locked</b>
+      <span>Onest 400 / 500 / 600</span>
+      <span>Light palette accepted</span>
+      <span>Dark palette accepted</span>
+      <span>No coral · purple · glow</span>
+    </aside>
+
+    <section class="fit-component-grid" aria-label="Сравнение компонентов в светлой и тёмной теме">
+      <article class="fit-component-sheet fit-component-light" aria-labelledby="fit-components-light-title">
+        <header class="fit-component-sheet-head">
+          <div>
+            <span class="fit-component-meta">LIGHT · 390 PX</span>
+            <h2 id="fit-components-light-title">Тёплый графит</h2>
+          </div>
+          <b>Accepted</b>
+        </header>
+
+        <section class="fit-component-section" aria-labelledby="fit-light-actions-title">
+          <header class="fit-component-section-head">
+            <div>
+              <span class="fit-component-meta">ACTION HIERARCHY</span>
+              <h3 id="fit-light-actions-title">Одно главное действие</h3>
+            </div>
+            <p>Все base actions 48 px независимо от semantic priority.</p>
+          </header>
+
+          <div class="fit-action-stack">
+            <button class="fit-action fit-action-primary" type="button">Сохранить тренировку</button>
+            <div class="fit-action-row">
+              <button class="fit-action fit-action-secondary" type="button">Редактировать</button>
+              <button class="fit-action fit-action-ghost" type="button">Отмена</button>
+            </div>
+            <button class="fit-action fit-action-destructive" type="button">Удалить тренировку</button>
+            <p class="fit-component-helper">Production destructive использует danger semantic, прямой текст и подтверждение.</p>
+          </div>
+
+          <div class="fit-compact-specimen">
+            <span class="fit-component-meta">COMPACT SIZE · 44 PX</span>
+            <div class="fit-compact-grid">
+              <button class="fit-action fit-action-primary fit-action-compact" type="button">Primary</button>
+              <button class="fit-action fit-action-secondary fit-action-compact" type="button">Secondary</button>
+              <button class="fit-action fit-action-ghost fit-action-compact" type="button">Ghost</button>
+              <button class="fit-action fit-action-destructive fit-action-compact" type="button">Destructive</button>
+            </div>
+            <p class="fit-component-helper">Compact выбирается по плотности контекста, а не по приоритету.</p>
+          </div>
+
+          <div class="fit-state-grid" aria-label="Состояния primary action">
+            <div>
+              <span class="fit-component-meta">FOCUS</span>
+              <button class="fit-action fit-action-primary is-focus" type="button">Продолжить</button>
+            </div>
+            <div>
+              <span class="fit-component-meta">PENDING</span>
+              <button class="fit-action fit-action-primary" type="button" aria-busy="true" disabled><i aria-hidden="true"></i>Сохраняем</button>
+            </div>
+            <div>
+              <span class="fit-component-meta">DISABLED</span>
+              <button class="fit-action fit-action-primary" type="button" disabled>Продолжить</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="fit-component-section" aria-labelledby="fit-light-fields-title">
+          <header class="fit-component-section-head">
+            <div>
+              <span class="fit-component-meta">FIELDS</span>
+              <h3 id="fit-light-fields-title">Редактируемый контент</h3>
+            </div>
+            <p>Editable всегда 16/400.</p>
+          </header>
+
+          <div class="fit-field-stack">
+            <label class="fit-field">
+              <span>Название тренировки</span>
+              <input value="Силовая тренировка" readonly>
+              <small>Видно клиенту и тренеру</small>
+            </label>
+            <label class="fit-field is-focus">
+              <span>Рабочий вес</span>
+              <input value="40 кг" readonly>
+              <small>Focus не меняет размер control</small>
+            </label>
+            <label class="fit-field">
+              <span>Комментарий</span>
+              <textarea readonly>Сохраняйте ровный темп и не сокращайте амплитуду.</textarea>
+            </label>
+            <label class="fit-field is-disabled">
+              <span>Подтверждённый результат</span>
+              <input value="3 × 10 · 40 кг" disabled>
+              <small>Недоступно после подтверждения</small>
+            </label>
+          </div>
+        </section>
+
+        <section class="fit-component-section" aria-labelledby="fit-light-controls-title">
+          <header class="fit-component-section-head">
+            <div>
+              <span class="fit-component-meta">CONTROLS</span>
+              <h3 id="fit-light-controls-title">Выбор и active states</h3>
+            </div>
+          </header>
+
+          <div class="fit-segmented" role="group" aria-label="Период, светлая тема">
+            <button type="button">Неделя</button>
+            <button class="is-active" type="button" aria-pressed="true">Месяц</button>
+            <button type="button">Год</button>
+          </div>
+
+          <div class="fit-switch-list">
+            <button class="fit-switch-row" type="button" role="switch" aria-checked="false">
+              <span><b>Напоминание</b><small>За час до тренировки</small></span><i aria-hidden="true"></i>
+            </button>
+            <button class="fit-switch-row" type="button" role="switch" aria-checked="true">
+              <span><b>Голосовая запись</b><small>Разрешена для черновика</small></span><i aria-hidden="true"></i>
+            </button>
+            <button class="fit-switch-row" type="button" role="switch" aria-checked="false" disabled>
+              <span><b>Автоподтверждение</b><small>Недоступно для этой роли</small></span><i aria-hidden="true"></i>
+            </button>
+          </div>
+        </section>
+      </article>
+
+      <article class="fit-component-sheet fit-component-dark" aria-labelledby="fit-components-dark-title">
+        <header class="fit-component-sheet-head">
+          <div>
+            <span class="fit-component-meta">DARK · 430 PX</span>
+            <h2 id="fit-components-dark-title">Молочный на графите</h2>
+          </div>
+          <b>Accepted</b>
+        </header>
+
+        <section class="fit-component-section" aria-labelledby="fit-dark-actions-title">
+          <header class="fit-component-section-head">
+            <div>
+              <span class="fit-component-meta">ACTION HIERARCHY</span>
+              <h3 id="fit-dark-actions-title">Одно главное действие</h3>
+            </div>
+            <p>Все base actions 48 px; геометрия совпадает с light.</p>
+          </header>
+
+          <div class="fit-action-stack">
+            <button class="fit-action fit-action-primary" type="button">Сохранить тренировку</button>
+            <div class="fit-action-row">
+              <button class="fit-action fit-action-secondary" type="button">Редактировать</button>
+              <button class="fit-action fit-action-ghost" type="button">Отмена</button>
+            </div>
+            <button class="fit-action fit-action-destructive" type="button">Удалить тренировку</button>
+            <p class="fit-component-helper">Production destructive использует danger semantic, прямой текст и подтверждение.</p>
+          </div>
+
+          <div class="fit-compact-specimen">
+            <span class="fit-component-meta">COMPACT SIZE · 44 PX</span>
+            <div class="fit-compact-grid">
+              <button class="fit-action fit-action-primary fit-action-compact" type="button">Primary</button>
+              <button class="fit-action fit-action-secondary fit-action-compact" type="button">Secondary</button>
+              <button class="fit-action fit-action-ghost fit-action-compact" type="button">Ghost</button>
+              <button class="fit-action fit-action-destructive fit-action-compact" type="button">Destructive</button>
+            </div>
+            <p class="fit-component-helper">Compact выбирается по плотности контекста, а не по приоритету.</p>
+          </div>
+
+          <div class="fit-state-grid" aria-label="Состояния primary action в тёмной теме">
+            <div>
+              <span class="fit-component-meta">FOCUS</span>
+              <button class="fit-action fit-action-primary is-focus" type="button">Продолжить</button>
+            </div>
+            <div>
+              <span class="fit-component-meta">PENDING</span>
+              <button class="fit-action fit-action-primary" type="button" aria-busy="true" disabled><i aria-hidden="true"></i>Сохраняем</button>
+            </div>
+            <div>
+              <span class="fit-component-meta">DISABLED</span>
+              <button class="fit-action fit-action-primary" type="button" disabled>Продолжить</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="fit-component-section" aria-labelledby="fit-dark-fields-title">
+          <header class="fit-component-section-head">
+            <div>
+              <span class="fit-component-meta">FIELDS</span>
+              <h3 id="fit-dark-fields-title">Редактируемый контент</h3>
+            </div>
+            <p>Secondary остаётся единым #999A9F.</p>
+          </header>
+
+          <div class="fit-field-stack">
+            <label class="fit-field">
+              <span>Название тренировки</span>
+              <input value="Силовая тренировка" readonly>
+              <small>Видно клиенту и тренеру</small>
+            </label>
+            <label class="fit-field is-focus">
+              <span>Рабочий вес</span>
+              <input value="40 кг" readonly>
+              <small>Focus не меняет размер control</small>
+            </label>
+            <label class="fit-field">
+              <span>Комментарий</span>
+              <textarea readonly>Сохраняйте ровный темп и не сокращайте амплитуду.</textarea>
+            </label>
+            <label class="fit-field is-disabled">
+              <span>Подтверждённый результат</span>
+              <input value="3 × 10 · 40 кг" disabled>
+              <small>Недоступно после подтверждения</small>
+            </label>
+          </div>
+        </section>
+
+        <section class="fit-component-section" aria-labelledby="fit-dark-controls-title">
+          <header class="fit-component-section-head">
+            <div>
+              <span class="fit-component-meta">CONTROLS</span>
+              <h3 id="fit-dark-controls-title">Выбор и active states</h3>
+            </div>
+          </header>
+
+          <div class="fit-segmented" role="group" aria-label="Период, тёмная тема">
+            <button type="button">Неделя</button>
+            <button class="is-active" type="button" aria-pressed="true">Месяц</button>
+            <button type="button">Год</button>
+          </div>
+
+          <div class="fit-switch-list">
+            <button class="fit-switch-row" type="button" role="switch" aria-checked="false">
+              <span><b>Напоминание</b><small>За час до тренировки</small></span><i aria-hidden="true"></i>
+            </button>
+            <button class="fit-switch-row" type="button" role="switch" aria-checked="true">
+              <span><b>Голосовая запись</b><small>Разрешена для черновика</small></span><i aria-hidden="true"></i>
+            </button>
+            <button class="fit-switch-row" type="button" role="switch" aria-checked="false" disabled>
+              <span><b>Автоподтверждение</b><small>Недоступно для этой роли</small></span><i aria-hidden="true"></i>
+            </button>
+          </div>
+        </section>
+      </article>
+    </section>
+
+    <footer class="fit-type-notes fit-component-notes">
+      <strong>Принято</strong>
+      <p>Единый base action 48 px, независимый compact 44 px, иерархию через
+        fill / contrast / visual weight, различимость secondary / ghost /
+        destructive, focus без glow и читаемый disabled в обеих темах.</p>
+      <p>Danger semantic принят в задаче 6 и применён к destructive без изменения
+        action geometry. Product CSS не подключён.</p>
+    </footer>
+  </main>
+</body>
+</html>

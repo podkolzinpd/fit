@@ -5,6 +5,12 @@ brief. Runtime behavior, feature components, and `src/styles.css` remain the
 implementation source of truth. The purpose of this map is to make future UI
 work consistent and easier to verify.
 
+> **Target identity:** the approved MONOCHROME PERFORMANCE direction is recorded
+> in `docs/UI_IDENTITY.md`. It has not been implemented globally yet. Use this
+> document to understand the current coral/violet baseline and migrate it
+> safely; do not treat the colors below as the target for a newly migrated
+> screen. The implementation plan is `docs/design/MONOCHROME_REDESIGN_PLAN.md`.
+
 ## Foundations
 
 - Stack: React 19, TypeScript, React Router, TanStack Query, React Hook Form,
