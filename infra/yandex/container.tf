@@ -41,6 +41,7 @@ resource "yandex_serverless_container" "api" {
         DATABASE_USER          = yandex_mdb_postgresql_user.api.name
         DATABASE_SSL_ROOT_CERT = "/app/certs/yandex-cloud-ca.pem"
         YANDEX_CLOUD_FOLDER_ID = var.folder_id
+        YANDEX_CLOUD_USE_METADATA_IAM_TOKEN = "true"
       },
       var.yandex_oauth_client_id == null ? {} : {
         YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id
@@ -83,6 +84,7 @@ resource "yandex_serverless_container" "api" {
     yandex_container_registry_iam_binding.api_image_puller,
     yandex_iam_service_account_iam_member.deployer_self_use,
     yandex_iam_service_account_iam_member.api_deployer,
+    yandex_resourcemanager_folder_iam_member.api_ai_user,
     yandex_lockbox_secret_iam_member.api_connection_secret_reader,
     yandex_lockbox_secret_iam_member.legacy_supabase_bridge_reader,
   ]

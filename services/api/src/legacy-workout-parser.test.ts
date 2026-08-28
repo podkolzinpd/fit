@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { SupabaseWorkoutParser } from './legacy-workout-parser.js'
+import { SupabaseWorkoutParser, YandexWorkoutParser } from './legacy-workout-parser.js'
 import { SupabaseBridge } from './supabase-bridge.js'
 
 function response(value: unknown, status = 200): Response {
@@ -51,5 +51,34 @@ describe('SupabaseWorkoutParser', () => {
 
     await expect(parser.parse('invalid', { text: 'присед', systemCatalog: [] })).rejects.toMatchObject({ status: 401, code: 'unauthorized' })
     expect(yandexFetch).not.toHaveBeenCalled()
+  })
+})
+
+describe('YandexWorkoutParser runtime authorization', () => {
+  it('uses an injected IAM token for the native stage parser', async () => {
+    const request = vi.fn((input: URL | RequestInfo, init?: RequestInit) => {
+      void input
+      void init
+      return Promise.resolve(response({ result: { alternatives: [{ message: { text: JSON.stringify({
+        items: [{ sourceText: 'присед 10 раз', exerciseRef: 'squat', confidence: 1, sets: [{ reps: 10 }] }],
+        unmatched: [],
+      }) } }] } }))
+    })
+    const authorizationHeader = vi.fn(() => Promise.resolve('Bearer metadata-token'))
+    const parser = new YandexWorkoutParser(
+      { authorizationHeader },
+      'folder-id',
+      'yandexgpt',
+      request,
+    )
+
+    await parser.parse({
+      text: 'присед 10 раз',
+      systemCatalog: [{ source: 'system', ref: 'squat', name: 'Присед', inputKind: 'strength' }],
+    })
+
+    expect(authorizationHeader).toHaveBeenCalledOnce()
+    const requestInit = request.mock.calls[0]?.[1]
+    expect(new Headers(requestInit?.headers).get('authorization')).toBe('Bearer metadata-token')
   })
 })

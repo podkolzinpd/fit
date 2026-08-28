@@ -1,4 +1,8 @@
 import { SupabaseBridge, SupabaseBridgeError } from './supabase-bridge.js'
+import {
+  ApiKeyYandexAiAuthorization,
+  type YandexAiAuthorization,
+} from './yandex-ai-authorization.js'
 
 const completionUrl = 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion'
 
@@ -63,12 +67,18 @@ export interface LegacyWorkoutParser {
 }
 
 export class YandexWorkoutParser {
+  private readonly authorization: YandexAiAuthorization
+
   constructor(
-    private readonly yandexApiKey: string,
+    authorization: string | YandexAiAuthorization,
     private readonly yandexFolderId: string,
     private readonly modelId = 'yandexgpt',
     private readonly request = fetch,
-  ) {}
+  ) {
+    this.authorization = typeof authorization === 'string'
+      ? new ApiKeyYandexAiAuthorization(authorization)
+      : authorization
+  }
 
   async parse(value: unknown, customCatalog: readonly WorkoutParserExercise[] = []): Promise<WorkoutParseResponse> {
     const input = this.parseInput(value)
@@ -87,7 +97,7 @@ export class YandexWorkoutParser {
     for (let attempt = 1; attempt <= 2; attempt += 1) {
       let response: Response
       try {
-        response = await this.request(completionUrl, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Api-Key ${this.yandexApiKey}` }, body: JSON.stringify({ modelUri: `gpt://${this.yandexFolderId}/${this.modelId}/latest`, completionOptions: { stream: false, temperature: 0, maxTokens: '2000' }, jsonSchema: { schema: outputSchema }, messages: [{ role: 'user', text: prompt }] }) })
+        response = await this.request(completionUrl, { method: 'POST', headers: { 'content-type': 'application/json', authorization: await this.authorization.authorizationHeader() }, body: JSON.stringify({ modelUri: `gpt://${this.yandexFolderId}/${this.modelId}/latest`, completionOptions: { stream: false, temperature: 0, maxTokens: '2000' }, jsonSchema: { schema: outputSchema }, messages: [{ role: 'user', text: prompt }] }) })
       } catch {
         if (attempt === 2) throw new WorkoutParseError(502, 'parse_failed')
         continue
