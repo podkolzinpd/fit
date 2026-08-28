@@ -11,6 +11,7 @@ const REALTIME_DEBOUNCE_MS = 120
 const clientSpaceRoots = new Set([
   'my-client',
   'client',
+  'client-canonical-id',
   'clients',
   'workouts',
   'workout',
@@ -43,6 +44,7 @@ export async function applyClientRealtimeChanges(
     tasks.push(
       queryClient.invalidateQueries({ queryKey: ['my-client'] }),
       queryClient.invalidateQueries({ queryKey: ['client', clientId] }),
+      queryClient.invalidateQueries({ queryKey: ['client-canonical-id', clientId] }),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
     )
   }

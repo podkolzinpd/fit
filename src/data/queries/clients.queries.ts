@@ -2,7 +2,7 @@ import type { CreateClientInput, UpdateClientInput, UpdateClientTrainerPreferenc
 import { supabase } from './client'
 import { toJson } from './json'
 
-const clientColumns = 'id,auth_user_id,full_name,gender,age_years,age_updated_at,height_cm,goal,archived_at,version'
+const clientColumns = 'id,auth_user_id,full_name,gender,age_years,age_updated_at,height_cm,goal,archived_at,version,merged_into_client_id'
 
 export const clientQueries = {
   getMine: () => supabase.rpc('get_my_client'),

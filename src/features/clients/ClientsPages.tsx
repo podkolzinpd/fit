@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm } from 'react-hook-form'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { goalsRepository } from '../../data/repositories/goals.repository'
@@ -258,6 +258,9 @@ export function ClientDetailPage() {
   const today = todayInTimeZone(actor?.timezone)
   useClientRealtime(clientId)
   const query = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
+  useEffect(() => {
+    if (query.data?.id && query.data.id !== clientId) navigate(`/clients/${query.data.id}`, { replace: true })
+  }, [clientId, navigate, query.data?.id])
   const stats = useQuery({ queryKey: ['client-stats', clientId, today], queryFn: async () => computeClientStats(await workoutsRepository.listSummaries(clientId), today) })
   const workouts = useQuery({ queryKey: ['workouts', clientId, 'upcoming'], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
   const upcoming = workouts.data ? splitClientWorkouts(workouts.data, today).upcoming : []

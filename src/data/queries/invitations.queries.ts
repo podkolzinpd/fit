@@ -6,6 +6,7 @@ export const invitationQueries = {
     p_target_role: targetRole,
   }),
   claim: (code: string) => supabase.rpc('claim_client_invitation', { p_code: code }),
+  reconnect: (code: string) => supabase.rpc('reconnect_client_trainer', { p_code: code }),
   list: (clientId: string) => supabase.from('client_invitations')
     .select('id,client_id,target_role,expires_at,created_at')
     .eq('client_id', clientId).is('claimed_at', null).is('revoked_at', null)
