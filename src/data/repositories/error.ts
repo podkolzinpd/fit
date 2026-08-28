@@ -58,6 +58,12 @@ export function repositoryError(error: unknown): RepositoryError {
       'Вы уже подключены к другому тренеру. Сначала отключите текущего тренера в профиле, затем повторите.',
     )
   }
+  if (normalizedMessage.includes('trainer_disconnect_required')) {
+    return new RepositoryError(
+      'trainer_disconnect_required',
+      'Сначала отключите текущего тренера в профиле. Ваши тренировки и результаты сохранятся.',
+    )
+  }
   if (normalizedMessage.includes('client_requires_safe_migration')) {
     return new RepositoryError(
       'client_requires_safe_migration',
