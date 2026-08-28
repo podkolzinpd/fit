@@ -16,6 +16,15 @@ Development-сборка программно отклоняет любой Supa
 
 После merge миграции применяет `.github/workflows/deploy-database.yml`. Запуск SQL через Dashboard запрещён. Publishable key может находиться в frontend deployment environment; service role и DB password — никогда.
 
+Закрытый rollout Foundation UI Identity v1 использует server-managed таблицу
+`public.user_feature_flags`. Флаг `monochrome_preview` по умолчанию выключен;
+authenticated пользователь может прочитать через RLS только собственную строку
+и не имеет прав на insert/update/delete. Включение и kill switch выполняются
+административной ролью на сервере и не требуют новой frontend-сборки. Frontend
+не содержит email allowlist: первоначальная production-настройка один раз
+разрешает согласованные email в Auth UUID внутри migration, после чего runtime
+работает только с `user_id`.
+
 Изменения `summarize-client-training` после merge выкатывает отдельный
 `.github/workflows/deploy-summary-function.yml`. Он публикует только эту Edge
 Function через Supabase API, не использует Docker и получает project id и access

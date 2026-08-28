@@ -1,4 +1,4 @@
-// schema-sha256: 1749352ea913da5c8464ded3e76d0582bf972ccdc771c7d8e28330971fb51b3a
+// schema-sha256: 06bc29bc8fd2b82f8515176ba9d587ad240d366852c86dc5c97fe16deea43757
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1186,6 +1186,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_feature_flags: {
+        Row: {
+          monochrome_preview: boolean
+          user_id: string
+        }
+        Insert: {
+          monochrome_preview?: boolean
+          user_id: string
+        }
+        Update: {
+          monochrome_preview?: boolean
+          user_id?: string
+        }
+        Relationships: []
       }
       workout_exercises: {
         Row: {
