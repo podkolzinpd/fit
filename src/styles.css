@@ -712,7 +712,7 @@ p { margin: 6px 0 }
   .phone-frame.assistant-shell.keyboard-open .content:not(.content-immersive) { padding-bottom:0; }
   .assistant-shell .assistant-page { height:100%; min-height:0; grid-template-rows:auto minmax(0, 1fr) auto auto; padding-bottom:0; overflow:hidden; }
   .assistant-shell .assistant-thread { overflow-y:auto; overscroll-behavior:contain; }
-  .assistant-shell .assistant-context-panel { max-height:min(58vh, 520px); overflow-y:auto; }
+  .assistant-shell .assistant-context-panel { max-height:min(78vh, 660px); overflow-y:auto; }
   .assistant-shell .assistant-composer { position:static; margin-top:0; padding:6px; }
   .phone-frame.keyboard-open .assistant-page { height:100%; min-height:0; grid-template-areas:"thread" "context" "composer"; grid-template-rows:minmax(0, 1fr) auto auto; gap:8px; padding-top:0; padding-bottom:0; overflow:hidden; }
   .phone-frame.keyboard-open .assistant-page:not(:has(> .assistant-context-panel)) { grid-template-areas:"thread" "composer"; grid-template-rows:minmax(0, 1fr) auto; }
