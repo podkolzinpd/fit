@@ -96,8 +96,13 @@ export function isInteractiveAssistantAction(action: AssistantOrchestratorAction
 }
 
 export function latestActiveAssistantAction(messages: readonly AssistantMessage[], conversationId?: string): AssistantActionMessage | undefined {
-  const message = [...messages].reverse().find((item) => item.conversation_id === conversationId && isInteractiveAssistantAction(item.action))
-  return message?.action ? { message, action: message.action } : undefined
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]
+    if (!message || message.conversation_id !== conversationId) continue
+    if (message.action) return isInteractiveAssistantAction(message.action) ? { message, action: message.action } : undefined
+    if (isWorkoutTerminalReply(message)) return undefined
+  }
+  return undefined
 }
 
 export function latestActiveWorkoutAction(messages: readonly AssistantMessage[], conversationId?: string): AssistantActionMessage | undefined {

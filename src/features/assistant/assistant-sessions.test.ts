@@ -57,6 +57,36 @@ describe('assistant sessions', () => {
     expect(visible.find((message) => message.id === 'terminal')?.action?.lifecycleStatus).toBe('applied')
   })
 
+  it.each([
+    ['create_client_draft', 'profile'],
+    ['record_workout', 'workout'],
+    ['create_program_draft', 'brief'],
+    ['schedule_program', 'confirm'],
+    ['summarize_progress', 'period'],
+  ] as const)('returns an active %s scenario for the live context', (tool, step) => {
+    const action: AssistantOrchestratorAction = {
+      tool,
+      status: 'needs_input',
+      title: 'Активный сценарий',
+      description: 'Продолжите',
+      payload: { step },
+    }
+    const messages = [{ id: tool, conversation_id: 'today', turn_id: tool, author: 'assistant', content: 'Продолжите', action, created_at: '2026-08-25T09:00:00.000Z' }]
+
+    expect(latestActiveAssistantAction(messages, 'today')?.action.tool).toBe(tool)
+  })
+
+  it.each(['applied', 'cancelled', 'failed'] as const)('does not resurrect an older scenario after the newest action is %s', (lifecycleStatus) => {
+    const active: AssistantOrchestratorAction = { tool: 'create_client_draft', status: 'needs_input', title: 'Клиент', description: 'Продолжите', payload: { step: 'profile' } }
+    const terminal: AssistantOrchestratorAction = { tool: 'summarize_progress', status: 'proposed', title: 'Сводка', description: 'Готово', payload: { step: 'confirm' }, lifecycleStatus }
+    const messages = [
+      { id: 'older', conversation_id: 'today', turn_id: 'older', author: 'assistant', content: 'Продолжите', action: active, created_at: '2026-08-25T09:00:00.000Z' },
+      { id: 'terminal', conversation_id: 'today', turn_id: 'terminal', author: 'assistant', content: 'Готово', action: terminal, created_at: '2026-08-25T09:01:00.000Z' },
+    ]
+
+    expect(latestActiveAssistantAction(messages, 'today')).toBeUndefined()
+  })
+
   it('does not resurrect an older workout after the newest workout was applied', () => {
     const makeAction = (lifecycleStatus?: 'applied') => ({ tool: 'record_workout' as const, status: 'proposed' as const, title: 'Тренировка', description: 'Тренировка', payload: { step: 'confirm' }, lifecycleStatus })
     const messages = [
@@ -75,10 +105,13 @@ describe('assistant sessions', () => {
       { id: 'small-talk', conversation_id: 'today', turn_id: 'hello', author: 'assistant', content: 'Здравствуйте!', action: null, created_at: '2026-08-25T09:01:00.000Z' },
     ]
     expect(latestActiveWorkoutAction(base, 'today')?.message.id).toBe('draft')
+    expect(latestActiveAssistantAction(base, 'today')?.message.id).toBe('draft')
     const cancelled = [...base, { id: 'cancelled', conversation_id: 'today', turn_id: 'cancel', author: 'assistant', content: 'Хорошо, запись тренировки отменена.', action: null, created_at: '2026-08-25T09:02:00.000Z' }]
     expect(latestActiveWorkoutAction(cancelled, 'today')).toBeUndefined()
+    expect(latestActiveAssistantAction(cancelled, 'today')).toBeUndefined()
     const restarted = [...cancelled, { id: 'new-draft', conversation_id: 'today', turn_id: 'new-draft', author: 'assistant', content: 'Новая тренировка', action: draft, created_at: '2026-08-25T09:03:00.000Z' }]
     expect(latestActiveWorkoutAction(restarted, 'today')?.message.id).toBe('new-draft')
+    expect(latestActiveAssistantAction(restarted, 'today')?.message.id).toBe('new-draft')
   })
 
   it('ignores legacy active tools when the chat is temporarily workout-only', () => {

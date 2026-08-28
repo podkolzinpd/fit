@@ -14,7 +14,7 @@ import { parseWorkoutWithLlm } from '../workouts/llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
 import { appendAssistantTranscript, appendWorkoutParse, appendedWorkoutTranscript, assistantWorkoutDraftKey, assistantWorkoutSaveInput, clearAssistantWorkoutDraft, enqueueWorkoutParse, readAssistantWorkoutDraft, removeWorkoutParseSource, resolveWorkoutParseSource, updateWorkoutParseMetrics, writeAssistantWorkoutDraft, type WorkoutParseQueue } from './workout-draft'
-import { compactAssistantContent, conversationLocalDate, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, groupWorkoutDictationReceipts, isReadOnlyConversation, latestActiveWorkoutAction, mergeAssistantMessages, selectTodayConversation, workoutDictationFragmentLabel, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
+import { compactAssistantContent, conversationLocalDate, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, groupWorkoutDictationReceipts, isReadOnlyConversation, latestActiveAssistantAction, mergeAssistantMessages, selectTodayConversation, workoutDictationFragmentLabel, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
 import { AssistantInlineSummaryCard } from './AssistantInlineSummary'
 import { parseAssistantInlineSummary } from './assistant-inline-summary'
 import { assistantActionView } from './assistant-action-view'
@@ -278,8 +278,8 @@ export function AssistantHistoryPage() {
     }
   }
 
-  const latestActiveAction = readOnly ? undefined : latestActiveWorkoutAction(messages, conversationId)
-  const workoutDraftStorageKey = latestActiveAction && actor && conversationId
+  const latestActiveAction = readOnly ? undefined : latestActiveAssistantAction(messages, conversationId)
+  const workoutDraftStorageKey = latestActiveAction?.action.tool === 'record_workout' && actor && conversationId
     ? assistantWorkoutDraftKey(actor.userId, conversationId, String((latestActiveAction.action.payload as WorkoutDraftPayload).clientId ?? 'unknown'))
     : undefined
   const visibleMessages = filterTerminalAssistantMessages(messages)
