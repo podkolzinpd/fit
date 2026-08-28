@@ -38,6 +38,7 @@ function assistantMarkup(context = '') {
 function workoutContextMarkup() {
   return `<section class="assistant-context-panel" data-testid="workout-context">
     <div class="assistant-flow-card assistant-program-draft assistant-workout-draft" aria-label="Черновик тренировки Тестик">
+      <div class="assistant-workout-draft-content">
       <header class="assistant-workout-header"><span class="assistant-workout-heading"><small>Черновик тренировки</small><strong>Тестик</strong></span><span class="assistant-flow-status">Диктовка</span></header>
       <div class="assistant-workout-meta"><label><span>Дата</span><input type="date" value="2026-08-28"></label><label><span>Время</span><input type="time" value="19:30"></label></div>
       <span class="assistant-workout-fragment-count">Диктовка · 1 фрагмент</span>
@@ -45,6 +46,7 @@ function workoutContextMarkup() {
         <div class="assistant-workout-result-row"><span class="assistant-workout-exercise-name"><strong>Жим лёжа (Штанга)</strong><small>Штанга</small></span><div class="assistant-workout-metrics" aria-label="Параметры упражнения"><label><input aria-label="Подходы" type="number" value="3"><small>подх.</small></label><label><input aria-label="Повторы" type="number" value="10"><small>повт.</small></label><label><input aria-label="Вес" type="number" value="50"><small>кг</small></label></div><button type="button" class="assistant-workout-remove" aria-label="Удалить Жим лёжа (Штанга)">×</button></div>
       </div></div>
       <p class="assistant-flow-guidance">Надиктуйте следующее упражнение — оно добавится сюда.</p>
+      </div>
       <div class="assistant-flow-actions"><button type="button" class="primary">Проверить и сохранить</button><button type="button" class="assistant-action-cancel">Отменить сценарий</button></div>
     </div>
   </section>`
@@ -234,8 +236,8 @@ test('assistant composer stays contained and keeps accessible controls on mobile
   }
 })
 
-test('assistant keeps the primary workout action visible before inner scrolling', async ({ page }) => {
-  for (const { width, height } of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {
+test('assistant keeps the primary workout action and composer visible before inner scrolling', async ({ page }) => {
+  for (const { width, height } of [{ width: 390, height: 844 }, { width: 430, height: 932 }, { width: 430, height: 720 }]) {
     for (const theme of ['theme-light', 'theme-dark']) {
       await page.setViewportSize({ width, height })
       await page.setContent(assistantMarkup(workoutContextMarkup()))
@@ -246,10 +248,18 @@ test('assistant keeps the primary workout action visible before inner scrolling'
       }, theme)
 
       const context = await page.getByTestId('workout-context').boundingBox()
+      const status = await page.locator('.assistant-flow-status').boundingBox()
+      const meta = await page.locator('.assistant-workout-meta').boundingBox()
       const primary = await page.getByRole('button', { name: 'Проверить и сохранить' }).boundingBox()
       const cancel = await page.getByRole('button', { name: 'Отменить сценарий' }).boundingBox()
       const composer = await page.getByTestId('composer').boundingBox()
+      const tabbar = await page.getByTestId('tabbar').boundingBox()
       const overflow = await page.getByTestId('workout-context').evaluate((element) => ({
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+        scrollTop: element.scrollTop,
+      }))
+      const draftOverflow = await page.locator('.assistant-workout-draft-content').evaluate((element) => ({
         clientHeight: element.clientHeight,
         scrollHeight: element.scrollHeight,
         scrollTop: element.scrollTop,
@@ -257,17 +267,62 @@ test('assistant keeps the primary workout action visible before inner scrolling'
       const pageWidth = await page.evaluate(() => document.documentElement.scrollWidth)
 
       expect(context).not.toBeNull()
+      expect(status).not.toBeNull()
+      expect(meta).not.toBeNull()
       expect(primary).not.toBeNull()
       expect(cancel).not.toBeNull()
       expect(composer).not.toBeNull()
+      expect(tabbar).not.toBeNull()
       expect(overflow.scrollTop).toBe(0)
+      expect(status!.y + status!.height).toBeLessThanOrEqual(meta!.y)
       expect(primary!.y + primary!.height).toBeLessThanOrEqual(context!.y + context!.height + 1)
+      expect(cancel!.y + cancel!.height).toBeLessThanOrEqual(context!.y + context!.height + 1)
       expect(primary!.y + primary!.height).toBeLessThanOrEqual(composer!.y)
       expect(overflow.scrollHeight).toBeGreaterThanOrEqual(overflow.clientHeight)
       expect(context!.y + context!.height).toBeLessThanOrEqual(composer!.y)
+      expect(composer!.y + composer!.height).toBeLessThanOrEqual(tabbar!.y)
       expect(pageWidth).toBe(width)
+
+      if (height === 720) {
+        expect(draftOverflow.scrollHeight).toBeGreaterThan(draftOverflow.clientHeight)
+        await page.locator('.assistant-workout-draft-content').evaluate((element) => { element.scrollTop = element.scrollHeight })
+        expect(await page.locator('.assistant-workout-draft-content').evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+        const primaryAfterScroll = await page.getByRole('button', { name: 'Проверить и сохранить' }).boundingBox()
+        const composerAfterScroll = await page.getByTestId('composer').boundingBox()
+        expect(primaryAfterScroll!.y).toBe(primary!.y)
+        expect(composerAfterScroll!.y).toBe(composer!.y)
+      }
     }
   }
+})
+
+test('assistant keeps workout actions and composer available with the keyboard open', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.setContent(assistantMarkup(workoutContextMarkup()))
+  await page.locator('html').evaluate((element) => {
+    element.classList.add('app-keyboard-open')
+    element.style.setProperty('--app-visible-height', '508px')
+    element.style.setProperty('--app-viewport-height', '844px')
+    element.style.setProperty('--app-viewport-offset-top', '336px')
+  })
+  await page.locator('.phone-frame').evaluate((element) => element.classList.add('keyboard-open'))
+
+  const frame = await page.locator('.phone-frame').boundingBox()
+  const context = await page.getByTestId('workout-context').boundingBox()
+  const primary = await page.getByRole('button', { name: 'Проверить и сохранить' }).boundingBox()
+  const cancel = await page.getByRole('button', { name: 'Отменить сценарий' }).boundingBox()
+  const composer = await page.getByTestId('composer').boundingBox()
+
+  expect(frame).not.toBeNull()
+  expect(context).not.toBeNull()
+  expect(primary).not.toBeNull()
+  expect(cancel).not.toBeNull()
+  expect(composer).not.toBeNull()
+  expect(context!.y + context!.height).toBeLessThanOrEqual(composer!.y)
+  expect(primary!.y + primary!.height).toBeLessThanOrEqual(context!.y + context!.height + 1)
+  expect(cancel!.y + cancel!.height).toBeLessThanOrEqual(context!.y + context!.height + 1)
+  expect(composer!.y + composer!.height).toBeLessThanOrEqual(frame!.y + frame!.height)
+  await expect(page.getByTestId('tabbar')).toBeHidden()
 })
 
 test('assistant page has no decorative accent glow in light and dark themes', async ({ page }) => {

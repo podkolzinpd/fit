@@ -4,15 +4,15 @@
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
 
-Обновлено: 2026-08-28
-Проверенный базовый `main`: `f8a8f5b` (`fix(yandex): bootstrap push function invoker (#646)`)
+Обновлено: 2026-08-29
+Проверенный базовый `main`: `cf1193e` (`YAFIT-411: keep assistant primary action visible (#647)`)
 
 ## Активное изменение
 
-- YAFIT-411: на мобильном `/assistant` главное действие заполненного черновика
-  тренировки с одним упражнением видно без внутренней прокрутки при 390×844 и
-  430×932. Длинный черновик по-прежнему прокручивается внутри контекстной
-  панели; режим открытой клавиатуры, LLM, matching, fallback и данные не меняются.
+- YAFIT-412: мобильный `/assistant` сохраняет primary CTA, отмену и composer
+  доступными одновременно при 390×844, 430×932 и коротком 430×720. Содержимое
+  workout-черновика прокручивается в отдельной внутренней секции; клавиатура,
+  LLM, matching, fallback, SpeechKit и данные не меняются.
 - Run `33191312202` создал immutable production Push Lockbox, runtime identity и
   первую `ACTIVE` версию функции; smoke выявил единственный оставшийся bootstrap:
   закрытый Yandex gateway вернул `403`. Push workflow открывает только invocation
@@ -106,9 +106,10 @@
   на Supabase; полный cutover не выполнен.
 
 ## Проверки активной ветки
-- Мобильный layout ассистента: 22 Playwright-сценария зелёные в Chromium и
-  WebKit, включая 390/430 px, light/dark, открытую клавиатуру и видимость
-  primary CTA до внутренней прокрутки.
+- Мобильный layout ассистента: 24 Playwright-сценария зелёные в Chromium и
+  WebKit, включая 390/430 px, короткую высоту 720 px, light/dark, открытую
+  клавиатуру, внутреннюю прокрутку и одновременную доступность CTA/composer.
+- Компонентные состояния workout draft/history: 17 тестов зелёные.
 - Полный `npm run check` зелёный: 857 frontend, 225 API и 61 infra/policy-
   тестов, lint, typecheck, coverage и production build. Policy проверяет
   запрет folder IAM и автоматического paid AI, ручное подтверждение smoke и
