@@ -192,6 +192,30 @@ jobs:
           echo "PUSH_PREVIOUS_VERSION_ID=$previous_version_id" >> "$GITHUB_ENV"
           echo "PUSH_CANDIDATE_VERSION_ID=$(jq -er '.id' <<<"$version")" >> "$GITHUB_ENV"
 
+      - name: Bootstrap the exact public invocation binding
+        run: |
+          set -euo pipefail
+          function_url=$(yc serverless function get \
+            --name "$PUSH_FUNCTION_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --format json | jq -er '.http_invoke_url')
+          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --request POST --header 'content-type: application/json' --data '{}' \
+            "$function_url" || true)
+
+          if [[ "$status" == '403' ]]; then
+            yc serverless function allow-unauthenticated-invoke "$PUSH_FUNCTION_NAME" \
+              --folder-id "$YC_FOLDER_ID"
+
+            for _ in {1..15}; do
+              status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+                --request POST --header 'content-type: application/json' --data '{}' \
+                "$function_url" || true)
+              [[ "$status" != '403' ]] && break
+              sleep 2
+            done
+          fi
+
       - name: Verify the candidate and roll back on smoke failure
         run: |
           set -euo pipefail
