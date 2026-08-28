@@ -39,6 +39,13 @@ describe('repositoryError', () => {
     expect(error.message).toBe('Вы уже подключены к другому тренеру. Сначала отключите текущего тренера в профиле, затем повторите.')
   })
 
+  it('explains the safe reconnect requirement without exposing database details', () => {
+    const error = repositoryError({ code: 'PT409', message: 'trainer_disconnect_required' })
+
+    expect(error.code).toBe('trainer_disconnect_required')
+    expect(error.message).toBe('Сначала отключите текущего тренера в профиле. Ваши тренировки и результаты сохранятся.')
+  })
+
   it('explains a legacy client migration conflict without exposing internals', () => {
     const error = repositoryError({ code: 'PT409', message: 'client_requires_safe_migration' })
 

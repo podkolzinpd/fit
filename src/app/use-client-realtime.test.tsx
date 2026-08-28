@@ -75,6 +75,19 @@ describe('client realtime', () => {
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['workouts'] })
   })
 
+  it('refreshes the canonical route when a client card is merged', async () => {
+    const queryClient = new QueryClient()
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue()
+
+    await applyClientRealtimeChanges(queryClient, 'client-source', [
+      change('clients', { id: 'client-source', merged_into_client_id: 'client-target' }),
+    ])
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['client', 'client-source'] })
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['client-canonical-id', 'client-source'] })
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['clients'] })
+  })
+
   it('refreshes goals, connections and summaries for the same client space', async () => {
     const queryClient = new QueryClient()
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue()
@@ -160,6 +173,7 @@ describe('client realtime', () => {
     queryClient.setQueryData(['profile'], { id: 'profile-1' })
     queryClient.setQueryData(['client', 'client-1'], { id: 'client-1' })
     queryClient.setQueryData(['client', 'client-2'], { id: 'client-2' })
+    queryClient.setQueryData(['client-canonical-id', 'client-1'], 'client-1')
     queryClient.setQueryData(['client-goal', 'client-1'], { id: 'goal-1' })
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries')
 
@@ -169,6 +183,7 @@ describe('client realtime', () => {
     expect(options?.predicate?.(queryClient.getQueryCache().find({ queryKey: ['profile'] })!)).toBe(false)
     expect(options?.predicate?.(queryClient.getQueryCache().find({ queryKey: ['client', 'client-1'] })!)).toBe(true)
     expect(options?.predicate?.(queryClient.getQueryCache().find({ queryKey: ['client', 'client-2'] })!)).toBe(false)
+    expect(options?.predicate?.(queryClient.getQueryCache().find({ queryKey: ['client-canonical-id', 'client-1'] })!)).toBe(true)
     expect(options?.predicate?.(queryClient.getQueryCache().find({ queryKey: ['client-goal', 'client-1'] })!)).toBe(true)
   })
 })

@@ -11,6 +11,7 @@ import { ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
 import { AssistantHistoryPage } from '../features/assistant'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
+import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canonical-client-route'
 
 function Protected() {
   const { actor, loading, error } = useAuth(); const location = useLocation()
@@ -62,7 +63,9 @@ const router = createBrowserRouter([
       { path: '/me/progress', element: <MyProgressPage /> },
       { path: '/me/profile', element: <ClientProfilePage /> },
     ] },
-    { path: '/workouts/new', element: <WorkoutFormPage /> },
+    { element: <CanonicalWorkoutClientRoute />, children: [
+      { path: '/workouts/new', element: <WorkoutFormPage /> },
+    ] },
     { path: '/workouts/:workoutId/edit', element: <WorkoutFormPage /> },
     { path: '/workouts/:workoutId', element: <WorkoutDetailPage /> },
     { path: '/workouts/:workoutId/live', element: <LiveWorkoutPage /> },
@@ -74,12 +77,14 @@ const router = createBrowserRouter([
       { path: '/today', element: <TodayPage /> },
       { path: '/clients', element: <ClientsPage /> },
       { path: '/clients/new', element: <ClientFormPage /> },
-      { path: '/clients/:clientId', element: <ClientDetailPage /> },
-      { path: '/clients/:clientId/goal', element: <GoalPage /> },
-      { path: '/clients/:clientId/edit', element: <ClientFormPage /> },
-      { path: '/clients/:clientId/workouts', element: <ClientWorkoutsPage /> },
+      { element: <CanonicalClientParamRoute />, children: [
+        { path: '/clients/:clientId', element: <ClientDetailPage /> },
+        { path: '/clients/:clientId/goal', element: <GoalPage /> },
+        { path: '/clients/:clientId/edit', element: <ClientFormPage /> },
+        { path: '/clients/:clientId/workouts', element: <ClientWorkoutsPage /> },
+        { path: '/progress/:clientId', element: <ProgressPage /> },
+      ] },
       { path: '/schedule', element: <SchedulePage /> },
-      { path: '/progress/:clientId', element: <ProgressPage /> },
       { path: '/exercises', element: <ExercisesPage /> },
       { path: '/profile', element: <ProfilePage /> },
     ] },
