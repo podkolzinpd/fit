@@ -853,6 +853,7 @@ p { margin: 6px 0 }
 .client-home-section-head .secondary { min-height: 38px; padding: 8px 11px }
 .client-home-connections > .card, .client-home-invitations { box-shadow: none }
 .client-home-connections > .card, .client-home-invitations .card { border-radius: 14px; background: var(--surface-sunken) }
+.client-trainer-disconnect-success { margin: 0; color: var(--success-text); font-weight: 700; }
 .client-home-invitations { display: grid; gap: 8px }
 .client-home-invitations h3 { margin: 5px 0 0; font-size: 14px; color: var(--muted) }
 .today-assignment-self { margin: 0; padding: 13px 14px; border: 1px solid var(--accent-border); border-radius: 14px; background: var(--accent-soft); color: var(--accent-strong); font-weight: var(--weight-medium) }

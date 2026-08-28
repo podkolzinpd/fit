@@ -12,6 +12,7 @@ export const invitationQueries = {
     .gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false }),
   listTrainers: (clientId: string) => supabase.rpc('list_client_trainers', { p_client_id: clientId }),
   revoke: (invitationId: string) => supabase.rpc('revoke_client_invitation', { p_invitation_id: invitationId }),
+  disconnectTrainer: (clientId: string) => supabase.rpc('disconnect_client_trainer', { p_client_id: clientId }),
   removeTrainer: (clientId: string, trainerId: string) => supabase.rpc('remove_client_trainer', {
     p_client_id: clientId, p_trainer_id: trainerId,
   }),
