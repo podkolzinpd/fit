@@ -5,13 +5,14 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-28
-Проверенный базовый `main`: `82dca29` (`YAFIT-410: show all active assistant actions (#644)`)
+Проверенный базовый `main`: `7d0ae6b` (`fix yandex: bootstrap push function Lockbox (#645)`)
 
 ## Активное изменение
 
-- Production Push Function bootstrap создаёт отсутствующий immutable Lockbox
-  только при подтверждённом `NOT_FOUND`; VAPID private key и dispatch secret не
-  покидают одноразовый GitHub runner и Yandex Lockbox. Ошибки IAM не маскируются.
+- Run `33191312202` создал immutable production Push Lockbox, runtime identity и
+  первую `ACTIVE` версию функции; smoke выявил единственный оставшийся bootstrap:
+  закрытый Yandex gateway вернул `403`. Push workflow открывает только invocation
+  этой функции и затем требует application-level `401` без dispatch secret.
 - После первого зелёного deploy публичный VAPID key из summary нужно передать в
   `VITE_VAPID_PUBLIC_KEY`, а URL функции и тот же dispatch secret — в Supabase
   Vault; это отдельная контролируемая настройка реальной доставки.

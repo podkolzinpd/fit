@@ -43,5 +43,8 @@ test('pins every Yandex Cloud Lockbox mount to an immutable version', () => {
   assert.match(push, /lockbox secret create[\s\S]*?--deletion-protection[\s\S]*?--payload - < "\$payload_file"/)
   assert.match(push, /randomBytes\(32\)\.toString\('base64url'\)/)
   assert.match(push, /webPush\.generateVAPIDKeys\(\)/)
+  assert.match(push, /if \[\[ "\$status" == '403' \]\]; then[\s\S]*?serverless function allow-unauthenticated-invoke "\$PUSH_FUNCTION_NAME"/)
+  assert.doesNotMatch(push, /resource-manager folder add-access-binding/)
+  assert.doesNotMatch(push, /serverless function set-access-bindings/)
   assert.doesNotMatch(push, /lockbox secret add-version/)
 })
