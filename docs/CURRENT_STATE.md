@@ -5,21 +5,19 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-29
-Проверенный базовый `main`: `6383a7f` (`YAFIT-413: stabilize upcoming workout test date (#648)`)
+Проверенный базовый `main`: `6b025d3` (`docs: accept monochrome UI identity v1 (#650)`)
 
 ## Активное изменение
 
-- YAFIT-412: мобильный `/assistant` сохраняет primary CTA, отмену и composer
-  доступными одновременно при 390×844, 430×932 и коротком 430×720. Содержимое
-  workout-черновика прокручивается в отдельной внутренней секции; клавиатура,
-  LLM, matching, fallback, SpeechKit и данные не меняются.
-- Run `33191312202` создал immutable production Push Lockbox, runtime identity и
-  первую `ACTIVE` версию функции; smoke выявил единственный оставшийся bootstrap:
-  закрытый Yandex gateway вернул `403`. Push workflow открывает только invocation
-  этой функции и затем требует application-level `401` без dispatch secret.
-- После первого зелёного deploy публичный VAPID key из summary нужно передать в
-  `VITE_VAPID_PUBLIC_KEY`, а URL функции и тот же dispatch secret — в Supabase
-  Vault; это отдельная контролируемая настройка реальной доставки.
+- Foundation UI Identity v1 принята и зафиксирована в production-документации;
+  продуктовые экраны ещё не мигрированы.
+- Готовится отдельный server-managed флаг `monochrome_preview`: default OFF,
+  чтение только собственной строки через RLS, изменение только серверной ролью.
+  Два согласованных тестовых аккаунта включаются миграцией через Auth UUID;
+  email не попадает во frontend, routing или UI-условия.
+- Сначала отдельно доставляется схема БД, затем frontend-чтение флага, и только
+  после этого — последовательные route-scoped миграции Client Home, Live и
+  Progress. Пользователи без флага сохраняют прежний интерфейс.
 
 ## Последняя проверенная продуктовая точка
 
@@ -106,28 +104,20 @@
   на Supabase; полный cutover не выполнен.
 
 ## Проверки активной ветки
-- Мобильный layout ассистента: 24 Playwright-сценария зелёные в Chromium и
-  WebKit, включая 390/430 px, короткую высоту 720 px, light/dark, открытую
-  клавиатуру, внутреннюю прокрутку и одновременную доступность CTA/composer.
-- Компонентные состояния workout draft/history: 17 тестов зелёные.
-- Полный `npm run check` зелёный: 857 frontend, 225 API и 61 infra/policy-
-  тестов, lint, typecheck, coverage и production build. Policy проверяет
-  запрет folder IAM и автоматического paid AI, ручное подтверждение smoke и
-  отсутствие выгрузки его ответов. Feature-ветка валидирует Terraform без
-  remote state/OIDC; remote plan и apply остаются только на `main`.
-- Целевой Playwright-сценарий `trainer invitation links a client account`
-  зелёный в mobile Chromium. Чистая база через Podman применяет миграции;
-  отключение и переподключение, сохранность истории, права доступа,
-  идемпотентность и запрет скрытой смены проверены отдельными pgTAP-наборами.
+- Чистая локальная база через Podman применяет всю цепочку миграций с новым
+  флагом. 69 pgTAP-файлов / 821 проверка зелёные, включая default OFF, RLS и
+  запрет authenticated-пользователю менять флаг.
+- Полная проектная проверка зелёная: 857 frontend-тестов, 225 API-тестов,
+  61 infra/policy-тест, lint, typecheck, schema hash и production build.
+  Production migration подтверждается только database deploy после merge.
 
 ## Ближайший порядок
 
-1. Выдать `fit-stage-api` точную AI-роль, повторить автоматический deploy и
-   только после оценки цены запустить synthetic AI smoke с подтверждением.
-2. После полного tenant-контракта провести две миграционные репетиции; только
-   затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
-3. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению
-   программ и нового решения владельца продукта.
+1. Доставить server-managed `monochrome_preview` и frontend-чтение без
+   визуальных изменений.
+2. Последовательно мигрировать Client Home, Live и Progress отдельными PR.
+3. После трёх экранов провести общий visual audit light/dark и только затем
+   продолжить оставшиеся задачи `MONOCHROME_REDESIGN_PLAN.md`.
 
 ## Отложено
 
