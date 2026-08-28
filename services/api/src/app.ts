@@ -42,7 +42,8 @@ import type { PilotWorkoutsWriter } from './pilot-workouts-writer.js'
 import type { PilotWorkoutParser } from './pilot-workout-parser.js'
 import {
   PilotTrainingSummaryError,
-  type PilotTrainingSummaries,
+  type PilotTrainingSummaryGenerator,
+  type PilotTrainingSummaryReader,
 } from './training-summary.js'
 import {
   readLiveCommentRequest,
@@ -92,7 +93,8 @@ interface BuildAppOptions {
   pilotProgressData?: PilotProgressData
   pilotWorkoutsWriter?: PilotWorkoutsWriter
   pilotWorkoutParser?: PilotWorkoutParser
-  pilotTrainingSummaries?: PilotTrainingSummaries
+  pilotTrainingSummaryGenerator?: PilotTrainingSummaryGenerator
+  pilotTrainingSummaryReader?: PilotTrainingSummaryReader
   legacyWorkoutParser?: LegacyWorkoutParser
   legacySummaryHandler?: LegacySummaryHandler
   logger?: boolean
@@ -234,11 +236,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (typeof clientId !== 'string' || !uuidPattern.test(clientId)) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
-    if (options.pilotTrainingSummaries === undefined) {
-      return reply.code(503).send({ error: 'service_unavailable' })
+    if (options.pilotTrainingSummaryReader === undefined) {
+      return reply.header('x-fit-error-code', 'training_summary_reader_not_configured')
+        .code(503).send({ error: 'service_unavailable' })
     }
     try {
-      const summaries = await options.pilotTrainingSummaries.list(sessionToken, clientId)
+      const summaries = await options.pilotTrainingSummaryReader.list(sessionToken, clientId)
       return reply.header('cache-control', 'no-store').send({ summaries })
     } catch (error) {
       return sendPilotSummaryError(error, reply)
@@ -256,12 +259,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       || command === undefined || command.clientId !== clientId) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
-    if (options.pilotTrainingSummaries === undefined) {
-      return reply.code(503).send({ error: 'service_unavailable' })
+    if (options.pilotTrainingSummaryGenerator === undefined) {
+      return reply.header('x-fit-error-code', 'training_summary_generation_not_configured')
+        .code(503).send({ error: 'service_unavailable' })
     }
     try {
       return reply.header('cache-control', 'no-store').send(
-        await options.pilotTrainingSummaries.generate(sessionToken, command),
+        await options.pilotTrainingSummaryGenerator.generate(sessionToken, command),
       )
     } catch (error) {
       return sendPilotSummaryError(error, reply)

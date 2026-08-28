@@ -5,19 +5,13 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-28
-Проверенный базовый `main`: `93d0cb6` (`fix: add safe trainer disconnect UI (#639)`)
+Проверенный базовый `main`: `55d3cd3` (`feat: add safe trainer reconnect (#640)`)
 
 ## Активное изменение
 
-- Серверный контракт безопасного переподключения принимает код нового тренера
-  только после явного отключения предыдущего. Каноническая самостоятельная
-  карточка, история и авторство сохраняются; новая карточка тренера переносится
-  атомарно, а повтор того же кода идемпотентен.
-- Старые карточки, где раздел данных всё ещё принадлежит тренеру, обычным
-  отключением не изменяются: сервер возвращает контролируемый конфликт. Их
-  состав будет разобран отдельной диагностикой и dry-run repair, без скрытого
-  массового переноса пользовательской истории.
-- UI переподключения остаётся следующей отдельной задачей.
+- Run `33093878852` прошёл миграции и DB preflight, затем безопасно откатился:
+  summary list ошибочно зависел от AI key. Активный PR разделяет DB reader и AI
+  generator и уточняет smoke checkpoint каждого route.
 
 ## Последняя проверенная продуктовая точка
 
@@ -41,20 +35,14 @@
   метрик, интервальный бег и связки; неоднозначность открывает проверку.
 - Сохранённые тренировки — компактная хроника с раскрытием подходов и кнопкой
   истории; копирование и удаление в меню.
-- Общая ИИ-сводка и production-разбор тренировки — через Yandex Cloud
-  Functions, локальный разбор — в локальном Supabase. `app_feedback`: Tracker
-  sync остановлен (robot OAuth блокирован с внешних IP, TVM+SDR не делаем);
-  команда читает через `analytics.app_feedback` и Telegram раз в минуту
-  (`notify-app-feedback-telegram`, no-op без vault-секретов).
-- Assistant pilot trainer-only: `/assistant` защищён `TrainerOnly`, client nav
-  убраны. Turns принимают `turnId`; history/action state durable, proposed
-  actions — узкими RPC с owner/RLS, program apply атомарен, повтор идемпотентен.
-  При уточнении клиента исходная диктовка тренировки сохраняется в action state;
-  падежные формы имени одинаково работают в записи, сводке и программе.
-  В пустой текущей сессии видны нейтральные примеры реальных возможностей;
-  автоматической отправки или записи данных по нажатию нет. Последовательные
-  фрагменты диктовки собраны в одну компактную раскрываемую строку вместо
-  повторяющихся сервисных карточек.
+- ИИ-сводка и production-разбор — через Yandex Cloud Functions, локальный разбор
+  — в Supabase. Tracker sync `app_feedback` остановлен; команда читает через
+  `analytics.app_feedback` и Telegram (`notify-app-feedback-telegram`).
+- Assistant pilot trainer-only: `/assistant` защищён `TrainerOnly`; turns имеют
+  `turnId`, history/action state durable, записи — узкими RPC с owner/RLS.
+  Program apply атомарен и идемпотентен; исходная диктовка сохраняется при
+  уточнении клиента. Пустая сессия показывает реальные возможности без записи;
+  последовательные фрагменты собраны в одну раскрываемую строку.
 - PWA предлагает понятную установку на домашний экран. Ручной беговой MVP и
   локальный public-domain каталог упражнений работают без внешнего медиасервиса.
 - Web Push пользователям: сценарий `workout_reminder` — клиенту в 9:00 по его
@@ -90,10 +78,9 @@
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
   exercises, workout lifecycle и post-workout работают на stage (миграции
-  `000001–000018`). Последний candidate API в run `33088844710` вернул `503` на
-  progress smoke после неточного private preflight; rollback сохранил предыдущую
-  рабочую revision. Следующая доставка проверяет точного fixture-клиента и ждёт
-  устойчивого распространения candidate release до публичного smoke.
+  `000001–000018`). Run `33093878852` доказал, что exact candidate и все DB
+  read models готовы; публичный smoke откатил revision из-за ошибочной AI-config
+  зависимости у summary list. Production остался на предыдущей revision.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
 - Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
@@ -107,7 +94,7 @@
   не выполнен: production frontend/tenant на Supabase, остальные вкладки без изменений.
 
 ## Проверки активной ветки
-- Полный `npm run check` зелёный: 845 frontend, 218 API и 57 infra/policy-
+- Полный `npm run check` зелёный: 845 frontend, 219 API и 57 infra/policy-
   тестов, lint, typecheck, coverage и production build. Supabase SQL/RLS:
   793 теста в 68 файлах зелёные; generated types актуальны.
 - Целевой Playwright-сценарий `trainer invitation links a client account`
@@ -117,9 +104,9 @@
 
 ## Ближайший порядок
 
-1. Доставить exact-client progress preflight, получить зелёную API revision и
-   выполнить summary-list плюс один
-   контролируемый AI generation/parse smoke без логирования исходного текста.
+1. Доставить независимый summary reader, получить зелёную API revision и затем
+   выполнить один контролируемый AI generation/parse smoke без логирования
+   исходного текста.
 2. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
 3. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению

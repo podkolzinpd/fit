@@ -122,7 +122,11 @@ test('probes the fit_api identity privately before changing the API revision', (
   assert.match(workflow, /expected_release=\$API_IMAGE_TAG/)
   for (const check of [
     'training-data',
-    'progress-read-models',
+    'progress-bundle',
+    'exercise-progress',
+    'running-progress',
+    'workout-chronicle',
+    'training-summaries',
     'post-workout',
     'client-domain',
     'exercise-domain',
