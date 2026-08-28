@@ -72,6 +72,8 @@ test('client and trainer receive progress and workout changes without reload', a
     await client.goto('/join')
     await client.getByLabel('Код приглашения').fill(code!)
     await client.getByRole('button', { name: 'Присоединиться' }).click()
+    await expect(client.getByRole('heading', { name: 'Тренер подключён' })).toBeVisible()
+    await client.getByRole('button', { name: 'Открыть кабинет' }).click()
     await expect(client).toHaveURL(/\/me$/)
     await expect(trainer.getByRole('button', { name: 'Пригласить клиента' })).toHaveCount(0, { timeout: 10_000 })
 

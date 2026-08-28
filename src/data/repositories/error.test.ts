@@ -32,6 +32,13 @@ describe('repositoryError', () => {
     expect(error.message).toBe('Приглашение недействительно или срок его действия истёк. Попросите новый код.')
   })
 
+  it('explains that the current trainer must be disconnected before switching', () => {
+    const error = repositoryError({ code: 'PT409', message: 'trainer_switch_required' })
+
+    expect(error.code).toBe('trainer_switch_required')
+    expect(error.message).toBe('Вы уже подключены к другому тренеру. Сначала отключите текущего тренера в профиле, затем повторите.')
+  })
+
   it.each([
     [{ code: 'invalid_credentials', message: 'Invalid login credentials' }, 'invalid_credentials', 'Неверный email или пароль. Проверьте данные и повторите попытку.'],
     [{ code: 'over_request_rate_limit', message: 'Too many requests' }, 'rate_limited', 'Слишком много попыток. Подождите немного и повторите.'],
