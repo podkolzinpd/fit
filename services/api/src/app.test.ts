@@ -195,7 +195,11 @@ describe('native Yandex function contracts', () => {
     })
     const list = vi.fn().mockResolvedValue([{ id: 'summary-id' }])
     const pilotTrainingSummaries: PilotTrainingSummaries = { generate, list }
-    const app = buildApp({ pilotTrainingSummaries, logger: false })
+    const app = buildApp({
+      pilotTrainingSummaryGenerator: pilotTrainingSummaries,
+      pilotTrainingSummaryReader: pilotTrainingSummaries,
+      logger: false,
+    })
     apps.push(app)
 
     const generated = await app.inject({
@@ -234,7 +238,7 @@ describe('native Yandex function contracts', () => {
     const pilotTrainingSummaries: PilotTrainingSummaries = {
       generate: vi.fn(), list,
     }
-    const app = buildApp({ pilotTrainingSummaries, logger: false })
+    const app = buildApp({ pilotTrainingSummaryReader: pilotTrainingSummaries, logger: false })
     apps.push(app)
 
     const response = await app.inject({
@@ -244,6 +248,34 @@ describe('native Yandex function contracts', () => {
 
     expect(response.statusCode).toBe(401)
     expect(list).not.toHaveBeenCalled()
+  })
+
+  it('keeps stored summaries readable when AI generation is not configured', async () => {
+    const list = vi.fn().mockResolvedValue([{ id: 'stored-summary' }])
+    const app = buildApp({ pilotTrainingSummaryReader: { list }, logger: false })
+    apps.push(app)
+
+    const listed = await app.inject({
+      method: 'GET',
+      url: `/v1/clients/${PROFILE_ID}/training-summaries`,
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+    })
+    const generated = await app.inject({
+      method: 'POST',
+      url: `/v1/clients/${PROFILE_ID}/training-summaries/generate`,
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+      payload: {
+        client_id: PROFILE_ID,
+        period_start: '2026-08-01',
+        period_end: '2026-08-26',
+      },
+    })
+
+    expect(listed.statusCode).toBe(200)
+    expect(listed.json()).toEqual({ summaries: [{ id: 'stored-summary' }] })
+    expect(generated.statusCode).toBe(503)
+    expect(generated.headers['x-fit-error-code'])
+      .toBe('training_summary_generation_not_configured')
   })
 })
 

@@ -105,12 +105,16 @@ const pilotWorkoutParser =
           process.env.YANDEX_CLOUD_MODEL_ID,
         ),
       )
-const pilotTrainingSummaries =
+const pilotTrainingSummaryReader =
+  databasePool === undefined
+    ? undefined
+    : new DatabasePilotTrainingSummaries(databasePool)
+const pilotTrainingSummaryGenerator =
   databasePool === undefined
     || process.env.YANDEX_CLOUD_API_KEY === undefined
     || process.env.YANDEX_CLOUD_FOLDER_ID === undefined
     ? undefined
-    : new DatabasePilotTrainingSummaries(databasePool)
+    : pilotTrainingSummaryReader
 const supabaseBridgeConfig = readSupabaseBridgeConfig()
 const legacyWorkoutParser =
   supabaseBridgeConfig === undefined
@@ -148,7 +152,10 @@ const app = buildApp(
     ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),
     ...(pilotProgressData === undefined ? {} : { pilotProgressData }),
     ...(pilotWorkoutParser === undefined ? {} : { pilotWorkoutParser }),
-    ...(pilotTrainingSummaries === undefined ? {} : { pilotTrainingSummaries }),
+    ...(pilotTrainingSummaryGenerator === undefined
+      ? {}
+      : { pilotTrainingSummaryGenerator }),
+    ...(pilotTrainingSummaryReader === undefined ? {} : { pilotTrainingSummaryReader }),
     ...(legacyWorkoutParser === undefined ? {} : { legacyWorkoutParser }),
     ...(legacySummaryHandler === undefined ? {} : { legacySummaryHandler }),
   },
