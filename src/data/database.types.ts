@@ -1,4 +1,4 @@
-// schema-sha256: 97c382b822d09264b497c4db071b74314f4ec537ad8ff44dfaa88c9368c115a9
+// schema-sha256: 1855e3efe833d4aba1f8d2ed3ab7191d7b8bf7ec31f5f32f8f16a6e7386b20bc
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1591,6 +1591,10 @@ export type Database = {
         Returns: string
       }
       delete_goal_stage: { Args: { p_stage_id: string }; Returns: undefined }
+      disconnect_client_trainer: {
+        Args: { p_client_id: string }
+        Returns: Json
+      }
       finish_workout: {
         Args: { p_expected_version: number; p_workout_id: string }
         Returns: number
