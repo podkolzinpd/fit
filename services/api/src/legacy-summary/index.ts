@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unused-vars -- Supabase REST row shapes are runtime-validated by the existing Edge contract and will be replaced with typed Yandex DTOs after data cutover. */
 import { createClient } from "@supabase/supabase-js"
+
+import type { YandexAiAuthorization } from "../yandex-ai-authorization.js"
 import {
   PROMPT_VERSION,
   SUMMARY_JSON_SCHEMA,
@@ -477,6 +479,7 @@ export function buildProgressData(
 }
 
 type YandexRequestOptions = {
+  authorization?: YandexAiAuthorization
   fetchImpl?: typeof fetch
   requestId?: string
   sleep?: (delayMs: number) => Promise<void>
@@ -512,7 +515,9 @@ export async function requestYandexSummary(
   periodEnd: string,
   options: YandexRequestOptions = {},
 ) {
-  const apiKey = requiredSecret("YANDEX_CLOUD_API_KEY")
+  const apiKey = options.authorization === undefined
+    ? requiredSecret("YANDEX_CLOUD_API_KEY")
+    : undefined
   const folderId = requiredSecret("YANDEX_CLOUD_FOLDER_ID")
   const modelId = process.env.YANDEX_CLOUD_MODEL_ID ?? "yandexgpt"
   const modelUri = `gpt://${folderId}/${modelId}/latest`
@@ -538,10 +543,13 @@ export async function requestYandexSummary(
     const timeout = setTimeout(() => controller.abort(), 30_000)
     let response: Response
     try {
+      const authorization = options.authorization === undefined
+        ? `Api-Key ${apiKey}`
+        : await options.authorization.authorizationHeader()
       response = await fetchImpl(YANDEX_COMPLETION_URL, {
         method: "POST",
         headers: {
-          "Authorization": `Api-Key ${apiKey}`,
+          "Authorization": authorization,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
