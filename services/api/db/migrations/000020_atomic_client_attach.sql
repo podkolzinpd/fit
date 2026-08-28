@@ -5,7 +5,8 @@
 -- созданной тренером, переносятся без изменения авторства.
 
 create schema if not exists app_private;
-revoke all on schema app_private from public, fit_api;
+revoke all on schema app_private from public;
+grant usage on schema app_private to fit_api;
 
 -- В Supabase-контуре эта закрытая схема и защитный триггер появились раньше.
 -- API-контур должен уметь разворачиваться с нуля, поэтому создаём их здесь
