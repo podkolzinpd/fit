@@ -58,6 +58,12 @@ export function repositoryError(error: unknown): RepositoryError {
       'Вы уже подключены к другому тренеру. Сначала отключите текущего тренера в профиле, затем повторите.',
     )
   }
+  if (normalizedMessage.includes('client_requires_safe_migration')) {
+    return new RepositoryError(
+      'client_requires_safe_migration',
+      'Сейчас отключить тренера безопасно не получилось. Ваши данные не изменены. Попробуйте позже или напишите в поддержку.',
+    )
+  }
   if (code === 'PT409' && normalizedMessage.includes('active_workout_exists')) {
     return new RepositoryError('active_workout_exists', 'У клиента уже идёт другая тренировка. Откройте её и продолжите.')
   }
