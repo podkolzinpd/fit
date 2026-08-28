@@ -50,9 +50,10 @@ select is(
   '83000000-0000-4000-8000-000000000003'::uuid,
   'claim links client owner'
 );
-select throws_ok(
-  $$select public.claim_client_invitation((select code from invitation_code))$$,
-  'PT404', 'invitation_invalid', 'invitation is single use'
+select is(
+  public.claim_client_invitation((select code from invitation_code)),
+  '85000000-0000-4000-8000-000000000005'::uuid,
+  'repeating a successful claim is idempotent'
 );
 select is((select count(*) from public.clients), 1::bigint, 'owner can read linked client');
 select is(
