@@ -12,9 +12,8 @@ export function JoinPage() {
   const queryClient = useQueryClient()
   const claim = useMutation({
     mutationFn: (code: string) => invitationsRepository.claim(code),
-    onSuccess: async (clientId) => {
+    onSuccess: async () => {
       await queryClient.invalidateQueries()
-      navigate(actor?.role === 'client' ? '/me' : `/clients/${clientId}`, { replace: true })
     },
   })
 
@@ -22,6 +21,27 @@ export function JoinPage() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     claim.mutate(String(new FormData(event.currentTarget).get('code')))
+  }
+
+  if (claim.isSuccess) {
+    const isClient = actor?.role === 'client'
+    return <Page title="Присоединиться" className="join-page">
+      <section className="join-card join-success" role="status" aria-live="polite">
+        <div className="join-card-head">
+          <p className="eyebrow">ГОТОВО</p>
+          <h2>{isClient ? 'Тренер подключён' : 'Клиент подключён'}</h2>
+          <p>{isClient
+            ? 'Ваши самостоятельные тренировки сохранены. Планы тренера уже доступны в кабинете.'
+            : 'Карточка клиента и доступная история тренировок готовы к работе.'}</p>
+        </div>
+        <button
+          className="primary wide"
+          onClick={() => navigate(isClient ? '/me' : `/clients/${claim.data}`, { replace: true })}
+        >
+          {isClient ? 'Открыть кабинет' : 'Открыть карточку'}
+        </button>
+      </section>
+    </Page>
   }
 
   return <Page title="Присоединиться" className="join-page">

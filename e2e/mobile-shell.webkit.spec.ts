@@ -230,6 +230,8 @@ test('iPhone: тренер назначает интервалы, спортсм
     await client.goto('/join')
     await client.getByLabel('Код приглашения').fill(code!)
     await client.getByRole('button', { name: 'Присоединиться' }).click()
+    await expect(client.getByRole('heading', { name: 'Тренер подключён' })).toBeVisible()
+    await client.getByRole('button', { name: 'Открыть кабинет' }).click()
     await expect(client).toHaveURL(/\/me$/)
 
     await trainer.goto(`/workouts/new?client=${clientId}`)
