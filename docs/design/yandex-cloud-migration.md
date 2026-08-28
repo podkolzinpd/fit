@@ -217,8 +217,10 @@ Port the current `main` behavior in this order:
    every 15 seconds and an immediate refetch on return, while production keeps
    its existing Supabase realtime channel until cutover);
 10. goal-aware training summary and the remaining Edge Function behavior
-    (`000018` and the native pilot API are implemented; controlled stage AI
-    smoke and tenant migration rehearsal remain before cutover).
+    (`000018` and the native pilot API are implemented; runtime AI authorization
+    uses the API service account and short-lived metadata IAM tokens. A separate
+    explicit paid synthetic generation/parse smoke is implemented and must pass
+    once after deployment; tenant migration rehearsals remain before cutover).
 
 Each item is a separate vertical slice: PostgreSQL migration, grants/RLS and
 cross-tenant tests, API transaction/DTO, repository adapter and observable
@@ -239,6 +241,16 @@ after the candidate revision is deployed. It also verifies the native summary
 list contract without generating a paid model request on every deployment. A
 failed nested aggregate or RLS
 check follows the existing API rollback path.
+
+AI execution is intentionally outside that automatic gate. The API runtime has
+the minimal `ai.languageModels.user` role and obtains a short-lived IAM token
+from Serverless Container metadata, so stage stores no static AI credential.
+The manually dispatched AI smoke requires the exact `RUN_PAID_AI_SMOKE`
+confirmation, uses only the deterministic fixture and never prints request or
+generated content. It exercises one workout parse and one forced summary
+generation; bounded retry policies can result in additional billable model
+requests. A failed AI smoke does not redeploy or roll back the otherwise healthy
+API revision.
 
 A production pilot cannot start after only profiles and memberships have been
 ported. Every mutable and shared domain reachable by that tenant cohort must

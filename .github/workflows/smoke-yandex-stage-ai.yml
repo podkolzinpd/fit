@@ -1,0 +1,157 @@
+name: Run controlled Yandex stage AI smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type RUN_PAID_AI_SMOKE for two billable AI scenarios; bounded retries may add requests'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: yandex-stage
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  TF_CLI_CONFIG_FILE: ${{ github.workspace }}/infra/yandex/terraform.rc.example
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-provider-cache
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_TFSTATE_SECRET_ACCESS_KEY }}
+
+jobs:
+  smoke:
+    name: Generate a synthetic summary and parse a synthetic workout
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require explicit paid-smoke confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: test "$CONFIRMATION" = RUN_PAID_AI_SMOKE
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          terraform_wrapper: false
+      - uses: actions/cache@v4
+        with:
+          path: .terraform-provider-cache
+          key: terraform-yandex-${{ runner.os }}-${{ hashFiles('infra/yandex/.terraform.lock.hcl') }}
+      - name: Prepare Terraform provider cache
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+      - name: Exchange GitHub OIDC token for a short-lived IAM token
+        run: scripts/yandex-github-oidc.sh
+      - name: Initialize Terraform remote state
+        working-directory: infra/yandex
+        run: >-
+          terraform init
+          -backend-config=backend.hcl.example
+          -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }}
+          -backend-config=key=fit/stage/terraform.tfstate
+      - name: Prepare an ephemeral synthetic pilot session
+        working-directory: infra/yandex
+        run: |
+          migration_url=$(terraform output -raw migration_container_url)
+          status=$(curl --silent --show-error --max-time 120 \
+            --output ai-smoke-fixture.json --write-out '%{http_code}' \
+            --request POST --header "Authorization: Bearer $YC_TOKEN" \
+            "${migration_url%/}/stage/fixtures/workout-read-model")
+          chmod 600 ai-smoke-fixture.json
+          test "$status" = 200
+          jq -e '
+            .status == "fixture_ready"
+            and (.session.token | test("^[A-Za-z0-9_-]{43}$"))
+            and (.session.clientId | test("^[0-9a-f-]{36}$"; "i"))
+          ' ai-smoke-fixture.json >/dev/null
+      - name: Parse one synthetic workout through Yandex AI
+        working-directory: infra/yandex
+        run: |
+          api_url=$(terraform output -raw api_container_url)
+          session_token=$(jq -er '.session.token' ai-smoke-fixture.json)
+          client_id=$(jq -er '.session.clientId' ai-smoke-fixture.json)
+          training_status=$(curl --silent --show-error --max-time 30 \
+            --output ai-smoke-training.json --write-out '%{http_code}' \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $session_token" \
+            "${api_url%/}/v1/training-data")
+          chmod 600 ai-smoke-training.json
+          test "$training_status" = 200
+          custom_ref=$(jq -er '
+            .customExercises[] | select(.name == "Тестовая тяга Yandex stage") | .id
+          ' ai-smoke-training.json)
+          jq -cn '{
+            text: "Тестовая тяга Yandex stage, 42,5 килограмма, 10 повторений",
+            systemCatalog: []
+          }' > ai-smoke-parser-request.json
+          chmod 600 ai-smoke-parser-request.json
+          parser_status=$(curl --silent --show-error --max-time 120 \
+            --output ai-smoke-parser-response.json --write-out '%{http_code}' \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $session_token" \
+            --header "Content-Type: application/json" \
+            --data @ai-smoke-parser-request.json \
+            "${api_url%/}/v1/assistant/yandex/parse-workout")
+          chmod 600 ai-smoke-parser-response.json
+          if test "$parser_status" != 200; then
+            error_code=$(jq -r '.error // "unexpected_response"' ai-smoke-parser-response.json)
+            echo "Synthetic parser smoke failed: HTTP $parser_status; code=$error_code." >&2
+            exit 1
+          fi
+          jq -e --arg custom_ref "$custom_ref" '
+            .items | any(
+              .exerciseRef == $custom_ref
+              and (.sets | any(.weightKg == 42.5 and .reps == 10))
+            )
+          ' ai-smoke-parser-response.json >/dev/null
+          jq -cn --arg client_id "$client_id" '{
+            clientId: $client_id,
+            periodStart: "2026-08-01",
+            periodEnd: "2026-08-31",
+            force: true
+          }' > ai-smoke-summary-request.json
+          chmod 600 ai-smoke-summary-request.json
+      - name: Generate and persist one synthetic training summary
+        working-directory: infra/yandex
+        run: |
+          api_url=$(terraform output -raw api_container_url)
+          session_token=$(jq -er '.session.token' ai-smoke-fixture.json)
+          client_id=$(jq -er '.session.clientId' ai-smoke-fixture.json)
+          summary_status=$(curl --silent --show-error --max-time 120 \
+            --output ai-smoke-summary-response.json --write-out '%{http_code}' \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $session_token" \
+            --header "Content-Type: application/json" \
+            --data @ai-smoke-summary-request.json \
+            "${api_url%/}/v1/clients/$client_id/training-summaries/generate")
+          chmod 600 ai-smoke-summary-response.json
+          if test "$summary_status" != 200; then
+            error_code=$(jq -r '.error // "unexpected_response"' ai-smoke-summary-response.json)
+            echo "Synthetic summary smoke failed: HTTP $summary_status; code=$error_code." >&2
+            exit 1
+          fi
+          summary_id=$(jq -er '
+            select(.cached == false)
+            | .data.id
+            | select(test("^[0-9a-f-]{36}$"; "i"))
+          ' ai-smoke-summary-response.json)
+          list_status=$(curl --silent --show-error --max-time 30 \
+            --output ai-smoke-summary-list.json --write-out '%{http_code}' \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Pilot-Session: $session_token" \
+            "${api_url%/}/v1/clients/$client_id/training-summaries")
+          chmod 600 ai-smoke-summary-list.json
+          test "$list_status" = 200
+          jq -e --arg summary_id "$summary_id" '
+            .summaries | any(.id == $summary_id)
+          ' ai-smoke-summary-list.json >/dev/null
+          printf '%s\n' 'Synthetic parser and summary generation passed.' >> "$GITHUB_STEP_SUMMARY"

@@ -82,6 +82,14 @@ the short-lived Fit pilot session, read Yandex PostgreSQL and never receive a
 Supabase JWT. The bridge remains only for unchanged production tenants until a
 reviewed cohort cutover.
 
+Native stage parser and summary generation do not mount a permanent AI key.
+The API service account has only `ai.languageModels.user`; the Serverless
+Container obtains a short-lived IAM token from its GCE-compatible metadata
+endpoint. Ordinary deployment checks only stored summary reads and therefore
+make no paid model request. The two synthetic AI scenarios run only through
+the manually dispatched `smoke-yandex-stage-ai.yml` workflow after the exact
+`RUN_PAID_AI_SMOKE` confirmation; bounded model retries can add requests.
+
 To enable this bridge on an isolated stage, a security administrator creates an
 existing Lockbox version with exactly these payload keys:
 
@@ -105,6 +113,9 @@ Pull-request CI never applies Terraform. A merge to `main` creates a plan and
 automatically deploys only when policy confirms an existing API/migration image
 update with no new paid resource, resize, identity change, delete or replacement.
 Every other infrastructure plan stops before image push, migration or apply.
+Feature branches initialize Terraform without the remote backend and validate
+the configuration without Yandex OIDC or state credentials; remote plan and
+apply remain restricted to `main`.
 
 ## Current intentional limits
 
@@ -114,4 +125,6 @@ Every other infrastructure plan stops before image push, migration or apply.
 - Yandex ID verification, controlled stage enrollment and the read-only profile
   endpoint are implemented. The default-off browser pilot still requires a
   reviewed stage apply and an explicitly enrolled test identity;
+- native Yandex AI stage calls use runtime IAM metadata; their paid synthetic
+  smoke is separate from automatic deployment;
 - Terraform state backend and CI identity are selected before the first apply.

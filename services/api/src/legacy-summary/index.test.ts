@@ -75,6 +75,25 @@ describe('summarizeClientTraining cloud handler', () => {
     expect(sleep).toHaveBeenCalledOnce()
   })
 
+  it('uses an injected runtime IAM token without requiring a static API key', async () => {
+    vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
+    const fetchImpl = vi.fn((input: URL | RequestInfo, init?: RequestInit) => {
+      void input
+      void init
+      return Promise.resolve(completionResponse())
+    })
+    const authorizationHeader = vi.fn(() => Promise.resolve('Bearer metadata-token'))
+
+    await requestYandexSummary({}, '2026-08-01', '2026-08-25', {
+      authorization: { authorizationHeader },
+      fetchImpl,
+    })
+
+    expect(authorizationHeader).toHaveBeenCalledOnce()
+    const requestInit = fetchImpl.mock.calls[0]?.[1]
+    expect(new Headers(requestInit?.headers).get('Authorization')).toBe('Bearer metadata-token')
+  })
+
   it('stops after three temporary service failures', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')

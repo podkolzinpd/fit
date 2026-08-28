@@ -5,13 +5,13 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-28
-Проверенный базовый `main`: `55d3cd3` (`feat: add safe trainer reconnect (#640)`)
+Проверенный базовый `main`: `796f958` (`fix(yandex): decouple summary reads from AI config (#633)`)
 
 ## Активное изменение
 
-- Run `33093878852` прошёл миграции и DB preflight, затем безопасно откатился:
-  summary list ошибочно зависел от AI key. Активный PR разделяет DB reader и AI
-  generator и уточняет smoke checkpoint каждого route.
+- Native stage AI использует runtime service account и короткоживущий metadata
+  IAM token вместо статического ключа. Ручной smoke проверяет synthetic parse и
+  forced summary generation; обычный deploy не делает платных AI-запросов.
 
 ## Последняя проверенная продуктовая точка
 
@@ -78,9 +78,9 @@
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
   exercises, workout lifecycle и post-workout работают на stage (миграции
-  `000001–000018`). Run `33093878852` доказал, что exact candidate и все DB
-  read models готовы; публичный smoke откатил revision из-за ошибочной AI-config
-  зависимости у summary list. Production остался на предыдущей revision.
+  `000001–000020`). Run `33154423400` доставил revision `796f958`: миграции,
+  runtime DB preflight, exact read/write smoke и независимый summary list зелёные;
+  rollback не потребовался.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
   нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
 - Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
@@ -90,13 +90,15 @@
   pilot UI read-only. Client/custom-exercise и Planned/Live writes — только
   через stage API, production routing не затрагивают.
 - Реальный invite → join → leave/remove smoke на двух Yandex ID — внешняя
-  stage-проверка; локальный lifecycle и RLS-матрица зелёные. Полный cutover
-  не выполнен: production frontend/tenant на Supabase, остальные вкладки без изменений.
+  stage-проверка; локальный lifecycle и RLS-матрица зелёные. Production остаётся
+  на Supabase; полный cutover не выполнен.
 
 ## Проверки активной ветки
-- Полный `npm run check` зелёный: 845 frontend, 219 API и 57 infra/policy-
-  тестов, lint, typecheck, coverage и production build. Supabase SQL/RLS:
-  793 теста в 68 файлах зелёные; generated types актуальны.
+- Полный `npm run check` зелёный: 845 frontend, 225 API и 61 infra/policy-
+  тестов, lint, typecheck, coverage и production build. Policy проверяет точную
+  IAM-роль, запрет автоматического paid AI, ручное подтверждение smoke и
+  отсутствие выгрузки его ответов. Feature-ветка валидирует Terraform без
+  remote state/OIDC; remote plan и apply остаются только на `main`.
 - Целевой Playwright-сценарий `trainer invitation links a client account`
   зелёный в mobile Chromium. Чистая база через Podman применяет миграции;
   отключение и переподключение, сохранность истории, права доступа,
@@ -104,9 +106,8 @@
 
 ## Ближайший порядок
 
-1. Доставить независимый summary reader, получить зелёную API revision и затем
-   выполнить один контролируемый AI generation/parse smoke без логирования
-   исходного текста.
+1. Доставить runtime IAM и отдельный controlled AI workflow, затем один раз
+   запустить synthetic generation/parse smoke с явным подтверждением.
 2. После полного tenant-контракта провести две миграционные репетиции; только
    затем обсуждать первый sticky tenant cutover. Production пока на Supabase.
 3. Не начинать `YAFIT-350–354` до завершения внешней задачи по ИИ-составлению
