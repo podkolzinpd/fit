@@ -2,7 +2,8 @@
 
 Статус: **server flag и authenticated runtime read доставлены; Client Home,
 Live и Progress задеплоены и прошли общий visual audit; My Workouts проходит
-отдельный Gate 6 rollout**.
+отдельный Gate 6 rollout; My Workouts задеплоен, Client Profile проходит
+валидацию**.
 
 ## Контракт
 
@@ -48,7 +49,8 @@ Live и Progress задеплоены и прошли общий visual audit; M
 | Client Home `/me` | `client-home-identity` | production preview |
 | Live `*/live` | `live-identity` | production preview |
 | Progress `/me/progress` | `progress-identity` | production preview |
-| My Workouts `/me/workouts` | `client-workouts-identity` | local validation complete |
+| My Workouts `/me/workouts` | `client-workouts-identity` | production preview |
+| Client Profile `/me/profile` | `client-profile-shell-identity` | local validation complete |
 
 `/me?view=review` и `/me?view=save` относятся к workout lifecycle и не получают
 Client Home identity. У пользователя без `monochrome_preview` даже `/me`

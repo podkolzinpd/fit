@@ -3388,3 +3388,116 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .client-workouts-identity .workout-chronicle-card { padding-inline:16px }
   .client-workouts-identity .past-workout-plan-action { max-width:84px; white-space:normal; text-align:right }
 }
+
+/* ── Gate 6 / task 11: Client Profile. */
+.client-profile-shell-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none }
+.client-profile-shell-identity .content { padding-bottom:calc(82px + env(safe-area-inset-bottom)); background:var(--bg) }
+.client-profile-shell-identity .client-profile-page { max-width:560px; gap:12px; padding:max(12px, calc(24px - env(safe-area-inset-top))) 16px 28px }
+.client-profile-shell-identity .client-profile-page > .page-header { min-height:44px; margin-bottom:4px }
+.client-profile-shell-identity .client-profile-page > .page-header h1 { font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+
+.client-profile-shell-identity .client-profile-card,
+.client-profile-shell-identity .client-home-connections,
+.client-profile-shell-identity .body-map-appearance-setting,
+.client-profile-shell-identity .profile-settings,
+.client-profile-shell-identity .menu,
+.client-profile-shell-identity .app-install-card,
+.client-profile-shell-identity .app-feedback-card { margin:0; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.client-profile-shell-identity .client-profile-card { gap:16px; padding:18px }
+.client-profile-shell-identity .client-profile-identity { gap:12px }
+.client-profile-shell-identity .client-profile-avatar { width:44px; height:44px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:14px; font-weight:600 }
+.client-profile-shell-identity .client-profile-identity strong { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
+.client-profile-shell-identity .client-profile-identity p { margin:4px 0 0; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
+.client-profile-shell-identity .client-profile-edit { min-height:48px; border-color:var(--border); border-radius:14px; background:var(--surface-elevated); color:var(--fg); font-size:14px; font-weight:500; box-shadow:none }
+
+.client-profile-shell-identity .client-home-connections { gap:12px; padding:18px }
+.client-profile-shell-identity .client-home-section-head { align-items:center; gap:12px }
+.client-profile-shell-identity .client-home-section-head > div { gap:4px }
+.client-profile-shell-identity .client-home-section-head .eyebrow { margin:0; color:var(--muted); font-size:12px; font-weight:500; line-height:1.3; letter-spacing:.06em }
+.client-profile-shell-identity .client-home-section-head h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
+.client-profile-shell-identity .client-home-section-head .secondary { min-height:44px; padding:0 12px; border-color:var(--border); border-radius:14px; background:var(--surface-elevated); color:var(--fg); font-size:12px; font-weight:500; box-shadow:none }
+.client-profile-shell-identity .client-home-connections > .muted { margin:0; color:var(--secondary-label-fg); font-size:14px; font-weight:400; line-height:1.45 }
+.client-profile-shell-identity .client-home-connections > .card,
+.client-profile-shell-identity .client-home-invitations .card { min-height:64px; padding:14px; border-color:var(--border); border-radius:14px; background:var(--surface-elevated); box-shadow:none }
+.client-profile-shell-identity .client-home-connections .card:hover { border-color:var(--border); transform:none }
+.client-profile-shell-identity .client-home-connections .card strong { color:var(--fg); font-size:14px; font-weight:600 }
+.client-profile-shell-identity .client-home-connections .card p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.client-profile-shell-identity .client-home-connections .link { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
+.client-profile-shell-identity .client-home-connections .link.danger { color:var(--danger) }
+.client-profile-shell-identity .client-home-invitations { gap:8px; background:transparent }
+.client-profile-shell-identity .client-home-invitations h3 { color:var(--secondary-label-fg); font-size:14px; font-weight:600 }
+.client-profile-shell-identity .client-trainer-disconnect-success { color:var(--success-fg); font-size:14px; font-weight:400 }
+.client-profile-shell-identity .client-home-connections .error { color:var(--danger); font-size:14px; font-weight:400 }
+.client-profile-shell-identity .client-home-connections > div > .secondary { min-height:44px; border-radius:14px; background:var(--surface-elevated); color:var(--fg); font-size:14px; font-weight:500 }
+
+.client-profile-shell-identity .body-map-appearance-setting { gap:12px; padding:18px }
+.client-profile-shell-identity .body-map-appearance-setting > div:first-child strong { color:var(--fg); font-size:16px; font-weight:600; line-height:1.25 }
+.client-profile-shell-identity .body-map-appearance-setting > div:first-child span,
+.client-profile-shell-identity .body-map-appearance-setting > small { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.4 }
+.client-profile-shell-identity .body-map-appearance-options { gap:3px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.client-profile-shell-identity .body-map-appearance-options button { min-height:44px; border-radius:10px; color:var(--muted); font-size:12px; font-weight:500 }
+.client-profile-shell-identity .body-map-appearance-options button[aria-checked='true'] { background:var(--surface-elevated); color:var(--fg); box-shadow:none }
+.client-profile-shell-identity .body-map-appearance-icon { opacity:1 }
+
+.client-profile-shell-identity .profile-settings { overflow:hidden }
+.client-profile-shell-identity .switch-row { min-height:64px; padding:10px 14px; color:var(--fg); font-size:14px; font-weight:500 }
+.client-profile-shell-identity .switch-control { border-color:var(--border); background:var(--surface-sunken); box-shadow:none }
+.client-profile-shell-identity .switch-control::after { background:var(--surface-elevated); box-shadow:none }
+.client-profile-shell-identity .switch-input:checked + .switch-control { border-color:var(--mono-primary); background:var(--mono-primary); box-shadow:none }
+.client-profile-shell-identity .switch-input:checked + .switch-control::after { background:var(--mono-on-primary) }
+
+.client-profile-shell-identity .menu { overflow:hidden; border-block:1px solid var(--border) }
+.client-profile-shell-identity .menu a,
+.client-profile-shell-identity .menu > button { min-height:52px; padding:0 14px; border-color:var(--border); color:var(--fg); font-size:14px; font-weight:500 }
+.client-profile-shell-identity .menu a:hover,
+.client-profile-shell-identity .menu > button:hover { background:var(--surface-elevated) }
+.client-profile-shell-identity .client-profile-page > .danger.secondary { min-height:48px; margin:0; border-color:var(--border); border-radius:14px; background:transparent; color:var(--danger); font-size:14px; font-weight:500; box-shadow:none }
+
+.client-profile-shell-identity .app-install-card,
+.client-profile-shell-identity .app-feedback-card { gap:16px; padding:18px }
+.client-profile-shell-identity .app-install-card .eyebrow,
+.client-profile-shell-identity .app-feedback-card .eyebrow { color:var(--muted); font-size:12px; font-weight:500; letter-spacing:.06em }
+.client-profile-shell-identity .app-install-card h2,
+.client-profile-shell-identity .app-feedback-card h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
+.client-profile-shell-identity .app-install-head .link,
+.client-profile-shell-identity .app-feedback-head .link { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
+.client-profile-shell-identity .app-install-copy,
+.client-profile-shell-identity .app-install-steps,
+.client-profile-shell-identity .app-feedback-context { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.client-profile-shell-identity .app-install-card .secondary,
+.client-profile-shell-identity .app-feedback-card button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.client-profile-shell-identity .app-feedback-kinds { gap:3px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.client-profile-shell-identity .app-feedback-kinds button { min-height:44px; border-radius:10px; background:transparent; color:var(--muted); font-size:12px; font-weight:500 }
+.client-profile-shell-identity .app-feedback-kinds button.active { background:var(--surface-elevated); color:var(--fg); box-shadow:none }
+.client-profile-shell-identity .app-feedback-card .field { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.client-profile-shell-identity .app-feedback-card textarea { min-height:122px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400 }
+.client-profile-shell-identity .app-feedback-counter { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.client-profile-shell-identity .app-feedback-card .actions { gap:8px }
+.client-profile-shell-identity .app-feedback-card .secondary { border-color:var(--border); background:transparent; color:var(--fg); box-shadow:none }
+.client-profile-shell-identity .app-feedback-card .primary { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none }
+.client-profile-shell-identity .app-feedback-card button:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.client-profile-shell-identity .app-feedback-sent > p:not(.eyebrow) { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+
+.client-profile-shell-identity .state-panel { border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.client-profile-shell-identity .state-panel-mark { border-radius:14px; background:var(--surface-sunken); color:var(--fg) }
+.client-profile-shell-identity .state-panel h2 { color:var(--fg); font-size:18px; font-weight:600 }
+.client-profile-shell-identity .state-panel p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.client-profile-shell-identity .state-panel button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.client-profile-shell-identity .skeleton-card { border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.client-profile-shell-identity .skeleton-block { background:var(--surface-sunken); animation:none }
+
+.client-profile-shell-identity .tab-bar { left:50%; bottom:0; width:min(100%,440px); padding:8px 8px calc(8px + env(safe-area-inset-bottom)); border:0; border-top:1px solid var(--border); border-radius:0; background:var(--bar-bg); box-shadow:none; backdrop-filter:none; transform:translateX(-50%) }
+.client-profile-shell-identity .tab-bar a { min-height:48px; gap:3px; padding:5px 3px; border-radius:10px; color:var(--muted); font-size:12px; font-weight:500 }
+.client-profile-shell-identity .tab-bar a svg { width:20px; height:20px; opacity:1; stroke-width:1.8; transform:none }
+.client-profile-shell-identity .tab-bar a.active { background:transparent; color:var(--fg); font-weight:500 }
+.client-profile-shell-identity .tab-bar a.active svg { transform:none }
+
+@media (max-width:480px) {
+  .client-profile-shell-identity .content { padding-bottom:0 }
+  .client-profile-shell-identity .tab-bar { position:static; left:auto; bottom:auto; width:100%; transform:none }
+}
+@media (max-width:375px) {
+  .client-profile-shell-identity .client-profile-page { padding-inline:14px }
+  .client-profile-shell-identity .client-home-section-head { align-items:flex-start }
+  .client-profile-shell-identity .client-home-section-head .secondary { max-width:112px; white-space:normal }
+}
