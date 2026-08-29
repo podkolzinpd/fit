@@ -216,7 +216,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
     return { backgroundColor: style.backgroundColor, color: style.color, height: element.getBoundingClientRect().height }
   })
   expect(compactActionStyle.backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
-  expect(compactActionStyle.color).toBe('rgb(255, 255, 255)')
+  const liveForeground = await page.locator('.phone-frame').evaluate((element) => getComputedStyle(element).color)
+  expect(compactActionStyle.color).toBe(liveForeground)
   expect(compactActionStyle.height).toBeGreaterThanOrEqual(44)
   const addSetBackground = await page.getByRole('button', { name: '＋ Подход' }).evaluate((element) => getComputedStyle(element).backgroundColor)
   expect(addSetBackground).toBe('rgba(0, 0, 0, 0)')

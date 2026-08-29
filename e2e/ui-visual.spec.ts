@@ -16,6 +16,7 @@ async function expectVisualBaseline(
   name: string,
   mask: import('@playwright/test').Locator[] = [],
   fullPage = false,
+  maskColor = '#f8f5ef',
 ) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await expect(page).toHaveScreenshot(name, {
@@ -23,7 +24,7 @@ async function expectVisualBaseline(
     caret: 'hide',
     fullPage,
     mask,
-    maskColor: '#f8f5ef',
+    maskColor,
     maxDiffPixelRatio: 0.03,
   })
 }
@@ -47,11 +48,19 @@ async function createStandaloneClient(
   await page.getByRole('button', { name: 'Скрыть' }).click()
 }
 
-async function createStandaloneLiveWorkout(page: import('@playwright/test').Page, projectName: string) {
-  await createStandaloneClient(page, projectName, 'Live клиент', 'visual-live')
+async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
+  await signIn(page, 'client@fit.local', /\/me$/)
 
   await page.goto('/me/workouts')
+  const activeWorkout = page.getByRole('link', { name: /Идёт/ }).first()
   const emptyAction = page.getByRole('link', { name: 'Добавить тренировку' })
+  await expect(activeWorkout.or(emptyAction)).toBeVisible()
+  if (await activeWorkout.isVisible()) {
+    await activeWorkout.click()
+    await page.getByRole('link', { name: 'Продолжить тренировку' }).click()
+    await expect(page.getByRole('heading', { name: 'Live-тренировка' })).toBeVisible()
+    return
+  }
   await expect(emptyAction).toHaveCount(1)
   await expect(page.getByText('БЛИЖАЙШЕЕ')).toHaveCount(0)
   await expect(page.getByText('РЕЗУЛЬТАТЫ')).toHaveCount(0)
@@ -175,9 +184,29 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
 
 test('client live workout keeps its visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Live uses mobile visual profiles')
-  await createStandaloneLiveWorkout(page, testInfo.project.name)
+  await openPreviewLiveWorkout(page)
   await expect(page.locator('.live-exercise.current')).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/live-identity/)
   await expectVisualBaseline(page, 'client-live.png', [page.locator('.live-timer')])
+
+  const livePath = new URL(page.url()).pathname
+  await page.goto('/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.goto(livePath)
+  await expect(page.locator('.phone-frame')).toHaveClass(/live-identity/)
+  await expect(page.locator('.live-exercise.current')).toBeVisible()
+  await expectVisualBaseline(page, 'client-live-dark.png', [page.locator('.live-timer')], false, '#1d1e21')
+
+  // Visual projects share the seeded preview account. Restore both appearance
+  // and product data so later projects still exercise their committed fixtures.
+  await page.goto('/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
+  await page.goto(livePath.replace(/\/live$/, ''))
+  await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
+  await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
+  const deleteConfirmation = page.getByRole('alertdialog', { name: 'Удалить тренировку?' })
+  await deleteConfirmation.getByRole('button', { name: 'Удалить', exact: true }).click()
+  await expect(page).toHaveURL(/\/me\/workouts$/)
 })
 
 test('trainer key routes keep their visual baselines', async ({ page }, testInfo) => {
