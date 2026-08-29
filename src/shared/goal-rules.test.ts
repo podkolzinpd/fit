@@ -11,7 +11,7 @@ const stage = (over: { id?: string; title?: string; startsOn?: string; endsOn?: 
 
 const goal = (stages: GoalStage[], targetDate: string | null = null): ClientGoal => ({
   id: 'g', clientId: 'c', title: 'Цель', targetDate: targetDate === null ? null : localDate(targetDate),
-  status: 'active', version: 1, stages,
+  status: 'active', version: 1, stages, criteria: [],
 })
 
 describe('goal-rules', () => {

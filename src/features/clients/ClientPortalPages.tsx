@@ -104,7 +104,7 @@ export function MyProgressPage() {
     emptyTitle="Сначала создайте личную карточку" emptyDescription="Она связывает тренировки, замеры и анализ прогресса в одном профиле." emptyAction={<Link className="button primary" to="/me">Создать карточку</Link>}>
     {entries.data && mine.data && <div className="client-progress-stack"><ClientTrainingSummaryCard clientId={mine.data.id} profileGoal={mine.data.goal} gender={mine.data.gender} />
       <RunningProgressCard clientId={mine.data.id} />
-      <section className="client-progress-measurement">
+      <section className="client-progress-measurement" id="measurements">
         <div className="client-progress-measurement-head"><div><p className="eyebrow">ЗАМЕРЫ И ПОКАЗАТЕЛИ</p><h2>{entries.data[0] ? 'Последний замер' : 'Замеров пока нет'}</h2></div></div>
         {entries.data[0] && <div className="client-progress-measurement-latest"><span>{formatLocalDate(entries.data[0].recordedOn)}</span><div className="measurement-latest-values">{measurementSummaryItems(entries.data[0], metrics.data ?? []).slice(0, 4).map((item) => <span key={item.label}><small>{item.label}</small><strong>{item.value}</strong></span>)}</div></div>}
         {!entries.data[0] && <p>Сохрани вес или объёмы — здесь появится последняя точка.</p>}

@@ -52,7 +52,7 @@ describe('clientProgressPresentation', () => {
     ])
   })
 
-  it('shows factual measurement movement and plan completion for the saved goal', () => {
+  it('shows only the confirmed criterion foundation without inventing goal achievement', () => {
     const measurements: ProgressEntry[] = [{
       id: 'm1', clientId: 'client-1', createdBy: 'client-1', recordedOn: localDate('2026-07-24'),
       weightKg: 80, customMetrics: [], version: 1,
@@ -64,14 +64,37 @@ describe('clientProgressPresentation', () => {
       weightKg: 90, customMetrics: [], version: 1,
     }]
     const result = clientProgressPresentation(summary(), {
-      profileGoal: 'Набрать мышечную массу и улучшить грудь', measurements,
+      goal: {
+        id: 'goal-1', clientId: 'client-1', title: 'Набрать мышечную массу', targetDate: null,
+        status: 'active', version: 1, stages: [], criteria: [{
+          id: 'criterion-1', goalId: 'goal-1', metric: 'weight', operation: 'increase_to',
+          targetValue: 85, rangeMin: null, rangeMax: null, unit: 'кг',
+          confirmationStatus: 'confirmed', position: 0, version: 1,
+        }],
+      }, measurements,
       currentWorkouts: [workout('current', '2026-08-03', 2, 3)],
     })
 
     expect(result.goal).toEqual({
-      title: 'Набрать мышечную массу и улучшить грудь',
-      evidence: ['Вес: 80 → 81,5 кг (+1,5 кг)'],
-      planEvidence: 'Целевые мышцы получили 2 подтверждённых подхода; в плане было 3.',
+      title: 'Набрать мышечную массу',
+      state: 'configured',
+      statusLabel: 'Настроено',
+      criterionLabel: 'Вес',
+      targetLabel: 'увеличить до 85 кг',
+    })
+  })
+
+  it('does not infer a criterion from a legacy free-text goal', () => {
+    expect(clientProgressPresentation(summary(), {
+      profileGoal: 'Держать вес 59 кг',
+      measurements: [{
+        id: 'm1', clientId: 'client-1', createdBy: 'client-1', recordedOn: localDate('2026-08-24'),
+        weightKg: 59, customMetrics: [], version: 1,
+      }],
+    }).goal).toEqual({
+      title: 'Держать вес 59 кг',
+      state: 'unconfigured',
+      statusLabel: 'Не настроено',
     })
   })
 

@@ -1,7 +1,7 @@
 import { compactPlannedSetSummary } from '../../data/repositories/workout-rules'
 import type { ClientGoal, ProgressEntry, PublishedTrainingSummary, TrainingSummary, Workout } from '../../shared/domain'
+import { GOAL_CRITERION_METRICS, goalCriterionFoundationState, goalCriterionTargetLabel, type GoalCriterionFoundationState } from '../../shared/goal-criterion-rules'
 import { formatLocalDate, type LocalDate } from '../../shared/local-date'
-import { bodyZoneForExerciseName } from './body-progress-map'
 import { progressFactChangeLabel } from './progress-facts'
 import { progressMetricNoun } from './summary-format'
 
@@ -27,7 +27,13 @@ export type ClientProgressPresentation = {
     items: Array<{ value: string; label: string; tone: 'positive' | 'neutral' }>
     emptyMessage?: string
   }
-  goal?: { title: string; evidence: string[]; planEvidence?: string }
+  goal?: {
+    title: string
+    state: GoalCriterionFoundationState
+    statusLabel: string
+    criterionLabel?: string
+    targetLabel?: string
+  }
   nextWorkout?: { date: string; title: string; exercises: Array<{ name: string; plan?: string }> }
   conclusion: string
   orientations: string[]
@@ -42,15 +48,6 @@ function improvedExerciseLabel(value: number): string {
   if (mod10 === 1) return 'упражнение улучшено'
   if (mod10 >= 2 && mod10 <= 4) return 'упражнения улучшены'
   return 'упражнений улучшено'
-}
-
-function confirmedSetsLabel(value: number): string {
-  const mod100 = Math.abs(value) % 100
-  const mod10 = Math.abs(value) % 10
-  if (mod100 >= 11 && mod100 <= 14) return 'подтверждённых подходов'
-  if (mod10 === 1) return 'подтверждённый подход'
-  if (mod10 >= 2 && mod10 <= 4) return 'подтверждённых подхода'
-  return 'подтверждённых подходов'
 }
 
 function done(workouts: readonly Workout[]): Workout[] {
@@ -149,92 +146,25 @@ function comparison(current: readonly Workout[], previous: readonly Workout[]): 
   return { title: 'Изменения к предыдущему периоду', items: items.slice(0, 2) }
 }
 
-type MeasurementKey = 'weightKg' | 'chestCm' | 'waistCm' | 'hipCm'
-
-function measurementForGoal(goal: string): { key: MeasurementKey; label: string; unit: string } | undefined {
-  const normalized = goal.toLocaleLowerCase('ru-RU')
-  if (/вес|масс|похуд|набрать|сброс/.test(normalized)) return { key: 'weightKg', label: 'Вес', unit: 'кг' }
-  if (/тал/.test(normalized)) return { key: 'waistCm', label: 'Талия', unit: 'см' }
-  if (/груд/.test(normalized)) return { key: 'chestCm', label: 'Обхват груди', unit: 'см' }
-  if (/бедр|ягод/.test(normalized)) return { key: 'hipCm', label: 'Обхват бёдер', unit: 'см' }
-  return undefined
+const GOAL_STATE_LABELS: Record<GoalCriterionFoundationState, string> = {
+  unconfigured: 'Не настроено',
+  needs_review: 'Нужно проверить',
+  needs_data: 'Нужны данные',
+  configured: 'Настроено',
 }
 
-function measurementEvidence(
-  goal: string,
-  measurements: readonly ProgressEntry[],
-  periodStart: LocalDate,
-  periodEnd: LocalDate,
-): string | undefined {
-  const metric = measurementForGoal(goal)
-  if (!metric) return undefined
-  const values = [...measurements]
-    .filter((entry) => entry[metric.key] !== undefined && entry.recordedOn <= periodEnd)
-    .sort((left, right) => left.recordedOn.localeCompare(right.recordedOn))
-  const periodValues = values.filter((entry) => entry.recordedOn >= periodStart)
-  const lastEntry = periodValues.at(-1)
-  const baselineEntry = values.filter((entry) => entry.recordedOn <= periodStart).at(-1) ?? periodValues[0]
-  if (!baselineEntry || !lastEntry || baselineEntry.recordedOn === lastEntry.recordedOn) return undefined
-  const first = baselineEntry[metric.key]
-  const last = lastEntry[metric.key]
-  if (first === undefined || last === undefined || first === last) return undefined
-  const delta = Math.round((last - first) * 10) / 10
-  return `${metric.label}: ${number.format(first)} → ${number.format(last)} ${metric.unit} (${delta > 0 ? '+' : '−'}${number.format(Math.abs(delta))} ${metric.unit})`
-}
-
-function targetZones(goal: string): Set<string> {
-  const normalized = goal.toLocaleLowerCase('ru-RU')
-  const zones = new Set<string>()
-  if (/плеч|дельт/.test(normalized)) zones.add('shoulders')
-  if (/рук|бицеп|трицеп/.test(normalized)) zones.add('arms')
-  if (/груд/.test(normalized)) zones.add('chest')
-  if (/спин/.test(normalized)) zones.add('back')
-  if (/ягод/.test(normalized)) zones.add('glutes')
-  if (/ног|бедр|икр/.test(normalized)) zones.add('legs')
-  if (/пресс|кор/.test(normalized)) zones.add('core')
-  return zones
-}
-
-function broadZone(zone: ReturnType<typeof bodyZoneForExerciseName>): string | undefined {
-  if (!zone) return undefined
-  if (['biceps', 'triceps', 'forearms'].includes(zone)) return 'arms'
-  if (['quadriceps', 'hamstrings', 'inner_thigh', 'outer_thigh', 'calves'].includes(zone)) return 'legs'
-  if (['upper_back', 'lower_back'].includes(zone)) return 'back'
-  return zone
-}
-
-function targetPlanEvidence(goal: string, workouts: readonly Workout[]): string | undefined {
-  const zones = targetZones(goal)
-  if (zones.size === 0) return undefined
-  let planned = 0
-  let confirmed = 0
-  for (const workout of done(workouts)) {
-    for (const exercise of workout.exercises) {
-      const zone = broadZone(bodyZoneForExerciseName(exercise.name, exercise.muscleGroup))
-      if (!zone || !zones.has(zone)) continue
-      planned += exercise.sets.length
-      confirmed += exercise.sets.filter((set) => Boolean(set.confirmedAt)).length
-    }
-  }
-  return planned > 0
-    ? `Целевые мышцы получили ${confirmed} ${confirmedSetsLabel(confirmed)}; в плане было ${planned}.`
-    : undefined
-}
-
-function bestGoalFact(summary: ProgressSummary, goal: string): string | undefined {
-  const zones = targetZones(goal)
-  const change = storyChanges(summary).find((item) => zones.has(broadZone(bodyZoneForExerciseName(item.exerciseName)) ?? ''))
-  return change ? `${change.exerciseName}: ${change.percent}% улучшения по подтверждённым результатам.` : undefined
-}
-
-function goalStory(summary: ProgressSummary, options: StoryOptions): ClientProgressPresentation['goal'] {
+function goalStory(_summary: ProgressSummary, options: StoryOptions): ClientProgressPresentation['goal'] {
   const title = options.goal?.title ?? options.profileGoal?.trim()
   if (!title) return undefined
-  const evidence = [
-    measurementEvidence(title, options.measurements ?? [], summary.periodStart, summary.periodEnd),
-    bestGoalFact(summary, title),
-  ].filter((item): item is string => Boolean(item)).slice(0, 2)
-  return { title, evidence, planEvidence: targetPlanEvidence(title, options.currentWorkouts ?? []) }
+  const criterion = options.goal?.criteria[0]
+  const state = goalCriterionFoundationState(criterion, options.measurements ?? [])
+  return {
+    title,
+    state,
+    statusLabel: GOAL_STATE_LABELS[state],
+    criterionLabel: criterion ? GOAL_CRITERION_METRICS[criterion.metric].label : undefined,
+    targetLabel: criterion ? goalCriterionTargetLabel(criterion) : undefined,
+  }
 }
 
 function nextWorkoutStory(workouts: readonly Workout[], today?: LocalDate): ClientProgressPresentation['nextWorkout'] {

@@ -362,6 +362,16 @@ describe('AppLayout: monochrome preview route scope', () => {
     expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
   })
 
+  it('uses the shared monochrome Goal workspace for the client goal route', () => {
+    authState.role = 'client'
+    authState.monochromePreview = true
+    renderLayout('/me/goal')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass(
+      'identity-monochrome-preview', 'trainer-client-goal-identity', 'client-goal-identity',
+    )
+  })
+
   it.each(['/clients', '/clients/new', '/clients/client-1', '/clients/client-1/edit', '/clients/client-1/workouts', '/clients/client-1/progress'])(
     'does not leak Trainer Client Goal identity into %s',
     (path) => {

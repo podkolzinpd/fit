@@ -5,7 +5,7 @@ import { AppLayout } from './AppLayout'
 import { AppViewportProvider } from './app-viewport'
 import { isAssistantNavPilotEnabled, trainerHomePath } from './feature-flags'
 import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage, YandexPilotCallbackPage } from '../features/auth'
-import { ClientDetailPage, ClientFormPage, ClientProfilePage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
+import { ClientDetailPage, ClientFormPage, ClientProfilePage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyGoalPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
@@ -61,6 +61,7 @@ const router = createBrowserRouter([
       { path: '/me/edit', element: <MyClientEditPage /> },
       { path: '/me/workouts', element: <MyWorkoutsPage /> },
       { path: '/me/progress', element: <MyProgressPage /> },
+      { path: '/me/goal', element: <MyGoalPage /> },
       { path: '/me/profile', element: <ClientProfilePage /> },
     ] },
     { element: <CanonicalWorkoutClientRoute />, children: [

@@ -2109,6 +2109,16 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-progress-comparison article span { color:var(--muted); font-size:var(--type-micro-size); line-height:var(--leading-snug) }
 .client-progress-goal-story { display:grid; gap:6px; margin:var(--space-3) var(--card-padding) 0; padding-bottom:var(--space-3); border-bottom:1px solid var(--ai-divider) }
 .client-progress-goal-story > span, .client-progress-upcoming > span { color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label); text-transform:uppercase }
+.client-progress-goal-story-head { display:flex; align-items:center; justify-content:space-between; gap:10px }
+.client-progress-goal-story-head > span { color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label); text-transform:uppercase }
+.goal-foundation-status { display:inline-flex; align-items:center; min-height:28px; padding:4px 9px; border:1px solid var(--border); border-radius:999px; background:var(--surface-sunken); color:var(--fg); font-size:11px; font-weight:var(--weight-semibold); line-height:1.2 }
+.goal-foundation-status.needs_data,
+.goal-foundation-status.needs_review { border-style:dashed }
+.goal-foundation-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:4px 0 }
+.goal-foundation-facts > div { display:grid; gap:2px; min-width:0; padding:10px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-sunken) }
+.goal-foundation-facts dt { color:var(--muted); font-size:11px; line-height:1.25 }
+.goal-foundation-facts dd { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); font-weight:var(--weight-semibold); line-height:var(--leading-body) }
+.client-progress-goal-story > .link { width:fit-content; min-height:44px; padding:8px 0 }
 .client-progress-goal-story p, .client-progress-upcoming p { margin:0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
 .client-progress-goal-story ul { display:grid; gap:6px; margin:2px 0 0; padding:0; list-style:none }
 .client-progress-goal-story li { position:relative; padding-left:16px; font-size:var(--type-caption-size); line-height:var(--leading-body) }
@@ -4273,6 +4283,18 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-client-goal-identity .stage-row .muted,
 .trainer-client-goal-identity .stage-hint { color:var(--secondary-label-fg); font-weight:400; line-height:1.45 }
 .trainer-client-goal-identity .goal-block > .muted { margin:0; font-size:14px }
+.trainer-client-goal-identity .goal-criterion-summary > p { color:var(--fg); font-size:14px; line-height:1.45 }
+.trainer-client-goal-identity .goal-criterion-form { display:grid; gap:14px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
+.trainer-client-goal-identity .goal-criterion-form-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px }
+.trainer-client-goal-identity .goal-criterion-form-head h2 { margin:0; color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
+.trainer-client-goal-identity .goal-criterion-form-head p { margin:5px 0 0; color:var(--secondary-label-fg); font-size:13px; line-height:1.4 }
+.trainer-client-goal-identity .goal-criterion-form-head .switch-row { flex:0 0 auto }
+.trainer-client-goal-identity .goal-criterion-fields { display:grid; gap:12px; padding-top:14px; border-top:1px solid var(--border) }
+.trainer-client-goal-identity .goal-criterion-hint { margin:0; color:var(--secondary-label-fg); font-size:12px; line-height:1.45 }
+.trainer-client-goal-identity .goal-criterion-confirm { display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px dashed var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:13px; line-height:1.4 }
+.trainer-client-goal-identity .goal-criterion-confirm input { width:20px; height:20px; min-height:20px; margin:0; accent-color:var(--mono-primary) }
+.trainer-client-goal-identity .goal-criterion-confirm span { display:grid; gap:3px }
+.trainer-client-goal-identity .goal-criterion-confirm small { color:var(--secondary-label-fg); font-size:11px; font-weight:400 }
 .trainer-client-goal-identity .goal-head .link { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 2px; border:0; background:transparent; color:var(--fg); font-size:14px; font-weight:500; box-shadow:none }
 .trainer-client-goal-identity .stage-list { gap:8px }
 .trainer-client-goal-identity .stage-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px 12px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); box-shadow:none }
@@ -4290,10 +4312,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-client-goal-identity .field > span,
 .trainer-client-goal-identity .field > label { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
 .trainer-client-goal-identity input,
-.trainer-client-goal-identity textarea { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.trainer-client-goal-identity textarea,
+.trainer-client-goal-identity select { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
 .trainer-client-goal-identity textarea { min-height:92px; line-height:1.45; resize:vertical }
 .trainer-client-goal-identity input:focus,
-.trainer-client-goal-identity textarea:focus { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px }
+.trainer-client-goal-identity textarea:focus,
+.trainer-client-goal-identity select:focus { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px }
 .trainer-client-goal-identity .stage-form input,
 .trainer-client-goal-identity .stage-form textarea { background:var(--surface-raised) }
 .trainer-client-goal-identity .stage-hint { margin:0; font-size:12px }
@@ -4318,6 +4342,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 @media (max-width:480px) {
   .trainer-client-goal-identity .page { padding:12px 16px calc(env(safe-area-inset-bottom) + 104px) }
   .trainer-client-goal-identity .goal-block { padding:16px }
+  .trainer-client-goal-identity .goal-criterion-form { padding:16px }
+  .trainer-client-goal-identity .goal-criterion-form-head { align-items:stretch; flex-direction:column }
   .trainer-client-goal-identity .stage-row { grid-template-columns:1fr }
   .trainer-client-goal-identity .stage-actions { justify-content:flex-start }
 }
