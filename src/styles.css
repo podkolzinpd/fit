@@ -4295,6 +4295,15 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-client-goal-identity .goal-criterion-form-head p { margin:5px 0 0; color:var(--secondary-label-fg); font-size:13px; line-height:1.4 }
 .trainer-client-goal-identity .goal-criterion-form-head .switch-row { flex:0 0 auto }
 .trainer-client-goal-identity .goal-criterion-fields { display:grid; gap:12px; padding-top:14px; border-top:1px solid var(--border) }
+.trainer-client-goal-identity .goal-criterion-item { display:grid; gap:12px; padding:14px; border:1px solid var(--border); border-radius:16px; background:var(--surface-sunken) }
+.goal-criteria-progress-list { display:grid; gap:12px; margin-top:14px }
+.goal-criterion-progress-card { display:grid; gap:12px; padding:14px; border:1px solid var(--border); border-radius:16px; background:var(--surface-raised) }
+.goal-criterion-progress-card header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
+.goal-criterion-progress-card header span { color:var(--secondary-label-fg); font-size:12px; font-weight:600 }
+.goal-criterion-progress-card dl { display:grid; gap:8px; margin:0 }
+.goal-criterion-progress-card dl div { display:grid; grid-template-columns:minmax(86px,.7fr) minmax(0,1.5fr); gap:10px }
+.goal-criterion-progress-card dt { color:var(--secondary-label-fg); font-size:12px }
+.goal-criterion-progress-card dd { margin:0; font-size:13px; overflow-wrap:anywhere }
 .trainer-client-goal-identity .goal-criterion-hint { margin:0; color:var(--secondary-label-fg); font-size:12px; line-height:1.45 }
 .trainer-client-goal-identity .goal-criterion-confirm { display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px dashed var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:13px; line-height:1.4 }
 .trainer-client-goal-identity .goal-criterion-confirm input { width:20px; height:20px; min-height:20px; margin:0; accent-color:var(--mono-primary) }
@@ -4319,6 +4328,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-client-goal-identity input,
 .trainer-client-goal-identity textarea,
 .trainer-client-goal-identity select { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.trainer-client-goal-identity select { height:48px }
+.trainer-client-goal-identity .goal-criterion-fields > .secondary { min-height:44px }
 .trainer-client-goal-identity textarea { min-height:92px; line-height:1.45; resize:vertical }
 .trainer-client-goal-identity input:focus,
 .trainer-client-goal-identity textarea:focus,

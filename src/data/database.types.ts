@@ -1,4 +1,4 @@
-// schema-sha256: 2137de2853fb5c9c232e288a9871699cd698ab84ea057d42af9f86ce4202ff73
+// schema-sha256: d0b7c3be84447575ba1764f9eeece3f48464a02e84fa6ebff711f9ee2cafdbab
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1032,6 +1032,12 @@ export type Database = {
           confirmed_by: string | null
           created_at: string
           created_by: string
+          custom_exercise_id: string | null
+          custom_metric_id: string | null
+          custom_metric_name: string | null
+          exercise_name: string | null
+          exercise_ref: string | null
+          exercise_source: string | null
           goal_id: string
           id: string
           metric: string
@@ -1039,6 +1045,10 @@ export type Database = {
           position: number
           range_max: number | null
           range_min: number | null
+          regularity_mode: string | null
+          regularity_period: string | null
+          secondary_target_value: number | null
+          secondary_unit: string | null
           target_value: number | null
           trainer_id: string
           unit: string
@@ -1056,6 +1066,12 @@ export type Database = {
           confirmed_by?: string | null
           created_at?: string
           created_by: string
+          custom_exercise_id?: string | null
+          custom_metric_id?: string | null
+          custom_metric_name?: string | null
+          exercise_name?: string | null
+          exercise_ref?: string | null
+          exercise_source?: string | null
           goal_id: string
           id?: string
           metric: string
@@ -1063,6 +1079,10 @@ export type Database = {
           position?: number
           range_max?: number | null
           range_min?: number | null
+          regularity_mode?: string | null
+          regularity_period?: string | null
+          secondary_target_value?: number | null
+          secondary_unit?: string | null
           target_value?: number | null
           trainer_id: string
           unit: string
@@ -1080,6 +1100,12 @@ export type Database = {
           confirmed_by?: string | null
           created_at?: string
           created_by?: string
+          custom_exercise_id?: string | null
+          custom_metric_id?: string | null
+          custom_metric_name?: string | null
+          exercise_name?: string | null
+          exercise_ref?: string | null
+          exercise_source?: string | null
           goal_id?: string
           id?: string
           metric?: string
@@ -1087,6 +1113,10 @@ export type Database = {
           position?: number
           range_max?: number | null
           range_min?: number | null
+          regularity_mode?: string | null
+          regularity_period?: string | null
+          secondary_target_value?: number | null
+          secondary_unit?: string | null
           target_value?: number | null
           trainer_id?: string
           unit?: string
@@ -1099,6 +1129,20 @@ export type Database = {
             columns: ["baseline_progress_id", "trainer_id", "client_id"]
             isOneToOne: false
             referencedRelation: "client_progress"
+            referencedColumns: ["id", "trainer_id", "client_id"]
+          },
+          {
+            foreignKeyName: "goal_criteria_custom_exercise_fk"
+            columns: ["custom_exercise_id", "trainer_id"]
+            isOneToOne: false
+            referencedRelation: "custom_exercises"
+            referencedColumns: ["id", "trainer_id"]
+          },
+          {
+            foreignKeyName: "goal_criteria_custom_metric_fk"
+            columns: ["custom_metric_id", "trainer_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "client_custom_metrics"
             referencedColumns: ["id", "trainer_id", "client_id"]
           },
           {
@@ -1733,6 +1777,10 @@ export type Database = {
           planned_count: number
           skipped_count: number
         }[]
+      }
+      goal_criterion_payload_valid: {
+        Args: { p_client_id: string; p_criterion: Json; p_trainer_id: string }
+        Returns: boolean
       }
       initialize_account: {
         Args: {

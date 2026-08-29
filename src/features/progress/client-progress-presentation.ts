@@ -1,7 +1,8 @@
 import { compactPlannedSetSummary } from '../../data/repositories/workout-rules'
 import type { ClientGoal, ProgressEntry, PublishedTrainingSummary, TrainingSummary, Workout } from '../../shared/domain'
-import { GOAL_CRITERION_METRICS, goalCriterionFoundationState, goalCriterionTargetLabel, type GoalCriterionFoundationState } from '../../shared/goal-criterion-rules'
+import { GOAL_CRITERION_METRICS, goalCriterionTargetLabel, isStandardGoalCriterionMetric, type GoalCriterionFoundationState } from '../../shared/goal-criterion-rules'
 import { calculateStandardGoalProgress, type GoalProgressDirection, type GoalProgressStatus } from '../../shared/goal-progress'
+import { calculateTrainingGoalProgress } from '../../shared/goal-training-progress'
 import { formatLocalDate, formatLocalDateShort, type LocalDate } from '../../shared/local-date'
 import { progressFactChangeLabel } from './progress-facts'
 import { progressMetricNoun } from './summary-format'
@@ -43,6 +44,9 @@ export type ClientProgressPresentation = {
     baselineLabel?: string
     message?: string
     measurementAction?: boolean
+    completedCriteria?: number
+    totalCriteria?: number
+    criteria?: Array<{ id: string; label: string; target: string; status: string; current: string; dynamics: string; lastDate?: string; freshness: string; sufficiency: string; action: 'measurement' | 'workout' | 'configure' | null }>
   }
   nextWorkout?: { date: string; title: string; exercises: Array<{ name: string; plan?: string }> }
   conclusion: string
@@ -191,67 +195,73 @@ function signed(value: number, unit: string): string {
 function goalStory(summary: ProgressSummary, options: StoryOptions): ClientProgressPresentation['goal'] {
   const title = options.goal?.title ?? options.profileGoal?.trim()
   if (!title) return undefined
-  const criterion = options.goal?.criteria[0]
-  const state = goalCriterionFoundationState(criterion, options.measurements ?? [])
-  const foundation = {
-    title,
-    state,
-    statusLabel: GOAL_STATE_LABELS[state],
-    criterionLabel: criterion ? GOAL_CRITERION_METRICS[criterion.metric].label : undefined,
-    targetLabel: criterion ? goalCriterionTargetLabel(criterion) : undefined,
+  const criteria = options.goal?.criteria ?? []
+  if (!criteria.length) return { title, state: 'unconfigured', statusLabel: GOAL_STATE_LABELS.unconfigured }
+  if (criteria.some((criterion) => criterion.confirmationStatus !== 'confirmed')) {
+    return { title, state: 'needs_review', statusLabel: GOAL_STATE_LABELS.needs_review, totalCriteria: criteria.length }
   }
-  if (!criterion || state !== 'configured' || !options.today) return foundation
-
-  const result = calculateStandardGoalProgress(
-    criterion, options.measurements ?? [], summary.periodStart, summary.periodEnd, options.today,
-  )
-  const targetLabel = criterion.operation === 'change_by' && result.absoluteTarget !== null
-    ? `${goalCriterionTargetLabel(criterion)} · до ${number.format(result.absoluteTarget)} ${criterion.unit}`
-    : goalCriterionTargetLabel(criterion)
-  const dynamicsLabel = result.dynamics.first && result.dynamics.last && result.dynamics.delta !== null
-    ? `${number.format(result.dynamics.first.value)} → ${number.format(result.dynamics.last.value)} ${criterion.unit} (${signed(result.dynamics.delta, criterion.unit)}) · ${DIRECTION_LABELS[result.dynamics.direction]}`
-    : DIRECTION_LABELS[result.dynamics.direction]
-  const freshnessLabel = result.freshness === 'fresh'
-    ? result.ageDays === 0 ? 'Свежие данные · сегодня' : `Свежие данные · ${result.ageDays} дн. назад`
-    : result.freshness === 'stale' ? `Данные устарели · ${result.ageDays} дн. назад` : 'Нет данных'
-  const sufficiencyLabel = {
-    none: 'Нет замеров',
-    position_only: 'Достаточно только для текущего положения',
-    enough_for_dynamics: 'Достаточно для динамики периода',
-    enough_for_maintenance: 'Достаточно для проверки удержания',
-  }[result.sufficiency]
-  const message = result.freshness === 'stale'
-    ? 'Текущее положение рассчитано по устаревшему замеру. Добавьте новый замер, чтобы обновить вывод.'
-    : result.status === 'in_range_now'
-      ? result.sufficiency === 'enough_for_maintenance'
-        ? 'Значение находится в диапазоне сейчас, но в окне удержания был замер за его пределами.'
-        : 'Значение находится в диапазоне сейчас. Для подтверждения удержания нужны минимум два замера с интервалом не менее 7 дней.'
-      : result.status === 'needs_baseline'
-        ? 'Первый замер станет отправной точкой для относительной цели.'
-        : result.status === 'range_maintained'
-          ? 'Все замеры окна удержания находятся в заданном диапазоне.'
-          : result.status === 'target_reached'
-            ? 'Последний актуальный замер соответствует заданному ориентиру.'
-            : result.status === 'target_not_reached'
-              ? 'Последний актуальный замер пока не достиг заданного ориентира.'
-              : 'Показатель отслеживается без оценки направления улучшения.'
+  if (!options.today) {
+    const criterion = criteria[0]!
+    return { title, state: 'configured', statusLabel: GOAL_STATE_LABELS.configured,
+      criterionLabel: GOAL_CRITERION_METRICS[criterion.metric].label, targetLabel: goalCriterionTargetLabel(criterion) }
+  }
+  const calculated = criteria.map((criterion) => {
+    const result = isStandardGoalCriterionMetric(criterion.metric)
+      ? calculateStandardGoalProgress(criterion, options.measurements ?? [], summary.periodStart, summary.periodEnd, options.today!)
+      : calculateTrainingGoalProgress(criterion, [...(options.previousWorkouts ?? []), ...(options.currentWorkouts ?? []), ...(options.upcomingWorkouts ?? [])], options.measurements ?? [], summary.periodStart, summary.periodEnd, options.today!)
+    const dynamics = result.dynamics.first && result.dynamics.last && result.dynamics.delta !== null
+      ? `${number.format(result.dynamics.first.value)} → ${number.format(result.dynamics.last.value)} ${criterion.unit} (${signed(result.dynamics.delta, criterion.unit)}) · ${DIRECTION_LABELS[result.dynamics.direction]}`
+      : DIRECTION_LABELS[result.dynamics.direction]
+    const freshness = result.freshness === 'fresh' ? result.ageDays === 0 ? 'Свежие данные · сегодня' : `Свежие данные · ${result.ageDays} дн. назад`
+      : result.freshness === 'stale' ? `Данные устарели · ${result.ageDays} дн. назад` : 'Нет данных'
+    const sufficiency = { none: 'Нет замеров', position_only: 'Достаточно только для текущего положения', enough_for_dynamics: 'Достаточно для динамики периода', enough_for_maintenance: 'Достаточно для проверки удержания' }[result.sufficiency]
+    return {
+      criterion,
+      result,
+      presentation: {
+        id: criterion.id,
+        label: `${GOAL_CRITERION_METRICS[criterion.metric].label}${criterion.exerciseName ? ` · ${criterion.exerciseName}` : ''}${criterion.customMetricName ? ` · ${criterion.customMetricName}` : ''}`,
+        target: goalCriterionTargetLabel(criterion), status: GOAL_PROGRESS_STATUS_LABELS[result.status],
+        current: result.latestNow ? `${number.format(result.latestNow.value)} ${criterion.unit}${'secondaryCurrent' in result && result.secondaryCurrent != null ? ` за ${number.format(result.secondaryCurrent)} мин` : ''}` : 'Нет данных',
+        dynamics, lastDate: result.latestNow ? formatLocalDate(result.latestNow.recordedOn) : undefined,
+        freshness, sufficiency,
+        action: result.status === 'needs_data' || result.status === 'needs_baseline'
+          ? isStandardGoalCriterionMetric(criterion.metric) || criterion.metric === 'custom' ? 'measurement' as const : 'workout' as const
+          : result.freshness === 'stale' ? isStandardGoalCriterionMetric(criterion.metric) || criterion.metric === 'custom' ? 'measurement' as const : 'workout' as const : null,
+      },
+    }
+  })
+  const completed = calculated.filter(({ result }) => result.status === 'target_reached' || result.status === 'range_maintained').length
+  const primary = calculated[0]!
+  const message = criteria.length > 1
+    ? 'Каждый критерий оценивается отдельно по подтверждённым данным.'
+    : primary.result.freshness === 'stale'
+      ? 'Текущее положение рассчитано по устаревшему результату. Добавьте новые данные, чтобы обновить вывод.'
+      : primary.result.status === 'in_range_now'
+        ? primary.result.sufficiency === 'enough_for_maintenance'
+          ? 'Значение находится в диапазоне сейчас, но в окне удержания был замер за его пределами.'
+          : 'Значение находится в диапазоне сейчас. Для подтверждения удержания нужны минимум два замера с интервалом не менее 7 дней.'
+        : primary.result.status === 'needs_baseline'
+          ? 'Первый замер станет отправной точкой для относительной цели.'
+          : primary.result.status === 'range_maintained'
+            ? 'Все замеры окна удержания находятся в заданном диапазоне.'
+            : primary.result.status === 'target_reached'
+              ? 'Последний актуальный результат соответствует заданному ориентиру.'
+              : primary.result.status === 'needs_data'
+                ? 'Пока недостаточно подтверждённых данных.'
+                : primary.result.status === 'target_not_reached'
+                  ? 'Последний актуальный результат пока не достиг заданного ориентира.'
+                  : 'Показатель отслеживается без оценки направления улучшения.'
   return {
-    ...foundation,
-    statusLabel: GOAL_PROGRESS_STATUS_LABELS[result.status],
-    targetLabel,
-    currentLabel: result.latestNow ? `${number.format(result.latestNow.value)} ${criterion.unit}` : 'Нет данных',
-    periodEndLabel: result.periodEnd
-      ? `${number.format(result.periodEnd.value)} ${criterion.unit} · ${formatLocalDateShort(result.periodEnd.recordedOn)}`
-      : 'Нет данных к концу периода',
-    dynamicsLabel,
-    lastMeasurementLabel: result.latestNow ? formatLocalDate(result.latestNow.recordedOn) : undefined,
-    sufficiencyLabel,
-    freshnessLabel,
-    baselineLabel: result.baseline
-      ? `${number.format(result.baseline.value)} ${criterion.unit} · ${formatLocalDateShort(result.baseline.recordedOn)}`
-      : undefined,
+    title, state: 'configured', statusLabel: criteria.length === 1 ? GOAL_PROGRESS_STATUS_LABELS[primary.result.status] : `${completed} из ${criteria.length} выполнено`,
+    criterionLabel: primary.presentation.label, targetLabel: primary.presentation.target, currentLabel: primary.presentation.current,
+    periodEndLabel: primary.result.periodEnd ? `${number.format(primary.result.periodEnd.value)} ${primary.criterion.unit} · ${formatLocalDateShort(primary.result.periodEnd.recordedOn)}` : 'Нет данных к концу периода',
+    dynamicsLabel: primary.presentation.dynamics, lastMeasurementLabel: primary.presentation.lastDate,
+    sufficiencyLabel: primary.presentation.sufficiency, freshnessLabel: primary.presentation.freshness,
+    baselineLabel: 'baseline' in primary.result && primary.result.baseline ? `${number.format(primary.result.baseline.value)} ${primary.criterion.unit} · ${formatLocalDateShort(primary.result.baseline.recordedOn)}` : undefined,
     message,
-    measurementAction: result.freshness !== 'fresh' || result.status === 'needs_data' || result.status === 'needs_baseline',
+    measurementAction: primary.presentation.action !== null, completedCriteria: completed, totalCriteria: criteria.length,
+    criteria: calculated.map((item) => item.presentation),
   }
 }
 

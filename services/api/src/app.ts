@@ -151,9 +151,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return reply.code(503).send({ error: 'service_unavailable' })
     }
     try {
-      return reply.send(await options.legacyWorkoutParser.parse(
-        actorToken.slice('Bearer '.length), request.body,
-      ))
+      const body = request.body as { kind?: unknown } | null
+      if (body?.kind === 'goal_criteria' && options.legacyWorkoutParser.suggest === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+      return reply.send(body?.kind === 'goal_criteria'
+        ? await options.legacyWorkoutParser.suggest!(actorToken.slice('Bearer '.length), request.body)
+        : await options.legacyWorkoutParser.parse(actorToken.slice('Bearer '.length), request.body))
     } catch (error) {
       if (error instanceof WorkoutParseError) {
         if (error.code === 'invalid_request') {
@@ -163,7 +165,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           return reply.code(400).send({ error: { code: error.code, message: 'Каталог упражнений пуст' } })
         }
         if (error.code === 'llm_unavailable') {
-          return reply.code(502).send({ error: { code: error.code, message: 'Модель разбора временно недоступна' } })
+          return reply.code(502).send({ error: { code: error.code, message: 'Модель временно недоступна' } })
         }
         if (error.code === 'parse_failed') {
           return reply.code(502).send({ error: { code: error.code, message: 'Не удалось разобрать диктовку' } })

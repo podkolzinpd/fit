@@ -92,6 +92,36 @@ describe('legacy Supabase function bridge', () => {
     expect(parse).toHaveBeenCalledWith('supabase-access-token', { text: 'присед', systemCatalog: [] })
   })
 
+  it('dispatches goal criteria suggestions without changing the workout parser contract', async () => {
+    const parse = vi.fn()
+    const suggest = vi.fn().mockResolvedValue({ criteria: [], needsInput: [], unsupportedReason: 'Нужно уточнение' })
+    const parser: LegacyWorkoutParser = { parse, suggest }
+    const app = buildApp({ legacyWorkoutParser: parser, logger: false })
+    apps.push(app)
+    const payload = { kind: 'goal_criteria', text: 'Стать выносливее', systemCatalog: [] }
+
+    const response = await app.inject({ method: 'POST', url: '/v1/legacy/parse-workout',
+      headers: { 'x-supabase-authorization': 'Bearer supabase-access-token' }, payload })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ criteria: [], needsInput: [], unsupportedReason: 'Нужно уточнение' })
+    expect(suggest).toHaveBeenCalledWith('supabase-access-token', payload)
+    expect(parse).not.toHaveBeenCalled()
+  })
+
+  it('keeps manual goal setup available when the suggestion model is not configured', async () => {
+    const parser: LegacyWorkoutParser = { parse: vi.fn() }
+    const app = buildApp({ legacyWorkoutParser: parser, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({ method: 'POST', url: '/v1/legacy/parse-workout',
+      headers: { 'x-supabase-authorization': 'Bearer token' },
+      payload: { kind: 'goal_criteria', text: '5 км', systemCatalog: [] } })
+
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual({ error: 'service_unavailable' })
+  })
+
   it('does not expose a bridge endpoint until its cloud secrets are configured', async () => {
     const app = buildApp({ logger: false })
     apps.push(app)
