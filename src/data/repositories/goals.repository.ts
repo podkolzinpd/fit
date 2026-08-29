@@ -14,6 +14,10 @@ type RawCriterion = {
   id: string; goalId: string; metric: GoalCriterion['metric']; operation: GoalCriterion['operation']
   targetValue: number | null; rangeMin: number | null; rangeMax: number | null; unit: string
   baselineValue?: number | null; baselineRecordedOn?: string | null
+  secondaryTargetValue?: number | null; secondaryUnit?: string | null
+  exerciseSource?: GoalCriterion['exerciseSource']; exerciseRef?: string | null; exerciseName?: string | null
+  customExerciseId?: string | null; customMetricId?: string | null; customMetricName?: string | null
+  regularityPeriod?: GoalCriterion['regularityPeriod']; regularityMode?: GoalCriterion['regularityMode']
   confirmationStatus: GoalCriterion['confirmationStatus']; position: number; version: number
 }
 
@@ -31,6 +35,11 @@ function toCriterion(raw: RawCriterion): GoalCriterion {
     targetValue: raw.targetValue, rangeMin: raw.rangeMin, rangeMax: raw.rangeMax,
     unit: raw.unit, baselineValue: raw.baselineValue ?? null,
     baselineRecordedOn: raw.baselineRecordedOn ? localDate(raw.baselineRecordedOn) : null,
+    secondaryTargetValue: raw.secondaryTargetValue ?? null, secondaryUnit: raw.secondaryUnit ?? null,
+    exerciseSource: raw.exerciseSource ?? null, exerciseRef: raw.exerciseRef ?? null,
+    exerciseName: raw.exerciseName ?? null, customExerciseId: raw.customExerciseId ?? null,
+    customMetricId: raw.customMetricId ?? null, customMetricName: raw.customMetricName ?? null,
+    regularityPeriod: raw.regularityPeriod ?? null, regularityMode: raw.regularityMode ?? null,
     confirmationStatus: raw.confirmationStatus,
     position: raw.position, version: raw.version,
   }

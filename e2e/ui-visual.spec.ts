@@ -348,6 +348,36 @@ test('client Progress scheme keeps its dark visual baseline', async ({ page }, t
   await expectVisualBaseline(page, `client-progress-scheme-dark-${process.platform}.png`)
 })
 
+test('client Progress shows composite goal facts in both themes', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
+  await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+    id: 'a1000000-0000-4000-8000-000000000001', clientId: demoClientId,
+    title: 'Держать вес и тренироваться регулярно', targetDate: null, status: 'active', version: 1, stages: [],
+    criteria: [
+      { id: 'a2000000-0000-4000-8000-000000000002', goalId: 'a1000000-0000-4000-8000-000000000001', metric: 'weight', operation: 'maintain_range', targetValue: null, rangeMin: 58.5, rangeMax: 59.5, unit: 'кг', baselineValue: null, baselineRecordedOn: null, confirmationStatus: 'confirmed', position: 0, version: 1 },
+      { id: 'a2000000-0000-4000-8000-000000000003', goalId: 'a1000000-0000-4000-8000-000000000001', metric: 'workout_regularity', operation: 'increase_to', targetValue: 2, rangeMin: null, rangeMax: null, unit: 'трен.', baselineValue: null, baselineRecordedOn: null, regularityPeriod: 'week', regularityMode: 'each_period', confirmationStatus: 'confirmed', position: 1, version: 1 },
+    ],
+  }) }))
+  await page.route('**/rest/v1/client_progress?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
+    { id: 'a4000000-0000-4000-8000-000000000004', client_id: demoClientId, created_by: null, recorded_on: '2026-08-15', weight_kg: 59, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+  ]) }))
+  await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await openClientProgress(page)
+  const goal = page.locator('.client-progress-goal-story')
+  await expect(goal.locator('.goal-criterion-progress-card')).toHaveCount(2)
+  await expect(goal.getByText(/из 2 выполнено/)).toBeVisible()
+  await goal.scrollIntoViewIfNeeded()
+  await expectVisualBaseline(page, `client-progress-composite-${process.platform}.png`, [], true)
+
+  await gotoStable(page, '/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await gotoStable(page, '/me/progress')
+  const darkGoal = page.locator('.client-progress-goal-story')
+  await expect(darkGoal.locator('.goal-criterion-progress-card')).toHaveCount(2)
+  await darkGoal.scrollIntoViewIfNeeded()
+  await expectVisualBaseline(page, `client-progress-composite-dark-${process.platform}.png`, [], true, '#1d1e21')
+})
+
 test('client measurements keep their visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client measurements use mobile visual profiles')
   await openClientProgress(page, { scheme: true })
@@ -807,10 +837,20 @@ test('trainer Client Goal keeps its real create, stage and edit states in both t
   await gotoStable(page, `/clients/${clientId}/goal`)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-goal-identity/)
   await expect(page.getByLabel('Цель')).toBeVisible()
+  await page.getByLabel('Цель').fill('Держать вес и тренироваться регулярно')
   await page.getByLabel('Дата достижения').fill('2026-12-20')
+  await page.getByRole('switch', { name: 'Автоматическая оценка' }).check()
+  await page.getByLabel('Способ оценки').selectOption('maintain_range')
+  await page.getByLabel('Минимум, кг').fill('62.5')
+  await page.getByLabel('Максимум, кг').fill('63.5')
+  await page.getByRole('button', { name: '＋ Добавить критерий' }).click()
+  const regularity = page.locator('.goal-criterion-item').nth(1)
+  await regularity.getByLabel('Показатель').selectOption('workout_regularity')
+  await regularity.locator('select').nth(2).selectOption('each_period')
+  await regularity.getByLabel('Способ оценки').selectOption('increase_to')
+  await regularity.getByLabel('Значение, трен.').fill('3')
   await expectVisualBaseline(page, `trainer-client-goal-create-${profile}-${process.platform}.png`, [], true)
 
-  await page.getByLabel('Цель').fill('Пробежать первые 10 км уверенно')
   await page.getByRole('button', { name: 'Создать цель' }).click()
   await expect(page.getByRole('heading', { name: 'Этапы' })).toBeVisible()
   await expect(page.getByText('Этапов пока нет')).toBeVisible()

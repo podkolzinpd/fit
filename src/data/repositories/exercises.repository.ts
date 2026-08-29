@@ -1,7 +1,8 @@
-import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
+import type { CustomMetric, ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
 import { exerciseQueries, type WorkoutParseResponse } from '../queries/exercises.queries'
 import { repositoryError } from './error'
+import { validateGoalCriteriaSuggestion, type GoalCriteriaSuggestionResult } from '../../shared/goal-criteria-suggestions'
 
 export type { WorkoutParseResponse } from '../queries/exercises.queries'
 
@@ -19,6 +20,11 @@ export const exercisesRepository = {
     const result = await exerciseQueries.parseWorkout(text, systemCatalog)
     if (result.error || !result.data) throw repositoryError(result.error ?? new Error('Пустой ответ парсера'))
     return result.data
+  },
+  async suggestGoalCriteria(text: string, catalog: readonly ExerciseSnapshot[], metrics: readonly CustomMetric[]): Promise<GoalCriteriaSuggestionResult> {
+    const result = await exerciseQueries.suggestGoalCriteria(text, catalog, metrics)
+    if (result.error || !result.data) throw repositoryError(result.error ?? new Error('Пустой ответ модели'))
+    return validateGoalCriteriaSuggestion(result.data, catalog, metrics)
   },
   async list(): Promise<CustomExercise[]> {
     const result = await exerciseQueries.list()

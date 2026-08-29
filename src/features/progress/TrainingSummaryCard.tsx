@@ -365,7 +365,12 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       <div className="client-progress-goal-story-head"><span>{role === 'client' ? 'Для твоей цели' : 'Цель клиента'}</span>
         <strong className={`goal-foundation-status ${presentation.goal.state}`}>{presentation.goal.statusLabel}</strong></div>
       <h3 id={`${role}-progress-goal-title`}>{presentation.goal.title}</h3>
-      {presentation.goal.criterionLabel && <dl className="goal-foundation-facts">
+      {presentation.goal.criteria && presentation.goal.criteria.length > 1 ? <div className="goal-criteria-progress-list">{presentation.goal.criteria.map((criterion) => <article key={criterion.id} className="goal-criterion-progress-card">
+        <header><strong>{criterion.label}</strong><span>{criterion.status}</span></header>
+        <dl><div><dt>Ориентир</dt><dd>{criterion.target}</dd></div><div><dt>Сейчас</dt><dd>{criterion.current}</dd></div><div><dt>Динамика</dt><dd>{criterion.dynamics}</dd></div><div><dt>Данные</dt><dd>{criterion.lastDate ? `${criterion.lastDate} · ` : ''}{criterion.freshness} · {criterion.sufficiency}</dd></div></dl>
+        {criterion.action === 'measurement' && <Link className="link" to={measurementLink}>Добавить актуальный замер</Link>}
+        {criterion.action === 'workout' && <Link className="link" to={workoutLink}>Записать тренировку</Link>}
+      </article>)}</div> : presentation.goal.criterionLabel && <dl className="goal-foundation-facts">
         <div><dt>Критерий</dt><dd>{presentation.goal.criterionLabel}</dd></div>
         <div><dt>Ориентир</dt><dd>{presentation.goal.targetLabel}</dd></div>
         {presentation.goal.currentLabel && <div><dt>Сейчас</dt><dd>{presentation.goal.currentLabel}</dd></div>}
@@ -376,13 +381,13 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       {presentation.goal.state === 'needs_review' && <><p>Формулировка цели изменилась. Проверь, подходит ли сохранённый критерий.</p><Link className="link" to={goalLink}>Проверить критерий</Link></>}
       {presentation.goal.state === 'needs_data' && <><p>Нет ни одного замера выбранного показателя.</p><Link className="link" to={measurementLink}>Добавить замер</Link></>}
       {presentation.goal.state === 'configured' && <>
-        <dl className="goal-progress-details">
+        {presentation.goal.totalCriteria === 1 && <dl className="goal-progress-details">
           <div><dt>Динамика выбранного периода</dt><dd>{presentation.goal.dynamicsLabel}</dd></div>
           <div><dt>Последний замер</dt><dd>{presentation.goal.lastMeasurementLabel} · {presentation.goal.freshnessLabel}</dd></div>
           <div><dt>Достаточность данных</dt><dd>{presentation.goal.sufficiencyLabel}</dd></div>
-        </dl>
+        </dl>}
         <p>{presentation.goal.message}</p>
-        {presentation.goal.measurementAction && <Link className="link" to={measurementLink}>Добавить актуальный замер</Link>}
+        {presentation.goal.totalCriteria === 1 && presentation.goal.measurementAction && <Link className="link" to={measurementLink}>Добавить актуальный замер</Link>}
       </>}
     </section>}
     {!goalLoading && !goalError && !presentation.goal && <section className="client-progress-goal-story empty" aria-labelledby={`${role}-progress-goal-title`}>
