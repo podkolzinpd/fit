@@ -514,6 +514,28 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
   gradient, glow или локальных hex. Flag-off возвращает прежний UI без миграции
   данных или маршрутов.
 
+### Product realization: Exercise Catalog
+
+- Scope — точный trainer route `/exercises`; Profile, Schedule, Progress и
+  workout picker не наследуют catalog identity.
+- Flagged route использует существующие system exercise metadata, локальные
+  media, search ranking и custom exercise mutations. Пользователь без flag
+  получает прежний component tree и поведение.
+- Page — `24/600`, section — `18/600`, body — `14/400`, item names и controls —
+  `14/500`, labels — `12/500`, search и editable fields — `16/400`.
+- Системная библиотека — searchable neutral surface с media rows 14 px и
+  compact 44 px pagination action. Detail открывается как 18 px bottom sheet и
+  показывает существующие technique media, metadata и instructions.
+- Пустой поиск, query loading/error/retry, пустой custom catalog, create/edit,
+  archive/restore и pending/disabled остаются реальными состояниями. Новые API,
+  mutations и workout data contract не создаются.
+- Primary custom action — base 48 px; secondary/ghost сохраняют ту же базовую
+  высоту, compact используется только для search reset и pagination. Archive
+  использует danger по реальной destructive семантике.
+- Light/dark имеют одинаковую геометрию. Media не становится декоративной
+  заливкой; scoped CSS не содержит coral, purple, gradient, glow или literal
+  hex.
+
 
 
 ### Навигация и иконки

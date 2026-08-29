@@ -407,6 +407,34 @@ describe('AppLayout: monochrome preview route scope', () => {
       expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-progress-identity')
     },
   )
+
+  it('applies Exercise Catalog identity only to the enabled trainer route', () => {
+    authState.role = 'trainer'
+    authState.monochromePreview = true
+    renderLayout('/exercises')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'exercise-catalog-identity')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-progress-identity', 'trainer-schedule-identity')
+  })
+
+  it('keeps Exercise Catalog unchanged when the server flag is off', () => {
+    authState.role = 'trainer'
+    renderLayout('/exercises')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'exercise-catalog-identity')
+    expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+  })
+
+  it.each(['/today', '/clients', '/schedule', '/profile', '/progress/client-1', '/workouts/new', '/me/progress'])(
+    'does not leak Exercise Catalog identity into %s',
+    (path) => {
+      authState.role = 'trainer'
+      authState.monochromePreview = true
+      renderLayout(path)
+
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('exercise-catalog-identity')
+    },
+  )
 })
 
 describe('AppLayout navigation', () => {
