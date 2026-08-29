@@ -4838,3 +4838,237 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .trainer-profile-identity .app-feedback-card .actions { display:grid; grid-template-columns:1fr }
   .trainer-profile-identity .app-feedback-card .actions button { width:100% }
 }
+
+/* Gate 8 / Task 26 — Assistant uses the same quiet, compact UI Identity v1
+   as the accepted product routes. The legacy assistant rules remain above and
+   become the one-switch rollback when monochrome rollout is disabled. */
+.assistant-identity .assistant-page {
+  gap:12px;
+  padding:10px 16px calc(104px + env(safe-area-inset-bottom));
+  background:var(--bg);
+  color:var(--fg);
+}
+.assistant-identity .assistant-local-note,
+.assistant-identity .assistant-thread-status,
+.assistant-identity .assistant-session-label span,
+.assistant-identity .assistant-flow-guidance,
+.assistant-identity .assistant-card-hint { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.4 }
+.assistant-identity .assistant-thread { gap:8px; padding:4px 0 8px }
+.assistant-identity .assistant-session-switcher { gap:8px }
+.assistant-identity .assistant-session-bar { min-height:48px; padding:0 2px 10px; border-bottom:1px solid var(--border) }
+.assistant-identity .assistant-session-label { gap:2px }
+.assistant-identity .assistant-session-label strong { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
+.assistant-identity .assistant-session-actions { gap:6px }
+.assistant-identity .assistant-session-actions button { min-height:44px; padding:0 12px; border-radius:12px; font-size:12px; font-weight:500 }
+.assistant-identity .assistant-session-today { color:var(--secondary-label-fg) }
+.assistant-identity .assistant-session-today:hover { color:var(--fg) }
+.assistant-identity .assistant-history-toggle { border-color:var(--border); background:var(--surface-raised); color:var(--fg) }
+.assistant-identity .assistant-history-toggle:hover,
+.assistant-identity .assistant-history-toggle[aria-expanded='true'] { border-color:var(--border); background:var(--surface-sunken); color:var(--fg) }
+.assistant-identity .assistant-session-history { gap:4px; padding:8px; border-color:var(--border); border-radius:14px; background:var(--surface-raised) }
+.assistant-identity .assistant-session-day-label { padding:4px 10px 2px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:0; text-transform:none }
+.assistant-identity .assistant-session-history button { min-height:44px; padding:8px 10px; border-radius:10px; color:var(--fg); font-size:14px; font-weight:400 }
+.assistant-identity .assistant-session-history button:hover,
+.assistant-identity .assistant-session-history button.selected { border-color:var(--border); background:var(--surface-sunken) }
+.assistant-identity .assistant-session-history button small { font-size:12px; font-weight:500 }
+
+.assistant-identity .assistant-first-entry { width:min(100%, 352px); grid-template-columns:48px minmax(0, 1fr); gap:14px; padding:20px 2px 10px }
+.assistant-identity .assistant-first-entry-icon { width:48px; height:48px; border-color:var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg) }
+.assistant-identity .assistant-first-entry-copy { gap:6px }
+.assistant-identity .assistant-first-entry-copy h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.018em }
+.assistant-identity .assistant-first-entry-copy p { color:var(--secondary-label-fg); font-size:14px; font-weight:400; line-height:1.45 }
+.assistant-identity .assistant-first-entry-actions { gap:8px; padding-top:6px }
+.assistant-identity .assistant-first-entry-actions button,
+.assistant-identity .assistant-choice-chips button,
+.assistant-identity .assistant-period-options button,
+.assistant-identity .assistant-choice-table button { min-height:44px; padding:0 12px; border:1px solid var(--border); border-radius:12px; background:transparent; color:var(--fg); font-size:12px; font-weight:500; box-shadow:none }
+.assistant-identity .assistant-first-entry-actions button:hover,
+.assistant-identity .assistant-choice-chips button:hover,
+.assistant-identity .assistant-period-options button:hover,
+.assistant-identity .assistant-choice-table button:hover { border-color:var(--border); background:var(--surface-raised); color:var(--fg) }
+
+.assistant-identity .assistant-message { max-width:min(75%, 320px); padding:11px 14px; border:1px solid var(--mono-primary); border-radius:18px 18px 6px 18px; background:var(--mono-primary); color:var(--mono-on-primary) }
+.assistant-identity .assistant-message p,
+.assistant-identity .assistant-message-copy li { font-size:14px; font-weight:400; line-height:1.45 }
+.assistant-identity .assistant-message.assistant-message-assistant { width:min(100%, 328px); padding:4px 0; border:0; border-radius:0; background:transparent; color:var(--fg) }
+.assistant-identity .assistant-message.assistant-message-result { width:100%; max-width:none; border:0; background:transparent; color:var(--fg) }
+.assistant-identity .assistant-message-edit { min-height:44px; margin-top:2px; padding:0; font-size:12px; font-weight:500 }
+.assistant-identity .assistant-message-copy { gap:8px }
+.assistant-identity .assistant-message-copy li::before { color:var(--fg) }
+.assistant-identity .assistant-thinking { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.assistant-identity .assistant-thinking span { width:10px; height:10px; background:var(--fg); background-image:none; box-shadow:none }
+.assistant-identity .assistant-message-error { gap:10px; max-width:calc(100% - 12px); padding:10px 12px; border-color:transparent; border-radius:14px; background:var(--surface-sunken); color:var(--danger); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-message-error button { min-height:44px; padding:0 12px; border-color:var(--border); border-radius:12px; background:transparent; color:var(--danger); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-workout-user-receipt,
+.assistant-identity .assistant-workout-receipt { padding:10px 12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised) }
+.assistant-identity .assistant-workout-user-receipt summary,
+.assistant-identity .assistant-workout-receipt summary { color:var(--fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-workout-user-receipt ol,
+.assistant-identity .assistant-workout-receipt p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+
+.assistant-identity .assistant-context-panel,
+.assistant-identity .assistant-context-panel:has(> .assistant-workout-draft),
+.assistant-identity .assistant-flow-card,
+.assistant-identity .assistant-action-card,
+.assistant-identity .assistant-workout-card,
+.assistant-identity .assistant-workout-collection,
+.assistant-identity .assistant-completion-card,
+.assistant-identity .assistant-inline-summary { border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); background-image:none; box-shadow:none }
+.assistant-identity .assistant-context-panel { gap:14px; padding:16px }
+.assistant-identity .assistant-context-panel > .assistant-flow-card,
+.assistant-identity .assistant-context-panel > .assistant-workout-collection,
+.assistant-identity .assistant-context-panel > .assistant-completion-card,
+.assistant-identity .assistant-context-panel > .assistant-progress-preview { border:0; border-radius:0; background:transparent }
+.assistant-identity .assistant-flow-card,
+.assistant-identity .assistant-action-card,
+.assistant-identity .assistant-workout-card,
+.assistant-identity .assistant-workout-collection,
+.assistant-identity .assistant-completion-card,
+.assistant-identity .assistant-inline-summary { gap:12px; padding:16px }
+.assistant-identity .assistant-flow-card > header small,
+.assistant-identity .assistant-workout-draft-content > header small,
+.assistant-identity .assistant-workout-result > header small,
+.assistant-identity .assistant-workout-collection > small:first-child,
+.assistant-identity .assistant-completion-card > small:first-child,
+.assistant-identity .assistant-workout-ambiguous-head small { color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:0; text-transform:none }
+.assistant-identity .assistant-flow-card > header strong,
+.assistant-identity .assistant-workout-draft-content > header strong,
+.assistant-identity .assistant-workout-result > header strong,
+.assistant-identity .assistant-workout-collection > strong,
+.assistant-identity .assistant-completion-card > strong,
+.assistant-identity .assistant-workout-ambiguous-head strong { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.018em }
+.assistant-identity .assistant-flow-status { min-height:28px; display:inline-flex; align-items:center; padding:0 9px; border:1px solid var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-flow-empty,
+.assistant-identity .assistant-flow-fact,
+.assistant-identity .assistant-progress-preview,
+.assistant-identity .assistant-progress-preview .assistant-period-options,
+.assistant-identity .assistant-workout-transcript,
+.assistant-identity .assistant-inline-summary-headline,
+.assistant-identity .assistant-inline-summary-metrics > div,
+.assistant-identity .assistant-workout-recognition-state { border:0; border-radius:14px; background:var(--surface-sunken); background-image:none }
+.assistant-identity .assistant-progress-preview { gap:10px; padding:14px }
+.assistant-identity .assistant-progress-preview span,
+.assistant-identity .assistant-progress-preview small,
+.assistant-identity .assistant-flow-empty span,
+.assistant-identity .assistant-flow-fact small,
+.assistant-identity .assistant-workout-transcript small,
+.assistant-identity .assistant-inline-summary header small,
+.assistant-identity .assistant-inline-summary header span,
+.assistant-identity .assistant-inline-summary-section > small,
+.assistant-identity .assistant-inline-summary-section ul,
+.assistant-identity .assistant-workout-recognition-state span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-progress-preview b,
+.assistant-identity .assistant-inline-summary-status { color:var(--fg) !important; font-weight:500 }
+.assistant-identity .assistant-inline-summary-status.saved { color:var(--success-fg) !important }
+.assistant-identity .assistant-inline-summary-metrics strong { font-size:18px; font-weight:600 }
+.assistant-identity .assistant-flow-checklist { gap:7px }
+.assistant-identity .assistant-flow-checklist span { min-height:32px; display:inline-flex; align-items:center; padding:0 9px; border:1px solid var(--border); border-radius:10px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-flow-checklist.complete span { border-color:var(--border); background:transparent; color:var(--success-fg) }
+
+.assistant-identity .assistant-flow-actions { gap:8px 16px }
+.assistant-identity .assistant-flow-actions > button:not(.assistant-action-cancel),
+.assistant-identity .assistant-action-card button:not(.assistant-action-cancel),
+.assistant-identity .assistant-inline-summary > button,
+.assistant-identity .assistant-progress-preview > button:not(.assistant-action-cancel) { min-height:48px; padding:0 16px; border-radius:14px; font-size:14px; font-weight:500 }
+.assistant-identity .assistant-flow-actions .primary,
+.assistant-identity .assistant-action-card .primary,
+.assistant-identity .assistant-progress-preview .primary,
+.assistant-identity .assistant-workout-draft > .assistant-flow-actions > .primary,
+.assistant-identity .assistant-workout-draft-content > .assistant-workout-result > .primary { border:1px solid var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none }
+.assistant-identity .assistant-action-cancel,
+.assistant-identity .assistant-flow-card .assistant-action-cancel,
+.assistant-identity .assistant-program-draft .assistant-action-cancel,
+.assistant-identity .assistant-workout-result + .assistant-action-cancel,
+.assistant-identity .assistant-workout-draft > .assistant-flow-actions .assistant-action-cancel { min-height:44px; padding:0; border:0; background:transparent; color:var(--secondary-label-fg); font-size:12px; font-weight:500; box-shadow:none }
+.assistant-identity .assistant-action-cancel:hover { color:var(--fg) }
+.assistant-identity button:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg); box-shadow:none }
+.assistant-identity button:focus-visible,
+.assistant-identity summary:focus-visible,
+.assistant-identity textarea:focus-visible,
+.assistant-identity input:focus-visible,
+.assistant-identity select:focus-visible { outline:2px solid var(--fg); outline-offset:2px }
+
+.assistant-identity .assistant-client-choices { gap:8px }
+.assistant-identity .assistant-client-choices button { min-height:48px; padding:10px 12px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:14px; font-weight:500 }
+.assistant-identity .assistant-client-choices button span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-program-draft { gap:12px; padding:0; background:transparent }
+.assistant-identity .assistant-client-fields label,
+.assistant-identity .assistant-program-card label,
+.assistant-identity .assistant-program-draft label { gap:6px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-client-fields input,
+.assistant-identity .assistant-client-fields select,
+.assistant-identity .assistant-program-card input,
+.assistant-identity .assistant-program-draft input { min-height:48px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--surface-sunken); color:var(--fg); font-family:inherit; font-size:16px; font-weight:400; box-shadow:none }
+.assistant-identity .assistant-program-sessions details { border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.assistant-identity .assistant-program-sessions summary { min-height:52px; padding:10px 12px }
+.assistant-identity .assistant-program-sessions summary strong { font-size:14px; font-weight:500 }
+.assistant-identity .assistant-program-sessions summary small,
+.assistant-identity .assistant-program-sessions summary b { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-program-sessions details[open] summary { border-color:var(--border); background:var(--surface-raised) }
+
+.assistant-identity .assistant-context-panel:has(> .assistant-workout-draft) > .assistant-flow-card.assistant-workout-draft { gap:16px; padding:16px; border:0; border-radius:18px; background:transparent }
+.assistant-identity .assistant-workout-heading { gap:4px !important }
+.assistant-identity .assistant-workout-heading small { font-size:12px !important; letter-spacing:0 !important }
+.assistant-identity .assistant-workout-heading strong { font-size:18px !important; font-weight:600 !important; line-height:1.2 !important; letter-spacing:-.018em }
+.assistant-identity .assistant-workout-draft .assistant-flow-status { min-height:28px; padding:0 9px; border-radius:10px; font-size:12px }
+.assistant-identity .assistant-workout-meta { grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:8px }
+.assistant-identity .assistant-workout-meta label { min-height:68px; gap:6px; padding:10px 12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-workout-meta input,
+.assistant-identity .assistant-program-draft .assistant-workout-meta input { min-height:32px; padding:0; border:0; background:transparent; color:var(--fg); font-size:16px; font-weight:400 }
+.assistant-identity .assistant-workout-fragment-count { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-workout-result { gap:10px }
+.assistant-identity .assistant-workout-result-list { gap:8px }
+.assistant-identity .assistant-workout-result-row { grid-template-columns:minmax(0,1fr) auto 30px; gap:8px; min-height:72px; padding:10px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken) }
+.assistant-identity .assistant-workout-exercise-name strong { font-size:14px; font-weight:500; line-height:1.25 }
+.assistant-identity .assistant-workout-exercise-name small { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-workout-metrics,
+.assistant-identity .assistant-exercise-choice > .assistant-workout-metrics { grid-template-columns:repeat(3, 44px); gap:5px }
+.assistant-identity .assistant-workout-metrics label { min-height:54px; padding:5px 3px; border:1px solid var(--border); border-radius:10px; background:var(--surface-raised); color:var(--secondary-label-fg) }
+.assistant-identity .assistant-workout-metrics input,
+.assistant-identity .assistant-program-draft .assistant-workout-metrics input { min-height:28px; padding:0; color:var(--fg); font-size:16px; font-weight:600 }
+.assistant-identity .assistant-workout-metrics small { font-size:10px; font-weight:500 }
+.assistant-identity .assistant-workout-remove { width:30px; min-width:30px; min-height:44px; color:var(--secondary-label-fg) }
+.assistant-identity .assistant-workout-remove:hover { color:var(--danger) }
+.assistant-identity .assistant-exercise-choice { gap:12px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken) }
+.assistant-identity .assistant-exercise-options { gap:8px }
+.assistant-identity .assistant-exercise-options button,
+.assistant-identity .assistant-exercise-options button:first-child { min-height:48px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--surface-raised); background-image:none; color:var(--fg); font-size:14px; font-weight:500 }
+.assistant-identity .assistant-exercise-options button:first-child { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.assistant-identity .assistant-workout-draft-content > .assistant-flow-guidance { padding-inline:0; font-size:12px; line-height:1.4 }
+.assistant-identity .assistant-workout-draft > .assistant-flow-actions { gap:10px; padding-top:4px }
+.assistant-identity .assistant-workout-draft > .assistant-flow-actions > .primary,
+.assistant-identity .assistant-workout-draft-content > .assistant-workout-result > .primary { width:min(100%, 320px); min-height:48px; padding:0 16px; border-radius:14px; font-size:14px; font-weight:500 }
+
+.assistant-identity .assistant-composer { grid-template-columns:minmax(0,1fr) 48px 48px; gap:6px; margin-top:0; padding:5px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.assistant-identity .assistant-composer textarea,
+.assistant-identity .assistant-composer > input { min-height:48px; padding:12px; border-radius:12px; color:var(--fg); font-family:inherit; font-size:16px; font-weight:400; line-height:1.4 }
+.assistant-identity .assistant-composer textarea::placeholder { color:var(--secondary-label-fg) }
+.assistant-identity .assistant-composer textarea:focus,
+.assistant-identity .assistant-composer > input:focus { outline:0 }
+.assistant-identity .assistant-composer .voice-input { min-width:0 }
+.assistant-identity .assistant-icon-button { width:48px; min-height:48px; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--fg); box-shadow:none }
+.assistant-identity .assistant-composer > .assistant-icon-button:last-child { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.assistant-identity .assistant-icon-button.recording { border-color:var(--border); background:var(--surface-sunken); color:var(--danger) }
+.assistant-identity .assistant-reset { min-height:44px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-workout-saved { padding:14px 16px; border-color:var(--border); border-radius:16px; background:var(--surface-raised) }
+.assistant-identity .assistant-workout-saved > span { background:transparent; color:var(--success-fg); font-weight:600 }
+.assistant-identity .assistant-workout-saved strong { font-size:14px; font-weight:500 }
+.assistant-identity .assistant-workout-saved small { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
+.assistant-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
+.assistant-identity .tab-bar a.active,
+.assistant-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+
+@media (min-width:641px) {
+  .assistant-identity .assistant-page { width:min(100%, 760px); margin:0 auto; padding:20px 24px calc(112px + env(safe-area-inset-bottom)) }
+  .assistant-identity .assistant-message.assistant-message-assistant { width:min(100%, 520px) }
+  .assistant-identity .assistant-message { max-width:min(70%, 460px) }
+}
+
+@media (max-width:480px) {
+  .assistant-identity .assistant-page { gap:10px; padding:8px 16px 0 }
+  .assistant-identity .assistant-context-panel { padding:14px }
+  .assistant-identity .assistant-context-panel:has(> .assistant-workout-draft) > .assistant-flow-card.assistant-workout-draft { padding:14px }
+  .assistant-identity .assistant-composer,
+  .assistant-identity.keyboard-open .assistant-composer { padding:5px; background:var(--surface-raised) }
+}

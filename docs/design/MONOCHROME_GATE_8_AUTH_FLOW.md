@@ -1,6 +1,6 @@
 # Gate 8 — auth-flow
 
-Статус: **implemented; local acceptance complete**.
+Статус: **merged and deployed to production**.
 
 ## Scope
 
@@ -58,8 +58,12 @@
   auth/join lifecycle — 7/7 Chromium passed; public WebKit auth smoke passed.
 - Полный project check зелёный: 123 app files / 962 tests, 225 API tests,
   typecheck, lint, coverage, DB types, iOS permissions, infra policy и
-  production build. Linux visual baselines и production smoke остаются
-  merge/deploy gates.
+  production build.
+- Linux visual baselines получены из CI-артефактов и приняты; весь CI зелёный.
+- PR `#672`, squash merge `a492e04892280dfe85a9fca889aebc4c619cf07b`.
+- Production deployment `6157521504` завершён успешно. Встроенный production
+  browser заблокирован admin policy до загрузки страницы, поэтому runtime
+  подтверждён deployment status, полным CI и локальным реальным auth lifecycle.
 
 ## Rollback
 

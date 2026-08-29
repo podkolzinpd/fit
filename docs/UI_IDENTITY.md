@@ -1,7 +1,7 @@
 # Fit — целевая айдентика интерфейса
 
 Статус: **Foundation UI Identity v1 принята и является production default;
-оставшиеся Auth/Assistant мигрируют поэтапно, legacy rollback сохранён**.
+задачи 8–25 доставлены, Assistant мигрирует отдельно, legacy rollback сохранён**.
 
 Этот документ фиксирует новый визуальный характер Fit. Он обязателен для
 планируемого редизайна и для новых UI-решений. Пока конкретный экран не
@@ -554,6 +554,33 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
   или отправки; семантический цвет всегда сопровождается текстом/иконкой.
 - Light/dark имеют одинаковую геометрию; scoped CSS не содержит coral, purple,
   gradient, glow или literal hex. Flag-off возвращает прежний UI.
+
+### Product realization: Assistant
+
+- Scope — точный trainer-only route `/assistant`. Существующий отдельный
+  Assistant pilot определяет доступ к продукту независимо от глобального
+  identity rollout; Task 26 не расширяет allowlist и не меняет authorization.
+- История, read-only archive, empty first entry, user/assistant messages,
+  error/retry, composer/voice, client/program/progress/workout flows,
+  ambiguity, draft/result и applied states используют прежние данные и
+  orchestration contracts.
+- Session header и история — плоская рабочая иерархия. Сообщение пользователя
+  использует полярный primary fill, ответ ассистента остаётся типографическим;
+  action results и текущий structured draft занимают полную ширину контекста.
+- Cards, receipts, fields и nested metrics используют только accepted neutral
+  surfaces 18/14/10 px без gradient, glow и декоративной semantic-заливки.
+  Success/danger появляются только в сохранении или ошибке и дублируются
+  текстом/знаком.
+- Composer — одна neutral surface радиуса 18 px; editable text `16/400`, mic —
+  neutral 48 px control, send — primary 48 px. Disabled остаётся читаемым без
+  общей opacity; recording использует danger только вместе с понятным voice
+  state.
+- Flow primary actions — base 48 px, choice/history controls — explicit compact
+  44 px. Высота не кодирует semantic priority. Light/dark сохраняют одинаковую
+  геометрию, keyboard viewport, inner draft scroll и bottom navigation.
+- `VITE_MONOCHROME_ROLLOUT_MODE=off` возвращает legacy Assistant UI одним
+  redeploy; orchestration, matching, fallback и сохранённые данные не требуют
+  отката.
 
 
 
