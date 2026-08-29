@@ -204,7 +204,7 @@ function ClientGoalBlock({ client }: { client: Client }) {
     const stage = currentStage(goal, today)
     const progress = stageProgress(goal, today)
     return <section className="goal-block">
-      <div className="goal-head"><h2>Цель</h2><Link className="link" to={`/clients/${client.id}/goal`}>Открыть →</Link></div>
+      <div className="goal-head"><h2>Цель</h2><Link className="link" to={`/clients/${client.id}/goal`}>{actor?.featureFlags?.monochromePreview ? <><span>Открыть</span><ChevronRightIcon /></> : 'Открыть →'}</Link></div>
       <p className="goal-title">{goal.title}</p>
       {goal.targetDate && <p className="goal-deadline">До {formatLocalDateShort(localDate(goal.targetDate))}{days !== null ? ` · ${targetHint(days)}` : ''}</p>}
       {progress && progress.total > 0 && <p className="goal-stage-line">

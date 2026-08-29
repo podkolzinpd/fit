@@ -3990,3 +3990,66 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .trainer-clients-identity .clients-page .page-header { margin-bottom:12px }
   .trainer-clients-identity .client-card { padding-inline:14px }
 }
+
+/* ── Gate 7 / task 18: Trainer Client Detail. */
+.trainer-client-detail-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none }
+.trainer-client-detail-identity .content { background:var(--bg) }
+.trainer-client-detail-identity .client-detail-page { max-width:760px; margin:0 auto; padding:24px 24px calc(env(safe-area-inset-bottom) + 104px) }
+.trainer-client-detail-identity .client-detail-page .page-header { min-height:44px; gap:8px; margin-bottom:16px }
+.trainer-client-detail-identity .client-detail-page .page-header h1 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.trainer-client-detail-identity .client-detail-page .page-back,
+.trainer-client-detail-identity .client-detail-page .overflow-trigger { width:44px; height:44px; min-height:44px; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--fg); box-shadow:none }
+.trainer-client-detail-identity .client-detail-snapshot { padding:16px; border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.trainer-client-detail-identity .client-detail-vitals { gap:5px 12px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
+.trainer-client-detail-identity .client-detail-activity { gap:12px; margin-top:14px; padding-top:14px; border-color:var(--border) }
+.trainer-client-detail-identity .client-detail-activity strong { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
+.trainer-client-detail-identity .client-detail-activity span { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
+.trainer-client-detail-identity .client-detail-page .attention { margin-top:8px; border-color:var(--danger-border); border-radius:10px; background:var(--surface-raised); color:var(--danger); font-size:12px; font-weight:500 }
+.trainer-client-detail-identity .client-detail-actions { gap:8px; margin:12px 0 }
+.trainer-client-detail-identity .client-detail-plan { min-height:48px; padding:0 14px; border-color:var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:500; box-shadow:none }
+.trainer-client-detail-identity .client-detail-plan > svg:first-child,
+.trainer-client-detail-identity .client-detail-plan .client-detail-chevron { color:currentColor }
+.trainer-client-detail-identity .client-detail-plan:hover,
+.trainer-client-detail-identity .client-detail-plan:focus-visible { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.trainer-client-detail-identity .client-detail-routes { gap:8px }
+.trainer-client-detail-identity .client-detail-routes a { min-height:48px; padding:8px 12px; border-color:var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); font-size:12px; font-weight:500; box-shadow:none }
+.trainer-client-detail-identity .client-detail-routes a svg { color:var(--fg); stroke-width:1.8 }
+.trainer-client-detail-identity .client-detail-routes a:hover,
+.trainer-client-detail-identity .client-detail-routes a:focus-visible { border-color:var(--fg); background:var(--surface-raised) }
+.trainer-client-detail-identity .client-detail-page .goal-block { gap:8px; margin-top:10px; padding:16px; border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.trainer-client-detail-identity .client-detail-page .goal-head h2,
+.trainer-client-detail-identity .client-detail-upcoming h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
+.trainer-client-detail-identity .client-detail-page .goal-head .link { display:inline-flex; align-items:center; gap:2px; min-height:44px; padding:0 2px; color:var(--fg); font-size:14px; font-weight:500 }
+.trainer-client-detail-identity .client-detail-page .goal-head .link svg { width:18px; height:18px }
+.trainer-client-detail-identity .client-detail-page .goal-block > p { color:var(--secondary-label-fg); font-size:14px; font-weight:400; line-height:1.45 }
+.trainer-client-detail-identity .client-detail-page .goal-block > .goal-title,
+.trainer-client-detail-identity .client-detail-page .goal-stage-title { color:var(--fg); font-size:14px; font-weight:500 }
+.trainer-client-detail-identity .client-detail-page .goal-stage-line { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-client-detail-identity .client-detail-page .goal-stages-hint { padding:12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg) }
+.trainer-client-detail-identity .client-detail-page .goal-stages-hint p { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
+.trainer-client-detail-identity .client-detail-page .goal-stages-hint .button { min-height:44px; border-color:var(--border); border-radius:12px; background:transparent; color:var(--fg); font-size:12px; font-weight:500; box-shadow:none }
+.trainer-client-detail-identity .client-detail-upcoming { gap:8px; margin-top:14px }
+.trainer-client-detail-identity .client-detail-upcoming .card,
+.trainer-client-detail-identity .client-detail-page .page-actions .card { border-color:var(--border); border-radius:18px; background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.trainer-client-detail-identity .client-detail-page .goal-block.client-note-block { margin-top:14px; padding:16px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
+.trainer-client-detail-identity .client-detail-page textarea { min-height:96px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400 }
+.trainer-client-detail-identity .client-detail-page .actions { gap:8px }
+.trainer-client-detail-identity .client-detail-page .actions button,
+.trainer-client-detail-identity .client-detail-page .page-actions > button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500; box-shadow:none }
+.trainer-client-detail-identity .client-detail-page .actions .primary { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.trainer-client-detail-identity .client-detail-page .actions .secondary,
+.trainer-client-detail-identity .client-detail-page .page-actions > .secondary { border-color:var(--border); background:transparent; color:var(--fg) }
+.trainer-client-detail-identity .client-detail-page .danger { color:var(--danger) }
+.trainer-client-detail-identity .client-detail-page button:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.trainer-client-detail-identity .state-panel { border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.trainer-client-detail-identity .state-panel-mark { border-radius:14px; background:var(--surface-sunken); color:var(--fg) }
+.trainer-client-detail-identity .state-panel h2 { color:var(--fg); font-size:18px; font-weight:600 }
+.trainer-client-detail-identity .state-panel p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.trainer-client-detail-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
+.trainer-client-detail-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
+.trainer-client-detail-identity .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+
+@media (max-width:480px) {
+  .trainer-client-detail-identity .client-detail-page { padding:12px 16px calc(env(safe-area-inset-bottom) + 104px) }
+  .trainer-client-detail-identity .client-detail-page .page-header { margin-bottom:12px }
+}

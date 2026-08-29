@@ -1,6 +1,6 @@
 # Gate 7 — Trainer Clients
 
-Статус: **implemented; local validation complete**.
+Статус: **production preview; PR #663, deployment verified**.
 
 ## Scope
 
@@ -40,8 +40,9 @@
   passed, 3 ожидаемых skips; соседние client detail, schedule и progress
   baselines в desktop suite остались неизменны.
 - Полный `npm run check`: 123/123 test files, 893/893 tests; API 225/225 при
-  23 ожидаемых skips. CI, deployment и production smoke фиксируются в PR до
-  перехода к задаче 18.
+  23 ожидаемых skips. Обязательный CI прошёл полностью; PR #663 влит как
+  `3760115`, production deployment `6152916140` успешен. Authenticated browser
+  smoke заблокирован административной policy до navigation и остаётся ручным.
 
 ## Rollback
 
