@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppLayout, appViewportMetrics } from './AppLayout'
 
 const authState = vi.hoisted(() => ({
@@ -44,6 +44,12 @@ function renderLayout(path: string) {
 function iconName(link: HTMLElement) {
   return link.querySelector('svg')?.getAttribute('data-icon')
 }
+
+beforeEach(() => {
+  // Большинство route-scope тестов проверяют прежний персональный контракт.
+  // Production default ON покрывается отдельной rollout-группой ниже.
+  vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'preview')
+})
 
 afterEach(() => {
   authState.role = 'client'
@@ -472,6 +478,46 @@ describe('AppLayout: monochrome preview route scope', () => {
       expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-profile-identity')
     },
   )
+})
+
+describe('AppLayout: global monochrome rollout', () => {
+  it('enables a migrated route for every user in production mode', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'on')
+    authState.monochromePreview = false
+    renderLayout('/me')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'client-home-identity')
+  })
+
+  it('uses one global off switch even when personal preview is enabled', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'off')
+    authState.monochromePreview = true
+    renderLayout('/me')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'client-home-identity')
+  })
+
+  it('keeps accepted monochrome dark independent from the old purple pilot', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'on')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_USER_IDS', 'user-1')
+    authState.theme = 'dark'
+    renderLayout('/me')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('theme-dark-pilot')
+    expect(document.documentElement).not.toHaveClass('theme-dark-pilot')
+  })
+
+  it('migrates Join as an exact auth route without leaking into other routes', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'on')
+    const join = renderLayout('/join')
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'auth-join-identity')
+
+    join.unmount()
+    renderLayout('/assistant')
+    expect(document.querySelectorAll('.auth-join-identity')).toHaveLength(0)
+  })
 })
 
 describe('AppLayout navigation', () => {

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('client without monochrome preview keeps the current My Workouts identity', async ({ page }, testInfo) => {
+test('global rollout gives a new client the My Workouts identity', async ({ page }, testInfo) => {
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Тип аккаунта').selectOption('client')
@@ -12,6 +12,6 @@ test('client without monochrome preview keeps the current My Workouts identity',
 
   await page.goto('/me/workouts')
   await expect(page.getByRole('heading', { name: 'Мои тренировки' })).toBeVisible()
-  await expect(page.locator('.phone-frame')).not.toHaveClass(/client-workouts-identity/)
-  await expect(page.locator('html')).not.toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('.phone-frame')).toHaveClass(/client-workouts-identity/)
+  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
 })

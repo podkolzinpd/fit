@@ -18,7 +18,10 @@ vi.mock('../../data/repositories/workouts.repository', () => ({ bmiLabel: () => 
 
 const auth = vi.hoisted(() => ({ pilot: vi.fn() }))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { userId: 'trainer-1' } }) }))
-vi.mock('../../app/feature-flags', () => ({ isDarkThemePilotEnabled: auth.pilot }))
+vi.mock('../../app/feature-flags', () => ({
+  isDarkThemePilotEnabled: auth.pilot,
+  isMonochromeUiEnabled: auth.pilot,
+}))
 
 const client = (id: string, fullName: string): Client => ({
   id, fullName, canonicalFullName: fullName, hasAccount: false, gender: null,
@@ -68,9 +71,8 @@ describe('ClientsPage search', () => {
     expect(screen.queryByLabelText('Поиск клиента')).not.toBeInTheDocument()
   })
 
-  // Вне пилота экран обязан остаться прежним: поле показывается на любом
-  // списке, кнопки сброса нет. На этом держатся committed visual baselines.
-  it('keeps the previous field outside the pilot allowlist', async () => {
+  // Global rollout=off возвращает прежнее правило поиска вместе с legacy UI.
+  it('keeps the previous field when monochrome rollout is off', async () => {
     auth.pilot.mockReturnValue(false)
     const user = userEvent.setup()
     renderPage(NAMES.slice(0, 2).map((name, index) => client(`c${index}`, name)))

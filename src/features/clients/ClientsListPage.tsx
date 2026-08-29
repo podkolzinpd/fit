@@ -6,7 +6,7 @@ import { bmiLabel } from '../../data/repositories/workouts.repository'
 import { AsyncView, Page } from '../../shared/ui'
 import { ChevronRightIcon, CloseIcon, ProfileIcon, SearchIcon } from '../../shared/icons'
 import { useAuth } from '../../app/auth-context'
-import { isDarkThemePilotEnabled } from '../../app/feature-flags'
+import { isDarkThemePilotEnabled, isMonochromeUiEnabled } from '../../app/feature-flags'
 
 // Порог, с которого список перестаёт охватываться взглядом и поиск начинает
 // экономить время. Ниже него поле только занимало верх экрана: у тренера с
@@ -15,11 +15,10 @@ const CLIENTS_SEARCH_MIN = 6
 
 export function ClientsPage() {
   const { actor } = useAuth()
-  // Новое оформление поиска раскатываем тем же default-off allowlist, что и
-  // тёмную палитру: отдельный флаг пришлось бы заводить руками в Vercel, а
-  // аудитория закрытого пилота у этих изменений одна и та же. Вне пилота поле
-  // остаётся прежним — и по виду, и по правилу показа.
-  const searchPilot = Boolean(actor?.featureFlags?.monochromePreview || (actor && isDarkThemePilotEnabled(actor.userId)))
+  // В новой identity поиск появляется только когда он действительно экономит
+  // время. Rollout=preview сохраняет прежний server-managed pilot, а старый
+  // dark-pilot остаётся совместим до отдельного cleanup.
+  const searchPilot = Boolean(isMonochromeUiEnabled(actor?.featureFlags?.monochromePreview) || (actor && isDarkThemePilotEnabled(actor.userId)))
   const showArchived = window.localStorage?.getItem('fit.showArchivedClients') === 'true'
   // Список — рабочая очередь тренера, поэтому при каждом входе показываем
   // актуальную активность, а не данные из короткого SPA-кэша.

@@ -9,7 +9,7 @@ async function signInPreviewTrainer(page: import('@playwright/test').Page) {
   await expect(page).toHaveURL(/\/(today|clients)$/)
 }
 
-test('trainer without monochrome preview keeps the current exercise catalog', async ({ page }) => {
+test('global rollout gives a new trainer the monochrome exercise catalog', async ({ page }) => {
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Тип аккаунта').selectOption('trainer')
@@ -20,10 +20,10 @@ test('trainer without monochrome preview keeps the current exercise catalog', as
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto('/exercises')
-  await expect(page.locator('.phone-frame')).not.toHaveClass(/exercise-catalog-identity/)
-  await expect(page.locator('html')).not.toHaveClass(/identity-monochrome-preview/)
-  await expect(page.getByText('Системный каталог', { exact: true })).toBeVisible()
-  await expect(page.getByLabel('Поиск упражнения')).toHaveCount(0)
+  await expect(page.locator('.phone-frame')).toHaveClass(/exercise-catalog-identity/)
+  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.getByRole('heading', { name: 'Системные упражнения' })).toBeVisible()
+  await expect(page.getByLabel('Поиск упражнения')).toBeVisible()
 })
 
 test('exercise catalog preview keeps search, media and detail transitions usable', async ({ page }) => {

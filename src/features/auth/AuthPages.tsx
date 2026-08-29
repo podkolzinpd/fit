@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type PropsWithChildren } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { authRepository } from '../../data/repositories/auth.repository'
 import {
@@ -9,7 +9,8 @@ import {
   type YandexPilotTrainingData as YandexPilotTrainingDataState,
 } from '../../data/repositories/yandex-pilot.repository'
 import { useAuth } from '../../app/auth-context'
-import { getYandexIdPilotConfig, trainerHomePath } from '../../app/feature-flags'
+import { getYandexIdPilotConfig, isMonochromeUiEnabled, trainerHomePath } from '../../app/feature-flags'
+import { applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from '../../app/theme'
 import { ProfileIcon } from '../../shared/icons'
 import { AsyncView, Field } from '../../shared/ui'
 import type { AccountRole } from '../../shared/domain'
@@ -19,6 +20,37 @@ import { YandexPilotTrainingData } from './YandexPilotTrainingData'
 import { useYandexPilotPolling } from './use-yandex-pilot-polling'
 
 type Mode = 'login' | 'register'
+
+function AuthIdentityScreen({ children, className }: PropsWithChildren<{ className?: string }>) {
+  const theme = useAppTheme()
+  // Публичные auth routes не имеют authenticated user_id. В режиме preview
+  // они намеренно остаются legacy; production mode=on включает их глобально.
+  const monochromeEnabled = isMonochromeUiEnabled(false)
+  // Новый dark живёт в identity tokens и не должен подключать старый
+  // фиолетовый theme-dark-pilot class.
+  const themeVariant = resolveThemeVariant(theme, false)
+
+  useEffect(() => {
+    applyThemeVariant(themeVariant)
+    const root = document.documentElement
+    root.classList.toggle('identity-monochrome-preview', monochromeEnabled)
+    if (monochromeEnabled) {
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#FBFAF7' : '#111214')
+    }
+    return () => {
+      root.classList.remove('identity-monochrome-preview')
+      applyThemeVariant(resolveThemeVariant(theme, false))
+    }
+  }, [monochromeEnabled, theme, themeVariant])
+
+  return <main className={[
+    'auth-screen',
+    'auth-entry',
+    monochromeEnabled ? 'identity-monochrome-preview auth-flow-identity' : '',
+    monochromeEnabled ? themeVariantClass(themeVariant) : '',
+    className,
+  ].filter(Boolean).join(' ')}>{children}</main>
+}
 
 export function AuthPage() {
   const location = useLocation()
@@ -44,7 +76,7 @@ export function AuthPage() {
     finally { setBusy(false) }
   }
 
-  return <main className="auth-screen auth-entry">
+  return <AuthIdentityScreen>
     <header className="auth-entry-head">
       <div className="brand" aria-hidden="true">FIT</div>
       <p className="eyebrow">ВАШ РАБОЧИЙ ПРОЦЕСС</p>
@@ -72,7 +104,7 @@ export function AuthPage() {
         .catch(() => { setError('Не удалось начать вход через Yandex ID.'); setYandexBusy(false) })
     }}>{yandexBusy ? 'Переходим в Yandex ID…' : 'Проверить Yandex ID'}</button>}
     <div className="auth-links"><button className="link" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>{mode === 'login' ? 'Создать аккаунт' : 'У меня есть аккаунт'}</button>{mode === 'login' && <Link to="/auth/forgot">Забыли пароль?</Link>}</div>
-  </main>
+  </AuthIdentityScreen>
 }
 
 export function YandexPilotCallbackPage() {
@@ -214,7 +246,7 @@ export function YandexPilotCallbackPage() {
   const fullName = session === null
     ? ''
     : [session.profile.firstName, session.profile.lastName].filter(Boolean).join(' ') || 'Пользователь FIT'
-  return <main className="auth-screen auth-entry">
+  return <AuthIdentityScreen className="auth-pilot-flow">
     <header className="auth-entry-head">
       <div className="brand" aria-hidden="true">FIT</div>
       <p className="eyebrow">YANDEX ID · ПИЛОТ</p>
@@ -267,7 +299,7 @@ export function YandexPilotCallbackPage() {
       session={session}
     />}
     <Link className="auth-back-link" to="/auth">Вернуться ко входу</Link>
-  </main>
+  </AuthIdentityScreen>
 }
 
 function pilotClientSummary(client: YandexPilotClient): string {
@@ -287,7 +319,7 @@ export function ForgotPasswordPage() {
     try { await authRepository.resetPassword(String(new FormData(event.currentTarget).get('email'))); setMessage('Ссылка отправлена, если такой аккаунт существует.') }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Ошибка') }
   }
-  return <main className="auth-screen auth-entry"><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">ДОСТУП К АККАУНТУ</p><h1>Восстановление пароля</h1><p className="muted">Отправим ссылку на ваш email.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>{error && <p className="error">{error}</p>}{message && <p className="success">{message}</p>}<button className="primary">Отправить ссылку</button></form><Link className="auth-back-link" to="/auth">Вернуться ко входу</Link></main>
+  return <AuthIdentityScreen><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">ДОСТУП К АККАУНТУ</p><h1>Восстановление пароля</h1><p className="muted">Отправим ссылку на ваш email.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>{error && <p className="error" role="alert">{error}</p>}{message && <p className="success" role="status">{message}</p>}<button className="primary">Отправить ссылку</button></form><Link className="auth-back-link" to="/auth">Вернуться ко входу</Link></AuthIdentityScreen>
 }
 
 export function ResetPasswordPage() {
@@ -297,11 +329,11 @@ export function ResetPasswordPage() {
     try { await authRepository.updatePassword(String(new FormData(event.currentTarget).get('password'))); navigate('/') }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Ошибка') }
   }
-  return <main className="auth-screen auth-entry"><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">БЕЗОПАСНОСТЬ</p><h1>Новый пароль</h1><p className="muted">Выберите новый пароль для входа в FIT.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete="new-password" required /></Field>{error && <p className="error">{error}</p>}<button className="primary">Сохранить</button></form></main>
+  return <AuthIdentityScreen><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">БЕЗОПАСНОСТЬ</p><h1>Новый пароль</h1><p className="muted">Выберите новый пароль для входа в FIT.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete="new-password" required /></Field>{error && <p className="error" role="alert">{error}</p>}<button className="primary">Сохранить</button></form></AuthIdentityScreen>
 }
 
 export function AuthCallbackPage() {
   const { loading, error, actor } = useAuth()
   if (actor) return <Navigate to={actor.role === 'client' ? '/me' : trainerHomePath()} replace />
-  return <main className="auth-screen auth-entry"><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">ВХОД В АККАУНТ</p><h1>Завершаем вход</h1><p className="muted">{loading ? 'Проверяем сессию…' : error ?? 'Не удалось получить сессию.'}</p></header><Link className="auth-back-link" to="/auth">Вернуться</Link></main>
+  return <AuthIdentityScreen><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">ВХОД В АККАУНТ</p><h1>Завершаем вход</h1><p className="muted">{loading ? 'Проверяем сессию…' : error ?? 'Не удалось получить сессию.'}</p></header><Link className="auth-back-link" to="/auth">Вернуться</Link></AuthIdentityScreen>
 }

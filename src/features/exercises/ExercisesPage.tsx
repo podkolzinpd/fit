@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState, type FormEvent, type MouseEvent } from 'react'
 import { exercisesRepository, type CustomExercise } from '../../data/repositories/exercises.repository'
 import { useAuth } from '../../app/auth-context'
+import { isMonochromeUiEnabled } from '../../app/feature-flags'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
 import { CloseIcon, SearchIcon } from '../../shared/icons'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
@@ -55,7 +56,7 @@ function useCustomExercises() {
 
 export function ExercisesPage() {
   const { actor } = useAuth()
-  if (actor?.role === 'trainer' && actor.featureFlags?.monochromePreview) return <MonochromeExercisesPage />
+  if (actor?.role === 'trainer' && isMonochromeUiEnabled(actor.featureFlags?.monochromePreview)) return <MonochromeExercisesPage />
   return <LegacyExercisesPage />
 }
 

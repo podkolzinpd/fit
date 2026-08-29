@@ -9,7 +9,7 @@ async function signInPreviewTrainer(page: import('@playwright/test').Page) {
   await expect(page).toHaveURL(/\/(today|clients)$/)
 }
 
-test('trainer without monochrome preview keeps the current profile', async ({ page }) => {
+test('global rollout gives a new trainer the monochrome profile', async ({ page }) => {
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Тип аккаунта').selectOption('trainer')
@@ -20,8 +20,8 @@ test('trainer without monochrome preview keeps the current profile', async ({ pa
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto('/profile')
-  await expect(page.locator('.phone-frame')).not.toHaveClass(/trainer-profile-identity/)
-  await expect(page.locator('html')).not.toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-profile-identity/)
+  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
   await expect(page.getByRole('heading', { name: 'Основные данные' })).toBeVisible()
 })
 

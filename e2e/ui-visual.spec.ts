@@ -100,6 +100,56 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
   await expect(page.getByRole('heading', { name: 'Live-тренировка' })).toBeVisible()
 }
 
+test('auth family keeps light and dark visual baselines', async ({ page }) => {
+  await page.goto('/auth')
+  await expect(page.locator('.auth-flow-identity')).toBeVisible()
+  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expectVisualBaseline(page, `auth-login-${process.platform}.png`, [], true)
+
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page.getByRole('heading', { name: 'Регистрация' })).toBeVisible()
+  await expectVisualBaseline(page, `auth-register-${process.platform}.png`, [], true)
+
+  await page.goto('/auth/reset')
+  await expect(page.getByRole('heading', { name: 'Новый пароль' })).toBeVisible()
+  await expectVisualBaseline(page, `auth-reset-${process.platform}.png`, [], true)
+
+  await page.addInitScript(() => window.localStorage.setItem('fit.appTheme', 'dark'))
+  await page.goto('/auth/forgot')
+  await expect(page.getByRole('heading', { name: 'Восстановление пароля' })).toBeVisible()
+  await expect(page.locator('.auth-flow-identity')).not.toHaveClass(/theme-dark-pilot/)
+  await expectVisualBaseline(page, `auth-forgot-dark-${process.platform}.png`, [], true, '#111214')
+
+  await page.goto('/auth')
+  await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
+  await expectVisualBaseline(page, `auth-login-dark-${process.platform}.png`, [], true, '#111214')
+
+  await page.goto('/auth/callback')
+  await expect(page.getByRole('heading', { name: 'Завершаем вход' })).toBeVisible()
+  await expectVisualBaseline(page, `auth-callback-dark-${process.platform}.png`, [], true, '#111214')
+})
+
+test('Join keeps manual and invitation states in the auth family', async ({ page }) => {
+  await signIn(page, 'client@fit.local', /\/me$/)
+  await page.goto('/join')
+  await expect(page.locator('.phone-frame')).toHaveClass(/auth-join-identity/)
+  await expect(page.getByRole('heading', { name: 'Введите код приглашения' })).toBeVisible()
+  await expectVisualBaseline(page, `auth-join-${process.platform}.png`, [], true)
+
+  await page.goto('/join?code=ABCDEF123456')
+  await expect(page.getByRole('heading', { name: 'Тренер пригласил вас в Fit' })).toBeVisible()
+  await expectVisualBaseline(page, `auth-join-invitation-${process.platform}.png`, [], true)
+
+  await page.goto('/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.goto('/join')
+  await expect(page.locator('.phone-frame')).toHaveClass(/auth-join-identity/)
+  await expect(page.locator('.phone-frame')).not.toHaveClass(/theme-dark-pilot/)
+  await expect(page.locator('.tab-bar')).toHaveCSS('background-color', 'rgb(17, 18, 20)')
+  await expect(page.locator('.tab-bar')).toHaveCSS('border-top-color', 'rgb(48, 49, 54)')
+  await expectVisualBaseline(page, `auth-join-dark-${process.platform}.png`, [], true, '#111214')
+})
+
 test('current role home keeps its visual baseline', async ({ page }, testInfo) => {
   const trainer = testInfo.project.name === 'visual-trainer-1440'
   await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
@@ -177,7 +227,7 @@ test('future standalone plan stays compact on client home', async ({ page }, tes
   await page.getByRole('button', { name: 'Сохранить план' }).click()
 
   await page.goto('/me')
-  await expect(page.locator('.phone-frame')).not.toHaveClass(/client-home-identity/)
+  await expect(page.locator('.phone-frame')).toHaveClass(/client-home-identity/)
   await expect(page.getByRole('heading', { name: 'Следующая тренировка' })).toBeVisible()
   await expect(page.getByText('Завтра · без времени')).toBeVisible()
   await expect(page.getByRole('link', { name: /Следующая тренировка/ })).toBeVisible()

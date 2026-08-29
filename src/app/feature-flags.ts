@@ -9,6 +9,24 @@ export function trainerHomePath() {
   return isTodayStartRedesignEnabled() ? '/today' : '/clients'
 }
 
+export type MonochromeRolloutMode = 'on' | 'preview' | 'off'
+
+// Новый UI уже принят как production identity, но legacy-разметка и
+// персональный server-managed preview остаются доступными для безопасного
+// отката. Неизвестное/пустое значение трактуется как production default ON.
+export function monochromeRolloutMode(
+  value: unknown = import.meta.env.VITE_MONOCHROME_ROLLOUT_MODE,
+): MonochromeRolloutMode {
+  const normalized = String(value ?? '').trim().toLowerCase()
+  if (normalized === 'off' || normalized === 'preview') return normalized
+  return 'on'
+}
+
+export function isMonochromeUiEnabled(personalPreview = false): boolean {
+  const mode = monochromeRolloutMode()
+  return mode === 'on' || (mode === 'preview' && personalPreview)
+}
+
 // Верхняя навигация тренера «Ассистент» (возврат YAFIT-276 после отката
 // YAFIT-279) открывается только участникам пилота. В production безопасный
 // default — единственный тестовый e-mail; VITE_ASSISTANT_NAV_ENABLED=false

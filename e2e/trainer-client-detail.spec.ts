@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
 
-test('trainer without monochrome preview keeps current Client Detail identity', async ({ page }) => {
+test('global rollout gives a new trainer the Client Detail identity', async ({ page }) => {
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Тип аккаунта').selectOption('trainer')
@@ -12,6 +12,6 @@ test('trainer without monochrome preview keeps current Client Detail identity', 
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto('/clients/11111111-1111-4111-8111-111111111111')
-  await expect(page.locator('.phone-frame')).not.toHaveClass(/trainer-client-detail-identity/)
-  await expect(page.locator('html')).not.toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-detail-identity/)
+  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
 })
