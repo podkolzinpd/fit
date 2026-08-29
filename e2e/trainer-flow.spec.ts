@@ -759,7 +759,9 @@ test('profile Cancel resets unsaved edits', async ({ page }) => {
   await expect(darkTheme).not.toBeChecked()
   await darkTheme.check()
   await expect(page.locator('.phone-frame')).not.toHaveClass(/theme-light/)
-  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#15131a')
+  // Preview trainer Profile owns the accepted dark shell color; flag-off
+  // accounts continue to receive the legacy theme metadata.
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#111214')
 
   await page.reload()
   await expect(page.getByRole('switch', { name: 'Тёмная тема' })).toBeChecked()
