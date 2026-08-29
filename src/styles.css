@@ -4285,7 +4285,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-client-goal-identity .goal-block > .muted { margin:0; font-size:14px }
 .trainer-client-goal-identity .goal-criterion-summary > p { color:var(--fg); font-size:14px; line-height:1.45 }
 .trainer-client-goal-identity .goal-criterion-form { display:grid; gap:14px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
-.trainer-client-goal-identity .goal-criterion-form-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px }
+.trainer-client-goal-identity .goal-criterion-form-head { display:flex; align-items:stretch; flex-direction:column; gap:16px }
 .trainer-client-goal-identity .goal-criterion-form-head h2 { margin:0; color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
 .trainer-client-goal-identity .goal-criterion-form-head p { margin:5px 0 0; color:var(--secondary-label-fg); font-size:13px; line-height:1.4 }
 .trainer-client-goal-identity .goal-criterion-form-head .switch-row { flex:0 0 auto }
@@ -4343,7 +4343,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .trainer-client-goal-identity .page { padding:12px 16px calc(env(safe-area-inset-bottom) + 104px) }
   .trainer-client-goal-identity .goal-block { padding:16px }
   .trainer-client-goal-identity .goal-criterion-form { padding:16px }
-  .trainer-client-goal-identity .goal-criterion-form-head { align-items:stretch; flex-direction:column }
   .trainer-client-goal-identity .stage-row { grid-template-columns:1fr }
   .trainer-client-goal-identity .stage-actions { justify-content:flex-start }
 }
