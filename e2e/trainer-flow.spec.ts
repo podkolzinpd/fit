@@ -778,7 +778,8 @@ test('schedule shows week strip and hour grid with day/week navigation', async (
 
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Расписание' })).toBeVisible()
-  await expect(page.locator('.schedule-selected-date')).toContainText(/\d+ трениров/)
+  await expect(page.locator('.schedule-selected-date')).toBeHidden()
+  await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toBeVisible()
 
   // Week strip has 7 day buttons, hour grid is rendered.
   await expect(page.locator('.week-day')).toHaveCount(7)
@@ -868,7 +869,7 @@ test('расписание: создание тренировки из расп�
 
   // Идём в расписание и создаём тренировку прямо оттуда.
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
-  await expect(page.locator('.schedule-selected-date')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Запланировать' }).click()
   // Форма открылась; дата предзаполнена (не пустая), клиента выбираем.
   await expect(page.locator('.workout-notes summary')).toBeVisible()
@@ -899,7 +900,7 @@ test('расписание: отмена создания возвращает �
   const selectedDate = await page.getByLabel('Дата').inputValue()
   await page.getByRole('button', { name: 'Назад' }).click()
 
-  await expect(page.locator('.schedule-selected-date')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toBeVisible()
   await expect(page).toHaveURL(new RegExp(`date=${selectedDate}`))
   await expect(page.locator('.week-day.active .day-num')).toHaveText(selectedNumber)
 })
@@ -938,7 +939,7 @@ test('расписание: карточка события — время, им
   // Навигация таббара проверяется отдельно; здесь фиксируем только
   // отображение только что созданного события в расписании.
   await page.goto('/schedule')
-  await expect(page.locator('.schedule-selected-date')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toBeVisible()
   const card = page.locator('.day-grid-event').filter({ hasText: clientName })
   await expect(card.locator('.day-grid-event-time')).toHaveText('09:00')
   await expect(card.locator('.day-grid-event-name')).toHaveText(clientName)
