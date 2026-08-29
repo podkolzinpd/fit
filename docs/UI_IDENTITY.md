@@ -438,6 +438,22 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
 - Loading/error/retry, invitations, membership и archive остаются реальными
   query/mutation states. Light/dark имеют одинаковую геометрию и navigation.
 
+### Product realization: Trainer Client Create/Edit
+
+- Scope — `/clients/new` и точный `/clients/:id/edit`; detail, goal и workouts
+  не наследуют form identity.
+- Page — `24/600`, section — `18/600`, body — `14/400`, labels — `12/500`, все
+  editable inputs/selects/textarea — `16/400`.
+- Create и edit используют одинаковые surfaces 18 px, fields 48 px и actions
+  48 px. Trainer-only settings остаются neutral surface, без альтернативного
+  accent/gradient варианта.
+- Validation и pending/disabled используют существующий form/data contract;
+  disabled не переводится в общую low-opacity. Cancel — secondary, Save —
+  primary независимо от одинаковой высоты.
+- Light/dark и navigation сохраняют одинаковую геометрию; coral, purple, glow
+  и локальные hex в scoped CSS отсутствуют.
+
+
 
 ### Навигация и иконки
 

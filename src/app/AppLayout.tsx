@@ -31,7 +31,8 @@ export function AppLayout() {
   const monochromeTrainerToday = Boolean(actor?.featureFlags?.monochromePreview && actor.role === 'trainer' && pathname === '/today' && !todayStep)
   const monochromeTrainerClients = Boolean(actor?.featureFlags?.monochromePreview && actor.role === 'trainer' && pathname === '/clients')
   const monochromeTrainerClientDetail = Boolean(actor?.featureFlags?.monochromePreview && actor.role === 'trainer' && /^\/clients\/[^/]+$/.test(pathname) && pathname !== '/clients/new')
-  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientWorkouts || monochromeClientProfile || monochromeClientCardEdit || monochromeWorkoutCreateEdit || monochromeWorkoutDetailHistory || monochromeTrainerToday || monochromeTrainerClients || monochromeTrainerClientDetail
+  const monochromeTrainerClientForm = Boolean(actor?.featureFlags?.monochromePreview && actor.role === 'trainer' && (pathname === '/clients/new' || /^\/clients\/[^/]+\/edit$/.test(pathname)))
+  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientWorkouts || monochromeClientProfile || monochromeClientCardEdit || monochromeWorkoutCreateEdit || monochromeWorkoutDetailHistory || monochromeTrainerToday || monochromeTrainerClients || monochromeTrainerClientDetail || monochromeTrainerClientForm
   // main.tsx применяет тему до первого render, когда аккаунт ещё неизвестен.
   // Пилотный вариант подключается здесь — как только auth вернул actor и
   // allowlist можно проверить; вне allowlist вариант остаётся прежним тёмным.
@@ -86,6 +87,7 @@ export function AppLayout() {
     monochromeTrainerToday ? 'trainer-today-identity' : '',
     monochromeTrainerClients ? 'trainer-clients-identity' : '',
     monochromeTrainerClientDetail ? 'trainer-client-detail-identity' : '',
+    monochromeTrainerClientForm ? 'trainer-client-form-identity' : '',
     keyboardOpen ? 'keyboard-open' : '',
   ].filter(Boolean).join(' ')
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
