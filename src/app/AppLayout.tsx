@@ -18,7 +18,7 @@ export function AppLayout() {
   const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   const liveSession = /\/live$/.test(pathname)
   const workoutForm = pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname)
-  const workoutDetail = /\/workouts\/[^/]+$/.test(pathname)
+  const workoutDetail = pathname !== '/workouts/new' && /\/workouts\/[^/]+$/.test(pathname)
   const exerciseHistory = /\/workouts\/[^/]+\/history\/[^/]+$/.test(pathname)
   const monochromeClientHome = Boolean(actor?.featureFlags?.monochromePreview && pathname === '/me' && !todayStep)
   const monochromeLive = Boolean(actor?.featureFlags?.monochromePreview && liveSession)

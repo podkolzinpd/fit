@@ -166,7 +166,7 @@ describe('AppLayout: monochrome preview route scope', () => {
       renderLayout(path)
 
       expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'workout-create-edit-identity')
-      expect(document.querySelector('.phone-frame')).not.toHaveClass('client-home-identity')
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('client-home-identity', 'workout-detail-history-identity')
       expect(document.documentElement).toHaveClass('identity-monochrome-preview')
     },
   )
