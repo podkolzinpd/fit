@@ -1120,7 +1120,7 @@ test('iPhone: пустую тренировку нельзя сохранить 
   expect(await disabledSave.evaluate((button) => {
     const style = getComputedStyle(button)
     return { background: style.backgroundColor, color: style.color, opacity: style.opacity }
-  })).toEqual({ background: 'rgb(242, 238, 232)', color: 'rgb(108, 113, 122)', opacity: '1' })
+  })).toEqual({ background: 'rgb(229, 226, 220)', color: 'rgb(116, 115, 111)', opacity: '1' })
   await expect(page.getByRole('button', { name: 'Выбрать упражнения' })).toBeVisible()
   await expectNoHorizontalOverflow(page)
 })
