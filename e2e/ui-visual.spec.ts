@@ -244,6 +244,28 @@ test('client Profile keeps its visual baseline', async ({ page }, testInfo) => {
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
 })
 
+test('client card edit keeps its visual baseline', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Card Edit uses mobile visual profiles')
+  await signIn(page, 'client@fit.local', /\/me$/)
+  await page.goto('/me/edit')
+  await expect(page.getByRole('heading', { name: 'Редактировать клиента' })).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/client-card-edit-identity/)
+  await expect(page.getByLabel('Имя')).toHaveValue('Анна Смирнова')
+  await expect(page.getByLabel('Цель')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Отмена' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Сохранить' })).toBeVisible()
+  await expectVisualBaseline(page, `client-card-edit-${process.platform}.png`, [], true)
+
+  await page.goto('/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.goto('/me/edit')
+  await expect(page.locator('.phone-frame')).toHaveClass(/client-card-edit-identity/)
+  await expectVisualBaseline(page, `client-card-edit-dark-${process.platform}.png`, [], true, '#1d1e21')
+
+  await page.goto('/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
+})
+
 test('client live workout keeps its visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Live uses mobile visual profiles')
   await openPreviewLiveWorkout(page)

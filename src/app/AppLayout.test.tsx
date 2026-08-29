@@ -151,6 +151,24 @@ describe('AppLayout: monochrome preview route scope', () => {
     expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'client-profile-shell-identity')
     expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
   })
+
+  it('applies the Client Card Edit identity only to the enabled self-edit route', () => {
+    authState.role = 'client'
+    authState.monochromePreview = true
+    renderLayout('/me/edit')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'client-card-edit-identity')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('client-home-identity', 'client-profile-shell-identity')
+    expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+  })
+
+  it('keeps Client Card Edit unchanged when the server flag is off', () => {
+    authState.role = 'client'
+    renderLayout('/me/edit')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'client-card-edit-identity')
+    expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+  })
 })
 
 describe('AppLayout navigation', () => {
