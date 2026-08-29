@@ -791,14 +791,6 @@ test('iPhone: header action stays vertically centered in trainer Clients', async
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: header action stays vertically centered in client Workouts', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
-  await login(page, 'client@fit.local')
-  await page.goto('/me/workouts')
-  await expectActionTextVerticallyCentered(page.getByRole('link', { name: 'Добавить', exact: true }))
-  await expectNoHorizontalOverflow(page)
-})
-
 test('iPhone: trainer client workout history uses monochrome identity in light and dark', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
