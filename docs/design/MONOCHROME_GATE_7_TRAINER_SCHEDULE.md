@@ -1,6 +1,6 @@
 # Gate 7 — Trainer Schedule
 
-Статус: **implemented; local validation complete**.
+Статус: **production preview deployed**.
 
 ## Scope
 
@@ -32,11 +32,14 @@
 
 - AppLayout route scope, flag-off и schedule presentation: 86/86; typecheck passed.
 - Flag-off и реальные week/date controls: 2/2 на mobile Chromium.
-- Реальный visual-flow создаёт отдельного клиента и planned workout на отдельной
-  фиксированной дате каждого viewport, проверяет event card и очищает данные.
+- Реальный visual-flow использует seed-клиента, создаёт planned workout на
+  отдельной фиксированной дате каждого viewport, проверяет event card и всегда
+  удаляет тренировку через `finally`, чтобы не загрязнять следующие baseline.
 - Darwin/Linux visual: event workspace, light/dark, 390/430/1440 passed.
 - Полный `npm run check`: 123/123 test files, 923/923 tests; API 225/225 при
-  23 ожидаемых skips. CI, deployment и production smoke фиксируются в PR.
+  23 ожидаемых skips. Финальный CI полностью зелёный. Production deployment
+  `6154311630` завершён успешно; browser smoke заблокирован admin policy и не
+  обходился.
 
 ## Rollback
 

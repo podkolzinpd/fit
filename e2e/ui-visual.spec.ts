@@ -515,6 +515,7 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
 
   await page.goto(`/progress/${demoClientId}`)
   await expect(page.getByRole('heading', { name: 'Прогресс', exact: true })).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
   await expect(page.getByText('Анна Смирнова', { exact: true })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Тренировки за неделю' })).toBeVisible()
   const trainerAnalysis = page.getByLabel('ИИ-анализ тренировок')
@@ -529,6 +530,7 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await expectVisualBaseline(page, 'trainer-progress.png')
 
   await page.getByRole('link', { name: 'Открыть замеры и показатели' }).click()
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
   await expect(page.getByRole('button', { name: 'Настроить показатели' })).toBeVisible()
   await page.locator('.trainer-measurements-workspace .measurement-actions').evaluate((element) => element.scrollIntoView({ block: 'center' }))
   await page.locator('.content').evaluate((element) => element.scrollBy({ top: 180 }))
@@ -544,6 +546,39 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await expect(detailedAnalysis.getByText('Динамика упражнений')).toBeVisible()
   await expect(detailedAnalysis.getByText('Ритм тренировок')).toBeVisible()
   await detailedAnalysis.getByRole('button', { name: 'Закрыть' }).click()
+})
+
+test('trainer Progress and measurements form keep their visual baselines in both themes', async ({ page }, testInfo) => {
+  await signIn(page, 'trainer@fit.local', /\/today$/)
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+  const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : 'mobile'
+
+  await page.goto(`/progress/${demoClientId}`)
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
+  await expect(page.getByLabel('ИИ-анализ тренировок')).toBeVisible()
+  const coachmark = page.getByRole('button', { name: 'Понятно' })
+  if (await coachmark.isVisible()) await coachmark.click()
+  await expectVisualBaseline(page, `trainer-progress-${profile}-${process.platform}.png`, [], true)
+
+  await page.goto(`/progress/${demoClientId}?view=measurements`)
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
+  await page.getByRole('button', { name: 'Добавить замер' }).click()
+  await expect(page.getByRole('heading', { name: 'Новый замер' })).toBeVisible()
+  await expectVisualBaseline(page, `trainer-measurements-form-${profile}-${process.platform}.png`, [], true)
+
+  await page.goto('/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.goto(`/progress/${demoClientId}`)
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
+  await expectVisualBaseline(page, `trainer-progress-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
+
+  await page.goto(`/progress/${demoClientId}?view=measurements`)
+  await page.getByRole('button', { name: 'Добавить замер' }).click()
+  await expect(page.getByRole('heading', { name: 'Новый замер' })).toBeVisible()
+  await expectVisualBaseline(page, `trainer-measurements-form-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
+
+  await page.goto('/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
 })
 
 test('trainer Clients list keeps its desktop visual baselines', async ({ page }, testInfo) => {

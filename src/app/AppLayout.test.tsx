@@ -376,6 +376,37 @@ describe('AppLayout: monochrome preview route scope', () => {
       expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-schedule-identity')
     },
   )
+
+  it.each(['/progress/client-1', '/progress/client-1?view=running', '/progress/client-1?view=measurements'])(
+    'applies Trainer Progress identity to the enabled route state %s',
+    (path) => {
+      authState.role = 'trainer'
+      authState.monochromePreview = true
+      renderLayout(path)
+
+      expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'trainer-progress-identity')
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('progress-identity', 'trainer-schedule-identity')
+    },
+  )
+
+  it('keeps Trainer Progress unchanged when the server flag is off', () => {
+    authState.role = 'trainer'
+    renderLayout('/progress/client-1')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'trainer-progress-identity')
+    expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+  })
+
+  it.each(['/today', '/clients', '/schedule', '/profile', '/exercises', '/clients/client-1', '/workouts/new', '/me/progress'])(
+    'does not leak Trainer Progress identity into %s',
+    (path) => {
+      authState.role = 'trainer'
+      authState.monochromePreview = true
+      renderLayout(path)
+
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-progress-identity')
+    },
+  )
 })
 
 describe('AppLayout navigation', () => {
