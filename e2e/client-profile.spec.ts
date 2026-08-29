@@ -16,7 +16,7 @@ test('client profile: trainer can complete a client profile from the detail page
   await expect(page.getByLabel('Цель')).toBeVisible()
 })
 
-test('client without monochrome preview keeps the current Profile identity', async ({ page }, testInfo) => {
+test('global rollout gives a new client the Profile and Card Edit identity', async ({ page }, testInfo) => {
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Тип аккаунта').selectOption('client')
@@ -28,10 +28,10 @@ test('client without monochrome preview keeps the current Profile identity', asy
 
   await page.goto('/me/profile')
   await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
-  await expect(page.locator('.phone-frame')).not.toHaveClass(/client-profile-shell-identity/)
-  await expect(page.locator('html')).not.toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('.phone-frame')).toHaveClass(/client-profile-shell-identity/)
+  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
 
   await page.goto('/me/edit')
-  await expect(page.locator('.phone-frame')).not.toHaveClass(/client-card-edit-identity/)
-  await expect(page.locator('html')).not.toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('.phone-frame')).toHaveClass(/client-card-edit-identity/)
+  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
 })

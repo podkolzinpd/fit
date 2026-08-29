@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('client without monochrome preview keeps the current Progress identity', async ({ page }, testInfo) => {
+test('global rollout gives a new client the monochrome Progress identity', async ({ page }, testInfo) => {
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Тип аккаунта').selectOption('client')
@@ -12,8 +12,8 @@ test('client without monochrome preview keeps the current Progress identity', as
 
   await page.goto('/me/progress')
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
-  await expect(page.locator('.phone-frame')).not.toHaveClass(/progress-identity/)
-  await expect(page.locator('html')).not.toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('.phone-frame')).toHaveClass(/progress-identity/)
+  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
 })
 
 test('linked client sees only the published client progress view', async ({ page }) => {

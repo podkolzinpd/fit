@@ -11,7 +11,7 @@ async function signInPreviewTrainer(page: import('@playwright/test').Page) {
   await expect(page).toHaveURL(/\/(today|clients)$/)
 }
 
-test('trainer without monochrome preview keeps current Progress identity', async ({ page }) => {
+test('global rollout gives a new trainer the Progress identity', async ({ page }) => {
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Тип аккаунта').selectOption('trainer')
@@ -22,8 +22,8 @@ test('trainer without monochrome preview keeps current Progress identity', async
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto(`/progress/${demoClientId}`)
-  await expect(page.locator('.phone-frame')).not.toHaveClass(/trainer-progress-identity/)
-  await expect(page.locator('html')).not.toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
+  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
 })
 
 test('trainer Progress preview keeps real summary and measurement controls usable', async ({ page }) => {
