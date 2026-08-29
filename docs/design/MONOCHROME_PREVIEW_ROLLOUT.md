@@ -2,8 +2,8 @@
 
 Статус: **server flag и authenticated runtime read доставлены; Client Home,
 Live и Progress задеплоены и прошли общий visual audit; остальной клиентский
-контур, workout lifecycle и Trainer Today также задеплоены. Trainer Clients
-прошёл локальную валидацию и проходит отдельный Gate 7 rollout**.
+контур, workout lifecycle, Trainer Today и Trainer Clients также задеплоены.
+Trainer Client Detail проходит отдельный Gate 7 rollout**.
 
 ## Контракт
 
@@ -57,12 +57,13 @@ Live и Progress задеплоены и прошли общий visual audit; �
 | Workout Detail `/workouts/:id` | `workout-detail-history-identity` | production preview |
 | Exercise History `/workouts/:id/history/:exerciseSlug` | `workout-detail-history-identity` | production preview |
 | Trainer Today `/today` без review/save | `trainer-today-identity` | production preview |
-| Trainer Clients `/clients` | `trainer-clients-identity` | local validation complete |
+| Trainer Clients `/clients` | `trainer-clients-identity` | production preview |
+| Trainer Client Detail `/clients/:id` | `trainer-client-detail-identity` | local validation complete |
 
 Review/save относятся к workout lifecycle и не получают Client Home, Client
 Card Edit или Trainer Today identity. Detail/completion/history используют
 собственный scope и не наследуют Create/Edit; Live остаётся отдельной принятой
-областью. Trainer Clients заканчивается на точном `/clients`: create/edit и
-client detail не получают list identity.
+областью. Trainer Clients заканчивается на точном `/clients`; Trainer Client
+Detail — на точном `/clients/:id`. Create/edit, goal и workouts не наследуют их.
 У пользователя без `monochrome_preview` все перечисленные маршруты остаются в
 текущей айдентике.

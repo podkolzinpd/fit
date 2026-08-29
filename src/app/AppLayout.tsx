@@ -30,7 +30,8 @@ export function AppLayout() {
   const monochromeWorkoutDetailHistory = Boolean(actor?.featureFlags?.monochromePreview && (workoutDetail || exerciseHistory))
   const monochromeTrainerToday = Boolean(actor?.featureFlags?.monochromePreview && actor.role === 'trainer' && pathname === '/today' && !todayStep)
   const monochromeTrainerClients = Boolean(actor?.featureFlags?.monochromePreview && actor.role === 'trainer' && pathname === '/clients')
-  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientWorkouts || monochromeClientProfile || monochromeClientCardEdit || monochromeWorkoutCreateEdit || monochromeWorkoutDetailHistory || monochromeTrainerToday || monochromeTrainerClients
+  const monochromeTrainerClientDetail = Boolean(actor?.featureFlags?.monochromePreview && actor.role === 'trainer' && /^\/clients\/[^/]+$/.test(pathname) && pathname !== '/clients/new')
+  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientWorkouts || monochromeClientProfile || monochromeClientCardEdit || monochromeWorkoutCreateEdit || monochromeWorkoutDetailHistory || monochromeTrainerToday || monochromeTrainerClients || monochromeTrainerClientDetail
   // main.tsx применяет тему до первого render, когда аккаунт ещё неизвестен.
   // Пилотный вариант подключается здесь — как только auth вернул actor и
   // allowlist можно проверить; вне allowlist вариант остаётся прежним тёмным.
@@ -84,6 +85,7 @@ export function AppLayout() {
     monochromeWorkoutDetailHistory ? 'workout-detail-history-identity' : '',
     monochromeTrainerToday ? 'trainer-today-identity' : '',
     monochromeTrainerClients ? 'trainer-clients-identity' : '',
+    monochromeTrainerClientDetail ? 'trainer-client-detail-identity' : '',
     keyboardOpen ? 'keyboard-open' : '',
   ].filter(Boolean).join(' ')
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
