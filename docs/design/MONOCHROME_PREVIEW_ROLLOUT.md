@@ -3,7 +3,7 @@
 Статус: **server flag и authenticated runtime read доставлены; Client Home,
 Live и Progress задеплоены и прошли общий visual audit; остальной клиентский
 контур, workout lifecycle, Trainer Today, Trainer Clients и Trainer Client
-Detail/Create/Edit также задеплоены. Trainer Client Goal проходит отдельный
+Detail/Create/Edit/Goal также задеплоены. Trainer Schedule проходит отдельный
 Gate 7 rollout**.
 
 ## Контракт
@@ -61,7 +61,8 @@ Gate 7 rollout**.
 | Trainer Clients `/clients` | `trainer-clients-identity` | production preview |
 | Trainer Client Detail `/clients/:id` | `trainer-client-detail-identity` | production preview |
 | Trainer Client Create/Edit `/clients/new`, `/clients/:id/edit` | `trainer-client-form-identity` | production preview |
-| Trainer Client Goal `/clients/:id/goal` | `trainer-client-goal-identity` | local validation complete |
+| Trainer Client Goal `/clients/:id/goal` | `trainer-client-goal-identity` | production preview |
+| Trainer Schedule `/schedule` | `trainer-schedule-identity` | local validation complete |
 
 Review/save относятся к workout lifecycle и не получают Client Home, Client
 Card Edit или Trainer Today identity. Detail/completion/history используют
@@ -69,6 +70,7 @@ Card Edit или Trainer Today identity. Detail/completion/history исполь�
 областью. Trainer Clients заканчивается на точном `/clients`; Trainer Client
 Detail — на точном `/clients/:id`. Create/edit, goal и workouts не наследуют их.
 Goal заканчивается на точном `/clients/:id/goal` и не меняет schedule, progress
-или workout routes.
+или workout routes. Schedule заканчивается на точном `/schedule` и не меняет
+workout create/detail, Trainer Progress, Exercises или Profile.
 У пользователя без `monochrome_preview` все перечисленные маршруты остаются в
 текущей айдентике.
