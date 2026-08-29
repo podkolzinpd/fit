@@ -2,8 +2,9 @@
 
 Статус: **Gate 0–6 и общий client pilot visual audit завершены; Foundation UI
 Identity v1 подтверждена на реальных экранах. В production preview доставлены
-весь клиентский контур, workout lifecycle, Trainer Today и задача 17 Trainer
-Clients. Задача 18 Trainer Client Detail проходит отдельный rollout**.
+весь клиентский контур, workout lifecycle, Trainer Today, Trainer Clients и
+задача 18 Trainer Client Detail. Задача 19 Trainer Client Create/Edit проходит
+отдельный rollout**.
 
 Целевой контракт: `docs/UI_IDENTITY.md`. План сохраняет правило проекта:
 один явно выбранный экран или один самостоятельный foundation-слой — одна

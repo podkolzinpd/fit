@@ -2,8 +2,8 @@
 
 Статус: **server flag и authenticated runtime read доставлены; Client Home,
 Live и Progress задеплоены и прошли общий visual audit; остальной клиентский
-контур, workout lifecycle, Trainer Today и Trainer Clients также задеплоены.
-Trainer Client Detail проходит отдельный Gate 7 rollout**.
+контур, workout lifecycle, Trainer Today, Trainer Clients и Trainer Client
+Detail также задеплоены. Trainer Client Create/Edit проходит отдельный Gate 7 rollout**.
 
 ## Контракт
 
@@ -58,7 +58,8 @@ Trainer Client Detail проходит отдельный Gate 7 rollout**.
 | Exercise History `/workouts/:id/history/:exerciseSlug` | `workout-detail-history-identity` | production preview |
 | Trainer Today `/today` без review/save | `trainer-today-identity` | production preview |
 | Trainer Clients `/clients` | `trainer-clients-identity` | production preview |
-| Trainer Client Detail `/clients/:id` | `trainer-client-detail-identity` | local validation complete |
+| Trainer Client Detail `/clients/:id` | `trainer-client-detail-identity` | production preview |
+| Trainer Client Create/Edit `/clients/new`, `/clients/:id/edit` | `trainer-client-form-identity` | local validation complete |
 
 Review/save относятся к workout lifecycle и не получают Client Home, Client
 Card Edit или Trainer Today identity. Detail/completion/history используют

@@ -596,3 +596,27 @@ test('trainer Client Detail keeps its visual baselines', async ({ page }, testIn
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-detail-identity/)
   await expectVisualBaseline(page, `trainer-client-detail-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
 })
+
+test('trainer Client Create and Edit keep their visual baselines', async ({ page }, testInfo) => {
+  await signIn(page, 'trainer@fit.local', /\/today$/)
+  const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : 'mobile'
+
+  await page.goto('/clients/new')
+  await expect(page.getByRole('heading', { name: 'Новый клиент' })).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-form-identity/)
+  await expect(page.getByLabel('Начальный вес, кг')).toBeVisible()
+  await expectVisualBaseline(page, `trainer-client-create-${profile}-${process.platform}.png`, [], true)
+
+  await page.goto(`/clients/${demoClientId}/edit`)
+  await expect(page.getByRole('heading', { name: 'Редактировать клиента' })).toBeVisible()
+  await expect(page.getByLabel('Имя в моём списке')).toBeVisible()
+  await expectVisualBaseline(page, `trainer-client-edit-${profile}-${process.platform}.png`, [], true)
+
+  await page.goto('/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.goto('/clients/new')
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-form-identity/)
+  await expectVisualBaseline(page, `trainer-client-create-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
+  await page.goto(`/clients/${demoClientId}/edit`)
+  await expectVisualBaseline(page, `trainer-client-edit-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
+})
