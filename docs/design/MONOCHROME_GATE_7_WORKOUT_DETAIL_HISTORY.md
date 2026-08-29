@@ -1,6 +1,6 @@
 # Gate 7 — Workout Detail, Completion and Exercise History
 
-Статус: **implemented; local validation complete**.
+Статус: **production preview; PR #661, deployment verified**.
 
 ## Scope
 
@@ -56,8 +56,10 @@
   post-workout feedback.
 - Native visual: 3/3; Linux visual: 3/3 после повторной проверки одного
   инфраструктурного navigation failure WebKit.
-- Полный `npm run check`, CI, deployment и production smoke фиксируются в PR до
-  перехода к Trainer Today.
+- Полный `npm run check` и обязательный CI прошли. PR #661 влит отдельным squash
+  commit; production deployment завершился успешно. Автоматический browser
+  smoke был заблокирован административной browser policy до navigation, поэтому
+  authenticated production runtime остаётся пунктом ручной проверки.
 
 ## Rollback
 

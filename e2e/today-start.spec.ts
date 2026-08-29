@@ -145,7 +145,7 @@ test('today: быстрый старт ведёт к единому выбору
   expect(await disabledParse.evaluate((button) => {
     const style = getComputedStyle(button)
     return { background: style.backgroundColor, color: style.color, opacity: style.opacity }
-  })).toEqual({ background: 'rgb(242, 238, 232)', color: 'rgb(108, 113, 122)', opacity: '1' })
+  })).toEqual({ background: 'rgb(229, 226, 220)', color: 'rgb(102, 101, 96)', opacity: '1' })
   await mockWorkoutParser(page, [
     { sourceText: 'Присед со штангой 3×8 — 80 кг', exerciseRef: 'barbell-squat', confidence: 1, sets: [{ weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }] },
     { sourceText: 'Планка 3×45 сек', exerciseRef: 'plank', confidence: 1, sets: [{ durationMin: 0.75 }, { durationMin: 0.75 }, { durationMin: 0.75 }] },

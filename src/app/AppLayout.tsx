@@ -28,7 +28,8 @@ export function AppLayout() {
   const monochromeClientCardEdit = Boolean(actor?.featureFlags?.monochromePreview && pathname === '/me/edit')
   const monochromeWorkoutCreateEdit = Boolean(actor?.featureFlags?.monochromePreview && (workoutForm || todayStep))
   const monochromeWorkoutDetailHistory = Boolean(actor?.featureFlags?.monochromePreview && (workoutDetail || exerciseHistory))
-  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientWorkouts || monochromeClientProfile || monochromeClientCardEdit || monochromeWorkoutCreateEdit || monochromeWorkoutDetailHistory
+  const monochromeTrainerToday = Boolean(actor?.featureFlags?.monochromePreview && actor.role === 'trainer' && pathname === '/today' && !todayStep)
+  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientWorkouts || monochromeClientProfile || monochromeClientCardEdit || monochromeWorkoutCreateEdit || monochromeWorkoutDetailHistory || monochromeTrainerToday
   // main.tsx применяет тему до первого render, когда аккаунт ещё неизвестен.
   // Пилотный вариант подключается здесь — как только auth вернул actor и
   // allowlist можно проверить; вне allowlist вариант остаётся прежним тёмным.
@@ -80,6 +81,7 @@ export function AppLayout() {
     monochromeClientCardEdit ? 'client-card-edit-identity' : '',
     monochromeWorkoutCreateEdit ? 'workout-create-edit-identity' : '',
     monochromeWorkoutDetailHistory ? 'workout-detail-history-identity' : '',
+    monochromeTrainerToday ? 'trainer-today-identity' : '',
     keyboardOpen ? 'keyboard-open' : '',
   ].filter(Boolean).join(' ')
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
