@@ -5,75 +5,57 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-29
-Проверенный базовый `main`: `144921d` (`Task 26: migrate Assistant to monochrome identity (#673)`)
+Проверенный базовый `main`: `6e344d6` (`Task 27: enforce monochrome accessibility parity (#674)`)
 
-## Активное изменение
+## Текущий release gate
 
-- Foundation UI Identity v1 принята. Задачи 8–26 — клиентский, тренерский,
-  полный auth scope и Assistant — merged и задеплоены в production.
+- Foundation UI Identity v1 принята. Задачи 8–28 — клиентский, тренерский,
+  полный auth scope, Assistant, accessibility и visual release gate —
+  завершены последовательно.
 - Глобальный rollout новой identity работает через
   `VITE_MONOCHROME_ROLLOUT_MODE`: `on` (default для всех), `preview` (прежний
   server-managed `monochrome_preview` по `user_id`) и `off` (legacy UI для всех
   одним переключателем и redeploy).
 - Legacy components, CSS и `public.user_feature_flags` пока не удаляются.
   Email не участвует во frontend, routing или UI rollout conditions.
-- Активна задача 27: общий light/dark accessibility parity audit без изменения
-  маршрутов, данных, ролей и product logic.
+- Task 28 не меняет product bundle: она стабилизирует только E2E navigation,
+  фиксирует финальную 390/430/1440 и WebKit/iOS matrix и release evidence.
+- Ручной видимый production smoke остаётся follow-up: встроенный браузер
+  заблокирован admin-enforced policy; контроль не обходился.
 
 ## Последняя проверенная продуктовая точка
 
-- Главные страницы обеих ролей сохраняют voice-first действие и ввод текстом.
-  Клиентская главная показывает ближайшее назначение, состоявшуюся неделю и не
-  более одного вторичного акцента: ответ тренера, рекорд или цель.
-- На экранах создания тренировки недоступные разбор и сохранение нейтральны;
-  коралловый primary появляется только после заполнения обязательных данных.
-- В Live статус не повторяется в каждом упражнении; обычный таймер нейтрален,
-  активный отдых выделен, а `＋ Подход` не конкурирует с главным действием.
-- Прошлый план можно завершить через предзаполненную форму факта без перехода в
-  Live и без дубликата; отмена оставляет план неизменным. Тренер может сохранить
-  завершённую тренировку на выбранную дату, включая будущую.
-- Yandex stage поддерживает non-Live lifecycle: создание и исправление факта,
-  результат прошлого назначения, cancel/reschedule, комментарий клиента и
-  author-scoped soft-delete с optimistic version и tenant-проверками.
+- Главные страницы обеих ролей сохраняют voice-first действие и ввод текстом;
+  Client Home показывает ближайшее назначение, состоявшуюся неделю и максимум
+  один вторичный акцент. Live разделяет нейтральный таймер и активный отдых.
+- Создание, Live и завершение прошлого плана сохраняют прежнюю логику без
+  дубликатов. Yandex stage поддерживает non-Live lifecycle, cancel/reschedule,
+  комментарий и author-scoped soft-delete с optimistic/tenant checks.
 - Единый мобильный viewport-контракт восстанавливает полную высоту Trainer,
   Client и авторизации после закрытия клавиатуры даже при resize WebKit.
   Создание тренировки — каталог «Силовая»/«Бег», недавние упражнения, фильтры.
-- Голосовой/текстовый разбор понимает числа словами, дробный вес, порядок
-  метрик, интервальный бег и связки; неоднозначность открывает проверку.
-- Сохранённые тренировки — компактная хроника с раскрытием подходов и кнопкой
-  истории; копирование и удаление в меню.
+- Голосовой/текстовый разбор понимает числа словами, дробный вес, интервальный
+  бег и связки; неоднозначность открывает проверку. Сохранённые тренировки —
+  компактная хроника с копированием и удалением в меню.
 - ИИ-сводка и production-разбор — через Yandex Cloud Functions, локальный разбор
   — в Supabase. Tracker sync `app_feedback` остановлен; команда читает через
   `analytics.app_feedback` и Telegram (`notify-app-feedback-telegram`).
-- Assistant pilot trainer-only: `/assistant` защищён `TrainerOnly`; turns имеют
-  `turnId`, history/action state durable, записи — узкими RPC с owner/RLS.
-  Новые turn'ы сейчас создают только черновик тренировки; сохранённые карточки
-  client/program/schedule/summary из предыдущего rollout остаются читаемыми.
-  Исходная диктовка сохраняется при уточнении клиента. Пустая сессия показывает
-  реальные возможности без записи; последовательные фрагменты собраны в одну
-  раскрываемую строку.
-- PWA предлагает понятную установку на домашний экран. Ручной беговой MVP и
-  локальный public-domain каталог упражнений работают без внешнего медиасервиса.
-- Web Push пользователям: сценарий `workout_reminder` — клиенту в 9:00 по его
-  таймзоне про тренировку сегодня. Producer/dispatcher/finalize в Postgres,
-  шифрование и отправка — Cloud Function `fit-send-push-notifications`
-  (VAPID). Тумблер в профиле клиента; чек-лист нового сценария — в `AGENTS.md`.
+- Assistant trainer-only защищён `TrainerOnly`; durable turns/actions и narrow
+  RPC сохраняют owner/RLS. Новые turn'ы создают workout draft, прежние карточки
+  остаются читаемыми; исходная диктовка сохраняется при уточнении клиента.
+- PWA, ручной беговой MVP и локальный public-domain каталог работают. Web Push
+  `workout_reminder` отправляется клиенту в 9:00 его timezone через Postgres
+  producer/dispatcher/finalize и VAPID Cloud Function.
 - Client и Trainer Progress используют одну короткую историю подтверждённого
   периода: лучший результат, тренировки, `X/Y` недель, улучшенные упражнения,
-  карта тела, сравнение с периодом, связь с целью, ближайший план и один
-  фактический вывод; выполнение плана не выдаётся за прогресс к цели. Полная
-  динамика и до двух ориентиров — в нижнем листе. Тренер видит plan/fact,
-  внутренние сигналы, редактор и статус публикации. Фигуры не наследуются;
-  выбранный период нейтрален и не конкурирует с primary CTA коралловой заливкой.
+  карта тела, сравнение с периодом, связь с целью и ближайший план. Тренер видит
+  plan/fact, внутренние сигналы, редактор и статус публикации; выполнение плана
+  не выдаётся за прогресс к цели.
 - Карточка спортсмена у тренера — один нейтральный вход в планирование,
   равноправные переходы в историю/прогресс, действие «Добавить этапы». Выбор
   фигуры/схемы — настройка аккаунта тренера, не смешивается с выбором клиента.
-- Расписание тренера — компактная мобильная иерархия: месяц, календарь, неделя
-  с понедельника, дата с числом тренировок, действие «Запланировать». События
-  показывают время/клиента/состав/статус; шкала фокусируется на ближайшей или
-  текущей тренировке, а планы без времени остаются видны отдельным блоком над
-  прокручиваемой шкалой.
-- Ассистент сохраняет тренировку только после подтверждения черновика.
+- Расписание показывает месяц, неделю, события и планы без времени; Assistant
+  сохраняет тренировку только после подтверждения черновика.
 - Клиент может безопасно отключить текущего тренера в профиле: серверная
   операция атомарна, повтор идемпотентен, самостоятельная история, назначения,
   замеры и цели сохраняются. Серверное переподключение после явного отключения
@@ -106,18 +88,17 @@
 
 ## Проверки активной ветки
 
-- Task 25: PR `#672`, merge `a492e048`, production deploy `6157521504`; весь CI,
-  Chromium/WebKit auth lifecycle и Linux/Darwin visual matrix зелёные.
-- Task 26 targeted unit: AppLayout + assistant domain — 134/134.
-- Task 26 mobile Chromium и iPhone/WebKit layout/state suites — 12/12 каждая.
-  Визуально проверены conversation/error/success/composer и workout draft на
-  390, 430 и 1440 px в light/dark.
-- Task 26 full project check зелёный: 123 app files / 966 tests, 225 API tests,
-  typecheck, lint, coverage, DB types, iOS permissions, infra policy и build.
-- Task 26: PR `#673`, merge `144921d8`, production Vercel deployment success;
-  Sync Yandex stage preview run `33263066435` зелёный.
+- Tasks 25–26: PR `#672/#673`, auth и Assistant задеплоены; app/API, Chromium,
+  WebKit и Linux/Darwin visual matrix зелёные на 390/430/1440 в light/dark.
+  Yandex stage preview sync `33263066435` также зелёный.
 - Task 27: WCAG AA token pairs, screen-reader names, 44 px targets,
   focus-visible и reduced motion добавлены в общий автоматический контракт.
+- Task 27: PR `#674`, merge `6e344d6`, production Vercel deployment
+  `6158408571` success; весь обязательный CI зелёный.
+- Task 28 final matrix: 72 applicable visual scenarios, 18 intentional
+  role/viewport skips, 73 Chromium behavior scenarios и оба WebKit shard
+  зелёные. В репозитории 346 согласованных Linux/Darwin snapshots для
+  390/430/1440.
 - Встроенный localhost browser заблокирован admin-enforced policy до загрузки;
   стандартный Playwright runtime используется для реальной проверки.
 - Общий audit Home → Live → Progress прошёл без stabilization-задачи: едины
@@ -126,8 +107,12 @@
 
 ## Ближайший порядок
 
-1. Завершить задачу 27: полный theme/accessibility parity audit.
-2. Выполнить задачу 28: общий visual regression, WebKit/iOS и production smoke.
+1. Выполнить короткий ручной visual smoke production под Client и Trainer test
+   accounts, когда browser policy снова разрешит доступ.
+2. Сохранять rollout `on`; при серьёзной проблеме установить
+   `VITE_MONOCHROME_ROLLOUT_MODE=off` и redeploy.
+3. Не удалять legacy UI, `preview` и feature flag минимум один стабильный
+   релизный цикл; cleanup выполнять отдельной задачей.
 
 ## Отложено
 
