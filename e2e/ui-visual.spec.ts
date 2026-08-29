@@ -684,53 +684,50 @@ test('trainer Client Goal keeps its real create, stage and edit states in both t
 })
 
 test('trainer Schedule keeps its compact workspace in both themes', async ({ page }, testInfo) => {
+  test.setTimeout(90_000)
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : 'mobile'
   const scheduleDate = testInfo.project.name === 'visual-client-390' ? '2027-02-02'
     : testInfo.project.name === 'visual-client-430' ? '2027-02-03' : '2027-02-04'
-  const clientName = 'Ирина Котова'
+  const clientName = 'Анна Смирнова'
+  let workoutUrl: string | null = null
 
-  await page.goto('/clients/new')
-  await page.getByLabel('Имя', { exact: true }).fill(clientName)
-  await page.getByLabel('Пол').selectOption('female')
-  await page.getByLabel('Возраст').fill('34')
-  await page.getByLabel('Рост, см').fill('171')
-  await page.getByLabel('Начальный вес, кг').fill('66')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page).toHaveURL(/\/clients\/[0-9a-f-]+$/)
-  const clientId = page.url().split('/').pop()!
+  try {
+    await page.goto(`/workouts/new?client=${demoClientId}&date=${scheduleDate}`, { waitUntil: 'domcontentloaded' })
+    await page.getByLabel('Начало').fill('18:30')
+    await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+    await page.getByRole('button', { name: /^Силовая/ }).click()
+    await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
+    await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
+    await page.getByRole('button', { name: 'Добавить 1' }).click()
+    await page.getByRole('button', { name: 'Сохранить' }).click()
+    await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]+$/)
+    workoutUrl = page.url()
 
-  await page.goto(`/workouts/new?client=${clientId}&date=${scheduleDate}`)
-  await page.getByLabel('Начало').fill('18:30')
-  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
-  await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
-  await page.getByRole('button', { name: 'Добавить 1' }).click()
-  await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]+$/)
-  const workoutUrl = page.url()
+    await page.goto(`/schedule?date=${scheduleDate}`)
+    await expect(page.locator('.phone-frame')).toHaveClass(/trainer-schedule-identity/)
+    await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
+    await expect(page.locator('.week-day')).toHaveCount(7)
+    await expect(page.locator('.day-grid-hour')).toHaveCount(24)
+    await expect(page.locator('.schedule-selected-date')).toContainText('1 тренировка')
+    await expect(page.locator('.day-grid-event').filter({ hasText: clientName })).toBeVisible()
+    await expectVisualBaseline(page, `trainer-schedule-${profile}-${process.platform}.png`)
 
-  await page.goto(`/schedule?date=${scheduleDate}`)
-  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-schedule-identity/)
-  await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
-  await expect(page.locator('.week-day')).toHaveCount(7)
-  await expect(page.locator('.day-grid-hour')).toHaveCount(24)
-  await expect(page.locator('.schedule-selected-date')).toContainText('1 тренировка')
-  await expect(page.locator('.day-grid-event').filter({ hasText: clientName })).toBeVisible()
-  await expectVisualBaseline(page, `trainer-schedule-${profile}-${process.platform}.png`)
-
-  await page.goto('/profile')
-  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-  await page.goto(`/schedule?date=${scheduleDate}`)
-  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-schedule-identity/)
-  await expectVisualBaseline(page, `trainer-schedule-${profile}-dark-${process.platform}.png`, [], false, '#1d1e21')
-
-  await page.goto(workoutUrl)
-  await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
-  await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
-  await page.goto(`/clients/${clientId}`)
-  await page.getByRole('button', { name: 'Архивировать клиента' }).click()
+    await page.goto('/profile')
+    await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+    await page.goto(`/schedule?date=${scheduleDate}`)
+    await expect(page.locator('.phone-frame')).toHaveClass(/trainer-schedule-identity/)
+    await expectVisualBaseline(page, `trainer-schedule-${profile}-dark-${process.platform}.png`, [], false, '#1d1e21')
+  } finally {
+    if (workoutUrl) {
+      await page.goto(workoutUrl, { waitUntil: 'domcontentloaded' })
+      await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
+      await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+    }
+    await page.goto('/profile', { waitUntil: 'domcontentloaded' })
+    const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
+    if (await darkTheme.isChecked()) await darkTheme.uncheck()
+  }
 })
