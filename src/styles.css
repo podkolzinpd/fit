@@ -3942,3 +3942,51 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .trainer-today-identity .voice-action { padding:16px }
   .trainer-today-identity .trainer-attention { padding-inline:14px }
 }
+
+/* ── Gate 7 / task 17: Trainer Clients list. */
+.trainer-clients-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none }
+.trainer-clients-identity .content { background:var(--bg) }
+.trainer-clients-identity .clients-page { max-width:760px; margin:0 auto; padding:24px 24px calc(env(safe-area-inset-bottom) + 104px) }
+.trainer-clients-identity .clients-page .page-header { min-height:44px; margin-bottom:16px }
+.trainer-clients-identity .clients-page .page-header h1 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.trainer-clients-identity .clients-page .page-header .button { min-height:44px; padding:0 14px; border:1px solid var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:500; box-shadow:none }
+.trainer-clients-identity .clients-search-pilot,
+.trainer-clients-identity .clients-search input { min-height:48px; margin-bottom:12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); box-shadow:none }
+.trainer-clients-identity .clients-search-pilot { padding:0 8px 0 14px }
+.trainer-clients-identity .clients-search-pilot:focus-within { border-color:var(--fg); box-shadow:0 0 0 1px var(--fg) }
+.trainer-clients-identity .clients-search-pilot > svg { color:var(--secondary-label-fg) }
+.trainer-clients-identity .clients-search-pilot input { color:var(--fg); font-size:16px; font-weight:400 }
+.trainer-clients-identity .clients-search-pilot input::placeholder { color:var(--secondary-label-fg) }
+.trainer-clients-identity .clients-search-clear { width:44px; height:44px; min-height:44px; color:var(--secondary-label-fg) }
+.trainer-clients-identity .clients-search-clear:focus-visible { outline:2px solid var(--fg); outline-offset:-2px }
+.trainer-clients-identity .clients-list { gap:8px }
+.trainer-clients-identity .client-card { min-height:76px; padding:14px 16px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); color:var(--fg); box-shadow:none; transform:none }
+.trainer-clients-identity .client-card:hover { border-color:var(--fg); transform:none }
+.trainer-clients-identity .client-avatar { width:44px; height:44px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg) }
+.trainer-clients-identity .client-avatar svg { width:22px; height:22px; stroke-width:1.8 }
+.trainer-clients-identity .client-card > div > strong { color:var(--fg); font-size:16px; font-weight:600; line-height:1.25 }
+.trainer-clients-identity .client-card p { margin-top:3px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
+.trainer-clients-identity .client-card-arrow { display:grid; place-items:center; width:24px; color:var(--secondary-label-fg); font-size:0 }
+.trainer-clients-identity .client-card-arrow svg { width:20px; height:20px }
+.trainer-clients-identity .clients-page .badge { min-height:24px; padding:0 8px; border:1px solid var(--border); border-radius:8px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-clients-identity .clients-search-empty { margin:0; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.trainer-clients-identity .state-panel { border-color:var(--border); border-radius:18px; background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.trainer-clients-identity .state-panel-empty { border-style:solid; background:var(--surface-raised) }
+.trainer-clients-identity .state-panel-mark { border-radius:14px; background:var(--surface-sunken); color:var(--fg) }
+.trainer-clients-identity .state-panel h2,
+.trainer-clients-identity .state-panel h3 { color:var(--fg); font-size:18px; font-weight:600 }
+.trainer-clients-identity .state-panel p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.trainer-clients-identity .state-panel-action .button,
+.trainer-clients-identity .state-panel-action button { min-height:48px; border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:500 }
+.trainer-clients-identity .state-panel-error { border-color:var(--danger-border); background:var(--surface-raised) }
+.trainer-clients-identity .state-panel-error .state-panel-mark { color:var(--danger); background:var(--surface-sunken) }
+.trainer-clients-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
+.trainer-clients-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
+.trainer-clients-identity .tab-bar a.active,
+.trainer-clients-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+
+@media (max-width:480px) {
+  .trainer-clients-identity .clients-page { padding:12px 16px calc(env(safe-area-inset-bottom) + 104px) }
+  .trainer-clients-identity .clients-page .page-header { margin-bottom:12px }
+  .trainer-clients-identity .client-card { padding-inline:14px }
+}
