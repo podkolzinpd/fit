@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('client without monochrome preview keeps the current Progress identity', async ({ page }, testInfo) => {
+test('global rollout gives a new client the monochrome Progress identity', async ({ page }, testInfo) => {
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Тип аккаунта').selectOption('client')
@@ -12,8 +12,35 @@ test('client without monochrome preview keeps the current Progress identity', as
 
   await page.goto('/me/progress')
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
-  await expect(page.locator('.phone-frame')).not.toHaveClass(/progress-identity/)
-  await expect(page.locator('html')).not.toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('.phone-frame')).toHaveClass(/progress-identity/)
+  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+})
+
+test('standalone client creates and formulates an own goal', async ({ page }, testInfo) => {
+  await page.goto('/auth')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Тип аккаунта').selectOption('client')
+  await page.getByLabel('Имя').fill('Самостоятельная цель')
+  await page.getByLabel('Email').fill(`self-goal-${testInfo.workerIndex}-${Date.now()}@fit.local`)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page).toHaveURL(/\/me$/)
+
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/me/goal')
+  await expect(page.getByRole('heading', { name: 'Моя цель' })).toBeVisible()
+  await page.getByLabel('Цель').fill('Держать вес 59 кг')
+  await page.getByRole('switch', { name: 'Автоматическая оценка' }).check()
+  await page.getByLabel('Показатель').selectOption('weight')
+  await page.getByLabel('Способ оценки').selectOption('maintain_range')
+  await page.getByLabel('Минимум, кг').fill('58.5')
+  await page.getByLabel('Максимум, кг').fill('59.5')
+  await page.getByRole('button', { name: 'Создать цель' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Держать вес 59 кг' })).toBeVisible()
+  await expect(page.getByText('58,5–59,5 кг')).toBeVisible()
+  await expect(page.getByText('Критерий подтверждён')).toBeVisible()
 })
 
 test('linked client sees only the published client progress view', async ({ page }) => {
@@ -47,12 +74,21 @@ test('linked client sees only the published client progress view', async ({ page
   await page.getByRole('button', { name: 'Закрыть' }).click()
   await expect(page.getByText('Для твоей цели', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Повысить силовые показатели и улучшить выносливость' })).toBeVisible()
+  await expect(page.getByText('Не настроено', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Настроить оценку' })).toHaveAttribute('href', '/me/goal')
   await expect(page.getByText(/Рост рабочего веса поддерживает цель/)).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
   await expect(page.getByText(/причина максимального перерыва/)).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Обновить' })).toBeVisible()
   await page.getByText('ЗАМЕРЫ И ПОКАЗАТЕЛИ', { exact: true }).scrollIntoViewIfNeeded()
   await expect(page.getByText('ЗАМЕРЫ И ПОКАЗАТЕЛИ', { exact: true })).toBeVisible()
+
+  await page.goto('/me/goal')
+  await expect(page.locator('.phone-frame')).toHaveClass(/client-goal-identity/)
+  await expect(page.getByRole('heading', { name: 'Моя цель' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Как оценивать цель' })).toBeVisible()
+  await expect(page.getByLabel('Цель')).toHaveValue('Повысить силовые показатели и улучшить выносливость')
+  await expect(page.getByText(/Цель сохранится как текст без автоматической оценки/)).toBeVisible()
 
   await page.goto('/clients')
   await expect(page).toHaveURL(/\/me$/)

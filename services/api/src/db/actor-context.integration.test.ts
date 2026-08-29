@@ -3186,6 +3186,35 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           ),
         )
         expect(version).toBe(2)
+
+        const goal = await withActorTransaction(
+          runtimePool,
+          DOMAIN_CLIENT_ACTOR_ID,
+          async (client) => {
+            const rows = await client.query<{
+              goal_id: string
+              version: string
+            } & QueryResultRow>(
+              'select goal_id, version from public.save_client_goal($1::jsonb, null)',
+              [JSON.stringify({
+                id: null,
+                clientId: created.id,
+                title: 'Самостоятельно сформулированная цель',
+                targetDate: null,
+              })],
+            )
+            return rows[0]
+          },
+        )
+        expect(goal).toMatchObject({ version: '1' })
+        const storedGoal = await ownerPool.query<{ created_by: string; trainer_id: string } & QueryResultRow>(
+          'select created_by, trainer_id from public.client_goals where id = $1',
+          [goal?.goal_id],
+        )
+        expect(storedGoal.rows[0]).toEqual({
+          created_by: DOMAIN_CLIENT_ACTOR_ID,
+          trainer_id: DOMAIN_CLIENT_ACTOR_ID,
+        })
       } finally {
         if (clientId !== undefined) {
           await ownerPool.query('delete from public.clients where id = $1', [clientId])
@@ -3247,7 +3276,14 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       const goal = await withActorTransaction(runtimePool, ACTOR_ID, async (client) => {
         const rows = await client.query<{ goal_id: string; version: string } & QueryResultRow>(
           `select goal_id, version from public.save_client_goal($1::jsonb, null)`,
-          [JSON.stringify({ id: null, clientId: CLIENT_ID, title: 'Подтянуться 10 раз', targetDate: '2026-12-31' })],
+          [JSON.stringify({
+            id: null, clientId: CLIENT_ID, title: 'Держать вес 70 кг', targetDate: '2026-12-31',
+            criterion: {
+              id: null, version: null, metric: 'weight', operation: 'maintain_range',
+              targetValue: null, rangeMin: 69.5, rangeMax: 70.5, unit: 'кг',
+              confirmationStatus: 'confirmed', position: 0,
+            },
+          })],
         )
         return rows[0]
       })
@@ -3260,11 +3296,18 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       const shared = await withActorTransaction(runtimePool, MEMBER_TRAINER_ID, async (client) => {
         const rows = await client.query<JsonResultRow>(
           'select public.get_client_progress_bundle($1) result', [CLIENT_ID])
-        return rows[0]?.result as { entries: unknown[]; customMetrics: unknown[]; goal: unknown }
+        return rows[0]?.result as {
+          entries: unknown[]
+          customMetrics: unknown[]
+          goal: { criteria: Array<{ metric: string; confirmationStatus: string }> } | null
+        }
       })
       expect(shared.entries).toHaveLength(1)
       expect(shared.customMetrics).toHaveLength(1)
       expect(shared.goal).not.toBeNull()
+      expect(shared.goal?.criteria).toEqual([
+        expect.objectContaining({ metric: 'weight', confirmationStatus: 'confirmed' }),
+      ])
 
       const memberOverview = await withActorTransaction(
         runtimePool,

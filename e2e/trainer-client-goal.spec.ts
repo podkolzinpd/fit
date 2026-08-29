@@ -11,7 +11,7 @@ async function signInPreviewTrainer(page: import('@playwright/test').Page) {
   await expect(page).toHaveURL(/\/(today|clients)$/)
 }
 
-test('trainer without monochrome preview keeps current Client Goal identity', async ({ page }) => {
+test('global rollout gives a new trainer the Client Goal identity', async ({ page }) => {
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Тип аккаунта').selectOption('trainer')
@@ -22,8 +22,8 @@ test('trainer without monochrome preview keeps current Client Goal identity', as
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto(`/clients/${demoClientId}/goal`)
-  await expect(page.locator('.phone-frame')).not.toHaveClass(/trainer-client-goal-identity/)
-  await expect(page.locator('html')).not.toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-goal-identity/)
+  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
 })
 
 test('trainer Client Goal keeps create and date validation under monochrome preview', async ({ page }) => {
@@ -44,8 +44,15 @@ test('trainer Client Goal keeps create and date validation under monochrome prev
   await expect(page.getByText('Введите цель')).toBeVisible()
   await page.getByLabel('Цель').fill('Подготовиться к старту')
   await page.getByLabel('Дата достижения').fill('2026-12-20')
+  await page.getByRole('switch', { name: 'Автоматическая оценка' }).check()
+  await page.getByLabel('Показатель').selectOption('weight')
+  await page.getByLabel('Способ оценки').selectOption('maintain_range')
+  await page.getByLabel('Минимум, кг').fill('64.5')
+  await page.getByLabel('Максимум, кг').fill('65.5')
   await page.getByRole('button', { name: 'Создать цель' }).click()
   await expect(page.getByText('Этапов пока нет')).toBeVisible()
+  await expect(page.getByText('Вес', { exact: true })).toBeVisible()
+  await expect(page.getByText('64,5–65,5 кг')).toBeVisible()
 
   await page.getByRole('button', { name: '＋ Добавить' }).click()
   await page.getByLabel('Название этапа').fill('Базовый объём')

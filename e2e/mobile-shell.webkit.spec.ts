@@ -28,6 +28,26 @@ async function expectNoHorizontalOverflow(page: import('@playwright/test').Page)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 }
 
+async function expectActionTextVerticallyCentered(action: Locator) {
+  const geometry = await action.evaluate((element) => {
+    const range = document.createRange()
+    range.selectNodeContents(element)
+    const actionRect = element.getBoundingClientRect()
+    const textRect = range.getBoundingClientRect()
+    const style = window.getComputedStyle(element)
+    return {
+      actionHeight: actionRect.height,
+      centerOffset: Math.abs((actionRect.top + actionRect.height / 2) - (textRect.top + textRect.height / 2)),
+      alignItems: style.alignItems,
+      justifyContent: style.justifyContent,
+    }
+  })
+  expect(geometry.actionHeight).toBe(44)
+  expect(geometry.centerOffset).toBeLessThanOrEqual(1)
+  expect(geometry.alignItems).toBe('center')
+  expect(geometry.justifyContent).toBe('center')
+}
+
 async function expectMobileShellFillsViewport(page: Page) {
   const geometry = await page.evaluate(() => {
     const frame = document.querySelector('.phone-frame')?.getBoundingClientRect()
@@ -763,6 +783,33 @@ test('iPhone: форма тренера также восстанавливае�
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: header action stays vertically centered in trainer Clients', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+  await page.goto('/clients')
+  await expectActionTextVerticallyCentered(page.getByRole('link', { name: 'Добавить', exact: true }))
+  await expectNoHorizontalOverflow(page)
+})
+
+test('iPhone: trainer client workout history uses monochrome identity in light and dark', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+  await page.goto(`/clients/${demoClientId}/workouts`)
+  await expect(page.getByRole('heading', { name: 'Тренировки клиента' })).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/client-workouts-identity/)
+  await expect(page.locator('main')).toHaveClass(/trainer-client-workouts-page/)
+  await expect(page.locator('.phone-frame')).toHaveCSS('background-color', 'rgb(251, 250, 247)')
+  await expectNoHorizontalOverflow(page)
+
+  await page.evaluate(() => {
+    window.localStorage.setItem('fit.appTheme', 'dark')
+    window.dispatchEvent(new Event('fit-theme-change'))
+  })
+  await expect(page.locator('.phone-frame')).toHaveCSS('background-color', 'rgb(17, 18, 20)')
+  await expect(page.locator('.phone-frame')).toHaveClass(/client-workouts-identity/)
+  await expectNoHorizontalOverflow(page)
+})
+
 for (const viewport of mobileViewports) {
   test(`iPhone: основной сценарий не выходит за ширину ${viewport.width} px`, async ({ page }) => {
     await page.setViewportSize(viewport)
@@ -779,6 +826,10 @@ for (const viewport of mobileViewports) {
         await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()
         await expect(page.getByRole('button', { name: 'Действия с профилем спортсмена' })).toBeVisible()
         await expect(page.locator('.client-detail-overview')).toHaveCount(0)
+      }
+      if (screen === '/schedule') {
+        await expect(page.locator('.schedule-selected-date')).toBeHidden()
+        await expectActionTextVerticallyCentered(page.getByRole('link', { name: 'Запланировать', exact: true }))
       }
       await expectNoHorizontalOverflow(page)
     }
@@ -819,7 +870,9 @@ test('iPhone: voice-first и AI-поверхности сохраняют кон
   await page.goto('/progress/11111111-1111-4111-8111-111111111111')
   const aiCard = page.locator('.ai-progress-card')
   await expect(aiCard).toBeVisible()
-  expect(await aiCard.evaluate((element) => getComputedStyle(element).borderTopColor)).toBe('rgb(66, 107, 88)')
+  const aiBorder = await aiCard.evaluate((element) => getComputedStyle(element).borderTopColor)
+  const neutralBorder = await page.locator('.page-back').evaluate((element) => getComputedStyle(element).borderTopColor)
+  expect(aiBorder).toBe(neutralBorder)
   await expectNoHorizontalOverflow(page)
 })
 

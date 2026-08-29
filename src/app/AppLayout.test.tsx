@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppLayout, appViewportMetrics } from './AppLayout'
 
 const authState = vi.hoisted(() => ({
@@ -44,6 +44,12 @@ function renderLayout(path: string) {
 function iconName(link: HTMLElement) {
   return link.querySelector('svg')?.getAttribute('data-icon')
 }
+
+beforeEach(() => {
+  // Большинство route-scope тестов проверяют прежний персональный контракт.
+  // Production default ON покрывается отдельной rollout-группой ниже.
+  vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'preview')
+})
 
 afterEach(() => {
   authState.role = 'client'
@@ -118,6 +124,24 @@ describe('AppLayout: monochrome preview route scope', () => {
   it('keeps My Workouts unchanged when the server flag is off', () => {
     authState.role = 'client'
     renderLayout('/me/workouts')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'client-workouts-identity')
+    expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+  })
+
+  it('applies the shared workouts identity to the enabled trainer client history route', () => {
+    authState.role = 'trainer'
+    authState.monochromePreview = true
+    renderLayout('/clients/client-1/workouts')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'client-workouts-identity')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-clients-identity', 'trainer-client-detail-identity')
+    expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+  })
+
+  it('keeps trainer client workout history unchanged when the server flag is off', () => {
+    authState.role = 'trainer'
+    renderLayout('/clients/client-1/workouts')
 
     expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'client-workouts-identity')
     expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
@@ -338,6 +362,16 @@ describe('AppLayout: monochrome preview route scope', () => {
     expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
   })
 
+  it('uses the shared monochrome Goal workspace for the client goal route', () => {
+    authState.role = 'client'
+    authState.monochromePreview = true
+    renderLayout('/me/goal')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass(
+      'identity-monochrome-preview', 'trainer-client-goal-identity', 'client-goal-identity',
+    )
+  })
+
   it.each(['/clients', '/clients/new', '/clients/client-1', '/clients/client-1/edit', '/clients/client-1/workouts', '/clients/client-1/progress'])(
     'does not leak Trainer Client Goal identity into %s',
     (path) => {
@@ -376,6 +410,182 @@ describe('AppLayout: monochrome preview route scope', () => {
       expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-schedule-identity')
     },
   )
+
+  it.each(['/progress/client-1', '/progress/client-1?view=running', '/progress/client-1?view=measurements'])(
+    'applies Trainer Progress identity to the enabled route state %s',
+    (path) => {
+      authState.role = 'trainer'
+      authState.monochromePreview = true
+      renderLayout(path)
+
+      expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'trainer-progress-identity')
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('progress-identity', 'trainer-schedule-identity')
+    },
+  )
+
+  it('keeps Trainer Progress unchanged when the server flag is off', () => {
+    authState.role = 'trainer'
+    renderLayout('/progress/client-1')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'trainer-progress-identity')
+    expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+  })
+
+  it.each(['/today', '/clients', '/schedule', '/profile', '/exercises', '/clients/client-1', '/workouts/new', '/me/progress'])(
+    'does not leak Trainer Progress identity into %s',
+    (path) => {
+      authState.role = 'trainer'
+      authState.monochromePreview = true
+      renderLayout(path)
+
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-progress-identity')
+    },
+  )
+
+  it('applies Exercise Catalog identity only to the enabled trainer route', () => {
+    authState.role = 'trainer'
+    authState.monochromePreview = true
+    renderLayout('/exercises')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'exercise-catalog-identity')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-progress-identity', 'trainer-schedule-identity')
+  })
+
+  it('keeps Exercise Catalog unchanged when the server flag is off', () => {
+    authState.role = 'trainer'
+    renderLayout('/exercises')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'exercise-catalog-identity')
+    expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+  })
+
+  it.each(['/today', '/clients', '/schedule', '/profile', '/progress/client-1', '/workouts/new', '/me/progress'])(
+    'does not leak Exercise Catalog identity into %s',
+    (path) => {
+      authState.role = 'trainer'
+      authState.monochromePreview = true
+      renderLayout(path)
+
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('exercise-catalog-identity')
+    },
+  )
+
+  it('applies Trainer Profile identity only to the enabled trainer route', () => {
+    authState.role = 'trainer'
+    authState.monochromePreview = true
+    renderLayout('/profile')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'trainer-profile-identity')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('exercise-catalog-identity', 'client-profile-shell-identity')
+  })
+
+  it('keeps Trainer Profile unchanged when the server flag is off', () => {
+    authState.role = 'trainer'
+    renderLayout('/profile')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'trainer-profile-identity')
+    expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+  })
+
+  it('does not apply Trainer Profile identity to the client profile route', () => {
+    authState.role = 'client'
+    authState.monochromePreview = true
+    renderLayout('/me/profile')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('client-profile-shell-identity')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-profile-identity')
+  })
+
+  it.each(['/today', '/clients', '/schedule', '/exercises', '/progress/client-1', '/join', '/workouts/new'])(
+    'does not leak Trainer Profile identity into %s',
+    (path) => {
+      authState.role = 'trainer'
+      authState.monochromePreview = true
+      renderLayout(path)
+
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-profile-identity')
+    },
+  )
+})
+
+describe('AppLayout: global monochrome rollout', () => {
+  it('enables a migrated route for every user in production mode', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'on')
+    authState.monochromePreview = false
+    renderLayout('/me')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'client-home-identity')
+  })
+
+  it('uses one global off switch even when personal preview is enabled', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'off')
+    authState.monochromePreview = true
+    renderLayout('/me')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'client-home-identity')
+  })
+
+  it('keeps accepted monochrome dark independent from the old purple pilot', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'on')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_USER_IDS', 'user-1')
+    authState.theme = 'dark'
+    renderLayout('/me')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('theme-dark-pilot')
+    expect(document.documentElement).not.toHaveClass('theme-dark-pilot')
+  })
+
+  it('migrates Join as an exact auth route without leaking into other routes', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'on')
+    const join = renderLayout('/join')
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'auth-join-identity')
+
+    join.unmount()
+    renderLayout('/assistant')
+    expect(document.querySelectorAll('.auth-join-identity')).toHaveLength(0)
+  })
+
+  it('migrates Assistant globally while preserving the dedicated shell', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'on')
+    authState.role = 'trainer'
+    renderLayout('/assistant')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'assistant-identity', 'assistant-shell')
+    expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+  })
+
+  it('keeps Assistant on the legacy UI behind the global rollback switch', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'off')
+    authState.role = 'trainer'
+    authState.monochromePreview = true
+    renderLayout('/assistant')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('assistant-shell')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'assistant-identity')
+  })
+
+  it('keeps monochrome Assistant dark independent from the old purple pilot', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'on')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_USER_IDS', 'user-1')
+    authState.role = 'trainer'
+    authState.theme = 'dark'
+    renderLayout('/assistant')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'assistant-identity')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('theme-dark-pilot')
+    expect(document.documentElement).not.toHaveClass('theme-dark-pilot')
+  })
+
+  it('does not leak Assistant identity into another route', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'on')
+    authState.role = 'trainer'
+    renderLayout('/schedule')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('assistant-identity')
+  })
 })
 
 describe('AppLayout navigation', () => {

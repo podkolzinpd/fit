@@ -110,6 +110,31 @@ export interface GoalStage {
   version: number
 }
 
+export type GoalCriterionMetric = 'weight' | 'waist' | 'chest' | 'hips'
+
+export type GoalCriterionOperation =
+  | 'decrease_to'
+  | 'increase_to'
+  | 'maintain_range'
+  | 'change_by'
+  | 'track_only'
+
+export type GoalCriterionConfirmationStatus = 'suggested' | 'confirmed' | 'needs_review'
+
+export interface GoalCriterion {
+  id: UUID
+  goalId: UUID
+  metric: GoalCriterionMetric
+  operation: GoalCriterionOperation
+  targetValue: number | null
+  rangeMin: number | null
+  rangeMax: number | null
+  unit: string
+  confirmationStatus: GoalCriterionConfirmationStatus
+  position: number
+  version: number
+}
+
 export interface ClientGoal {
   id: UUID
   clientId: UUID
@@ -118,6 +143,20 @@ export interface ClientGoal {
   status: 'active' | 'archived'
   version: number
   stages: GoalStage[]
+  criteria: GoalCriterion[]
+}
+
+export interface SaveGoalCriterionInput {
+  id?: UUID
+  metric: GoalCriterionMetric
+  operation: GoalCriterionOperation
+  targetValue?: number | null
+  rangeMin?: number | null
+  rangeMax?: number | null
+  unit: string
+  confirmationStatus: 'confirmed'
+  position?: number
+  version?: number
 }
 
 export interface SaveClientGoalInput {
@@ -125,6 +164,7 @@ export interface SaveClientGoalInput {
   id?: UUID
   title: string
   targetDate?: LocalDate | null
+  criterion?: SaveGoalCriterionInput | null
   version?: number
 }
 

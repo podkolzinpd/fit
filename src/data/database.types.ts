@@ -1,4 +1,4 @@
-// schema-sha256: 06bc29bc8fd2b82f8515176ba9d587ad240d366852c86dc5c97fe16deea43757
+// schema-sha256: a1ba7fb2946d1496467f7fc5b5cb9b9a949441d385f0f5e6bdca323c019119a0
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1017,6 +1017,80 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "trainers"
             referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      goal_criteria: {
+        Row: {
+          archived_at: string | null
+          client_id: string
+          confirmation_status: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          created_by: string
+          goal_id: string
+          id: string
+          metric: string
+          operation: string
+          position: number
+          range_max: number | null
+          range_min: number | null
+          target_value: number | null
+          trainer_id: string
+          unit: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          client_id: string
+          confirmation_status?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by: string
+          goal_id: string
+          id?: string
+          metric: string
+          operation: string
+          position?: number
+          range_max?: number | null
+          range_min?: number | null
+          target_value?: number | null
+          trainer_id: string
+          unit: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          client_id?: string
+          confirmation_status?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string
+          goal_id?: string
+          id?: string
+          metric?: string
+          operation?: string
+          position?: number
+          range_max?: number | null
+          range_min?: number | null
+          target_value?: number | null
+          trainer_id?: string
+          unit?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_criteria_goal_fk"
+            columns: ["goal_id", "trainer_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "client_goals"
+            referencedColumns: ["id", "trainer_id", "client_id"]
           },
         ]
       }

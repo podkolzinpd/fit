@@ -2109,6 +2109,16 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-progress-comparison article span { color:var(--muted); font-size:var(--type-micro-size); line-height:var(--leading-snug) }
 .client-progress-goal-story { display:grid; gap:6px; margin:var(--space-3) var(--card-padding) 0; padding-bottom:var(--space-3); border-bottom:1px solid var(--ai-divider) }
 .client-progress-goal-story > span, .client-progress-upcoming > span { color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label); text-transform:uppercase }
+.client-progress-goal-story-head { display:flex; align-items:center; justify-content:space-between; gap:10px }
+.client-progress-goal-story-head > span { color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label); text-transform:uppercase }
+.goal-foundation-status { display:inline-flex; align-items:center; min-height:28px; padding:4px 9px; border:1px solid var(--border); border-radius:999px; background:var(--surface-sunken); color:var(--fg); font-size:11px; font-weight:var(--weight-semibold); line-height:1.2 }
+.goal-foundation-status.needs_data,
+.goal-foundation-status.needs_review { border-style:dashed }
+.goal-foundation-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:4px 0 }
+.goal-foundation-facts > div { display:grid; gap:2px; min-width:0; padding:10px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-sunken) }
+.goal-foundation-facts dt { color:var(--muted); font-size:11px; line-height:1.25 }
+.goal-foundation-facts dd { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); font-weight:var(--weight-semibold); line-height:var(--leading-body) }
+.client-progress-goal-story > .link { width:fit-content; min-height:44px; padding:8px 0 }
 .client-progress-goal-story p, .client-progress-upcoming p { margin:0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
 .client-progress-goal-story ul { display:grid; gap:6px; margin:2px 0 0; padding:0; list-style:none }
 .client-progress-goal-story li { position:relative; padding-left:16px; font-size:var(--type-caption-size); line-height:var(--leading-body) }
@@ -2711,8 +2721,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .theme-dark-pilot .voice-input-button.recording { border-color: var(--danger-border); color: var(--danger); background: var(--danger-surface) }
 
 /* ── Foundation UI Identity v1: route-scoped продуктовые экраны.
-   Класс ставится только для authenticated monochrome_preview на мигрированных routes.
-   Немигрированные маршруты продолжают использовать прежние токены и CSS. */
+   Production default задаёт общий rollout mode; режим preview продолжает
+   читать authenticated monochrome_preview. Немигрированные маршруты и
+   rollout=off используют прежние токены и CSS. */
 .identity-monochrome-preview {
   color-scheme:dark;
   font-family:"Onest Variable", -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
@@ -2864,6 +2875,151 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   --frame-bg:#fbfaf7;
   --frame-border:#dedbd4;
   --bar-bg:#fbfaf7;
+}
+
+/* Gate 8 / Task 25 — весь доступ к продукту образует одну спокойную auth-family.
+   Публичные маршруты получают эти правила через AuthIdentityScreen, а Join —
+   через route-scoped shell. Legacy CSS остаётся рядом для rollout=off. */
+.auth-flow-identity {
+  width:min(calc(100% - 32px), 456px);
+  min-height:calc(100dvh - 32px);
+  gap:18px;
+  padding:max(28px, calc(env(safe-area-inset-top) + 20px)) 24px max(24px, calc(env(safe-area-inset-bottom) + 20px));
+  border-color:var(--border);
+  border-radius:22px;
+  background:var(--bg);
+  box-shadow:none;
+}
+.auth-flow-identity.auth-pilot-flow { max-width:760px }
+.auth-flow-identity .auth-entry-head { gap:6px; padding:0 2px 2px }
+.auth-flow-identity .auth-entry-head .brand {
+  width:52px;
+  height:52px;
+  margin-bottom:16px;
+  border:0;
+  border-radius:14px;
+  background:var(--mono-primary);
+  color:var(--mono-on-primary);
+  box-shadow:none;
+  font-size:16px;
+  font-weight:600;
+  letter-spacing:-.018em;
+}
+.auth-flow-identity .auth-entry-head .eyebrow {
+  color:var(--secondary-label-fg);
+  font-size:12px;
+  font-weight:500;
+  line-height:1.3;
+  letter-spacing:.06em;
+}
+.auth-flow-identity .auth-entry-head h1 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.auth-flow-identity .auth-entry-head .muted { max-width:360px; color:var(--muted); font-size:14px; font-weight:400; line-height:1.45 }
+.auth-flow-identity .auth-form {
+  gap:14px;
+  padding:18px;
+  border-color:var(--border);
+  border-radius:18px;
+  background:var(--surface);
+  box-shadow:none;
+}
+.auth-flow-identity .field { gap:6px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
+.auth-flow-identity .auth-form input,
+.auth-flow-identity .auth-form select {
+  height:48px;
+  min-height:48px;
+  border-color:var(--border);
+  border-radius:14px;
+  background:var(--input);
+  color:var(--fg);
+  font-size:16px;
+  font-weight:400;
+}
+.auth-flow-identity .auth-form input:focus,
+.auth-flow-identity .auth-form select:focus { border-color:var(--fg); box-shadow:0 0 0 2px var(--accent-ring) }
+.auth-flow-identity button,
+.auth-flow-identity .button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.auth-flow-identity button.primary,
+.auth-flow-identity .button.primary { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none }
+.auth-flow-identity button.secondary,
+.auth-flow-identity .button.secondary { border-color:var(--border); background:var(--surface); color:var(--fg); box-shadow:none }
+.auth-flow-identity button:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg); box-shadow:none }
+.auth-flow-identity .auth-form > button { min-height:48px; margin-top:2px; border-radius:14px; font-size:14px; font-weight:500 }
+.auth-flow-identity .auth-google,
+.auth-flow-identity .auth-yandex { min-height:48px; border-color:var(--border); border-radius:14px; color:var(--fg) }
+.auth-flow-identity .auth-links { gap:8px; align-items:stretch }
+.auth-flow-identity .auth-links > * { min-height:44px; display:flex; align-items:center; padding:0 4px; color:var(--fg); font-size:14px; font-weight:500 }
+.auth-flow-identity .auth-links .link { border:0; background:transparent; box-shadow:none }
+.auth-flow-identity .auth-back-link { min-height:44px; display:inline-flex; align-items:center; color:var(--fg); font-size:14px; font-weight:500 }
+.auth-flow-identity .error,
+.auth-flow-identity .success { margin:0; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:var(--surface-sunken); font-size:12px; font-weight:500; line-height:1.4 }
+.auth-flow-identity .error { color:var(--danger) }
+.auth-flow-identity .success { color:var(--success-fg) }
+.auth-flow-identity .compact,
+.auth-flow-identity .card,
+.auth-flow-identity .state-panel { border-color:var(--border); border-radius:16px; background:var(--surface); box-shadow:none }
+.auth-flow-identity .yandex-pilot-section-head h2 { font-size:16px; font-weight:600 }
+.auth-flow-identity .yandex-pilot-profile span,
+.auth-flow-identity .yandex-pilot-client p,
+.auth-flow-identity .yandex-pilot-connection p,
+.auth-flow-identity .yandex-pilot-training p { color:var(--muted); font-size:12px; font-weight:400 }
+
+.auth-join-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none }
+.auth-join-identity .content { background:var(--bg) }
+.auth-join-identity .join-page { max-width:680px; padding:12px 16px 28px }
+.auth-join-identity .join-page .page-header { min-height:44px; margin-bottom:12px }
+.auth-join-identity .join-page .page-header h1 { font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.auth-join-identity .join-card {
+  gap:18px;
+  max-width:520px;
+  margin:0 auto;
+  padding:18px;
+  border-color:var(--border);
+  border-radius:18px;
+  background:var(--surface);
+  box-shadow:none;
+}
+.auth-join-identity .join-card-head { gap:6px }
+.auth-join-identity .join-card-head .eyebrow { color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
+.auth-join-identity .join-card-head h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
+.auth-join-identity .join-card-head > p:last-child { color:var(--muted); font-size:14px; font-weight:400; line-height:1.45 }
+.auth-join-identity .join-form .field { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.auth-join-identity .join-form input { min-height:48px; border-color:var(--border); border-radius:14px; background:var(--input); color:var(--fg); font-size:16px; font-weight:400 }
+.auth-join-identity .join-reconnect { gap:8px; padding:14px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.auth-join-identity .join-reconnect strong { color:var(--fg); font-size:14px; font-weight:600 }
+.auth-join-identity .join-reconnect p { color:var(--muted); font-size:12px; font-weight:400 }
+.auth-join-identity .join-success { border-color:var(--border); background:var(--surface) }
+.auth-join-identity .join-success .eyebrow,
+.auth-join-identity .join-success h2 { color:var(--success-fg) }
+.auth-join-identity button,
+.auth-join-identity .button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.auth-join-identity button.primary,
+.auth-join-identity .button.primary { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none }
+.auth-join-identity button.secondary,
+.auth-join-identity .button.secondary { border-color:var(--border); background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.auth-join-identity button:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg); box-shadow:none }
+.auth-join-identity .tab-bar {
+  left:50%;
+  bottom:0;
+  width:min(100%,440px);
+  padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+  border:0;
+  border-top:1px solid var(--border);
+  border-radius:0;
+  background:var(--bar-bg);
+  box-shadow:none;
+  backdrop-filter:none;
+  transform:translateX(-50%);
+}
+.auth-join-identity .tab-bar a { min-height:48px; gap:3px; padding:5px 3px; border-radius:10px; color:var(--muted); font-size:12px; font-weight:500; background:transparent }
+.auth-join-identity .tab-bar a svg { width:20px; height:20px; opacity:1; stroke-width:1.8; transform:none }
+.auth-join-identity .tab-bar a.active,
+.auth-join-identity.theme-dark-pilot .tab-bar a.active { background:transparent; color:var(--fg); font-weight:500 }
+.auth-join-identity .tab-bar a.active svg { transform:none }
+
+@media (max-width:480px) {
+  .auth-flow-identity { width:100%; height:100%; min-height:0; margin:0; padding-inline:20px; border:0; border-radius:0 }
+  .auth-flow-identity .auth-form { padding:16px }
+  .auth-join-identity .tab-bar { position:static; left:auto; bottom:auto; width:100%; transform:none }
 }
 
 .client-home-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none }
@@ -3181,6 +3337,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .ai-progress-periods { width:auto; margin:0 18px 12px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
 .progress-identity .client-progress-card .ai-progress-periods button { min-height:44px; padding:0 12px; border:0; border-radius:10px; color:var(--muted); font-size:12px; font-weight:500 }
 .progress-identity .client-progress-card .ai-progress-periods button.active { border:0; background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.progress-identity .ai-progress-footer button { min-height:44px }
 
 .progress-identity .progress-story-hero { gap:5px; padding:18px; border-color:var(--border); background:var(--surface-elevated) }
 .progress-identity .progress-story-hero > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
@@ -3202,7 +3359,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .body-progress-modes button { min-height:44px; border-radius:10px; color:var(--muted); font-size:12px; font-weight:500 }
 .progress-identity .body-progress-modes button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:none }
 .progress-identity .body-progress-sides { border-color:var(--border); border-radius:10px; background:var(--surface-sunken) }
-.progress-identity .body-progress-sides button { min-height:36px; border-radius:8px; font-size:12px; font-weight:500 }
+.progress-identity .body-progress-sides button { min-height:44px; border-radius:8px; font-size:12px; font-weight:500 }
 .progress-identity .body-progress-sides button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:none }
 .progress-identity .body-progress-visual { border:1px solid var(--border); border-radius:18px; background:var(--surface-sunken) }
 .progress-identity .body-progress-overlay { filter:none }
@@ -3301,10 +3458,14 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
    existing identity until their own lifecycle tasks. */
 .client-workouts-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none }
 .client-workouts-identity .content { padding-bottom:calc(82px + env(safe-area-inset-bottom)); background:var(--bg) }
-.client-workouts-identity .client-workouts-page { max-width:560px; padding:max(12px, calc(24px - env(safe-area-inset-top))) 16px 28px }
-.client-workouts-identity .client-workouts-page > .page-header { min-height:44px; margin-bottom:16px }
-.client-workouts-identity .client-workouts-page > .page-header h1 { font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
-.client-workouts-identity .client-workouts-page > .page-header .button { min-height:44px; padding:0 14px; border:0; border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:500; box-shadow:none }
+.client-workouts-identity .client-workouts-page,
+.client-workouts-identity .trainer-client-workouts-page { max-width:560px; padding:max(12px, calc(24px - env(safe-area-inset-top))) 16px 28px }
+.client-workouts-identity .client-workouts-page > .page-header,
+.client-workouts-identity .trainer-client-workouts-page > .page-header { min-height:44px; margin-bottom:16px }
+.client-workouts-identity .client-workouts-page > .page-header h1,
+.client-workouts-identity .trainer-client-workouts-page > .page-header h1 { font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.client-workouts-identity .client-workouts-page > .page-header .button,
+.client-workouts-identity .trainer-client-workouts-page > .page-header .button { display:inline-flex; align-items:center; justify-content:center; height:44px; min-height:44px; padding:0 14px; border:0; border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:500; line-height:1; white-space:nowrap; box-shadow:none }
 
 .client-workouts-identity .client-workouts-stack { gap:24px }
 .client-workouts-identity .client-workout-section { gap:12px }
@@ -3382,7 +3543,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .client-workouts-identity .tab-bar { position:static; left:auto; bottom:auto; width:100%; transform:none }
 }
 @media (max-width:375px) {
-  .client-workouts-identity .client-workouts-page { padding-inline:14px }
+  .client-workouts-identity .client-workouts-page,
+  .client-workouts-identity .trainer-client-workouts-page { padding-inline:14px }
   .client-workouts-identity .client-workout-card,
   .client-workouts-identity .past-workout-plan-card,
   .client-workouts-identity .workout-chronicle-card { padding-inline:16px }
@@ -3524,6 +3686,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-card-edit-identity .client-profile-form input,
 .client-card-edit-identity .client-profile-form select,
 .client-card-edit-identity .client-profile-form textarea { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.client-card-edit-identity .client-profile-form select { height:48px }
 .client-card-edit-identity .client-profile-form textarea { min-height:96px; line-height:1.45; resize:vertical }
 .client-card-edit-identity .client-profile-form input:focus,
 .client-card-edit-identity .client-profile-form select:focus,
@@ -3800,6 +3963,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-history-identity .workout-feedback-fieldset legend { color:var(--fg); font-size:16px; font-weight:600 }
 .workout-detail-history-identity .workout-review p,
 .workout-detail-history-identity .workout-review-text { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.workout-detail-history-identity .workout-review-head .secondary { min-height:44px }
 .workout-detail-history-identity .workout-detail-actions { gap:8px; margin-top:16px }
 .workout-detail-history-identity .workout-detail-actions > .button,
 .workout-detail-history-identity .workout-detail-actions .icon-button { min-height:44px }
@@ -3949,7 +4113,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-clients-identity .clients-page { max-width:760px; margin:0 auto; padding:24px 24px calc(env(safe-area-inset-bottom) + 104px) }
 .trainer-clients-identity .clients-page .page-header { min-height:44px; margin-bottom:16px }
 .trainer-clients-identity .clients-page .page-header h1 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
-.trainer-clients-identity .clients-page .page-header .button { min-height:44px; padding:0 14px; border:1px solid var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:500; box-shadow:none }
+.trainer-clients-identity .clients-page .page-header .button { display:inline-flex; align-items:center; justify-content:center; height:44px; min-height:44px; padding:0 14px; border:1px solid var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:500; line-height:1; white-space:nowrap; box-shadow:none }
 .trainer-clients-identity .clients-search-pilot,
 .trainer-clients-identity .clients-search input { min-height:48px; margin-bottom:12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); box-shadow:none }
 .trainer-clients-identity .clients-search-pilot { padding:0 8px 0 14px }
@@ -4073,6 +4237,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-client-form-identity .client-profile-form input,
 .trainer-client-form-identity .client-profile-form select,
 .trainer-client-form-identity .client-profile-form textarea { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.trainer-client-form-identity .client-profile-form select { height:48px }
 .trainer-client-form-identity .client-profile-form textarea { min-height:96px; line-height:1.45; resize:vertical }
 .trainer-client-form-identity .client-profile-form input:focus,
 .trainer-client-form-identity .client-profile-form select:focus,
@@ -4118,6 +4283,18 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-client-goal-identity .stage-row .muted,
 .trainer-client-goal-identity .stage-hint { color:var(--secondary-label-fg); font-weight:400; line-height:1.45 }
 .trainer-client-goal-identity .goal-block > .muted { margin:0; font-size:14px }
+.trainer-client-goal-identity .goal-criterion-summary > p { color:var(--fg); font-size:14px; line-height:1.45 }
+.trainer-client-goal-identity .goal-criterion-form { display:grid; gap:14px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
+.trainer-client-goal-identity .goal-criterion-form-head { display:flex; align-items:stretch; flex-direction:column; gap:16px }
+.trainer-client-goal-identity .goal-criterion-form-head h2 { margin:0; color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
+.trainer-client-goal-identity .goal-criterion-form-head p { margin:5px 0 0; color:var(--secondary-label-fg); font-size:13px; line-height:1.4 }
+.trainer-client-goal-identity .goal-criterion-form-head .switch-row { flex:0 0 auto }
+.trainer-client-goal-identity .goal-criterion-fields { display:grid; gap:12px; padding-top:14px; border-top:1px solid var(--border) }
+.trainer-client-goal-identity .goal-criterion-hint { margin:0; color:var(--secondary-label-fg); font-size:12px; line-height:1.45 }
+.trainer-client-goal-identity .goal-criterion-confirm { display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px dashed var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:13px; line-height:1.4 }
+.trainer-client-goal-identity .goal-criterion-confirm input { width:20px; height:20px; min-height:20px; margin:0; accent-color:var(--mono-primary) }
+.trainer-client-goal-identity .goal-criterion-confirm span { display:grid; gap:3px }
+.trainer-client-goal-identity .goal-criterion-confirm small { color:var(--secondary-label-fg); font-size:11px; font-weight:400 }
 .trainer-client-goal-identity .goal-head .link { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 2px; border:0; background:transparent; color:var(--fg); font-size:14px; font-weight:500; box-shadow:none }
 .trainer-client-goal-identity .stage-list { gap:8px }
 .trainer-client-goal-identity .stage-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px 12px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); box-shadow:none }
@@ -4135,10 +4312,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-client-goal-identity .field > span,
 .trainer-client-goal-identity .field > label { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
 .trainer-client-goal-identity input,
-.trainer-client-goal-identity textarea { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.trainer-client-goal-identity textarea,
+.trainer-client-goal-identity select { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
 .trainer-client-goal-identity textarea { min-height:92px; line-height:1.45; resize:vertical }
 .trainer-client-goal-identity input:focus,
-.trainer-client-goal-identity textarea:focus { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px }
+.trainer-client-goal-identity textarea:focus,
+.trainer-client-goal-identity select:focus { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px }
 .trainer-client-goal-identity .stage-form input,
 .trainer-client-goal-identity .stage-form textarea { background:var(--surface-raised) }
 .trainer-client-goal-identity .stage-hint { margin:0; font-size:12px }
@@ -4163,6 +4342,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 @media (max-width:480px) {
   .trainer-client-goal-identity .page { padding:12px 16px calc(env(safe-area-inset-bottom) + 104px) }
   .trainer-client-goal-identity .goal-block { padding:16px }
+  .trainer-client-goal-identity .goal-criterion-form { padding:16px }
   .trainer-client-goal-identity .stage-row { grid-template-columns:1fr }
   .trainer-client-goal-identity .stage-actions { justify-content:flex-start }
 }
@@ -4177,6 +4357,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-schedule-identity .schedule-controls { gap:10px }
 .trainer-schedule-identity .schedule-month-row,
 .trainer-schedule-identity .schedule-selected-row { gap:12px }
+.trainer-schedule-identity .schedule-selected-row { justify-content:flex-end }
 .trainer-schedule-identity .schedule-month-row > strong { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
 .trainer-schedule-identity .schedule-month-actions { gap:6px }
 .trainer-schedule-identity .schedule-today,
@@ -4185,20 +4366,22 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-schedule-identity .schedule-jump { width:44px; height:44px }
 .trainer-schedule-identity .schedule-jump svg { width:19px; height:19px; stroke-width:1.8 }
 .trainer-schedule-identity .schedule-today:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg) }
-.trainer-schedule-identity .week-nav { gap:3px }
-.trainer-schedule-identity .week-arrow { width:36px; height:44px; min-height:44px; border:0; background:transparent; color:var(--secondary-label-fg); box-shadow:none }
+.trainer-schedule-identity .week-nav { display:grid; grid-template-columns:minmax(0,1fr) 44px 44px; gap:6px }
+.trainer-schedule-identity .week-arrow { width:44px; height:44px; min-height:44px; border:0; background:transparent; color:var(--secondary-label-fg); box-shadow:none }
+.trainer-schedule-identity .week-arrow:first-child { grid-column:2; grid-row:1 }
+.trainer-schedule-identity .week-arrow:last-child { grid-column:3; grid-row:1 }
 .trainer-schedule-identity .week-arrow svg { width:19px; height:19px; stroke-width:1.8 }
-.trainer-schedule-identity .week-strip { gap:2px; padding:3px; border:1px solid var(--border); border-radius:16px; background:var(--surface-sunken); box-shadow:none }
+.trainer-schedule-identity .week-strip { grid-column:1 / -1; grid-row:2; gap:2px; padding:3px; border:1px solid var(--border); border-radius:16px; background:var(--surface-sunken); box-shadow:none }
 .trainer-schedule-identity .week-day { min-height:50px; border-radius:13px; color:var(--fg); background:transparent; box-shadow:none }
 .trainer-schedule-identity .week-day.active { background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none }
 .trainer-schedule-identity .day-label { color:var(--secondary-label-fg); font-size:10px; font-weight:500; letter-spacing:.04em }
 .trainer-schedule-identity .week-day.active .day-label { color:var(--mono-on-primary) }
 .trainer-schedule-identity .day-num { font-size:14px; font-weight:600 }
 .trainer-schedule-identity .week-day.is-today::after { background:var(--mono-primary) }
-.trainer-schedule-identity .schedule-selected-date { gap:2px }
+.trainer-schedule-identity .schedule-selected-date { display:none }
 .trainer-schedule-identity .schedule-selected-date strong { color:var(--fg); font-size:14px; font-weight:600; line-height:1.3 }
 .trainer-schedule-identity .schedule-selected-date span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
-.trainer-schedule-identity .schedule-plan { min-height:44px; padding:0 14px; border:1px solid var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:12px; font-weight:500; box-shadow:none }
+.trainer-schedule-identity .schedule-plan { display:inline-flex; align-items:center; justify-content:center; height:44px; min-height:44px; padding:0 14px; border:1px solid var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:12px; font-weight:500; line-height:1; white-space:nowrap; box-shadow:none }
 .trainer-schedule-identity .schedule-untimed-section { gap:8px; margin-bottom:12px }
 .trainer-schedule-identity .schedule-untimed-heading strong { color:var(--fg); font-size:12px; font-weight:500 }
 .trainer-schedule-identity .schedule-untimed-heading span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
@@ -4242,6 +4425,715 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 @media (max-width:480px) {
   .trainer-schedule-identity .schedule-page { padding:12px 14px 0 }
   .trainer-schedule-identity .schedule-page .page-header h1 { margin-bottom:12px }
-  .trainer-schedule-identity .week-arrow { width:28px }
   .trainer-schedule-identity .week-strip { padding:3px 2px }
+}
+
+/* ── Gate 7 / task 22: Trainer Progress and measurements. Data density is
+   expressed through hierarchy and neutral surfaces; semantic colour remains
+   tied to a real result, warning or destructive action. */
+.trainer-progress-identity {
+  --ai-card-border:var(--border);
+  --ai-card-background:var(--surface-raised);
+  --ai-card-shadow:none;
+  --ai-divider:var(--border);
+  --ai-subtle-surface:var(--surface-elevated);
+  --ai-stat-surface:var(--surface-raised);
+  --ai-copy:var(--secondary-label-fg);
+  --ai-mark-border:var(--border);
+  --ai-mark-background:var(--surface-sunken);
+  --ai-mark-shadow:none;
+  --ai-attention-border:var(--warning-border);
+  --ai-attention-surface:var(--surface-elevated);
+  --ai-attention-fg:var(--warning-fg);
+  --ai-empty-fg:var(--fg);
+  --client-ai-card-border:var(--border);
+  --client-ai-card-background:var(--surface-raised);
+  --client-ai-mark-border:var(--border);
+  --client-ai-mark-background:var(--surface-sunken);
+  --client-ai-mark-shadow:none;
+  --client-ai-note-border:var(--border);
+  --client-ai-note-surface:var(--surface-elevated);
+  --client-ai-note-fg:var(--fg);
+  --client-ai-note-icon:var(--success-fg);
+  border-color:var(--frame-border);
+  background:var(--bg);
+  box-shadow:none;
+}
+.trainer-progress-identity .content { background:var(--bg) }
+.trainer-progress-identity .progress-page { max-width:820px; margin:0 auto; padding:20px 24px 28px }
+.trainer-progress-identity .progress-page > .page-header { min-height:44px; align-items:center; margin-bottom:14px }
+.trainer-progress-identity .progress-page > .page-header h1 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.trainer-progress-identity .progress-page > .page-header p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-progress-identity .page-back { width:44px; min-width:44px; height:44px; min-height:44px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.trainer-progress-identity .page-back svg { width:20px; height:20px; stroke-width:1.8 }
+.trainer-progress-identity .eyebrow { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.3; letter-spacing:.06em }
+.trainer-progress-identity .trainer-progress-stack { gap:12px }
+
+.trainer-progress-identity .trainer-progress-week,
+.trainer-progress-identity .ai-progress-card,
+.trainer-progress-identity .trainer-progress-route-card,
+.trainer-progress-identity .running-progress-card,
+.trainer-progress-identity .trainer-measurements-workspace { border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.trainer-progress-identity .trainer-progress-week { padding:18px }
+.trainer-progress-identity .trainer-progress-week.is-positive { border-color:var(--border); background:var(--surface-raised); box-shadow:inset 3px 0 0 var(--success-fg) }
+.trainer-progress-identity .trainer-progress-week span,
+.trainer-progress-identity .trainer-progress-week.is-positive span { color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
+.trainer-progress-identity .trainer-progress-week strong { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
+.trainer-progress-identity .trainer-progress-week p { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
+
+.trainer-progress-identity .ai-progress-card { margin:0; overflow:hidden }
+.trainer-progress-identity .ai-progress-header { padding:18px 18px 12px }
+.trainer-progress-identity .ai-progress-title { gap:10px }
+.trainer-progress-identity .ai-progress-title h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
+.trainer-progress-identity .ai-progress-title p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-progress-identity .ai-progress-mark { width:36px; height:36px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--fg); box-shadow:none; font-size:14px }
+.trainer-progress-identity .ai-progress-demo,
+.trainer-progress-identity .ai-progress-demo.published { min-height:28px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:10px; font-weight:500 }
+.trainer-progress-identity .ai-progress-periods { width:auto; margin:0 18px 12px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.trainer-progress-identity .ai-progress-periods button { min-height:44px; padding:0 12px; border:0; border-radius:10px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; box-shadow:none }
+.trainer-progress-identity .ai-progress-periods button.active { border:0; background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.trainer-progress-identity .progress-story-hero { gap:5px; padding:18px; border-color:var(--border); background:var(--surface-elevated) }
+.trainer-progress-identity .progress-story-hero > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-progress-identity .progress-story-hero > strong { color:var(--success-fg); font-size:40px; font-weight:600; letter-spacing:-.035em }
+.trainer-progress-identity .progress-story-hero h3 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
+.trainer-progress-identity .progress-story-hero p { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
+.trainer-progress-identity .ai-progress-stats { gap:0; border-color:var(--border); background:var(--surface-raised) }
+.trainer-progress-identity .ai-progress-stats div { min-height:72px; justify-content:center; padding:12px 6px; border-right:1px solid var(--border); background:transparent }
+.trainer-progress-identity .ai-progress-stats div:last-child { border-right:0 }
+.trainer-progress-identity .ai-progress-stats strong { color:var(--fg); font-size:18px; font-weight:600 }
+.trainer-progress-identity .ai-progress-stats span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+
+.trainer-progress-identity .body-progress-map { gap:12px; padding:16px 18px 18px; border-color:var(--border); background:var(--surface-raised) }
+.trainer-progress-identity .body-progress-map > header { gap:12px }
+.trainer-progress-identity .body-progress-map > header span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-progress-identity .body-progress-map > header h3 { color:var(--fg); font-size:16px; font-weight:600 }
+.trainer-progress-identity .body-progress-map > header p { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
+.trainer-progress-identity .body-progress-modes { gap:3px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.trainer-progress-identity .body-progress-modes button { min-height:44px; border-radius:10px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-progress-identity .body-progress-modes button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.trainer-progress-identity .body-progress-sides { border-color:var(--border); border-radius:10px; background:var(--surface-sunken) }
+.trainer-progress-identity .body-progress-sides button { min-height:36px; border-radius:8px; font-size:12px; font-weight:500 }
+.trainer-progress-identity .body-progress-sides button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.trainer-progress-identity .body-progress-sides button:disabled { opacity:1; color:var(--secondary-label-fg) }
+.trainer-progress-identity .body-progress-visual { border:1px solid var(--border); border-radius:18px; background:var(--surface-sunken) }
+.trainer-progress-identity .body-progress-overlay { filter:none }
+.trainer-progress-identity .body-progress-region-fill { transition:none }
+.trainer-progress-identity .body-progress-visual.discovering .body-progress-region-fill { animation:none }
+.trainer-progress-identity .body-progress-detail { border-color:var(--border); border-radius:14px; background:var(--surface-elevated) }
+
+.trainer-progress-identity .client-progress-wins,
+.trainer-progress-identity .client-progress-comparison,
+.trainer-progress-identity .client-progress-goal-story,
+.trainer-progress-identity .client-progress-insight { margin-inline:18px; border-color:var(--border) }
+.trainer-progress-identity .client-progress-wins h3,
+.trainer-progress-identity .client-progress-comparison h3,
+.trainer-progress-identity .client-progress-goal-story h3,
+.trainer-progress-identity .client-progress-upcoming h3,
+.trainer-progress-identity .client-progress-insight h3 { color:var(--fg); font-size:14px; font-weight:600 }
+.trainer-progress-identity .client-progress-wins article > span { width:6px; height:6px; background:var(--success); box-shadow:none }
+.trainer-progress-identity .client-progress-wins article strong,
+.trainer-progress-identity .client-progress-wins article p,
+.trainer-progress-identity .client-progress-goal-story li,
+.trainer-progress-identity .client-progress-goal-story p,
+.trainer-progress-identity .client-progress-insight p { font-size:12px }
+.trainer-progress-identity .client-progress-comparison article { border:1px solid var(--border); border-radius:10px; background:var(--surface-elevated) }
+.trainer-progress-identity .client-progress-comparison article strong { color:var(--fg); font-size:18px; font-weight:600 }
+.trainer-progress-identity .client-progress-comparison article.positive strong { color:var(--success-fg) }
+.trainer-progress-identity .client-progress-goal-story > span,
+.trainer-progress-identity .client-progress-upcoming > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-progress-identity .client-progress-goal-story.empty,
+.trainer-progress-identity .client-progress-upcoming,
+.trainer-progress-identity .client-progress-next { margin-inline:18px; padding:14px; border-color:var(--border); border-radius:14px; background:var(--surface-elevated) }
+.trainer-progress-identity .progress-story-attention { border-color:var(--warning-border); border-radius:14px; background:var(--surface-elevated) }
+.trainer-progress-identity .progress-story-attention > span { color:var(--warning-fg); background:var(--surface-sunken); font-weight:600 }
+.trainer-progress-identity .client-progress-details-toggle,
+.trainer-progress-identity .client-copy-toggle { margin-inline:18px; border-color:var(--border) }
+.trainer-progress-identity .client-progress-details-toggle .link,
+.trainer-progress-identity .client-copy-toggle .link { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
+.trainer-progress-identity .ai-progress-footer { margin-top:12px; padding:12px 18px; border-color:var(--border); background:var(--surface-elevated) }
+.trainer-progress-identity .ai-progress-footer > span { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
+.trainer-progress-identity .ai-progress-footer button { min-height:44px; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--fg); font-size:12px; font-weight:500; box-shadow:none }
+.trainer-progress-identity .ai-progress-footer button:disabled { opacity:1; background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.trainer-progress-identity .ai-progress-empty { border-color:var(--border); background:var(--surface-elevated) }
+
+.trainer-progress-identity .trainer-progress-route-card { min-height:88px; padding:16px 18px; color:var(--fg) }
+.trainer-progress-identity .trainer-progress-route-card:focus-visible { outline:2px solid var(--fg); outline-offset:2px }
+.trainer-progress-identity .trainer-progress-route-card strong { color:var(--fg); font-size:18px; font-weight:600 }
+.trainer-progress-identity .trainer-progress-route-card span { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
+.trainer-progress-identity .trainer-progress-route-card > svg,
+.trainer-progress-identity .trainer-progress-route-meta svg { color:var(--secondary-label-fg); stroke-width:1.8 }
+.trainer-progress-identity .trainer-progress-route-meta b { color:var(--fg); font-size:18px; font-weight:600 }
+
+.trainer-progress-identity .running-progress-card { gap:16px; margin:0; padding:18px }
+.trainer-progress-identity .running-progress-card h2 { color:var(--fg); font-size:18px; font-weight:600 }
+.trainer-progress-identity .running-progress-periods { padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.trainer-progress-identity .running-progress-periods button { min-height:44px; border-radius:10px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-progress-identity .running-progress-periods button.active { background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.trainer-progress-identity .running-progress-total strong { color:var(--fg); font-size:24px; font-weight:600 }
+.trainer-progress-identity .running-progress-total span { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.trainer-progress-identity .running-progress-metrics { border-color:var(--border); border-radius:14px }
+.trainer-progress-identity .running-progress-metrics > div { padding:14px; background:var(--surface-elevated) }
+.trainer-progress-identity .running-progress-metrics strong { color:var(--fg); font-size:18px; font-weight:600 }
+.trainer-progress-identity .running-progress-metrics span { color:var(--secondary-label-fg); font-size:12px }
+.trainer-progress-identity .running-progress-insight { border:1px solid var(--border); border-radius:14px; background:var(--surface-elevated); color:var(--fg) }
+
+.trainer-progress-identity .trainer-measurements-workspace { gap:16px; padding:18px }
+.trainer-progress-identity .trainer-measurements-workspace-head h2 { color:var(--fg); font-size:18px; font-weight:600 }
+.trainer-progress-identity .trainer-measurements-workspace-head > span { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
+.trainer-progress-identity .metric-tabs { gap:6px; margin:0 0 12px }
+.trainer-progress-identity .metric-tab { min-height:44px; padding:0 14px; border-color:var(--border); border-radius:14px; background:var(--surface-elevated); color:var(--secondary-label-fg); font-size:12px; font-weight:500; box-shadow:none }
+.trainer-progress-identity .metric-tab.active { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.trainer-progress-identity .measurement-trend .chart { border:0; background:transparent; box-shadow:none }
+.trainer-progress-identity .measurement-trend .chart h2 { color:var(--fg); font-size:16px; font-weight:600 }
+.trainer-progress-identity .measurement-trend .recharts-cartesian-grid line { stroke:var(--border) }
+.trainer-progress-identity .measurement-trend .recharts-line-curve { stroke:var(--mono-primary) }
+.trainer-progress-identity .measurement-actions { gap:8px; border-color:var(--border) }
+.trainer-progress-identity .measurement-actions button { min-height:48px; border-radius:14px; font-size:12px; font-weight:500; box-shadow:none }
+.trainer-progress-identity .measurement-actions .measurement-primary-action { border:1px solid var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.trainer-progress-identity .measurement-actions .link { color:var(--fg) }
+.trainer-progress-identity .progress-form-card,
+.trainer-progress-identity .progress-history,
+.trainer-progress-identity .metrics-manager { border-color:var(--border); background:transparent; box-shadow:none }
+.trainer-progress-identity .progress-form-card h2,
+.trainer-progress-identity .progress-history h2,
+.trainer-progress-identity .metrics-manager h2 { color:var(--fg); font-size:18px; font-weight:600 }
+.trainer-progress-identity .field { gap:6px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-progress-identity input,
+.trainer-progress-identity select,
+.trainer-progress-identity textarea { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.trainer-progress-identity textarea { min-height:88px }
+.trainer-progress-identity input:focus,
+.trainer-progress-identity select:focus,
+.trainer-progress-identity textarea:focus { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px }
+.trainer-progress-identity .progress-form-card .actions { gap:8px }
+.trainer-progress-identity .progress-form-card .actions button,
+.trainer-progress-identity .metric-preset-row button,
+.trainer-progress-identity .inline-form button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500; box-shadow:none }
+.trainer-progress-identity .progress-form-card .primary,
+.trainer-progress-identity .inline-form button { border:1px solid var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.trainer-progress-identity .progress-form-card .secondary,
+.trainer-progress-identity .metric-preset-row .secondary { border:1px solid var(--border); background:transparent; color:var(--fg) }
+.trainer-progress-identity button:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.trainer-progress-identity .progress-history .card { border-color:var(--border); border-radius:14px; background:var(--surface-elevated); box-shadow:none }
+.trainer-progress-identity .progress-history .card strong { color:var(--fg); font-size:14px; font-weight:500 }
+.trainer-progress-identity .progress-history .card p { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
+.trainer-progress-identity .row-actions .link,
+.trainer-progress-identity .metrics-manager .link { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
+.trainer-progress-identity .row-actions .danger,
+.trainer-progress-identity .metrics-manager .danger { color:var(--danger) }
+.trainer-progress-identity .metric { border-color:var(--border) }
+.trainer-progress-identity .metric span,
+.trainer-progress-identity .metric-manual-hint,
+.trainer-progress-identity .measurement-section-heading > span { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
+.trainer-progress-identity .error { color:var(--danger); font-size:12px; font-weight:500 }
+
+.trainer-progress-identity .state-panel { border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.trainer-progress-identity .state-panel-mark { border-radius:14px; background:var(--surface-sunken); color:var(--fg) }
+.trainer-progress-identity .state-panel h2 { color:var(--fg); font-size:18px; font-weight:600 }
+.trainer-progress-identity .state-panel p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.trainer-progress-identity .sheet-overlay { background:color-mix(in srgb, var(--bg) 76%, transparent); backdrop-filter:none }
+.trainer-progress-identity .ai-progress-sheet,
+.trainer-progress-identity .exercise-picker { border-color:var(--border); border-radius:18px 18px 0 0; background:var(--surface-elevated); box-shadow:none }
+.trainer-progress-identity .picker-close { width:44px; height:44px; border-radius:14px; color:var(--fg) }
+.trainer-progress-identity .picker-item { min-height:48px; border-color:var(--border); background:transparent; color:var(--fg); font-size:14px; font-weight:500 }
+.trainer-progress-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
+.trainer-progress-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
+.trainer-progress-identity .tab-bar a.active,
+.trainer-progress-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+
+@media (max-width:640px) {
+  .trainer-progress-identity .progress-page { padding:12px 14px calc(env(safe-area-inset-bottom) + 104px) }
+  .trainer-progress-identity .measurement-actions { grid-template-columns:1fr }
+  .trainer-progress-identity .measurement-actions button { width:100% }
+  .trainer-progress-identity .ai-progress-stats { grid-template-columns:1fr }
+  .trainer-progress-identity .ai-progress-stats div { min-height:56px; border-right:0; border-bottom:1px solid var(--border) }
+  .trainer-progress-identity .ai-progress-stats div:last-child { border-bottom:0 }
+}
+
+/* ── Gate 7 / task 23: Exercise Catalog. The preview keeps custom exercise
+   mutations intact while presenting the existing system catalog as a neutral,
+   searchable media library with an in-context technique detail. */
+.exercise-catalog-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none }
+.exercise-catalog-identity .content { background:var(--bg) }
+.exercise-catalog-identity .exercise-catalog-preview { max-width:980px; margin:0 auto; padding:20px 24px 28px; gap:14px }
+.exercise-catalog-identity .exercise-catalog-preview > .page-header { min-height:44px; align-items:center; margin-bottom:2px }
+.exercise-catalog-identity .exercise-catalog-preview > .page-header h1 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.exercise-catalog-identity .exercise-catalog-preview > .page-header p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.exercise-catalog-identity .page-back { width:44px; min-width:44px; height:44px; min-height:44px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.exercise-catalog-identity .page-back svg { width:20px; height:20px; stroke-width:1.8 }
+.exercise-catalog-identity .eyebrow { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.3; letter-spacing:.06em }
+
+.exercise-catalog-identity .catalog-library,
+.exercise-catalog-identity .catalog-custom-preview { display:grid; gap:14px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.exercise-catalog-identity .catalog-library-head,
+.exercise-catalog-identity .catalog-section-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
+.exercise-catalog-identity .catalog-library-head .eyebrow,
+.exercise-catalog-identity .catalog-section-head .eyebrow { margin:0 0 4px }
+.exercise-catalog-identity .catalog-library-head h2,
+.exercise-catalog-identity .catalog-section-head h2 { margin:0; color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
+.exercise-catalog-identity .catalog-library-head > span,
+.exercise-catalog-identity .catalog-section-head > span { display:grid; min-width:36px; height:28px; padding:0 9px; place-items:center; border:1px solid var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--fg); font-size:12px; font-weight:500 }
+
+.exercise-catalog-identity .catalog-search { display:grid; grid-template-columns:20px minmax(0, 1fr) 44px; align-items:center; min-height:48px; padding:0 2px 0 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.exercise-catalog-identity .catalog-search:focus-within { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px }
+.exercise-catalog-identity .catalog-search > svg { width:18px; height:18px; stroke-width:1.8 }
+.exercise-catalog-identity .catalog-search input { min-width:0; min-height:46px; padding:0 10px; border:0; border-radius:0; outline:0; background:transparent; color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.exercise-catalog-identity .catalog-search input::placeholder { color:var(--secondary-label-fg); opacity:1 }
+.exercise-catalog-identity .catalog-search input::-webkit-search-cancel-button { display:none }
+.exercise-catalog-identity .catalog-search button { display:grid; width:44px; height:44px; min-height:44px; padding:0; place-items:center; border:0; border-radius:12px; background:transparent; color:var(--secondary-label-fg); box-shadow:none }
+.exercise-catalog-identity .catalog-search button svg { width:18px; height:18px }
+.exercise-catalog-identity .catalog-results-meta { display:flex; justify-content:space-between; gap:12px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.exercise-catalog-identity .catalog-results-meta span:last-child { font-weight:400 }
+
+.exercise-catalog-identity .catalog-media-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px }
+.exercise-catalog-identity .catalog-media-card { display:grid; grid-template-columns:56px minmax(0, 1fr) 18px; align-items:center; gap:12px; min-height:72px; padding:8px 12px 8px 8px; border:1px solid var(--border); border-radius:14px; background:var(--surface-elevated); color:var(--fg); text-align:left; box-shadow:none }
+.exercise-catalog-identity .catalog-media-card:hover { border-color:var(--secondary-label-fg); background:var(--surface-sunken); transform:none }
+.exercise-catalog-identity .catalog-media-card:focus-visible { outline:2px solid var(--fg); outline-offset:2px }
+.exercise-catalog-identity .catalog-media-card .exercise-image { width:56px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken) }
+.exercise-catalog-identity .catalog-media-card .exercise-image img { background:var(--surface-raised) }
+.exercise-catalog-identity .catalog-media-card > span { display:grid; gap:4px; min-width:0 }
+.exercise-catalog-identity .catalog-media-card strong { overflow:hidden; color:var(--fg); font-size:14px; font-weight:500; line-height:1.25; text-overflow:ellipsis }
+.exercise-catalog-identity .catalog-media-card small { overflow:hidden; color:var(--secondary-label-fg); font-size:12px; font-weight:400; line-height:1.25; text-overflow:ellipsis; white-space:nowrap }
+.exercise-catalog-identity .catalog-media-card > b { color:var(--secondary-label-fg); font-size:18px; font-weight:400 }
+.exercise-catalog-identity .catalog-load-more { justify-self:center; min-width:160px }
+
+.exercise-catalog-identity .catalog-search-empty { display:grid; justify-items:start; gap:7px; min-height:156px; align-content:center; padding:18px; border:1px solid var(--border); border-radius:14px; background:var(--surface-elevated) }
+.exercise-catalog-identity .catalog-search-empty strong { color:var(--fg); font-size:18px; font-weight:600 }
+.exercise-catalog-identity .catalog-search-empty p { margin:0; color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+
+.exercise-catalog-identity .catalog-section-description { margin:-6px 0 0; color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.exercise-catalog-identity .catalog-custom-form { gap:12px; padding-top:2px }
+.exercise-catalog-identity .catalog-custom-form .split { gap:8px }
+.exercise-catalog-identity .field { gap:6px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.exercise-catalog-identity .catalog-custom-form input,
+.exercise-catalog-identity .catalog-custom-form select { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.exercise-catalog-identity .catalog-custom-form select { height:48px }
+.exercise-catalog-identity .catalog-custom-form input:focus,
+.exercise-catalog-identity .catalog-custom-form select:focus { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px }
+.exercise-catalog-identity .catalog-custom-form .actions { display:flex; gap:8px; margin:0 }
+.exercise-catalog-identity .primary,
+.exercise-catalog-identity .secondary,
+.exercise-catalog-identity .ghost { min-height:48px; padding:0 18px; border-radius:14px; font-size:14px; font-weight:500; box-shadow:none }
+.exercise-catalog-identity .primary { border:1px solid var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.exercise-catalog-identity .secondary { border:1px solid var(--border); background:transparent; color:var(--fg) }
+.exercise-catalog-identity .ghost { border:1px solid transparent; background:transparent; color:var(--fg) }
+.exercise-catalog-identity .compact { min-height:44px }
+.exercise-catalog-identity button:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.exercise-catalog-identity .catalog-custom-results { border-top:1px solid var(--border); padding-top:4px }
+.exercise-catalog-identity .catalog-custom-list { gap:0 }
+.exercise-catalog-identity .catalog-custom-item { min-height:64px; padding:12px 0; border-color:var(--border) }
+.exercise-catalog-identity .catalog-custom-item:first-child { border-top:0 }
+.exercise-catalog-identity .catalog-custom-item.archived { opacity:1 }
+.exercise-catalog-identity .catalog-custom-item.archived strong { color:var(--secondary-label-fg); text-decoration:line-through }
+.exercise-catalog-identity .catalog-custom-item strong { color:var(--fg); font-size:14px; font-weight:500 }
+.exercise-catalog-identity .catalog-custom-item p { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
+.exercise-catalog-identity .row-actions .link { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
+.exercise-catalog-identity .row-actions .danger { color:var(--danger) }
+.exercise-catalog-identity .error { color:var(--danger); font-size:12px; font-weight:500 }
+.exercise-catalog-identity .state-panel { border-color:var(--border); border-radius:14px; background:var(--surface-elevated); box-shadow:none }
+.exercise-catalog-identity .state-panel-mark { border-radius:10px; background:var(--surface-sunken); color:var(--fg) }
+.exercise-catalog-identity .state-panel h2 { color:var(--fg); font-size:16px; font-weight:600 }
+.exercise-catalog-identity .state-panel p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+
+.exercise-catalog-identity .catalog-detail-overlay { position:fixed; z-index:70; inset:0; display:grid; align-items:end; justify-items:center; padding-top:24px; background:color-mix(in srgb, var(--bg) 76%, transparent) }
+.exercise-catalog-identity .catalog-detail { display:grid; gap:16px; width:min(100%, 620px); max-height:calc(100% - 24px); overflow-y:auto; padding:20px 20px calc(20px + env(safe-area-inset-bottom)); border:1px solid var(--border); border-bottom:0; border-radius:18px 18px 0 0; background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.exercise-catalog-identity .catalog-detail > header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
+.exercise-catalog-identity .catalog-detail .eyebrow { margin:0 0 4px }
+.exercise-catalog-identity .catalog-detail h2 { margin:0; color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.exercise-catalog-identity .catalog-detail-close { display:grid; flex:0 0 44px; width:44px; height:44px; min-height:44px; padding:0; place-items:center; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--fg); box-shadow:none }
+.exercise-catalog-identity .catalog-detail-close svg { width:20px; height:20px }
+.exercise-catalog-identity .catalog-detail .exercise-image-technique { border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.exercise-catalog-identity .catalog-detail .exercise-image-technique img { background:var(--surface-elevated) }
+.exercise-catalog-identity .catalog-detail-facts { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); border:1px solid var(--border); border-radius:14px; overflow:hidden }
+.exercise-catalog-identity .catalog-detail-facts span { display:grid; gap:4px; min-height:68px; align-content:center; padding:12px 14px; border-right:1px solid var(--border); border-bottom:1px solid var(--border); background:var(--surface-elevated) }
+.exercise-catalog-identity .catalog-detail-facts span:nth-child(2n) { border-right:0 }
+.exercise-catalog-identity .catalog-detail-facts span:nth-last-child(-n+2) { border-bottom:0 }
+.exercise-catalog-identity .catalog-detail-facts small { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.exercise-catalog-identity .catalog-detail-facts strong { color:var(--fg); font-size:14px; font-weight:500 }
+.exercise-catalog-identity .catalog-detail-instructions { display:grid; gap:10px }
+.exercise-catalog-identity .catalog-detail-instructions h3 { margin:0; color:var(--fg); font-size:18px; font-weight:600 }
+.exercise-catalog-identity .catalog-detail-instructions ol { display:grid; gap:8px; margin:0; padding-left:22px; color:var(--secondary-label-fg); font-size:14px; font-weight:400; line-height:1.45 }
+.exercise-catalog-identity .catalog-detail-note { margin:0; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-elevated); color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.exercise-catalog-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
+.exercise-catalog-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
+.exercise-catalog-identity .tab-bar a.active,
+.exercise-catalog-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+
+@media (max-width:640px) {
+  .exercise-catalog-identity .exercise-catalog-preview { padding:12px 14px calc(env(safe-area-inset-bottom) + 104px) }
+  .exercise-catalog-identity .catalog-library,
+  .exercise-catalog-identity .catalog-custom-preview { padding:16px }
+  .exercise-catalog-identity .catalog-media-grid { grid-template-columns:1fr }
+  .exercise-catalog-identity .catalog-results-meta span:last-child { display:none }
+  .exercise-catalog-identity .catalog-custom-form .split { grid-template-columns:1fr }
+  .exercise-catalog-identity .catalog-custom-form .actions { flex-direction:column-reverse }
+  .exercise-catalog-identity .catalog-custom-form .actions button { width:100% }
+  .exercise-catalog-identity .catalog-custom-item { align-items:flex-start; flex-direction:column }
+  .exercise-catalog-identity .catalog-custom-item .row-actions { width:100%; justify-content:flex-start }
+  .exercise-catalog-identity .catalog-detail { width:100%; max-height:calc(100% - 16px); padding-inline:16px }
+}
+
+/* ── Gate 7 / task 24: Trainer Profile. Existing profile settings, app install
+   and feedback remain the product contract; the preview only supplies the
+   accepted compact, neutral identity for the exact trainer route. */
+.trainer-profile-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none }
+.trainer-profile-identity .content { background:var(--bg) }
+.trainer-profile-identity .profile-page { display:grid; max-width:760px; margin:0 auto; padding:20px 24px 28px; gap:14px }
+.trainer-profile-identity .profile-page > .page-header { min-height:44px; align-items:center; margin-bottom:2px }
+.trainer-profile-identity .profile-page > .page-header h1 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.trainer-profile-identity .eyebrow { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.3; letter-spacing:.06em }
+
+.trainer-profile-identity .profile-form { gap:12px }
+.trainer-profile-identity .profile-form-section { gap:12px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.trainer-profile-identity .profile-form-section-head { gap:4px; padding:0 0 2px }
+.trainer-profile-identity .profile-form-section-head .eyebrow { margin:0; color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
+.trainer-profile-identity .profile-form-section-head h2 { margin:0; color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
+.trainer-profile-identity .profile-form .field { gap:6px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
+.trainer-profile-identity .profile-form .field input { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.trainer-profile-identity .profile-form .field input:focus { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px }
+.trainer-profile-identity .profile-form .actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0; padding:0 }
+.trainer-profile-identity .profile-form .actions button,
+.trainer-profile-identity .profile-form .actions button:last-child { min-height:48px; margin:0; border-radius:14px; font-size:14px; font-weight:500; box-shadow:none }
+.trainer-profile-identity .profile-form .actions .secondary { border:1px solid var(--border); background:transparent; color:var(--fg) }
+.trainer-profile-identity .profile-form .actions .primary { border:1px solid var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.trainer-profile-identity .profile-form button:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.trainer-profile-identity .save-status { margin:0; border-color:var(--border); border-radius:14px; background:var(--surface-elevated); color:var(--fg); font-size:12px; font-weight:500 }
+.trainer-profile-identity .save-status-saved { color:var(--success-fg) }
+.trainer-profile-identity .save-status-error { color:var(--danger) }
+
+.trainer-profile-identity .profile-settings,
+.trainer-profile-identity .body-map-appearance-setting,
+.trainer-profile-identity .menu,
+.trainer-profile-identity .app-install-card,
+.trainer-profile-identity .app-feedback-card { margin:0; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.trainer-profile-identity .profile-settings,
+.trainer-profile-identity .menu { overflow:hidden }
+.trainer-profile-identity .switch-row { min-height:64px; padding:10px 14px }
+.trainer-profile-identity .switch-label { color:var(--fg); font-size:14px; font-weight:500 }
+.trainer-profile-identity .switch-control { border-color:var(--border); background:var(--surface-sunken); box-shadow:none }
+.trainer-profile-identity .switch-control::after { background:var(--surface-elevated); box-shadow:none }
+.trainer-profile-identity .switch-input:checked + .switch-control { border-color:var(--mono-primary); background:var(--mono-primary); box-shadow:none }
+.trainer-profile-identity .switch-input:checked + .switch-control::after { background:var(--mono-on-primary) }
+.trainer-profile-identity .switch-input:focus-visible + .switch-control { outline:2px solid var(--fg); outline-offset:2px }
+
+.trainer-profile-identity .body-map-appearance-setting { gap:12px; padding:18px }
+.trainer-profile-identity .body-map-appearance-setting > div:first-child strong { color:var(--fg); font-size:16px; font-weight:600; line-height:1.25 }
+.trainer-profile-identity .body-map-appearance-setting > div:first-child span { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.4 }
+.trainer-profile-identity .body-map-appearance-options { gap:3px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.trainer-profile-identity .body-map-appearance-options button { min-height:44px; border-radius:10px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; box-shadow:none }
+.trainer-profile-identity .body-map-appearance-options button[aria-checked='true'] { background:var(--surface-elevated); color:var(--fg); box-shadow:none }
+.trainer-profile-identity .body-map-appearance-options button:focus-visible { outline:2px solid var(--fg); outline-offset:1px }
+.trainer-profile-identity .body-map-appearance-icon { opacity:1 }
+
+.trainer-profile-identity .menu { border-block:1px solid var(--border) }
+.trainer-profile-identity .menu a,
+.trainer-profile-identity .menu > button { min-height:52px; padding:0 14px; border-color:var(--border); color:var(--fg); font-size:14px; font-weight:500 }
+.trainer-profile-identity .menu a:hover,
+.trainer-profile-identity .menu > button:hover { background:var(--surface-elevated) }
+.trainer-profile-identity .menu a:focus-visible,
+.trainer-profile-identity .menu > button:focus-visible { outline:2px solid var(--fg); outline-offset:-3px }
+
+.trainer-profile-identity .app-install-card,
+.trainer-profile-identity .app-feedback-card { gap:16px; padding:18px }
+.trainer-profile-identity .app-install-card .eyebrow,
+.trainer-profile-identity .app-feedback-card .eyebrow { margin:0 0 4px }
+.trainer-profile-identity .app-install-card h2,
+.trainer-profile-identity .app-feedback-card h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
+.trainer-profile-identity .app-install-head .link,
+.trainer-profile-identity .app-feedback-head .link { min-height:44px; padding:0; color:var(--fg); font-size:12px; font-weight:500 }
+.trainer-profile-identity .app-install-copy,
+.trainer-profile-identity .app-install-steps,
+.trainer-profile-identity .app-feedback-context { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.45 }
+.trainer-profile-identity .app-install-card .secondary,
+.trainer-profile-identity .app-feedback-card button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500; box-shadow:none }
+.trainer-profile-identity .app-install-card .secondary,
+.trainer-profile-identity .app-feedback-card .secondary { border:1px solid var(--border); background:transparent; color:var(--fg) }
+.trainer-profile-identity .app-feedback-card .primary { border:1px solid var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.trainer-profile-identity .app-install-success { border-color:var(--border); border-radius:14px; background:var(--surface-elevated); color:var(--success-fg); font-size:14px; font-weight:500 }
+.trainer-profile-identity .app-feedback-kinds { gap:3px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.trainer-profile-identity .app-feedback-kinds button { min-height:44px; border-radius:10px; background:transparent; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-profile-identity .app-feedback-kinds button.active { background:var(--surface-elevated); color:var(--fg); box-shadow:none }
+.trainer-profile-identity .app-feedback-card .field { gap:6px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-profile-identity .app-feedback-card textarea { min-height:122px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.trainer-profile-identity .app-feedback-card textarea:focus { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px }
+.trainer-profile-identity .app-feedback-counter { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-profile-identity .app-feedback-sent > p:not(.eyebrow) { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.trainer-profile-identity .app-feedback-card .actions { gap:8px }
+.trainer-profile-identity .app-feedback-card button:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.trainer-profile-identity .app-feedback-card .error { color:var(--danger); font-size:12px; font-weight:500 }
+.trainer-profile-identity .profile-page > .danger.secondary { min-height:48px; margin:0; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--danger); font-size:14px; font-weight:500; box-shadow:none }
+.trainer-profile-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
+.trainer-profile-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
+.trainer-profile-identity .tab-bar a.active,
+.trainer-profile-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+
+@media (max-width:640px) {
+  .trainer-profile-identity .profile-page { padding:12px 14px calc(env(safe-area-inset-bottom) + 104px) }
+  .trainer-profile-identity .profile-form-section,
+  .trainer-profile-identity .body-map-appearance-setting,
+  .trainer-profile-identity .app-install-card,
+  .trainer-profile-identity .app-feedback-card { padding:16px }
+  .trainer-profile-identity .app-feedback-card .actions { display:grid; grid-template-columns:1fr }
+  .trainer-profile-identity .app-feedback-card .actions button { width:100% }
+}
+
+/* Gate 8 / Task 26 — Assistant uses the same quiet, compact UI Identity v1
+   as the accepted product routes. The legacy assistant rules remain above and
+   become the one-switch rollback when monochrome rollout is disabled. */
+.assistant-identity .assistant-page {
+  gap:12px;
+  padding:10px 16px calc(104px + env(safe-area-inset-bottom));
+  background:var(--bg);
+  color:var(--fg);
+}
+.assistant-identity .assistant-local-note,
+.assistant-identity .assistant-thread-status,
+.assistant-identity .assistant-session-label span,
+.assistant-identity .assistant-flow-guidance,
+.assistant-identity .assistant-card-hint { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.4 }
+.assistant-identity .assistant-thread { gap:8px; padding:4px 0 8px }
+.assistant-identity .assistant-session-switcher { gap:8px }
+.assistant-identity .assistant-session-bar { min-height:48px; padding:0 2px 10px; border-bottom:1px solid var(--border) }
+.assistant-identity .assistant-session-label { gap:2px }
+.assistant-identity .assistant-session-label strong { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
+.assistant-identity .assistant-session-actions { gap:6px }
+.assistant-identity .assistant-session-actions button { min-height:44px; padding:0 12px; border-radius:12px; font-size:12px; font-weight:500 }
+.assistant-identity .assistant-session-today { color:var(--secondary-label-fg) }
+.assistant-identity .assistant-session-today:hover { color:var(--fg) }
+.assistant-identity .assistant-history-toggle { border-color:var(--border); background:var(--surface-raised); color:var(--fg) }
+.assistant-identity .assistant-history-toggle:hover,
+.assistant-identity .assistant-history-toggle[aria-expanded='true'] { border-color:var(--border); background:var(--surface-sunken); color:var(--fg) }
+.assistant-identity .assistant-session-history { gap:4px; padding:8px; border-color:var(--border); border-radius:14px; background:var(--surface-raised) }
+.assistant-identity .assistant-session-day-label { padding:4px 10px 2px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:0; text-transform:none }
+.assistant-identity .assistant-session-history button { min-height:44px; padding:8px 10px; border-radius:10px; color:var(--fg); font-size:14px; font-weight:400 }
+.assistant-identity .assistant-session-history button:hover,
+.assistant-identity .assistant-session-history button.selected { border-color:var(--border); background:var(--surface-sunken) }
+.assistant-identity .assistant-session-history button small { font-size:12px; font-weight:500 }
+
+.assistant-identity .assistant-first-entry { width:min(100%, 352px); grid-template-columns:48px minmax(0, 1fr); gap:14px; padding:20px 2px 10px }
+.assistant-identity .assistant-first-entry-icon { width:48px; height:48px; border-color:var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg) }
+.assistant-identity .assistant-first-entry-copy { gap:6px }
+.assistant-identity .assistant-first-entry-copy h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.018em }
+.assistant-identity .assistant-first-entry-copy p { color:var(--secondary-label-fg); font-size:14px; font-weight:400; line-height:1.45 }
+.assistant-identity .assistant-first-entry-actions { gap:8px; padding-top:6px }
+.assistant-identity .assistant-first-entry-actions button,
+.assistant-identity .assistant-choice-chips button,
+.assistant-identity .assistant-period-options button,
+.assistant-identity .assistant-choice-table button { min-height:44px; padding:0 12px; border:1px solid var(--border); border-radius:12px; background:transparent; color:var(--fg); font-size:12px; font-weight:500; box-shadow:none }
+.assistant-identity .assistant-first-entry-actions button:hover,
+.assistant-identity .assistant-choice-chips button:hover,
+.assistant-identity .assistant-period-options button:hover,
+.assistant-identity .assistant-choice-table button:hover { border-color:var(--border); background:var(--surface-raised); color:var(--fg) }
+
+.assistant-identity .assistant-message { max-width:min(75%, 320px); padding:11px 14px; border:1px solid var(--mono-primary); border-radius:18px 18px 6px 18px; background:var(--mono-primary); color:var(--mono-on-primary) }
+.assistant-identity .assistant-message p,
+.assistant-identity .assistant-message-copy li { font-size:14px; font-weight:400; line-height:1.45 }
+.assistant-identity .assistant-message.assistant-message-assistant { width:min(100%, 328px); padding:4px 0; border:0; border-radius:0; background:transparent; color:var(--fg) }
+.assistant-identity .assistant-message.assistant-message-result { width:100%; max-width:none; border:0; background:transparent; color:var(--fg) }
+.assistant-identity .assistant-message-edit { min-height:44px; margin-top:2px; padding:0; font-size:12px; font-weight:500 }
+.assistant-identity .assistant-message-copy { gap:8px }
+.assistant-identity .assistant-message-copy li::before { color:var(--fg) }
+.assistant-identity .assistant-thinking { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.assistant-identity .assistant-thinking span { width:10px; height:10px; background:var(--fg); background-image:none; box-shadow:none }
+.assistant-identity .assistant-message-error { gap:10px; max-width:calc(100% - 12px); padding:10px 12px; border-color:transparent; border-radius:14px; background:var(--surface-sunken); color:var(--danger); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-message-error button { min-height:44px; padding:0 12px; border-color:var(--border); border-radius:12px; background:transparent; color:var(--danger); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-workout-user-receipt,
+.assistant-identity .assistant-workout-receipt { padding:10px 12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised) }
+.assistant-identity .assistant-workout-user-receipt summary,
+.assistant-identity .assistant-workout-receipt summary { color:var(--fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-workout-user-receipt ol,
+.assistant-identity .assistant-workout-receipt p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+
+.assistant-identity .assistant-context-panel,
+.assistant-identity .assistant-context-panel:has(> .assistant-workout-draft),
+.assistant-identity .assistant-flow-card,
+.assistant-identity .assistant-action-card,
+.assistant-identity .assistant-workout-card,
+.assistant-identity .assistant-workout-collection,
+.assistant-identity .assistant-completion-card,
+.assistant-identity .assistant-inline-summary { border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); background-image:none; box-shadow:none }
+.assistant-identity .assistant-context-panel { gap:14px; padding:16px }
+.assistant-identity .assistant-context-panel > .assistant-flow-card,
+.assistant-identity .assistant-context-panel > .assistant-workout-collection,
+.assistant-identity .assistant-context-panel > .assistant-completion-card,
+.assistant-identity .assistant-context-panel > .assistant-progress-preview { border:0; border-radius:0; background:transparent }
+.assistant-identity .assistant-flow-card,
+.assistant-identity .assistant-action-card,
+.assistant-identity .assistant-workout-card,
+.assistant-identity .assistant-workout-collection,
+.assistant-identity .assistant-completion-card,
+.assistant-identity .assistant-inline-summary { gap:12px; padding:16px }
+.assistant-identity .assistant-flow-card > header small,
+.assistant-identity .assistant-workout-draft-content > header small,
+.assistant-identity .assistant-workout-result > header small,
+.assistant-identity .assistant-workout-collection > small:first-child,
+.assistant-identity .assistant-completion-card > small:first-child,
+.assistant-identity .assistant-workout-ambiguous-head small { color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:0; text-transform:none }
+.assistant-identity .assistant-flow-card > header strong,
+.assistant-identity .assistant-workout-draft-content > header strong,
+.assistant-identity .assistant-workout-result > header strong,
+.assistant-identity .assistant-workout-collection > strong,
+.assistant-identity .assistant-completion-card > strong,
+.assistant-identity .assistant-workout-ambiguous-head strong { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.018em }
+.assistant-identity .assistant-flow-status { min-height:28px; display:inline-flex; align-items:center; padding:0 9px; border:1px solid var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-flow-empty,
+.assistant-identity .assistant-flow-fact,
+.assistant-identity .assistant-progress-preview,
+.assistant-identity .assistant-progress-preview .assistant-period-options,
+.assistant-identity .assistant-workout-transcript,
+.assistant-identity .assistant-inline-summary-headline,
+.assistant-identity .assistant-inline-summary-metrics > div,
+.assistant-identity .assistant-workout-recognition-state { border:0; border-radius:14px; background:var(--surface-sunken); background-image:none }
+.assistant-identity .assistant-progress-preview { gap:10px; padding:14px }
+.assistant-identity .assistant-progress-preview span,
+.assistant-identity .assistant-progress-preview small,
+.assistant-identity .assistant-flow-empty span,
+.assistant-identity .assistant-flow-fact small,
+.assistant-identity .assistant-workout-transcript small,
+.assistant-identity .assistant-inline-summary header small,
+.assistant-identity .assistant-inline-summary header span,
+.assistant-identity .assistant-inline-summary-section > small,
+.assistant-identity .assistant-inline-summary-section ul,
+.assistant-identity .assistant-workout-recognition-state span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-progress-preview b,
+.assistant-identity .assistant-inline-summary-status { color:var(--fg) !important; font-weight:500 }
+.assistant-identity .assistant-inline-summary-status.saved { color:var(--success-fg) !important }
+.assistant-identity .assistant-inline-summary-metrics strong { font-size:18px; font-weight:600 }
+.assistant-identity .assistant-flow-checklist { gap:7px }
+.assistant-identity .assistant-flow-checklist span { min-height:32px; display:inline-flex; align-items:center; padding:0 9px; border:1px solid var(--border); border-radius:10px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-flow-checklist.complete span { border-color:var(--border); background:transparent; color:var(--success-fg) }
+
+.assistant-identity .assistant-flow-actions { gap:8px 16px }
+.assistant-identity .assistant-flow-actions > button:not(.assistant-action-cancel),
+.assistant-identity .assistant-action-card button:not(.assistant-action-cancel),
+.assistant-identity .assistant-inline-summary > button,
+.assistant-identity .assistant-progress-preview > button:not(.assistant-action-cancel) { min-height:48px; padding:0 16px; border-radius:14px; font-size:14px; font-weight:500 }
+.assistant-identity .assistant-flow-actions .primary,
+.assistant-identity .assistant-action-card .primary,
+.assistant-identity .assistant-progress-preview .primary,
+.assistant-identity .assistant-workout-draft > .assistant-flow-actions > .primary,
+.assistant-identity .assistant-workout-draft-content > .assistant-workout-result > .primary { border:1px solid var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none }
+.assistant-identity .assistant-action-cancel,
+.assistant-identity .assistant-flow-card .assistant-action-cancel,
+.assistant-identity .assistant-program-draft .assistant-action-cancel,
+.assistant-identity .assistant-workout-result + .assistant-action-cancel,
+.assistant-identity .assistant-workout-draft > .assistant-flow-actions .assistant-action-cancel { min-height:44px; padding:0; border:0; background:transparent; color:var(--secondary-label-fg); font-size:12px; font-weight:500; box-shadow:none }
+.assistant-identity .assistant-action-cancel:hover { color:var(--fg) }
+.assistant-identity button:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg); box-shadow:none }
+.assistant-identity button:focus-visible,
+.assistant-identity summary:focus-visible,
+.assistant-identity textarea:focus-visible,
+.assistant-identity input:focus-visible,
+.assistant-identity select:focus-visible { outline:2px solid var(--fg); outline-offset:2px }
+
+.assistant-identity .assistant-client-choices { gap:8px }
+.assistant-identity .assistant-client-choices button { min-height:48px; padding:10px 12px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:14px; font-weight:500 }
+.assistant-identity .assistant-client-choices button span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-program-draft { gap:12px; padding:0; background:transparent }
+.assistant-identity .assistant-client-fields label,
+.assistant-identity .assistant-program-card label,
+.assistant-identity .assistant-program-draft label { gap:6px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-client-fields input,
+.assistant-identity .assistant-client-fields select,
+.assistant-identity .assistant-program-card input,
+.assistant-identity .assistant-program-draft input { min-height:48px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--surface-sunken); color:var(--fg); font-family:inherit; font-size:16px; font-weight:400; box-shadow:none }
+.assistant-identity .assistant-program-sessions details { border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.assistant-identity .assistant-program-sessions summary { min-height:52px; padding:10px 12px }
+.assistant-identity .assistant-program-sessions summary strong { font-size:14px; font-weight:500 }
+.assistant-identity .assistant-program-sessions summary small,
+.assistant-identity .assistant-program-sessions summary b { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-program-sessions details[open] summary { border-color:var(--border); background:var(--surface-raised) }
+
+.assistant-identity .assistant-context-panel:has(> .assistant-workout-draft) > .assistant-flow-card.assistant-workout-draft { gap:16px; padding:16px; border:0; border-radius:18px; background:transparent }
+.assistant-identity .assistant-workout-heading { gap:4px !important }
+.assistant-identity .assistant-workout-heading small { font-size:12px !important; letter-spacing:0 !important }
+.assistant-identity .assistant-workout-heading strong { font-size:18px !important; font-weight:600 !important; line-height:1.2 !important; letter-spacing:-.018em }
+.assistant-identity .assistant-workout-draft .assistant-flow-status { min-height:28px; padding:0 9px; border-radius:10px; font-size:12px }
+.assistant-identity .assistant-workout-meta { grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:8px }
+.assistant-identity .assistant-workout-meta label { min-height:68px; gap:6px; padding:10px 12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-workout-meta input,
+.assistant-identity .assistant-program-draft .assistant-workout-meta input { min-height:32px; padding:0; border:0; background:transparent; color:var(--fg); font-size:16px; font-weight:400 }
+.assistant-identity .assistant-workout-fragment-count { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-workout-result { gap:10px }
+.assistant-identity .assistant-workout-result-list { gap:8px }
+.assistant-identity .assistant-workout-result-row { grid-template-columns:minmax(0,1fr) auto 30px; gap:8px; min-height:72px; padding:10px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken) }
+.assistant-identity .assistant-workout-exercise-name strong { font-size:14px; font-weight:500; line-height:1.25 }
+.assistant-identity .assistant-workout-exercise-name small { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-workout-metrics,
+.assistant-identity .assistant-exercise-choice > .assistant-workout-metrics { grid-template-columns:repeat(3, 44px); gap:5px }
+.assistant-identity .assistant-workout-metrics label { min-height:54px; padding:5px 3px; border:1px solid var(--border); border-radius:10px; background:var(--surface-raised); color:var(--secondary-label-fg) }
+.assistant-identity .assistant-workout-metrics input,
+.assistant-identity .assistant-program-draft .assistant-workout-metrics input { min-height:28px; padding:0; color:var(--fg); font-size:16px; font-weight:600 }
+.assistant-identity .assistant-workout-metrics small { font-size:10px; font-weight:500 }
+.assistant-identity .assistant-workout-remove { width:30px; min-width:30px; min-height:44px; color:var(--secondary-label-fg) }
+.assistant-identity .assistant-workout-remove:hover { color:var(--danger) }
+.assistant-identity .assistant-exercise-choice { gap:12px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken) }
+.assistant-identity .assistant-exercise-options { gap:8px }
+.assistant-identity .assistant-exercise-options button,
+.assistant-identity .assistant-exercise-options button:first-child { min-height:48px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--surface-raised); background-image:none; color:var(--fg); font-size:14px; font-weight:500 }
+.assistant-identity .assistant-exercise-options button:first-child { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.assistant-identity .assistant-workout-draft-content > .assistant-flow-guidance { padding-inline:0; font-size:12px; line-height:1.4 }
+.assistant-identity .assistant-workout-draft > .assistant-flow-actions { gap:10px; padding-top:4px }
+.assistant-identity .assistant-workout-draft > .assistant-flow-actions > .primary,
+.assistant-identity .assistant-workout-draft-content > .assistant-workout-result > .primary { width:min(100%, 320px); min-height:48px; padding:0 16px; border-radius:14px; font-size:14px; font-weight:500 }
+
+.assistant-identity .assistant-composer { grid-template-columns:minmax(0,1fr) 48px 48px; gap:6px; margin-top:0; padding:5px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.assistant-identity .assistant-composer textarea,
+.assistant-identity .assistant-composer > input { min-height:48px; padding:12px; border-radius:12px; color:var(--fg); font-family:inherit; font-size:16px; font-weight:400; line-height:1.4 }
+.assistant-identity .assistant-composer textarea::placeholder { color:var(--secondary-label-fg) }
+.assistant-identity .assistant-composer textarea:focus,
+.assistant-identity .assistant-composer > input:focus { outline:0 }
+.assistant-identity .assistant-composer .voice-input { min-width:0 }
+.assistant-identity .assistant-icon-button { width:48px; min-height:48px; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--fg); box-shadow:none }
+.assistant-identity .assistant-composer > .assistant-icon-button:last-child { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.assistant-identity .assistant-icon-button.recording { border-color:var(--border); background:var(--surface-sunken); color:var(--danger) }
+.assistant-identity .assistant-reset { min-height:44px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-workout-saved { padding:14px 16px; border-color:var(--border); border-radius:16px; background:var(--surface-raised) }
+.assistant-identity .assistant-workout-saved > span { background:transparent; color:var(--success-fg); font-weight:600 }
+.assistant-identity .assistant-workout-saved strong { font-size:14px; font-weight:500 }
+.assistant-identity .assistant-workout-saved small { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.assistant-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
+.assistant-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
+.assistant-identity .tab-bar a.active,
+.assistant-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+
+@media (min-width:641px) {
+  .assistant-identity .assistant-page { width:min(100%, 760px); margin:0 auto; padding:20px 24px calc(112px + env(safe-area-inset-bottom)) }
+  .assistant-identity .assistant-message.assistant-message-assistant { width:min(100%, 520px) }
+  .assistant-identity .assistant-message { max-width:min(70%, 460px) }
+}
+
+@media (max-width:480px) {
+  .assistant-identity .assistant-page { gap:10px; padding:8px 16px 0 }
+  .assistant-identity .assistant-context-panel { padding:14px }
+  .assistant-identity .assistant-context-panel:has(> .assistant-workout-draft) > .assistant-flow-card.assistant-workout-draft { padding:14px }
+  .assistant-identity .assistant-composer,
+  .assistant-identity.keyboard-open .assistant-composer { padding:5px; background:var(--surface-raised) }
+}
+
+/* Gate 9 / Task 27 — one accessibility contract for every accepted identity
+   route. Local component focus rules may refine geometry, but never remove the
+   visible fallback. Reduced motion applies to descendants and pseudo-elements,
+   including legacy transitions that remain available behind rollout=off. */
+.identity-monochrome-preview :where(button, a[href], input, textarea, select, summary, [tabindex]:not([tabindex='-1'])):focus-visible,
+.auth-flow-identity :where(button, a[href], input, textarea, select, summary, [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline:2px solid var(--fg);
+  outline-offset:2px;
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .identity-monochrome-preview,
+  .identity-monochrome-preview *,
+  .identity-monochrome-preview *::before,
+  .identity-monochrome-preview *::after,
+  .auth-flow-identity,
+  .auth-flow-identity *,
+  .auth-flow-identity *::before,
+  .auth-flow-identity *::after {
+    scroll-behavior:auto !important;
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+    transition-delay:0ms !important;
+  }
 }

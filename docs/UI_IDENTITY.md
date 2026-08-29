@@ -1,7 +1,8 @@
 # Fit — целевая айдентика интерфейса
 
-Статус: **Foundation UI Identity v1 принята; продуктовые экраны
-мигрируют на неё поэтапно**.
+Статус: **Foundation UI Identity v1 принята и является production default;
+задачи 8–28 доставлены, финальный accessibility/visual/WebKit gate пройден,
+legacy rollback сохранён минимум на один стабильный релизный цикл**.
 
 Этот документ фиксирует новый визуальный характер Fit. Он обязателен для
 планируемого редизайна и для новых UI-решений. Пока конкретный экран не
@@ -491,6 +492,97 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
 - Light/dark имеют одинаковую геометрию; shadows, coral/purple и локальные hex
   в scoped CSS отсутствуют.
 
+### Product realization: Trainer Progress
+
+- Scope — точный `/progress/:clientId`, включая реальные `view=running` и
+  `view=measurements`; client `/me/progress`, Client Detail, Schedule и workout
+  routes не наследуют trainer progress identity.
+- Page — `24/600`, section — `18/600`, body — `14/400`, controls и compact
+  labels — `12/500`, editable fields — `16/400`, ключевые числа — `18–40/600`.
+- Недельная сводка, анализ, бег и замеры образуют вертикальный data workspace,
+  а не dashboard grid. Карточки используют neutral surfaces 18 px без glow и
+  декоративных semantic-заливок.
+- Периоды и body-map modes — compact 44 px controls. Реальный лучший результат
+  может использовать success-текст; warning/danger остаются только у состояния
+  внимания и destructive actions, всегда вместе с текстом.
+- Measurement metric tabs используют primary только для выбранной серии.
+  `Добавить замер` — base primary 48 px; history и metric settings — равные
+  ghost actions 48 px. Высота не зависит от semantic priority.
+- Create/edit form, history, custom metrics, duplicate-date feedback,
+  loading/error/retry и summary generation сохраняют существующие queries,
+  mutations и product states. Искусственные состояния не добавляются.
+- Light/dark имеют одинаковую геометрию; scoped CSS не содержит coral, purple,
+  gradient, glow или локальных hex. Flag-off возвращает прежний UI без миграции
+  данных или маршрутов.
+
+### Product realization: Exercise Catalog
+
+- Scope — точный trainer route `/exercises`; Profile, Schedule, Progress и
+  workout picker не наследуют catalog identity.
+- Flagged route использует существующие system exercise metadata, локальные
+  media, search ranking и custom exercise mutations. Пользователь без flag
+  получает прежний component tree и поведение.
+- Page — `24/600`, section — `18/600`, body — `14/400`, item names и controls —
+  `14/500`, labels — `12/500`, search и editable fields — `16/400`.
+- Системная библиотека — searchable neutral surface с media rows 14 px и
+  compact 44 px pagination action. Detail открывается как 18 px bottom sheet и
+  показывает существующие technique media, metadata и instructions.
+- Пустой поиск, query loading/error/retry, пустой custom catalog, create/edit,
+  archive/restore и pending/disabled остаются реальными состояниями. Новые API,
+  mutations и workout data contract не создаются.
+- Primary custom action — base 48 px; secondary/ghost сохраняют ту же базовую
+  высоту, compact используется только для search reset и pagination. Archive
+  использует danger по реальной destructive семантике.
+- Light/dark имеют одинаковую геометрию. Media не становится декоративной
+  заливкой; scoped CSS не содержит coral, purple, gradient, glow или literal
+  hex.
+
+### Product realization: Trainer Profile
+
+- Scope — точный trainer route `/profile`; Client Profile `/me/profile`, Join,
+  Exercise Catalog и другие trainer routes не наследуют profile identity.
+- Form, settings, body-map appearance, install и feedback образуют единый
+  последовательный settings workspace на neutral surfaces 18 px без shadows.
+- Page — `24/600`, section — `18/600`, body — `14/400`, controls — `14/500`,
+  compact labels — `12/500`, editable fields — `16/400`.
+- Inputs и base actions используют 48 px; body-map modes — compact 44 px.
+  Primary, secondary и destructive различаются fill/contrast/semantics, а не
+  высотой. Disabled сохраняет читаемость без общей opacity.
+- Имя, timezone, theme, RPE, archived clients, body-map mode, install,
+  feedback, links и logout сохраняют существующую product logic. Новые trainer
+  notifications или connections не создаются без реального product contract.
+- Danger используется для logout и ошибок, success — для реального сохранения
+  или отправки; семантический цвет всегда сопровождается текстом/иконкой.
+- Light/dark имеют одинаковую геометрию; scoped CSS не содержит coral, purple,
+  gradient, glow или literal hex. Flag-off возвращает прежний UI.
+
+### Product realization: Assistant
+
+- Scope — точный trainer-only route `/assistant`. Существующий отдельный
+  Assistant pilot определяет доступ к продукту независимо от глобального
+  identity rollout; Task 26 не расширяет allowlist и не меняет authorization.
+- История, read-only archive, empty first entry, user/assistant messages,
+  error/retry, composer/voice, client/program/progress/workout flows,
+  ambiguity, draft/result и applied states используют прежние данные и
+  orchestration contracts.
+- Session header и история — плоская рабочая иерархия. Сообщение пользователя
+  использует полярный primary fill, ответ ассистента остаётся типографическим;
+  action results и текущий structured draft занимают полную ширину контекста.
+- Cards, receipts, fields и nested metrics используют только accepted neutral
+  surfaces 18/14/10 px без gradient, glow и декоративной semantic-заливки.
+  Success/danger появляются только в сохранении или ошибке и дублируются
+  текстом/знаком.
+- Composer — одна neutral surface радиуса 18 px; editable text `16/400`, mic —
+  neutral 48 px control, send — primary 48 px. Disabled остаётся читаемым без
+  общей opacity; recording использует danger только вместе с понятным voice
+  state.
+- Flow primary actions — base 48 px, choice/history controls — explicit compact
+  44 px. Высота не кодирует semantic priority. Light/dark сохраняют одинаковую
+  геометрию, keyboard viewport, inner draft scroll и bottom navigation.
+- `VITE_MONOCHROME_ROLLOUT_MODE=off` возвращает legacy Assistant UI одним
+  redeploy; orchestration, matching, fallback и сохранённые данные не требуют
+  отката.
+
 
 
 ### Навигация и иконки
@@ -526,6 +618,24 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
   достижимы на экране.
 - Обновлять visual baseline только после явного подтверждения, что изменение
   соответствует этому контракту.
+
+### Общий accessibility-контракт
+
+- Основной, вторичный и semantic text проверяются на фактических token pairs в
+  обеих темах; минимальный контраст обычного текста — WCAG AA `4.5:1`.
+- Каждый видимый interactive control имеет доступное имя. Проверка выполняется
+  на тех же реальных состояниях, что и visual regression, без искусственных
+  product states.
+- Base actions остаются 48 px, compact controls и иные touch targets — не менее
+  44 px. SVG-карта тела использует отдельный прозрачный stroked hit target,
+  который больше видимой зоны.
+- Все мигрированные route scopes получают заметный `focus-visible`; порядок и
+  достижимость native controls проверяются клавиатурой.
+- При `prefers-reduced-motion: reduce` animations и transitions внутри новой
+  identity и auth family отключаются практически мгновенно, включая
+  pseudo-elements; scroll behavior становится `auto`.
+- Эти проверки встроены в общий Playwright visual route matrix и отдельный
+  contrast/focus/motion smoke. Rollout `off` не наследует новые scoped правила.
 
 ## Запрещённые решения
 

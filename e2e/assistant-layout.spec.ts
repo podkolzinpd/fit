@@ -5,10 +5,10 @@ const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8
 
 function assistantMarkup(context = '') {
   return `<!doctype html>
-    <html class="theme-light">
+    <html class="theme-light identity-monochrome-preview">
       <head><meta name="viewport" content="width=device-width, initial-scale=1"><style>${styles}</style></head>
       <body><div id="root">
-        <div class="phone-frame theme-light assistant-shell">
+        <div class="phone-frame theme-light assistant-shell identity-monochrome-preview assistant-identity">
           <div class="content">
             <main class="assistant-page">
               <section class="assistant-session-switcher"><div class="assistant-session-bar"><strong>Сегодня</strong></div></section>
