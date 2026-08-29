@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
+import { expectMonochromeAccessibility } from './accessibility-helpers'
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
@@ -40,6 +41,7 @@ async function expectVisualBaseline(
   fullPage = false,
   maskColor = '#f8f5ef',
 ) {
+  await expectMonochromeAccessibility(page)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await expect(page).toHaveScreenshot(name, {
     animations: 'disabled',

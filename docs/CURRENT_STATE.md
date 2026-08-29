@@ -5,21 +5,20 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-29
-Проверенный базовый `main`: `a492e04` (`Task 25: migrate auth flow and enable monochrome rollout (#672)`)
+Проверенный базовый `main`: `144921d` (`Task 26: migrate Assistant to monochrome identity (#673)`)
 
 ## Активное изменение
 
-- Foundation UI Identity v1 принята. Задачи 8–25 — клиентский, тренерский и
-  полный auth scope — merged и задеплоены в production.
+- Foundation UI Identity v1 принята. Задачи 8–26 — клиентский, тренерский,
+  полный auth scope и Assistant — merged и задеплоены в production.
 - Глобальный rollout новой identity работает через
   `VITE_MONOCHROME_ROLLOUT_MODE`: `on` (default для всех), `preview` (прежний
   server-managed `monochrome_preview` по `user_id`) и `off` (legacy UI для всех
   одним переключателем и redeploy).
 - Legacy components, CSS и `public.user_feature_flags` пока не удаляются.
   Email не участвует во frontend, routing или UI rollout conditions.
-- Активна задача 26: trainer-only Assistant переводится на UI Identity v1 без
-  изменения pilot-доступа, orchestration, matching, fallback, repositories,
-  routes и product logic.
+- Активна задача 27: общий light/dark accessibility parity audit без изменения
+  маршрутов, данных, ролей и product logic.
 
 ## Последняя проверенная продуктовая точка
 
@@ -115,6 +114,10 @@
   390, 430 и 1440 px в light/dark.
 - Task 26 full project check зелёный: 123 app files / 966 tests, 225 API tests,
   typecheck, lint, coverage, DB types, iOS permissions, infra policy и build.
+- Task 26: PR `#673`, merge `144921d8`, production Vercel deployment success;
+  Sync Yandex stage preview run `33263066435` зелёный.
+- Task 27: WCAG AA token pairs, screen-reader names, 44 px targets,
+  focus-visible и reduced motion добавлены в общий автоматический контракт.
 - Встроенный localhost browser заблокирован admin-enforced policy до загрузки;
   стандартный Playwright runtime используется для реальной проверки.
 - Общий audit Home → Live → Progress прошёл без stabilization-задачи: едины
@@ -123,9 +126,8 @@
 
 ## Ближайший порядок
 
-1. Завершить задачу 26 Assistant отдельным PR без изменения orchestration.
-2. Выполнить задачу 27: полный theme/accessibility parity audit.
-3. Выполнить задачу 28: общий visual regression, WebKit/iOS и production smoke.
+1. Завершить задачу 27: полный theme/accessibility parity audit.
+2. Выполнить задачу 28: общий visual regression, WebKit/iOS и production smoke.
 
 ## Отложено
 
