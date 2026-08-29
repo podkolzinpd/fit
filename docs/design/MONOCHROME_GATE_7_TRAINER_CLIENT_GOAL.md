@@ -1,6 +1,7 @@
 # Gate 7 — Trainer Client Goal
 
-Статус: **implemented; local validation complete**.
+Статус: **production preview** — PR #666, merge commit `c0054a97`, deployment
+`6153979093`.
 
 ## Scope
 
