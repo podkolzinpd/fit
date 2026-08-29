@@ -827,6 +827,10 @@ for (const viewport of mobileViewports) {
         await expect(page.getByRole('button', { name: 'Действия с профилем спортсмена' })).toBeVisible()
         await expect(page.locator('.client-detail-overview')).toHaveCount(0)
       }
+      if (screen === '/schedule') {
+        await expect(page.locator('.schedule-selected-date')).toBeHidden()
+        await expectActionTextVerticallyCentered(page.getByRole('link', { name: 'Запланировать', exact: true }))
+      }
       await expectNoHorizontalOverflow(page)
     }
 

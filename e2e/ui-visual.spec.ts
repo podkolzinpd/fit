@@ -874,7 +874,8 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
     await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
     await expect(page.locator('.week-day')).toHaveCount(7)
     await expect(page.locator('.day-grid-hour')).toHaveCount(24)
-    await expect(page.locator('.schedule-selected-date')).toContainText('1 тренировка')
+    await expect(page.locator('.schedule-selected-date')).toBeHidden()
+    await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toBeVisible()
     await expect(page.locator('.day-grid-event').filter({ hasText: clientName })).toBeVisible()
     await expectVisualBaseline(page, `trainer-schedule-${profile}-${process.platform}.png`)
 
