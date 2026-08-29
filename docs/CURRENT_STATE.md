@@ -5,24 +5,24 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-29
-Проверенный базовый `main`: `17ab3c7` (`feat: migrate Client Home to monochrome identity (#653)`)
+Проверенный базовый `main`: `efcbbaf` (`feat: migrate Live to monochrome identity (#654)`)
 
 ## Активное изменение
 
 - Foundation UI Identity v1 принята и зафиксирована в production-документации.
-  Client Home `/me` задеплоен в route-scoped production preview; активная
-  задача отдельно мигрирует Live обеих ролей.
+  Client Home `/me` и Live обеих ролей задеплоены в route-scoped production
+  preview; активная задача отдельно мигрирует Client Progress `/me/progress`.
 - Server-managed `monochrome_preview` доставлен в production: default OFF,
   чтение только собственной строки через RLS, изменение только серверной ролью.
   Два согласованных тестовых аккаунта включены миграцией через Auth UUID.
 - Authenticated actor уже получает runtime-read с fail-closed mapping:
   отсутствующая строка, `false` или ошибка дают OFF. Email не попадает во
   frontend, routing или UI-условия.
-- Client Home получает Onest, принятую компактную шкалу, монохромные токены,
-  новую voice-first композицию и нейтральную навигацию только при
-  `actor.featureFlags.monochromePreview === true`. Live подключается следующим
-  route-scoped классом; Progress, review/save и все пользователи без флага
-  сохраняют прежний интерфейс.
+- Client Home, Live и Client Progress получают Onest, принятую компактную шкалу
+  и route-scoped монохромные паттерны только при
+  `actor.featureFlags.monochromePreview === true`. Trainer Progress,
+  review/save, остальные маршруты и все пользователи без флага сохраняют
+  прежний интерфейс.
 
 ## Последняя проверенная продуктовая точка
 
@@ -113,16 +113,17 @@
   Локально чистая база прошла 69 pgTAP-файлов / 821 проверку.
 - Runtime-read доставлен PR #652; production deployment зелёный.
 - Client Home: PR #653 merged, production deployment green, все CI lanes green.
-- Live: 46 целевых unit-тестов, 5 Chromium и 8 WebKit реальных сценариев,
-  light/dark visual baselines 390/430 зелёные локально. Пользователь без флага
-  явно остаётся на старом Live UI.
+- Live: PR #654 merged, production deployment green, все CI lanes green.
+- Progress: полный check (869 app + 225 API tests), 3 Chromium и 5 WebKit
+  реальных сценариев, native и exact Linux light/dark baselines 390/430
+  зелёные. Новый аккаунт без флага явно остаётся на старом Progress UI;
+  выполняются CI, merge, deploy и production smoke активного PR.
 
 ## Ближайший порядок
 
-1. Завершить отдельный PR, deploy и production smoke Live.
-2. Последовательно мигрировать Progress отдельным PR.
-3. После Client Home, Live и Progress провести общий visual audit light/dark и только затем
-   продолжить оставшиеся задачи `MONOCHROME_REDESIGN_PLAN.md`.
+1. Завершить отдельный PR, deploy и production smoke Progress.
+2. Провести общий visual audit Client Home, Live и Progress в light/dark.
+3. После успешного аудита продолжить Gate 6 с My Workouts отдельным PR.
 
 ## Отложено
 

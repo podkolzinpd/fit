@@ -2710,8 +2710,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .theme-dark-pilot .picker-create { border-color: var(--accent-surface-border); color: var(--accent-label); background: var(--accent-surface) }
 .theme-dark-pilot .voice-input-button.recording { border-color: var(--danger-border); color: var(--danger); background: var(--danger-surface) }
 
-/* ── Foundation UI Identity v1: первый route-scoped продуктовый экран.
-   Класс ставится только для authenticated monochrome_preview на Client Home.
+/* ── Foundation UI Identity v1: route-scoped продуктовые экраны.
+   Класс ставится только для authenticated monochrome_preview на мигрированных routes.
    Немигрированные маршруты продолжают использовать прежние токены и CSS. */
 .identity-monochrome-preview {
   color-scheme:dark;
@@ -3131,4 +3131,167 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .live-identity .live-session-header .workout-header-side { grid-row:1; justify-self:end; margin-bottom:-37px }
   .live-identity .live-session-header h2 { padding-right:88px; font-size:22px }
   .live-identity .live-timer { min-height:68px; font-size:28px }
+}
+
+/* ── Gate 5 / Client Progress: данные остаются главным объектом, а цвет
+   используется только для реального результата, состояния или серии. */
+.progress-identity {
+  --ai-card-border:var(--border);
+  --ai-card-background:var(--surface-raised);
+  --ai-card-shadow:none;
+  --ai-divider:var(--border);
+  --ai-subtle-surface:var(--surface-elevated);
+  --ai-stat-surface:var(--surface-raised);
+  --ai-copy:var(--secondary-label-fg);
+  --ai-mark-border:var(--border);
+  --ai-mark-background:var(--surface-sunken);
+  --ai-mark-shadow:none;
+  --ai-attention-border:var(--warning-border);
+  --ai-attention-surface:var(--warning-surface);
+  --ai-attention-fg:var(--warning-fg);
+  --ai-empty-fg:var(--fg);
+  --client-ai-card-border:var(--border);
+  --client-ai-card-background:var(--surface-raised);
+  --client-ai-mark-border:var(--border);
+  --client-ai-mark-background:var(--surface-sunken);
+  --client-ai-mark-shadow:none;
+  --client-ai-note-border:var(--border);
+  --client-ai-note-surface:var(--surface-elevated);
+  --client-ai-note-fg:var(--fg);
+  --client-ai-note-icon:var(--success-fg);
+  border-color:var(--frame-border);
+  background:var(--bg);
+  box-shadow:none;
+}
+.progress-identity .content { padding-bottom:calc(82px + env(safe-area-inset-bottom)); background:var(--bg) }
+.progress-identity .client-progress-page { max-width:560px; padding:max(12px, calc(24px - env(safe-area-inset-top))) 16px 28px }
+.progress-identity .client-progress-page > .page-header { min-height:44px; margin-bottom:16px }
+.progress-identity .client-progress-page > .page-header h1 { font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.progress-identity .client-progress-stack { gap:12px }
+.progress-identity .eyebrow { color:var(--muted); font-size:12px; font-weight:500; line-height:1.3; letter-spacing:.06em }
+
+.progress-identity .ai-progress-card,
+.progress-identity .running-progress-card,
+.progress-identity .client-progress-measurement { margin:0; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.progress-identity .ai-progress-header { padding:18px 18px 12px }
+.progress-identity .ai-progress-title { gap:10px }
+.progress-identity .ai-progress-title h2 { font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
+.progress-identity .ai-progress-title p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.progress-identity .ai-progress-mark { width:36px; height:36px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--fg); box-shadow:none; font-size:14px }
+.progress-identity .ai-progress-periods { width:auto; margin:0 18px 12px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.progress-identity .client-progress-card .ai-progress-periods button { min-height:44px; padding:0 12px; border:0; border-radius:10px; color:var(--muted); font-size:12px; font-weight:500 }
+.progress-identity .client-progress-card .ai-progress-periods button.active { border:0; background:var(--surface-raised); color:var(--fg); box-shadow:none }
+
+.progress-identity .progress-story-hero { gap:5px; padding:18px; border-color:var(--border); background:var(--surface-elevated) }
+.progress-identity .progress-story-hero > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.progress-identity .progress-story-hero > strong { color:var(--success-fg); font-size:40px; font-weight:600; letter-spacing:-.035em }
+.progress-identity .progress-story-hero h3 { font-size:18px; font-weight:600; line-height:1.2 }
+.progress-identity .progress-story-hero p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.progress-identity .ai-progress-stats { gap:0; border-color:var(--border); background:var(--surface-raised) }
+.progress-identity .ai-progress-stats div { min-height:72px; justify-content:center; padding:12px 6px; border-right:1px solid var(--border); background:transparent }
+.progress-identity .ai-progress-stats div:last-child { border-right:0 }
+.progress-identity .ai-progress-stats strong { color:var(--fg); font-size:18px; font-weight:600 }
+.progress-identity .ai-progress-stats span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+
+.progress-identity .body-progress-map { gap:12px; padding:16px 18px 18px; border-color:var(--border); background:var(--surface-raised) }
+.progress-identity .body-progress-map > header { gap:12px }
+.progress-identity .body-progress-map > header span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.progress-identity .body-progress-map > header h3 { font-size:16px; font-weight:600 }
+.progress-identity .body-progress-map > header p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.progress-identity .body-progress-modes { gap:3px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.progress-identity .body-progress-modes button { min-height:44px; border-radius:10px; color:var(--muted); font-size:12px; font-weight:500 }
+.progress-identity .body-progress-modes button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.progress-identity .body-progress-sides { border-color:var(--border); border-radius:10px; background:var(--surface-sunken) }
+.progress-identity .body-progress-sides button { min-height:36px; border-radius:8px; font-size:12px; font-weight:500 }
+.progress-identity .body-progress-sides button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.progress-identity .body-progress-visual { border:1px solid var(--border); border-radius:18px; background:var(--surface-sunken) }
+.progress-identity .body-progress-overlay { filter:none }
+.progress-identity .body-progress-region-fill { transition:none }
+.progress-identity .body-progress-visual.discovering .body-progress-region-fill { animation:none }
+.progress-identity .body-progress-detail { border-color:var(--border); border-radius:14px; background:var(--surface-elevated) }
+
+.progress-identity .client-progress-wins,
+.progress-identity .client-progress-comparison,
+.progress-identity .client-progress-goal-story,
+.progress-identity .client-progress-insight { margin-inline:18px; border-color:var(--border) }
+.progress-identity .client-progress-wins h3,
+.progress-identity .client-progress-comparison h3,
+.progress-identity .client-progress-goal-story h3,
+.progress-identity .client-progress-upcoming h3,
+.progress-identity .client-progress-insight h3 { color:var(--fg); font-size:14px; font-weight:600 }
+.progress-identity .client-progress-wins article { grid-template-columns:6px minmax(0,1fr) }
+.progress-identity .client-progress-wins article > span { width:6px; height:6px; background:var(--success); box-shadow:none }
+.progress-identity .client-progress-wins article strong,
+.progress-identity .client-progress-wins article p,
+.progress-identity .client-progress-goal-story li,
+.progress-identity .client-progress-goal-story p,
+.progress-identity .client-progress-insight p { font-size:12px }
+.progress-identity .client-progress-comparison article { border:1px solid var(--border); border-radius:10px; background:var(--surface-elevated) }
+.progress-identity .client-progress-comparison article strong { color:var(--fg); font-size:18px; font-weight:600 }
+.progress-identity .client-progress-comparison article.positive strong { color:var(--success-fg) }
+.progress-identity .client-progress-goal-story > span,
+.progress-identity .client-progress-upcoming > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.progress-identity .client-progress-goal-story.empty,
+.progress-identity .client-progress-upcoming { margin-inline:18px; padding:14px; border-color:var(--border); border-radius:14px; background:var(--surface-elevated) }
+.progress-identity .client-progress-details-toggle { margin:8px 18px 0 }
+.progress-identity .client-progress-details-toggle .link { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
+
+.progress-identity .running-progress-card { gap:16px; padding:18px }
+.progress-identity .running-progress-card h2 { font-size:18px; font-weight:600 }
+.progress-identity .running-progress-periods { padding:3px; border-radius:14px; background:var(--surface-sunken) }
+.progress-identity .running-progress-periods button { min-height:44px; border-radius:10px; font-size:12px; font-weight:500 }
+.progress-identity .running-progress-periods button.active { background:var(--surface-elevated); color:var(--fg); box-shadow:none }
+.progress-identity .running-progress-total strong { font-size:24px; font-weight:600 }
+.progress-identity .running-progress-total span { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.progress-identity .running-progress-metrics { border-radius:14px }
+.progress-identity .running-progress-metrics > div { padding:14px; background:var(--surface-elevated) }
+.progress-identity .running-progress-metrics strong { font-size:18px; font-weight:600 }
+.progress-identity .running-progress-insight { border:1px solid var(--border); border-radius:14px; background:var(--surface-elevated) }
+
+.progress-identity .client-progress-measurement { gap:16px; padding:18px }
+.progress-identity .client-progress-measurement-head h2 { font-size:18px; font-weight:600 }
+.progress-identity .client-progress-measurement-latest { gap:12px; padding:14px; border-radius:14px; background:var(--surface-elevated) }
+.progress-identity .client-progress-measurement-latest > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.progress-identity .measurement-latest-values strong { color:var(--fg); font-size:18px; font-weight:600 }
+.progress-identity .measurement-latest-values small { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.progress-identity .measurement-trend .chart h2 { font-size:16px; font-weight:600 }
+.progress-identity .measurement-trend .recharts-cartesian-grid line { stroke:var(--border) }
+.progress-identity .measurement-actions { gap:8px; border-color:var(--border) }
+.progress-identity .measurement-actions button { min-height:48px; border-radius:14px; font-size:12px; font-weight:500 }
+.progress-identity .measurement-actions .secondary { border-color:var(--border); background:var(--surface-elevated); color:var(--fg); box-shadow:none }
+.progress-identity .measurement-actions .link { color:var(--fg) }
+.progress-identity .client-progress-form,
+.progress-identity .client-progress-history { padding-top:16px; border-color:var(--border); background:transparent; box-shadow:none }
+.progress-identity .client-progress-form .field { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.progress-identity .client-progress-form input,
+.progress-identity .client-progress-form textarea { min-height:48px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400 }
+.progress-identity .client-progress-form textarea { min-height:88px }
+.progress-identity .client-progress-form button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.progress-identity .client-progress-form button.primary { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none }
+.progress-identity .client-progress-form button.secondary { border-color:var(--border); background:transparent; color:var(--fg); box-shadow:none }
+.progress-identity .client-progress-history .card { border-color:var(--border); border-radius:14px; background:var(--surface-elevated); box-shadow:none }
+.progress-identity .client-progress-history .row-actions .link { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
+.progress-identity .client-progress-history .row-actions .danger { color:var(--danger) }
+
+.progress-identity .tab-bar { left:50%; bottom:0; width:min(100%,440px); padding:8px 8px calc(8px + env(safe-area-inset-bottom)); border:0; border-top:1px solid var(--border); border-radius:0; background:var(--bar-bg); box-shadow:none; backdrop-filter:none; transform:translateX(-50%) }
+.progress-identity .tab-bar a { min-height:48px; gap:3px; padding:5px 3px; border-radius:10px; color:var(--muted); font-size:12px; font-weight:500 }
+.progress-identity .tab-bar a svg { width:20px; height:20px; opacity:1; stroke-width:1.8; transform:none }
+.progress-identity .tab-bar a.active { background:transparent; color:var(--fg); font-weight:500 }
+.progress-identity .tab-bar a.active svg { transform:none }
+.progress-identity .sheet-overlay { background:color-mix(in srgb, var(--bg) 76%, transparent); backdrop-filter:none }
+.progress-identity .ai-progress-sheet { border-color:var(--border); border-radius:18px 18px 0 0; background:var(--surface-elevated); box-shadow:none }
+.progress-identity .picker-close { width:44px; height:44px; border-radius:14px; color:var(--fg) }
+
+@media (max-width:480px) {
+  .progress-identity .content { padding-bottom:0 }
+  .progress-identity .tab-bar { position:static; left:auto; bottom:auto; width:100%; transform:none }
+}
+@media (max-width:375px) {
+  .progress-identity .client-progress-page { padding-inline:14px }
+  .progress-identity .ai-progress-header,
+  .progress-identity .progress-story-hero,
+  .progress-identity .body-progress-map,
+  .progress-identity .running-progress-card,
+  .progress-identity .client-progress-measurement { padding-inline:16px }
+  .progress-identity .progress-story-hero > strong { font-size:36px }
 }
