@@ -81,9 +81,22 @@ test('current role home keeps its visual baseline', async ({ page }, testInfo) =
   await page.goto(trainer ? '/today' : '/me')
 
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
-  if (!trainer) await expect(page.getByText('Загружаем прогресс недели…')).toHaveCount(0)
+  if (!trainer) {
+    await expect(page.getByText('Загружаем прогресс недели…')).toHaveCount(0)
+    await expect(page.locator('.phone-frame')).toHaveClass(/client-home-identity/)
+  } else {
+    await expect(page.locator('.phone-frame')).not.toHaveClass(/client-home-identity/)
+  }
   await expect(page.locator('.phone-frame')).toBeVisible()
   await expectVisualBaseline(page, 'role-home.png', [], true)
+
+  if (!trainer) {
+    await page.goto('/me/profile')
+    await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+    await page.goto('/me')
+    await expect(page.locator('.phone-frame')).toHaveClass(/client-home-identity/)
+    await expectVisualBaseline(page, 'role-home-dark.png', [], true)
+  }
 })
 
 test('future standalone plan stays compact on client home', async ({ page }, testInfo) => {
@@ -101,6 +114,7 @@ test('future standalone plan stays compact on client home', async ({ page }, tes
   await page.getByRole('button', { name: 'Сохранить план' }).click()
 
   await page.goto('/me')
+  await expect(page.locator('.phone-frame')).not.toHaveClass(/client-home-identity/)
   await expect(page.getByRole('heading', { name: 'Следующая тренировка' })).toBeVisible()
   await expect(page.getByText('Завтра · без времени')).toBeVisible()
   await expect(page.getByRole('link', { name: /Следующая тренировка/ })).toBeVisible()

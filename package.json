@@ -38,6 +38,7 @@
     "@capacitor/core": "^8.4.2",
     "@capacitor/ios": "^8.4.2",
     "@capgo/capacitor-health": "^8.10.0",
+    "@fontsource-variable/onest": "^5.3.0",
     "@fugood/node-whisper-wasm": "^1.1.1",
     "@hookform/resolvers": "^5.4.0",
     "@supabase/supabase-js": "^2.110.8",

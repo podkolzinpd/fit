@@ -5,20 +5,22 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-29
-Проверенный базовый `main`: `f5cb786` (`feat: add server monochrome preview flag (#651)`)
+Проверенный базовый `main`: `9036050` (`feat: expose monochrome preview in authenticated runtime (#652)`)
 
 ## Активное изменение
 
-- Foundation UI Identity v1 принята и зафиксирована в production-документации;
-  продуктовые экраны ещё не мигрированы.
+- Foundation UI Identity v1 принята и зафиксирована в production-документации.
+  Активная задача route-scoped мигрирует только Client Home `/me`.
 - Server-managed `monochrome_preview` доставлен в production: default OFF,
   чтение только собственной строки через RLS, изменение только серверной ролью.
   Два согласованных тестовых аккаунта включены миграцией через Auth UUID.
-- Активная задача добавляет в authenticated actor только runtime-read с
-  fail-closed mapping: отсутствующая строка, `false` или ошибка дают OFF.
-  Email не попадает во frontend, routing или UI-условия; экраны ещё не меняются.
-- После runtime-read начинаются отдельные route-scoped миграции Client Home,
-  Live и Progress. Пользователи без флага сохраняют прежний интерфейс.
+- Authenticated actor уже получает runtime-read с fail-closed mapping:
+  отсутствующая строка, `false` или ошибка дают OFF. Email не попадает во
+  frontend, routing или UI-условия.
+- Client Home получает Onest, принятую компактную шкалу, монохромные токены,
+  новую voice-first композицию и нейтральную навигацию только при
+  `actor.featureFlags.monochromePreview === true`. Live, Progress, review/save
+  и все пользователи без флага сохраняют прежний интерфейс.
 
 ## Последняя проверенная продуктовая точка
 
@@ -107,15 +109,15 @@
 ## Проверки активной ветки
 - Production database deploy нового флага и связанный Vercel deploy зелёные.
   Локально чистая база прошла 69 pgTAP-файлов / 821 проверку.
-- Runtime-read: 14 целевых auth/session-тестов зелёные. Полный прогон также
-  зелёный: 859 frontend, 225 API и 61 infra/policy-тест, lint, typecheck,
-  schema hash и production build.
+- Runtime-read доставлен PR #652; production deployment зелёный.
+- Client Home: 43 целевых component/session-теста, lint, typecheck и local
+  light/dark Playwright 390/430 зелёные. Чистый local Supabase reset с preview
+  seed зелёный. Точный Linux Chromium/WebKit baseline завершается в PR CI.
 
 ## Ближайший порядок
 
-1. Доставить server-managed `monochrome_preview` и frontend-чтение без
-   визуальных изменений.
-2. Последовательно мигрировать Client Home, Live и Progress отдельными PR.
+1. Завершить отдельный PR, deploy и production smoke Client Home.
+2. Последовательно мигрировать Live и Progress отдельными PR.
 3. После трёх экранов провести общий visual audit light/dark и только затем
    продолжить оставшиеся задачи `MONOCHROME_REDESIGN_PLAN.md`.
 

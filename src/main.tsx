@@ -5,6 +5,7 @@ import { AuthProvider } from './app/auth-context'
 import { AppErrorBoundary } from './app/error-boundary'
 import { QueryProvider } from './app/query-provider'
 import { applyAppTheme, getAppTheme } from './app/theme'
+import '@fontsource-variable/onest/wght.css'
 import './styles.css'
 
 // Ставим сохранённую тему до первого React-render, чтобы при запуске и
