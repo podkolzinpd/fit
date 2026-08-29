@@ -129,6 +129,24 @@ describe('AppLayout: monochrome preview route scope', () => {
     expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
   })
 
+  it('applies the shared workouts identity to the enabled trainer client history route', () => {
+    authState.role = 'trainer'
+    authState.monochromePreview = true
+    renderLayout('/clients/client-1/workouts')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'client-workouts-identity')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-clients-identity', 'trainer-client-detail-identity')
+    expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+  })
+
+  it('keeps trainer client workout history unchanged when the server flag is off', () => {
+    authState.role = 'trainer'
+    renderLayout('/clients/client-1/workouts')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'client-workouts-identity')
+    expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+  })
+
   it('applies the Client Profile identity only to the enabled route', () => {
     authState.role = 'client'
     authState.monochromePreview = true

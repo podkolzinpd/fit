@@ -297,7 +297,7 @@ export function ClientWorkoutsPage() {
   const items = query.data?.pages.flatMap((page) => page.items) ?? []
   const split = splitClientWorkouts(items, today)
   const hasWorkouts = split.needsDecision.length > 0 || split.history.length > 0
-  return <Page title="Тренировки клиента" back={`/clients/${clientId}`} action={hasWorkouts && <Link className="button" to={`/workouts/new?client=${clientId}`}>Запланировать</Link>}><AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
+  return <Page className="trainer-client-workouts-page" title="Тренировки клиента" back={`/clients/${clientId}`} action={hasWorkouts && <Link className="button" to={`/workouts/new?client=${clientId}`}>Запланировать</Link>}><AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
     {hasWorkouts ? <div className="client-workouts-stack">
       {split.needsDecision.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РАНЕЕ ЗАПЛАНИРОВАНО</p><h2>Выберите действие</h2></div><div className="cards client-workout-cards">{split.needsDecision.map((workout) => <PastWorkoutPlanCard key={workout.id} workout={workout} returnTo={`/clients/${clientId}/workouts`} />)}</div></section>}
       {split.history.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div><div className="cards workout-chronicle-list">{split.history.map((workout) => {
