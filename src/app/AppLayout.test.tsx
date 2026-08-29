@@ -63,7 +63,7 @@ describe('AppLayout: monochrome preview route scope', () => {
     expect(document.documentElement).toHaveClass('identity-monochrome-preview')
   })
 
-  it.each(['/me/progress', '/me/workouts', '/me/profile', '/me?view=save'])(
+  it.each(['/me/workouts', '/me/profile', '/me?view=save'])(
     'keeps the current identity on the not-yet-migrated route %s',
     (path) => {
       authState.monochromePreview = true
@@ -95,6 +95,24 @@ describe('AppLayout: monochrome preview route scope', () => {
 
     expect(document.querySelector('.phone-frame')).toHaveClass('live-session-shell')
     expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'live-identity')
+    expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+  })
+
+  it('applies the Progress identity only to an enabled client route', () => {
+    authState.role = 'client'
+    authState.monochromePreview = true
+    renderLayout('/me/progress')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'progress-identity')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('client-home-identity', 'live-identity')
+    expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+  })
+
+  it('keeps Progress unchanged when the server flag is off', () => {
+    authState.role = 'client'
+    renderLayout('/me/progress')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'progress-identity')
     expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
   })
 })

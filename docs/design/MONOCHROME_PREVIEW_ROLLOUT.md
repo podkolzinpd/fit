@@ -1,7 +1,7 @@
 # Fit — production rollout Foundation UI Identity v1
 
-Статус: **server flag и authenticated runtime read доставлены; Client Home
-задеплоен, Live проходит отдельную route-scoped миграцию**.
+Статус: **server flag и authenticated runtime read доставлены; Client Home и
+Live задеплоены, Progress проходит отдельную route-scoped миграцию**.
 
 ## Контракт
 
@@ -45,8 +45,8 @@
 | Route | Preview class | Статус |
 | --- | --- | --- |
 | Client Home `/me` | `client-home-identity` | production preview |
-| Live `*/live` | `live-identity` | implementation / visual validation |
-| Progress `/me/progress` | — | current UI |
+| Live `*/live` | `live-identity` | production preview |
+| Progress `/me/progress` | `progress-identity` | implementation / visual validation |
 
 `/me?view=review` и `/me?view=save` относятся к workout lifecycle и не получают
 Client Home identity. У пользователя без `monochrome_preview` даже `/me`

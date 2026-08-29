@@ -19,7 +19,8 @@ export function AppLayout() {
   const liveSession = /\/live$/.test(pathname)
   const monochromeClientHome = Boolean(actor?.featureFlags?.monochromePreview && pathname === '/me' && !todayStep)
   const monochromeLive = Boolean(actor?.featureFlags?.monochromePreview && liveSession)
-  const monochromeIdentity = monochromeClientHome || monochromeLive
+  const monochromeProgress = Boolean(actor?.featureFlags?.monochromePreview && pathname === '/me/progress')
+  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress
   // main.tsx применяет тему до первого render, когда аккаунт ещё неизвестен.
   // Пилотный вариант подключается здесь — как только auth вернул actor и
   // allowlist можно проверить; вне allowlist вариант остаётся прежним тёмным.
@@ -66,6 +67,7 @@ export function AppLayout() {
     monochromeIdentity ? 'identity-monochrome-preview' : '',
     monochromeClientHome ? 'client-home-identity' : '',
     monochromeLive ? 'live-identity' : '',
+    monochromeProgress ? 'progress-identity' : '',
     keyboardOpen ? 'keyboard-open' : '',
   ].filter(Boolean).join(' ')
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
