@@ -25,6 +25,7 @@ export function AppLayout() {
   const monochromeLive = monochromeEnabled && liveSession
   const monochromeProgress = monochromeEnabled && pathname === '/me/progress'
   const monochromeClientWorkouts = monochromeEnabled && pathname === '/me/workouts'
+  const monochromeTrainerClientWorkouts = Boolean(monochromeEnabled && actor?.role === 'trainer' && /^\/clients\/[^/]+\/workouts$/.test(pathname))
   const monochromeClientProfile = monochromeEnabled && pathname === '/me/profile'
   const monochromeClientCardEdit = monochromeEnabled && pathname === '/me/edit'
   const monochromeWorkoutCreateEdit = monochromeEnabled && (workoutForm || todayStep)
@@ -40,7 +41,7 @@ export function AppLayout() {
   const monochromeTrainerProfile = Boolean(monochromeEnabled && actor?.role === 'trainer' && pathname === '/profile')
   const monochromeAuthJoin = monochromeEnabled && pathname === '/join'
   const monochromeAssistant = monochromeEnabled && pathname === '/assistant'
-  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientWorkouts || monochromeClientProfile || monochromeClientCardEdit || monochromeWorkoutCreateEdit || monochromeWorkoutDetailHistory || monochromeTrainerToday || monochromeTrainerClients || monochromeTrainerClientDetail || monochromeTrainerClientForm || monochromeTrainerClientGoal || monochromeTrainerSchedule || monochromeTrainerProgress || monochromeExerciseCatalog || monochromeTrainerProfile || monochromeAuthJoin || monochromeAssistant
+  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientWorkouts || monochromeTrainerClientWorkouts || monochromeClientProfile || monochromeClientCardEdit || monochromeWorkoutCreateEdit || monochromeWorkoutDetailHistory || monochromeTrainerToday || monochromeTrainerClients || monochromeTrainerClientDetail || monochromeTrainerClientForm || monochromeTrainerClientGoal || monochromeTrainerSchedule || monochromeTrainerProgress || monochromeExerciseCatalog || monochromeTrainerProfile || monochromeAuthJoin || monochromeAssistant
   // main.tsx применяет тему до первого render, когда аккаунт ещё неизвестен.
   // Пилотный вариант подключается здесь — как только auth вернул actor и
   // allowlist можно проверить; вне allowlist вариант остаётся прежним тёмным.
@@ -90,7 +91,7 @@ export function AppLayout() {
     monochromeClientHome ? 'client-home-identity' : '',
     monochromeLive ? 'live-identity' : '',
     monochromeProgress ? 'progress-identity' : '',
-    monochromeClientWorkouts ? 'client-workouts-identity' : '',
+    monochromeClientWorkouts || monochromeTrainerClientWorkouts ? 'client-workouts-identity' : '',
     monochromeClientProfile ? 'client-profile-shell-identity' : '',
     monochromeClientCardEdit ? 'client-card-edit-identity' : '',
     monochromeWorkoutCreateEdit ? 'workout-create-edit-identity' : '',

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
@@ -18,6 +18,26 @@ async function setRpe(page: Page, value: number) {
   await scale.press('Home')
   for (let current = 1; current < value; current += 1) await scale.press('ArrowRight')
   await expect(scale).toHaveValue(String(value))
+}
+
+async function expectActionTextVerticallyCentered(action: Locator) {
+  const geometry = await action.evaluate((element) => {
+    const range = document.createRange()
+    range.selectNodeContents(element)
+    const actionRect = element.getBoundingClientRect()
+    const textRect = range.getBoundingClientRect()
+    const style = window.getComputedStyle(element)
+    return {
+      actionHeight: actionRect.height,
+      centerOffset: Math.abs((actionRect.top + actionRect.height / 2) - (textRect.top + textRect.height / 2)),
+      alignItems: style.alignItems,
+      justifyContent: style.justifyContent,
+    }
+  })
+  expect(geometry.actionHeight).toBe(44)
+  expect(geometry.centerOffset).toBeLessThanOrEqual(1)
+  expect(geometry.alignItems).toBe('center')
+  expect(geometry.justifyContent).toBe('center')
 }
 
 test('iPhone: trainer review and client post-workout feedback stay visible to the other side only', async ({ page }) => {
@@ -113,6 +133,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await expect(feedbackCard.getByText('RPE 8/10', { exact: true })).toBeVisible()
   await expect(feedbackCard.getByText(clientComment, { exact: true })).toBeVisible()
   await page.goto('/me/workouts')
+  await expectActionTextVerticallyCentered(page.getByRole('link', { name: 'Добавить', exact: true }))
   const clientChronicleCard = page.locator('.workout-chronicle-card').filter({ hasText: review }).first()
   await expect(clientChronicleCard).toBeVisible()
   await expect(clientChronicleCard).toContainText('RPE 8/10')
@@ -199,6 +220,10 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await page.goto('/today')
   await expect(page.locator('.trainer-attention-row').filter({ hasText: clientQuestion })).toHaveCount(0)
   await page.goto(`/clients/${demoClientId}/workouts`)
+  await expect(page.getByRole('heading', { name: 'Тренировки клиента' })).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/client-workouts-identity/)
+  await expect(page.locator('main')).toHaveClass(/trainer-client-workouts-page/)
+  await expect(page.locator('.phone-frame')).toHaveCSS('background-color', 'rgb(251, 250, 247)')
   const trainerChronicleCard = page.locator('.workout-chronicle-card').filter({ hasText: review }).first()
   await expect(trainerChronicleCard).toBeVisible()
   await expect(trainerChronicleCard).toContainText('RPE 8/10')
