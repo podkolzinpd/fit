@@ -166,7 +166,7 @@ describe('AppLayout: monochrome preview route scope', () => {
       renderLayout(path)
 
       expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'workout-create-edit-identity')
-      expect(document.querySelector('.phone-frame')).not.toHaveClass('client-home-identity')
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('client-home-identity', 'workout-detail-history-identity')
       expect(document.documentElement).toHaveClass('identity-monochrome-preview')
     },
   )
@@ -177,6 +177,28 @@ describe('AppLayout: monochrome preview route scope', () => {
       renderLayout(path)
 
       expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'workout-create-edit-identity')
+      expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+    },
+  )
+
+  it.each(['/workouts/workout-1', '/workouts/workout-1/history/bench-press'])(
+    'applies the Workout Detail/History identity to the enabled route %s',
+    (path) => {
+      authState.monochromePreview = true
+      renderLayout(path)
+
+      expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'workout-detail-history-identity')
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('workout-create-edit-identity', 'live-identity')
+      expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+    },
+  )
+
+  it.each(['/workouts/workout-1', '/workouts/workout-1/history/bench-press'])(
+    'keeps Workout Detail/History unchanged when the server flag is off on %s',
+    (path) => {
+      renderLayout(path)
+
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'workout-detail-history-identity')
       expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
     },
   )
