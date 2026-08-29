@@ -16,6 +16,33 @@ test('global rollout gives a new client the monochrome Progress identity', async
   await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
 })
 
+test('standalone client creates and formulates an own goal', async ({ page }, testInfo) => {
+  await page.goto('/auth')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Тип аккаунта').selectOption('client')
+  await page.getByLabel('Имя').fill('Самостоятельная цель')
+  await page.getByLabel('Email').fill(`self-goal-${testInfo.workerIndex}-${Date.now()}@fit.local`)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page).toHaveURL(/\/me$/)
+
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await page.goto('/me/goal')
+  await expect(page.getByRole('heading', { name: 'Моя цель' })).toBeVisible()
+  await page.getByLabel('Цель').fill('Держать вес 59 кг')
+  await page.getByRole('switch', { name: 'Автоматическая оценка' }).check()
+  await page.getByLabel('Показатель').selectOption('weight')
+  await page.getByLabel('Способ оценки').selectOption('maintain_range')
+  await page.getByLabel('Минимум, кг').fill('58.5')
+  await page.getByLabel('Максимум, кг').fill('59.5')
+  await page.getByRole('button', { name: 'Создать цель' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Держать вес 59 кг' })).toBeVisible()
+  await expect(page.getByText('58,5–59,5 кг')).toBeVisible()
+  await expect(page.getByText('Критерий подтверждён')).toBeVisible()
+})
+
 test('linked client sees only the published client progress view', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('client@fit.local')
