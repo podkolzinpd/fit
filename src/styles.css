@@ -3295,3 +3295,96 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .progress-identity .client-progress-measurement { padding-inline:16px }
   .progress-identity .progress-story-hero > strong { font-size:36px }
 }
+
+/* ── Gate 6 / task 9: Client My Workouts.
+   Scope is the list route only; workout detail, forms and review keep their
+   existing identity until their own lifecycle tasks. */
+.client-workouts-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none }
+.client-workouts-identity .content { padding-bottom:calc(82px + env(safe-area-inset-bottom)); background:var(--bg) }
+.client-workouts-identity .client-workouts-page { max-width:560px; padding:max(12px, calc(24px - env(safe-area-inset-top))) 16px 28px }
+.client-workouts-identity .client-workouts-page > .page-header { min-height:44px; margin-bottom:16px }
+.client-workouts-identity .client-workouts-page > .page-header h1 { font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.client-workouts-identity .client-workouts-page > .page-header .button { min-height:44px; padding:0 14px; border:0; border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:500; box-shadow:none }
+
+.client-workouts-identity .client-workouts-stack { gap:24px }
+.client-workouts-identity .client-workout-section { gap:12px }
+.client-workouts-identity .client-workout-section-head { gap:4px }
+.client-workouts-identity .client-workout-section-head .eyebrow { color:var(--muted); font-size:12px; font-weight:500; line-height:1.3; letter-spacing:.06em }
+.client-workouts-identity .client-workout-section-head h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
+.client-workouts-identity .client-workout-cards { gap:8px }
+
+.client-workouts-identity .client-workout-card,
+.client-workouts-identity .past-workout-plan-card,
+.client-workouts-identity .workout-chronicle-card { border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.client-workouts-identity .client-workout-card:hover,
+.client-workouts-identity .past-workout-plan-card:hover,
+.client-workouts-identity .workout-chronicle-card:hover { border-color:var(--border); background:var(--surface-elevated); transform:none }
+.client-workouts-identity .client-workout-card { min-height:88px; padding:16px 18px; align-items:flex-start; gap:12px }
+.client-workouts-identity .client-workout-card > div { min-width:0; flex:1 }
+.client-workouts-identity .client-workout-card strong { color:var(--fg); font-size:16px; font-weight:600; line-height:1.25 }
+.client-workouts-identity .client-workout-card p { margin:4px 0 0; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
+.client-workouts-identity .workout-exercise-list { gap:3px; margin:8px 0 0 }
+.client-workouts-identity .workout-exercise-name { color:var(--secondary-label-fg); font-size:14px; font-weight:400; line-height:1.4 }
+.client-workouts-identity .workout-exercise-more { color:var(--muted); font-size:12px; font-weight:500 }
+
+.client-workouts-identity .workout-status { min-height:28px; padding:0 9px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.client-workouts-identity .workout-status[data-state='current'] { border-color:var(--warning-border); background:var(--warning-surface); color:var(--warning-fg) }
+.client-workouts-identity .workout-status[data-tone='success'] { border-color:var(--border); background:var(--surface-sunken); color:var(--success-fg) }
+.client-workouts-identity .workout-status[data-tone='warning'] { border-color:var(--warning-border); background:var(--warning-surface); color:var(--warning-fg) }
+
+.client-workouts-identity .past-workout-plan-card { min-height:96px; padding:16px 18px; gap:12px }
+.client-workouts-identity .past-workout-plan-copy { gap:4px }
+.client-workouts-identity .past-workout-plan-copy > strong { color:var(--fg); font-size:16px; font-weight:600; line-height:1.25 }
+.client-workouts-identity .past-workout-plan-copy > small { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.client-workouts-identity .past-workout-plan-action { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
+.client-workouts-identity .past-workout-plan-action b { color:var(--muted); font-size:20px; font-weight:400 }
+
+.client-workouts-identity .workout-chronicle-card { gap:12px; padding:18px }
+.client-workouts-identity .workout-chronicle-card.has-pr { border-color:var(--border); box-shadow:inset 3px 0 0 var(--success) }
+.client-workouts-identity .workout-chronicle-head > strong { color:var(--fg); font-size:16px; font-weight:600 }
+.client-workouts-identity .workout-chronicle-head-badges { gap:6px }
+.client-workouts-identity .workout-pr-badge { color:var(--success-fg); background:transparent; font-size:12px; font-weight:500 }
+.client-workouts-identity .workout-chronicle-card .card-author { margin:-4px 0 0; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.client-workouts-identity .workout-chronicle-exercises { gap:8px; padding:12px 0; border-color:var(--border) }
+.client-workouts-identity .workout-chronicle-exercise-name { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.client-workouts-identity .workout-chronicle-exercise > strong { color:var(--fg); font-size:14px; font-weight:600 }
+.client-workouts-identity .workout-chronicle-more { color:var(--muted); font-size:12px; font-weight:500 }
+.client-workouts-identity .workout-chronicle-facts { gap:6px }
+.client-workouts-identity .workout-chronicle-facts span { padding:5px 8px; border-radius:10px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.client-workouts-identity .workout-chronicle-facts .attention { color:var(--danger); background:var(--surface-sunken) }
+.client-workouts-identity .workout-chronicle-comment,
+.client-workouts-identity .workout-chronicle-response { padding:10px 12px; border-radius:14px; background:var(--surface-elevated); color:var(--fg); font-size:12px; font-weight:400 }
+.client-workouts-identity .workout-chronicle-note-label { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+
+.client-workouts-identity .state-panel { min-height:232px; gap:8px; padding:24px 20px; border:0; border-radius:18px; background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.client-workouts-identity .state-panel-mark { width:44px; height:44px; border-radius:14px; background:var(--surface-sunken); color:var(--fg) }
+.client-workouts-identity .state-panel-mark svg { width:22px; height:22px; stroke-width:1.8 }
+.client-workouts-identity .state-panel h2 { margin:8px 0 0; color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
+.client-workouts-identity .state-panel p { color:var(--secondary-label-fg); font-size:14px; font-weight:400; line-height:1.45 }
+.client-workouts-identity .state-panel-action { width:100%; margin-top:12px }
+.client-workouts-identity .state-panel-action .button,
+.client-workouts-identity .state-panel-action button { width:100%; min-height:48px; border:0; border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:500; box-shadow:none }
+.client-workouts-identity .state-panel-error { border:1px solid var(--border) }
+.client-workouts-identity .state-panel-error .state-panel-mark { color:var(--danger); background:var(--surface-sunken) }
+.client-workouts-identity .state-panel-error p { color:var(--danger) }
+.client-workouts-identity .skeleton-stack { gap:12px }
+.client-workouts-identity .skeleton-card { min-height:96px; padding:18px; border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.client-workouts-identity .skeleton-block { background:var(--surface-sunken); animation:none }
+
+.client-workouts-identity .tab-bar { left:50%; bottom:0; width:min(100%,440px); padding:8px 8px calc(8px + env(safe-area-inset-bottom)); border:0; border-top:1px solid var(--border); border-radius:0; background:var(--bar-bg); box-shadow:none; backdrop-filter:none; transform:translateX(-50%) }
+.client-workouts-identity .tab-bar a { min-height:48px; gap:3px; padding:5px 3px; border-radius:10px; color:var(--muted); font-size:12px; font-weight:500 }
+.client-workouts-identity .tab-bar a svg { width:20px; height:20px; opacity:1; stroke-width:1.8; transform:none }
+.client-workouts-identity .tab-bar a.active { background:transparent; color:var(--fg); font-weight:500 }
+.client-workouts-identity .tab-bar a.active svg { transform:none }
+
+@media (max-width:480px) {
+  .client-workouts-identity .content { padding-bottom:0 }
+  .client-workouts-identity .tab-bar { position:static; left:auto; bottom:auto; width:100%; transform:none }
+}
+@media (max-width:375px) {
+  .client-workouts-identity .client-workouts-page { padding-inline:14px }
+  .client-workouts-identity .client-workout-card,
+  .client-workouts-identity .past-workout-plan-card,
+  .client-workouts-identity .workout-chronicle-card { padding-inline:16px }
+  .client-workouts-identity .past-workout-plan-action { max-width:84px; white-space:normal; text-align:right }
+}
