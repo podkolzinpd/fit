@@ -63,17 +63,6 @@ describe('AppLayout: monochrome preview route scope', () => {
     expect(document.documentElement).toHaveClass('identity-monochrome-preview')
   })
 
-  it.each(['/me?view=save'])(
-    'keeps the current identity on the not-yet-migrated route %s',
-    (path) => {
-      authState.monochromePreview = true
-      renderLayout(path)
-
-      expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview')
-      expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
-    },
-  )
-
   it('keeps Client Home unchanged when the server flag is off', () => {
     renderLayout('/me')
 
@@ -169,6 +158,28 @@ describe('AppLayout: monochrome preview route scope', () => {
     expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'client-card-edit-identity')
     expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
   })
+
+  it.each(['/workouts/new', '/workouts/workout-1/edit', '/today?view=review', '/me?view=save'])(
+    'applies the Workout Create/Edit identity to the enabled route %s',
+    (path) => {
+      authState.monochromePreview = true
+      renderLayout(path)
+
+      expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'workout-create-edit-identity')
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('client-home-identity')
+      expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+    },
+  )
+
+  it.each(['/workouts/new', '/workouts/workout-1/edit', '/today?view=review', '/me?view=save'])(
+    'keeps Workout Create/Edit unchanged when the server flag is off on %s',
+    (path) => {
+      renderLayout(path)
+
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'workout-create-edit-identity')
+      expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+    },
+  )
 })
 
 describe('AppLayout navigation', () => {

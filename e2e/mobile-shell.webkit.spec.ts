@@ -982,7 +982,7 @@ test('iPhone: создание тренировки сфокусировано �
   await expect(save).toHaveAttribute('data-variant', 'primary')
   await expect(page.getByRole('button', { name: 'Отмена', exact: true })).toHaveCount(0)
   const setTableHeading = page.locator('.workout-set-table-head').first()
-  await expect(setTableHeading).toHaveCSS('font-size', '13px')
+  await expect(setTableHeading).toHaveCSS('font-size', '12px')
   expect(await setTableHeading.evaluate((element) => {
     const style = window.getComputedStyle(element)
     const probe = document.createElement('span')

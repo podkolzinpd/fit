@@ -1,9 +1,9 @@
 # Fit — план перехода на монохромную айдентику
 
 Статус: **Gate 0–5 и общий client pilot visual audit завершены; Foundation UI
-Identity v1 подтверждена на реальных экранах. Gate 6 выполняется
-последовательно: задачи 9 My Workouts и 11 Client Profile задеплоены, текущая
-задача — 12 Client Card Edit**.
+Identity v1 подтверждена на реальных экранах. Gate 6 завершён: задачи 9 My
+Workouts, 11 Client Profile и 12 Client Card Edit задеплоены. Gate 7 выполняется
+последовательно; текущая задача — 13 Workout Create/Edit**.
 
 Целевой контракт: `docs/UI_IDENTITY.md`. План сохраняет правило проекта:
 один явно выбранный экран или один самостоятельный foundation-слой — одна
