@@ -3448,10 +3448,14 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
    existing identity until their own lifecycle tasks. */
 .client-workouts-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none }
 .client-workouts-identity .content { padding-bottom:calc(82px + env(safe-area-inset-bottom)); background:var(--bg) }
-.client-workouts-identity .client-workouts-page { max-width:560px; padding:max(12px, calc(24px - env(safe-area-inset-top))) 16px 28px }
-.client-workouts-identity .client-workouts-page > .page-header { min-height:44px; margin-bottom:16px }
-.client-workouts-identity .client-workouts-page > .page-header h1 { font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
-.client-workouts-identity .client-workouts-page > .page-header .button { min-height:44px; padding:0 14px; border:0; border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:500; box-shadow:none }
+.client-workouts-identity .client-workouts-page,
+.client-workouts-identity .trainer-client-workouts-page { max-width:560px; padding:max(12px, calc(24px - env(safe-area-inset-top))) 16px 28px }
+.client-workouts-identity .client-workouts-page > .page-header,
+.client-workouts-identity .trainer-client-workouts-page > .page-header { min-height:44px; margin-bottom:16px }
+.client-workouts-identity .client-workouts-page > .page-header h1,
+.client-workouts-identity .trainer-client-workouts-page > .page-header h1 { font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.client-workouts-identity .client-workouts-page > .page-header .button,
+.client-workouts-identity .trainer-client-workouts-page > .page-header .button { display:inline-flex; align-items:center; justify-content:center; height:44px; min-height:44px; padding:0 14px; border:0; border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:500; line-height:1; white-space:nowrap; box-shadow:none }
 
 .client-workouts-identity .client-workouts-stack { gap:24px }
 .client-workouts-identity .client-workout-section { gap:12px }
@@ -3529,7 +3533,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .client-workouts-identity .tab-bar { position:static; left:auto; bottom:auto; width:100%; transform:none }
 }
 @media (max-width:375px) {
-  .client-workouts-identity .client-workouts-page { padding-inline:14px }
+  .client-workouts-identity .client-workouts-page,
+  .client-workouts-identity .trainer-client-workouts-page { padding-inline:14px }
   .client-workouts-identity .client-workout-card,
   .client-workouts-identity .past-workout-plan-card,
   .client-workouts-identity .workout-chronicle-card { padding-inline:16px }
@@ -4098,7 +4103,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-clients-identity .clients-page { max-width:760px; margin:0 auto; padding:24px 24px calc(env(safe-area-inset-bottom) + 104px) }
 .trainer-clients-identity .clients-page .page-header { min-height:44px; margin-bottom:16px }
 .trainer-clients-identity .clients-page .page-header h1 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
-.trainer-clients-identity .clients-page .page-header .button { min-height:44px; padding:0 14px; border:1px solid var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:500; box-shadow:none }
+.trainer-clients-identity .clients-page .page-header .button { display:inline-flex; align-items:center; justify-content:center; height:44px; min-height:44px; padding:0 14px; border:1px solid var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:500; line-height:1; white-space:nowrap; box-shadow:none }
 .trainer-clients-identity .clients-search-pilot,
 .trainer-clients-identity .clients-search input { min-height:48px; margin-bottom:12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); box-shadow:none }
 .trainer-clients-identity .clients-search-pilot { padding:0 8px 0 14px }
