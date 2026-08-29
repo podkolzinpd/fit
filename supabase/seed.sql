@@ -48,6 +48,14 @@ values (
   'Тренер'
 ) on conflict (id) do nothing;
 
+-- Локальные demo-аккаунты имитируют закрытый production preview. Новые
+-- пользователи по-прежнему не получают строку и остаются на текущем UI.
+insert into public.user_feature_flags (user_id, monochrome_preview) values
+  ('90000000-0000-4000-8000-000000000009', true),
+  ('92000000-0000-4000-8000-000000000029', true)
+on conflict (user_id) do update
+set monochrome_preview = excluded.monochrome_preview;
+
 insert into public.trainers (profile_id)
 values ('90000000-0000-4000-8000-000000000009')
 on conflict (profile_id) do nothing;
