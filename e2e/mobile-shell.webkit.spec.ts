@@ -286,6 +286,13 @@ test('iPhone: тренер назначает интервалы, спортсм
         await expect(nextConfirm).toBeVisible()
         await nextConfirm.click()
         await expect(client.getByText(/^Отдых/)).toHaveCount(0)
+        if (segment === 0) {
+          await expect(client.locator('.circuit-round.current button.live-set-check:not(:disabled)')).toHaveCount(1)
+        } else if (round < 6) {
+          await expect(client.locator('.live-pinned .circuit-counter')).toHaveText(`Круг ${round + 1} из 6`, { timeout: 10_000 })
+        } else {
+          await expect(client.getByText('Готово 12 из 12', { exact: true })).toBeVisible({ timeout: 10_000 })
+        }
       }
     }
     await expect(client.getByRole('button', { name: 'Готово', exact: true })).toHaveCount(0)
@@ -807,7 +814,7 @@ test('iPhone: voice-first и AI-поверхности сохраняют кон
   await expect(page.locator('.phone-frame')).not.toHaveClass(/theme-light/)
   expect(await voiceButton.evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe('rgb(255, 254, 252)')
   expect(await page.locator('.voice-action-label strong').evaluate((element) => getComputedStyle(element).color)).not.toBe('rgb(23, 25, 29)')
-  await expect(page.locator('.phone-frame')).toHaveScreenshot('today-voice-dark-390.png', { animations: 'disabled', maxDiffPixelRatio: 0.03 })
+  await expect(page.locator('.voice-action')).toHaveScreenshot('today-voice-dark-390.png', { animations: 'disabled', maxDiffPixelRatio: 0.03 })
 
   await page.goto('/progress/11111111-1111-4111-8111-111111111111')
   const aiCard = page.locator('.ai-progress-card')
