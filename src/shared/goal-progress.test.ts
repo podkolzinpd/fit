@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { GoalCriterion, GoalCriterionMetric, ProgressEntry } from './domain'
+import type { GoalCriterion, ProgressEntry, StandardGoalCriterionMetric } from './domain'
 import { calculateStandardGoalProgress, STANDARD_GOAL_PROGRESS_POLICY } from './goal-progress'
 import { localDate } from './local-date'
 
@@ -12,7 +12,7 @@ function criterion(overrides: Partial<GoalCriterion> = {}): GoalCriterion {
   }
 }
 
-function entry(id: string, date: string, metric: GoalCriterionMetric, value: number): ProgressEntry {
+function entry(id: string, date: string, metric: StandardGoalCriterionMetric, value: number): ProgressEntry {
   const key = { weight: 'weightKg', waist: 'waistCm', chest: 'chestCm', hips: 'hipCm' }[metric]
   return {
     id, clientId: 'client-1', createdBy: 'client-1', recordedOn: localDate(date),

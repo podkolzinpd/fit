@@ -1,9 +1,9 @@
-import type { GoalCriterion, GoalCriterionMetric, ProgressEntry } from './domain'
+import type { GoalCriterion, ProgressEntry, StandardGoalCriterionMetric } from './domain'
 import { daysBetween, type LocalDate } from './local-date'
-import { GOAL_CRITERION_METRICS } from './goal-criterion-rules'
+import { GOAL_CRITERION_METRICS, isStandardGoalCriterionMetric } from './goal-criterion-rules'
 
 export const STANDARD_GOAL_PROGRESS_POLICY = {
-  freshnessDays: { weight: 14, waist: 30, chest: 30, hips: 30 } satisfies Record<GoalCriterionMetric, number>,
+  freshnessDays: { weight: 14, waist: 30, chest: 30, hips: 30 } satisfies Record<StandardGoalCriterionMetric, number>,
   maintainWindowDays: 28,
   maintainMinMeasurements: 2,
   maintainMinSpanDays: 7,
@@ -54,7 +54,8 @@ export interface StandardGoalProgress {
 }
 
 function observations(criterion: GoalCriterion, entries: readonly ProgressEntry[]): GoalProgressObservation[] {
-  const key = GOAL_CRITERION_METRICS[criterion.metric].progressKey
+  if (!isStandardGoalCriterionMetric(criterion.metric)) return []
+  const key = GOAL_CRITERION_METRICS[criterion.metric].progressKey!
   return entries.flatMap((entry) => {
     const value = entry[key]
     return typeof value === 'number' && Number.isFinite(value)
@@ -128,6 +129,9 @@ export function calculateStandardGoalProgress(
   periodEnd: LocalDate,
   today: LocalDate,
 ): StandardGoalProgress {
+  if (!isStandardGoalCriterionMetric(criterion.metric)) {
+    throw new Error('standard_goal_metric_required')
+  }
   const all = observations(criterion, entries)
   const throughToday = all.filter((item) => item.recordedOn <= today)
   const latestNow = throughToday.at(-1) ?? null

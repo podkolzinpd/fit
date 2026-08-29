@@ -1519,6 +1519,20 @@ test('iPhone: прогресс открывается из карточки кл
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: составная цель настраивается вручную без горизонтального переполнения', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await login(page, 'client@fit.local')
+  await page.goto('/me/goal')
+  await expect(page.getByRole('heading', { name: 'Моя цель' })).toBeVisible()
+  await page.getByRole('switch', { name: 'Автоматическая оценка' }).check()
+  await page.getByRole('button', { name: '＋ Добавить критерий' }).click()
+  const regularity = page.locator('.goal-criterion-item').nth(1)
+  await regularity.getByLabel('Показатель').selectOption('workout_regularity')
+  await regularity.locator('select').nth(2).selectOption('each_period')
+  await expect(page.locator('.goal-criterion-item')).toHaveCount(2)
+  await expectNoHorizontalOverflow(page)
+})
+
 test('iPhone: сет не ставит отдых внутри круга и не оставляет его после финала', async ({ page }, testInfo) => {
   // WebKit in the CI container can need longer to create an isolated Auth user
   // after a retry; this scenario also creates and runs a full grouped workout.

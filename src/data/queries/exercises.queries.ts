@@ -1,9 +1,16 @@
 import { supabase } from './client'
 import type { ExerciseSnapshot } from '../../shared/domain'
+import type { CustomMetric } from '../../shared/domain'
 
 export type WorkoutParseResponse = {
   items: Array<{ sourceText: string; exerciseRef: string; confidence: number; sets: Array<{ weightKg?: number; reps?: number; durationMin?: number; distanceKm?: number }> }>
   unmatched: Array<{ sourceText: string; reason: string; suggestedExerciseRefs: string[]; sets?: Array<{ weightKg?: number; reps?: number; durationMin?: number; distanceKm?: number }> }>
+}
+
+export type GoalCriteriaSuggestionResponse = {
+  criteria: unknown[]
+  needsInput: Array<{ message: string; exerciseRefs: string[] }>
+  unsupportedReason: string | null
 }
 
 const parserUrl = 'https://functions.yandexcloud.net/d4eicdja8le8ivq53u9f'
@@ -30,10 +37,27 @@ export const parseWorkout = (text: string, systemCatalog: readonly ExerciseSnaps
   })
 }
 
+export const suggestGoalCriteria = (text: string, catalog: readonly ExerciseSnapshot[], metrics: readonly CustomMetric[]) => {
+  const body = { kind: 'goal_criteria', text, systemCatalog: catalog.filter((item) => item.source === 'system'), customMetrics: metrics }
+  if (isLocalSupabase) return supabase.functions.invoke<GoalCriteriaSuggestionResponse>('parse-workout', { body })
+  return supabase.auth.getSession().then(async ({ data: { session } }) => {
+    if (!session?.access_token) return { data: null, error: new Error('authentication_required') }
+    try {
+      const response = await fetch(parserUrl, { method: 'POST', headers: { 'content-type': 'application/json', 'x-supabase-authorization': `Bearer ${session.access_token}` }, body: JSON.stringify(body) })
+      return response.ok
+        ? { data: await response.json() as GoalCriteriaSuggestionResponse, error: null }
+        : { data: null, error: { context: response } }
+    } catch (error) {
+      return { data: null, error: error instanceof Error ? error : new Error('goal_suggestion_request_failed') }
+    }
+  })
+}
+
 const columns = 'id,name,muscle_group,input_kind,archived_at,version'
 
 export const exerciseQueries = {
   parseWorkout,
+  suggestGoalCriteria,
   list: () => supabase.from('custom_exercises').select(columns).order('name'),
   create: (trainerId: string, value: { name: string; muscle_group: string; input_kind: string }) =>
     supabase.from('custom_exercises').insert({ trainer_id: trainerId, ...value }).select(columns).single(),

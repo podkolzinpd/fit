@@ -40,17 +40,28 @@ export interface GoalDraft {
   title: string
   targetDate: string | null
   criterion?: GoalCriterionDraft | null
+  criteria?: GoalCriterionDraft[]
 }
 
 export interface GoalCriterionDraft {
   id: string | null
   version: number | null
-  metric: 'weight' | 'waist' | 'chest' | 'hips'
+  metric: 'weight' | 'waist' | 'chest' | 'hips' | 'exercise_working_weight' | 'exercise_reps' | 'exercise_volume' | 'exercise_best_result' | 'cardio_distance' | 'cardio_duration' | 'cardio_pace' | 'cardio_distance_time' | 'workout_regularity' | 'custom'
   operation: 'decrease_to' | 'increase_to' | 'maintain_range' | 'change_by' | 'track_only'
   targetValue: number | null
   rangeMin: number | null
   rangeMax: number | null
-  unit: 'кг' | 'см'
+  unit: string
+  secondaryTargetValue: number | null
+  secondaryUnit: string | null
+  exerciseSource: 'system' | 'custom' | null
+  exerciseRef: string | null
+  exerciseName: string | null
+  customExerciseId: string | null
+  customMetricId: string | null
+  customMetricName: string | null
+  regularityPeriod: 'week' | 'month' | null
+  regularityMode: 'average' | 'each_period' | null
   confirmationStatus: 'confirmed'
   position: number
 }
@@ -106,13 +117,6 @@ function date(value: unknown, nullable: boolean): string | null | undefined {
 function optionalNumber(value: unknown, maximum: number): number | null | undefined {
   if (value === null || value === undefined || value === '') return null
   return typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= maximum
-    ? value
-    : undefined
-}
-
-function optionalSignedNumber(value: unknown, maximum: number): number | null | undefined {
-  if (value === null || value === undefined || value === '') return null
-  return typeof value === 'number' && Number.isFinite(value) && value !== 0 && Math.abs(value) <= maximum
     ? value
     : undefined
 }
@@ -191,6 +195,11 @@ export function readVersionedGoalRequest(body: unknown): VersionedGoalRequest | 
     || targetDate === undefined || expectedVersion === undefined
     ? undefined : (() => {
       const result: GoalDraft = { id, clientId, title, targetDate }
+      if (Object.prototype.hasOwnProperty.call(draft, 'criteria')) {
+        if (!Array.isArray(draft?.criteria) || draft.criteria.length > 10) return undefined
+        const criteria = draft.criteria.map(readGoalCriterionDraft)
+        return criteria.some((criterion) => criterion === undefined) ? undefined : { draft: { ...result, criteria: criteria as GoalCriterionDraft[] }, expectedVersion }
+      }
       if (!Object.prototype.hasOwnProperty.call(draft, 'criterion')) return { draft: result, expectedVersion }
       if (draft?.criterion === null) return { draft: { ...result, criterion: null }, expectedVersion }
       const criterion = readGoalCriterionDraft(draft?.criterion)
@@ -205,32 +214,74 @@ function readGoalCriterionDraft(value: unknown): GoalCriterionDraft | undefined 
   const criterionVersion = version(input.version, id !== null)
   const metric = input.metric
   const operation = input.operation
-  const targetValue = operation === 'change_by'
-    ? optionalSignedNumber(input.targetValue, 999_999_999.999)
-    : optionalNumber(input.targetValue, 999_999_999.999)
-  const rangeMin = optionalNumber(input.rangeMin, 999_999_999.999)
-  const rangeMax = optionalNumber(input.rangeMax, 999_999_999.999)
+  const numeric = (raw: unknown): number | null | undefined => raw == null ? null : typeof raw === 'number' && Number.isFinite(raw) && Math.abs(raw) <= 999_999_999.999 ? raw : undefined
+  const targetValue = numeric(input.targetValue)
+  const rangeMin = numeric(input.rangeMin)
+  const rangeMax = numeric(input.rangeMax)
+  const secondaryTargetValue = numeric(input.secondaryTargetValue)
   const unit = input.unit
+  const exerciseSource = input.exerciseSource == null ? null : input.exerciseSource
+  const exerciseRef = text(input.exerciseRef, 200, false)
+  const exerciseName = text(input.exerciseName, 200, false)
+  const customExerciseId = uuid(input.customExerciseId)
+  const customMetricId = uuid(input.customMetricId)
+  const customMetricName = text(input.customMetricName, 120, false)
+  const secondaryUnit = text(input.secondaryUnit, 40, false)
+  const regularityPeriod = input.regularityPeriod == null ? null : input.regularityPeriod
+  const regularityMode = input.regularityMode == null ? null : input.regularityMode
   const position = input.position ?? 0
   if (id === undefined || criterionVersion === undefined
-    || !['weight', 'waist', 'chest', 'hips'].includes(String(metric))
+    || !['weight', 'waist', 'chest', 'hips', 'exercise_working_weight', 'exercise_reps', 'exercise_volume', 'exercise_best_result', 'cardio_distance', 'cardio_duration', 'cardio_pace', 'cardio_distance_time', 'workout_regularity', 'custom'].includes(String(metric))
     || !['decrease_to', 'increase_to', 'maintain_range', 'change_by', 'track_only'].includes(String(operation))
-    || (metric === 'weight' ? unit !== 'кг' : unit !== 'см')
+    || typeof unit !== 'string' || !unit.trim() || unit.length > 40
     || input.confirmationStatus !== 'confirmed'
     || typeof position !== 'number' || !Number.isSafeInteger(position) || position < 0 || position > 32_767
-    || targetValue === undefined || rangeMin === undefined || rangeMax === undefined) return undefined
+    || targetValue === undefined || rangeMin === undefined || rangeMax === undefined || secondaryTargetValue === undefined
+    || exerciseRef === undefined || exerciseName === undefined || customExerciseId === undefined || customMetricId === undefined
+    || customMetricName === undefined || secondaryUnit === undefined
+    || ![null, 'system', 'custom'].includes(exerciseSource as null | string)
+    || ![null, 'week', 'month'].includes(regularityPeriod as null | string)
+    || ![null, 'average', 'each_period'].includes(regularityMode as null | string)) return undefined
   const valuesValid = operation === 'track_only'
     ? targetValue === null && rangeMin === null && rangeMax === null
     : operation === 'maintain_range'
       ? targetValue === null && rangeMin !== null && rangeMax !== null && rangeMax >= rangeMin
       : targetValue !== null && rangeMin === null && rangeMax === null
-  if (!valuesValid) return undefined
+  const metricName = metric as GoalCriterionDraft['metric']
+  const exerciseLinked = metricName.startsWith('exercise_') || metricName.startsWith('cardio_')
+  const expectedUnit: Partial<Record<GoalCriterionDraft['metric'], string>> = {
+    weight: 'кг', waist: 'см', chest: 'см', hips: 'см', exercise_working_weight: 'кг',
+    exercise_reps: 'повт.', exercise_volume: 'кг·повт.', cardio_distance: 'км', cardio_duration: 'мин',
+    cardio_pace: 'мин/км', cardio_distance_time: 'км', workout_regularity: 'трен.',
+  }
+  const sourceValid = exerciseLinked
+    ? exerciseSource !== null && exerciseRef !== null && exerciseName !== null
+      && (exerciseSource === 'custom') === (customExerciseId !== null)
+      && customMetricId === null && customMetricName === null && regularityPeriod === null && regularityMode === null
+    : metricName === 'custom'
+      ? customMetricId !== null && customMetricName !== null && exerciseSource === null && exerciseRef === null
+        && exerciseName === null && customExerciseId === null && regularityPeriod === null && regularityMode === null
+      : metricName === 'workout_regularity'
+        ? regularityPeriod !== null && regularityMode !== null && (targetValue === null || Number.isInteger(targetValue))
+          && exerciseSource === null && exerciseRef === null && exerciseName === null && customExerciseId === null
+          && customMetricId === null && customMetricName === null
+        : exerciseSource === null && exerciseRef === null && exerciseName === null && customExerciseId === null
+          && customMetricId === null && customMetricName === null && regularityPeriod === null && regularityMode === null
+  const secondaryValid = metricName === 'cardio_distance_time'
+    ? operation === 'increase_to' && secondaryTargetValue !== null && secondaryTargetValue > 0 && secondaryUnit === 'мин'
+    : secondaryTargetValue === null && secondaryUnit === null
+  if (!valuesValid || !sourceValid || !secondaryValid
+    || (expectedUnit[metricName] !== undefined && unit.trim() !== expectedUnit[metricName])
+    || (operation === 'change_by' && !['weight', 'waist', 'chest', 'hips'].includes(metricName))) return undefined
   return {
     id, version: criterionVersion,
     metric: metric as GoalCriterionDraft['metric'],
     operation: operation as GoalCriterionDraft['operation'],
     targetValue, rangeMin, rangeMax,
-    unit: unit as GoalCriterionDraft['unit'], confirmationStatus: 'confirmed', position,
+    unit: unit.trim(), secondaryTargetValue, secondaryUnit,
+    exerciseSource: exerciseSource as GoalCriterionDraft['exerciseSource'], exerciseRef, exerciseName, customExerciseId,
+    customMetricId, customMetricName, regularityPeriod: regularityPeriod as GoalCriterionDraft['regularityPeriod'],
+    regularityMode: regularityMode as GoalCriterionDraft['regularityMode'], confirmationStatus: 'confirmed', position,
   }
 }
 

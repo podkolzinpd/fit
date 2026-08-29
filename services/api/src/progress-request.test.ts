@@ -60,7 +60,7 @@ describe('progress request validation', () => {
           rangeMax: 59.5, unit: 'кг', confirmationStatus: 'confirmed',
         },
       },
-    })?.draft.criterion).toEqual({
+    })?.draft.criterion).toMatchObject({
       id: null, version: null, metric: 'weight', operation: 'maintain_range',
       targetValue: null, rangeMin: 58.5, rangeMax: 59.5, unit: 'кг',
       confirmationStatus: 'confirmed', position: 0,
@@ -91,5 +91,30 @@ describe('progress request validation', () => {
         endsOn: '2026-08-31',
       },
     })).toBeUndefined()
+  })
+
+  it('accepts a bounded composite goal and rejects invalid linked criteria', () => {
+    const parsed = readVersionedGoalRequest({ draft: {
+      clientId: CLIENT_ID, title: 'Сильнее и регулярнее', targetDate: null,
+      criteria: [
+        { metric: 'exercise_reps', operation: 'increase_to', targetValue: 12, unit: 'повт.',
+          exerciseSource: 'system', exerciseRef: 'pull-up', exerciseName: 'Подтягивания', confirmationStatus: 'confirmed', position: 0 },
+        { metric: 'workout_regularity', operation: 'increase_to', targetValue: 3, unit: 'трен.',
+          regularityPeriod: 'week', regularityMode: 'each_period', confirmationStatus: 'confirmed', position: 1 },
+      ],
+    } })
+    expect(parsed?.draft.criteria).toHaveLength(2)
+    expect(parsed?.draft.criteria?.[0]).toMatchObject({ exerciseRef: 'pull-up', position: 0 })
+    expect(parsed?.draft.criteria?.[1]).toMatchObject({ regularityMode: 'each_period', position: 1 })
+
+    expect(readVersionedGoalRequest({ draft: {
+      clientId: CLIENT_ID, title: 'Выдуманное упражнение', targetDate: null,
+      criteria: [{ metric: 'exercise_reps', operation: 'increase_to', targetValue: 12, unit: 'повт.',
+        exerciseSource: null, exerciseRef: null, exerciseName: null, confirmationStatus: 'confirmed', position: 0 }],
+    } })).toBeUndefined()
+    expect(readVersionedGoalRequest({ draft: {
+      clientId: CLIENT_ID, title: 'Слишком много критериев', targetDate: null,
+      criteria: Array.from({ length: 11 }, (_, position) => ({ metric: 'weight', operation: 'track_only', unit: 'кг', confirmationStatus: 'confirmed', position })),
+    } })).toBeUndefined()
   })
 })
