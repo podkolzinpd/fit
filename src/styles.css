@@ -3841,3 +3841,104 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .workout-detail-history-identity .workout-detail-page > .planned-exercise-list,
   .workout-detail-history-identity .workout-detail-page > .completed-exercise-list { padding-inline:14px }
 }
+
+/* ── Gate 7 / task 16: Trainer Today compose and client attention. */
+.trainer-today-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none }
+.trainer-today-identity .content { overflow-anchor:none; background:var(--bg) }
+.trainer-today-identity .today-start-page { max-width:560px; padding:max(12px, calc(24px - env(safe-area-inset-top))) 16px 28px }
+.trainer-today-identity .today-start-page .page-header { min-height:44px; margin-bottom:12px }
+.trainer-today-identity .today-start-page .page-header h1 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.trainer-today-identity .today-profile-avatar { width:44px; height:44px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); font-size:14px; font-weight:600 }
+.trainer-today-identity .today-profile-avatar:focus-visible { outline:2px solid var(--fg); outline-offset:2px }
+.trainer-today-identity .today-composer,
+.trainer-today-identity .today-voice-home { min-height:0; gap:12px }
+.trainer-today-identity .today-greeting { margin:0 0 2px; color:var(--secondary-label-fg); font-size:14px; font-weight:400; line-height:1.4 }
+
+.trainer-today-identity .voice-action { grid-template-columns:minmax(0,1fr) 48px; grid-template-areas:"copy button" "label button" "controls controls" "error error"; align-items:center; justify-items:stretch; gap:4px 14px; min-height:116px; padding:18px; border:0; border-radius:18px; background:var(--mono-primary); color:var(--mono-on-primary); text-align:left; box-shadow:none }
+.trainer-today-identity .voice-action-copy { grid-area:copy; min-height:0; justify-items:start; gap:5px }
+.trainer-today-identity .voice-action-copy h2 { color:var(--mono-on-primary); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
+.trainer-today-identity .voice-action-guidance,
+.trainer-today-identity .voice-action-transcript { max-width:none; color:var(--mono-on-primary); font-size:12px; font-weight:400; line-height:1.35; opacity:.76 }
+.trainer-today-identity .voice-action-button { grid-area:button; width:48px; height:48px; border:0; border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); box-shadow:none }
+.trainer-today-identity .voice-action-button::before { display:none }
+.trainer-today-identity .voice-action-button svg { width:23px; height:23px; stroke-width:1.8 }
+.trainer-today-identity .voice-action-button:focus-visible { outline:2px solid var(--mono-on-primary); outline-offset:3px }
+.trainer-today-identity .voice-action-label { grid-area:label; justify-items:start; gap:0 }
+.trainer-today-identity .voice-action-label strong,
+.trainer-today-identity .voice-action-label span { color:var(--mono-on-primary); font-size:14px; font-weight:500; line-height:1.3 }
+.trainer-today-identity .voice-action-ring { inset:0; border:0 }
+.trainer-today-identity .voice-action-recording-controls { grid-area:controls; width:100%; grid-template-columns:minmax(0,1fr) auto; align-items:center; margin-top:10px }
+.trainer-today-identity .voice-action-recording-controls .wide { min-height:48px; border:1px solid var(--mono-on-primary); border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); font-size:14px; font-weight:500 }
+.trainer-today-identity .voice-action-recording-controls .link { min-height:44px; color:var(--mono-on-primary); font-size:14px; font-weight:500 }
+
+.trainer-today-identity button,
+.trainer-today-identity .button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.trainer-today-identity button.primary,
+.trainer-today-identity .button.primary,
+.trainer-today-identity .today-primary-cta { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none }
+.trainer-today-identity button.secondary,
+.trainer-today-identity .button.secondary { border-color:var(--border); background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.trainer-today-identity button:disabled,
+.trainer-today-identity .button[aria-disabled='true'] { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg); box-shadow:none }
+.trainer-today-identity .link { color:var(--fg); font-size:14px; font-weight:500 }
+.trainer-today-identity .today-text-toggle { justify-self:stretch; min-height:48px; padding:0 16px; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--fg) }
+
+.trainer-today-identity .today-text-fallback { gap:12px; padding-top:2px }
+.trainer-today-identity .today-text-fallback-head strong { color:var(--fg); font-size:18px; font-weight:600 }
+.trainer-today-identity .today-text-fallback-head small { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-today-identity .today-text-fallback-head .link { min-height:44px }
+.trainer-today-identity .workout-composer-card { padding:16px; border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.trainer-today-identity .workout-composer-card .voice-note-field > label { color:var(--fg); font-size:14px; font-weight:500 }
+.trainer-today-identity .workout-composer-card textarea { min-height:144px; padding:12px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400 }
+.trainer-today-identity .today-picker-cta { min-height:44px; border:0; background:transparent; color:var(--fg); font-size:14px; font-weight:500 }
+
+.trainer-today-identity .first-run-first-plan { gap:5px; padding:2px 0 }
+.trainer-today-identity .first-run-first-plan .eyebrow,
+.trainer-today-identity .trainer-attention .eyebrow,
+.trainer-today-identity .today-context > p { color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
+.trainer-today-identity .first-run-first-plan h2 { color:var(--fg); font-size:18px; font-weight:600; letter-spacing:-.012em }
+.trainer-today-identity .first-run-first-plan p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.trainer-today-identity .first-run-trainer { padding:18px; border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.trainer-today-identity .first-run-client-form label { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-today-identity .first-run-client-form input { min-height:48px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400 }
+
+.trainer-today-identity .today-context { gap:6px; margin-top:2px }
+.trainer-today-identity .today-context > a,
+.trainer-today-identity .trainer-attention,
+.trainer-today-identity .today-resume { border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.trainer-today-identity .today-context > a { min-height:72px; padding:14px 16px; color:var(--fg) }
+.trainer-today-identity .today-context strong { color:var(--fg); font-size:14px; font-weight:500 }
+.trainer-today-identity .today-context small { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-today-identity .today-context span + span { border-color:var(--border) }
+.trainer-today-identity .today-context b { color:var(--secondary-label-fg) }
+.trainer-today-identity .trainer-attention { gap:10px; margin-top:0; padding:16px }
+.trainer-today-identity .trainer-attention-heading h2 { color:var(--fg); font-size:18px; font-weight:600 }
+.trainer-today-identity .trainer-attention-row,
+.trainer-today-identity .trainer-planning,
+.trainer-today-identity .trainer-planning-row { border-color:var(--border) }
+.trainer-today-identity .trainer-attention-row { min-height:64px; padding:12px 0; color:var(--fg) }
+.trainer-today-identity .trainer-attention-row strong,
+.trainer-today-identity .trainer-planning-row strong { color:var(--fg); font-size:14px; font-weight:500 }
+.trainer-today-identity .trainer-attention-row small,
+.trainer-today-identity .trainer-planning-row small { color:var(--fg); font-size:12px; font-weight:500 }
+.trainer-today-identity .trainer-attention-row em,
+.trainer-today-identity .trainer-planning-row em,
+.trainer-today-identity .trainer-planning > summary small { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
+.trainer-today-identity .trainer-attention-row > b { color:var(--fg); font-size:12px; font-weight:500 }
+.trainer-today-identity .trainer-planning > summary { min-height:48px; color:var(--fg) }
+.trainer-today-identity .trainer-planning > summary i { border-color:var(--secondary-label-fg) }
+.trainer-today-identity .trainer-planning-row .link { min-height:44px; font-size:12px; font-weight:500 }
+.trainer-today-identity .trainer-attention-clear strong { color:var(--fg); font-size:14px; font-weight:500 }
+.trainer-today-identity .today-resume { padding:16px }
+.trainer-today-identity .today-resume small { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
+.trainer-today-identity .app-install-card { border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.trainer-today-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
+.trainer-today-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
+.trainer-today-identity .tab-bar a.active,
+.trainer-today-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+
+@media (max-width:375px) {
+  .trainer-today-identity .today-start-page { padding-inline:14px }
+  .trainer-today-identity .voice-action { padding:16px }
+  .trainer-today-identity .trainer-attention { padding-inline:14px }
+}

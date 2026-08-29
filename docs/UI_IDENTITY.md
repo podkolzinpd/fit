@@ -380,6 +380,29 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
 - Light/dark имеют одинаковую геометрию; dark surfaces и active tabs проверяются
   отдельно. Bottom navigation переиспользует соответствующий role shell.
 
+### Product realization: Trainer Today
+
+- `/today` без `view=review|save` — самостоятельный trainer workspace. Review и
+  Save продолжают принятый Workout Create/Edit lifecycle и не наследуют Today
+  composition.
+- Header использует `24/600`, section и ключевая задача — `18/600`, body —
+  `14/400`, controls — `14/500`, meta — `12/500`. Имя клиента и числовые данные
+  получают 600 только когда формируют реальную иерархию.
+- Voice-first остаётся единственным primary: одна полярная surface 18 px с
+  текстом и 48 px mic-control. Text composer раскрывается как neutral surface,
+  сохраняет editable `16/400` и не меняет parse/review flow.
+- First-plan, ближайшая тренировка, draft/resume, attention/planning и install
+  prompt используют один neutral surface family. Они различаются содержанием,
+  плотностью и action weight, а не декоративными цветами или dashboard-сеткой.
+- Base actions — 48 px, compact actions — 44 px независимо от semantic variant.
+  Disabled остаётся читаемым с opacity 1 и использует semantic surface/text
+  tokens.
+- Trainer navigation переиспользует принятый shell: active state нейтрален,
+  coral/purple pill отсутствует. Light/dark имеют одинаковую геометрию и
+  проверяются отдельно на desktop 1440 и mobile 360/375/390/430.
+- Flag-off сохраняет прежний Today. Feature CSS не содержит локальных hex,
+  email не участвует в route gating, product logic и data contract не меняются.
+
 ### Навигация и иконки
 
 - Сохраняется текущая навигационная архитектура Fit.
