@@ -113,10 +113,13 @@ test('current role home keeps its visual baseline', async ({ page }, testInfo) =
     await expect(page.getByText('Загружаем прогресс недели…')).toHaveCount(0)
     await expect(page.locator('.phone-frame')).toHaveClass(/client-home-identity/)
   } else {
+    await expect(page.locator('.phone-frame')).toHaveClass(/trainer-today-identity/)
     await expect(page.locator('.phone-frame')).not.toHaveClass(/client-home-identity/)
+    await expect(page.locator('.trainer-attention-loading')).toHaveCount(0)
+    await expect(page.locator('.trainer-attention')).toBeVisible()
   }
   await expect(page.locator('.phone-frame')).toBeVisible()
-  await expectVisualBaseline(page, 'role-home.png', [], true)
+  await expectVisualBaseline(page, trainer ? `trainer-today-${process.platform}.png` : 'role-home.png', [], true)
 
   if (!trainer) {
     await page.goto('/me/profile')
@@ -124,7 +127,39 @@ test('current role home keeps its visual baseline', async ({ page }, testInfo) =
     await page.goto('/me')
     await expect(page.locator('.phone-frame')).toHaveClass(/client-home-identity/)
     await expectVisualBaseline(page, 'role-home-dark.png', [], true)
+  } else {
+    await page.getByRole('button', { name: 'Ввести текстом' }).click()
+    await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
+    await expectVisualBaseline(page, `trainer-today-composer-${process.platform}.png`, [], true)
+    await page.goto('/profile')
+    await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+    await page.goto('/today')
+    await expect(page.locator('.phone-frame')).toHaveClass(/trainer-today-identity/)
+    await expect(page.locator('.trainer-attention-loading')).toHaveCount(0)
+    await expectVisualBaseline(page, `trainer-today-dark-${process.platform}.png`, [], true, '#1d1e21')
   }
+})
+
+test('trainer Today keeps its mobile visual baselines', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Trainer desktop is covered by the role-home baseline')
+  await signIn(page, 'trainer@fit.local', /\/today$/)
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+  await page.goto('/today')
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-today-identity/)
+  await expect(page.locator('.trainer-attention-loading')).toHaveCount(0)
+  await expect(page.locator('.trainer-attention')).toBeVisible()
+  await expectVisualBaseline(page, `trainer-today-mobile-${process.platform}.png`, [], true)
+
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
+  await expectVisualBaseline(page, `trainer-today-mobile-composer-${process.platform}.png`, [], true)
+
+  await page.goto('/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.goto('/today')
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-today-identity/)
+  await expect(page.locator('.trainer-attention-loading')).toHaveCount(0)
+  await expectVisualBaseline(page, `trainer-today-mobile-dark-${process.platform}.png`, [], true, '#1d1e21')
 })
 
 test('future standalone plan stays compact on client home', async ({ page }, testInfo) => {

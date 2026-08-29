@@ -202,6 +202,36 @@ describe('AppLayout: monochrome preview route scope', () => {
       expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
     },
   )
+
+  it('applies Trainer Today identity only to the enabled compose route', () => {
+    authState.role = 'trainer'
+    authState.monochromePreview = true
+    renderLayout('/today')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'trainer-today-identity')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('workout-create-edit-identity', 'client-home-identity')
+    expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+  })
+
+  it('keeps Trainer Today unchanged when the server flag is off', () => {
+    authState.role = 'trainer'
+    renderLayout('/today')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'trainer-today-identity')
+    expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+  })
+
+  it.each(['/today?view=review', '/today?view=save'])(
+    'keeps the accepted Workout Create/Edit identity isolated from Trainer Today on %s',
+    (path) => {
+      authState.role = 'trainer'
+      authState.monochromePreview = true
+      renderLayout(path)
+
+      expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'workout-create-edit-identity')
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-today-identity')
+    },
+  )
 })
 
 describe('AppLayout navigation', () => {
