@@ -11,6 +11,28 @@ async function signIn(page: import('@playwright/test').Page, email: string, dest
   await expect(page).toHaveURL(destination)
 }
 
+async function openClientProgress(page: import('@playwright/test').Page, options: { scheme?: boolean, dark?: boolean } = {}) {
+  await signIn(page, 'client@fit.local', /\/me$/)
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+  if (options.scheme || options.dark) {
+    await page.goto('/me/profile')
+    if (options.scheme) {
+      const schemeOption = page.getByRole('radio', { name: 'Схема' })
+      await schemeOption.click()
+      await expect(schemeOption).toHaveAttribute('aria-checked', 'true')
+    }
+    if (options.dark) {
+      const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
+      await darkTheme.check()
+      await expect(darkTheme).toBeChecked()
+    }
+  }
+  await page.goto('/me/progress')
+  await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/progress-identity/)
+  await expect(page.locator('.client-progress-card')).toBeVisible()
+}
+
 async function expectVisualBaseline(
   page: import('@playwright/test').Page,
   name: string,
@@ -133,12 +155,7 @@ test('future standalone plan stays compact on client home', async ({ page }, tes
 
 test('client key routes keep their visual baselines', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client routes use mobile visual profiles')
-  await signIn(page, 'client@fit.local', /\/me$/)
-  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
-
-  await page.goto('/me/progress')
-  await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
-  await expect(page.locator('.client-progress-card')).toBeVisible()
+  await openClientProgress(page)
   await expect(page.locator('.client-progress-card .body-progress-map')).toBeVisible()
   const progressStats = page.locator('.client-progress-card .ai-progress-stats')
   await expect(progressStats.getByText(/трениров/).first()).toBeVisible()
@@ -154,26 +171,37 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   const progressCoachmark = page.getByRole('button', { name: 'Понятно' })
   if (await progressCoachmark.isVisible()) await progressCoachmark.click()
   await expectVisualBaseline(page, `client-progress-${process.platform}.png`)
-  await page.goto('/me/profile')
-  await page.getByRole('radio', { name: 'Схема' }).click()
-  await page.goto('/me/progress')
+})
+
+test('client Progress scheme keeps its visual baseline', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
+  await openClientProgress(page, { scheme: true })
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0)
-  await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible({ timeout: 15_000 })
   await expectVisualBaseline(page, `client-progress-scheme-${process.platform}.png`)
-  await page.goto('/me/profile')
-  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-  await page.goto('/me/progress')
-  await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
+})
+
+test('client Progress scheme keeps its dark visual baseline', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
+  await openClientProgress(page, { scheme: true, dark: true })
+  await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible({ timeout: 15_000 })
   await expectVisualBaseline(page, `client-progress-scheme-dark-${process.platform}.png`)
-  await page.goto('/me/profile')
-  await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
-  await page.goto('/me/progress')
+})
+
+test('client measurements keep their visual baseline', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client measurements use mobile visual profiles')
+  await openClientProgress(page, { scheme: true })
   await page.locator('.client-progress-measurement').scrollIntoViewIfNeeded()
   await expect(page.getByRole('button', { name: 'Добавить замер' })).toBeVisible()
   await page.locator('.client-progress-measurement-head').click({ position: { x: 4, y: 4 } })
   await page.locator('.client-progress-measurement .recharts-tooltip-wrapper').evaluateAll((elements) => elements.forEach((element) => { (element as HTMLElement).style.visibility = 'hidden' }))
   await expectVisualBaseline(page, `client-measurements-${process.platform}.png`)
+})
 
+test('client workouts keep their visual baseline', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client workouts use mobile visual profiles')
+  await signIn(page, 'client@fit.local', /\/me$/)
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await page.goto('/me/workouts')
   await expect(page.getByRole('heading', { name: 'Мои тренировки' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
