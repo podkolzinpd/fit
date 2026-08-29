@@ -4,8 +4,8 @@
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
 
-Обновлено: 2026-08-29
-Проверенный базовый `main`: `0a0c735` (`Progress 1.1: добавить подтверждённые критерии цели (#678)`)
+Обновлено: 2026-08-30
+Проверенный базовый `main`: `b48ff0a` (`fix: allow clients to manage their goals (#679)`)
 
 ## Текущий release gate
 
@@ -45,7 +45,9 @@
   остаются читаемыми; исходная диктовка сохраняется при уточнении клиента.
 - PWA, ручной беговой MVP и локальный public-domain каталог работают. Web Push
   `workout_reminder` отправляется клиенту в 9:00 его timezone через Postgres
-  producer/dispatcher/finalize и VAPID Cloud Function.
+  producer/dispatcher/finalize и VAPID Cloud Function. Vercel получил public
+  VAPID key; push deploy синхронизирует URL и dispatch secret из immutable
+  Yandex Lockbox в Supabase Vault без вывода секретов в repo или CI logs.
 - Client и Trainer Progress используют одну короткую историю подтверждённого
   периода: лучший результат, тренировки, `X/Y` недель, улучшенные упражнения,
   карта тела, сравнение с периодом, связь с целью и ближайший план. Тренер видит
@@ -88,31 +90,14 @@
 
 ## Проверки активной ветки
 
-- Исправление self-service цели: клиент может создать, переформулировать,
-  разбить на этапы и архивировать свою цель без тренера и при активной связи с
-  тренером. Общая цель остаётся доступна связанному тренеру; посторонний тренер
-  и прямые записи в таблицы остаются запрещены.
-- YAFIT-414 / Progress 1.1: свободный текст цели дополнен необязательным ручным
-  критерием `weight/waist/chest/hips`; старые цели не интерпретируются по тексту.
-  Общая форма Trainer/Client и карточка Progress различают «Не настроено»,
-  «Нужны данные», «Настроено» и «Нужно проверить». Численный статус, динамика,
-  freshness и LLM остаются за пределами 1.1.
-- Tasks 25–26: PR `#672/#673`, auth и Assistant задеплоены; app/API, Chromium,
-  WebKit и Linux/Darwin visual matrix зелёные на 390/430/1440 в light/dark.
-  Yandex stage preview sync `33263066435` также зелёный.
-- Task 27: WCAG AA token pairs, screen-reader names, 44 px targets,
-  focus-visible и reduced motion добавлены в общий автоматический контракт.
-- Task 27: PR `#674`, merge `6e344d6`, production Vercel deployment
-  `6158408571` success; весь обязательный CI зелёный.
-- Task 28 final matrix: 72 applicable visual scenarios, 18 intentional
-  role/viewport skips, 73 Chromium behavior scenarios и оба WebKit shard
-  зелёные. В репозитории 346 согласованных Linux/Darwin snapshots для
-  390/430/1440.
-- Встроенный localhost browser заблокирован admin-enforced policy до загрузки;
-  стандартный Playwright runtime используется для реальной проверки.
-- Общий audit Home → Live → Progress прошёл без stabilization-задачи: едины
-  typography, spacing, radii, surfaces, actions, navigation и light/dark;
-  coral/purple и эффект простой перекраски отсутствуют.
+- Self-service цели прошёл owner/linked-trainer/cross-tenant проверки:
+  клиент управляет своей целью, а прямые записи и посторонний тренер запрещены.
+- YAFIT-414 / Progress 1.1 добавил ручной `weight/waist/chest/hips` критерий
+  и явные состояния без интерпретации старых целей по тексту; динамика и LLM отложены.
+- Tasks 25–28: auth/Assistant, WCAG AA, 44 px targets, reduced motion,
+  app/API, Chromium/WebKit и Linux/Darwin visual matrix 390/430/1440 зелёные.
+- Production Vercel `6158408571` и Yandex stage preview sync `33263066435`
+  зелёные; для локального visual smoke используется standard Playwright runtime.
 
 ## Ближайший порядок
 
