@@ -518,6 +518,46 @@ describe('AppLayout: global monochrome rollout', () => {
     renderLayout('/assistant')
     expect(document.querySelectorAll('.auth-join-identity')).toHaveLength(0)
   })
+
+  it('migrates Assistant globally while preserving the dedicated shell', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'on')
+    authState.role = 'trainer'
+    renderLayout('/assistant')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'assistant-identity', 'assistant-shell')
+    expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+  })
+
+  it('keeps Assistant on the legacy UI behind the global rollback switch', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'off')
+    authState.role = 'trainer'
+    authState.monochromePreview = true
+    renderLayout('/assistant')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('assistant-shell')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'assistant-identity')
+  })
+
+  it('keeps monochrome Assistant dark independent from the old purple pilot', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'on')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_DARK_THEME_PILOT_USER_IDS', 'user-1')
+    authState.role = 'trainer'
+    authState.theme = 'dark'
+    renderLayout('/assistant')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'assistant-identity')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('theme-dark-pilot')
+    expect(document.documentElement).not.toHaveClass('theme-dark-pilot')
+  })
+
+  it('does not leak Assistant identity into another route', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'on')
+    authState.role = 'trainer'
+    renderLayout('/schedule')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('assistant-identity')
+  })
 })
 
 describe('AppLayout navigation', () => {

@@ -5,21 +5,21 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-29
-Проверенный базовый `main`: `c6b3a2e` (`feat: migrate trainer profile identity (#671)`)
+Проверенный базовый `main`: `a492e04` (`Task 25: migrate auth flow and enable monochrome rollout (#672)`)
 
 ## Активное изменение
 
-- Foundation UI Identity v1 принята. Задачи 8–24 — весь клиентский и тренерский
-  контур кроме Assistant/Auth — merged и задеплоены в production.
-- Владелец продукта принял глобальный rollout новой identity. Текущая ветка
-  добавляет `VITE_MONOCHROME_ROLLOUT_MODE`: `on` (default для всех), `preview`
-  (прежний server-managed `monochrome_preview` по `user_id`) и `off` (legacy
-  UI для всех одним переключателем и redeploy).
+- Foundation UI Identity v1 принята. Задачи 8–25 — клиентский, тренерский и
+  полный auth scope — merged и задеплоены в production.
+- Глобальный rollout новой identity работает через
+  `VITE_MONOCHROME_ROLLOUT_MODE`: `on` (default для всех), `preview` (прежний
+  server-managed `monochrome_preview` по `user_id`) и `off` (legacy UI для всех
+  одним переключателем и redeploy).
 - Legacy components, CSS и `public.user_feature_flags` пока не удаляются.
   Email не участвует во frontend, routing или UI rollout conditions.
-- Активна задача 25: публичные Auth/Forgot/Reset/callback, Yandex callback и
-  authenticated Join переводятся на UI Identity v1 без изменения OAuth,
-  repositories, routes и product logic.
+- Активна задача 26: trainer-only Assistant переводится на UI Identity v1 без
+  изменения pilot-доступа, orchestration, matching, fallback, repositories,
+  routes и product logic.
 
 ## Последняя проверенная продуктовая точка
 
@@ -107,19 +107,14 @@
 
 ## Проверки активной ветки
 
-- Rollout unit tests: `on / preview / off`, exact route scope и global off
-  поверх персонального preview — зелёные.
-- Auth visual baselines: Login/Register light и Login/Forgot dark на 390, 430
-  и 1440 px — зелёные; Reset/Callback и Join manual/invitation также покрыты
-  light/dark baseline; mobile Chromium baseline обновлён.
-- Полный project check зелёный: 123 app files / 962 tests, 225 API tests,
+- Task 25: PR `#672`, merge `a492e048`, production deploy `6157521504`; весь CI,
+  Chromium/WebKit auth lifecycle и Linux/Darwin visual matrix зелёные.
+- Task 26 targeted unit: AppLayout + assistant domain — 134/134.
+- Task 26 mobile Chromium и iPhone/WebKit layout/state suites — 12/12 каждая.
+  Визуально проверены conversation/error/success/composer и workout draft на
+  390, 430 и 1440 px в light/dark.
+- Task 26 full project check зелёный: 123 app files / 966 tests, 225 API tests,
   typecheck, lint, coverage, DB types, iOS permissions, infra policy и build.
-- Локальный Supabase runtime восстановлен через Podman: authenticated auth/join
-  lifecycle 7/7 Chromium и public WebKit smoke прошли.
-- Visual matrix проверена на чистом seed отдельно по профилям: 390 — 29/29,
-  430 — 29/29, desktop 1440 — 17/17 применимых тестов. Параллельный общий
-  прогон не является gate: сценарии намеренно меняют общие seed-данные и
-  конфликтуют между viewport-проектами.
 - Встроенный localhost browser заблокирован admin-enforced policy до загрузки;
   стандартный Playwright runtime используется для реальной проверки.
 - Общий audit Home → Live → Progress прошёл без stabilization-задачи: едины
@@ -128,9 +123,9 @@
 
 ## Ближайший порядок
 
-1. Завершить задачу 25 через CI, merge, production deploy и короткий smoke.
-2. Выполнить задачу 26 Assistant отдельным PR без изменения orchestration.
-3. Завершить задачи 27–28: accessibility, общий visual regression и выпуск.
+1. Завершить задачу 26 Assistant отдельным PR без изменения orchestration.
+2. Выполнить задачу 27: полный theme/accessibility parity audit.
+3. Выполнить задачу 28: общий visual regression, WebKit/iOS и production smoke.
 
 ## Отложено
 
