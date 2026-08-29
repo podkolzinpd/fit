@@ -620,3 +620,64 @@ test('trainer Client Create and Edit keep their visual baselines', async ({ page
   await page.goto(`/clients/${demoClientId}/edit`)
   await expectVisualBaseline(page, `trainer-client-edit-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
 })
+
+test('trainer Client Goal keeps its real create, stage and edit states in both themes', async ({ page }, testInfo) => {
+  await signIn(page, 'trainer@fit.local', /\/today$/)
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+  const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : 'mobile'
+  const clientName = 'Марина Орлова'
+
+  // Отдельный спортсмен на каждый browser-project не даёт параллельным
+  // visual-проверкам делить одну active goal и менять состояние друг друга.
+  await page.goto('/clients/new')
+  await page.getByLabel('Имя', { exact: true }).fill(clientName)
+  await page.getByLabel('Пол').selectOption('female')
+  await page.getByLabel('Возраст').fill('29')
+  await page.getByLabel('Рост, см').fill('168')
+  await page.getByLabel('Начальный вес, кг').fill('63')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page).toHaveURL(/\/clients\/[0-9a-f-]+$/)
+  const clientId = page.url().split('/').pop()!
+
+  await page.goto(`/clients/${clientId}/goal`)
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-goal-identity/)
+  await expect(page.getByLabel('Цель')).toBeVisible()
+  await page.getByLabel('Дата достижения').fill('2026-12-20')
+  await expectVisualBaseline(page, `trainer-client-goal-create-${profile}-${process.platform}.png`, [], true)
+
+  await page.getByLabel('Цель').fill('Пробежать первые 10 км уверенно')
+  await page.getByRole('button', { name: 'Создать цель' }).click()
+  await expect(page.getByRole('heading', { name: 'Этапы' })).toBeVisible()
+  await expect(page.getByText('Этапов пока нет')).toBeVisible()
+  await page.getByRole('button', { name: '＋ Добавить' }).click()
+  await page.getByLabel('Название этапа').fill('Стабильные 5 км')
+  await page.getByLabel('Начало').fill('2026-08-16')
+  await page.getByLabel('Конец').fill('2026-09-20')
+  await page.getByRole('button', { name: 'Добавить этап' }).click()
+  await expect(page.getByText('Стабильные 5 км', { exact: true })).toBeVisible()
+  await expectVisualBaseline(page, `trainer-client-goal-detail-${profile}-${process.platform}.png`, [], true)
+
+  // Открываем и закрываем обе реальные edit-формы: визуальный контракт форм
+  // тот же, а данные и версии не меняем ради снимка.
+  await page.getByRole('button', { name: 'Изменить' }).first().click()
+  await expect(page.getByRole('button', { name: 'Сохранить' })).toBeVisible()
+  await page.getByRole('button', { name: 'Отмена' }).click()
+  await page.getByRole('button', { name: 'Изменить' }).last().click()
+  await expect(page.getByLabel('Название этапа')).toHaveValue('Стабильные 5 км')
+  await page.getByRole('button', { name: 'Отмена' }).click()
+
+  await page.goto('/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.goto(`/clients/${clientId}/goal`)
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-goal-identity/)
+  await expectVisualBaseline(page, `trainer-client-goal-detail-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
+
+  await page.getByRole('button', { name: 'Архивировать цель' }).click()
+  const dialog = page.getByRole('alertdialog')
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: 'Архивировать' }).click()
+  await expect(page).toHaveURL(new RegExp(`/clients/${clientId}$`))
+  await page.getByRole('button', { name: 'Архивировать клиента' }).click()
+  await page.goto('/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
+})
