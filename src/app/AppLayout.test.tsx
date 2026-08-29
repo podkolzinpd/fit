@@ -260,6 +260,33 @@ describe('AppLayout: monochrome preview route scope', () => {
       expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-clients-identity')
     },
   )
+
+  it('applies Trainer Client Detail identity only to the enabled exact detail route', () => {
+    authState.role = 'trainer'
+    authState.monochromePreview = true
+    renderLayout('/clients/client-1')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'trainer-client-detail-identity')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-clients-identity')
+  })
+
+  it('keeps Trainer Client Detail unchanged when the server flag is off', () => {
+    authState.role = 'trainer'
+    renderLayout('/clients/client-1')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'trainer-client-detail-identity')
+  })
+
+  it.each(['/clients/new', '/clients/client-1/edit', '/clients/client-1/goal', '/clients/client-1/workouts'])(
+    'does not leak Trainer Client Detail identity into %s',
+    (path) => {
+      authState.role = 'trainer'
+      authState.monochromePreview = true
+      renderLayout(path)
+
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-client-detail-identity')
+    },
+  )
 })
 
 describe('AppLayout navigation', () => {

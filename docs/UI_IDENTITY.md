@@ -422,6 +422,23 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
 - Trainer navigation переиспользует neutral shell. Light/dark имеют одинаковую
   геометрию; coral, purple, glow и локальные hex в route CSS отсутствуют.
 
+### Product realization: Trainer Client Detail
+
+- Scope — только точный `/clients/:id`; create/edit, goal, workouts и progress
+  остаются в собственных задачах и не наследуют detail identity.
+- Имя — `24/600`, данные и supporting text — `12/500` или `14/400`, заголовки
+  секций и ключевые числа — `18/600`, controls — `14/500`.
+- Сводка — одна neutral surface, не dashboard grid. Главное действие
+  «Запланировать тренировку» — base 48 px primary; история и прогресс — равные
+  secondary actions 48 px.
+- Цель, этапы, предстоящие тренировки и заметка используют одну геометрию
+  surfaces 18 px. Inline edit сохраняет существующие формы и mutation contract.
+- Attention, revoke, leave и archive используют danger только по реальной
+  семантике; semantic color не становится декоративной заливкой карточек.
+- Loading/error/retry, invitations, membership и archive остаются реальными
+  query/mutation states. Light/dark имеют одинаковую геометрию и navigation.
+
+
 ### Навигация и иконки
 
 - Сохраняется текущая навигационная архитектура Fit.

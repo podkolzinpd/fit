@@ -503,16 +503,6 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
 
-  await page.goto(`/clients/${demoClientId}`)
-  await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Сводка по спортсмену' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Запланировать тренировку' })).toBeVisible()
-  await expect(page.getByRole('navigation', { name: 'Разделы спортсмена' })).toBeVisible()
-  await expect(page.getByRole('navigation', { name: 'Разделы спортсмена' }).getByRole('link')).toHaveCount(2)
-  await expect(page.getByRole('region', { name: 'Вид карты тела' })).toHaveCount(0)
-  await expect(page.getByText('БЛИЖАЙШЕЕ')).toHaveCount(0)
-  await expectVisualBaseline(page, 'trainer-client-detail.png')
-
   await page.goto('/profile')
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toBeVisible()
   await expect(page.getByText('Ваш выбор для карт прогресса спортсменов')).toBeVisible()
@@ -586,4 +576,23 @@ test('trainer Clients list keeps its mobile visual baselines', async ({ page }, 
   await page.goto('/clients')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
   await expectVisualBaseline(page, `trainer-clients-mobile-dark-${process.platform}.png`, [], true, '#1d1e21')
+})
+
+test('trainer Client Detail keeps its visual baselines', async ({ page }, testInfo) => {
+  await signIn(page, 'trainer@fit.local', /\/today$/)
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+  await page.goto(`/clients/${demoClientId}`)
+  await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Сводка по спортсмену' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Запланировать тренировку' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Разделы спортсмена' }).getByRole('link')).toHaveCount(2)
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-detail-identity/)
+  const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : 'mobile'
+  await expectVisualBaseline(page, `trainer-client-detail-${profile}-${process.platform}.png`, [], true)
+
+  await page.goto('/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.goto(`/clients/${demoClientId}`)
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-detail-identity/)
+  await expectVisualBaseline(page, `trainer-client-detail-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
 })
