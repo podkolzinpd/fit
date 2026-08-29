@@ -5,13 +5,13 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-29
-Проверенный базовый `main`: `efcbbaf` (`feat: migrate Live to monochrome identity (#654)`)
+Проверенный базовый `main`: `ce4f8fa` (`feat: migrate Client Progress to monochrome identity (#655)`)
 
 ## Активное изменение
 
 - Foundation UI Identity v1 принята и зафиксирована в production-документации.
-  Client Home `/me` и Live обеих ролей задеплоены в route-scoped production
-  preview; активная задача отдельно мигрирует Client Progress `/me/progress`.
+  Client Home `/me`, Live обеих ролей и Client Progress `/me/progress`
+  задеплоены в route-scoped production preview и прошли общий visual audit.
 - Server-managed `monochrome_preview` доставлен в production: default OFF,
   чтение только собственной строки через RLS, изменение только серверной ролью.
   Два согласованных тестовых аккаунта включены миграцией через Auth UUID.
@@ -116,14 +116,17 @@
 - Live: PR #654 merged, production deployment green, все CI lanes green.
 - Progress: полный check (869 app + 225 API tests), 3 Chromium и 5 WebKit
   реальных сценариев, native и exact Linux light/dark baselines 390/430
-  зелёные. Новый аккаунт без флага явно остаётся на старом Progress UI;
-  выполняются CI, merge, deploy и production smoke активного PR.
+  зелёные. PR #655 merged, Vercel deployment `6151374269` green. Новый аккаунт
+  без флага явно остаётся на старом Progress UI.
+- Общий audit Home → Live → Progress прошёл без stabilization-задачи: едины
+  typography, spacing, radii, surfaces, actions, navigation и light/dark;
+  coral/purple и эффект простой перекраски отсутствуют.
 
 ## Ближайший порядок
 
-1. Завершить отдельный PR, deploy и production smoke Progress.
-2. Провести общий visual audit Client Home, Live и Progress в light/dark.
-3. После успешного аудита продолжить Gate 6 с My Workouts отдельным PR.
+1. Начать Gate 6 с My Workouts отдельным route-scoped PR.
+2. Затем последовательно выполнить задачи 11–14 без пересмотра foundation.
+3. После клиентского блока провести сквозной client-flow smoke light/dark.
 
 ## Отложено
 
