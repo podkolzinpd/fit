@@ -30,4 +30,8 @@ test('client without monochrome preview keeps the current Profile identity', asy
   await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
   await expect(page.locator('.phone-frame')).not.toHaveClass(/client-profile-shell-identity/)
   await expect(page.locator('html')).not.toHaveClass(/identity-monochrome-preview/)
+
+  await page.goto('/me/edit')
+  await expect(page.locator('.phone-frame')).not.toHaveClass(/client-card-edit-identity/)
+  await expect(page.locator('html')).not.toHaveClass(/identity-monochrome-preview/)
 })

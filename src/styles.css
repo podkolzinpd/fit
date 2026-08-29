@@ -3501,3 +3501,66 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .client-profile-shell-identity .client-home-section-head { align-items:flex-start }
   .client-profile-shell-identity .client-home-section-head .secondary { max-width:112px; white-space:normal }
 }
+
+/* ── Gate 6 / task 12: own client card and edit form.
+   Client Home first-run already uses the accepted identity from task 8. This
+   scope adds only the real self-edit route; trainer forms remain unchanged. */
+.client-card-edit-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none }
+.client-card-edit-identity .content { padding-bottom:calc(82px + env(safe-area-inset-bottom)); background:var(--bg) }
+.client-card-edit-identity .client-self-edit-page { max-width:560px; padding:max(12px, calc(24px - env(safe-area-inset-top))) 16px 28px }
+.client-card-edit-identity .client-self-edit-page > .page-header { min-height:44px; margin-bottom:16px }
+.client-card-edit-identity .client-self-edit-page > .page-header h1 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+
+.client-card-edit-identity .client-profile-form { gap:12px; padding:0 }
+.client-card-edit-identity .client-form-section { gap:14px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.client-card-edit-identity .client-form-section-head { gap:5px; padding:0 0 4px }
+.client-card-edit-identity .client-form-section-head .eyebrow { color:var(--muted); font-size:12px; font-weight:500; line-height:1.3; letter-spacing:.06em }
+.client-card-edit-identity .client-form-section-head h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
+.client-card-edit-identity .client-form-section-head p:last-child { color:var(--secondary-label-fg); font-size:14px; font-weight:400; line-height:1.45 }
+
+.client-card-edit-identity .client-profile-form .field { gap:6px; color:var(--secondary-label-fg) }
+.client-card-edit-identity .client-profile-form .field > span,
+.client-card-edit-identity .client-profile-form .field > label { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
+.client-card-edit-identity .client-profile-form input,
+.client-card-edit-identity .client-profile-form select,
+.client-card-edit-identity .client-profile-form textarea { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.client-card-edit-identity .client-profile-form textarea { min-height:96px; line-height:1.45; resize:vertical }
+.client-card-edit-identity .client-profile-form input:focus,
+.client-card-edit-identity .client-profile-form select:focus,
+.client-card-edit-identity .client-profile-form textarea:focus { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px }
+.client-card-edit-identity .client-profile-form input::placeholder,
+.client-card-edit-identity .client-profile-form textarea::placeholder { color:var(--secondary-label-fg); opacity:1 }
+.client-card-edit-identity .client-profile-form .field .error,
+.client-card-edit-identity .client-profile-form > .error { color:var(--danger); font-size:12px; font-weight:500; line-height:1.4 }
+
+.client-card-edit-identity .client-profile-form .actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0; padding:4px 0 calc(4px + env(safe-area-inset-bottom)); background:transparent }
+.client-card-edit-identity .client-profile-form .actions button,
+.client-card-edit-identity .client-profile-form .actions button:last-child { min-height:48px; margin:0; border-radius:14px; font-size:14px; font-weight:500; box-shadow:none }
+.client-card-edit-identity .client-profile-form .actions .secondary { border:1px solid var(--border); background:transparent; color:var(--fg) }
+.client-card-edit-identity .client-profile-form .actions .primary { border:1px solid var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.client-card-edit-identity .client-profile-form .actions button:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg) }
+
+.client-card-edit-identity .state-panel { margin:16px; border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.client-card-edit-identity .state-panel-mark { border-radius:14px; background:var(--surface-sunken); color:var(--fg) }
+.client-card-edit-identity .state-panel h2 { color:var(--fg); font-size:18px; font-weight:600 }
+.client-card-edit-identity .state-panel p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.client-card-edit-identity .state-panel-error .state-panel-mark,
+.client-card-edit-identity .state-panel-error p { color:var(--danger) }
+.client-card-edit-identity .state-panel button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.client-card-edit-identity .skeleton-card { border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.client-card-edit-identity .skeleton-block { background:var(--surface-sunken); animation:none }
+
+.client-card-edit-identity .tab-bar { left:50%; bottom:0; width:min(100%,440px); padding:8px 8px calc(8px + env(safe-area-inset-bottom)); border:0; border-top:1px solid var(--border); border-radius:0; background:var(--bar-bg); box-shadow:none; backdrop-filter:none; transform:translateX(-50%) }
+.client-card-edit-identity .tab-bar a { min-height:48px; gap:3px; padding:5px 3px; border-radius:10px; color:var(--muted); font-size:12px; font-weight:500 }
+.client-card-edit-identity .tab-bar a svg { width:20px; height:20px; opacity:1; stroke-width:1.8; transform:none }
+.client-card-edit-identity .tab-bar a.active { background:transparent; color:var(--fg); font-weight:500 }
+.client-card-edit-identity .tab-bar a.active svg { transform:none }
+
+@media (max-width:480px) {
+  .client-card-edit-identity .content { padding-bottom:0 }
+  .client-card-edit-identity .tab-bar { position:static; left:auto; bottom:auto; width:100%; transform:none }
+}
+@media (max-width:375px) {
+  .client-card-edit-identity .client-self-edit-page { padding-inline:14px }
+  .client-card-edit-identity .client-form-section { padding-inline:16px }
+}
