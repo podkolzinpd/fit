@@ -39,6 +39,20 @@ export interface GoalDraft {
   clientId: string
   title: string
   targetDate: string | null
+  criterion?: GoalCriterionDraft | null
+}
+
+export interface GoalCriterionDraft {
+  id: string | null
+  version: number | null
+  metric: 'weight' | 'waist' | 'chest' | 'hips'
+  operation: 'decrease_to' | 'increase_to' | 'maintain_range' | 'change_by' | 'track_only'
+  targetValue: number | null
+  rangeMin: number | null
+  rangeMax: number | null
+  unit: 'кг' | 'см'
+  confirmationStatus: 'confirmed'
+  position: number
 }
 
 export interface VersionedGoalRequest {
@@ -92,6 +106,13 @@ function date(value: unknown, nullable: boolean): string | null | undefined {
 function optionalNumber(value: unknown, maximum: number): number | null | undefined {
   if (value === null || value === undefined || value === '') return null
   return typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= maximum
+    ? value
+    : undefined
+}
+
+function optionalSignedNumber(value: unknown, maximum: number): number | null | undefined {
+  if (value === null || value === undefined || value === '') return null
+  return typeof value === 'number' && Number.isFinite(value) && value !== 0 && Math.abs(value) <= maximum
     ? value
     : undefined
 }
@@ -168,7 +189,49 @@ export function readVersionedGoalRequest(body: unknown): VersionedGoalRequest | 
   const expectedVersion = version(input?.expectedVersion, id !== null)
   return id === undefined || clientId === undefined || title === undefined
     || targetDate === undefined || expectedVersion === undefined
-    ? undefined : { draft: { id, clientId, title, targetDate }, expectedVersion }
+    ? undefined : (() => {
+      const result: GoalDraft = { id, clientId, title, targetDate }
+      if (!Object.prototype.hasOwnProperty.call(draft, 'criterion')) return { draft: result, expectedVersion }
+      if (draft?.criterion === null) return { draft: { ...result, criterion: null }, expectedVersion }
+      const criterion = readGoalCriterionDraft(draft?.criterion)
+      return criterion ? { draft: { ...result, criterion }, expectedVersion } : undefined
+    })()
+}
+
+function readGoalCriterionDraft(value: unknown): GoalCriterionDraft | undefined {
+  const input = record(value)
+  if (!input) return undefined
+  const id = uuid(input.id)
+  const criterionVersion = version(input.version, id !== null)
+  const metric = input.metric
+  const operation = input.operation
+  const targetValue = operation === 'change_by'
+    ? optionalSignedNumber(input.targetValue, 999_999_999.999)
+    : optionalNumber(input.targetValue, 999_999_999.999)
+  const rangeMin = optionalNumber(input.rangeMin, 999_999_999.999)
+  const rangeMax = optionalNumber(input.rangeMax, 999_999_999.999)
+  const unit = input.unit
+  const position = input.position ?? 0
+  if (id === undefined || criterionVersion === undefined
+    || !['weight', 'waist', 'chest', 'hips'].includes(String(metric))
+    || !['decrease_to', 'increase_to', 'maintain_range', 'change_by', 'track_only'].includes(String(operation))
+    || (metric === 'weight' ? unit !== 'кг' : unit !== 'см')
+    || input.confirmationStatus !== 'confirmed'
+    || typeof position !== 'number' || !Number.isSafeInteger(position) || position < 0 || position > 32_767
+    || targetValue === undefined || rangeMin === undefined || rangeMax === undefined) return undefined
+  const valuesValid = operation === 'track_only'
+    ? targetValue === null && rangeMin === null && rangeMax === null
+    : operation === 'maintain_range'
+      ? targetValue === null && rangeMin !== null && rangeMax !== null && rangeMax >= rangeMin
+      : targetValue !== null && rangeMin === null && rangeMax === null
+  if (!valuesValid) return undefined
+  return {
+    id, version: criterionVersion,
+    metric: metric as GoalCriterionDraft['metric'],
+    operation: operation as GoalCriterionDraft['operation'],
+    targetValue, rangeMin, rangeMax,
+    unit: unit as GoalCriterionDraft['unit'], confirmationStatus: 'confirmed', position,
+  }
 }
 
 export function readVersionedGoalStageRequest(body: unknown): VersionedGoalStageRequest | undefined {

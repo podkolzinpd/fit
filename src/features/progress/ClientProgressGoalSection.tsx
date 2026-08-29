@@ -24,11 +24,11 @@ export function ClientProgressGoalSection({ goal, profileGoal, today, loading, e
       {stage && <small>Текущий этап: {stage.title}</small>}
       {alignment
         ? <p>{formatSummaryText(alignment)}</p>
-        : <p className="muted">Обнови сводку — ИИ учтёт эту цель в анализе.</p>}
+        : <p className="muted">Цель сохранена. Настрой критерий, чтобы Progress мог проверять наличие нужных данных.</p>}
     </>}
     {!loading && !error && !goalTitle && <div className="ai-progress-goal-empty">
-      <p>Добавь цель, чтобы ИИ оценивал прогресс относительно твоей задачи.</p>
-      <Link className="button secondary" to="/me/edit">Добавить цель</Link>
+      <p>Добавь ориентир и при желании настрой измеримый критерий.</p>
+      <Link className="button secondary" to="/me/goal">Добавить цель</Link>
     </div>}
   </section>
 }

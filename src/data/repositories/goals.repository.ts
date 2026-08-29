@@ -1,4 +1,4 @@
-import type { ClientGoal, GoalStage, SaveClientGoalInput, SaveGoalStageInput } from '../../shared/domain'
+import type { ClientGoal, GoalCriterion, GoalStage, SaveClientGoalInput, SaveGoalStageInput } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { goalsQueries } from '../queries/goals.queries'
 import { repositoryError } from './error'
@@ -8,7 +8,12 @@ type RawStage = {
 }
 type RawGoal = {
   id: string; clientId: string; title: string; targetDate: string | null
-  status: 'active' | 'archived'; version: number; stages: RawStage[]
+  status: 'active' | 'archived'; version: number; stages: RawStage[]; criteria?: RawCriterion[]
+}
+type RawCriterion = {
+  id: string; goalId: string; metric: GoalCriterion['metric']; operation: GoalCriterion['operation']
+  targetValue: number | null; rangeMin: number | null; rangeMax: number | null; unit: string
+  confirmationStatus: GoalCriterion['confirmationStatus']; position: number; version: number
 }
 
 function toStage(raw: RawStage): GoalStage {
@@ -19,12 +24,22 @@ function toStage(raw: RawStage): GoalStage {
   }
 }
 
+function toCriterion(raw: RawCriterion): GoalCriterion {
+  return {
+    id: raw.id, goalId: raw.goalId, metric: raw.metric, operation: raw.operation,
+    targetValue: raw.targetValue, rangeMin: raw.rangeMin, rangeMax: raw.rangeMax,
+    unit: raw.unit, confirmationStatus: raw.confirmationStatus,
+    position: raw.position, version: raw.version,
+  }
+}
+
 function toGoal(raw: RawGoal): ClientGoal {
   return {
     id: raw.id, clientId: raw.clientId, title: raw.title,
     targetDate: raw.targetDate === null ? null : localDate(raw.targetDate),
     status: raw.status, version: raw.version,
     stages: (raw.stages ?? []).map(toStage),
+    criteria: (raw.criteria ?? []).map(toCriterion),
   }
 }
 
