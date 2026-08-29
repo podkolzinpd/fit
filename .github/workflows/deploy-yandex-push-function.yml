@@ -225,3 +225,23 @@ jobs:
             --expected-version-id "$PUSH_CANDIDATE_VERSION_ID" \
             --previous-version-id "$PUSH_PREVIOUS_VERSION_ID" \
             | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Sync the verified transport into Supabase Vault
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          dispatch_secret=$(yc lockbox payload get \
+            --id "$PUSH_LOCKBOX_ID" \
+            --version-id "$PUSH_LOCKBOX_VERSION_ID" \
+            --key PUSH_DISPATCH_SECRET)
+          echo "::add-mask::$dispatch_secret"
+          function_url=$(yc serverless function get \
+            --name "$PUSH_FUNCTION_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --format json | jq -er '.http_invoke_url')
+
+          PUSH_FUNCTION_URL="$function_url" \
+          PUSH_DISPATCH_SECRET="$dispatch_secret" \
+            node scripts/sync-supabase-push-transport.mjs

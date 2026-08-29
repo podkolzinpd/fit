@@ -5,10 +5,13 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-29
-Проверенный базовый `main`: `ce4f8fa` (`feat: migrate Client Progress to monochrome identity (#655)`)
+Проверенный базовый `main`: `786d61c` (`Gate 7: migrate Trainer Schedule to UI Identity v1 (#667)`)
 
 ## Активное изменение
 
+- Production Vercel получил `VITE_VAPID_PUBLIC_KEY`. Push deploy после release
+  параметризованно синхронизирует URL функции и dispatch secret из immutable
+  Yandex Lockbox в Supabase Vault; секреты не попадают в repo или CI logs.
 - Foundation UI Identity v1 принята и зафиксирована в production-документации.
   Client Home `/me`, Live обеих ролей и Client Progress `/me/progress`
   задеплоены в route-scoped production preview и прошли общий visual audit.
