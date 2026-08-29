@@ -2756,6 +2756,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   --danger-border:#303136;
   --danger-surface:#1d1e21;
   --danger-hover:#26272b;
+  --warning:#d7b56d;
+  --warning-fg:#d7b56d;
+  --warning-surface:color-mix(in srgb, #d7b56d 12%, var(--surface-raised));
+  --warning-border:color-mix(in srgb, #d7b56d 36%, var(--border));
   --voice-surface:#1d1e21;
   --voice-surface-border:#303136;
   --voice-inset:#191a1d;
@@ -2844,6 +2848,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   --danger-border:#dedbd4;
   --danger-surface:#efede8;
   --danger-hover:#e5e2dc;
+  --warning:#8a5e12;
+  --warning-fg:#8a5e12;
+  --warning-surface:color-mix(in srgb, #8a5e12 9%, var(--surface-raised));
+  --warning-border:color-mix(in srgb, #8a5e12 30%, var(--border));
   --voice-surface:#efede8;
   --voice-surface-border:#dedbd4;
   --voice-inset:#e5e2dc;
@@ -3008,4 +3016,119 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .client-home-identity .page { padding-inline:14px }
   .client-home-identity .first-run-copy h2 { font-size:22px }
   .client-home-identity .voice-action { min-height:108px; padding:16px }
+}
+
+/* ── Gate 4 / Live: один рабочий экран поверх принятой Identity v1.
+   Route class выдаётся только server-managed monochrome_preview; product DOM,
+   RPC и порядок действий остаются общими с текущим интерфейсом. */
+.live-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none }
+.live-identity .content { background:var(--bg) }
+.live-identity .live-workout-page { padding:12px 16px 28px }
+.live-identity .live-workout-page > .page-header { min-height:44px; margin-bottom:8px }
+.live-identity .page-back { width:44px; height:44px; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--fg); box-shadow:none }
+.live-identity .page-back:focus-visible { outline:2px solid var(--fg); outline-offset:2px }
+
+.live-identity .live-session-header {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;
+  margin:0 0 12px;
+  padding:0 0 16px;
+  border-bottom:1px solid var(--border);
+}
+.live-identity .live-session-header .workout-header-copy { gap:5px }
+.live-identity .live-session-header .workout-header-eyebrow { color:var(--danger); font-size:12px; font-weight:500; letter-spacing:.06em }
+.live-identity .live-session-header h2 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.live-identity .live-session-header .workout-header-side { align-self:start }
+.live-identity .live-session-header .workout-status { min-height:32px; padding:0 10px; border-color:var(--warning-border); border-radius:10px; background:var(--warning-surface); color:var(--warning-fg); font-size:12px; font-weight:500 }
+.live-identity .live-session-progress { gap:7px; margin-top:3px }
+.live-identity .live-session-progress-copy { gap:3px 10px; color:var(--muted); font-size:12px; font-weight:500; line-height:1.35 }
+.live-identity .live-session-progress-copy strong { color:var(--secondary-label-fg); font-weight:500 }
+.live-identity .live-session-progress-track { height:4px; border-radius:10px; background:var(--surface-sunken) }
+.live-identity .live-session-progress-track > span { border-radius:10px; background:var(--mono-primary) }
+
+.live-identity .live-pinned { top:0; gap:8px; margin:0 0 12px; padding:6px 0 10px; background:var(--bg) }
+.live-identity .live-timer { width:100%; min-height:72px; justify-content:center; gap:10px; padding:0 18px; border:0; border-radius:18px; background:var(--surface-raised); color:var(--fg); font-size:30px; font-weight:600; line-height:1; letter-spacing:-.018em; box-shadow:none }
+.live-identity .live-timer .live-dot-mark { width:8px; height:8px; background:var(--muted) }
+.live-identity .live-timer.resting { border:1px solid var(--warning-border); background:var(--warning-surface); color:var(--warning-fg) }
+.live-identity .live-timer.resting .live-dot-mark { background:var(--warning); box-shadow:none; animation:none }
+.live-identity .rest-timer { padding:12px 14px; border:1px solid var(--warning-border); border-radius:14px; background:var(--warning-surface); color:var(--warning-fg) }
+.live-identity .rest-timer strong { font-size:16px; font-weight:600; font-variant-numeric:tabular-nums }
+.live-identity .rest-step { min-width:48px; min-height:48px; border-color:var(--warning-border); border-radius:14px; background:transparent; color:var(--fg); font-size:14px; font-weight:500 }
+.live-identity .rest-controls .link { min-height:48px; color:var(--warning-fg); font-size:14px; font-weight:500 }
+.live-identity .circuit-head.pinned { padding:12px 14px; border-color:var(--border); border-radius:14px; background:var(--surface-raised) }
+.live-identity .block-badge, .live-identity .circuit-counter { font-size:12px; font-weight:500 }
+.live-identity .block-badge { border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.live-identity .circuit-counter { color:var(--fg) }
+.live-identity .circuit-dot { border-color:var(--border); background:var(--surface-sunken) }
+.live-identity .circuit-dot.current { border-color:var(--warning); background:var(--warning) }
+.live-identity .circuit-dot.done { border-color:var(--success); background:var(--success) }
+
+.live-identity .live-reorder-mode { margin:0 0 12px; padding:10px 12px; border-color:var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); font-size:14px; font-weight:500 }
+.live-identity .live-reorder-mode .secondary { min-height:44px; border-radius:14px }
+.live-identity .workout-exercise-contract { box-shadow:none }
+.live-identity .live-exercise.current { margin:0 0 12px; padding:18px; border:0; border-radius:18px; background:var(--surface-raised); box-shadow:inset 3px 0 0 var(--warning) }
+.live-identity .live-exercise-head { gap:10px }
+.live-identity .live-exercise-head h2, .live-identity .live-exercise-head h3 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
+.live-identity .overflow-trigger { width:44px; height:44px; border-color:var(--border); border-radius:14px; background:transparent; color:var(--fg) }
+.live-identity .overflow-list { padding:6px; border-color:var(--border); border-radius:14px; background:var(--surface-elevated); box-shadow:none }
+.live-identity .overflow-item { min-height:48px; border-radius:10px; font-size:14px; font-weight:500 }
+.live-identity .live-previous-result { margin:4px 0 0; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.live-identity .workout-set-table { margin-top:12px; border-color:var(--border) }
+.live-identity .workout-set-table-head { min-height:32px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
+.live-identity .live-set-table > .live-set, .live-identity .circuit-round .live-set { padding:10px 0 }
+.live-identity .live-set-table > .live-set + .live-set, .live-identity .circuit-round .live-set + .live-set { border-color:var(--border) }
+.live-identity .live-set-grid { min-height:58px; gap:6px; padding:5px 0 }
+.live-identity .live-set-number { color:var(--muted); font-size:12px; font-weight:500 }
+.live-identity .live-set-input, .live-identity .live-set-rpe { min-height:48px; padding:8px 5px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400 }
+.live-identity .live-set-input:focus, .live-identity .live-set-rpe:focus { border-color:var(--fg); outline:2px solid var(--border); outline-offset:1px; box-shadow:none }
+.live-identity .live-set-input.plan-hint { color:var(--secondary-label-fg); font-weight:400 }
+.live-identity .live-set-check, .live-identity .live-set-save, .live-identity .live-set-expanded .live-set-check, .live-identity .live-set-expanded .live-set-save { width:48px; min-height:48px; border:1px solid var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:18px; font-weight:500; box-shadow:none }
+.live-identity .live-set-check.done { border-color:var(--border); background:var(--surface-sunken); color:var(--success-fg) }
+.live-identity .live-set-compact { grid-template-columns:24px minmax(0,1fr) 52px; min-height:56px; border-color:var(--border) }
+.live-identity .live-set-compact-values strong { color:var(--fg); font-size:14px; font-weight:500 }
+.live-identity .live-set-compact-values small { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.live-identity .live-set-compact-action { min-height:44px; border-radius:10px; background:var(--surface-sunken); color:var(--fg); font-size:12px; font-weight:500 }
+.live-identity .live-set-compact.confirmed .live-set-compact-action { color:var(--success-fg) }
+.live-identity .live-add-set { min-height:44px; color:var(--fg); font-size:14px; font-weight:500 }
+.live-identity .live-exercise-note { border-color:var(--border) }
+.live-identity .live-exercise-note summary { min-height:44px; color:var(--fg); font-size:14px; font-weight:500 }
+.live-identity .live-exercise-note summary span { color:var(--secondary-label-fg); font-weight:400 }
+.live-identity .exercise-comment { min-height:96px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400 }
+
+.live-identity .live-exercise-upcoming { margin:12px 0; padding:16px 18px; border-color:var(--border); border-radius:18px; background:transparent; opacity:1 }
+.live-identity .live-exercise-upcoming .live-exercise-head h2 { font-size:16px }
+.live-identity .live-upcoming-summary { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.live-identity .workout-exercise-compact { min-height:64px; margin:8px 0; padding:10px 0; border-color:var(--border); color:var(--fg) }
+.live-identity .workout-exercise-compact-mark { border-radius:10px; background:var(--surface-sunken); color:var(--success-fg); font-weight:500 }
+.live-identity .workout-exercise-compact-copy strong { font-size:14px; font-weight:600 }
+.live-identity .workout-exercise-compact-copy span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.live-identity .workout-exercise-compact .workout-status { min-height:28px; border-radius:10px; font-size:12px; font-weight:500 }
+.live-identity .exercise-block.live { margin:0 0 12px; padding:18px; border:0; border-radius:18px; background:var(--surface-raised); box-shadow:inset 3px 0 0 var(--warning) }
+.live-identity .circuit-round { border-color:var(--border) }
+.live-identity .circuit-round.current { border-color:var(--warning-border) }
+.live-identity .circuit-round.done { border-color:var(--success-border) }
+.live-identity .circuit-round-label { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+
+.live-identity .live-workout-page > .secondary.wide { min-height:48px; margin-top:4px; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--fg); font-size:14px; font-weight:500; box-shadow:none }
+.live-identity .state { color:var(--success-fg); font-size:14px; font-weight:400 }
+.live-identity .error { color:var(--danger); font-size:14px; font-weight:400 }
+.live-identity .live-bottom-bar { width:min(100%,440px); padding:12px 16px calc(12px + env(safe-area-inset-bottom)); border-color:var(--border); background:var(--bar-bg); backdrop-filter:none }
+.live-identity .live-bottom-bar .workout-cta { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.live-identity .live-bottom-bar .workout-cta[data-variant='secondary'] { border-color:var(--border); background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.live-identity .live-bottom-bar .workout-cta:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.live-identity .finish-confirm { gap:10px }
+.live-identity .finish-confirm p { color:var(--fg); font-size:14px; font-weight:400 }
+.live-identity .finish-confirm .workout-cta[data-variant='tertiary'] { color:var(--fg) }
+.live-identity .finish-confirm .workout-cta[data-variant='primary'] { border-color:var(--danger); background:var(--danger); color:var(--mono-on-primary) }
+.live-identity .modal-overlay { background:color-mix(in srgb, #111214 74%, transparent); backdrop-filter:none }
+.live-identity .modal-dialog { padding:20px; border-color:var(--border); border-radius:18px; background:var(--surface-elevated); box-shadow:none }
+.live-identity .modal-message { color:var(--fg); font-size:14px; font-weight:400 }
+
+@media (max-width:375px) {
+  .live-identity .live-workout-page { padding-inline:14px }
+  .live-identity .live-session-header { grid-template-columns:minmax(0,1fr) }
+  .live-identity .live-session-header .workout-header-side { grid-row:1; justify-self:end; margin-bottom:-37px }
+  .live-identity .live-session-header h2 { padding-right:88px; font-size:22px }
+  .live-identity .live-timer { min-height:68px; font-size:28px }
 }

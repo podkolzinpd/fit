@@ -80,6 +80,23 @@ describe('AppLayout: monochrome preview route scope', () => {
     expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview')
     expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
   })
+
+  it.each(['client', 'trainer'] as const)('applies the Live identity to an enabled %s session', (role) => {
+    authState.role = role
+    authState.monochromePreview = true
+    renderLayout('/workouts/workout-1/live')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'live-identity', 'live-session-shell')
+    expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+  })
+
+  it('keeps Live unchanged when the server flag is off', () => {
+    renderLayout('/workouts/workout-1/live')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('live-session-shell')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'live-identity')
+    expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+  })
 })
 
 describe('AppLayout navigation', () => {
