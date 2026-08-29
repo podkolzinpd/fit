@@ -3186,6 +3186,35 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           ),
         )
         expect(version).toBe(2)
+
+        const goal = await withActorTransaction(
+          runtimePool,
+          DOMAIN_CLIENT_ACTOR_ID,
+          async (client) => {
+            const rows = await client.query<{
+              goal_id: string
+              version: string
+            } & QueryResultRow>(
+              'select goal_id, version from public.save_client_goal($1::jsonb, null)',
+              [JSON.stringify({
+                id: null,
+                clientId: created.id,
+                title: 'Самостоятельно сформулированная цель',
+                targetDate: null,
+              })],
+            )
+            return rows[0]
+          },
+        )
+        expect(goal).toMatchObject({ version: '1' })
+        const storedGoal = await ownerPool.query<{ created_by: string; trainer_id: string } & QueryResultRow>(
+          'select created_by, trainer_id from public.client_goals where id = $1',
+          [goal?.goal_id],
+        )
+        expect(storedGoal.rows[0]).toEqual({
+          created_by: DOMAIN_CLIENT_ACTOR_ID,
+          trainer_id: DOMAIN_CLIENT_ACTOR_ID,
+        })
       } finally {
         if (clientId !== undefined) {
           await ownerPool.query('delete from public.clients where id = $1', [clientId])
