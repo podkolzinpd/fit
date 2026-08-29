@@ -32,7 +32,8 @@ export function AppLayout() {
   const monochromeTrainerClients = Boolean(actor?.featureFlags?.monochromePreview && actor.role === 'trainer' && pathname === '/clients')
   const monochromeTrainerClientDetail = Boolean(actor?.featureFlags?.monochromePreview && actor.role === 'trainer' && /^\/clients\/[^/]+$/.test(pathname) && pathname !== '/clients/new')
   const monochromeTrainerClientForm = Boolean(actor?.featureFlags?.monochromePreview && actor.role === 'trainer' && (pathname === '/clients/new' || /^\/clients\/[^/]+\/edit$/.test(pathname)))
-  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientWorkouts || monochromeClientProfile || monochromeClientCardEdit || monochromeWorkoutCreateEdit || monochromeWorkoutDetailHistory || monochromeTrainerToday || monochromeTrainerClients || monochromeTrainerClientDetail || monochromeTrainerClientForm
+  const monochromeTrainerClientGoal = Boolean(actor?.featureFlags?.monochromePreview && actor.role === 'trainer' && /^\/clients\/[^/]+\/goal$/.test(pathname))
+  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientWorkouts || monochromeClientProfile || monochromeClientCardEdit || monochromeWorkoutCreateEdit || monochromeWorkoutDetailHistory || monochromeTrainerToday || monochromeTrainerClients || monochromeTrainerClientDetail || monochromeTrainerClientForm || monochromeTrainerClientGoal
   // main.tsx применяет тему до первого render, когда аккаунт ещё неизвестен.
   // Пилотный вариант подключается здесь — как только auth вернул actor и
   // allowlist можно проверить; вне allowlist вариант остаётся прежним тёмным.
@@ -88,6 +89,7 @@ export function AppLayout() {
     monochromeTrainerClients ? 'trainer-clients-identity' : '',
     monochromeTrainerClientDetail ? 'trainer-client-detail-identity' : '',
     monochromeTrainerClientForm ? 'trainer-client-form-identity' : '',
+    monochromeTrainerClientGoal ? 'trainer-client-goal-identity' : '',
     keyboardOpen ? 'keyboard-open' : '',
   ].filter(Boolean).join(' ')
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">

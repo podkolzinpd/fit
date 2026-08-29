@@ -453,6 +453,24 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
 - Light/dark и navigation сохраняют одинаковую геометрию; coral, purple, glow
   и локальные hex в scoped CSS отсутствуют.
 
+### Product realization: Trainer Client Goal
+
+- Scope — точный `/clients/:id/goal`; detail, create/edit, workouts, progress и
+  schedule не наследуют goal identity.
+- Page — `24/600`, section — `18/600`, body — `14/400`, controls — `14/500`,
+  labels — `12/500`, editable content — `16/400`.
+- Goal и stages используют neutral surfaces 18 px; stage — вложенную 14 px
+  surface. Текущий этап различим контуром и текстовым статусом даже в grayscale,
+  завершённый этап не скрывается общей opacity.
+- Create/edit и stage forms сохраняют существующие validation, dates, optimistic
+  versions и mutations. Actions имеют base 48 px независимо от primary,
+  secondary или destructive semantics.
+- Success/danger не используются декоративно. Archive/delete используют только
+  утверждённый danger и понятную текстовую подпись; disabled остаётся читаемым.
+- Empty goal, empty stages, loading/error/retry и confirm dialog остаются
+  реальными состояниями текущей продуктовой логики. Геометрия light/dark
+  одинакова; scoped CSS не содержит coral, purple, glow или локальных hex.
+
 
 
 ### Навигация и иконки

@@ -320,6 +320,34 @@ describe('AppLayout: monochrome preview route scope', () => {
       expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-client-form-identity')
     },
   )
+
+  it('applies Trainer Client Goal identity only to the enabled exact goal route', () => {
+    authState.role = 'trainer'
+    authState.monochromePreview = true
+    renderLayout('/clients/client-1/goal')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'trainer-client-goal-identity')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-client-detail-identity', 'trainer-client-form-identity', 'trainer-clients-identity')
+  })
+
+  it('keeps Trainer Client Goal unchanged when the server flag is off', () => {
+    authState.role = 'trainer'
+    renderLayout('/clients/client-1/goal')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'trainer-client-goal-identity')
+    expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+  })
+
+  it.each(['/clients', '/clients/new', '/clients/client-1', '/clients/client-1/edit', '/clients/client-1/workouts', '/clients/client-1/progress'])(
+    'does not leak Trainer Client Goal identity into %s',
+    (path) => {
+      authState.role = 'trainer'
+      authState.monochromePreview = true
+      renderLayout(path)
+
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-client-goal-identity')
+    },
+  )
 })
 
 describe('AppLayout navigation', () => {
