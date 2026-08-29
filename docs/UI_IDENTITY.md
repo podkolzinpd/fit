@@ -618,6 +618,24 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
 - Обновлять visual baseline только после явного подтверждения, что изменение
   соответствует этому контракту.
 
+### Общий accessibility-контракт
+
+- Основной, вторичный и semantic text проверяются на фактических token pairs в
+  обеих темах; минимальный контраст обычного текста — WCAG AA `4.5:1`.
+- Каждый видимый interactive control имеет доступное имя. Проверка выполняется
+  на тех же реальных состояниях, что и visual regression, без искусственных
+  product states.
+- Base actions остаются 48 px, compact controls и иные touch targets — не менее
+  44 px. SVG-карта тела использует отдельный прозрачный stroked hit target,
+  который больше видимой зоны.
+- Все мигрированные route scopes получают заметный `focus-visible`; порядок и
+  достижимость native controls проверяются клавиатурой.
+- При `prefers-reduced-motion: reduce` animations и transitions внутри новой
+  identity и auth family отключаются практически мгновенно, включая
+  pseudo-elements; scroll behavior становится `auto`.
+- Эти проверки встроены в общий Playwright visual route matrix и отдельный
+  contrast/focus/motion smoke. Rollout `off` не наследует новые scoped правила.
+
 ## Запрещённые решения
 
 - Возвращать коралловый или фиолетовый как массовый акцент.
