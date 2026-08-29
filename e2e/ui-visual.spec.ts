@@ -503,11 +503,6 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
 
-  await page.goto('/clients')
-  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
-  await expect(page.getByRole('link', { name: /Анна Смирнова/ }).first()).toBeVisible()
-  await expectVisualBaseline(page, 'trainer-clients.png')
-
   await page.goto(`/clients/${demoClientId}`)
   await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Сводка по спортсмену' })).toBeVisible()
@@ -558,4 +553,37 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await expect(detailedAnalysis.getByText('Динамика упражнений')).toBeVisible()
   await expect(detailedAnalysis.getByText('Ритм тренировок')).toBeVisible()
   await detailedAnalysis.getByRole('button', { name: 'Закрыть' }).click()
+})
+
+test('trainer Clients list keeps its desktop visual baselines', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'visual-trainer-1440', 'Trainer desktop uses the desktop visual profile')
+  await signIn(page, 'trainer@fit.local', /\/today$/)
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+  await page.goto('/clients')
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Анна Смирнова/ }).first()).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
+  await expectVisualBaseline(page, `trainer-clients-${process.platform}.png`, [], true)
+
+  await page.goto('/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.goto('/clients')
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
+  await expectVisualBaseline(page, `trainer-clients-dark-${process.platform}.png`, [], true, '#1d1e21')
+})
+
+test('trainer Clients list keeps its mobile visual baselines', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Trainer desktop has a dedicated visual test')
+  await signIn(page, 'trainer@fit.local', /\/today$/)
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+  await page.goto('/clients')
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
+  await expect(page.getByRole('link', { name: /Анна Смирнова/ }).first()).toBeVisible()
+  await expectVisualBaseline(page, `trainer-clients-mobile-${process.platform}.png`, [], true)
+
+  await page.goto('/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.goto('/clients')
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
+  await expectVisualBaseline(page, `trainer-clients-mobile-dark-${process.platform}.png`, [], true, '#1d1e21')
 })

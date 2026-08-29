@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { bmiLabel } from '../../data/repositories/workouts.repository'
 import { AsyncView, Page } from '../../shared/ui'
-import { CloseIcon, ProfileIcon, SearchIcon } from '../../shared/icons'
+import { ChevronRightIcon, CloseIcon, ProfileIcon, SearchIcon } from '../../shared/icons'
 import { useAuth } from '../../app/auth-context'
 import { isDarkThemePilotEnabled } from '../../app/feature-flags'
 
@@ -19,7 +19,7 @@ export function ClientsPage() {
   // тёмную палитру: отдельный флаг пришлось бы заводить руками в Vercel, а
   // аудитория закрытого пилота у этих изменений одна и та же. Вне пилота поле
   // остаётся прежним — и по виду, и по правилу показа.
-  const searchPilot = Boolean(actor && isDarkThemePilotEnabled(actor.userId))
+  const searchPilot = Boolean(actor?.featureFlags?.monochromePreview || (actor && isDarkThemePilotEnabled(actor.userId)))
   const showArchived = window.localStorage?.getItem('fit.showArchivedClients') === 'true'
   // Список — рабочая очередь тренера, поэтому при каждом входе показываем
   // актуальную активность, а не данные из короткого SPA-кэша.
@@ -48,7 +48,7 @@ export function ClientsPage() {
           {search !== '' && <button type="button" className="clients-search-clear" aria-label="Очистить поиск" onClick={() => setSearch('')}><CloseIcon /></button>}
         </div>
         : <label className="clients-search"><span className="sr-only">Поиск клиента</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Поиск по имени" autoComplete="off" /></label>)}
-      {clients.length > 0 ? <div className="cards clients-list">{clients.map((client) => <Link className="card client-card" key={client.id} to={`/clients/${client.id}`}><span className="client-avatar" aria-hidden="true"><ProfileIcon /></span><div><strong>{client.fullName}</strong><p>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</p></div>{client.archivedAt && <span className="badge">Архив</span>}<span className="client-card-arrow" aria-hidden="true">›</span></Link>)}</div> : <p className="clients-search-empty">По этому имени клиентов не найдено.</p>}
+      {clients.length > 0 ? <div className="cards clients-list">{clients.map((client) => <Link className="card client-card" key={client.id} to={`/clients/${client.id}`}><span className="client-avatar" aria-hidden="true"><ProfileIcon /></span><div><strong>{client.fullName}</strong><p>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</p></div>{client.archivedAt && <span className="badge">Архив</span>}<span className="client-card-arrow" aria-hidden="true"><ChevronRightIcon /></span></Link>)}</div> : <p className="clients-search-empty">По этому имени клиентов не найдено.</p>}
     </AsyncView>
   </Page>
 }
