@@ -34,7 +34,8 @@ export function AppLayout() {
   const monochromeTrainerClientForm = Boolean(actor?.featureFlags?.monochromePreview && actor.role === 'trainer' && (pathname === '/clients/new' || /^\/clients\/[^/]+\/edit$/.test(pathname)))
   const monochromeTrainerClientGoal = Boolean(actor?.featureFlags?.monochromePreview && actor.role === 'trainer' && /^\/clients\/[^/]+\/goal$/.test(pathname))
   const monochromeTrainerSchedule = Boolean(actor?.featureFlags?.monochromePreview && actor.role === 'trainer' && pathname === '/schedule')
-  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientWorkouts || monochromeClientProfile || monochromeClientCardEdit || monochromeWorkoutCreateEdit || monochromeWorkoutDetailHistory || monochromeTrainerToday || monochromeTrainerClients || monochromeTrainerClientDetail || monochromeTrainerClientForm || monochromeTrainerClientGoal || monochromeTrainerSchedule
+  const monochromeTrainerProgress = Boolean(actor?.featureFlags?.monochromePreview && actor.role === 'trainer' && /^\/progress\/[^/]+$/.test(pathname))
+  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientWorkouts || monochromeClientProfile || monochromeClientCardEdit || monochromeWorkoutCreateEdit || monochromeWorkoutDetailHistory || monochromeTrainerToday || monochromeTrainerClients || monochromeTrainerClientDetail || monochromeTrainerClientForm || monochromeTrainerClientGoal || monochromeTrainerSchedule || monochromeTrainerProgress
   // main.tsx применяет тему до первого render, когда аккаунт ещё неизвестен.
   // Пилотный вариант подключается здесь — как только auth вернул actor и
   // allowlist можно проверить; вне allowlist вариант остаётся прежним тёмным.
@@ -92,6 +93,7 @@ export function AppLayout() {
     monochromeTrainerClientForm ? 'trainer-client-form-identity' : '',
     monochromeTrainerClientGoal ? 'trainer-client-goal-identity' : '',
     monochromeTrainerSchedule ? 'trainer-schedule-identity' : '',
+    monochromeTrainerProgress ? 'trainer-progress-identity' : '',
     keyboardOpen ? 'keyboard-open' : '',
   ].filter(Boolean).join(' ')
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">

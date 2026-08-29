@@ -491,6 +491,29 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
 - Light/dark имеют одинаковую геометрию; shadows, coral/purple и локальные hex
   в scoped CSS отсутствуют.
 
+### Product realization: Trainer Progress
+
+- Scope — точный `/progress/:clientId`, включая реальные `view=running` и
+  `view=measurements`; client `/me/progress`, Client Detail, Schedule и workout
+  routes не наследуют trainer progress identity.
+- Page — `24/600`, section — `18/600`, body — `14/400`, controls и compact
+  labels — `12/500`, editable fields — `16/400`, ключевые числа — `18–40/600`.
+- Недельная сводка, анализ, бег и замеры образуют вертикальный data workspace,
+  а не dashboard grid. Карточки используют neutral surfaces 18 px без glow и
+  декоративных semantic-заливок.
+- Периоды и body-map modes — compact 44 px controls. Реальный лучший результат
+  может использовать success-текст; warning/danger остаются только у состояния
+  внимания и destructive actions, всегда вместе с текстом.
+- Measurement metric tabs используют primary только для выбранной серии.
+  `Добавить замер` — base primary 48 px; history и metric settings — равные
+  ghost actions 48 px. Высота не зависит от semantic priority.
+- Create/edit form, history, custom metrics, duplicate-date feedback,
+  loading/error/retry и summary generation сохраняют существующие queries,
+  mutations и product states. Искусственные состояния не добавляются.
+- Light/dark имеют одинаковую геометрию; scoped CSS не содержит coral, purple,
+  gradient, glow или локальных hex. Flag-off возвращает прежний UI без миграции
+  данных или маршрутов.
+
 
 
 ### Навигация и иконки
