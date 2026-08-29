@@ -3564,3 +3564,167 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .client-card-edit-identity .client-self-edit-page { padding-inline:14px }
   .client-card-edit-identity .client-form-section { padding-inline:16px }
 }
+
+/* ── Gate 7 / task 13: workout creation, review, save and edit.
+   Detail, completion and Live keep their own route scopes. */
+.workout-create-edit-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none }
+.workout-create-edit-identity .content-immersive { background:var(--bg) }
+.workout-create-edit-identity .workout-form-page,
+.workout-create-edit-identity .today-start-page { max-width:560px; padding:max(12px, calc(24px - env(safe-area-inset-top))) 16px 28px }
+.workout-create-edit-identity .workout-focused-page > .page-header { min-height:44px; margin-bottom:8px }
+.workout-create-edit-identity .workout-focused-page > .page-header .page-back { width:44px; min-width:44px; height:44px; min-height:44px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.workout-create-edit-identity .workout-focused-page > .page-header .page-back svg { width:20px; height:20px; stroke-width:1.8 }
+
+.workout-create-edit-identity .workout-header-contract { gap:12px; margin:0 0 16px; padding:0 0 16px; border-color:var(--border) }
+.workout-create-edit-identity .workout-header-copy { gap:4px }
+.workout-create-edit-identity .workout-header-eyebrow { color:var(--muted); font-size:12px; font-weight:500; line-height:1.3; letter-spacing:.06em }
+.workout-create-edit-identity .workout-header-contract h2 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.workout-create-edit-identity .workout-header-meta { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
+.workout-create-edit-identity .workout-status { min-height:28px; padding:0 9px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+
+.workout-create-edit-identity button,
+.workout-create-edit-identity .button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.workout-create-edit-identity button.primary,
+.workout-create-edit-identity .button.primary,
+.workout-create-edit-identity .workout-cta[data-variant='primary'] { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none }
+.workout-create-edit-identity button.secondary,
+.workout-create-edit-identity .button.secondary { border-color:var(--border); background:var(--surface-elevated); color:var(--fg); box-shadow:none }
+.workout-create-edit-identity button.link { min-height:44px; padding-inline:0; border:0; background:transparent; color:var(--fg); box-shadow:none }
+.workout-create-edit-identity button:disabled,
+.workout-create-edit-identity .button[aria-disabled='true'],
+.workout-create-edit-identity .workout-cta:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg); box-shadow:none }
+
+.workout-create-edit-identity .workout-form { gap:20px; padding-bottom:calc(84px + env(safe-area-inset-bottom)) }
+.workout-create-edit-identity .workout-form-section,
+.workout-create-edit-identity .workout-form-page .workout-form-section:first-child { gap:14px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.workout-create-edit-identity .workout-form-section-head { gap:4px; padding:0 }
+.workout-create-edit-identity .workout-form-section-head .eyebrow { color:var(--muted); font-size:12px; font-weight:500; line-height:1.3; letter-spacing:.06em }
+.workout-create-edit-identity .workout-form-section-head h2,
+.workout-create-edit-identity .workout-form-exercises .workout-form-exercise-heading h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
+.workout-create-edit-identity .workout-form .field { gap:6px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-create-edit-identity .workout-form .field input,
+.workout-create-edit-identity .workout-form .field select,
+.workout-create-edit-identity .workout-form .field textarea,
+.workout-create-edit-identity .client-picker-trigger { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.workout-create-edit-identity .workout-form .field input:focus,
+.workout-create-edit-identity .workout-form .field select:focus,
+.workout-create-edit-identity .workout-form .field textarea:focus,
+.workout-create-edit-identity .client-picker-trigger:focus-visible { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px; box-shadow:none }
+.workout-create-edit-identity .client-picker-label { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-create-edit-identity .workout-record-mode,
+.workout-create-edit-identity .today-record-mode { gap:3px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.workout-create-edit-identity .workout-record-mode button,
+.workout-create-edit-identity .today-record-mode button { min-height:44px; border:0; border-radius:10px; background:transparent; color:var(--muted); font-size:12px; font-weight:500 }
+.workout-create-edit-identity .workout-record-mode button.active,
+.workout-create-edit-identity .today-record-mode button.active { background:var(--surface-elevated); color:var(--fg); box-shadow:none }
+.workout-create-edit-identity .workout-end-time > .link,
+.workout-create-edit-identity .workout-add-end-time { color:var(--fg); font-size:12px; font-weight:500 }
+.workout-create-edit-identity .workout-notes { border-color:var(--border) }
+.workout-create-edit-identity .workout-notes summary { min-height:48px; color:var(--fg); font-size:14px; font-weight:500 }
+.workout-create-edit-identity .workout-notes summary span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-create-edit-identity .workout-notes summary::after { content:''; width:8px; height:8px; margin:0 3px 4px 10px; border-right:1.5px solid var(--muted); border-bottom:1.5px solid var(--muted); transform:rotate(45deg) }
+.workout-create-edit-identity .workout-notes[open] summary::after { margin-bottom:-4px; transform:rotate(225deg) }
+
+.workout-create-edit-identity .workout-form-exercises { gap:12px }
+.workout-create-edit-identity .quick-workout-entry { gap:8px }
+.workout-create-edit-identity .workout-composer-card { padding:14px; border-color:var(--border); border-radius:18px; background:var(--surface-elevated); box-shadow:none }
+.workout-create-edit-identity .workout-composer-card .voice-note-field > label { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-create-edit-identity .workout-composer-card .voice-note-field textarea { min-height:120px; padding:10px 12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; line-height:1.45 }
+.workout-create-edit-identity .workout-composer-card .voice-note-field textarea:focus { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px }
+.workout-create-edit-identity .workout-composer-card .voice-input,
+.workout-create-edit-identity .workout-composer-clear { min-height:44px; border-color:var(--border) }
+.workout-create-edit-identity .workout-composer-card .voice-input-button,
+.workout-create-edit-identity .workout-composer-clear .link { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
+.workout-create-edit-identity .workout-composer-hint,
+.workout-create-edit-identity .workout-empty-hint { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.4 }
+.workout-create-edit-identity .workout-composer-actions { gap:8px }
+.workout-create-edit-identity .workout-composer-actions > button { min-height:48px }
+.workout-create-edit-identity .quick-workout-add { border-color:var(--border); background:var(--surface-sunken); color:var(--fg) }
+.workout-create-edit-identity .quick-workout-preview { border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg) }
+.workout-create-edit-identity .quick-workout-clarification p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.workout-create-edit-identity .quick-workout-unparsed { color:var(--warning-fg) }
+
+.workout-create-edit-identity .workout-form-exercises .planned-exercise,
+.workout-create-edit-identity .exercise-block { margin:0; padding:16px; border:1px solid var(--border); border-radius:18px; background:var(--surface-elevated); box-shadow:none }
+.workout-create-edit-identity .workout-form-exercises .planned-exercise + .planned-exercise,
+.workout-create-edit-identity .workout-form-exercises .exercise-block + .planned-exercise,
+.workout-create-edit-identity .workout-form-exercises .planned-exercise + .exercise-block { margin-top:8px }
+.workout-create-edit-identity .compact-editor-exercise-toggle strong,
+.workout-create-edit-identity .block-exercise-head strong { color:var(--fg); font-size:16px; font-weight:600 }
+.workout-create-edit-identity .compact-editor-exercise-summary,
+.workout-create-edit-identity .compact-editor-exercise-options,
+.workout-create-edit-identity .exercise-prefill-note,
+.workout-create-edit-identity .workout-set-table-head { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-create-edit-identity .planned-set-input,
+.workout-create-edit-identity .planned-set-rpe,
+.workout-create-edit-identity .exercise-block select,
+.workout-create-edit-identity .exercise-block input { min-height:44px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--fg); font-size:14px; font-weight:500; box-shadow:none }
+.workout-create-edit-identity .planned-exercise .set-add-row > .secondary,
+.workout-create-edit-identity .workout-editor-footer > .secondary { min-height:44px; border-color:var(--border); background:transparent; color:var(--fg); font-size:12px; font-weight:500 }
+.workout-create-edit-identity .workout-editor-footer { gap:8px; margin-top:12px }
+.workout-create-edit-identity .workout-form .workout-action-row { padding:10px 16px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); background:var(--bar-bg); box-shadow:none; backdrop-filter:none }
+.workout-create-edit-identity .workout-form .workout-action-row .workout-cta { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+
+.workout-create-edit-identity .today-review { gap:12px }
+.workout-create-edit-identity .today-start-page > .page-header { display:none }
+.workout-create-edit-identity .today-review-head { gap:4px; padding:0 }
+.workout-create-edit-identity .today-review-back { justify-self:start; min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
+.workout-create-edit-identity .today-review-order-toolbar > .link,
+.workout-create-edit-identity .today-review-order-toolbar .reorder-mode { color:var(--fg); font-size:12px; font-weight:500 }
+.workout-create-edit-identity .today-exercise-list { gap:0; overflow:hidden; padding:0 16px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
+.workout-create-edit-identity .today-exercise.planned-exercise { padding:16px 0; border-color:var(--border) }
+.workout-create-edit-identity .today-exercise-title strong { color:var(--fg); font-size:16px; font-weight:600 }
+.workout-create-edit-identity .today-exercise > p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.workout-create-edit-identity .today-exercise p.today-exercise-missing { color:var(--warning-fg); font-weight:500 }
+.workout-create-edit-identity .today-exercise .icon-button { width:44px; min-height:44px; border:0; border-radius:14px; background:transparent; color:var(--danger); font-size:22px }
+.workout-create-edit-identity .today-exercise-editor summary,
+.workout-create-edit-identity .today-exercise-actions .link { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
+.workout-create-edit-identity .today-empty,
+.workout-create-edit-identity .today-quick-client { border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.workout-create-edit-identity .today-empty p,
+.workout-create-edit-identity .today-quick-client p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.workout-create-edit-identity .today-review-next { min-height:48px; border-radius:14px }
+.workout-create-edit-identity .today-undo-remove { border-color:var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg) }
+
+.workout-create-edit-identity .today-assignment { gap:16px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.workout-create-edit-identity .today-assignment-self,
+.workout-create-edit-identity .today-save-question { color:var(--fg); font-size:14px; font-weight:500; line-height:1.4 }
+.workout-create-edit-identity .today-assignment-self { margin:0; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken) }
+.workout-create-edit-identity .today-save-actions { gap:12px }
+.workout-create-edit-identity .today-date-field { gap:6px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-create-edit-identity .today-date-field input { min-height:48px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400 }
+.workout-create-edit-identity .today-save-actions .workout-cta { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+
+.workout-create-edit-identity .sheet-overlay,
+.workout-create-edit-identity .modal-overlay { background:color-mix(in srgb, var(--bg) 76%, transparent); backdrop-filter:none }
+.workout-create-edit-identity .exercise-picker,
+.workout-create-edit-identity .client-picker-sheet,
+.workout-create-edit-identity .exercise-settings-sheet,
+.workout-create-edit-identity .modal-dialog { border-color:var(--border); background:var(--surface-elevated); box-shadow:none }
+.workout-create-edit-identity .picker-header h1,
+.workout-create-edit-identity .picker-header h2 { color:var(--fg); font-size:18px; font-weight:600 }
+.workout-create-edit-identity .picker-close { width:44px; height:44px; border-radius:14px; color:var(--fg) }
+.workout-create-edit-identity .picker-search { min-height:48px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400 }
+.workout-create-edit-identity .picker-category,
+.workout-create-edit-identity .picker-muscle,
+.workout-create-edit-identity .picker-equipment-option { min-height:44px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-create-edit-identity .picker-category.active,
+.workout-create-edit-identity .picker-muscle.active,
+.workout-create-edit-identity .picker-equipment-option.active { border-color:var(--border); background:var(--surface-raised); color:var(--fg) }
+.workout-create-edit-identity .picker-item { min-height:64px; border-color:var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); font-size:14px; font-weight:500 }
+.workout-create-edit-identity .picker-item.selected { border-color:var(--mono-primary); background:var(--surface-sunken) }
+.workout-create-edit-identity .picker-select-mark { border-color:var(--border); border-radius:10px; color:var(--muted) }
+.workout-create-edit-identity .picker-item.selected .picker-select-mark { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.workout-create-edit-identity .picker-create { border-color:var(--border); background:transparent; color:var(--secondary-label-fg) }
+.workout-create-edit-identity .state-panel { border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.workout-create-edit-identity .state-panel-mark { border-radius:14px; background:var(--surface-sunken); color:var(--fg) }
+.workout-create-edit-identity .state-panel h2 { color:var(--fg); font-size:18px; font-weight:600 }
+.workout-create-edit-identity .state-panel p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+
+@media (max-width:375px) {
+  .workout-create-edit-identity .workout-form-page,
+  .workout-create-edit-identity .today-start-page { padding-inline:14px }
+  .workout-create-edit-identity .workout-form-section,
+  .workout-create-edit-identity .workout-form-page .workout-form-section:first-child,
+  .workout-create-edit-identity .today-assignment { padding-inline:16px }
+}

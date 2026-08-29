@@ -266,6 +266,111 @@ test('client card edit keeps its visual baseline', async ({ page }, testInfo) =>
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
 })
 
+async function openWorkoutCreate(page: import('@playwright/test').Page, dark = false) {
+  await signIn(page, 'client@fit.local', /\/me$/)
+  await page.goto('/me/profile')
+  const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
+  if (dark) await darkTheme.check()
+  else await darkTheme.uncheck()
+  await page.goto('/workouts/new')
+  await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/workout-create-edit-identity/)
+}
+
+async function addCompletedBenchPress(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).scrollIntoViewIfNeeded()
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
+  await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
+  await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.getByLabel('Вес, подход 1').fill('60')
+  await page.getByLabel('Повторы, подход 1').fill('10')
+  await page.getByRole('button', { name: 'Завершённая' }).click()
+  await page.locator('.workout-form-exercises').scrollIntoViewIfNeeded()
+  await expect(page.getByRole('button', { name: 'Записать тренировку' })).toBeEnabled()
+}
+
+async function openWorkoutReview(page: import('@playwright/test').Page, trainer: boolean, dark = false) {
+  await page.route('**/functions/v1/parse-workout', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        items: [{
+          sourceText: 'Жим лёжа 3×10 — 60 кг',
+          exerciseRef: 'bench-press',
+          confidence: 1,
+          sets: [{ weightKg: 60, reps: 10 }, { weightKg: 60, reps: 10 }, { weightKg: 60, reps: 10 }],
+        }],
+        unmatched: [],
+      }),
+    })
+  })
+  await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
+  await page.goto(trainer ? '/profile' : '/me/profile')
+  const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
+  if (dark) await darkTheme.check()
+  else await darkTheme.uncheck()
+  await page.evaluate(() => Object.keys(localStorage)
+    .filter((key) => key.startsWith('fit.today-draft.'))
+    .forEach((key) => localStorage.removeItem(key)))
+  await page.goto(trainer ? '/today' : '/me')
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await page.getByLabel('Тренировка').fill('Жим лёжа 3×10 — 60 кг')
+  await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/workout-create-edit-identity/)
+}
+
+test('workout create keeps its visual baseline', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client workout form uses mobile visual profiles')
+  await openWorkoutCreate(page)
+  await expect(page.getByRole('button', { name: 'Сохранить план' })).toBeDisabled()
+  await expectVisualBaseline(page, `workout-create-${process.platform}.png`)
+})
+
+test('workout completed-entry keeps its visual baseline', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client workout form uses mobile visual profiles')
+  await openWorkoutCreate(page)
+  await addCompletedBenchPress(page)
+  await expectVisualBaseline(page, `workout-create-fact-${process.platform}.png`)
+})
+
+test('workout create dark keeps its visual baseline', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client workout form uses mobile visual profiles')
+  await openWorkoutCreate(page, true)
+  await expectVisualBaseline(page, `workout-create-dark-${process.platform}.png`, [], false, '#1d1e21')
+})
+
+test('workout review keeps its visual baseline', async ({ page }, testInfo) => {
+  const trainer = testInfo.project.name === 'visual-trainer-1440'
+  await openWorkoutReview(page, trainer)
+  await expectVisualBaseline(page, `workout-review-${process.platform}.png`)
+})
+
+test('workout save keeps its visual baseline', async ({ page }, testInfo) => {
+  const trainer = testInfo.project.name === 'visual-trainer-1440'
+  await openWorkoutReview(page, trainer)
+  await page.getByRole('button', { name: 'Далее' }).click()
+  await expect(page.getByRole('heading', { name: 'Сохраните тренировку' })).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/workout-create-edit-identity/)
+  await expectVisualBaseline(page, `workout-save-${process.platform}.png`)
+})
+
+test('workout review dark keeps its visual baseline', async ({ page }, testInfo) => {
+  const trainer = testInfo.project.name === 'visual-trainer-1440'
+  await openWorkoutReview(page, trainer, true)
+  await expectVisualBaseline(page, `workout-review-dark-${process.platform}.png`, [], false, '#1d1e21')
+})
+
+test('workout save dark keeps its visual baseline', async ({ page }, testInfo) => {
+  const trainer = testInfo.project.name === 'visual-trainer-1440'
+  await openWorkoutReview(page, trainer, true)
+  await page.getByRole('button', { name: 'Далее' }).click()
+  await expect(page.getByRole('heading', { name: 'Сохраните тренировку' })).toBeVisible()
+  await expectVisualBaseline(page, `workout-save-dark-${process.platform}.png`, [], false, '#1d1e21')
+})
+
 test('client live workout keeps its visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Live uses mobile visual profiles')
   await openPreviewLiveWorkout(page)
