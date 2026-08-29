@@ -73,6 +73,13 @@ function numberOrNull(value: number): number | null {
   return Number.isFinite(value) ? value : null
 }
 
+function localizedNumber(value: unknown): number {
+  if (typeof value === 'number') return value
+  if (typeof value !== 'string') return Number.NaN
+  const parsed = Number(value.trim().replace(/\s/g, '').replace(',', '.'))
+  return Number.isFinite(parsed) ? parsed : Number.NaN
+}
+
 function criterionInput(values: GoalFormValues, existing?: GoalCriterion): SaveGoalCriterionInput {
   const operation = values.operation
   return {
@@ -153,16 +160,16 @@ function GoalForm({ clientId, goal, initialTitle, onSaved, onCancel }: {
           {Object.entries(GOAL_CRITERION_OPERATIONS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select></Field>
         {operation === 'maintain_range' && <div className="split">
-          <Field label={`Минимум, ${GOAL_CRITERION_METRICS[metric].unit}`}><input disabled={criterionFieldsDisabled} type="number" step="0.1" {...form.register('rangeMin', { valueAsNumber: true })} /></Field>
-          <Field label={`Максимум, ${GOAL_CRITERION_METRICS[metric].unit}`}><input disabled={criterionFieldsDisabled} type="number" step="0.1" {...form.register('rangeMax', { valueAsNumber: true })} /></Field>
+          <Field label={`Минимум, ${GOAL_CRITERION_METRICS[metric].unit}`}><input disabled={criterionFieldsDisabled} type="text" inputMode="decimal" {...form.register('rangeMin', { setValueAs: localizedNumber })} /></Field>
+          <Field label={`Максимум, ${GOAL_CRITERION_METRICS[metric].unit}`}><input disabled={criterionFieldsDisabled} type="text" inputMode="decimal" {...form.register('rangeMax', { setValueAs: localizedNumber })} /></Field>
         </div>}
         {operation !== 'maintain_range' && operation !== 'track_only' && <Field label={`${operation === 'change_by' ? 'Изменение' : 'Значение'}, ${GOAL_CRITERION_METRICS[metric].unit}`}>
-          <input disabled={criterionFieldsDisabled} type="number" step="0.1" {...form.register('targetValue', { valueAsNumber: true })} />
+          <input disabled={criterionFieldsDisabled} type="text" inputMode="decimal" {...form.register('targetValue', { setValueAs: localizedNumber })} />
         </Field>}
         {criterionNeedsReview && <label className="goal-criterion-confirm"><input type="checkbox" checked={criterionReviewed}
           onChange={(event) => setCriterionReviewed(event.currentTarget.checked)} />
           <span>Я проверил(а), что критерий подходит к формулировке цели<small>Без подтверждения цель сохранится, а критерий получит статус «Нужно проверить».</small></span></label>}
-        <p className="muted goal-criterion-hint">Progress показывает настройку и наличие данных без оценки достижения цели.</p>
+        <p className="muted goal-criterion-hint">Progress рассчитает текущее положение, динамику периода и актуальность данных обычным кодом — без ИИ.</p>
       </div> : <p className="muted">Цель сохранится как текст без автоматической оценки.</p>}
     </section>
     {mutation.error && <p className="error" role="alert">{mutation.error.message}</p>}
