@@ -221,6 +221,29 @@ test('client workouts keep their visual baseline', async ({ page }, testInfo) =>
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
 })
 
+test('client Profile keeps its visual baseline', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Profile uses mobile visual profiles')
+  await signIn(page, 'client@fit.local', /\/me$/)
+  await page.goto('/me/profile')
+  await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/client-profile-shell-identity/)
+  await expect(page.getByRole('link', { name: 'Изменить данные' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Вид карты тела' })).toBeVisible()
+  await expectVisualBaseline(page, `client-profile-${process.platform}.png`)
+
+  await page.getByRole('button', { name: 'Предложение или проблема' }).click()
+  await page.getByRole('form', { name: 'Напишите команде Fit' }).scrollIntoViewIfNeeded()
+  await expect(page.getByRole('textbox', { name: 'Сообщение' })).toBeVisible()
+  await expectVisualBaseline(page, `client-profile-feedback-${process.platform}.png`)
+  await page.getByRole('button', { name: 'Закрыть' }).click()
+
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await expect(page.locator('.phone-frame')).toHaveClass(/client-profile-shell-identity/)
+  await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
+  await expectVisualBaseline(page, `client-profile-dark-${process.platform}.png`)
+  await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
+})
+
 test('client live workout keeps its visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Live uses mobile visual profiles')
   await openPreviewLiveWorkout(page)
