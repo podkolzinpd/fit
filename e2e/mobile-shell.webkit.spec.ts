@@ -819,7 +819,9 @@ test('iPhone: voice-first и AI-поверхности сохраняют кон
   await page.goto('/progress/11111111-1111-4111-8111-111111111111')
   const aiCard = page.locator('.ai-progress-card')
   await expect(aiCard).toBeVisible()
-  expect(await aiCard.evaluate((element) => getComputedStyle(element).borderTopColor)).toBe('rgb(66, 107, 88)')
+  const aiBorder = await aiCard.evaluate((element) => getComputedStyle(element).borderTopColor)
+  const neutralBorder = await page.locator('.page-back').evaluate((element) => getComputedStyle(element).borderTopColor)
+  expect(aiBorder).toBe(neutralBorder)
   await expectNoHorizontalOverflow(page)
 })
 
