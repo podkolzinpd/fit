@@ -1,6 +1,6 @@
 # Gate 7 — Trainer Client Detail
 
-Статус: **implemented; local validation complete**.
+Статус: **production preview; PR #664, deployment verified**.
 
 ## Scope
 
@@ -29,7 +29,9 @@
 - Flag-off Chromium: 1/1. WebKit overflow: 3/3 на 360/375/390 px.
 - Darwin и Linux visual: light/dark на 390, 430 и Trainer 1440 прошли.
 - Полный `npm run check`: 123/123 test files, 899/899 tests; API 225/225 при
-  23 ожидаемых skips. CI, deployment и production smoke фиксируются в PR.
+  23 ожидаемых skips. Обязательный CI прошёл; PR #664 влит как `9f57baab`,
+  production deployment `6153054766` успешен. Authenticated browser smoke
+  заблокирован административной policy до navigation и остаётся ручным.
 
 ## Rollback
 
