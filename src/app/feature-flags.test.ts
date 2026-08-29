@@ -3,13 +3,41 @@ import {
   getYandexIdPilotConfig,
   isAssistantNavPilotEnabled,
   isDarkThemePilotEnabled,
+  isMonochromeUiEnabled,
   isProductionAssistantPilotEmail,
   isTodayStartRedesignEnabled,
   isWearablesPilotEnabled,
+  monochromeRolloutMode,
   trainerHomePath,
 } from './feature-flags'
 
 afterEach(() => vi.unstubAllEnvs())
+
+describe('monochrome UI rollout', () => {
+  it('is globally enabled by default and for explicit on', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', '')
+    expect(monochromeRolloutMode()).toBe('on')
+    expect(isMonochromeUiEnabled(false)).toBe(true)
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'ON')
+    expect(isMonochromeUiEnabled(false)).toBe(true)
+  })
+
+  it('preserves the server-managed personal flag in preview mode', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'preview')
+    expect(isMonochromeUiEnabled(false)).toBe(false)
+    expect(isMonochromeUiEnabled(true)).toBe(true)
+  })
+
+  it('forces legacy UI for everyone in off mode', () => {
+    vi.stubEnv('VITE_MONOCHROME_ROLLOUT_MODE', 'off')
+    expect(isMonochromeUiEnabled(false)).toBe(false)
+    expect(isMonochromeUiEnabled(true)).toBe(false)
+  })
+
+  it('falls forward to the accepted production identity for an unknown value', () => {
+    expect(monochromeRolloutMode('unexpected')).toBe('on')
+  })
+})
 
 describe('today start redesign flag', () => {
   it('enables the new start path by default', () => {

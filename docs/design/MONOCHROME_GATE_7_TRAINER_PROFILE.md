@@ -1,11 +1,12 @@
 # Gate 7 — профиль тренера
 
-Статус: **implemented; local validation in progress**.
+Статус: **merged and deployed to production in PR #671**.
 
 ## Scope
 
 - Trainer, точный `/profile`.
-- Identity требует server-managed `monochrome_preview`.
+- Identity следует общему rollout mode; server-managed `monochrome_preview`
+  сохранён для режима `preview`.
 - Client Profile `/me/profile`, Join, Exercise Catalog и другие trainer routes
   не меняются.
 - Flag-off сохраняет прежний UI и текущую продуктовую логику.
@@ -49,5 +50,6 @@
 
 ## Rollback
 
-`monochrome_preview=false` возвращает прежний Trainer Profile без rollback
-данных, preferences, repositories или маршрутов.
+`VITE_MONOCHROME_ROLLOUT_MODE=off` возвращает прежний Trainer Profile без
+rollback данных, preferences, repositories или маршрутов. Режим `preview`
+сохраняет прежнее персональное управление через `monochrome_preview`.

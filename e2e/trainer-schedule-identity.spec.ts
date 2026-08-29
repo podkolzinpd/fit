@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
 
-test('trainer without monochrome preview keeps current Schedule identity', async ({ page }) => {
+test('global rollout gives a new trainer the Schedule identity', async ({ page }) => {
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Тип аккаунта').selectOption('trainer')
@@ -12,8 +12,8 @@ test('trainer without monochrome preview keeps current Schedule identity', async
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto('/schedule')
-  await expect(page.locator('.phone-frame')).not.toHaveClass(/trainer-schedule-identity/)
-  await expect(page.locator('html')).not.toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-schedule-identity/)
+  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
 })
 
 test('trainer Schedule preview keeps real date controls usable and compact', async ({ page }) => {
