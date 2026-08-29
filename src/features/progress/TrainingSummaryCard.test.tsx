@@ -236,6 +236,7 @@ describe('Training summary card states', () => {
       targetDate: null, status: 'active', version: 1, stages: [], criteria: [{
         id: 'criterion-1', goalId: 'goal-1', metric: 'weight', operation: 'increase_to',
         targetValue: 85, rangeMin: null, rangeMax: null, unit: 'кг',
+        baselineValue: null, baselineRecordedOn: null,
         confirmationStatus: 'confirmed', position: 0, version: 1,
       }],
     })
@@ -275,9 +276,13 @@ describe('Training summary card states', () => {
     expect(within(comparison!).getByText('+1')).toBeVisible()
     expect(within(comparison!).queryByText('+2')).toBeNull()
     expect(screen.getByRole('heading', { name: 'Набрать мышечную массу и укрепить спину' })).toBeVisible()
-    expect(screen.getByText('Настроено')).toBeVisible()
+    expect(screen.getByText('Движение к ориентиру')).toBeVisible()
     expect(screen.getByText('увеличить до 85 кг')).toBeVisible()
-    expect(screen.getByText(/Progress пока не делает вывод о достижении цели/)).toBeVisible()
+    expect(screen.getAllByText('81,5 кг')[0]).toBeVisible()
+    expect(screen.getByText(/80 → 81,5 кг \(\+1,5 кг\) · ближе к ориентиру/)).toBeVisible()
+    expect(screen.getByText('Достаточно для динамики периода')).toBeVisible()
+    expect(screen.getByText(/Свежие данные · 7 дн. назад/)).toBeVisible()
+    expect(screen.getByText(/пока не достиг заданного ориентира/)).toBeVisible()
     expect(screen.getByRole('heading', { name: '28 августа 2026 г. · 18:30' })).toBeVisible()
     expect(screen.getByText('Спина и плечи')).toBeVisible()
     expect(screen.getByText('3 × 70 кг × 10 повт.')).toBeVisible()

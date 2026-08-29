@@ -1,7 +1,8 @@
 import { compactPlannedSetSummary } from '../../data/repositories/workout-rules'
 import type { ClientGoal, ProgressEntry, PublishedTrainingSummary, TrainingSummary, Workout } from '../../shared/domain'
 import { GOAL_CRITERION_METRICS, goalCriterionFoundationState, goalCriterionTargetLabel, type GoalCriterionFoundationState } from '../../shared/goal-criterion-rules'
-import { formatLocalDate, type LocalDate } from '../../shared/local-date'
+import { calculateStandardGoalProgress, type GoalProgressDirection, type GoalProgressStatus } from '../../shared/goal-progress'
+import { formatLocalDate, formatLocalDateShort, type LocalDate } from '../../shared/local-date'
 import { progressFactChangeLabel } from './progress-facts'
 import { progressMetricNoun } from './summary-format'
 
@@ -33,6 +34,15 @@ export type ClientProgressPresentation = {
     statusLabel: string
     criterionLabel?: string
     targetLabel?: string
+    currentLabel?: string
+    periodEndLabel?: string
+    dynamicsLabel?: string
+    lastMeasurementLabel?: string
+    sufficiencyLabel?: string
+    freshnessLabel?: string
+    baselineLabel?: string
+    message?: string
+    measurementAction?: boolean
   }
   nextWorkout?: { date: string; title: string; exercises: Array<{ name: string; plan?: string }> }
   conclusion: string
@@ -153,17 +163,95 @@ const GOAL_STATE_LABELS: Record<GoalCriterionFoundationState, string> = {
   configured: 'Настроено',
 }
 
-function goalStory(_summary: ProgressSummary, options: StoryOptions): ClientProgressPresentation['goal'] {
+const GOAL_PROGRESS_STATUS_LABELS: Record<GoalProgressStatus, string> = {
+  target_reached: 'Ориентир достигнут',
+  target_not_reached: 'Движение к ориентиру',
+  in_range_now: 'В диапазоне сейчас',
+  range_maintained: 'Диапазон удерживается',
+  outside_range: 'Вне диапазона',
+  tracking: 'Отслеживается',
+  needs_data: 'Нужны данные',
+  needs_baseline: 'Нужна отправная точка',
+}
+
+const DIRECTION_LABELS: Record<GoalProgressDirection, string> = {
+  toward_target: 'ближе к ориентиру',
+  away_from_target: 'дальше от ориентира',
+  stable: 'положение не изменилось',
+  increased: 'значение выросло',
+  decreased: 'значение снизилось',
+  unchanged: 'без изменения',
+  insufficient_data: 'недостаточно данных для динамики',
+}
+
+function signed(value: number, unit: string): string {
+  return `${value > 0 ? '+' : value < 0 ? '−' : ''}${number.format(Math.abs(value))} ${unit}`
+}
+
+function goalStory(summary: ProgressSummary, options: StoryOptions): ClientProgressPresentation['goal'] {
   const title = options.goal?.title ?? options.profileGoal?.trim()
   if (!title) return undefined
   const criterion = options.goal?.criteria[0]
   const state = goalCriterionFoundationState(criterion, options.measurements ?? [])
-  return {
+  const foundation = {
     title,
     state,
     statusLabel: GOAL_STATE_LABELS[state],
     criterionLabel: criterion ? GOAL_CRITERION_METRICS[criterion.metric].label : undefined,
     targetLabel: criterion ? goalCriterionTargetLabel(criterion) : undefined,
+  }
+  if (!criterion || state !== 'configured' || !options.today) return foundation
+
+  const result = calculateStandardGoalProgress(
+    criterion, options.measurements ?? [], summary.periodStart, summary.periodEnd, options.today,
+  )
+  const targetLabel = criterion.operation === 'change_by' && result.absoluteTarget !== null
+    ? `${goalCriterionTargetLabel(criterion)} · до ${number.format(result.absoluteTarget)} ${criterion.unit}`
+    : goalCriterionTargetLabel(criterion)
+  const dynamicsLabel = result.dynamics.first && result.dynamics.last && result.dynamics.delta !== null
+    ? `${number.format(result.dynamics.first.value)} → ${number.format(result.dynamics.last.value)} ${criterion.unit} (${signed(result.dynamics.delta, criterion.unit)}) · ${DIRECTION_LABELS[result.dynamics.direction]}`
+    : DIRECTION_LABELS[result.dynamics.direction]
+  const freshnessLabel = result.freshness === 'fresh'
+    ? result.ageDays === 0 ? 'Свежие данные · сегодня' : `Свежие данные · ${result.ageDays} дн. назад`
+    : result.freshness === 'stale' ? `Данные устарели · ${result.ageDays} дн. назад` : 'Нет данных'
+  const sufficiencyLabel = {
+    none: 'Нет замеров',
+    position_only: 'Достаточно только для текущего положения',
+    enough_for_dynamics: 'Достаточно для динамики периода',
+    enough_for_maintenance: 'Достаточно для проверки удержания',
+  }[result.sufficiency]
+  const message = result.freshness === 'stale'
+    ? 'Текущее положение рассчитано по устаревшему замеру. Добавьте новый замер, чтобы обновить вывод.'
+    : result.status === 'in_range_now'
+      ? result.sufficiency === 'enough_for_maintenance'
+        ? 'Значение находится в диапазоне сейчас, но в окне удержания был замер за его пределами.'
+        : 'Значение находится в диапазоне сейчас. Для подтверждения удержания нужны минимум два замера с интервалом не менее 7 дней.'
+      : result.status === 'needs_baseline'
+        ? 'Первый замер станет отправной точкой для относительной цели.'
+        : result.status === 'range_maintained'
+          ? 'Все замеры окна удержания находятся в заданном диапазоне.'
+          : result.status === 'target_reached'
+            ? 'Последний актуальный замер соответствует заданному ориентиру.'
+            : result.status === 'target_not_reached'
+              ? 'Последний актуальный замер пока не достиг заданного ориентира.'
+              : 'Показатель отслеживается без оценки направления улучшения.'
+  return {
+    ...foundation,
+    statusLabel: GOAL_PROGRESS_STATUS_LABELS[result.status],
+    targetLabel,
+    currentLabel: result.latestNow ? `${number.format(result.latestNow.value)} ${criterion.unit}` : 'Нет данных',
+    periodEndLabel: result.periodEnd
+      ? `${number.format(result.periodEnd.value)} ${criterion.unit} · ${formatLocalDateShort(result.periodEnd.recordedOn)}`
+      : 'Нет данных к концу периода',
+    dynamicsLabel,
+    lastMeasurementLabel: result.latestNow ? formatLocalDate(result.latestNow.recordedOn) : undefined,
+    sufficiencyLabel,
+    freshnessLabel,
+    baselineLabel: result.baseline
+      ? `${number.format(result.baseline.value)} ${criterion.unit} · ${formatLocalDateShort(result.baseline.recordedOn)}`
+      : undefined,
+    message,
+    measurementAction: result.freshness !== 'fresh' || result.status === 'needs_data' || result.status === 'needs_baseline',
   }
 }
 

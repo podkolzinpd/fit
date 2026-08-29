@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-30
-Проверенный базовый `main`: `b48ff0a` (`fix: allow clients to manage their goals (#679)`)
+Проверенный базовый `main`: `3f2bf82` (`fix(push): sync production transport secrets (#669)`)
 
 ## Текущий release gate
 
@@ -94,6 +94,10 @@
   клиент управляет своей целью, а прямые записи и посторонний тренер запрещены.
 - YAFIT-414 / Progress 1.1 добавил ручной `weight/waist/chest/hips` критерий
   и явные состояния без интерпретации старых целей по тексту; динамика и LLM отложены.
+- Progress 1.2: deterministic-оценка `weight/waist/chest/hips` поддерживает все
+  пять operations, стабильный baseline для `change_by`, текущее положение,
+  динамику выбранного периода, значение на конец периода, достаточность и
+  freshness. Удержание требует минимум 2 замера за 7+ дней.
 - Tasks 25–28: auth/Assistant, WCAG AA, 44 px targets, reduced motion,
   app/API, Chromium/WebKit и Linux/Darwin visual matrix 390/430/1440 зелёные.
 - Production Vercel `6158408571` и Yandex stage preview sync `33263066435`
