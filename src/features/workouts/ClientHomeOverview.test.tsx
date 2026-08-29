@@ -17,7 +17,7 @@ function workout(patch: Partial<Workout> = {}): Workout {
 
 const goal: ClientGoal = {
   id: 'goal-1', clientId: 'client-1', title: 'Вернуться к бегу', targetDate: null,
-  status: 'active', version: 1, stages: [],
+  status: 'active', version: 1, stages: [], criteria: [],
 }
 
 const week: WorkoutRegularity = {

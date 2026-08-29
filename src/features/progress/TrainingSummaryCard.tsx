@@ -323,7 +323,8 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
   const wins = presentation.wins
     .filter((item) => item.title !== presentation.hero?.exerciseName)
     .slice(0, 2)
-  const goalLink = role === 'client' ? '/me/edit' : `/clients/${clientId}/goal`
+  const goalLink = role === 'client' ? '/me/goal' : `/clients/${clientId}/goal`
+  const measurementLink = role === 'client' ? '/me/progress#measurements' : `/progress/${clientId}?view=measurements`
   const workoutLink = role === 'client' ? '/workouts/new' : `/workouts/new?client=${clientId}`
   const attention = role === 'trainer' && 'trainer' in summary ? summary.trainer.attention : []
 
@@ -361,12 +362,17 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
     {goalLoading && <section className="client-progress-story-state" role="status">Проверяем данные цели…</section>}
     {goalError && <section className="client-progress-story-state" role="alert">Не удалось загрузить цель. <button type="button" className="link" onClick={onGoalRetry}>Повторить</button></section>}
     {!goalLoading && !goalError && presentation.goal && <section className="client-progress-goal-story" aria-labelledby={`${role}-progress-goal-title`}>
-      <span>{role === 'client' ? 'Для твоей цели' : 'Цель клиента'}</span>
+      <div className="client-progress-goal-story-head"><span>{role === 'client' ? 'Для твоей цели' : 'Цель клиента'}</span>
+        <strong className={`goal-foundation-status ${presentation.goal.state}`}>{presentation.goal.statusLabel}</strong></div>
       <h3 id={`${role}-progress-goal-title`}>{presentation.goal.title}</h3>
-      {presentation.goal.evidence.length > 0
-        ? <ul>{presentation.goal.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
-        : <p>Пока нет измеримого изменения, которое можно честно связать с этой целью.</p>}
-      {presentation.goal.planEvidence && <div className="progress-story-plan-evidence"><span>Выполнение плана</span><p>{presentation.goal.planEvidence}</p></div>}
+      {presentation.goal.criterionLabel && <dl className="goal-foundation-facts">
+        <div><dt>Критерий</dt><dd>{presentation.goal.criterionLabel}</dd></div>
+        <div><dt>Ориентир</dt><dd>{presentation.goal.targetLabel}</dd></div>
+      </dl>}
+      {presentation.goal.state === 'unconfigured' && <><p>Цель сохранена как текст. Автоматическая оценка не настроена.</p><Link className="link" to={goalLink}>Настроить оценку</Link></>}
+      {presentation.goal.state === 'needs_review' && <><p>Формулировка цели изменилась. Проверь, подходит ли сохранённый критерий.</p><Link className="link" to={goalLink}>Проверить критерий</Link></>}
+      {presentation.goal.state === 'needs_data' && <><p>Нет ни одного замера выбранного показателя.</p><Link className="link" to={measurementLink}>Добавить замер</Link></>}
+      {presentation.goal.state === 'configured' && <p>Критерий настроен, данные для показателя есть. Progress пока не делает вывод о достижении цели.</p>}
     </section>}
     {!goalLoading && !goalError && !presentation.goal && <section className="client-progress-goal-story empty" aria-labelledby={`${role}-progress-goal-title`}>
       <span>{role === 'client' ? 'Для твоей цели' : 'Цель клиента'}</span>

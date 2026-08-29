@@ -88,6 +88,11 @@
 
 ## Проверки активной ветки
 
+- YAFIT-414 / Progress 1.1: свободный текст цели дополнен необязательным ручным
+  критерием `weight/waist/chest/hips`; старые цели не интерпретируются по тексту.
+  Общая форма Trainer/Client и карточка Progress различают «Не настроено»,
+  «Нужны данные», «Настроено» и «Нужно проверить». Численный статус, динамика,
+  freshness и LLM остаются за пределами 1.1.
 - Tasks 25–26: PR `#672/#673`, auth и Assistant задеплоены; app/API, Chromium,
   WebKit и Linux/Darwin visual matrix зелёные на 390/430/1440 в light/dark.
   Yandex stage preview sync `33263066435` также зелёный.

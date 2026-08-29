@@ -52,6 +52,37 @@ describe('progress request validation', () => {
     expect(readVersionedGoalRequest({
       draft: { clientId: CLIENT_ID, title: '10 подтягиваний', targetDate: null },
     })?.draft.targetDate).toBeNull()
+    expect(readVersionedGoalRequest({
+      draft: {
+        clientId: CLIENT_ID, title: 'Держать вес 59 кг', targetDate: null,
+        criterion: {
+          metric: 'weight', operation: 'maintain_range', rangeMin: 58.5,
+          rangeMax: 59.5, unit: 'кг', confirmationStatus: 'confirmed',
+        },
+      },
+    })?.draft.criterion).toEqual({
+      id: null, version: null, metric: 'weight', operation: 'maintain_range',
+      targetValue: null, rangeMin: 58.5, rangeMax: 59.5, unit: 'кг',
+      confirmationStatus: 'confirmed', position: 0,
+    })
+    expect(readVersionedGoalRequest({
+      draft: {
+        clientId: CLIENT_ID, title: 'Держать вес', targetDate: null,
+        criterion: {
+          metric: 'weight', operation: 'maintain_range', rangeMin: 60,
+          rangeMax: 50, unit: 'кг', confirmationStatus: 'confirmed',
+        },
+      },
+    })).toBeUndefined()
+    expect(readVersionedGoalRequest({
+      draft: {
+        clientId: CLIENT_ID, title: 'Снизить вес', targetDate: null,
+        criterion: {
+          metric: 'weight', operation: 'change_by', targetValue: -3,
+          unit: 'кг', confirmationStatus: 'confirmed',
+        },
+      },
+    })?.draft.criterion).toMatchObject({ operation: 'change_by', targetValue: -3 })
     expect(readVersionedGoalStageRequest({
       draft: {
         goalId: RESOURCE_ID,

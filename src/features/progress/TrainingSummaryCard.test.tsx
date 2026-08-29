@@ -116,6 +116,7 @@ describe('ClientProgressGoalSection', () => {
           startsOn: localDate('2026-08-01'), endsOn: localDate('2026-09-30'),
           position: 0, version: 1,
         }],
+        criteria: [],
       }}
       today={localDate('2026-08-16')}
       loading={false}
@@ -139,8 +140,8 @@ describe('ClientProgressGoalSection', () => {
       onRetry={vi.fn()}
     /></MemoryRouter>)
 
-    expect(screen.getByText(/Добавь цель, чтобы ИИ оценивал прогресс/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Добавить цель' })).toHaveAttribute('href', '/me/edit')
+    expect(screen.getByText(/Добавь ориентир/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Добавить цель' })).toHaveAttribute('href', '/me/goal')
   })
 
   it('keeps explicit loading and retry states for the optional goal', async () => {
@@ -232,7 +233,11 @@ describe('Training summary card states', () => {
     repositories.listForClient.mockResolvedValue([publishedSummary])
     repositories.goal.mockResolvedValue({
       id: 'goal-1', clientId: 'client-1', title: 'Набрать мышечную массу и укрепить спину',
-      targetDate: null, status: 'active', version: 1, stages: [],
+      targetDate: null, status: 'active', version: 1, stages: [], criteria: [{
+        id: 'criterion-1', goalId: 'goal-1', metric: 'weight', operation: 'increase_to',
+        targetValue: 85, rangeMin: null, rangeMax: null, unit: 'кг',
+        confirmationStatus: 'confirmed', position: 0, version: 1,
+      }],
     })
     repositories.progress.mockResolvedValue([{
       id: 'measurement-1', clientId: 'client-1', createdBy: 'client-1',
@@ -270,8 +275,9 @@ describe('Training summary card states', () => {
     expect(within(comparison!).getByText('+1')).toBeVisible()
     expect(within(comparison!).queryByText('+2')).toBeNull()
     expect(screen.getByRole('heading', { name: 'Набрать мышечную массу и укрепить спину' })).toBeVisible()
-    expect(screen.getByText('Вес: 80 → 81,5 кг (+1,5 кг)')).toBeVisible()
-    expect(screen.getByText('Целевые мышцы получили 3 подтверждённых подхода; в плане было 4.')).toBeVisible()
+    expect(screen.getByText('Настроено')).toBeVisible()
+    expect(screen.getByText('увеличить до 85 кг')).toBeVisible()
+    expect(screen.getByText(/Progress пока не делает вывод о достижении цели/)).toBeVisible()
     expect(screen.getByRole('heading', { name: '28 августа 2026 г. · 18:30' })).toBeVisible()
     expect(screen.getByText('Спина и плечи')).toBeVisible()
     expect(screen.getByText('3 × 70 кг × 10 повт.')).toBeVisible()
