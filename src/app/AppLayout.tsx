@@ -18,6 +18,8 @@ export function AppLayout() {
   const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   const liveSession = /\/live$/.test(pathname)
   const workoutForm = pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname)
+  const workoutDetail = /\/workouts\/[^/]+$/.test(pathname)
+  const exerciseHistory = /\/workouts\/[^/]+\/history\/[^/]+$/.test(pathname)
   const monochromeClientHome = Boolean(actor?.featureFlags?.monochromePreview && pathname === '/me' && !todayStep)
   const monochromeLive = Boolean(actor?.featureFlags?.monochromePreview && liveSession)
   const monochromeProgress = Boolean(actor?.featureFlags?.monochromePreview && pathname === '/me/progress')
@@ -25,7 +27,8 @@ export function AppLayout() {
   const monochromeClientProfile = Boolean(actor?.featureFlags?.monochromePreview && pathname === '/me/profile')
   const monochromeClientCardEdit = Boolean(actor?.featureFlags?.monochromePreview && pathname === '/me/edit')
   const monochromeWorkoutCreateEdit = Boolean(actor?.featureFlags?.monochromePreview && (workoutForm || todayStep))
-  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientWorkouts || monochromeClientProfile || monochromeClientCardEdit || monochromeWorkoutCreateEdit
+  const monochromeWorkoutDetailHistory = Boolean(actor?.featureFlags?.monochromePreview && (workoutDetail || exerciseHistory))
+  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientWorkouts || monochromeClientProfile || monochromeClientCardEdit || monochromeWorkoutCreateEdit || monochromeWorkoutDetailHistory
   // main.tsx применяет тему до первого render, когда аккаунт ещё неизвестен.
   // Пилотный вариант подключается здесь — как только auth вернул actor и
   // allowlist можно проверить; вне allowlist вариант остаётся прежним тёмным.
@@ -76,6 +79,7 @@ export function AppLayout() {
     monochromeClientProfile ? 'client-profile-shell-identity' : '',
     monochromeClientCardEdit ? 'client-card-edit-identity' : '',
     monochromeWorkoutCreateEdit ? 'workout-create-edit-identity' : '',
+    monochromeWorkoutDetailHistory ? 'workout-detail-history-identity' : '',
     keyboardOpen ? 'keyboard-open' : '',
   ].filter(Boolean).join(' ')
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">

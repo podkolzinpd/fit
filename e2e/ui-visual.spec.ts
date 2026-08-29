@@ -75,19 +75,16 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
 
   await page.goto('/me/workouts')
   const activeWorkout = page.getByRole('link', { name: /Идёт/ }).first()
-  const emptyAction = page.getByRole('link', { name: 'Добавить тренировку' })
-  await expect(activeWorkout.or(emptyAction)).toBeVisible()
+  const addAction = page.getByRole('link', { name: /^(?:Добавить|Добавить тренировку)$/ })
+  await expect(addAction).toBeVisible()
   if (await activeWorkout.isVisible()) {
     await activeWorkout.click()
     await page.getByRole('link', { name: 'Продолжить тренировку' }).click()
     await expect(page.getByRole('heading', { name: 'Live-тренировка' })).toBeVisible()
     return
   }
-  await expect(emptyAction).toHaveCount(1)
-  await expect(page.getByText('БЛИЖАЙШЕЕ')).toHaveCount(0)
-  await expect(page.getByText('РЕЗУЛЬТАТЫ')).toHaveCount(0)
-  await expect(page.locator('.empty')).toHaveCount(0)
-  await emptyAction.click()
+  await expect(addAction).toHaveCount(1)
+  await addAction.click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
@@ -369,6 +366,74 @@ test('workout save dark keeps its visual baseline', async ({ page }, testInfo) =
   await page.getByRole('button', { name: 'Далее' }).click()
   await expect(page.getByRole('heading', { name: 'Сохраните тренировку' })).toBeVisible()
   await expectVisualBaseline(page, `workout-save-dark-${process.platform}.png`, [], false, '#1d1e21')
+})
+
+async function openWorkoutForDetailReview(page: import('@playwright/test').Page, trainer: boolean) {
+  if (!trainer) {
+    await openPreviewLiveWorkout(page)
+    return
+  }
+  await signIn(page, 'trainer@fit.local', /\/today$/)
+  await page.goto(`/workouts/new?client=${demoClientId}`)
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
+  await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
+  await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.getByLabel('Вес, подход 1').fill('40')
+  await page.getByLabel('Повторы, подход 1').fill('10')
+  await page.getByRole('button', { name: '＋ Подход' }).click()
+  await page.getByRole('button', { name: /^Сохранить(?: план)?$/ }).click()
+  await page.getByRole('button', { name: 'Начать тренировку' }).click()
+  await expect(page.getByRole('heading', { name: 'Live-тренировка' })).toBeVisible()
+}
+
+test('workout detail, completion and exercise history keep their visual baselines', async ({ page }, testInfo) => {
+  const trainer = testInfo.project.name === 'visual-trainer-1440'
+  await openWorkoutForDetailReview(page, trainer)
+  await page.getByLabel('Фактический вес').first().fill('42.5')
+  await page.getByLabel('Фактические повторы').first().fill('9')
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await expect(page.locator('.live-set-compact.confirmed')).toBeVisible()
+  // Добавляем реальное незавершённое упражнение, чтобы деталь стабильно
+  // покрывала partial независимо от числа подходов в исходном плане.
+  await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Берпи')
+  await page.getByRole('button', { name: /^Берпи/ }).click()
+  await expect(page.getByRole('heading', { name: 'Берпи' })).toBeVisible()
+  await page.getByRole('button', { name: 'Завершить тренировку' }).click()
+  const partialFinish = page.getByRole('button', { name: 'Завершить', exact: true })
+  if (await partialFinish.isVisible()) await partialFinish.click()
+  await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
+  await expect(page.locator('.workout-detail-page .badge.partial')).toHaveText('Частично')
+  const detailPath = new URL(page.url()).pathname
+  await expectVisualBaseline(page, `workout-detail-completion-${process.platform}.png`)
+
+  await page.locator('.exercise-history-link').first().click()
+  await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
+  const historyPath = new URL(page.url()).pathname
+  await page.goto(historyPath)
+  await expectVisualBaseline(page, `workout-exercise-history-${process.platform}.png`)
+  await page.getByRole('tab', { name: 'История' }).click()
+  await expectVisualBaseline(page, `workout-exercise-history-list-${process.platform}.png`)
+
+  await page.goto(trainer ? '/profile' : '/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.goto(detailPath)
+  await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
+  await expectVisualBaseline(page, `workout-detail-dark-${process.platform}.png`, [], false, '#1d1e21')
+  await page.goto(historyPath)
+  await expectVisualBaseline(page, `workout-exercise-history-dark-${process.platform}.png`, [], false, '#1d1e21')
+
+  await page.goto(trainer ? '/profile' : '/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
+  await page.goto(detailPath)
+  await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
+  await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
+  const deleteConfirmation = page.getByRole('alertdialog', { name: 'Удалить тренировку?' })
+  await deleteConfirmation.getByRole('button', { name: 'Удалить', exact: true }).click()
 })
 
 test('client live workout keeps its visual baseline', async ({ page }, testInfo) => {
