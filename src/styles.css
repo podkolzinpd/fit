@@ -3948,7 +3948,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-history-identity .workout-feedback-fieldset legend { color:var(--fg); font-size:16px; font-weight:600 }
 .workout-detail-history-identity .workout-review p,
 .workout-detail-history-identity .workout-review-text { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
-.workout-detail-history-identity .workout-question .secondary { min-height:44px }
+.workout-detail-history-identity .workout-review-head .secondary { min-height:44px }
 .workout-detail-history-identity .workout-detail-actions { gap:8px; margin-top:16px }
 .workout-detail-history-identity .workout-detail-actions > .button,
 .workout-detail-history-identity .workout-detail-actions .icon-button { min-height:44px }
