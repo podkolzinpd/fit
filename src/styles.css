@@ -2915,6 +2915,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .auth-flow-identity .field { gap:6px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
 .auth-flow-identity .auth-form input,
 .auth-flow-identity .auth-form select {
+  height:48px;
   min-height:48px;
   border-color:var(--border);
   border-radius:14px;
@@ -3326,6 +3327,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .ai-progress-periods { width:auto; margin:0 18px 12px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
 .progress-identity .client-progress-card .ai-progress-periods button { min-height:44px; padding:0 12px; border:0; border-radius:10px; color:var(--muted); font-size:12px; font-weight:500 }
 .progress-identity .client-progress-card .ai-progress-periods button.active { border:0; background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.progress-identity .ai-progress-footer button { min-height:44px }
 
 .progress-identity .progress-story-hero { gap:5px; padding:18px; border-color:var(--border); background:var(--surface-elevated) }
 .progress-identity .progress-story-hero > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
@@ -3347,7 +3349,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .body-progress-modes button { min-height:44px; border-radius:10px; color:var(--muted); font-size:12px; font-weight:500 }
 .progress-identity .body-progress-modes button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:none }
 .progress-identity .body-progress-sides { border-color:var(--border); border-radius:10px; background:var(--surface-sunken) }
-.progress-identity .body-progress-sides button { min-height:36px; border-radius:8px; font-size:12px; font-weight:500 }
+.progress-identity .body-progress-sides button { min-height:44px; border-radius:8px; font-size:12px; font-weight:500 }
 .progress-identity .body-progress-sides button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:none }
 .progress-identity .body-progress-visual { border:1px solid var(--border); border-radius:18px; background:var(--surface-sunken) }
 .progress-identity .body-progress-overlay { filter:none }
@@ -3669,6 +3671,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-card-edit-identity .client-profile-form input,
 .client-card-edit-identity .client-profile-form select,
 .client-card-edit-identity .client-profile-form textarea { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.client-card-edit-identity .client-profile-form select { height:48px }
 .client-card-edit-identity .client-profile-form textarea { min-height:96px; line-height:1.45; resize:vertical }
 .client-card-edit-identity .client-profile-form input:focus,
 .client-card-edit-identity .client-profile-form select:focus,
@@ -3945,6 +3948,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-history-identity .workout-feedback-fieldset legend { color:var(--fg); font-size:16px; font-weight:600 }
 .workout-detail-history-identity .workout-review p,
 .workout-detail-history-identity .workout-review-text { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.workout-detail-history-identity .workout-question .secondary { min-height:44px }
 .workout-detail-history-identity .workout-detail-actions { gap:8px; margin-top:16px }
 .workout-detail-history-identity .workout-detail-actions > .button,
 .workout-detail-history-identity .workout-detail-actions .icon-button { min-height:44px }
@@ -4218,6 +4222,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-client-form-identity .client-profile-form input,
 .trainer-client-form-identity .client-profile-form select,
 .trainer-client-form-identity .client-profile-form textarea { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.trainer-client-form-identity .client-profile-form select { height:48px }
 .trainer-client-form-identity .client-profile-form textarea { min-height:96px; line-height:1.45; resize:vertical }
 .trainer-client-form-identity .client-profile-form input:focus,
 .trainer-client-form-identity .client-profile-form select:focus,
@@ -4330,10 +4335,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-schedule-identity .schedule-jump { width:44px; height:44px }
 .trainer-schedule-identity .schedule-jump svg { width:19px; height:19px; stroke-width:1.8 }
 .trainer-schedule-identity .schedule-today:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg) }
-.trainer-schedule-identity .week-nav { gap:3px }
-.trainer-schedule-identity .week-arrow { width:36px; height:44px; min-height:44px; border:0; background:transparent; color:var(--secondary-label-fg); box-shadow:none }
+.trainer-schedule-identity .week-nav { display:grid; grid-template-columns:minmax(0,1fr) 44px 44px; gap:6px }
+.trainer-schedule-identity .week-arrow { width:44px; height:44px; min-height:44px; border:0; background:transparent; color:var(--secondary-label-fg); box-shadow:none }
+.trainer-schedule-identity .week-arrow:first-child { grid-column:2; grid-row:1 }
+.trainer-schedule-identity .week-arrow:last-child { grid-column:3; grid-row:1 }
 .trainer-schedule-identity .week-arrow svg { width:19px; height:19px; stroke-width:1.8 }
-.trainer-schedule-identity .week-strip { gap:2px; padding:3px; border:1px solid var(--border); border-radius:16px; background:var(--surface-sunken); box-shadow:none }
+.trainer-schedule-identity .week-strip { grid-column:1 / -1; grid-row:2; gap:2px; padding:3px; border:1px solid var(--border); border-radius:16px; background:var(--surface-sunken); box-shadow:none }
 .trainer-schedule-identity .week-day { min-height:50px; border-radius:13px; color:var(--fg); background:transparent; box-shadow:none }
 .trainer-schedule-identity .week-day.active { background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none }
 .trainer-schedule-identity .day-label { color:var(--secondary-label-fg); font-size:10px; font-weight:500; letter-spacing:.04em }
@@ -4387,7 +4394,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 @media (max-width:480px) {
   .trainer-schedule-identity .schedule-page { padding:12px 14px 0 }
   .trainer-schedule-identity .schedule-page .page-header h1 { margin-bottom:12px }
-  .trainer-schedule-identity .week-arrow { width:28px }
   .trainer-schedule-identity .week-strip { padding:3px 2px }
 }
 
@@ -4637,13 +4643,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-catalog-identity .catalog-library-head > span,
 .exercise-catalog-identity .catalog-section-head > span { display:grid; min-width:36px; height:28px; padding:0 9px; place-items:center; border:1px solid var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--fg); font-size:12px; font-weight:500 }
 
-.exercise-catalog-identity .catalog-search { display:grid; grid-template-columns:20px minmax(0, 1fr) 36px; align-items:center; min-height:48px; padding:0 6px 0 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.exercise-catalog-identity .catalog-search { display:grid; grid-template-columns:20px minmax(0, 1fr) 44px; align-items:center; min-height:48px; padding:0 2px 0 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--secondary-label-fg) }
 .exercise-catalog-identity .catalog-search:focus-within { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px }
 .exercise-catalog-identity .catalog-search > svg { width:18px; height:18px; stroke-width:1.8 }
 .exercise-catalog-identity .catalog-search input { min-width:0; min-height:46px; padding:0 10px; border:0; border-radius:0; outline:0; background:transparent; color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
 .exercise-catalog-identity .catalog-search input::placeholder { color:var(--secondary-label-fg); opacity:1 }
 .exercise-catalog-identity .catalog-search input::-webkit-search-cancel-button { display:none }
-.exercise-catalog-identity .catalog-search button { display:grid; width:36px; height:36px; min-height:36px; padding:0; place-items:center; border:0; border-radius:10px; background:transparent; color:var(--secondary-label-fg); box-shadow:none }
+.exercise-catalog-identity .catalog-search button { display:grid; width:44px; height:44px; min-height:44px; padding:0; place-items:center; border:0; border-radius:12px; background:transparent; color:var(--secondary-label-fg); box-shadow:none }
 .exercise-catalog-identity .catalog-search button svg { width:18px; height:18px }
 .exercise-catalog-identity .catalog-results-meta { display:flex; justify-content:space-between; gap:12px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .exercise-catalog-identity .catalog-results-meta span:last-child { font-weight:400 }
@@ -4670,6 +4676,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-catalog-identity .field { gap:6px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .exercise-catalog-identity .catalog-custom-form input,
 .exercise-catalog-identity .catalog-custom-form select { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.exercise-catalog-identity .catalog-custom-form select { height:48px }
 .exercise-catalog-identity .catalog-custom-form input:focus,
 .exercise-catalog-identity .catalog-custom-form select:focus { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px }
 .exercise-catalog-identity .catalog-custom-form .actions { display:flex; gap:8px; margin:0 }
@@ -5071,4 +5078,31 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .assistant-identity .assistant-context-panel:has(> .assistant-workout-draft) > .assistant-flow-card.assistant-workout-draft { padding:14px }
   .assistant-identity .assistant-composer,
   .assistant-identity.keyboard-open .assistant-composer { padding:5px; background:var(--surface-raised) }
+}
+
+/* Gate 9 / Task 27 — one accessibility contract for every accepted identity
+   route. Local component focus rules may refine geometry, but never remove the
+   visible fallback. Reduced motion applies to descendants and pseudo-elements,
+   including legacy transitions that remain available behind rollout=off. */
+.identity-monochrome-preview :where(button, a[href], input, textarea, select, summary, [tabindex]:not([tabindex='-1'])):focus-visible,
+.auth-flow-identity :where(button, a[href], input, textarea, select, summary, [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline:2px solid var(--fg);
+  outline-offset:2px;
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .identity-monochrome-preview,
+  .identity-monochrome-preview *,
+  .identity-monochrome-preview *::before,
+  .identity-monochrome-preview *::after,
+  .auth-flow-identity,
+  .auth-flow-identity *,
+  .auth-flow-identity *::before,
+  .auth-flow-identity *::after {
+    scroll-behavior:auto !important;
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+    transition-delay:0ms !important;
+  }
 }
