@@ -1,6 +1,7 @@
 # Gate 9 — Task 27: theme parity and accessibility
 
-Статус: **implemented; local acceptance complete**.
+Статус: **implemented, merged and deployed; final release matrix is recorded
+in `MONOCHROME_GATE_9_RELEASE.md`**.
 
 ## Scope и инварианты
 
@@ -48,8 +49,8 @@
   reduced motion: 2/2.
 - Full project check зелёный: 123 app files / 966 tests, 225 API tests,
   typecheck, lint, coverage, DB types, iOS permissions, infra policy и build.
-- Task 28 отвечает за финальную matrix 390/430/1440, WebKit/iOS safe areas,
-  production smoke и release report.
+- Task 28 завершает финальную matrix 390/430/1440, WebKit/iOS safe areas,
+  production evidence и release report в `MONOCHROME_GATE_9_RELEASE.md`.
 
 ## Rollback
 
