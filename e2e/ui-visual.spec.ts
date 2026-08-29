@@ -8,15 +8,21 @@ type VisualPage = import('@playwright/test').Page
 type VisualGotoOptions = Parameters<VisualPage['goto']>[1]
 
 async function gotoStable(page: VisualPage, url: string, options?: VisualGotoOptions) {
-  try {
-    await page.goto(url, options)
-  } catch (error) {
-    // The pinned browser runtime can rarely reject a navigation before the
-    // document request with its own internal error. Retry only that browser
-    // failure once; application, network and assertion failures still surface.
-    if (!(error instanceof Error) || !error.message.includes('encountered an internal error')) throw error
-    await page.waitForTimeout(100)
-    await page.goto(url, options)
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      await page.goto(url, options)
+      await page.locator('#root > *').first().waitFor({ state: 'attached', timeout: 5_000 })
+      return
+    } catch (error) {
+      const browserInternal = error instanceof Error && error.message.includes('encountered an internal error')
+      const emptyAppDocument = !browserInternal && await page.locator('#root > *').count() === 0
+      // The pinned runtime can rarely reject a navigation internally or return
+      // an empty document without throwing. Retry only those two browser-level
+      // states once; populated application, network and assertion failures
+      // still surface immediately.
+      if (attempt > 0 || (!browserInternal && !emptyAppDocument)) throw error
+      await page.waitForTimeout(100)
+    }
   }
 }
 

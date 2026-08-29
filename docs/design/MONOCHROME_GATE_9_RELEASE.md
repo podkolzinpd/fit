@@ -34,9 +34,9 @@ production visual follow-up**.
 
 ## Стабилизация release-тестов
 
-- Visual navigation один раз повторяет только browser-internal failure до
-  отправки document request. Network, application и assertion failures не
-  перехватываются.
+- Visual navigation один раз повторяет только browser-internal failure или
+  подтверждённый пустой app document. Network, populated application и
+  assertion failures не перехватываются.
 - Длинный Client Goal audit получил локальный бюджет 60 секунд; остальные
   visual tests сохраняют стандартный timeout.
 - Это изменение относится только к E2E harness и не меняет production bundle.
