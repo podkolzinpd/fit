@@ -302,6 +302,25 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
 - Route scope заканчивается на `/me/workouts`: detail, form, review и Live не
   наследуют list-композицию до своих задач workout lifecycle.
 
+### Product realization: Client Profile
+
+- Profile identity, trainer connections, body-map appearance, settings menu и
+  раскрываемые install/feedback panels используют один neutral surface family
+  радиуса 18 px. Вложенная строка может использовать elevated surface 14 px,
+  но не становится альтернативной карточкой.
+- Header остаётся `24/600`; имя — `18/600`; section — `16–18/600`; controls —
+  `14/500`; meta — `12/500`. Feedback textarea сохраняет `16/400`.
+- Edit, feedback и install actions используют foundation base 48 px. Компактное
+  действие в заголовке связи с тренером — 44 px и не кодирует semantic priority.
+- Disconnect, revoke и logout используют danger token только вместе с прямым
+  глаголом и существующим подтверждением. Connected/success state использует
+  success только вместе с текстом.
+- Switch и body-map selector имеют neutral active state, target не меньше 44 px
+  и одинаковую геометрию обеих тем. Bottom navigation полностью совпадает с
+  Client Home.
+- Route scope заканчивается на `/me/profile`: edit/join и Trainer Profile не
+  получают профильную композицию до своих задач.
+
 ### Навигация и иконки
 
 - Сохраняется текущая навигационная архитектура Fit.

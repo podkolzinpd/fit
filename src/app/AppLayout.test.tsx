@@ -63,7 +63,7 @@ describe('AppLayout: monochrome preview route scope', () => {
     expect(document.documentElement).toHaveClass('identity-monochrome-preview')
   })
 
-  it.each(['/me/profile', '/me?view=save'])(
+  it.each(['/me?view=save'])(
     'keeps the current identity on the not-yet-migrated route %s',
     (path) => {
       authState.monochromePreview = true
@@ -131,6 +131,24 @@ describe('AppLayout: monochrome preview route scope', () => {
     renderLayout('/me/workouts')
 
     expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'client-workouts-identity')
+    expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+  })
+
+  it('applies the Client Profile identity only to the enabled route', () => {
+    authState.role = 'client'
+    authState.monochromePreview = true
+    renderLayout('/me/profile')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'client-profile-shell-identity')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('client-home-identity', 'live-identity', 'progress-identity', 'client-workouts-identity')
+    expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+  })
+
+  it('keeps Client Profile unchanged when the server flag is off', () => {
+    authState.role = 'client'
+    renderLayout('/me/profile')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'client-profile-shell-identity')
     expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
   })
 })
