@@ -7,10 +7,15 @@ const authState = vi.hoisted(() => ({
   role: 'client' as 'client' | 'trainer',
   userId: 'user-1',
   theme: 'light' as 'light' | 'dark',
+  monochromePreview: false,
 }))
 
 vi.mock('./auth-context', () => ({
-  useAuth: () => ({ actor: { role: authState.role, userId: authState.userId } }),
+  useAuth: () => ({ actor: {
+    role: authState.role,
+    userId: authState.userId,
+    featureFlags: { monochromePreview: authState.monochromePreview },
+  } }),
 }))
 // Мокаем только выбор пользователя: разрешение варианта и применение класса
 // остаются настоящими, иначе пилотная палитра не была бы проверена.
@@ -44,8 +49,37 @@ afterEach(() => {
   authState.role = 'client'
   authState.userId = 'user-1'
   authState.theme = 'light'
+  authState.monochromePreview = false
   vi.unstubAllEnvs()
   document.documentElement.className = ''
+})
+
+describe('AppLayout: monochrome preview route scope', () => {
+  it('applies the identity only to Client Home for an enabled session', () => {
+    authState.monochromePreview = true
+    renderLayout('/me')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'client-home-identity')
+    expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+  })
+
+  it.each(['/me/progress', '/me/workouts', '/me/profile', '/me?view=save'])(
+    'keeps the current identity on the not-yet-migrated route %s',
+    (path) => {
+      authState.monochromePreview = true
+      renderLayout(path)
+
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview')
+      expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+    },
+  )
+
+  it('keeps Client Home unchanged when the server flag is off', () => {
+    renderLayout('/me')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview')
+    expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+  })
 })
 
 describe('AppLayout navigation', () => {

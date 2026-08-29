@@ -15,6 +15,8 @@ export function AppLayout() {
   const { pathname, search } = useLocation()
   const redesignedStart = isTodayStartRedesignEnabled()
   const { keyboardOpen } = useAppViewport()
+  const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
+  const monochromeClientHome = Boolean(actor?.featureFlags?.monochromePreview && pathname === '/me' && !todayStep)
   // main.tsx применяет тему до первого render, когда аккаунт ещё неизвестен.
   // Пилотный вариант подключается здесь — как только auth вернул actor и
   // allowlist можно проверить; вне allowlist вариант остаётся прежним тёмным.
@@ -24,7 +26,16 @@ export function AppLayout() {
     // Класс живёт на <html>: фон вне рамки телефона и цвет системной панели
     // должны совпадать с палитрой внутри неё.
     applyThemeVariant(themeVariant)
-  }, [themeVariant])
+    const root = document.documentElement
+    root.classList.toggle('identity-monochrome-preview', monochromeClientHome)
+    if (monochromeClientHome) {
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#FBFAF7' : '#111214')
+    }
+    return () => {
+      root.classList.remove('identity-monochrome-preview')
+      applyThemeVariant(themeVariant)
+    }
+  }, [monochromeClientHome, theme, themeVariant])
 
   useEffect(() => {
     // Route content can grow again while its draft is restored. Reset on the
@@ -37,7 +48,6 @@ export function AppLayout() {
   // Создание, проверка, редактирование и live — один сфокусированный путь
   // тренировки. Нижняя навигация возвращается на списках и после выхода из
   // сценария, но внутри не конкурирует с текущим действием.
-  const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   const liveSession = /\/live$/.test(pathname)
   const workoutForm = pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname)
   const assistant = pathname === '/assistant'
@@ -51,6 +61,7 @@ export function AppLayout() {
     liveSession ? 'live-session-shell' : '',
     workoutForm ? 'workout-form-shell' : '',
     assistant ? 'assistant-shell' : '',
+    monochromeClientHome ? 'identity-monochrome-preview client-home-identity' : '',
     keyboardOpen ? 'keyboard-open' : '',
   ].filter(Boolean).join(' ')
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">

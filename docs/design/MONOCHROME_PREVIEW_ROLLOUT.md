@@ -1,6 +1,7 @@
 # Fit — production rollout Foundation UI Identity v1
 
-Статус: **server flag deployed; authenticated runtime read in progress**.
+Статус: **server flag и authenticated runtime read доставлены; Client Home
+подключается первым route-scoped экраном**.
 
 ## Контракт
 
@@ -38,3 +39,15 @@
 - Отсутствующая строка, `false` или ошибка чтения дают `false` и не блокируют
   вход в приложение.
 - Само наличие runtime-флага не меняет UI: каждый экран подключается отдельно.
+
+## Route rollout
+
+| Route | Preview class | Статус |
+| --- | --- | --- |
+| Client Home `/me` | `client-home-identity` | implementation / visual validation |
+| Live `*/live` | — | current UI |
+| Progress `/me/progress` | — | current UI |
+
+`/me?view=review` и `/me?view=save` относятся к workout lifecycle и не получают
+Client Home identity. У пользователя без `monochrome_preview` даже `/me`
+остаётся в текущей айдентике.
