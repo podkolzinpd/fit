@@ -1,7 +1,7 @@
 # Fit — production rollout Foundation UI Identity v1
 
 Статус: **server flag и authenticated runtime read доставлены; Client Home
-подключается первым route-scoped экраном**.
+задеплоен, Live проходит отдельную route-scoped миграцию**.
 
 ## Контракт
 
@@ -44,8 +44,8 @@
 
 | Route | Preview class | Статус |
 | --- | --- | --- |
-| Client Home `/me` | `client-home-identity` | implementation / visual validation |
-| Live `*/live` | — | current UI |
+| Client Home `/me` | `client-home-identity` | production preview |
+| Live `*/live` | `live-identity` | implementation / visual validation |
 | Progress `/me/progress` | — | current UI |
 
 `/me?view=review` и `/me?view=save` относятся к workout lifecycle и не получают
