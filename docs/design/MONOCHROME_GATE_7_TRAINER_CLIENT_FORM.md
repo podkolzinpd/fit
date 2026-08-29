@@ -1,6 +1,7 @@
 # Gate 7 — Trainer Client Create/Edit
 
-Статус: **implemented; local validation complete**.
+Статус: **production preview** — PR #665, commit `1ab79b71`, deployment
+`6153192969`.
 
 ## Scope
 
