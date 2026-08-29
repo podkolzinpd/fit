@@ -471,6 +471,26 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
   реальными состояниями текущей продуктовой логики. Геометрия light/dark
   одинакова; scoped CSS не содержит coral, purple, glow или локальных hex.
 
+### Product realization: Trainer Schedule
+
+- Scope — точный `/schedule`; workout create/detail, Trainer Progress,
+  Exercises и Profile не наследуют schedule identity.
+- Page — `24/600`, month — `18/600`, selected date — `14/600`, controls и
+  event labels — `12/500`, secondary event content — `12/400`.
+- Today, date picker и week arrows используют compact 44 px. Семь дней живут в
+  одной neutral surface; выбранный день получает primary fill, сегодняшний
+  день при другом выборе сохраняет отдельную точку.
+- `Запланировать` — compact primary 44 px; иерархия создаётся fill/contrast, а
+  не отличающейся от других compact actions высотой.
+- Planned event остаётся neutral. Current/partial и done получают semantic
+  edge и текстовый статус на neutral surface; skipped и decision различаются
+  геометрией, surface и текстом. Цвет не является единственным сигналом.
+- Empty day — реальная часовая сетка без искусственной empty-card. Untimed,
+  loading/error/retry, pagination, internal scroll и date navigation сохраняют
+  существующую продуктовую логику.
+- Light/dark имеют одинаковую геометрию; shadows, coral/purple и локальные hex
+  в scoped CSS отсутствуют.
+
 
 
 ### Навигация и иконки
