@@ -1,9 +1,8 @@
 # Fit — production rollout Foundation UI Identity v1
 
 Статус: **server flag и authenticated runtime read доставлены; Client Home,
-Live и Progress задеплоены и прошли общий visual audit; My Workouts проходит
-отдельный Gate 6 rollout; My Workouts задеплоен, Client Profile проходит
-валидацию**.
+Live и Progress задеплоены и прошли общий visual audit; My Workouts и Client
+Profile задеплоены; Client Card Edit проходит отдельный Gate 6 rollout**.
 
 ## Контракт
 
@@ -50,8 +49,9 @@ Live и Progress задеплоены и прошли общий visual audit; M
 | Live `*/live` | `live-identity` | production preview |
 | Progress `/me/progress` | `progress-identity` | production preview |
 | My Workouts `/me/workouts` | `client-workouts-identity` | production preview |
-| Client Profile `/me/profile` | `client-profile-shell-identity` | local validation complete |
+| Client Profile `/me/profile` | `client-profile-shell-identity` | production preview |
+| Client Card Edit `/me/edit` | `client-card-edit-identity` | local validation complete |
 
 `/me?view=review` и `/me?view=save` относятся к workout lifecycle и не получают
-Client Home identity. У пользователя без `monochrome_preview` даже `/me`
-остаётся в текущей айдентике.
+Client Home или Client Card Edit identity. У пользователя без
+`monochrome_preview` все перечисленные маршруты остаются в текущей айдентике.

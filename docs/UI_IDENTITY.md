@@ -318,8 +318,24 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
 - Switch и body-map selector имеют neutral active state, target не меньше 44 px
   и одинаковую геометрию обеих тем. Bottom navigation полностью совпадает с
   Client Home.
-- Route scope заканчивается на `/me/profile`: edit/join и Trainer Profile не
-  получают профильную композицию до своих задач.
+- Route scope заканчивается на `/me/profile`: edit не наследует профильную
+  композицию и использует собственный принятый scope; join и Trainer Profile
+  остаются в прежней айдентике до своих задач.
+
+### Product realization: Client Card Edit
+
+- `/me/edit` — сфокусированная форма собственной карточки, а не вариант
+  Client Profile card. Trainer create/edit forms не наследуют её стили.
+- Page title использует `24/600`, section — `18/600`, labels — `12/500`,
+  helper/body — `14/400`, editable content — `16/400`.
+- Основные данные образуют одну neutral surface 18 px; поля — sunken surface
+  14 px. Сетка возраста и роста сохраняет текущий компактный data contract.
+- Cancel и Save используют одну base-высоту 48 px независимо от variant.
+  Иерархию создают прозрачный secondary и полярный primary.
+- Loading, error/retry и отсутствие client card переиспользуют foundation
+  states и возникают только из существующей продуктовой логики.
+- Client Home first-run остаётся частью уже принятого `/me`: задача формы не
+  создаёт второй onboarding или альтернативную карточку.
 
 ### Навигация и иконки
 

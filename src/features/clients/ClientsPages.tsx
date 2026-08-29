@@ -155,7 +155,7 @@ function ClientForm({
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions">{onCancel && <button type="button" className="secondary" disabled={mutation.isPending} onClick={onCancel}>Отмена</button>}<button className="primary" disabled={mutation.isPending} aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : createMode === 'self' && !existing ? 'Создать карточку' : 'Сохранить'}</button></div>
     </form>
-  return embedded ? contents : <Page title={existing ? 'Редактировать клиента' : 'Новый клиент'}>{contents}</Page>
+  return embedded ? contents : <Page title={existing ? 'Редактировать клиента' : 'Новый клиент'} className={createMode === 'self' ? 'client-self-edit-page' : undefined}>{contents}</Page>
 }
 
 // update_client пишет goal и note одной транзакцией с optimistic-lock (version).
