@@ -4,8 +4,30 @@ import { expectMonochromeAccessibility } from './accessibility-helpers'
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
+type VisualPage = import('@playwright/test').Page
+type VisualGotoOptions = Parameters<VisualPage['goto']>[1]
+
+async function gotoStable(page: VisualPage, url: string, options?: VisualGotoOptions) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      await page.goto(url, options)
+      await page.locator('#root > *').first().waitFor({ state: 'attached', timeout: 5_000 })
+      return
+    } catch (error) {
+      const browserInternal = error instanceof Error && error.message.includes('encountered an internal error')
+      const emptyAppDocument = !browserInternal && await page.locator('#root > *').count() === 0
+      // The pinned runtime can rarely reject a navigation internally or return
+      // an empty document without throwing. Retry only those two browser-level
+      // states once; populated application, network and assertion failures
+      // still surface immediately.
+      if (attempt > 0 || (!browserInternal && !emptyAppDocument)) throw error
+      await page.waitForTimeout(100)
+    }
+  }
+}
+
 async function signIn(page: import('@playwright/test').Page, email: string, destination: RegExp) {
-  await page.goto('/auth')
+  await gotoStable(page, '/auth')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
@@ -16,7 +38,7 @@ async function openClientProgress(page: import('@playwright/test').Page, options
   await signIn(page, 'client@fit.local', /\/me$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   if (options.scheme || options.dark) {
-    await page.goto('/me/profile')
+    await gotoStable(page, '/me/profile')
     if (options.scheme) {
       const schemeOption = page.getByRole('radio', { name: 'Схема' })
       await schemeOption.click()
@@ -28,7 +50,7 @@ async function openClientProgress(page: import('@playwright/test').Page, options
       await expect(darkTheme).toBeChecked()
     }
   }
-  await page.goto('/me/progress')
+  await gotoStable(page, '/me/progress')
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/progress-identity/)
   await expect(page.locator('.client-progress-card')).toBeVisible()
@@ -59,7 +81,7 @@ async function createStandaloneClient(
   name = 'Визуальный клиент',
   emailPrefix = 'visual-client',
 ) {
-  await page.goto('/auth')
+  await gotoStable(page, '/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Тип аккаунта').selectOption('client')
   await page.getByLabel('Имя').fill(name)
@@ -75,7 +97,7 @@ async function createStandaloneClient(
 async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
   await signIn(page, 'client@fit.local', /\/me$/)
 
-  await page.goto('/me/workouts')
+  await gotoStable(page, '/me/workouts')
   const activeWorkout = page.getByRole('link', { name: /Идёт/ }).first()
   const addAction = page.getByRole('link', { name: /^(?:Добавить|Добавить тренировку)$/ })
   await expect(addAction).toBeVisible()
@@ -103,7 +125,7 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
 }
 
 test('auth family keeps light and dark visual baselines', async ({ page }) => {
-  await page.goto('/auth')
+  await gotoStable(page, '/auth')
   await expect(page.locator('.auth-flow-identity')).toBeVisible()
   await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
   await expectVisualBaseline(page, `auth-login-${process.platform}.png`, [], true)
@@ -112,39 +134,39 @@ test('auth family keeps light and dark visual baselines', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Регистрация' })).toBeVisible()
   await expectVisualBaseline(page, `auth-register-${process.platform}.png`, [], true)
 
-  await page.goto('/auth/reset')
+  await gotoStable(page, '/auth/reset')
   await expect(page.getByRole('heading', { name: 'Новый пароль' })).toBeVisible()
   await expectVisualBaseline(page, `auth-reset-${process.platform}.png`, [], true)
 
   await page.addInitScript(() => window.localStorage.setItem('fit.appTheme', 'dark'))
-  await page.goto('/auth/forgot')
+  await gotoStable(page, '/auth/forgot')
   await expect(page.getByRole('heading', { name: 'Восстановление пароля' })).toBeVisible()
   await expect(page.locator('.auth-flow-identity')).not.toHaveClass(/theme-dark-pilot/)
   await expectVisualBaseline(page, `auth-forgot-dark-${process.platform}.png`, [], true, '#111214')
 
-  await page.goto('/auth')
+  await gotoStable(page, '/auth')
   await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
   await expectVisualBaseline(page, `auth-login-dark-${process.platform}.png`, [], true, '#111214')
 
-  await page.goto('/auth/callback')
+  await gotoStable(page, '/auth/callback')
   await expect(page.getByRole('heading', { name: 'Завершаем вход' })).toBeVisible()
   await expectVisualBaseline(page, `auth-callback-dark-${process.platform}.png`, [], true, '#111214')
 })
 
 test('Join keeps manual and invitation states in the auth family', async ({ page }) => {
   await signIn(page, 'client@fit.local', /\/me$/)
-  await page.goto('/join')
+  await gotoStable(page, '/join')
   await expect(page.locator('.phone-frame')).toHaveClass(/auth-join-identity/)
   await expect(page.getByRole('heading', { name: 'Введите код приглашения' })).toBeVisible()
   await expectVisualBaseline(page, `auth-join-${process.platform}.png`, [], true)
 
-  await page.goto('/join?code=ABCDEF123456')
+  await gotoStable(page, '/join?code=ABCDEF123456')
   await expect(page.getByRole('heading', { name: 'Тренер пригласил вас в Fit' })).toBeVisible()
   await expectVisualBaseline(page, `auth-join-invitation-${process.platform}.png`, [], true)
 
-  await page.goto('/me/profile')
+  await gotoStable(page, '/me/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-  await page.goto('/join')
+  await gotoStable(page, '/join')
   await expect(page.locator('.phone-frame')).toHaveClass(/auth-join-identity/)
   await expect(page.locator('.phone-frame')).not.toHaveClass(/theme-dark-pilot/)
   await expect(page.locator('.tab-bar')).toHaveCSS('background-color', 'rgb(17, 18, 20)')
@@ -158,7 +180,7 @@ test('current role home keeps its visual baseline', async ({ page }, testInfo) =
   // Фиксируем время только после auth: приветствие и недельный период не
   // должны менять committed screenshot в зависимости от часа запуска CI.
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
-  await page.goto(trainer ? '/today' : '/me')
+  await gotoStable(page, trainer ? '/today' : '/me')
 
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   if (!trainer) {
@@ -174,18 +196,18 @@ test('current role home keeps its visual baseline', async ({ page }, testInfo) =
   await expectVisualBaseline(page, trainer ? `trainer-today-${process.platform}.png` : 'role-home.png', [], true)
 
   if (!trainer) {
-    await page.goto('/me/profile')
+    await gotoStable(page, '/me/profile')
     await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-    await page.goto('/me')
+    await gotoStable(page, '/me')
     await expect(page.locator('.phone-frame')).toHaveClass(/client-home-identity/)
     await expectVisualBaseline(page, 'role-home-dark.png', [], true)
   } else {
     await page.getByRole('button', { name: 'Ввести текстом' }).click()
     await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
     await expectVisualBaseline(page, `trainer-today-composer-${process.platform}.png`, [], true)
-    await page.goto('/profile')
+    await gotoStable(page, '/profile')
     await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-    await page.goto('/today')
+    await gotoStable(page, '/today')
     await expect(page.locator('.phone-frame')).toHaveClass(/trainer-today-identity/)
     await expect(page.locator('.trainer-attention-loading')).toHaveCount(0)
     await expectVisualBaseline(page, `trainer-today-dark-${process.platform}.png`, [], true, '#1d1e21')
@@ -196,7 +218,7 @@ test('trainer Today keeps its mobile visual baselines', async ({ page }, testInf
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Trainer desktop is covered by the role-home baseline')
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
-  await page.goto('/today')
+  await gotoStable(page, '/today')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-today-identity/)
   await expect(page.locator('.trainer-attention-loading')).toHaveCount(0)
   await expect(page.locator('.trainer-attention')).toBeVisible()
@@ -206,9 +228,9 @@ test('trainer Today keeps its mobile visual baselines', async ({ page }, testInf
   await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
   await expectVisualBaseline(page, `trainer-today-mobile-composer-${process.platform}.png`, [], true)
 
-  await page.goto('/profile')
+  await gotoStable(page, '/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-  await page.goto('/today')
+  await gotoStable(page, '/today')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-today-identity/)
   await expect(page.locator('.trainer-attention-loading')).toHaveCount(0)
   await expectVisualBaseline(page, `trainer-today-mobile-dark-${process.platform}.png`, [], true, '#1d1e21')
@@ -218,7 +240,7 @@ test('future standalone plan stays compact on client home', async ({ page }, tes
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Home uses mobile visual profiles')
   await createStandaloneClient(page, `future-${testInfo.project.name}`)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
-  await page.goto('/workouts/new?date=2026-08-17')
+  await gotoStable(page, '/workouts/new?date=2026-08-17')
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
@@ -228,7 +250,7 @@ test('future standalone plan stays compact on client home', async ({ page }, tes
   await page.getByLabel('Повторы, подход 1').fill('10')
   await page.getByRole('button', { name: 'Сохранить план' }).click()
 
-  await page.goto('/me')
+  await gotoStable(page, '/me')
   await expect(page.locator('.phone-frame')).toHaveClass(/client-home-identity/)
   await expect(page.getByRole('heading', { name: 'Следующая тренировка' })).toBeVisible()
   await expect(page.getByText('Завтра · без времени')).toBeVisible()
@@ -259,7 +281,7 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
 
 test('exercise catalog and technique detail keep their visual baselines in both themes', async ({ page }) => {
   await signIn(page, 'trainer@fit.local', /\/today$/)
-  await page.goto('/exercises')
+  await gotoStable(page, '/exercises')
   await expect(page.locator('.phone-frame')).toHaveClass(/exercise-catalog-identity/)
   const search = page.getByLabel('Поиск упражнения')
   await search.fill('face pull')
@@ -273,9 +295,9 @@ test('exercise catalog and technique detail keep their visual baselines in both 
   await expectVisualBaseline(page, `exercise-catalog-detail-${process.platform}.png`, [], true)
   await page.getByRole('dialog').locator('button.secondary').click()
 
-  await page.goto('/profile')
+  await gotoStable(page, '/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-  await page.goto('/exercises')
+  await gotoStable(page, '/exercises')
   await expect(page.locator('.phone-frame')).toHaveClass(/exercise-catalog-identity/)
   await page.getByLabel('Поиск упражнения').fill('face pull')
   await expect(page.locator('.catalog-media-card').first()).toBeVisible()
@@ -289,7 +311,7 @@ test('exercise catalog and technique detail keep their visual baselines in both 
 
 test('trainer Profile and feedback keep their visual baselines in both themes', async ({ page }) => {
   await signIn(page, 'trainer@fit.local', /\/today$/)
-  await page.goto('/profile')
+  await gotoStable(page, '/profile')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-profile-identity/)
   await expect(page.getByRole('region', { name: 'Настройки' })).toBeVisible()
   await expectVisualBaseline(page, `trainer-profile-${process.platform}.png`, [], true)
@@ -340,7 +362,7 @@ test('client workouts keep their visual baseline', async ({ page }, testInfo) =>
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client workouts use mobile visual profiles')
   await signIn(page, 'client@fit.local', /\/me$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
-  await page.goto('/me/workouts')
+  await gotoStable(page, '/me/workouts')
   await expect(page.getByRole('heading', { name: 'Мои тренировки' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/client-workouts-identity/)
   await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
@@ -348,21 +370,21 @@ test('client workouts keep their visual baseline', async ({ page }, testInfo) =>
   await expect(page.getByRole('link', { name: 'Добавить тренировку' })).toBeVisible()
   await expectVisualBaseline(page, `client-workouts-${process.platform}.png`)
 
-  await page.goto('/me/profile')
+  await gotoStable(page, '/me/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-  await page.goto('/me/workouts')
+  await gotoStable(page, '/me/workouts')
   await expect(page.locator('.phone-frame')).toHaveClass(/client-workouts-identity/)
   await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
   await expectVisualBaseline(page, `client-workouts-dark-${process.platform}.png`)
 
-  await page.goto('/me/profile')
+  await gotoStable(page, '/me/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
 })
 
 test('client Profile keeps its visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Profile uses mobile visual profiles')
   await signIn(page, 'client@fit.local', /\/me$/)
-  await page.goto('/me/profile')
+  await gotoStable(page, '/me/profile')
   await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/client-profile-shell-identity/)
   await expect(page.getByRole('link', { name: 'Изменить данные' })).toBeVisible()
@@ -385,7 +407,7 @@ test('client Profile keeps its visual baseline', async ({ page }, testInfo) => {
 test('client card edit keeps its visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Card Edit uses mobile visual profiles')
   await signIn(page, 'client@fit.local', /\/me$/)
-  await page.goto('/me/edit')
+  await gotoStable(page, '/me/edit')
   await expect(page.getByRole('heading', { name: 'Редактировать клиента' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/client-card-edit-identity/)
   await expect(page.getByLabel('Имя')).toHaveValue('Анна Смирнова')
@@ -394,23 +416,23 @@ test('client card edit keeps its visual baseline', async ({ page }, testInfo) =>
   await expect(page.getByRole('button', { name: 'Сохранить' })).toBeVisible()
   await expectVisualBaseline(page, `client-card-edit-${process.platform}.png`, [], true)
 
-  await page.goto('/me/profile')
+  await gotoStable(page, '/me/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-  await page.goto('/me/edit')
+  await gotoStable(page, '/me/edit')
   await expect(page.locator('.phone-frame')).toHaveClass(/client-card-edit-identity/)
   await expectVisualBaseline(page, `client-card-edit-dark-${process.platform}.png`, [], true, '#1d1e21')
 
-  await page.goto('/me/profile')
+  await gotoStable(page, '/me/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
 })
 
 async function openWorkoutCreate(page: import('@playwright/test').Page, dark = false) {
   await signIn(page, 'client@fit.local', /\/me$/)
-  await page.goto('/me/profile')
+  await gotoStable(page, '/me/profile')
   const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
   if (dark) await darkTheme.check()
   else await darkTheme.uncheck()
-  await page.goto('/workouts/new')
+  await gotoStable(page, '/workouts/new')
   await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-create-edit-identity/)
 }
@@ -445,14 +467,14 @@ async function openWorkoutReview(page: import('@playwright/test').Page, trainer:
     })
   })
   await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
-  await page.goto(trainer ? '/profile' : '/me/profile')
+  await gotoStable(page, trainer ? '/profile' : '/me/profile')
   const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
   if (dark) await darkTheme.check()
   else await darkTheme.uncheck()
   await page.evaluate(() => Object.keys(localStorage)
     .filter((key) => key.startsWith('fit.today-draft.'))
     .forEach((key) => localStorage.removeItem(key)))
-  await page.goto(trainer ? '/today' : '/me')
+  await gotoStable(page, trainer ? '/today' : '/me')
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await page.getByLabel('Тренировка').fill('Жим лёжа 3×10 — 60 кг')
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
@@ -515,7 +537,7 @@ async function openWorkoutForDetailReview(page: import('@playwright/test').Page,
     return
   }
   await signIn(page, 'trainer@fit.local', /\/today$/)
-  await page.goto(`/workouts/new?client=${demoClientId}`)
+  await gotoStable(page, `/workouts/new?client=${demoClientId}`)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
@@ -555,22 +577,22 @@ test('workout detail, completion and exercise history keep their visual baseline
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
   const historyPath = new URL(page.url()).pathname
-  await page.goto(historyPath)
+  await gotoStable(page, historyPath)
   await expectVisualBaseline(page, `workout-exercise-history-${process.platform}.png`)
   await page.getByRole('tab', { name: 'История' }).click()
   await expectVisualBaseline(page, `workout-exercise-history-list-${process.platform}.png`)
 
-  await page.goto(trainer ? '/profile' : '/me/profile')
+  await gotoStable(page, trainer ? '/profile' : '/me/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-  await page.goto(detailPath)
+  await gotoStable(page, detailPath)
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
   await expectVisualBaseline(page, `workout-detail-dark-${process.platform}.png`, [], false, '#1d1e21')
-  await page.goto(historyPath)
+  await gotoStable(page, historyPath)
   await expectVisualBaseline(page, `workout-exercise-history-dark-${process.platform}.png`, [], false, '#1d1e21')
 
-  await page.goto(trainer ? '/profile' : '/me/profile')
+  await gotoStable(page, trainer ? '/profile' : '/me/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
-  await page.goto(detailPath)
+  await gotoStable(page, detailPath)
   await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
   await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
   const deleteConfirmation = page.getByRole('alertdialog', { name: 'Удалить тренировку?' })
@@ -585,18 +607,18 @@ test('client live workout keeps its visual baseline', async ({ page }, testInfo)
   await expectVisualBaseline(page, 'client-live.png', [page.locator('.live-timer')])
 
   const livePath = new URL(page.url()).pathname
-  await page.goto('/me/profile')
+  await gotoStable(page, '/me/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-  await page.goto(livePath)
+  await gotoStable(page, livePath)
   await expect(page.locator('.phone-frame')).toHaveClass(/live-identity/)
   await expect(page.locator('.live-exercise.current')).toBeVisible()
   await expectVisualBaseline(page, 'client-live-dark.png', [page.locator('.live-timer')], false, '#1d1e21')
 
   // Visual projects share the seeded preview account. Restore both appearance
   // and product data so later projects still exercise their committed fixtures.
-  await page.goto('/me/profile')
+  await gotoStable(page, '/me/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
-  await page.goto(livePath.replace(/\/live$/, ''))
+  await gotoStable(page, livePath.replace(/\/live$/, ''))
   await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
   await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
   const deleteConfirmation = page.getByRole('alertdialog', { name: 'Удалить тренировку?' })
@@ -609,17 +631,17 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
 
-  await page.goto('/profile')
+  await gotoStable(page, '/profile')
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toBeVisible()
   await expect(page.getByText('Ваш выбор для карт прогресса спортсменов')).toBeVisible()
   await page.getByRole('radio', { name: 'Схема' }).click()
 
-  await page.goto('/schedule')
+  await gotoStable(page, '/schedule')
   await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-schedule-identity/)
   await expectVisualBaseline(page, 'trainer-schedule.png')
 
-  await page.goto(`/progress/${demoClientId}`)
+  await gotoStable(page, `/progress/${demoClientId}`)
   await expect(page.getByRole('heading', { name: 'Прогресс', exact: true })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
   await expect(page.getByText('Анна Смирнова', { exact: true })).toBeVisible()
@@ -642,7 +664,7 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await page.locator('.content').evaluate((element) => element.scrollBy({ top: 180 }))
   await page.locator('.trainer-measurements-workspace .chart h2').click({ position: { x: 4, y: 4 } })
   await expectVisualBaseline(page, 'trainer-measurements.png')
-  await page.goto(`/progress/${demoClientId}`)
+  await gotoStable(page, `/progress/${demoClientId}`)
   const analysis = page.getByLabel('ИИ-анализ тренировок')
   await expect(analysis.locator('.body-progress-map')).toBeVisible()
   await expect(analysis.getByText('Анализ прогресса')).toBeVisible()
@@ -659,31 +681,31 @@ test('trainer Progress and measurements form keep their visual baselines in both
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : 'mobile'
 
-  await page.goto(`/progress/${demoClientId}`)
+  await gotoStable(page, `/progress/${demoClientId}`)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
   await expect(page.getByLabel('ИИ-анализ тренировок')).toBeVisible()
   const coachmark = page.getByRole('button', { name: 'Понятно' })
   if (await coachmark.isVisible()) await coachmark.click()
   await expectVisualBaseline(page, `trainer-progress-${profile}-${process.platform}.png`, [], true)
 
-  await page.goto(`/progress/${demoClientId}?view=measurements`)
+  await gotoStable(page, `/progress/${demoClientId}?view=measurements`)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
   await page.getByRole('button', { name: 'Добавить замер' }).click()
   await expect(page.getByRole('heading', { name: 'Новый замер' })).toBeVisible()
   await expectVisualBaseline(page, `trainer-measurements-form-${profile}-${process.platform}.png`, [], true)
 
-  await page.goto('/profile')
+  await gotoStable(page, '/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-  await page.goto(`/progress/${demoClientId}`)
+  await gotoStable(page, `/progress/${demoClientId}`)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
   await expectVisualBaseline(page, `trainer-progress-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
 
-  await page.goto(`/progress/${demoClientId}?view=measurements`)
+  await gotoStable(page, `/progress/${demoClientId}?view=measurements`)
   await page.getByRole('button', { name: 'Добавить замер' }).click()
   await expect(page.getByRole('heading', { name: 'Новый замер' })).toBeVisible()
   await expectVisualBaseline(page, `trainer-measurements-form-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
 
-  await page.goto('/profile')
+  await gotoStable(page, '/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
 })
 
@@ -691,15 +713,15 @@ test('trainer Clients list keeps its desktop visual baselines', async ({ page },
   test.skip(testInfo.project.name !== 'visual-trainer-1440', 'Trainer desktop uses the desktop visual profile')
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
-  await page.goto('/clients')
+  await gotoStable(page, '/clients')
   await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
   await expect(page.getByRole('link', { name: /Анна Смирнова/ }).first()).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
   await expectVisualBaseline(page, `trainer-clients-${process.platform}.png`, [], true)
 
-  await page.goto('/profile')
+  await gotoStable(page, '/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-  await page.goto('/clients')
+  await gotoStable(page, '/clients')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
   await expectVisualBaseline(page, `trainer-clients-dark-${process.platform}.png`, [], true, '#1d1e21')
 })
@@ -708,14 +730,14 @@ test('trainer Clients list keeps its mobile visual baselines', async ({ page }, 
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Trainer desktop has a dedicated visual test')
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
-  await page.goto('/clients')
+  await gotoStable(page, '/clients')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
   await expect(page.getByRole('link', { name: /Анна Смирнова/ }).first()).toBeVisible()
   await expectVisualBaseline(page, `trainer-clients-mobile-${process.platform}.png`, [], true)
 
-  await page.goto('/profile')
+  await gotoStable(page, '/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-  await page.goto('/clients')
+  await gotoStable(page, '/clients')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
   await expectVisualBaseline(page, `trainer-clients-mobile-dark-${process.platform}.png`, [], true, '#1d1e21')
 })
@@ -723,7 +745,7 @@ test('trainer Clients list keeps its mobile visual baselines', async ({ page }, 
 test('trainer Client Detail keeps its visual baselines', async ({ page }, testInfo) => {
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
-  await page.goto(`/clients/${demoClientId}`)
+  await gotoStable(page, `/clients/${demoClientId}`)
   await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Сводка по спортсмену' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Запланировать тренировку' })).toBeVisible()
@@ -732,9 +754,9 @@ test('trainer Client Detail keeps its visual baselines', async ({ page }, testIn
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : 'mobile'
   await expectVisualBaseline(page, `trainer-client-detail-${profile}-${process.platform}.png`, [], true)
 
-  await page.goto('/profile')
+  await gotoStable(page, '/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-  await page.goto(`/clients/${demoClientId}`)
+  await gotoStable(page, `/clients/${demoClientId}`)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-detail-identity/)
   await expectVisualBaseline(page, `trainer-client-detail-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
 })
@@ -743,27 +765,28 @@ test('trainer Client Create and Edit keep their visual baselines', async ({ page
   await signIn(page, 'trainer@fit.local', /\/today$/)
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : 'mobile'
 
-  await page.goto('/clients/new')
+  await gotoStable(page, '/clients/new')
   await expect(page.getByRole('heading', { name: 'Новый клиент' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-form-identity/)
   await expect(page.getByLabel('Начальный вес, кг')).toBeVisible()
   await expectVisualBaseline(page, `trainer-client-create-${profile}-${process.platform}.png`, [], true)
 
-  await page.goto(`/clients/${demoClientId}/edit`)
+  await gotoStable(page, `/clients/${demoClientId}/edit`)
   await expect(page.getByRole('heading', { name: 'Редактировать клиента' })).toBeVisible()
   await expect(page.getByLabel('Имя в моём списке')).toBeVisible()
   await expectVisualBaseline(page, `trainer-client-edit-${profile}-${process.platform}.png`, [], true)
 
-  await page.goto('/profile')
+  await gotoStable(page, '/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-  await page.goto('/clients/new')
+  await gotoStable(page, '/clients/new')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-form-identity/)
   await expectVisualBaseline(page, `trainer-client-create-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
-  await page.goto(`/clients/${demoClientId}/edit`)
+  await gotoStable(page, `/clients/${demoClientId}/edit`)
   await expectVisualBaseline(page, `trainer-client-edit-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
 })
 
 test('trainer Client Goal keeps its real create, stage and edit states in both themes', async ({ page }, testInfo) => {
+  test.setTimeout(60_000)
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : 'mobile'
@@ -771,7 +794,7 @@ test('trainer Client Goal keeps its real create, stage and edit states in both t
 
   // Отдельный спортсмен на каждый browser-project не даёт параллельным
   // visual-проверкам делить одну active goal и менять состояние друг друга.
-  await page.goto('/clients/new')
+  await gotoStable(page, '/clients/new')
   await page.getByLabel('Имя', { exact: true }).fill(clientName)
   await page.getByLabel('Пол').selectOption('female')
   await page.getByLabel('Возраст').fill('29')
@@ -781,7 +804,7 @@ test('trainer Client Goal keeps its real create, stage and edit states in both t
   await expect(page).toHaveURL(/\/clients\/[0-9a-f-]+$/)
   const clientId = page.url().split('/').pop()!
 
-  await page.goto(`/clients/${clientId}/goal`)
+  await gotoStable(page, `/clients/${clientId}/goal`)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-goal-identity/)
   await expect(page.getByLabel('Цель')).toBeVisible()
   await page.getByLabel('Дата достижения').fill('2026-12-20')
@@ -808,9 +831,9 @@ test('trainer Client Goal keeps its real create, stage and edit states in both t
   await expect(page.getByLabel('Название этапа')).toHaveValue('Стабильные 5 км')
   await page.getByRole('button', { name: 'Отмена' }).click()
 
-  await page.goto('/profile')
+  await gotoStable(page, '/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-  await page.goto(`/clients/${clientId}/goal`)
+  await gotoStable(page, `/clients/${clientId}/goal`)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-goal-identity/)
   await expectVisualBaseline(page, `trainer-client-goal-detail-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
 
@@ -820,7 +843,7 @@ test('trainer Client Goal keeps its real create, stage and edit states in both t
   await dialog.getByRole('button', { name: 'Архивировать' }).click()
   await expect(page).toHaveURL(new RegExp(`/clients/${clientId}$`))
   await page.getByRole('button', { name: 'Архивировать клиента' }).click()
-  await page.goto('/profile')
+  await gotoStable(page, '/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
 })
 
@@ -835,7 +858,7 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
   let workoutUrl: string | null = null
 
   try {
-    await page.goto(`/workouts/new?client=${demoClientId}&date=${scheduleDate}`, { waitUntil: 'domcontentloaded' })
+    await gotoStable(page, `/workouts/new?client=${demoClientId}&date=${scheduleDate}`, { waitUntil: 'domcontentloaded' })
     await page.getByLabel('Начало').fill('18:30')
     await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
     await page.getByRole('button', { name: /^Силовая/ }).click()
@@ -846,7 +869,7 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
     await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]+$/)
     workoutUrl = page.url()
 
-    await page.goto(`/schedule?date=${scheduleDate}`)
+    await gotoStable(page, `/schedule?date=${scheduleDate}`)
     await expect(page.locator('.phone-frame')).toHaveClass(/trainer-schedule-identity/)
     await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
     await expect(page.locator('.week-day')).toHaveCount(7)
@@ -855,19 +878,19 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
     await expect(page.locator('.day-grid-event').filter({ hasText: clientName })).toBeVisible()
     await expectVisualBaseline(page, `trainer-schedule-${profile}-${process.platform}.png`)
 
-    await page.goto('/profile')
+    await gotoStable(page, '/profile')
     await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-    await page.goto(`/schedule?date=${scheduleDate}`)
+    await gotoStable(page, `/schedule?date=${scheduleDate}`)
     await expect(page.locator('.phone-frame')).toHaveClass(/trainer-schedule-identity/)
     await expectVisualBaseline(page, `trainer-schedule-${profile}-dark-${process.platform}.png`, [], false, '#1d1e21')
   } finally {
     if (workoutUrl) {
-      await page.goto(workoutUrl, { waitUntil: 'domcontentloaded' })
+      await gotoStable(page, workoutUrl, { waitUntil: 'domcontentloaded' })
       await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
       await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
       await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
     }
-    await page.goto('/profile', { waitUntil: 'domcontentloaded' })
+    await gotoStable(page, '/profile', { waitUntil: 'domcontentloaded' })
     const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
     if (await darkTheme.isChecked()) await darkTheme.uncheck()
   }

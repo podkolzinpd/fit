@@ -1,10 +1,10 @@
 # Fit — план перехода на монохромную айдентику
 
-Статус: **Gate 0–7 и общий client pilot visual audit завершены; Foundation UI
-Identity v1 подтверждена на реальных экранах. Задачи 8–26 доставлены в
-production. Новая identity работает в default-on rollout для всех
-пользователей; задача 27 выполняет общий accessibility-аудит. Legacy UI и
-обратимый переключатель сохраняются до отдельного cleanup**.
+Статус: **Gate 0–9 завершены; Foundation UI Identity v1 подтверждена на
+реальных экранах. Задачи 8–28 доставлены последовательно. Новая identity
+работает в default-on rollout для всех пользователей; accessibility, visual
+regression и WebKit/iOS release gate пройдены. Legacy UI и обратимый
+переключатель сохраняются минимум на один стабильный релизный цикл**.
 
 Целевой контракт: `docs/UI_IDENTITY.md`. План сохраняет правило проекта:
 один явно выбранный экран или один самостоятельный foundation-слой — одна
