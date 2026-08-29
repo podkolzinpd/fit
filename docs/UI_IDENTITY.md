@@ -403,6 +403,25 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
 - Flag-off сохраняет прежний Today. Feature CSS не содержит локальных hex,
   email не участвует в route gating, product logic и data contract не меняются.
 
+### Product realization: Trainer Clients
+
+- Scope — только точный `/clients`. Create/edit и client detail остаются в
+  прежней identity до собственных задач.
+- Page — `24/600`, имя клиента — `16/600`, метаданные — `12/500`, search и
+  controls — `14/500`, editable search content — `16/400`.
+- Список остаётся плотной рабочей очередью: одна neutral card 18 px на клиента,
+  gap 8 px, avatar-control 44 px с радиусом 14 px. Dashboard grid и цветные
+  status-card варианты не создаются.
+- Add — compact 44 px primary; empty-state action — base 48 px. Semantic
+  priority не кодируется высотой.
+- Search появляется только по существующему продуктовому порогу, использует
+  neutral sunken field и понятный clear-control. Empty result, loading,
+  error/retry и пустой список сохраняют реальную query-логику.
+- Archive всегда написан текстом и остаётся neutral. Переход в карточку клиента
+  использует общий outline ChevronRightIcon вместо Unicode-стрелки.
+- Trainer navigation переиспользует neutral shell. Light/dark имеют одинаковую
+  геометрию; coral, purple, glow и локальные hex в route CSS отсутствуют.
+
 ### Навигация и иконки
 
 - Сохраняется текущая навигационная архитектура Fit.

@@ -1,6 +1,6 @@
 # Gate 7 — Trainer Today
 
-Статус: **implemented; local validation complete**.
+Статус: **production preview; PR #662, deployment verified**.
 
 ## Scope
 
@@ -53,8 +53,10 @@
 - WebKit: 5/5 focused checks — 360/375/390 px, draft/voice и dark contrast.
 - Native visual: 5 passed, 1 ожидаемый desktop skip. Linux visual: 5 passed,
   1 ожидаемый desktop skip после чистого повторного comparison.
-- Полный `npm run check`, CI, deployment и production smoke фиксируются в PR до
-  перехода к задаче 17.
+- Полный `npm run check` и повторный обязательный CI прошли. PR #662 влит
+  отдельным squash commit, production deployment `6152753932` завершился
+  успешно. Browser smoke был заблокирован административной policy до navigation;
+  обход не применялся, authenticated smoke остаётся ручным пунктом.
 
 ## Rollback
 
