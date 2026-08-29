@@ -205,6 +205,36 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   await expectVisualBaseline(page, `client-progress-${process.platform}.png`)
 })
 
+test('exercise catalog and technique detail keep their visual baselines in both themes', async ({ page }) => {
+  await signIn(page, 'trainer@fit.local', /\/today$/)
+  await page.goto('/exercises')
+  await expect(page.locator('.phone-frame')).toHaveClass(/exercise-catalog-identity/)
+  const search = page.getByLabel('Поиск упражнения')
+  await search.fill('face pull')
+  const result = page.locator('.catalog-media-card').first()
+  await expect(result.locator('.exercise-image')).toBeVisible()
+  await search.blur()
+  await expectVisualBaseline(page, `exercise-catalog-${process.platform}.png`, [page.locator('.catalog-custom-results')], true)
+
+  await result.click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expectVisualBaseline(page, `exercise-catalog-detail-${process.platform}.png`, [], true)
+  await page.getByRole('dialog').locator('button.secondary').click()
+
+  await page.goto('/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.goto('/exercises')
+  await expect(page.locator('.phone-frame')).toHaveClass(/exercise-catalog-identity/)
+  await page.getByLabel('Поиск упражнения').fill('face pull')
+  await expect(page.locator('.catalog-media-card').first()).toBeVisible()
+  await page.getByLabel('Поиск упражнения').blur()
+  await expectVisualBaseline(page, `exercise-catalog-dark-${process.platform}.png`, [page.locator('.catalog-custom-results')], true, '#1d1e21')
+
+  await page.locator('.catalog-media-card').first().click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expectVisualBaseline(page, `exercise-catalog-detail-dark-${process.platform}.png`, [], true, '#1d1e21')
+})
+
 test('client Progress scheme keeps its visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
   await openClientProgress(page, { scheme: true })

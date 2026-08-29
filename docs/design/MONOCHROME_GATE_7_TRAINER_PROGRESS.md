@@ -1,6 +1,6 @@
 # Gate 7 — Trainer Progress и замеры
 
-Статус: **implemented; local validation in progress**.
+Статус: **production preview**.
 
 ## Scope
 
@@ -38,7 +38,9 @@
   metric settings и отсутствие horizontal overflow.
 - Visual acceptance покрывает summary и открытую реальную measurement form в
   light/dark на 390, 430 и 1440×1000.
-- Полный CI, deployment и production smoke фиксируются в PR.
+- Полный CI зелёный; merge `8f7ed03f9ce91999e6f90842986e4c1e631940fd`
+  задеплоен в production deployment `6154538514`. Browser smoke был запущен,
+  но остановлен admin-enforced policy без обхода security controls.
 
 ## Rollback
 
