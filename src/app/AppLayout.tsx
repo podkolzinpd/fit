@@ -17,13 +17,15 @@ export function AppLayout() {
   const { keyboardOpen } = useAppViewport()
   const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   const liveSession = /\/live$/.test(pathname)
+  const workoutForm = pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname)
   const monochromeClientHome = Boolean(actor?.featureFlags?.monochromePreview && pathname === '/me' && !todayStep)
   const monochromeLive = Boolean(actor?.featureFlags?.monochromePreview && liveSession)
   const monochromeProgress = Boolean(actor?.featureFlags?.monochromePreview && pathname === '/me/progress')
   const monochromeClientWorkouts = Boolean(actor?.featureFlags?.monochromePreview && pathname === '/me/workouts')
   const monochromeClientProfile = Boolean(actor?.featureFlags?.monochromePreview && pathname === '/me/profile')
   const monochromeClientCardEdit = Boolean(actor?.featureFlags?.monochromePreview && pathname === '/me/edit')
-  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientWorkouts || monochromeClientProfile || monochromeClientCardEdit
+  const monochromeWorkoutCreateEdit = Boolean(actor?.featureFlags?.monochromePreview && (workoutForm || todayStep))
+  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientWorkouts || monochromeClientProfile || monochromeClientCardEdit || monochromeWorkoutCreateEdit
   // main.tsx применяет тему до первого render, когда аккаунт ещё неизвестен.
   // Пилотный вариант подключается здесь — как только auth вернул actor и
   // allowlist можно проверить; вне allowlist вариант остаётся прежним тёмным.
@@ -55,7 +57,6 @@ export function AppLayout() {
   // Создание, проверка, редактирование и live — один сфокусированный путь
   // тренировки. Нижняя навигация возвращается на списках и после выхода из
   // сценария, но внутри не конкурирует с текущим действием.
-  const workoutForm = pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname)
   const assistant = pathname === '/assistant'
   const immersive = liveSession || workoutForm || todayStep
   const contentClass = immersive ? 'content content-immersive' : 'content'
@@ -74,6 +75,7 @@ export function AppLayout() {
     monochromeClientWorkouts ? 'client-workouts-identity' : '',
     monochromeClientProfile ? 'client-profile-shell-identity' : '',
     monochromeClientCardEdit ? 'client-card-edit-identity' : '',
+    monochromeWorkoutCreateEdit ? 'workout-create-edit-identity' : '',
     keyboardOpen ? 'keyboard-open' : '',
   ].filter(Boolean).join(' ')
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">

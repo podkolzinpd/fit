@@ -337,6 +337,29 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
 - Client Home first-run остаётся частью уже принятого `/me`: задача формы не
   создаёт второй onboarding или альтернативную карточку.
 
+### Product realization: Workout Create/Edit
+
+- Scope объединяет существующий lifecycle одной формы: `/workouts/new`,
+  `/workouts/:id/edit` и реальные review/save steps в `/today` и `/me`. Detail,
+  completion и Live остаются в собственных задачах и не наследуют композицию.
+- План, факт, voice/text/catalog, review и save используют одну типографическую
+  систему: page `24/600`, section `18/600`, control `14/500`, meta `12/500`,
+  editable content `16/400`. Вес 600 не применяется к обычным controls.
+- Form sections и exercise blocks используют один neutral surface family 18 px;
+  поля и composer — sunken/elevated surfaces 14 px. Вложенные уровни не создают
+  декоративную dashboard-сетку.
+- Plan/fact — neutral segmented control с target 44 px. Base actions остаются
+  48 px независимо от variant; fixed save bar сохраняет safe area и не
+  перекрывает поля или системную навигацию.
+- Review и Save визуально продолжают форму, но сохраняют прежний порядок,
+  распознанные данные, assignment и mutation contract. Delete/danger всегда
+  сопровождается понятным текстом или icon label.
+- Light/dark имеют одинаковую геометрию. Dark проверяется отдельно и использует
+  milk primary без glow; coral и purple не возвращаются как акценты.
+- Loading, parse ambiguity, disabled, picker, plan/fact и save проверяются только
+  там, где они существуют в текущей продуктовой логике; искусственные состояния
+  не создаются.
+
 ### Навигация и иконки
 
 - Сохраняется текущая навигационная архитектура Fit.

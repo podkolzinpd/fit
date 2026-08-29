@@ -1,8 +1,9 @@
 # Fit — production rollout Foundation UI Identity v1
 
 Статус: **server flag и authenticated runtime read доставлены; Client Home,
-Live и Progress задеплоены и прошли общий visual audit; My Workouts и Client
-Profile задеплоены; Client Card Edit проходит отдельный Gate 6 rollout**.
+Live и Progress задеплоены и прошли общий visual audit; My Workouts, Client
+Profile и Client Card Edit задеплоены; Workout Create/Edit проходит отдельный
+Gate 7 rollout**.
 
 ## Контракт
 
@@ -50,8 +51,11 @@ Profile задеплоены; Client Card Edit проходит отдельны
 | Progress `/me/progress` | `progress-identity` | production preview |
 | My Workouts `/me/workouts` | `client-workouts-identity` | production preview |
 | Client Profile `/me/profile` | `client-profile-shell-identity` | production preview |
-| Client Card Edit `/me/edit` | `client-card-edit-identity` | local validation complete |
+| Client Card Edit `/me/edit` | `client-card-edit-identity` | production preview |
+| Workout Create/Edit `/workouts/new`, `/workouts/:id/edit` | `workout-create-edit-identity` | local validation complete |
+| Workout Review/Save `/today?view=review\|save`, `/me?view=review\|save` | `workout-create-edit-identity` | local validation complete |
 
-`/me?view=review` и `/me?view=save` относятся к workout lifecycle и не получают
-Client Home или Client Card Edit identity. У пользователя без
-`monochrome_preview` все перечисленные маршруты остаются в текущей айдентике.
+Review/save относятся к workout lifecycle и не получают Client Home или Client
+Card Edit identity. Detail, completion и Live не наследуют Create/Edit scope.
+У пользователя без `monochrome_preview` все перечисленные маршруты остаются в
+текущей айдентике.
