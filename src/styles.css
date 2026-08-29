@@ -4589,3 +4589,107 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .exercise-catalog-identity .catalog-custom-item .row-actions { width:100%; justify-content:flex-start }
   .exercise-catalog-identity .catalog-detail { width:100%; max-height:calc(100% - 16px); padding-inline:16px }
 }
+
+/* ── Gate 7 / task 24: Trainer Profile. Existing profile settings, app install
+   and feedback remain the product contract; the preview only supplies the
+   accepted compact, neutral identity for the exact trainer route. */
+.trainer-profile-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none }
+.trainer-profile-identity .content { background:var(--bg) }
+.trainer-profile-identity .profile-page { display:grid; max-width:760px; margin:0 auto; padding:20px 24px 28px; gap:14px }
+.trainer-profile-identity .profile-page > .page-header { min-height:44px; align-items:center; margin-bottom:2px }
+.trainer-profile-identity .profile-page > .page-header h1 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.trainer-profile-identity .eyebrow { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.3; letter-spacing:.06em }
+
+.trainer-profile-identity .profile-form { gap:12px }
+.trainer-profile-identity .profile-form-section { gap:12px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.trainer-profile-identity .profile-form-section-head { gap:4px; padding:0 0 2px }
+.trainer-profile-identity .profile-form-section-head .eyebrow { margin:0; color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
+.trainer-profile-identity .profile-form-section-head h2 { margin:0; color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
+.trainer-profile-identity .profile-form .field { gap:6px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
+.trainer-profile-identity .profile-form .field input { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.trainer-profile-identity .profile-form .field input:focus { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px }
+.trainer-profile-identity .profile-form .actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0; padding:0 }
+.trainer-profile-identity .profile-form .actions button,
+.trainer-profile-identity .profile-form .actions button:last-child { min-height:48px; margin:0; border-radius:14px; font-size:14px; font-weight:500; box-shadow:none }
+.trainer-profile-identity .profile-form .actions .secondary { border:1px solid var(--border); background:transparent; color:var(--fg) }
+.trainer-profile-identity .profile-form .actions .primary { border:1px solid var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.trainer-profile-identity .profile-form button:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.trainer-profile-identity .save-status { margin:0; border-color:var(--border); border-radius:14px; background:var(--surface-elevated); color:var(--fg); font-size:12px; font-weight:500 }
+.trainer-profile-identity .save-status-saved { color:var(--success-fg) }
+.trainer-profile-identity .save-status-error { color:var(--danger) }
+
+.trainer-profile-identity .profile-settings,
+.trainer-profile-identity .body-map-appearance-setting,
+.trainer-profile-identity .menu,
+.trainer-profile-identity .app-install-card,
+.trainer-profile-identity .app-feedback-card { margin:0; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.trainer-profile-identity .profile-settings,
+.trainer-profile-identity .menu { overflow:hidden }
+.trainer-profile-identity .switch-row { min-height:64px; padding:10px 14px }
+.trainer-profile-identity .switch-label { color:var(--fg); font-size:14px; font-weight:500 }
+.trainer-profile-identity .switch-control { border-color:var(--border); background:var(--surface-sunken); box-shadow:none }
+.trainer-profile-identity .switch-control::after { background:var(--surface-elevated); box-shadow:none }
+.trainer-profile-identity .switch-input:checked + .switch-control { border-color:var(--mono-primary); background:var(--mono-primary); box-shadow:none }
+.trainer-profile-identity .switch-input:checked + .switch-control::after { background:var(--mono-on-primary) }
+.trainer-profile-identity .switch-input:focus-visible + .switch-control { outline:2px solid var(--fg); outline-offset:2px }
+
+.trainer-profile-identity .body-map-appearance-setting { gap:12px; padding:18px }
+.trainer-profile-identity .body-map-appearance-setting > div:first-child strong { color:var(--fg); font-size:16px; font-weight:600; line-height:1.25 }
+.trainer-profile-identity .body-map-appearance-setting > div:first-child span { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.4 }
+.trainer-profile-identity .body-map-appearance-options { gap:3px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.trainer-profile-identity .body-map-appearance-options button { min-height:44px; border-radius:10px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; box-shadow:none }
+.trainer-profile-identity .body-map-appearance-options button[aria-checked='true'] { background:var(--surface-elevated); color:var(--fg); box-shadow:none }
+.trainer-profile-identity .body-map-appearance-options button:focus-visible { outline:2px solid var(--fg); outline-offset:1px }
+.trainer-profile-identity .body-map-appearance-icon { opacity:1 }
+
+.trainer-profile-identity .menu { border-block:1px solid var(--border) }
+.trainer-profile-identity .menu a,
+.trainer-profile-identity .menu > button { min-height:52px; padding:0 14px; border-color:var(--border); color:var(--fg); font-size:14px; font-weight:500 }
+.trainer-profile-identity .menu a:hover,
+.trainer-profile-identity .menu > button:hover { background:var(--surface-elevated) }
+.trainer-profile-identity .menu a:focus-visible,
+.trainer-profile-identity .menu > button:focus-visible { outline:2px solid var(--fg); outline-offset:-3px }
+
+.trainer-profile-identity .app-install-card,
+.trainer-profile-identity .app-feedback-card { gap:16px; padding:18px }
+.trainer-profile-identity .app-install-card .eyebrow,
+.trainer-profile-identity .app-feedback-card .eyebrow { margin:0 0 4px }
+.trainer-profile-identity .app-install-card h2,
+.trainer-profile-identity .app-feedback-card h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
+.trainer-profile-identity .app-install-head .link,
+.trainer-profile-identity .app-feedback-head .link { min-height:44px; padding:0; color:var(--fg); font-size:12px; font-weight:500 }
+.trainer-profile-identity .app-install-copy,
+.trainer-profile-identity .app-install-steps,
+.trainer-profile-identity .app-feedback-context { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.45 }
+.trainer-profile-identity .app-install-card .secondary,
+.trainer-profile-identity .app-feedback-card button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500; box-shadow:none }
+.trainer-profile-identity .app-install-card .secondary,
+.trainer-profile-identity .app-feedback-card .secondary { border:1px solid var(--border); background:transparent; color:var(--fg) }
+.trainer-profile-identity .app-feedback-card .primary { border:1px solid var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.trainer-profile-identity .app-install-success { border-color:var(--border); border-radius:14px; background:var(--surface-elevated); color:var(--success-fg); font-size:14px; font-weight:500 }
+.trainer-profile-identity .app-feedback-kinds { gap:3px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.trainer-profile-identity .app-feedback-kinds button { min-height:44px; border-radius:10px; background:transparent; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-profile-identity .app-feedback-kinds button.active { background:var(--surface-elevated); color:var(--fg); box-shadow:none }
+.trainer-profile-identity .app-feedback-card .field { gap:6px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-profile-identity .app-feedback-card textarea { min-height:122px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
+.trainer-profile-identity .app-feedback-card textarea:focus { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px }
+.trainer-profile-identity .app-feedback-counter { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-profile-identity .app-feedback-sent > p:not(.eyebrow) { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.trainer-profile-identity .app-feedback-card .actions { gap:8px }
+.trainer-profile-identity .app-feedback-card button:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.trainer-profile-identity .app-feedback-card .error { color:var(--danger); font-size:12px; font-weight:500 }
+.trainer-profile-identity .profile-page > .danger.secondary { min-height:48px; margin:0; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--danger); font-size:14px; font-weight:500; box-shadow:none }
+.trainer-profile-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
+.trainer-profile-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
+.trainer-profile-identity .tab-bar a.active,
+.trainer-profile-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+
+@media (max-width:640px) {
+  .trainer-profile-identity .profile-page { padding:12px 14px calc(env(safe-area-inset-bottom) + 104px) }
+  .trainer-profile-identity .profile-form-section,
+  .trainer-profile-identity .body-map-appearance-setting,
+  .trainer-profile-identity .app-install-card,
+  .trainer-profile-identity .app-feedback-card { padding:16px }
+  .trainer-profile-identity .app-feedback-card .actions { display:grid; grid-template-columns:1fr }
+  .trainer-profile-identity .app-feedback-card .actions button { width:100% }
+}

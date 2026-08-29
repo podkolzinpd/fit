@@ -435,6 +435,43 @@ describe('AppLayout: monochrome preview route scope', () => {
       expect(document.querySelector('.phone-frame')).not.toHaveClass('exercise-catalog-identity')
     },
   )
+
+  it('applies Trainer Profile identity only to the enabled trainer route', () => {
+    authState.role = 'trainer'
+    authState.monochromePreview = true
+    renderLayout('/profile')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'trainer-profile-identity')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('exercise-catalog-identity', 'client-profile-shell-identity')
+  })
+
+  it('keeps Trainer Profile unchanged when the server flag is off', () => {
+    authState.role = 'trainer'
+    renderLayout('/profile')
+
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('identity-monochrome-preview', 'trainer-profile-identity')
+    expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+  })
+
+  it('does not apply Trainer Profile identity to the client profile route', () => {
+    authState.role = 'client'
+    authState.monochromePreview = true
+    renderLayout('/me/profile')
+
+    expect(document.querySelector('.phone-frame')).toHaveClass('client-profile-shell-identity')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-profile-identity')
+  })
+
+  it.each(['/today', '/clients', '/schedule', '/exercises', '/progress/client-1', '/join', '/workouts/new'])(
+    'does not leak Trainer Profile identity into %s',
+    (path) => {
+      authState.role = 'trainer'
+      authState.monochromePreview = true
+      renderLayout(path)
+
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('trainer-profile-identity')
+    },
+  )
 })
 
 describe('AppLayout navigation', () => {

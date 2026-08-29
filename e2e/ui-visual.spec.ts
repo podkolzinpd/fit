@@ -235,6 +235,30 @@ test('exercise catalog and technique detail keep their visual baselines in both 
   await expectVisualBaseline(page, `exercise-catalog-detail-dark-${process.platform}.png`, [], true, '#1d1e21')
 })
 
+test('trainer Profile and feedback keep their visual baselines in both themes', async ({ page }) => {
+  await signIn(page, 'trainer@fit.local', /\/today$/)
+  await page.goto('/profile')
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-profile-identity/)
+  await expect(page.getByRole('region', { name: 'Настройки' })).toBeVisible()
+  await expectVisualBaseline(page, `trainer-profile-${process.platform}.png`, [], true)
+
+  await page.getByRole('button', { name: 'Предложение или проблема' }).click()
+  await expect(page.getByRole('form', { name: 'Напишите команде Fit' })).toBeVisible()
+  await expectVisualBaseline(page, `trainer-profile-feedback-${process.platform}.png`, [], true)
+  await page.getByRole('button', { name: 'Закрыть' }).click()
+
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-profile-identity/)
+  await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
+  await expectVisualBaseline(page, `trainer-profile-dark-${process.platform}.png`, [], true, '#1d1e21')
+
+  await page.getByRole('button', { name: 'Предложение или проблема' }).click()
+  await expect(page.getByRole('form', { name: 'Напишите команде Fit' })).toBeVisible()
+  await expectVisualBaseline(page, `trainer-profile-feedback-dark-${process.platform}.png`, [], true, '#1d1e21')
+  await page.getByRole('button', { name: 'Закрыть' }).click()
+  await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
+})
+
 test('client Progress scheme keeps its visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
   await openClientProgress(page, { scheme: true })

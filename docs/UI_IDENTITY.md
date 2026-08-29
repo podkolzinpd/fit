@@ -536,6 +536,25 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
   заливкой; scoped CSS не содержит coral, purple, gradient, glow или literal
   hex.
 
+### Product realization: Trainer Profile
+
+- Scope — точный trainer route `/profile`; Client Profile `/me/profile`, Join,
+  Exercise Catalog и другие trainer routes не наследуют profile identity.
+- Form, settings, body-map appearance, install и feedback образуют единый
+  последовательный settings workspace на neutral surfaces 18 px без shadows.
+- Page — `24/600`, section — `18/600`, body — `14/400`, controls — `14/500`,
+  compact labels — `12/500`, editable fields — `16/400`.
+- Inputs и base actions используют 48 px; body-map modes — compact 44 px.
+  Primary, secondary и destructive различаются fill/contrast/semantics, а не
+  высотой. Disabled сохраняет читаемость без общей opacity.
+- Имя, timezone, theme, RPE, archived clients, body-map mode, install,
+  feedback, links и logout сохраняют существующую product logic. Новые trainer
+  notifications или connections не создаются без реального product contract.
+- Danger используется для logout и ошибок, success — для реального сохранения
+  или отправки; семантический цвет всегда сопровождается текстом/иконкой.
+- Light/dark имеют одинаковую геометрию; scoped CSS не содержит coral, purple,
+  gradient, glow или literal hex. Flag-off возвращает прежний UI.
+
 
 
 ### Навигация и иконки
