@@ -204,10 +204,21 @@ test('client workouts keep their visual baseline', async ({ page }, testInfo) =>
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await page.goto('/me/workouts')
   await expect(page.getByRole('heading', { name: 'Мои тренировки' })).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/client-workouts-identity/)
   await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
   await expect(page.getByText('Добавьте упражнения голосом, текстом или из каталога.')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Добавить тренировку' })).toBeVisible()
   await expectVisualBaseline(page, `client-workouts-${process.platform}.png`)
+
+  await page.goto('/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.goto('/me/workouts')
+  await expect(page.locator('.phone-frame')).toHaveClass(/client-workouts-identity/)
+  await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
+  await expectVisualBaseline(page, `client-workouts-dark-${process.platform}.png`)
+
+  await page.goto('/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
 })
 
 test('client live workout keeps its visual baseline', async ({ page }, testInfo) => {

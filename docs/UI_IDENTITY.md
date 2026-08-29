@@ -283,6 +283,25 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
 - Bottom navigation полностью переиспользует Client Home pattern и не создаёт
   отдельную data-navigation.
 
+### Product realization: Client My Workouts
+
+- Список строится как последовательность реальных временных групп: upcoming,
+  решение по прошлому плану и history. Ритм между группами сильнее, чем между
+  карточками одной группы; альтернативная dashboard-сетка не создаётся.
+- Карточка тренировки использует одну нейтральную поверхность радиуса 18 px.
+  Дата и объект — `16/600`, упражнения — `14/400`, автор, status и метаданные —
+  `12/500`. История может быть плотнее, но не вводит второй тип базовой card.
+- Planned/history остаются нейтральными. Current, partial, personal record и
+  discomfort используют только утверждённый semantic token вместе с текстом;
+  status никогда не передаётся одним цветом.
+- Compact header action — 44 px, основной action пустого списка — 48 px.
+  Обе высоты доступны любому variant и не кодируют semantic priority.
+- Empty, loading, error/retry и отсутствие client card переиспользуют foundation
+  state surfaces без gradient/glow. Bottom navigation переиспользует Client Home
+  без локального active-pill.
+- Route scope заканчивается на `/me/workouts`: detail, form, review и Live не
+  наследуют list-композицию до своих задач workout lifecycle.
+
 ### Навигация и иконки
 
 - Сохраняется текущая навигационная архитектура Fit.
