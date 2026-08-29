@@ -3728,3 +3728,116 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .workout-create-edit-identity .workout-form-page .workout-form-section:first-child,
   .workout-create-edit-identity .today-assignment { padding-inline:16px }
 }
+
+/* ── Gate 7 / task 14: workout detail, completion and exercise history. */
+.workout-detail-history-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none }
+.workout-detail-history-identity .content { background:var(--bg) }
+.workout-detail-history-identity .page { max-width:600px; padding:16px 16px 28px }
+.workout-detail-history-identity .page-header { min-height:44px; margin-bottom:12px }
+.workout-detail-history-identity .page-header h1 { color:var(--fg); font-size:24px; font-weight:600; letter-spacing:-.018em }
+.workout-detail-history-identity .page-back { width:44px; min-width:44px; height:44px; min-height:44px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); box-shadow:none }
+.workout-detail-history-identity .page-back svg { width:20px; height:20px; stroke-width:1.8 }
+
+.workout-detail-history-identity button,
+.workout-detail-history-identity .button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.workout-detail-history-identity button.primary,
+.workout-detail-history-identity .button.primary,
+.workout-detail-history-identity .workout-cta[data-variant='primary'] { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none }
+.workout-detail-history-identity button.secondary,
+.workout-detail-history-identity .button.secondary { border-color:var(--border); background:var(--surface-elevated); color:var(--fg); box-shadow:none }
+.workout-detail-history-identity button:disabled,
+.workout-detail-history-identity .button[aria-disabled='true'] { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg); box-shadow:none }
+
+.workout-detail-history-identity .workout-header-contract { gap:12px; margin-bottom:16px; padding-bottom:16px; border-color:var(--border) }
+.workout-detail-history-identity .workout-header-copy { gap:4px }
+.workout-detail-history-identity .workout-header-eyebrow { color:var(--muted); font-size:12px; font-weight:500; letter-spacing:.06em }
+.workout-detail-history-identity .workout-header-contract h2 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.workout-detail-history-identity .workout-header-meta { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .workout-status { min-height:28px; padding:0 9px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .workout-status[data-tone='success'] { border-color:var(--success-border); background:var(--surface-sunken); color:var(--success-fg) }
+.workout-detail-history-identity .workout-status[data-tone='warning'] { border-color:var(--border); background:var(--surface-sunken); color:var(--warning-fg) }
+
+.workout-detail-history-identity .workout-completion { gap:14px; margin-bottom:18px; padding:18px; border-color:var(--success-border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.workout-detail-history-identity .workout-completion-mark { width:48px; height:48px; border-radius:14px; background:var(--surface-sunken); color:var(--success-fg) }
+.workout-detail-history-identity .workout-completion-kicker { color:var(--success-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
+.workout-detail-history-identity .workout-completion h2 { color:var(--fg); font-size:18px; font-weight:600 }
+.workout-detail-history-identity .workout-completion p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.workout-detail-history-identity .workout-completion-record strong { color:var(--success-fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .workout-completion-record span { color:var(--fg); font-size:16px; font-weight:600 }
+.workout-detail-history-identity .workout-completion-next { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
+
+.workout-detail-history-identity .workout-detail-primary-actions { gap:8px; margin:0 0 16px }
+.workout-detail-history-identity .workout-detail-primary-actions .workout-cta,
+.workout-detail-history-identity .workout-detail-page > .button.wide { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.workout-detail-history-identity .workout-fact-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0 0 16px; padding:0; border:0 }
+.workout-detail-history-identity .workout-fact-summary p { display:grid; gap:3px; padding:12px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken) }
+.workout-detail-history-identity .workout-fact-summary-groups { grid-column:1 / -1 }
+.workout-detail-history-identity .workout-fact-summary span { color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:0; text-transform:none }
+.workout-detail-history-identity .workout-fact-summary strong { color:var(--fg); font-size:16px; font-weight:600 }
+
+.workout-detail-history-identity .workout-detail-exercise-overview { margin:18px 0 8px; padding-bottom:8px; border-color:var(--border) }
+.workout-detail-history-identity .workout-detail-exercise-overview p { color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
+.workout-detail-history-identity .workout-detail-exercise-overview span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .workout-detail-page > .planned-exercise-list,
+.workout-detail-history-identity .workout-detail-page > .completed-exercise-list { gap:0; overflow:hidden; padding:0 16px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
+.workout-detail-history-identity .workout-detail-page > .planned-exercise-list > .planned-detail-exercise,
+.workout-detail-history-identity .workout-detail-page > .completed-exercise-list > .completed-exercise { padding:16px 0; border-bottom:1px solid var(--border); background:transparent }
+.workout-detail-history-identity .workout-detail-page > .planned-exercise-list > :last-child,
+.workout-detail-history-identity .workout-detail-page > .completed-exercise-list > :last-child { border-bottom:0 }
+.workout-detail-history-identity .workout-detail-exercise-heading strong { color:var(--fg); font-size:16px; font-weight:600 }
+.workout-detail-history-identity .workout-detail-exercise-result { color:var(--fg); font-size:14px; font-weight:500 }
+.workout-detail-history-identity .planned-set-summary span,
+.workout-detail-history-identity .completed-set-summary span,
+.workout-detail-history-identity .workout-history-set .plan-note { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .exercise-history-link { width:44px; min-height:44px; border-radius:14px; color:var(--secondary-label-fg) }
+.workout-detail-history-identity .exercise-history-link:active { background:var(--surface-sunken); color:var(--fg) }
+.workout-detail-history-identity .workout-review,
+.workout-detail-history-identity .workout-client-feedback,
+.workout-detail-history-identity .workout-client-question,
+.workout-detail-history-identity .workout-trainer-review,
+.workout-detail-history-identity .workout-question-answer { margin:12px 0; padding:16px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.workout-detail-history-identity .workout-review h2,
+.workout-detail-history-identity .workout-feedback-fieldset legend { color:var(--fg); font-size:16px; font-weight:600 }
+.workout-detail-history-identity .workout-review p,
+.workout-detail-history-identity .workout-review-text { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.workout-detail-history-identity .workout-detail-actions { gap:8px; margin-top:16px }
+.workout-detail-history-identity .workout-detail-actions > .button,
+.workout-detail-history-identity .workout-detail-actions .icon-button { min-height:44px }
+
+.workout-detail-history-identity .exercise-card-head,
+.workout-detail-history-identity .exercise-progress-proof,
+.workout-detail-history-identity .exercise-progress-chart,
+.workout-detail-history-identity .exercise-technique { padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.workout-detail-history-identity .exercise-card-head { gap:14px }
+.workout-detail-history-identity .exercise-card-head .exercise-image { border-radius:14px; background:var(--surface-sunken) }
+.workout-detail-history-identity .exercise-card-meta h2 { color:var(--fg); font-size:18px; font-weight:600 }
+.workout-detail-history-identity .exercise-card-meta p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .exercise-card-tabs { gap:3px; margin:12px 0; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
+.workout-detail-history-identity .exercise-card-tabs .tab { min-height:44px; border:0; border-radius:10px; background:transparent; color:var(--secondary-label-fg); font-size:12px; font-weight:500; box-shadow:none }
+.workout-detail-history-identity .exercise-card-tabs .tab.active { background:var(--surface-elevated); color:var(--fg); box-shadow:none }
+.workout-detail-history-identity .exercise-progress-proof > header .eyebrow { color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
+.workout-detail-history-identity .exercise-progress-result h2 { color:var(--fg); font-size:24px; font-weight:600 }
+.workout-detail-history-identity .exercise-progress-result > span,
+.workout-detail-history-identity .exercise-progress-badges span { border-color:var(--success-border); border-radius:10px; background:var(--surface-sunken); color:var(--success-fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .exercise-progress-details strong,
+.workout-detail-history-identity .exercise-progress-records strong,
+.workout-detail-history-identity .exercise-progress-milestone strong { color:var(--fg); font-size:14px; font-weight:500 }
+.workout-detail-history-identity .exercise-progress-details span,
+.workout-detail-history-identity .exercise-progress-records span,
+.workout-detail-history-identity .exercise-progress-milestone span,
+.workout-detail-history-identity .exercise-progress-method { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .exercise-progress-chart h2 { color:var(--fg); font-size:18px; font-weight:600 }
+.workout-detail-history-identity .exercise-progress-chart .recharts-cartesian-grid line { stroke:var(--border) }
+.workout-detail-history-identity .exercise-progress-chart .recharts-line-curve { stroke:var(--mono-primary) }
+.workout-detail-history-identity .exercise-progress-timeline { gap:8px }
+.workout-detail-history-identity .exercise-progress-timeline .card { padding:16px; border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.workout-detail-history-identity .exercise-progress-row-head strong { color:var(--fg); font-size:16px; font-weight:600 }
+.workout-detail-history-identity .exercise-progress-row-head > span,
+.workout-detail-history-identity .exercise-progress-timeline .card > p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .exercise-technique .how-steps { color:var(--fg); font-size:14px; font-weight:400; line-height:1.5 }
+
+@media (max-width:375px) {
+  .workout-detail-history-identity .page { padding-inline:14px }
+  .workout-detail-history-identity .workout-detail-page > .planned-exercise-list,
+  .workout-detail-history-identity .workout-detail-page > .completed-exercise-list { padding-inline:14px }
+}

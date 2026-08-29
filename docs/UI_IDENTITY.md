@@ -360,6 +360,26 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
   там, где они существуют в текущей продуктовой логике; искусственные состояния
   не создаются.
 
+### Product realization: Workout Detail, Completion and Exercise History
+
+- `/workouts/:id` и `/workouts/:id/history/:exerciseSlug` образуют один
+  read/result-контур, но не наследуют композицию Create/Edit или Live.
+- Completion, workout fact, feedback, trainer response и exercise rows используют
+  один neutral surface family 18 px. Tabs и вложенные controls используют 14 px
+  и не вводят альтернативную геометрию базовых компонентов.
+- Page — `24/600`, section и ключевой результат — `18/600`, body — `14/400`,
+  controls — `14/500`, meta — `12/500`. Числовая иерархия использует 600 только
+  для действительно ключевых данных.
+- Partial, personal record, saved result и danger action всегда имеют текстовую
+  или icon-label семантику; semantic color не применяется как декор и не создаёт
+  цветные карточки.
+- Planned и фактические значения сохраняют различие через content и hierarchy,
+  а не через локальную палитру. Незаполненный факт остаётся явным прочерком.
+- Statistics/history/technique, график и chronology используют существующие
+  данные. Новые метрики, состояния и параллельные компоненты не создаются.
+- Light/dark имеют одинаковую геометрию; dark surfaces и active tabs проверяются
+  отдельно. Bottom navigation переиспользует соответствующий role shell.
+
 ### Навигация и иконки
 
 - Сохраняется текущая навигационная архитектура Fit.

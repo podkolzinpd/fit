@@ -2,8 +2,8 @@
 
 Статус: **server flag и authenticated runtime read доставлены; Client Home,
 Live и Progress задеплоены и прошли общий visual audit; My Workouts, Client
-Profile и Client Card Edit задеплоены; Workout Create/Edit проходит отдельный
-Gate 7 rollout**.
+Profile, Client Card Edit и Workout Create/Edit задеплоены; Workout Detail,
+Completion и Exercise History проходят отдельный Gate 7 rollout**.
 
 ## Контракт
 
@@ -52,10 +52,13 @@ Gate 7 rollout**.
 | My Workouts `/me/workouts` | `client-workouts-identity` | production preview |
 | Client Profile `/me/profile` | `client-profile-shell-identity` | production preview |
 | Client Card Edit `/me/edit` | `client-card-edit-identity` | production preview |
-| Workout Create/Edit `/workouts/new`, `/workouts/:id/edit` | `workout-create-edit-identity` | local validation complete |
-| Workout Review/Save `/today?view=review\|save`, `/me?view=review\|save` | `workout-create-edit-identity` | local validation complete |
+| Workout Create/Edit `/workouts/new`, `/workouts/:id/edit` | `workout-create-edit-identity` | production preview |
+| Workout Review/Save `/today?view=review\|save`, `/me?view=review\|save` | `workout-create-edit-identity` | production preview |
+| Workout Detail `/workouts/:id` | `workout-detail-history-identity` | local validation complete |
+| Exercise History `/workouts/:id/history/:exerciseSlug` | `workout-detail-history-identity` | local validation complete |
 
 Review/save относятся к workout lifecycle и не получают Client Home или Client
-Card Edit identity. Detail, completion и Live не наследуют Create/Edit scope.
+Card Edit identity. Detail/completion/history используют собственный scope и не
+наследуют Create/Edit; Live остаётся отдельной принятой областью.
 У пользователя без `monochrome_preview` все перечисленные маршруты остаются в
 текущей айдентике.
