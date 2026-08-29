@@ -13,6 +13,7 @@ type RawGoal = {
 type RawCriterion = {
   id: string; goalId: string; metric: GoalCriterion['metric']; operation: GoalCriterion['operation']
   targetValue: number | null; rangeMin: number | null; rangeMax: number | null; unit: string
+  baselineValue?: number | null; baselineRecordedOn?: string | null
   confirmationStatus: GoalCriterion['confirmationStatus']; position: number; version: number
 }
 
@@ -28,7 +29,9 @@ function toCriterion(raw: RawCriterion): GoalCriterion {
   return {
     id: raw.id, goalId: raw.goalId, metric: raw.metric, operation: raw.operation,
     targetValue: raw.targetValue, rangeMin: raw.rangeMin, rangeMax: raw.rangeMax,
-    unit: raw.unit, confirmationStatus: raw.confirmationStatus,
+    unit: raw.unit, baselineValue: raw.baselineValue ?? null,
+    baselineRecordedOn: raw.baselineRecordedOn ? localDate(raw.baselineRecordedOn) : null,
+    confirmationStatus: raw.confirmationStatus,
     position: raw.position, version: raw.version,
   }
 }

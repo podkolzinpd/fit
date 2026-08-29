@@ -657,6 +657,32 @@ test('iPhone: client progress keeps one goal-aware LLM summary and compact runni
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: standard goal facts stay readable without horizontal overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await login(page, 'client@fit.local')
+  await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+    id: 'b1000000-0000-4000-8000-000000000001', clientId: '11111111-1111-4111-8111-111111111111',
+    title: 'Держать вес 59 кг', targetDate: null, status: 'active', version: 1, stages: [], criteria: [{
+      id: 'b2000000-0000-4000-8000-000000000002', goalId: 'b1000000-0000-4000-8000-000000000001',
+      metric: 'weight', operation: 'maintain_range', targetValue: null, rangeMin: 58.5, rangeMax: 59.5,
+      unit: 'кг', baselineValue: null, baselineRecordedOn: null,
+      confirmationStatus: 'confirmed', position: 0, version: 1,
+    }],
+  }) }))
+  await page.route('**/rest/v1/client_progress?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
+    { id: 'b4000000-0000-4000-8000-000000000004', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: '2026-08-25', weight_kg: 59, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+    { id: 'b3000000-0000-4000-8000-000000000003', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: '2026-08-05', weight_kg: 60, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+  ]) }))
+  await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+
+  await page.goto('/me/progress')
+  const goal = page.locator('.client-progress-goal-story')
+  await expect(goal.getByText('В диапазоне сейчас', { exact: true })).toBeVisible()
+  await expect(goal.getByText(/60 → 59 кг \(−1 кг\)/)).toBeVisible()
+  await expect(goal.getByText('Достаточно для проверки удержания')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+})
+
 async function selectClient(page: Page, name = 'Анна Смирнова') {
   await page.locator('.client-picker-trigger').click()
   await page.locator('.client-picker-item').filter({ hasText: name }).first().click()

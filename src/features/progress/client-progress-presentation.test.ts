@@ -69,6 +69,7 @@ describe('clientProgressPresentation', () => {
         status: 'active', version: 1, stages: [], criteria: [{
           id: 'criterion-1', goalId: 'goal-1', metric: 'weight', operation: 'increase_to',
           targetValue: 85, rangeMin: null, rangeMax: null, unit: 'кг',
+          baselineValue: null, baselineRecordedOn: null,
           confirmationStatus: 'confirmed', position: 0, version: 1,
         }],
       }, measurements,

@@ -130,6 +130,8 @@ export interface GoalCriterion {
   rangeMin: number | null
   rangeMax: number | null
   unit: string
+  baselineValue: number | null
+  baselineRecordedOn: LocalDate | null
   confirmationStatus: GoalCriterionConfirmationStatus
   position: number
   version: number

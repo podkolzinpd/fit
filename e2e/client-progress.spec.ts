@@ -34,8 +34,8 @@ test('standalone client creates and formulates an own goal', async ({ page }, te
   await page.getByRole('switch', { name: 'Автоматическая оценка' }).check()
   await page.getByLabel('Показатель').selectOption('weight')
   await page.getByLabel('Способ оценки').selectOption('maintain_range')
-  await page.getByLabel('Минимум, кг').fill('58.5')
-  await page.getByLabel('Максимум, кг').fill('59.5')
+  await page.getByLabel('Минимум, кг').fill('58,5')
+  await page.getByLabel('Максимум, кг').fill('59,5')
   await page.getByRole('button', { name: 'Создать цель' }).click()
 
   await expect(page.getByRole('heading', { name: 'Держать вес 59 кг' })).toBeVisible()
@@ -92,6 +92,48 @@ test('linked client sees only the published client progress view', async ({ page
 
   await page.goto('/clients')
   await expect(page).toHaveURL(/\/me$/)
+})
+
+test('client sees deterministic standard-measurement goal facts', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('client@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/me$/)
+
+  await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      id: 'a1000000-0000-4000-8000-000000000001', clientId: '11111111-1111-4111-8111-111111111111',
+      title: 'Держать вес 59 кг', targetDate: null, status: 'active', version: 1, stages: [],
+      criteria: [{
+        id: 'a2000000-0000-4000-8000-000000000002', goalId: 'a1000000-0000-4000-8000-000000000001',
+        metric: 'weight', operation: 'maintain_range', targetValue: null,
+        rangeMin: 58.5, rangeMax: 59.5, unit: 'кг', baselineValue: null,
+        baselineRecordedOn: null, confirmationStatus: 'confirmed', position: 0, version: 1,
+      }],
+    }),
+  }))
+  await page.route('**/rest/v1/client_progress?*', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify([
+      { id: 'a4000000-0000-4000-8000-000000000004', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: '2026-08-25', weight_kg: 59, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+      { id: 'a3000000-0000-4000-8000-000000000003', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: '2026-08-05', weight_kg: 60, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+    ]),
+  }))
+  await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({
+    contentType: 'application/json', body: '[]',
+  }))
+
+  await page.goto('/me/progress')
+  const goal = page.locator('.client-progress-goal-story')
+  await expect(goal.getByRole('heading', { name: 'Держать вес 59 кг' })).toBeVisible()
+  await expect(goal.getByText('В диапазоне сейчас', { exact: true })).toBeVisible()
+  await expect(goal.getByText('58,5–59,5 кг')).toBeVisible()
+  await expect(goal.getByText(/60 → 59 кг \(−1 кг\) · ближе к ориентиру/)).toBeVisible()
+  await expect(goal.getByText('Достаточно для проверки удержания')).toBeVisible()
+  await expect(goal.getByText(/в окне удержания был замер за его пределами/)).toBeVisible()
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
 
 test('trainer reviews the client copy separately from internal attention items', async ({ page }) => {

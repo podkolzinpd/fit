@@ -368,11 +368,22 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       {presentation.goal.criterionLabel && <dl className="goal-foundation-facts">
         <div><dt>Критерий</dt><dd>{presentation.goal.criterionLabel}</dd></div>
         <div><dt>Ориентир</dt><dd>{presentation.goal.targetLabel}</dd></div>
+        {presentation.goal.currentLabel && <div><dt>Сейчас</dt><dd>{presentation.goal.currentLabel}</dd></div>}
+        {presentation.goal.periodEndLabel && <div><dt>На конец периода</dt><dd>{presentation.goal.periodEndLabel}</dd></div>}
+        {presentation.goal.baselineLabel && <div><dt>Отправная точка</dt><dd>{presentation.goal.baselineLabel}</dd></div>}
       </dl>}
       {presentation.goal.state === 'unconfigured' && <><p>Цель сохранена как текст. Автоматическая оценка не настроена.</p><Link className="link" to={goalLink}>Настроить оценку</Link></>}
       {presentation.goal.state === 'needs_review' && <><p>Формулировка цели изменилась. Проверь, подходит ли сохранённый критерий.</p><Link className="link" to={goalLink}>Проверить критерий</Link></>}
       {presentation.goal.state === 'needs_data' && <><p>Нет ни одного замера выбранного показателя.</p><Link className="link" to={measurementLink}>Добавить замер</Link></>}
-      {presentation.goal.state === 'configured' && <p>Критерий настроен, данные для показателя есть. Progress пока не делает вывод о достижении цели.</p>}
+      {presentation.goal.state === 'configured' && <>
+        <dl className="goal-progress-details">
+          <div><dt>Динамика выбранного периода</dt><dd>{presentation.goal.dynamicsLabel}</dd></div>
+          <div><dt>Последний замер</dt><dd>{presentation.goal.lastMeasurementLabel} · {presentation.goal.freshnessLabel}</dd></div>
+          <div><dt>Достаточность данных</dt><dd>{presentation.goal.sufficiencyLabel}</dd></div>
+        </dl>
+        <p>{presentation.goal.message}</p>
+        {presentation.goal.measurementAction && <Link className="link" to={measurementLink}>Добавить актуальный замер</Link>}
+      </>}
     </section>}
     {!goalLoading && !goalError && !presentation.goal && <section className="client-progress-goal-story empty" aria-labelledby={`${role}-progress-goal-title`}>
       <span>{role === 'client' ? 'Для твоей цели' : 'Цель клиента'}</span>

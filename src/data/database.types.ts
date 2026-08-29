@@ -1,4 +1,4 @@
-// schema-sha256: a1ba7fb2946d1496467f7fc5b5cb9b9a949441d385f0f5e6bdca323c019119a0
+// schema-sha256: 2137de2853fb5c9c232e288a9871699cd698ab84ea057d42af9f86ce4202ff73
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1023,6 +1023,9 @@ export type Database = {
       goal_criteria: {
         Row: {
           archived_at: string | null
+          baseline_progress_id: string | null
+          baseline_recorded_on: string | null
+          baseline_value: number | null
           client_id: string
           confirmation_status: string
           confirmed_at: string | null
@@ -1044,6 +1047,9 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          baseline_progress_id?: string | null
+          baseline_recorded_on?: string | null
+          baseline_value?: number | null
           client_id: string
           confirmation_status?: string
           confirmed_at?: string | null
@@ -1065,6 +1071,9 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          baseline_progress_id?: string | null
+          baseline_recorded_on?: string | null
+          baseline_value?: number | null
           client_id?: string
           confirmation_status?: string
           confirmed_at?: string | null
@@ -1085,6 +1094,13 @@ export type Database = {
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "goal_criteria_baseline_progress_fk"
+            columns: ["baseline_progress_id", "trainer_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "client_progress"
+            referencedColumns: ["id", "trainer_id", "client_id"]
+          },
           {
             foreignKeyName: "goal_criteria_goal_fk"
             columns: ["goal_id", "trainer_id", "client_id"]

@@ -3277,10 +3277,10 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         const rows = await client.query<{ goal_id: string; version: string } & QueryResultRow>(
           `select goal_id, version from public.save_client_goal($1::jsonb, null)`,
           [JSON.stringify({
-            id: null, clientId: CLIENT_ID, title: 'Держать вес 70 кг', targetDate: '2026-12-31',
+            id: null, clientId: CLIENT_ID, title: 'Снизить вес на 3 кг', targetDate: '2026-12-31',
             criterion: {
-              id: null, version: null, metric: 'weight', operation: 'maintain_range',
-              targetValue: null, rangeMin: 69.5, rangeMax: 70.5, unit: 'кг',
+              id: null, version: null, metric: 'weight', operation: 'change_by',
+              targetValue: -3, rangeMin: null, rangeMax: null, unit: 'кг',
               confirmationStatus: 'confirmed', position: 0,
             },
           })],
@@ -3299,14 +3299,20 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         return rows[0]?.result as {
           entries: unknown[]
           customMetrics: unknown[]
-          goal: { criteria: Array<{ metric: string; confirmationStatus: string }> } | null
+          goal: { criteria: Array<{
+            metric: string; confirmationStatus: string
+            baselineValue: number; baselineRecordedOn: string
+          }> } | null
         }
       })
       expect(shared.entries).toHaveLength(1)
       expect(shared.customMetrics).toHaveLength(1)
       expect(shared.goal).not.toBeNull()
       expect(shared.goal?.criteria).toEqual([
-        expect.objectContaining({ metric: 'weight', confirmationStatus: 'confirmed' }),
+        expect.objectContaining({
+          metric: 'weight', confirmationStatus: 'confirmed',
+          baselineValue: 70, baselineRecordedOn: '2026-08-20',
+        }),
       ])
 
       const memberOverview = await withActorTransaction(
