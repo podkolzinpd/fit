@@ -3313,6 +3313,39 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-workouts-identity .client-workout-section-head { gap:4px }
 .client-workouts-identity .client-workout-section-head .eyebrow { color:var(--muted); font-size:12px; font-weight:500; line-height:1.3; letter-spacing:.06em }
 .client-workouts-identity .client-workout-section-head h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
+.client-workouts-identity .client-history-section-head { grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:12px }
+.client-workouts-identity .client-history-section-head > div:first-child { display:grid; gap:4px }
+.client-workouts-identity .client-history-view-toggle { display:grid; grid-template-columns:1fr 1.35fr; gap:2px; min-width:188px; padding:3px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken) }
+.client-workouts-identity .client-history-view-toggle button { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:44px; padding:0 10px; border:0; border-radius:10px; background:transparent; color:var(--secondary-label-fg); font-size:14px; font-weight:500; line-height:1; box-shadow:none }
+.client-workouts-identity .client-history-view-toggle button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:inset 0 0 0 1px var(--border) }
+.client-workouts-identity .client-history-view-toggle svg { width:18px; height:18px; stroke-width:1.8 }
+.client-workouts-identity .client-history-calendar { display:grid; gap:14px; padding:14px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); color:var(--fg) }
+.client-workouts-identity .client-history-calendar-toolbar { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; align-items:center; gap:8px }
+.client-workouts-identity .client-history-calendar-toolbar h3 { margin:0; color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em; text-align:center }
+.client-workouts-identity .client-history-calendar-arrow { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; min-height:44px; padding:0; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); box-shadow:none }
+.client-workouts-identity .client-history-calendar-arrow:disabled { border-color:var(--border); background:var(--surface-sunken); color:var(--muted); opacity:1 }
+.client-workouts-identity .client-history-calendar-arrow svg { width:20px; height:20px; stroke-width:1.8 }
+.client-workouts-identity .client-history-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:3px }
+.client-workouts-identity .client-history-calendar-weekday { display:flex; align-items:center; justify-content:center; min-height:24px; color:var(--muted); font-size:12px; font-weight:500; line-height:1 }
+.client-workouts-identity .client-history-calendar-day { display:block; min-width:0; height:46px; border-radius:10px; color:var(--secondary-label-fg) }
+.client-workouts-identity .client-history-calendar-day > span,
+.client-workouts-identity .client-history-calendar-day > button { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; width:100%; height:100%; min-height:44px; padding:0; border:0; border-radius:10px; background:transparent; color:inherit; font-size:12px; font-weight:500; line-height:1; box-shadow:none }
+.client-workouts-identity .client-history-calendar-day.outside,
+.client-workouts-identity .client-history-calendar-day.future { color:var(--muted) }
+.client-workouts-identity .client-history-calendar-day.has-workout > button { background:var(--surface-sunken); color:var(--fg) }
+.client-workouts-identity .client-history-calendar-day.today > span,
+.client-workouts-identity .client-history-calendar-day.today > button { box-shadow:inset 0 0 0 1px var(--fg) }
+.client-workouts-identity .client-history-calendar-day.selected > button { background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none }
+.client-workouts-identity .client-history-calendar-day-mark { display:flex; align-items:center; justify-content:center; min-width:14px; height:3px; padding:0 3px; border-radius:999px; background:currentColor; color:var(--mono-primary); font-size:10px; font-weight:600; line-height:1 }
+.client-workouts-identity .client-history-calendar-day-mark:not(:empty) { height:16px; background:var(--mono-primary); color:var(--mono-on-primary) }
+.client-workouts-identity .client-history-calendar-day.selected .client-history-calendar-day-mark { background:var(--mono-on-primary); color:var(--mono-primary) }
+.client-workouts-identity .client-history-calendar-state { display:grid; justify-items:center; gap:10px; min-height:44px; margin:0; padding:12px; border-radius:14px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:14px; font-weight:400; line-height:1.4; text-align:center }
+.client-workouts-identity .client-history-calendar-state p { margin:0 }
+.client-workouts-identity .client-history-calendar-state button { min-height:44px; margin:0; padding:0 14px; border-radius:14px; font-size:14px; font-weight:500 }
+.client-workouts-identity .client-history-calendar-selection { display:grid; gap:10px; padding-top:14px; border-top:1px solid var(--border) }
+.client-workouts-identity .client-history-calendar-selection-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px }
+.client-workouts-identity .client-history-calendar-selection-head h4 { margin:0; color:var(--fg); font-size:16px; font-weight:600; line-height:1.25 }
+.client-workouts-identity .client-history-calendar-selection-head span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .client-workouts-identity .client-workout-cards { gap:8px }
 
 .client-workouts-identity .client-workout-card,
@@ -3390,6 +3423,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .client-workouts-identity .past-workout-plan-card,
   .client-workouts-identity .workout-chronicle-card { padding-inline:16px }
   .client-workouts-identity .past-workout-plan-action { max-width:84px; white-space:normal; text-align:right }
+  .client-workouts-identity .client-history-section-head { grid-template-columns:1fr; align-items:stretch }
+  .client-workouts-identity .client-history-view-toggle { width:100%; min-width:0 }
+  .client-workouts-identity .client-history-calendar { padding-inline:12px }
 }
 
 /* ── Gate 6 / task 11: Client Profile. */
