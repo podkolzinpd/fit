@@ -259,7 +259,7 @@ test('creates isolated Vercel previews only when a collaborator requests their o
   assert.match(prPreviewWorkflow, /^  pull_request:\n    types: \[closed\]$/m)
   assert.match(prPreviewWorkflow, /^  contents: write$/m)
   assert.match(prPreviewWorkflow, /^  deployments: read$/m)
-  assert.match(prPreviewWorkflow, /^  issues: write$/m)
+  assert.match(prPreviewWorkflow, /^  pull-requests: write$/m)
   assert.match(prPreviewWorkflow, /github\.event\.comment\.body == '\/preview'/)
   assert.match(prPreviewWorkflow, /OWNER.*MEMBER.*COLLABORATOR/)
   assert.match(prPreviewWorkflow, /'\.user\.login'/)
