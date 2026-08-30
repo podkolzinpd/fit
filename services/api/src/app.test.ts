@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { DatabaseConnection, DatabasePool } from './db/types.js'
 import type { PilotConnectionsResponse } from './connections.js'
 import { buildApp } from './app.js'
+import { AppFeedbackCommandError } from './app-feedback-command.js'
+import type { AppFeedbackDraft } from './app-feedback-request.js'
 import {
   YandexIdentityRejectedError,
   type YandexIdentityProvider,
@@ -18,6 +20,7 @@ import {
 } from './db/yandex-pilot-transaction.js'
 import type { PilotClientsResponse } from './clients.js'
 import type { PilotClientsReader } from './pilot-clients-reader.js'
+import type { PilotAppFeedbackWriter } from './pilot-app-feedback-writer.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import { PilotConnectionCommandError } from './connection-commands.js'
@@ -658,6 +661,16 @@ function buildConnectionsReader(
     result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
   )
   return { pilotConnectionsReader: { readConnections }, readConnections }
+}
+
+function buildAppFeedbackWriter(error?: Error): {
+  pilotAppFeedbackWriter: PilotAppFeedbackWriter
+  submit: ReturnType<typeof vi.fn>
+} {
+  const submit = vi.fn(() => error === undefined
+    ? Promise.resolve(PROFILE_ID)
+    : Promise.reject(error))
+  return { pilotAppFeedbackWriter: { submit }, submit }
 }
 
 function buildTrainingDataReader(
@@ -1480,6 +1493,130 @@ describe('pilot progress and goals endpoints', () => {
     )
     expect(JSON.stringify(warn.mock.calls)).not.toContain('private progress')
     expect(response.body).not.toContain('42501')
+  })
+})
+
+describe('pilot app feedback command', () => {
+  const sessionToken = 's'.repeat(43)
+
+  it('normalizes the current feedback contract without accepting an author from the body', async () => {
+    const writer = buildAppFeedbackWriter()
+    const app = buildApp({
+      pilotAppFeedbackWriter: writer.pilotAppFeedbackWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/app-feedback',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        kind: ' Problem ',
+        message: ' Не открывается тренировка ',
+        screenPath: ' ',
+        appVersion: ' ',
+        displayMode: ' Standalone ',
+        userAgent: ' Safari ',
+        userId: '974f21af-f304-421f-81bd-050dbfabdd46',
+      },
+    })
+
+    const expectedDraft: AppFeedbackDraft = {
+      kind: 'problem',
+      message: 'Не открывается тренировка',
+      screenPath: '/',
+      appVersion: 'unknown',
+      displayMode: 'standalone',
+      userAgent: 'Safari',
+    }
+    expect(response.statusCode).toBe(201)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.json()).toEqual({ feedback: { id: PROFILE_ID } })
+    expect(writer.submit).toHaveBeenCalledWith(sessionToken, expectedDraft)
+  })
+
+  it.each([
+    [{ kind: 'other', message: 'Текст', screenPath: '/', appVersion: '1', displayMode: 'browser', userAgent: 'test' }],
+    [{ kind: 'problem', message: '  ', screenPath: '/', appVersion: '1', displayMode: 'browser', userAgent: 'test' }],
+    [{ kind: 'problem', message: 'Текст', screenPath: '/', appVersion: '1', displayMode: 'desktop', userAgent: 'test' }],
+    [{ kind: 'problem', message: 'Текст', screenPath: 10, appVersion: '1', displayMode: 'browser', userAgent: 'test' }],
+  ])('rejects malformed feedback before invoking the writer', async (payload) => {
+    const writer = buildAppFeedbackWriter()
+    const app = buildApp({
+      pilotAppFeedbackWriter: writer.pilotAppFeedbackWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/app-feedback',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload,
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_request' })
+    expect(writer.submit).not.toHaveBeenCalled()
+  })
+
+  it('requires a pilot session before invoking the writer', async () => {
+    const writer = buildAppFeedbackWriter()
+    const app = buildApp({
+      pilotAppFeedbackWriter: writer.pilotAppFeedbackWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/app-feedback',
+      payload: {
+        kind: 'suggestion',
+        message: 'Добавьте календарь',
+        screenPath: '/',
+        appVersion: '1',
+        displayMode: 'browser',
+        userAgent: 'test',
+      },
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json()).toEqual({ error: 'unauthorized' })
+    expect(writer.submit).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['forbidden', 403, 'action_not_allowed'],
+    ['invalid', 422, 'invalid_feedback'],
+  ] as const)('maps %s database failures without exposing details', async (
+    failure, status, responseError,
+  ) => {
+    const writer = buildAppFeedbackWriter(new AppFeedbackCommandError(failure))
+    const app = buildApp({
+      pilotAppFeedbackWriter: writer.pilotAppFeedbackWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/app-feedback',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        kind: 'suggestion',
+        message: 'Добавьте календарь',
+        screenPath: '/',
+        appVersion: '1',
+        displayMode: 'browser',
+        userAgent: 'test',
+      },
+    })
+
+    expect(response.statusCode).toBe(status)
+    expect(response.json()).toEqual({ error: responseError })
+    expect(response.body).not.toContain('App feedback command failed')
   })
 })
 

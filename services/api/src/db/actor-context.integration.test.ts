@@ -5,6 +5,7 @@ import { Pool, type QueryResultRow } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { hashPilotSessionToken } from '../auth/pilot-session-token.js'
+import { submitAppFeedback } from '../app-feedback-command.js'
 import { readAccessibleClients } from '../clients.js'
 import { readAccessibleConnections } from '../connections.js'
 import {
@@ -161,6 +162,17 @@ interface InvitationSecretRow extends QueryResultRow {
 
 interface CountRow extends QueryResultRow {
   count: number
+}
+
+interface AppFeedbackAuditRow extends QueryResultRow {
+  account_role: string
+  app_version: string
+  display_mode: string
+  kind: string
+  message: string
+  screen_path: string
+  user_agent: string
+  user_id: string
 }
 
 interface JsonResultRow extends QueryResultRow {
@@ -580,6 +592,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           [ACTOR_ID],
         )
         expect(visibleProfiles.rows).toEqual([{ id: ACTOR_ID }])
+        await expect(readerPool.query(
+          'select id from ops_readonly.app_feedback limit 0',
+        )).resolves.toMatchObject({ rows: [] })
 
         const clientColumns = await readerPool.query<{ column_name: string }>(
           `
@@ -2978,6 +2993,91 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       )
       expect(comments.rows).toEqual([{ trainer_comment: null }])
       await ownerPool.query('delete from public.workouts where id = $1', [created.id])
+    })
+
+    it('stores app feedback under the transaction actor and keeps runtime reads closed', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const draft = {
+        kind: 'problem' as const,
+        message: 'Не открывается завершённая тренировка',
+        screenPath: '/workouts/test',
+        appVersion: '0.1.0',
+        displayMode: 'browser' as const,
+        userAgent: 'Fit integration test',
+      }
+      const createdIds: string[] = []
+
+      try {
+        const actorFeedbackId = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => submitAppFeedback(client, draft),
+        )
+        createdIds.push(actorFeedbackId)
+        const otherFeedbackId = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => submitAppFeedback(client, {
+            ...draft,
+            kind: 'suggestion',
+            message: 'Добавьте быстрый повтор тренировки',
+          }),
+        )
+        createdIds.push(otherFeedbackId)
+
+        const stored = await ownerPool.query<AppFeedbackAuditRow>(
+          `select user_id, account_role, kind, message, screen_path,
+                  app_version, display_mode, user_agent
+           from public.app_feedback
+           where id = $1`,
+          [actorFeedbackId],
+        )
+        expect(stored.rows).toEqual([{
+          user_id: ACTOR_ID,
+          account_role: 'trainer',
+          kind: 'problem',
+          message: draft.message,
+          screen_path: draft.screenPath,
+          app_version: draft.appVersion,
+          display_mode: draft.displayMode,
+          user_agent: draft.userAgent,
+        }])
+
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => client.query(
+            'select id from public.app_feedback where id = $1',
+            [actorFeedbackId],
+          ),
+        )).rejects.toMatchObject({ code: '42501' })
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => client.query(
+            `select public.submit_app_feedback(
+              'other', 'Некорректный тип', '/', '0.1.0', 'browser', 'test'
+            )`,
+          ),
+        )).rejects.toMatchObject({ message: 'app_feedback_invalid', code: 'PT422' })
+
+        const authors = await ownerPool.query<{ id: string; user_id: string } & QueryResultRow>(
+          'select id, user_id from public.app_feedback where id = any($1::uuid[])',
+          [createdIds],
+        )
+        expect(authors.rows).toEqual(expect.arrayContaining([
+          { id: actorFeedbackId, user_id: ACTOR_ID },
+          { id: otherFeedbackId, user_id: OTHER_ACTOR_ID },
+        ]))
+      } finally {
+        await ownerPool.query(
+          'delete from public.app_feedback where id = any($1::uuid[])',
+          [createdIds],
+        )
+      }
     })
 
     it('enforces the client card, private preferences and custom exercise mutation contract', async () => {
