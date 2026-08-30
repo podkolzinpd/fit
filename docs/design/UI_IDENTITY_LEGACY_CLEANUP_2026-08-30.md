@@ -75,3 +75,18 @@ rollback.
 Сначала принять отдельное решение об окончании rollback-window. Только после
 этого можно удалять legacy branches/components, pre-identity tokens,
 `.theme-dark-pilot`, Supabase flag infrastructure и режимы `preview/off`.
+
+## Финальная проверка
+
+- Полный `npm run check`: 1005 app tests, 64 infrastructure tests и 230 API
+  tests прошли; lint, typecheck, generated DB types, iOS permissions и builds
+  зелёные.
+- Visual regression на чистом seed: Client 390 — 30 passed/2 scoped skips,
+  Client 430 — 30/2, Trainer 1440 — 17/15. Light/dark baselines обновлены
+  только для принятой геометрии composite Goal и Trainer Progress.
+- Rollout smoke: public auth, Client Home и Trainer Today прошли отдельно в
+  `on` и `off` (2/2 в каждом режиме).
+- Финальный identity-scope scan: coral/purple literals, gradients, glow и blur —
+  0. Во всём production source осталось 26 точных coral/purple совпадений;
+  все находятся в pre-identity tokens, `.theme-dark-pilot` или живом legacy CSS
+  режима `off`, то есть относятся только к классу C.

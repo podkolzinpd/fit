@@ -13,13 +13,10 @@
   полный auth scope, Assistant, accessibility и visual release gate —
   завершены последовательно.
 - Глобальный rollout новой identity работает через
-  `VITE_MONOCHROME_ROLLOUT_MODE`: `on` (default для всех), `preview` (прежний
-  server-managed `monochrome_preview` по `user_id`) и `off` (legacy UI для всех
-  одним переключателем и redeploy).
+  `VITE_MONOCHROME_ROLLOUT_MODE`: `on` (default), `preview` (server-managed
+  `monochrome_preview` по `user_id`) и `off` (legacy UI для всех и redeploy).
 - Legacy components, CSS и `public.user_feature_flags` пока не удаляются.
   Email не участвует во frontend, routing или UI rollout conditions.
-- Task 28 не меняет product bundle: она стабилизирует только E2E navigation,
-  фиксирует финальную 390/430/1440 и WebKit/iOS matrix и release evidence.
 - Ручной видимый production smoke остаётся follow-up: встроенный браузер
   заблокирован admin-enforced policy; контроль не обходился.
 
@@ -43,11 +40,8 @@
 - Assistant trainer-only защищён `TrainerOnly`; durable turns/actions и narrow
   RPC сохраняют owner/RLS. Новые turn'ы создают workout draft, прежние карточки
   остаются читаемыми; исходная диктовка сохраняется при уточнении клиента.
-- PWA, ручной беговой MVP и локальный public-domain каталог работают. Web Push
-  `workout_reminder` отправляется клиенту в 9:00 его timezone через Postgres
-  producer/dispatcher/finalize и VAPID Cloud Function. Vercel получил public
-  VAPID key; push deploy синхронизирует URL и dispatch secret из immutable
-  Yandex Lockbox в Supabase Vault без вывода секретов в repo или CI logs.
+- PWA, беговой MVP, локальный каталог и Web Push `workout_reminder` работают;
+  transport secrets синхронизируются из Yandex Lockbox без вывода в repo/CI.
 - Client и Trainer Progress используют одну короткую историю подтверждённого
   периода: лучший результат, тренировки, `X/Y` недель, улучшенные упражнения,
   карта тела, сравнение с периодом, связь с целью и ближайший план. Тренер видит
@@ -70,10 +64,8 @@
   доставляются автоматически через GitHub OIDC, private runner и forward-only
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
-  exercises, workout lifecycle и post-workout работают на stage (миграции
-  `000001–000020`). Run `33154423400` доставил revision `796f958`: миграции,
-  runtime DB preflight, exact read/write smoke и независимый summary list зелёные;
-  rollback не потребовался.
+  exercises и workout lifecycle работают на stage (`000001–000020`); revision
+  `796f958` прошёл migrations, runtime preflight и read/write smoke.
 - Native AI использует metadata IAM token без статического ключа; точную роль
   один раз выдаёт `fit-stage-api` администратор, а OIDC не меняет folder IAM.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
@@ -100,17 +92,16 @@
   freshness. Удержание требует минимум 2 замера за 7+ дней.
 - Progress 1.3: одна цель поддерживает до 10 независимо рассчитываемых
   критериев — рабочий вес, повторы, объём, лучший результат, дистанцию,
-  длительность, темп, дистанцию за время, регулярность и пользовательские
-  показатели. Карточка показывает факты по каждому критерию и итог `X/Y`, не
-  подменяя составную цель бинарным статусом. LLM только предлагает валидируемую
-  настройку из существующего каталога; пользователь подтверждает её явно, а
-  расчёт, status, direction, sufficiency и freshness остаются deterministic.
+  темп, регулярность и пользовательские показатели. Карточка показывает факты
+  и `X/Y`; LLM лишь предлагает настройку, расчёт остаётся deterministic.
 - Tasks 25–28: auth/Assistant, WCAG AA, 44 px targets, reduced motion,
   app/API, Chromium/WebKit и Linux/Darwin visual matrix 390/430/1440 зелёные.
 - Post-Progress UI cleanup мигрировал branding/system states, shared overlays,
   typography/icons и экранные хвосты, затем удалил только подтверждённый dead
   CSS. Классификация A/B/C/D зафиксирована в
   `docs/design/UI_IDENTITY_LEGACY_CLEANUP_2026-08-30.md`.
+- Финальная regression: полный check зелёный; visual 390/430/1440 прошёл на
+  clean seed; rollout smoke `on` и rollback `off` прошли для auth и обеих ролей.
 - Production Vercel `6158408571` и Yandex stage preview sync `33263066435`
   зелёные; для локального visual smoke используется standard Playwright runtime.
 
