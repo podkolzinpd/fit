@@ -22,12 +22,14 @@ import { trackGoal } from '../../shared/yandex-metrika'
 import { TrainingBodyProgressMap } from './ClientBodyProgressMap'
 import { MeasurementProgressSection } from './MeasurementProgressSection'
 import { ProgressNextStepSection } from './ProgressNextStepSection'
+import { TrainerProgressSignalsSection } from './TrainerProgressSignalsSection'
 import { WorkoutRegularityProgressSection } from './WorkoutRegularityProgressSection'
 import { progressStoryPresentation } from './client-progress-presentation'
 import { buildProgressNextStep } from './next-step-recommendation'
 import { progressFactChangeLabel } from './progress-facts'
 import { formatSummaryText, formatWorkoutsPerWeek, progressMetricNoun } from './summary-format'
 import { availableSummaryPeriods, SUMMARY_PERIODS, summaryPeriodMatch, summaryPeriodRange, type SummaryPeriod } from './summary-period'
+import { buildTrainerProgressSignals } from './trainer-progress-signals'
 import { buildWorkoutRegularityProgress } from './workout-regularity-progress'
 
 function PeriodTabs({ value, available, onChange }: {
@@ -398,7 +400,6 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       : presentation.mainNow.action === 'workout'
         ? 'Запланировать тренировку'
         : null
-  const attention = role === 'trainer' && 'trainer' in summary ? summary.trainer.attention : []
   const goalCriteria = presentation.goal?.criteria ?? []
   const visibleGoalCriteria = goalCriteriaOpen ? goalCriteria : goalCriteria.slice(0, 1)
   const visibleComparisonFacts = comparisonOpen
@@ -425,6 +426,13 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
     llmSuggestions: summaryNextSteps(summary),
     role,
   })
+  const trainerSignals = role === 'trainer' ? buildTrainerProgressSignals({
+    goal: presentation.goal,
+    regularity,
+    currentWorkouts,
+    summaryCompletedWorkouts: summary.metrics.completedWorkouts,
+    today,
+  }) : []
   const nextStepLinks = {
     add_measurement: measurementLink,
     schedule_workout: workoutLink,
@@ -581,9 +589,16 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
         onMeasurementsRetry()
       }}
     />
-    {attention.length > 0 && <section className="progress-story-attention" aria-label="На что обратить внимание">
-      <span aria-hidden="true">!</span><div><strong>На что обратить внимание</strong><p>{formatSummaryText(attention[0]!)}</p></div>
-    </section>}
+    {role === 'trainer' && <TrainerProgressSignalsSection
+      signals={trainerSignals}
+      loading={goalLoading || workoutsLoading || measurementsLoading}
+      error={goalError ?? workoutsError ?? measurementsError}
+      onRetry={() => {
+        onGoalRetry()
+        onWorkoutsRetry()
+        onMeasurementsRetry()
+      }}
+    />}
     <div className="client-progress-details-toggle">
       <button type="button" className="link" onClick={() => setDetailsOpen(true)}>Подробный анализ</button>
     </div>
@@ -603,10 +618,6 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       {presentation.orientations.length > 0 && <section className="client-progress-details-section">
         <h3>Ориентиры</h3>
         <ul>{presentation.orientations.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
-      </section>}
-      {attention.length > 0 && <section className="client-progress-details-section">
-        <h3>Сигналы тренеру</h3>
-        <ul>{attention.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
       </section>}
     </SummarySheet>}
   </>

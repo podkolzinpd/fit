@@ -229,7 +229,7 @@ test('client sees deterministic standard-measurement goal facts', async ({ page 
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
 
-test('trainer reviews the client copy separately from internal attention items', async ({ page }) => {
+test('trainer reviews verified signals separately from the client copy', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -272,7 +272,12 @@ test('trainer reviews the client copy separately from internal attention items',
   })).resolves.toBe(true)
   await expect(trainerAnalysis.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
   await expect(trainerAnalysis.getByText('Доступно клиенту')).toBeVisible()
-  await expect(trainerAnalysis.getByText('На что обратить внимание')).toBeVisible()
+  const trainerSignals = trainerAnalysis.getByRole('region', { name: /проверяем/ })
+  await expect(trainerSignals.getByText('Для тренера')).toBeVisible()
+  await expect(trainerSignals.getByRole('button', { name: 'Показать' })).toHaveAttribute('aria-expanded', 'false')
+  await trainerSignals.getByRole('button', { name: 'Показать' }).click()
+  await expect(trainerSignals.getByText('Факт', { exact: true }).first()).toBeVisible()
+  await expect(trainerSignals.getByText('Вопрос', { exact: true }).first()).toBeVisible()
   await expect(trainerAnalysis.getByText('Динамика упражнений')).toHaveCount(0)
   await trainerAnalysis.getByRole('button', { name: 'Подробный анализ' }).click()
   const detailedAnalysis = page.getByRole('dialog', { name: 'Подробный анализ' })
