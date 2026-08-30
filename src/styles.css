@@ -3242,7 +3242,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 
 @media (max-width:375px) {
   .client-home-identity .page { padding-inline:14px }
-  .client-home-identity .first-run-copy h2 { font-size:22px }
+.client-home-identity .first-run-copy h2 { font-size:18px }
   .client-home-identity .voice-action { min-height:108px; padding:16px }
 }
 
@@ -3349,7 +3349,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-identity .finish-confirm p { color:var(--fg); font-size:14px; font-weight:400 }
 .live-identity .finish-confirm .workout-cta[data-variant='tertiary'] { color:var(--fg) }
 .live-identity .finish-confirm .workout-cta[data-variant='primary'] { border-color:var(--danger); background:var(--danger); color:var(--mono-on-primary) }
-.live-identity .modal-overlay { background:color-mix(in srgb, #111214 74%, transparent); backdrop-filter:none }
+.live-identity .modal-overlay { background:color-mix(in srgb, var(--bg) 76%, transparent); backdrop-filter:none }
 .live-identity .modal-dialog { padding:20px; border-color:var(--border); border-radius:18px; background:var(--surface-elevated); box-shadow:none }
 .live-identity .modal-message { color:var(--fg); font-size:14px; font-weight:400 }
 
@@ -3357,7 +3357,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .live-identity .live-workout-page { padding-inline:14px }
   .live-identity .live-session-header { grid-template-columns:minmax(0,1fr) }
   .live-identity .live-session-header .workout-header-side { grid-row:1; justify-self:end; margin-bottom:-37px }
-  .live-identity .live-session-header h2 { padding-right:88px; font-size:22px }
+  .live-identity .live-session-header h2 { padding-right:88px; font-size:18px }
   .live-identity .live-timer { min-height:68px; font-size:28px }
 }
 
@@ -3431,7 +3431,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .body-progress-modes button { min-height:44px; border-radius:10px; color:var(--muted); font-size:12px; font-weight:500 }
 .progress-identity .body-progress-modes button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:none }
 .progress-identity .body-progress-sides { border-color:var(--border); border-radius:10px; background:var(--surface-sunken) }
-.progress-identity .body-progress-sides button { min-height:44px; border-radius:8px; font-size:12px; font-weight:500 }
+.progress-identity .body-progress-sides button { min-height:44px; border-radius:10px; font-size:12px; font-weight:500 }
 .progress-identity .body-progress-sides button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:none }
 .progress-identity .body-progress-visual { border:1px solid var(--border); border-radius:18px; background:var(--surface-sunken) }
 .progress-identity .body-progress-overlay { filter:none }
@@ -4219,7 +4219,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-clients-identity .client-card p { margin-top:3px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
 .trainer-clients-identity .client-card-arrow { display:grid; place-items:center; width:24px; color:var(--secondary-label-fg); font-size:0 }
 .trainer-clients-identity .client-card-arrow svg { width:20px; height:20px }
-.trainer-clients-identity .clients-page .badge { min-height:24px; padding:0 8px; border:1px solid var(--border); border-radius:8px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-clients-identity .clients-page .badge { min-height:24px; padding:0 8px; border:1px solid var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-clients-identity .clients-search-empty { margin:0; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
 .trainer-clients-identity .state-panel { border-color:var(--border); border-radius:18px; background:var(--surface-raised); color:var(--fg); box-shadow:none }
 .trainer-clients-identity .state-panel-empty { border-style:solid; background:var(--surface-raised) }
@@ -4278,7 +4278,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-client-detail-identity .client-detail-page .goal-stage-line { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-client-detail-identity .client-detail-page .goal-stages-hint { padding:12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg) }
 .trainer-client-detail-identity .client-detail-page .goal-stages-hint p { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
-.trainer-client-detail-identity .client-detail-page .goal-stages-hint .button { min-height:44px; border-color:var(--border); border-radius:12px; background:transparent; color:var(--fg); font-size:12px; font-weight:500; box-shadow:none }
+.trainer-client-detail-identity .client-detail-page .goal-stages-hint .button { min-height:44px; border-color:var(--border); border-radius:14px; background:transparent; color:var(--fg); font-size:12px; font-weight:500; box-shadow:none }
 .trainer-client-detail-identity .client-detail-upcoming { gap:8px; margin-top:14px }
 .trainer-client-detail-identity .client-detail-upcoming .card,
 .trainer-client-detail-identity .client-detail-page .page-actions .card { border-color:var(--border); border-radius:18px; background:var(--surface-raised); color:var(--fg); box-shadow:none }
@@ -4374,25 +4374,25 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-client-goal-identity .goal-criterion-form { display:grid; gap:14px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
 .trainer-client-goal-identity .goal-criterion-form-head { display:flex; align-items:stretch; flex-direction:column; gap:16px }
 .trainer-client-goal-identity .goal-criterion-form-head h2 { margin:0; color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
-.trainer-client-goal-identity .goal-criterion-form-head p { margin:5px 0 0; color:var(--secondary-label-fg); font-size:13px; line-height:1.4 }
+.trainer-client-goal-identity .goal-criterion-form-head p { margin:5px 0 0; color:var(--secondary-label-fg); font-size:14px; line-height:1.4 }
 .trainer-client-goal-identity .goal-criterion-form-head .switch-row { flex:0 0 auto }
 .trainer-client-goal-identity .goal-criterion-fields { display:grid; gap:12px; padding-top:14px; border-top:1px solid var(--border) }
-.trainer-client-goal-identity .goal-criterion-item { display:grid; gap:12px; padding:14px; border:1px solid var(--border); border-radius:16px; background:var(--surface-sunken) }
+.trainer-client-goal-identity .goal-criterion-item { display:grid; gap:12px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken) }
 .goal-custom-metric-field { display:grid; gap:6px }
 .goal-custom-metric-field > .link { width:fit-content; min-height:36px; padding:4px 0; font-size:12px }
 .goal-criteria-progress-list { display:grid; gap:12px; margin-top:14px }
-.goal-criterion-progress-card { display:grid; gap:12px; padding:14px; border:1px solid var(--border); border-radius:16px; background:var(--surface-raised) }
-.goal-criterion-progress-card header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
-.goal-criterion-progress-card header span { color:var(--secondary-label-fg); font-size:12px; font-weight:600 }
-.goal-criterion-progress-card dl { display:grid; gap:8px; margin:0 }
-.goal-criterion-progress-card dl div { display:grid; grid-template-columns:minmax(86px,.7fr) minmax(0,1.5fr); gap:10px }
-.goal-criterion-progress-card dt { color:var(--secondary-label-fg); font-size:12px }
-.goal-criterion-progress-card dd { margin:0; font-size:13px; overflow-wrap:anywhere }
+.identity-monochrome-preview .goal-criterion-progress-card { display:grid; gap:12px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised) }
+.identity-monochrome-preview .goal-criterion-progress-card header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
+.identity-monochrome-preview .goal-criterion-progress-card header span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.identity-monochrome-preview .goal-criterion-progress-card dl { display:grid; gap:8px; margin:0 }
+.identity-monochrome-preview .goal-criterion-progress-card dl div { display:grid; grid-template-columns:minmax(86px,.7fr) minmax(0,1.5fr); gap:10px }
+.identity-monochrome-preview .goal-criterion-progress-card dt { color:var(--secondary-label-fg); font-size:12px }
+.identity-monochrome-preview .goal-criterion-progress-card dd { margin:0; font-size:14px; overflow-wrap:anywhere }
 .trainer-client-goal-identity .goal-criterion-hint { margin:0; color:var(--secondary-label-fg); font-size:12px; line-height:1.45 }
-.trainer-client-goal-identity .goal-criterion-confirm { display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px dashed var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:13px; line-height:1.4 }
+.trainer-client-goal-identity .goal-criterion-confirm { display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px dashed var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:14px; line-height:1.4 }
 .trainer-client-goal-identity .goal-criterion-confirm input { width:20px; height:20px; min-height:20px; margin:0; accent-color:var(--mono-primary) }
 .trainer-client-goal-identity .goal-criterion-confirm span { display:grid; gap:3px }
-.trainer-client-goal-identity .goal-criterion-confirm small { color:var(--secondary-label-fg); font-size:11px; font-weight:400 }
+.trainer-client-goal-identity .goal-criterion-confirm small { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
 .trainer-client-goal-identity .goal-head .link { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 2px; border:0; background:transparent; color:var(--fg); font-size:14px; font-weight:500; box-shadow:none }
 .trainer-client-goal-identity .stage-list { gap:8px }
 .trainer-client-goal-identity .stage-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px 12px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); box-shadow:none }
@@ -4471,10 +4471,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-schedule-identity .week-arrow:first-child { grid-column:2; grid-row:1 }
 .trainer-schedule-identity .week-arrow:last-child { grid-column:3; grid-row:1 }
 .trainer-schedule-identity .week-arrow svg { width:19px; height:19px; stroke-width:1.8 }
-.trainer-schedule-identity .week-strip { grid-column:1 / -1; grid-row:2; gap:2px; padding:3px; border:1px solid var(--border); border-radius:16px; background:var(--surface-sunken); box-shadow:none }
-.trainer-schedule-identity .week-day { min-height:50px; border-radius:13px; color:var(--fg); background:transparent; box-shadow:none }
+.trainer-schedule-identity .week-strip { grid-column:1 / -1; grid-row:2; gap:2px; padding:3px; border:1px solid var(--border); border-radius:18px; background:var(--surface-sunken); box-shadow:none }
+.trainer-schedule-identity .week-day { min-height:50px; border-radius:14px; color:var(--fg); background:transparent; box-shadow:none }
 .trainer-schedule-identity .week-day.active { background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none }
-.trainer-schedule-identity .day-label { color:var(--secondary-label-fg); font-size:10px; font-weight:500; letter-spacing:.04em }
+.trainer-schedule-identity .day-label { color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.04em }
 .trainer-schedule-identity .week-day.active .day-label { color:var(--mono-on-primary) }
 .trainer-schedule-identity .day-num { font-size:14px; font-weight:600 }
 .trainer-schedule-identity .week-day.is-today::after { background:var(--mono-primary) }
@@ -4499,7 +4499,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-schedule-identity .day-grid-event-time { color:var(--fg); font-size:12px; font-weight:600 }
 .trainer-schedule-identity .day-grid-event-name { color:var(--fg); font-size:12px; font-weight:500 }
 .trainer-schedule-identity .day-grid-event-summary { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
-.trainer-schedule-identity .day-grid-event-status { color:var(--secondary-label-fg); font-size:10px; font-weight:500 }
+.trainer-schedule-identity .day-grid-event-status { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-schedule-identity .schedule-event-current,
 .trainer-schedule-identity .schedule-event-partial { border-color:var(--warning-border); background:var(--surface-raised); box-shadow:inset 3px 0 0 var(--warning) }
 .trainer-schedule-identity .schedule-event-current .day-grid-event-time,
@@ -4588,7 +4588,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-identity .ai-progress-title p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-progress-identity .ai-progress-mark { width:36px; height:36px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--fg); box-shadow:none; font-size:14px }
 .trainer-progress-identity .ai-progress-demo,
-.trainer-progress-identity .ai-progress-demo.published { min-height:28px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:10px; font-weight:500 }
+.trainer-progress-identity .ai-progress-demo.published { min-height:28px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-progress-identity .ai-progress-periods { width:auto; margin:0 18px 12px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
 .trainer-progress-identity .ai-progress-periods button { min-height:44px; padding:0 12px; border:0; border-radius:10px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; box-shadow:none }
 .trainer-progress-identity .ai-progress-periods button.active { border:0; background:var(--surface-raised); color:var(--fg); box-shadow:none }
@@ -4612,7 +4612,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-identity .body-progress-modes button { min-height:44px; border-radius:10px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-progress-identity .body-progress-modes button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:none }
 .trainer-progress-identity .body-progress-sides { border-color:var(--border); border-radius:10px; background:var(--surface-sunken) }
-.trainer-progress-identity .body-progress-sides button { min-height:36px; border-radius:8px; font-size:12px; font-weight:500 }
+.trainer-progress-identity .body-progress-sides button { min-height:36px; border-radius:10px; font-size:12px; font-weight:500 }
 .trainer-progress-identity .body-progress-sides button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:none }
 .trainer-progress-identity .body-progress-sides button:disabled { opacity:1; color:var(--secondary-label-fg) }
 .trainer-progress-identity .body-progress-visual { border:1px solid var(--border); border-radius:18px; background:var(--surface-sunken) }
@@ -4780,7 +4780,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-catalog-identity .catalog-search input { min-width:0; min-height:46px; padding:0 10px; border:0; border-radius:0; outline:0; background:transparent; color:var(--fg); font-size:16px; font-weight:400; box-shadow:none }
 .exercise-catalog-identity .catalog-search input::placeholder { color:var(--secondary-label-fg); opacity:1 }
 .exercise-catalog-identity .catalog-search input::-webkit-search-cancel-button { display:none }
-.exercise-catalog-identity .catalog-search button { display:grid; width:44px; height:44px; min-height:44px; padding:0; place-items:center; border:0; border-radius:12px; background:transparent; color:var(--secondary-label-fg); box-shadow:none }
+.exercise-catalog-identity .catalog-search button { display:grid; width:44px; height:44px; min-height:44px; padding:0; place-items:center; border:0; border-radius:14px; background:transparent; color:var(--secondary-label-fg); box-shadow:none }
 .exercise-catalog-identity .catalog-search button svg { width:18px; height:18px }
 .exercise-catalog-identity .catalog-results-meta { display:flex; justify-content:space-between; gap:12px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .exercise-catalog-identity .catalog-results-meta span:last-child { font-weight:400 }
@@ -4997,7 +4997,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .assistant-identity .assistant-session-label { gap:2px }
 .assistant-identity .assistant-session-label strong { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
 .assistant-identity .assistant-session-actions { gap:6px }
-.assistant-identity .assistant-session-actions button { min-height:44px; padding:0 12px; border-radius:12px; font-size:12px; font-weight:500 }
+.assistant-identity .assistant-session-actions button { min-height:44px; padding:0 12px; border-radius:14px; font-size:12px; font-weight:500 }
 .assistant-identity .assistant-session-today { color:var(--secondary-label-fg) }
 .assistant-identity .assistant-session-today:hover { color:var(--fg) }
 .assistant-identity .assistant-history-toggle { border-color:var(--border); background:var(--surface-raised); color:var(--fg) }
@@ -5019,7 +5019,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .assistant-identity .assistant-first-entry-actions button,
 .assistant-identity .assistant-choice-chips button,
 .assistant-identity .assistant-period-options button,
-.assistant-identity .assistant-choice-table button { min-height:44px; padding:0 12px; border:1px solid var(--border); border-radius:12px; background:transparent; color:var(--fg); font-size:12px; font-weight:500; box-shadow:none }
+.assistant-identity .assistant-choice-table button { min-height:44px; padding:0 12px; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--fg); font-size:12px; font-weight:500; box-shadow:none }
 .assistant-identity .assistant-first-entry-actions button:hover,
 .assistant-identity .assistant-choice-chips button:hover,
 .assistant-identity .assistant-period-options button:hover,
@@ -5036,7 +5036,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .assistant-identity .assistant-thinking { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
 .assistant-identity .assistant-thinking span { width:10px; height:10px; background:var(--fg); background-image:none; box-shadow:none }
 .assistant-identity .assistant-message-error { gap:10px; max-width:calc(100% - 12px); padding:10px 12px; border-color:transparent; border-radius:14px; background:var(--surface-sunken); color:var(--danger); font-size:12px; font-weight:500 }
-.assistant-identity .assistant-message-error button { min-height:44px; padding:0 12px; border-color:var(--border); border-radius:12px; background:transparent; color:var(--danger); font-size:12px; font-weight:500 }
+.assistant-identity .assistant-message-error button { min-height:44px; padding:0 12px; border-color:var(--border); border-radius:14px; background:transparent; color:var(--danger); font-size:12px; font-weight:500 }
 .assistant-identity .assistant-workout-user-receipt,
 .assistant-identity .assistant-workout-receipt { padding:10px 12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised) }
 .assistant-identity .assistant-workout-user-receipt summary,
@@ -5136,7 +5136,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .assistant-identity .assistant-client-fields input,
 .assistant-identity .assistant-client-fields select,
 .assistant-identity .assistant-program-card input,
-.assistant-identity .assistant-program-draft input { min-height:48px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--surface-sunken); color:var(--fg); font-family:inherit; font-size:16px; font-weight:400; box-shadow:none }
+.assistant-identity .assistant-program-draft input { min-height:48px; padding:10px 12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-family:inherit; font-size:16px; font-weight:400; box-shadow:none }
 .assistant-identity .assistant-program-sessions details { border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
 .assistant-identity .assistant-program-sessions summary { min-height:52px; padding:10px 12px }
 .assistant-identity .assistant-program-sessions summary strong { font-size:14px; font-weight:500 }
@@ -5164,13 +5164,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .assistant-identity .assistant-workout-metrics label { min-height:54px; padding:5px 3px; border:1px solid var(--border); border-radius:10px; background:var(--surface-raised); color:var(--secondary-label-fg) }
 .assistant-identity .assistant-workout-metrics input,
 .assistant-identity .assistant-program-draft .assistant-workout-metrics input { min-height:28px; padding:0; color:var(--fg); font-size:16px; font-weight:600 }
-.assistant-identity .assistant-workout-metrics small { font-size:10px; font-weight:500 }
+.assistant-identity .assistant-workout-metrics small { font-size:12px; font-weight:500 }
 .assistant-identity .assistant-workout-remove { width:30px; min-width:30px; min-height:44px; color:var(--secondary-label-fg) }
 .assistant-identity .assistant-workout-remove:hover { color:var(--danger) }
 .assistant-identity .assistant-exercise-choice { gap:12px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken) }
 .assistant-identity .assistant-exercise-options { gap:8px }
 .assistant-identity .assistant-exercise-options button,
-.assistant-identity .assistant-exercise-options button:first-child { min-height:48px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--surface-raised); background-image:none; color:var(--fg); font-size:14px; font-weight:500 }
+.assistant-identity .assistant-exercise-options button:first-child { min-height:48px; padding:10px 12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); background-image:none; color:var(--fg); font-size:14px; font-weight:500 }
 .assistant-identity .assistant-exercise-options button:first-child { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
 .assistant-identity .assistant-workout-draft-content > .assistant-flow-guidance { padding-inline:0; font-size:12px; line-height:1.4 }
 .assistant-identity .assistant-workout-draft > .assistant-flow-actions { gap:10px; padding-top:4px }
@@ -5179,7 +5179,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 
 .assistant-identity .assistant-composer { grid-template-columns:minmax(0,1fr) 48px 48px; gap:6px; margin-top:0; padding:5px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
 .assistant-identity .assistant-composer textarea,
-.assistant-identity .assistant-composer > input { min-height:48px; padding:12px; border-radius:12px; color:var(--fg); font-family:inherit; font-size:16px; font-weight:400; line-height:1.4 }
+.assistant-identity .assistant-composer > input { min-height:48px; padding:12px; border-radius:14px; color:var(--fg); font-family:inherit; font-size:16px; font-weight:400; line-height:1.4 }
 .assistant-identity .assistant-composer textarea::placeholder { color:var(--secondary-label-fg) }
 .assistant-identity .assistant-composer textarea:focus,
 .assistant-identity .assistant-composer > input:focus { outline:0 }
@@ -5188,7 +5188,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .assistant-identity .assistant-composer > .assistant-icon-button:last-child { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
 .assistant-identity .assistant-icon-button.recording { border-color:var(--border); background:var(--surface-sunken); color:var(--danger) }
 .assistant-identity .assistant-reset { min-height:44px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
-.assistant-identity .assistant-workout-saved { padding:14px 16px; border-color:var(--border); border-radius:16px; background:var(--surface-raised) }
+.assistant-identity .assistant-workout-saved { padding:14px 16px; border-color:var(--border); border-radius:18px; background:var(--surface-raised) }
 .assistant-identity .assistant-workout-saved > span { background:transparent; color:var(--success-fg); font-weight:600 }
 .assistant-identity .assistant-workout-saved strong { font-size:14px; font-weight:500 }
 .assistant-identity .assistant-workout-saved small { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
