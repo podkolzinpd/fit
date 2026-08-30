@@ -11,6 +11,10 @@ const previewSyncWorkflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'sync-yandex-stage-preview.yml'),
   'utf8',
 )
+const prPreviewWorkflow = readFileSync(
+  join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-pr-preview.yml'),
+  'utf8',
+)
 const vercelConfig = JSON.parse(
   readFileSync(join(import.meta.dirname, '..', 'vercel.json'), 'utf8'),
 )
@@ -241,12 +245,26 @@ test('syncs the stable Yandex preview from main without rewriting history', () =
   assert.doesNotMatch(previewSyncWorkflow, /--force(?:-with-lease)?/)
 })
 
-test('deploys Vercel only from main and the stable Yandex preview branch, including slash branches', () => {
+test('deploys Vercel only from main, stable stage, and explicit PR preview refs', () => {
   assert.deepEqual(vercelConfig.git?.deploymentEnabled, {
     main: true,
     'codex/yandex-id-stage-pilot': true,
+    'preview/**': true,
     '**': false,
   })
+})
+
+test('creates isolated Vercel previews only when a collaborator requests their own PR', () => {
+  assert.match(prPreviewWorkflow, /^  issue_comment:\n    types: \[created\]$/m)
+  assert.match(prPreviewWorkflow, /^  pull_request:\n    types: \[closed\]$/m)
+  assert.match(prPreviewWorkflow, /github\.event\.comment\.body == '\/preview'/)
+  assert.match(prPreviewWorkflow, /OWNER.*MEMBER.*COLLABORATOR/)
+  assert.match(prPreviewWorkflow, /'\.user\.login'/)
+  assert.match(prPreviewWorkflow, /"\$author" != "\$REQUESTED_BY"/)
+  assert.match(prPreviewWorkflow, /"\$state" != 'open' \|\| "\$base_ref" != 'main'/)
+  assert.match(prPreviewWorkflow, /"\$head_repository" != "\$REPOSITORY"/)
+  assert.match(prPreviewWorkflow, /preview_branch="preview\/pr-\$PR_NUMBER"/)
+  assert.doesNotMatch(prPreviewWorkflow, /pull_request_target|actions\/checkout|VERCEL_TOKEN/)
 })
 
 test('manages curated database readers only through an explicit private run', () => {
