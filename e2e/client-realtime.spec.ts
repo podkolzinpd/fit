@@ -145,7 +145,8 @@ test('client and trainer receive progress and workout changes without reload', a
 
     // Завершение уже видно тренеру до необязательного feedback: его ошибка или
     // пропуск не может откатить сохранённый факт тренировки.
-    await expect(trainer.getByText('Готово', { exact: true })).toBeVisible()
+    await expect(trainer.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
+    await expect(trainer.locator('.completed-exercise-list')).toBeVisible()
     const clientComment = `Realtime комментарий ${suffix}`
     const feedbackCard = client.locator('.workout-feedback')
     await setRpe(client, 7)
