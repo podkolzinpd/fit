@@ -292,6 +292,45 @@ describe('Training summary card states', () => {
     expect(document.body).not.toHaveTextContent('Прогресс уже заметен, ты на верном пути')
   })
 
+  it('keeps a composite goal compact and reveals additional criteria on demand', async () => {
+    const user = userEvent.setup()
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForClient.mockResolvedValue([publishedSummary])
+    repositories.goal.mockResolvedValue({
+      id: 'goal-1', clientId: 'client-1', title: 'Держать вес и тренироваться регулярно',
+      targetDate: null, status: 'active', version: 1, stages: [], criteria: [{
+        id: 'criterion-1', goalId: 'goal-1', metric: 'weight', operation: 'maintain_range',
+        targetValue: null, rangeMin: 58.5, rangeMax: 59.5, unit: 'кг',
+        baselineValue: null, baselineRecordedOn: null,
+        confirmationStatus: 'confirmed', position: 0, version: 1,
+      }, {
+        id: 'criterion-2', goalId: 'goal-1', metric: 'workout_regularity', operation: 'increase_to',
+        targetValue: 2, rangeMin: null, rangeMax: null, unit: 'трен.',
+        baselineValue: null, baselineRecordedOn: null, regularityPeriod: 'week', regularityMode: 'each_period',
+        confirmationStatus: 'confirmed', position: 1, version: 1,
+      }],
+    })
+    repositories.progress.mockResolvedValue([{
+      id: 'measurement-1', clientId: 'client-1', createdBy: 'client-1',
+      recordedOn: localDate('2026-08-15'), weightKg: 59, customMetrics: [], version: 1,
+    }])
+    repositories.workouts.mockResolvedValue([])
+
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    const goal = (await screen.findByRole('heading', { name: 'Держать вес и тренироваться регулярно' })).closest('section')
+    expect(goal).not.toBeNull()
+    expect(goal!.querySelectorAll('.goal-criterion-progress-row')).toHaveLength(1)
+    expect(within(goal!).queryByText('Регулярность тренировок')).toBeNull()
+
+    await user.click(within(goal!).getByRole('button', { name: 'Показать все критерии · 2' }))
+    expect(goal!.querySelectorAll('.goal-criterion-progress-row')).toHaveLength(2)
+    expect(within(goal!).getByText('Регулярность тренировок')).toBeVisible()
+
+    await user.click(within(goal!).getByRole('button', { name: 'Показать только основной критерий' }))
+    expect(goal!.querySelectorAll('.goal-criterion-progress-row')).toHaveLength(1)
+  })
+
   it('keeps the readable legacy fallback when structured progress facts are absent', async () => {
     repositories.firstCompletedWorkoutDate.mockResolvedValue(null)
     repositories.listForClient.mockResolvedValue([{
