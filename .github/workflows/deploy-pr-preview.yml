@@ -9,8 +9,7 @@ on:
 permissions:
   contents: write
   deployments: read
-  issues: write
-  pull-requests: read
+  pull-requests: write
 
 concurrency:
   group: pr-preview-${{ github.event.issue.number || github.event.pull_request.number }}
