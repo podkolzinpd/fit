@@ -152,6 +152,7 @@ test('linked client sees only the published client progress view', async ({ page
 })
 
 test('client sees deterministic standard-measurement goal facts', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-08-30T18:00:00+03:00') })
   await page.goto('/auth')
   await page.getByLabel('Email').fill('client@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
