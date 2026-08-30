@@ -228,6 +228,16 @@ describe('Training summary card states', () => {
     expect(document.body).not.toHaveTextContent(/custom_metric_key|workouts_per_week/)
   })
 
+  it('uses the matching male figure without changing the calculated zones', async () => {
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-08-10'))
+    repositories.listForClient.mockResolvedValue([publishedSummary])
+
+    render(<ClientTrainingSummaryCard clientId="client-1" gender="male" />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByRole('group', { name: 'Атлетичный мужчина, вид сзади' })).toBeVisible()
+    expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
+  })
+
   it('turns the client summary into a factual period, goal and upcoming-plan story', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-08-27T12:00:00Z'))
@@ -485,11 +495,18 @@ describe('Training summary card states', () => {
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
 
     const mainNow = screen.getByRole('heading', { name: `Заметное изменение · ${longExerciseName}` }).closest('section')
+    const goalStory = document.querySelector('.client-progress-goal-story')
     const bodyMap = document.querySelector('.body-progress-map')
+    const periodSummary = document.querySelector('.progress-story-summary')
     expect(mainNow).not.toBeNull()
+    expect(goalStory).not.toBeNull()
+    expect(bodyMap).not.toBeNull()
+    expect(periodSummary).not.toBeNull()
     expect(mainNow).toHaveAttribute('data-fact-id', expect.stringContaining('exercise:'))
     expect(mainNow).toHaveAttribute('data-copy-source', 'deterministic')
-    expect(mainNow!.compareDocumentPosition(bodyMap!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(mainNow!.compareDocumentPosition(goalStory!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(goalStory!.compareDocumentPosition(bodyMap!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(bodyMap!.compareDocumentPosition(periodSummary!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('shows a verified personal record as the main fact and loads it only for a marked workout', async () => {
@@ -568,7 +585,14 @@ describe('Training summary card states', () => {
     await user.click(screen.getByRole('button', { name: 'Спереди' }))
     expect(screen.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
     await user.click(screen.getByLabelText('Грудь. Доля всех выполненных подходов: 33%'))
-    expect(screen.getByText('Жим лёжа: 1 подход')).toBeVisible()
+    const loadDetail = document.querySelector<HTMLElement>('.body-progress-detail')
+    expect(loadDetail).toHaveAttribute('data-copy-source', 'deterministic')
+    expect(loadDetail).toHaveTextContent('На зону «Грудь» приходится 33% всех выполненных подходов.')
+    expect(screen.queryByText('Жим лёжа: 1 подход')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Показать 2 упражнения' }))
+    const loadDialog = await screen.findByRole('dialog', { name: 'Грудь' })
+    expect(loadDialog).toHaveTextContent('Жим лёжа: 1 подход')
+    await user.click(within(loadDialog).getByRole('button', { name: 'Закрыть' }))
     await user.click(screen.getByRole('button', { name: 'Прогресс' }))
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('group', { name: 'Анатомическая схема мышц, вид сзади' })).toBeVisible()
@@ -597,10 +621,12 @@ describe('Training summary card states', () => {
     const map = document.querySelector<HTMLElement>('.body-progress-map')
     expect(map).not.toBeNull()
     if (!map) return
-    expect(within(map).getByText(/Тяга нижнего блока/)).toBeVisible()
+    expect(within(map).getByText('В зоне «Верх спины» лучший подтверждённый результат изменился на +36%.')).toBeVisible()
+    expect(within(map).queryByText(/Тяга нижнего блока/)).toBeNull()
     expect(within(map).queryByText(/Пуловер прямыми руками/)).toBeNull()
-    await user.click(within(map).getByRole('button', { name: 'Ещё 1 упражнение' }))
+    await user.click(within(map).getByRole('button', { name: 'Показать 3 упражнения' }))
     const dialog = await screen.findByRole('dialog', { name: 'Верх спины' })
+    expect(dialog).toHaveTextContent(longExerciseName)
     expect(dialog).toHaveTextContent('Тяга нижнего блока')
     expect(dialog).toHaveTextContent('Пуловер прямыми руками в блоке')
   })

@@ -1,0 +1,4 @@
+.tab-bar,
+.coachmark-bubble {
+  visibility: hidden !important;
+}

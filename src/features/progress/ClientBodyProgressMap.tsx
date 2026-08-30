@@ -22,6 +22,7 @@ import {
   type BodyZoneShape,
 } from './body-progress-geometry'
 import { resolveBodyFigureVariant, useBodyMapDisplayMode } from './body-map-appearance'
+import { bodyMapInsight } from './body-map-insight'
 
 const BODY_FIGURES: Record<BodyFigureVariant, { image: string; alt: Record<BodyFigureSide, string> }> = {
   male: {
@@ -124,9 +125,10 @@ function BodyRegion({ region, variant, side, selected, mode, index, filterId, on
   </g>
 }
 
-function MapPanel({ data, selected, variant, side, discovering, onSideChange, onSelect, onShowDetails }: {
+function MapPanel({ data, selected, insightCandidates, variant, side, discovering, onSideChange, onSelect, onShowDetails }: {
   data: BodyMapData
   selected: BodyMapRegion | undefined
+  insightCandidates: readonly string[]
   variant: BodyFigureVariant
   side: BodyFigureSide
   discovering: boolean
@@ -142,8 +144,7 @@ function MapPanel({ data, selected, variant, side, discovering, onSideChange, on
   const filterId = `body-progress-soft-${useId().replace(/:/g, '')}`
   const darkFigureFilterId = `body-progress-dark-figure-${useId().replace(/:/g, '')}`
   const swipeStartX = useRef<number | null>(null)
-  const visibleSecondary = selected?.details[0]
-  const hiddenCount = selected ? Math.max(0, selected.details.length - 1) : 0
+  const insight = selected ? bodyMapInsight(data, selected, insightCandidates) : null
   const regionsBySide = useMemo(() => ({
     front: data.regions.filter((region) => bodyZoneShapes(variant, region.group, 'front').length > 0),
     back: data.regions.filter((region) => bodyZoneShapes(variant, region.group, 'back').length > 0),
@@ -213,22 +214,29 @@ function MapPanel({ data, selected, variant, side, discovering, onSideChange, on
       </div>
     </div>
     {data.regions.length === 0 && <p className="body-progress-empty">{data.emptyMessage}</p>}
-    {selected && <div className="body-progress-detail" role="status">
+    {selected && insight && <div
+      className="body-progress-detail"
+      role="status"
+      data-fact-id={insight.factId}
+      data-copy-source={insight.source}
+    >
       <div className="body-progress-detail-heading">
         <div><small>{selected.metricLabel}</small><strong>{selected.label}</strong></div>
         <span>{selected.valueLabel}</span>
       </div>
-      <p className="body-progress-primary-detail">{selected.primaryDetail}</p>
-      {visibleSecondary && <p>{visibleSecondary}</p>}
-      {hiddenCount > 0 && <button type="button" className="link body-progress-more" onClick={onShowDetails}>Ещё {hiddenCount} {exercisesCountLabel(hiddenCount)}</button>}
+      <p className="body-progress-primary-detail">{insight.text}</p>
+      <button type="button" className="link body-progress-more" onClick={onShowDetails}>
+        Показать {1 + selected.details.length} {exercisesCountLabel(1 + selected.details.length)}
+      </button>
     </div>}
   </>
 }
 
-export function TrainingBodyProgressMap({ summary, workouts, clientId, clientGender = null, loadLoading, loadError, onLoadRetry }: {
+export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCandidates, clientGender = null, loadLoading, loadError, onLoadRetry }: {
   summary: BodyProgressSummary
   workouts: readonly Workout[]
   clientId: string
+  insightCandidates: readonly string[]
   clientGender?: Gender | null
   loadLoading: boolean
   loadError: Error | null
@@ -290,6 +298,7 @@ export function TrainingBodyProgressMap({ summary, workouts, clientId, clientGen
       : <MapPanel
           data={data}
           selected={selected}
+          insightCandidates={insightCandidates}
           variant={variant}
           side={side}
           discovering={discovering}
