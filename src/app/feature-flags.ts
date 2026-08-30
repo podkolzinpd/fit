@@ -48,6 +48,20 @@ export function isWearablesPilotEnabled(userId: string) {
   return allowedUserIds.includes(userId)
 }
 
+// Шапка «Сегодня»/«Кабинет» заменяет заголовок вкладки на персональное
+// приветствие, чтобы освободить вертикальное место и поднять контент выше.
+// Флаг намеренно default-off; allowlist не является границей авторизации и
+// содержит только публичные UUID аккаунтов. Независимый rollout — не
+// переиспользует allowlist других пилотов (Wearables, Assistant nav).
+export function isTodayGreetingPilotEnabled(userId: string) {
+  if (import.meta.env.VITE_TODAY_GREETING_ENABLED !== 'true') return false
+  const allowedUserIds = String(import.meta.env.VITE_TODAY_GREETING_PILOT_USER_IDS ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+  return allowedUserIds.includes(userId)
+}
+
 export interface YandexIdPilotConfig {
   apiBaseUrl: string
   clientId: string

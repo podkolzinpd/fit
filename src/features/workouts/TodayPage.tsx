@@ -27,7 +27,7 @@ import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
 import { formatRunDuration, runDistanceLabel, runPaceLabel } from '../../shared/run-metrics'
 import { WearableHealthCard } from '../wearables'
-import { isWearablesPilotEnabled } from '../../app/feature-flags'
+import { isTodayGreetingPilotEnabled, isWearablesPilotEnabled } from '../../app/feature-flags'
 import { todayHeaderProps } from './today-header'
 import { ClientHomeOverview, clientHomeLatestDoneWorkout } from './ClientHomeOverview'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
@@ -590,11 +590,16 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const clientHomeError = clientMode ? mine.error ?? workouts.error ?? regularity.error ?? goal.error ?? personalRecords.error : null
   const greetingName = clientMode ? mine.data?.fullName || actor?.firstName || 'спортсмен' : actor?.firstName || 'тренер'
   const greeting = `${new Date().getHours() < 12 ? 'Доброе утро' : new Date().getHours() < 18 ? 'Добрый день' : 'Добрый вечер'}, ${greetingName}`
+  // Пилот: заголовок вкладки заменяется приветствием в шапке, а дублирующая
+  // строка ниже скрывается — так контент поднимается выше. Default-off,
+  // allowlist не является границей авторизации (см. feature-flags.ts).
+  const greetingHeaderPilotEnabled = Boolean(actor && isTodayGreetingPilotEnabled(actor.userId))
 
   const header = todayHeaderProps(clientMode, actor)
-  return <Page title={header.title} hideTitle={header.hideTitle} className="today-page today-start-page" action={header.showProfileAvatar ? <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link> : undefined}>
+  const pageTitle = greetingHeaderPilotEnabled ? greeting : header.title
+  return <Page title={pageTitle} hideTitle={header.hideTitle} className="today-page today-start-page" action={header.showProfileAvatar ? <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link> : undefined}>
     {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase}`}>
-      <p className="today-greeting">{greeting} 👋</p>
+      {!greetingHeaderPilotEnabled && <p className="today-greeting">{greeting} 👋</p>}
       {clientMode && !textComposerOpen ? <><ClientHomeOverview
         today={today}
         workouts={workouts.data}

@@ -3,6 +3,7 @@ import {
   getYandexIdPilotConfig,
   isAssistantNavPilotEnabled,
   isProductionAssistantPilotEmail,
+  isTodayGreetingPilotEnabled,
   isTodayStartRedesignEnabled,
   isWearablesPilotEnabled,
   trainerHomePath,
@@ -104,6 +105,55 @@ describe('wearables pilot flag', () => {
   it('requires a non-empty allowlist', () => {
     vi.stubEnv('VITE_WEARABLES_ENABLED', 'true')
     vi.stubEnv('VITE_WEARABLES_PILOT_USER_IDS', '')
+    expect(isWearablesPilotEnabled('client-1')).toBe(false)
+  })
+})
+
+describe('today greeting header pilot flag', () => {
+  it('is disabled when the enabled flag is missing or not exactly "true", even for an allowlisted user', () => {
+    vi.stubEnv('VITE_TODAY_GREETING_ENABLED', '')
+    vi.stubEnv('VITE_TODAY_GREETING_PILOT_USER_IDS', 'client-1')
+    expect(isTodayGreetingPilotEnabled('client-1')).toBe(false)
+    vi.stubEnv('VITE_TODAY_GREETING_ENABLED', 'TRUE')
+    expect(isTodayGreetingPilotEnabled('client-1')).toBe(false)
+  })
+
+  it('is enabled for an allowlisted user when the flag is exactly "true"', () => {
+    vi.stubEnv('VITE_TODAY_GREETING_ENABLED', 'true')
+    vi.stubEnv('VITE_TODAY_GREETING_PILOT_USER_IDS', 'client-1,client-2')
+    expect(isTodayGreetingPilotEnabled('client-1')).toBe(true)
+  })
+
+  it('is disabled for a user outside the allowlist', () => {
+    vi.stubEnv('VITE_TODAY_GREETING_ENABLED', 'true')
+    vi.stubEnv('VITE_TODAY_GREETING_PILOT_USER_IDS', 'client-1,client-2')
+    expect(isTodayGreetingPilotEnabled('client-3')).toBe(false)
+  })
+
+  it('is disabled for everyone when the allowlist is empty or missing', () => {
+    vi.stubEnv('VITE_TODAY_GREETING_ENABLED', 'true')
+    vi.stubEnv('VITE_TODAY_GREETING_PILOT_USER_IDS', '')
+    expect(isTodayGreetingPilotEnabled('client-1')).toBe(false)
+  })
+
+  it('trims whitespace and drops empty allowlist entries', () => {
+    vi.stubEnv('VITE_TODAY_GREETING_ENABLED', 'true')
+    vi.stubEnv('VITE_TODAY_GREETING_PILOT_USER_IDS', ' , client-1 , ,client-2, ')
+    expect(isTodayGreetingPilotEnabled('client-1')).toBe(true)
+    expect(isTodayGreetingPilotEnabled('client-2')).toBe(true)
+    expect(isTodayGreetingPilotEnabled('')).toBe(false)
+  })
+
+  it('does not leak access between users and stays independent from other pilot allowlists', () => {
+    vi.stubEnv('VITE_TODAY_GREETING_ENABLED', 'true')
+    vi.stubEnv('VITE_TODAY_GREETING_PILOT_USER_IDS', 'client-1')
+    vi.stubEnv('VITE_WEARABLES_ENABLED', 'true')
+    vi.stubEnv('VITE_WEARABLES_PILOT_USER_IDS', 'client-9')
+    vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
+    vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'trainer-1')
+    expect(isTodayGreetingPilotEnabled('client-1')).toBe(true)
+    expect(isTodayGreetingPilotEnabled('client-9')).toBe(false)
+    expect(isTodayGreetingPilotEnabled('trainer-1')).toBe(false)
     expect(isWearablesPilotEnabled('client-1')).toBe(false)
   })
 })
