@@ -1,5 +1,5 @@
 import { compactPlannedSetSummary } from '../../data/repositories/workout-rules'
-import type { ClientGoal, ProgressEntry, PublishedTrainingSummary, TrainingSummary, Workout } from '../../shared/domain'
+import type { ClientGoal, GoalCriterionMetric, ProgressEntry, PublishedTrainingSummary, TrainingSummary, Workout, WorkoutPersonalRecord } from '../../shared/domain'
 import { GOAL_CRITERION_METRICS, goalCriterionTargetLabel, isStandardGoalCriterionMetric, type GoalCriterionFoundationState } from '../../shared/goal-criterion-rules'
 import { calculateStandardGoalProgress, type GoalProgressDirection, type GoalProgressStatus } from '../../shared/goal-progress'
 import { calculateTrainingGoalProgress } from '../../shared/goal-training-progress'
@@ -16,6 +16,8 @@ export type StoryOptions = {
   goal?: ClientGoal | null
   profileGoal?: string | null
   upcomingWorkouts?: readonly Workout[]
+  personalRecords?: readonly WorkoutPersonalRecord[]
+  personalRecordWorkout?: Pick<Workout, 'id' | 'workoutDate'>
   today?: LocalDate
   role?: 'client' | 'trainer'
 }
@@ -49,7 +51,16 @@ export type ClientProgressPresentation = {
     criteria?: Array<{ id: string; label: string; target: string; status: string; current: string; dynamics: string; lastDate?: string; freshness: string; sufficiency: string; action: 'measurement' | 'workout' | 'configure' | null }>
   }
   nextWorkout?: { date: string; title: string; exercises: Array<{ name: string; plan?: string }> }
-  conclusion: string
+  mainNow: {
+    factId: string
+    kind: 'goal' | 'measurement' | 'personal_record' | 'exercise' | 'regularity' | 'gap' | 'data' | 'plan'
+    title: string
+    explanation: string
+    evidence: string
+    source: 'llm' | 'deterministic'
+    action?: 'goal' | 'measurement' | 'workout'
+    subject?: string
+  }
   orientations: string[]
 }
 
@@ -188,6 +199,11 @@ const DIRECTION_LABELS: Record<GoalProgressDirection, string> = {
   insufficient_data: 'недостаточно данных для динамики',
 }
 
+function goalProgressStatusLabel(status: GoalProgressStatus, direction: GoalProgressDirection): string {
+  if (status === 'target_not_reached' && direction === 'away_from_target') return 'Дальше от ориентира'
+  return GOAL_PROGRESS_STATUS_LABELS[status]
+}
+
 function signed(value: number, unit: string): string {
   return `${value > 0 ? '+' : value < 0 ? '−' : ''}${number.format(Math.abs(value))} ${unit}`
 }
@@ -221,7 +237,7 @@ function goalStory(summary: ProgressSummary, options: StoryOptions): ClientProgr
       presentation: {
         id: criterion.id,
         label: `${GOAL_CRITERION_METRICS[criterion.metric].label}${criterion.exerciseName ? ` · ${criterion.exerciseName}` : ''}${criterion.customMetricName ? ` · ${criterion.customMetricName}` : ''}`,
-        target: goalCriterionTargetLabel(criterion), status: GOAL_PROGRESS_STATUS_LABELS[result.status],
+        target: goalCriterionTargetLabel(criterion), status: goalProgressStatusLabel(result.status, result.dynamics.direction),
         current: result.latestNow ? `${number.format(result.latestNow.value)} ${criterion.unit}${'secondaryCurrent' in result && result.secondaryCurrent != null ? ` за ${number.format(result.secondaryCurrent)} мин` : ''}` : 'Нет данных',
         dynamics, lastDate: result.latestNow ? formatLocalDate(result.latestNow.recordedOn) : undefined,
         freshness, sufficiency,
@@ -253,7 +269,7 @@ function goalStory(summary: ProgressSummary, options: StoryOptions): ClientProgr
                   ? 'Последний актуальный результат пока не достиг заданного ориентира.'
                   : 'Показатель отслеживается без оценки направления улучшения.'
   return {
-    title, state: 'configured', statusLabel: criteria.length === 1 ? GOAL_PROGRESS_STATUS_LABELS[primary.result.status] : `${completed} из ${criteria.length} выполнено`,
+    title, state: 'configured', statusLabel: criteria.length === 1 ? goalProgressStatusLabel(primary.result.status, primary.result.dynamics.direction) : `${completed} из ${criteria.length} выполнено`,
     criterionLabel: primary.presentation.label, targetLabel: primary.presentation.target, currentLabel: primary.presentation.current,
     periodEndLabel: primary.result.periodEnd ? `${number.format(primary.result.periodEnd.value)} ${primary.criterion.unit} · ${formatLocalDateShort(primary.result.periodEnd.recordedOn)}` : 'Нет данных к концу периода',
     dynamicsLabel: primary.presentation.dynamics, lastMeasurementLabel: primary.presentation.lastDate,
@@ -347,26 +363,225 @@ function usefulOrientations(summary: ProgressSummary): string[] {
     .slice(0, 2)
 }
 
-function conclusion(summary: ProgressSummary, options: StoryOptions, totalWeeks: number): string {
-  const current = done(options.currentWorkouts ?? []).length
-  const previous = done(options.previousWorkouts ?? []).length
-  if (previous > 0 && current !== previous) {
-    const delta = Math.abs(current - previous)
-    return current > previous
-      ? `В этом периоде состоялось на ${delta} ${progressMetricNoun(delta, 'workout')} больше, чем в предыдущем.`
-      : `В этом периоде состоялось ${current} ${progressMetricNoun(current, 'workout')}; в предыдущем было ${previous}.`
+type MainNow = ClientProgressPresentation['mainNow']
+type MainNowCandidate = Omit<MainNow, 'source'> & {
+  priority: number
+  anchors: string[]
+  numbers: string[]
+  llmKinds: Array<'headline' | 'goal' | 'consistency'>
+}
+
+const MEASUREMENT_METRICS: Array<{
+  metric: Extract<GoalCriterionMetric, 'weight' | 'waist' | 'chest' | 'hips'>
+  key: 'weightKg' | 'waistCm' | 'chestCm' | 'hipCm'
+  label: string
+  unit: string
+}> = [
+  { metric: 'weight', key: 'weightKg', label: 'Вес', unit: 'кг' },
+  { metric: 'waist', key: 'waistCm', label: 'Талия', unit: 'см' },
+  { metric: 'chest', key: 'chestCm', label: 'Грудь', unit: 'см' },
+  { metric: 'hips', key: 'hipCm', label: 'Бёдра', unit: 'см' },
+]
+
+function searchable(value: string): string {
+  return value.toLocaleLowerCase('ru-RU').replace(/ё/g, 'е').replace(/[.,]/g, ',').replace(/\s+/g, ' ').trim()
+}
+
+function anchorWords(value: string): string[] {
+  return searchable(value).split(/[^а-яa-z0-9]+/u).filter((word) => word.length >= 4)
+}
+
+function numericAnchors(...values: Array<number | null | undefined>): string[] {
+  return values
+    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+    .flatMap((value) => {
+      const formatted = number.format(Math.abs(value))
+      const raw = String(Math.abs(value)).replace('.', ',')
+      return formatted === raw ? [formatted] : [formatted, raw]
+    })
+}
+
+function conciseLlmText(text: string | undefined): string | undefined {
+  const value = text?.replace(/\s+/g, ' ').trim()
+  if (!value || value.length > 240) return undefined
+  const sentenceCount = value.split(/[.!?]+/u).filter(Boolean).length
+  return sentenceCount <= 2 ? value : undefined
+}
+
+function groundedText(candidate: MainNowCandidate, texts: Record<'headline' | 'goal' | 'consistency', string | undefined>): string | undefined {
+  for (const kind of candidate.llmKinds) {
+    const text = conciseLlmText(texts[kind])
+    if (!text) continue
+    const normalized = searchable(text)
+    const hasAnchor = candidate.anchors.some((anchor) => normalized.includes(searchable(anchor)))
+    const textNumbers: string[] = normalized.match(/\d+(?:,\d+)?/g) ?? []
+    const hasNumber = candidate.numbers.length === 0 || candidate.numbers.some((value) => textNumbers.includes(searchable(value).replace(/\s/g, '')))
+    if (hasAnchor && hasNumber) return text
   }
-  const useFetchedWorkouts = options.currentWorkouts !== undefined
-    && (current > 0 || summary.metrics.completedWorkouts === 0)
-  const weeks = useFetchedWorkouts ? activeWeeks(options.currentWorkouts ?? []) : summary.metrics.activeWeeks
-  if (weeks > 0 && weeks === totalWeeks) return `Тренировки были в каждой неделе выбранного периода.`
-  const favorable = new Set(storyChanges(summary).map((item) => item.exerciseName)).size
-  if (favorable > 0) return favorable === 1
-    ? 'За период подтверждено улучшение в одном упражнении.'
-    : `За период подтверждено улучшение в ${favorable} упражнениях.`
-  return options.role === 'trainer'
-    ? 'Период сохранён как база для следующего решения по программе.'
-    : 'Результаты этого периода сохранены как база для следующего сравнения.'
+  return undefined
+}
+
+function personalRecordLabel(record: WorkoutPersonalRecord): string {
+  if (record.inputKind === 'strength' && record.weightKg !== null) {
+    return `${number.format(record.weightKg)} кг${record.reps === null ? '' : ` × ${record.reps} повт.`}`
+  }
+  const unit = record.inputKind === 'distance' ? 'км' : record.inputKind === 'duration' ? 'мин' : 'повт.'
+  return `${number.format(record.primaryValue)} ${unit}`
+}
+
+function measurementCandidates(summary: ProgressSummary, options: StoryOptions): MainNowCandidate[] {
+  const entries = [...(options.measurements ?? [])]
+    .filter((entry) => entry.recordedOn >= summary.periodStart && entry.recordedOn <= summary.periodEnd)
+    .sort((left, right) => left.recordedOn.localeCompare(right.recordedOn))
+  const goalMetrics = new Set(options.goal?.criteria.map((criterion) => criterion.metric) ?? [])
+  return MEASUREMENT_METRICS.flatMap(({ metric, key, label, unit }) => {
+    const points = entries.flatMap((entry) => typeof entry[key] === 'number' ? [{ value: entry[key]!, date: entry.recordedOn }] : [])
+    const first = points[0]
+    const last = points.at(-1)
+    if (!first || !last || first.date === last.date || first.value === last.value) return []
+    const delta = last.value - first.value
+    return [{
+      factId: `measurement:${metric}:${first.date}:${last.date}`,
+      kind: 'measurement' as const,
+      priority: goalMetrics.has(metric) ? 86 : 66,
+      title: `${label}: ${delta > 0 ? 'рост' : 'снижение'} за период`,
+      explanation: goalMetrics.has(metric)
+        ? 'Изменение относится к подтверждённому критерию цели.'
+        : 'Это самое свежее сопоставимое изменение показателя за выбранный период.',
+      evidence: `${number.format(first.value)} → ${number.format(last.value)} ${unit} · ${signed(delta, unit)}`,
+      subject: label,
+      anchors: [label, ...anchorWords(label)],
+      numbers: numericAnchors(first.value, last.value, delta),
+      llmKinds: goalMetrics.has(metric) ? ['goal', 'headline'] : ['headline'],
+    }]
+  })
+}
+
+function goalCandidates(goal: ClientProgressPresentation['goal']): MainNowCandidate[] {
+  if (!goal) return []
+  const anchors = [goal.title, ...(goal.criterionLabel ? [goal.criterionLabel] : []), ...anchorWords(goal.title)]
+  if (goal.state === 'unconfigured') return [{
+    factId: 'goal:unconfigured', kind: 'goal', priority: 110,
+    title: 'Настрой оценку цели', explanation: 'Цель сохранена, но пока не связана с измеримым критерием.',
+    evidence: goal.title, action: 'goal', anchors, numbers: [], llmKinds: [],
+  }]
+  if (goal.state === 'needs_review') return [{
+    factId: 'goal:needs-review', kind: 'goal', priority: 111,
+    title: 'Проверь критерий цели', explanation: 'Формулировка цели изменилась, поэтому старый критерий нельзя применять без подтверждения.',
+    evidence: goal.title, action: 'goal', anchors, numbers: [], llmKinds: [],
+  }]
+  const primary = goal.criteria?.[0]
+  if (primary?.action) {
+    const action = primary.action === 'configure' ? 'goal' : primary.action
+    return [{
+      factId: `goal:${primary.id}:${action}`, kind: 'data', priority: 112,
+      title: primary.action === 'measurement' ? 'Добавь актуальный замер' : 'Нужен подтверждённый результат',
+      explanation: primary.action === 'measurement'
+        ? 'Без нового замера нельзя честно оценить движение к цели.'
+        : 'Без результата тренировки нельзя обновить положение относительно ориентира.',
+      evidence: `${primary.label} · ${primary.freshness} · ${primary.sufficiency}`,
+      action, anchors: [primary.label, ...anchorWords(primary.label)], numbers: [], llmKinds: [],
+    }]
+  }
+  if (!primary) return []
+  const reached = /достигнут|удерживается|в диапазоне/u.test(primary.status.toLocaleLowerCase('ru-RU'))
+  const away = primary.dynamics.toLocaleLowerCase('ru-RU').includes('дальше от ориентира')
+  const toward = primary.dynamics.toLocaleLowerCase('ru-RU').includes('ближе к ориентиру')
+  const numeric = `${primary.current} ${primary.target}`.match(/\d+(?:[.,]\d+)?/g)?.map((value) => value.replace('.', ',')) ?? []
+  return [{
+    factId: `goal:${primary.id}:${reached ? 'reached' : 'tracking'}`, kind: 'goal', priority: reached ? 106 : 103,
+    title: reached
+      ? 'Текущий результат соответствует ориентиру'
+      : away
+        ? 'Положение стало дальше от ориентира'
+        : toward
+          ? 'Есть движение к ориентиру цели'
+          : 'Положение относительно цели обновлено',
+    explanation: reached ? 'Вывод основан на последнем актуальном результате.' : 'Текущее положение рассчитано по подтверждённому показателю.',
+    evidence: `${primary.label} · ${primary.current} · ${primary.status}`,
+    anchors: [primary.label, goal.title, ...anchorWords(primary.label), ...anchorWords(goal.title)],
+    numbers: numeric, llmKinds: ['goal'],
+  }]
+}
+
+function mainNow(summary: ProgressSummary, options: StoryOptions, goal: ClientProgressPresentation['goal'], totalWeeks: number): MainNow {
+  const candidates: MainNowCandidate[] = [...goalCandidates(goal), ...measurementCandidates(summary, options)]
+  const record = options.personalRecords?.[0]
+  if (record && options.personalRecordWorkout) {
+    const value = personalRecordLabel(record)
+    candidates.push({
+      factId: `personal-record:${options.personalRecordWorkout.id}:${record.exerciseRef}:${record.metric}`,
+      kind: 'personal_record', priority: 102, title: `Новый личный рекорд · ${record.exerciseName}`,
+      explanation: 'Результат подтверждён в завершённой тренировке.',
+      evidence: `${value} · ${formatLocalDateShort(options.personalRecordWorkout.workoutDate)}`,
+      subject: record.exerciseName,
+      anchors: [record.exerciseName, 'личный рекорд', ...anchorWords(record.exerciseName)],
+      numbers: numericAnchors(record.primaryValue, record.weightKg, record.reps), llmKinds: ['headline'],
+    })
+  }
+  if (summary.metrics.longestGapDays !== null && summary.metrics.longestGapDays >= 14) {
+    candidates.push({
+      factId: `regularity:gap:${summary.metrics.longestGapDays}`, kind: 'gap', priority: 96,
+      title: 'В ритме была длинная пауза', explanation: 'Это важнее общих изменений нагрузки за выбранный период.',
+      evidence: `${summary.metrics.longestGapDays} ${progressMetricNoun(summary.metrics.longestGapDays, 'gapDay')}`,
+      anchors: ['пауза', 'перерыв'], numbers: numericAnchors(summary.metrics.longestGapDays), llmKinds: ['consistency'],
+    })
+  }
+  for (const change of storyChanges(summary)) {
+    candidates.push({
+      factId: `exercise:${searchable(change.exerciseName)}:${change.percent}`,
+      kind: 'exercise', priority: 76 + Math.min(change.percent, 20) / 10,
+      title: `Заметное изменение · ${change.exerciseName}`,
+      explanation: 'Это наиболее выраженное подтверждённое изменение упражнения за период.',
+      evidence: change.detail, anchors: [change.exerciseName, ...anchorWords(change.exerciseName)],
+      subject: change.exerciseName,
+      numbers: numericAnchors(change.percent), llmKinds: ['headline'],
+    })
+  }
+  const current = done(options.currentWorkouts ?? []).length
+  const useFetched = options.currentWorkouts !== undefined && (current > 0 || summary.metrics.completedWorkouts === 0)
+  const completed = useFetched ? current : summary.metrics.completedWorkouts
+  const weeks = useFetched ? activeWeeks(options.currentWorkouts ?? []) : summary.metrics.activeWeeks
+  if (completed > 0) candidates.push({
+    factId: `regularity:${completed}:${weeks}:${totalWeeks}`, kind: 'regularity', priority: 62,
+    title: weeks === totalWeeks ? 'Ритм удержан весь период' : 'Тренировочный ритм зафиксирован',
+    explanation: weeks === totalWeeks ? 'Тренировки были в каждой неделе выбранного периода.' : 'Это отправная точка для сравнения регулярности дальше.',
+    evidence: `${completed} ${progressMetricNoun(completed, 'workout')} · ${weeks} из ${totalWeeks} активных недель`,
+    anchors: ['трениров', 'недел', 'ритм'], numbers: numericAnchors(completed, weeks, totalWeeks), llmKinds: ['consistency'],
+  })
+  if (!nextWorkoutStory(options.upcomingWorkouts ?? [], options.today)) candidates.push({
+    factId: 'plan:missing', kind: 'plan', priority: 58,
+    title: 'Ближайшая тренировка не запланирована', explanation: 'План поможет связать следующий шаг с текущими результатами.',
+    evidence: 'В ближайшие 45 дней нет запланированной тренировки', action: 'workout',
+    anchors: [], numbers: [], llmKinds: [],
+  })
+  candidates.push({
+    factId: 'data:baseline', kind: 'data', priority: 1,
+    title: 'Период сохранён как отправная точка', explanation: 'Сопоставимый вывод появится после следующего периода с подтверждёнными результатами.',
+    evidence: `${completed} ${progressMetricNoun(completed, 'workout')} · ${weeks} из ${totalWeeks} активных недель`,
+    anchors: [], numbers: [], llmKinds: [],
+  })
+  candidates.sort((left, right) => right.priority - left.priority || left.factId.localeCompare(right.factId))
+  const copy = clientCopy(summary)
+  const texts = {
+    headline: 'summary' in summary ? copy.headline : summary.trainer.headline,
+    goal: copy.goalAlignment,
+    consistency: 'summary' in summary ? copy.consistency : summary.trainer.consistency,
+  }
+  const critical = candidates[0]!
+  const grounded = candidates
+    .map((candidate) => ({ candidate, text: groundedText(candidate, texts) }))
+    .filter((item): item is { candidate: MainNowCandidate; text: string } => Boolean(item.text))
+    .sort((left, right) => right.candidate.priority - left.candidate.priority)[0]
+  const selected = critical.priority >= 90 ? critical : grounded?.candidate ?? critical
+  const llmText = selected === grounded?.candidate ? grounded.text : undefined
+  return {
+    factId: selected.factId, kind: selected.kind, title: selected.title,
+    explanation: llmText ?? selected.explanation, evidence: selected.evidence,
+    source: llmText ? 'llm' : 'deterministic',
+    ...(selected.action ? { action: selected.action } : {}),
+    ...(selected.subject ? { subject: selected.subject } : {}),
+  }
 }
 
 export function progressStoryPresentation(summary: ProgressSummary, options: StoryOptions = {}): ClientProgressPresentation {
@@ -384,6 +599,13 @@ export function progressStoryPresentation(summary: ProgressSummary, options: Sto
     { value: `${currentActiveWeeks}/${totalWeeks}`, label: 'недель с тренировками' },
   ]
   if (favorableCount > 0) stats.push({ value: String(favorableCount), label: improvedExerciseLabel(favorableCount) })
+  const goal = goalStory(summary, options)
+  const main = mainNow(summary, options, goal, totalWeeks)
+  const periodComparison = comparison(options.currentWorkouts ?? [], options.previousWorkouts ?? [])
+  const filteredComparison = main.subject ? {
+    ...periodComparison,
+    items: periodComparison.items.filter((item) => !searchable(item.label).includes(searchable(main.subject!))),
+  } : periodComparison
   return {
     hero: best ? {
       value: `+${best.percent}%`,
@@ -392,10 +614,10 @@ export function progressStoryPresentation(summary: ProgressSummary, options: Sto
     } : undefined,
     stats,
     wins: presentationWins(summary),
-    comparison: comparison(options.currentWorkouts ?? [], options.previousWorkouts ?? []),
-    goal: goalStory(summary, options),
+    comparison: filteredComparison,
+    goal,
     nextWorkout: nextWorkoutStory(options.upcomingWorkouts ?? [], options.today),
-    conclusion: conclusion(summary, options, totalWeeks),
+    mainNow: main,
     orientations: usefulOrientations(summary),
   }
 }

@@ -683,6 +683,22 @@ test('iPhone: standard goal facts stay readable without horizontal overflow', as
   await expectNoHorizontalOverflow(page)
 })
 
+for (const width of [320, 375]) {
+  test(`iPhone: главное в Progress читается без переполнения на ${width} px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: width === 320 ? 700 : 812 })
+    await login(page, 'client@fit.local')
+    await page.goto('/me/progress')
+
+    const mainNow = page.locator('.client-progress-main-now')
+    await expect(mainNow.getByText('Главное сейчас', { exact: true })).toBeVisible()
+    await expect(mainNow.getByRole('heading')).toBeVisible()
+    await expect(mainNow.locator('> strong')).toBeVisible()
+    const action = mainNow.getByRole('link')
+    if (await action.count()) expect(await action.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44)
+    await expectNoHorizontalOverflow(page)
+  })
+}
+
 async function selectClient(page: Page, name = 'Анна Смирнова') {
   await page.locator('.client-picker-trigger').click()
   await page.locator('.client-picker-item').filter({ hasText: name }).first().click()
