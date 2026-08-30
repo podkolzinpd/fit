@@ -126,4 +126,21 @@ describe('ProgressChart', () => {
     await user.click(screen.getByRole('button', { name: 'Показать последние 28 дней' }))
     expect(onWindowChange).toHaveBeenCalledWith(null)
   })
+
+  it('uses the selected report period as a fixed compact range', () => {
+    render(<ProgressChart
+      entries={[entry('2026-07-01', 80), entry('2026-08-10', 78)]}
+      metric="weightKg"
+      label="Вес"
+      unit="кг"
+      windowEnd={null}
+      onWindowChange={vi.fn()}
+      rangeStart={localDate('2026-07-10')}
+      rangeEnd={localDate('2026-07-31')}
+      compact
+    />)
+    expect(screen.getByText('Нет данных за этот период')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Показать последние 28 дней' })).toBeNull()
+    expect(screen.getByLabelText('График показателя «Вес»')).toHaveClass('compact')
+  })
 })
