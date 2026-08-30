@@ -631,7 +631,7 @@ test('iPhone: client progress keeps one goal-aware LLM summary and compact runni
 
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
   await expect(page.getByLabel('Регулярность тренировок')).toHaveCount(0)
-  await expect(page.getByText('Твой прогресс', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Прогресс тренировок').getByRole('heading', { name: 'Период', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '1 месяц' })).toHaveClass(/active/)
   await expect(page.getByRole('button', { name: '3 месяца' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: '6 месяцев' })).toHaveCount(0)

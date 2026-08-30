@@ -64,12 +64,11 @@ function ProgressFacts({ facts, fallback, limit, onShowAll }: {
   </div>{hiddenCount > 0 && onShowAll && <button type="button" className="link ai-progress-more" onClick={onShowAll}>Ещё {hiddenCount} {hiddenCount === 1 ? 'упражнение' : 'упражнения'}</button>}</>
 }
 
-function SummaryHeader({ client = false, published }: { client?: boolean; published?: boolean }) {
+function SummaryHeader({ published }: { published?: boolean }) {
   return <header className="ai-progress-header">
     <div className="ai-progress-title">
-      <span className="ai-progress-mark" aria-hidden="true">✦</span>
       <div>
-        <h2>{client ? 'Твой прогресс' : 'Анализ прогресса'}</h2>
+        <h2>Период</h2>
         <p>По завершённым тренировкам</p>
       </div>
     </div>
@@ -163,8 +162,11 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
     workout.workoutDate >= today && workout.workoutDate <= storyRange.end)
 
   return <section className="ai-progress-card client-progress-card progress-story-card trainer-progress-story-card" aria-label="ИИ-анализ тренировок" aria-busy={loading}>
-    <SummaryHeader published={summary?.published} />
-    {ready && <PeriodTabs value={period} available={availablePeriods} onChange={changePeriod} />}
+    <section className="progress-story-period" aria-labelledby="trainer-progress-period-title">
+      <SummaryHeader published={summary?.published} />
+      <span className="sr-only" id="trainer-progress-period-title">Период анализа прогресса</span>
+      {ready && <PeriodTabs value={period} available={availablePeriods} onChange={changePeriod} />}
+    </section>
     <AsyncView
       loading={loading}
       error={loadError}
@@ -310,6 +312,7 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
   onWorkoutsRetry: () => void
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [goalCriteriaOpen, setGoalCriteriaOpen] = useState(false)
   const presentation = progressStoryPresentation(summary, {
     currentWorkouts,
     previousWorkouts,
@@ -327,17 +330,21 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
   const measurementLink = role === 'client' ? '/me/progress#measurements' : `/progress/${clientId}?view=measurements`
   const workoutLink = role === 'client' ? '/workouts/new' : `/workouts/new?client=${clientId}`
   const attention = role === 'trainer' && 'trainer' in summary ? summary.trainer.attention : []
+  const goalCriteria = presentation.goal?.criteria ?? []
+  const visibleGoalCriteria = goalCriteriaOpen ? goalCriteria : goalCriteria.slice(0, 1)
 
   return <>
-    <section className={`progress-story-hero${presentation.hero ? '' : ' empty'}`} aria-label="Главный результат периода">
-      <span>{presentation.hero ? 'Лучший результат периода' : 'Результаты периода'}</span>
-      {presentation.hero
-        ? <><strong>{presentation.hero.value}</strong><h3>{presentation.hero.exerciseName}</h3><p>{presentation.hero.detail}</p></>
-        : <><h3>Собираем сопоставимые результаты</h3><p>Первые изменения появятся после повторного выполнения упражнений.</p></>}
+    <section className="progress-story-summary" aria-label="Результаты периода">
+      <div className={`progress-story-hero${presentation.hero ? '' : ' empty'}`}>
+        <span>{presentation.hero ? 'Лучший результат периода' : 'Результаты периода'}</span>
+        {presentation.hero
+          ? <><strong>{presentation.hero.value}</strong><h3>{presentation.hero.exerciseName}</h3><p>{presentation.hero.detail}</p></>
+          : <><h3>Собираем сопоставимые результаты</h3><p>Первые изменения появятся после повторного выполнения упражнений.</p></>}
+      </div>
+      <div className={`ai-progress-stats count-${presentation.stats.length}`}>
+        {presentation.stats.map((stat) => <div key={stat.label}><strong>{stat.value}</strong><span>{stat.label}</span></div>)}
+      </div>
     </section>
-    <div className={`ai-progress-stats count-${presentation.stats.length}`}>
-      {presentation.stats.map((stat) => <div key={stat.label}><strong>{stat.value}</strong><span>{stat.label}</span></div>)}
-    </div>
     <TrainingBodyProgressMap
       summary={summary}
       workouts={currentWorkouts ?? []}
@@ -365,12 +372,17 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       <div className="client-progress-goal-story-head"><span>{role === 'client' ? 'Для твоей цели' : 'Цель клиента'}</span>
         <div className="goal-story-actions"><strong className={`goal-foundation-status ${presentation.goal.state}`}>{presentation.goal.statusLabel}</strong><Link className="link" to={goalLink}>Изменить цель</Link></div></div>
       <h3 id={`${role}-progress-goal-title`}>{presentation.goal.title}</h3>
-      {presentation.goal.criteria && presentation.goal.criteria.length > 0 ? <div className="goal-criteria-progress-list">{presentation.goal.criteria.map((criterion) => <article key={criterion.id} className="goal-criterion-progress-card">
+      {goalCriteria.length > 0 ? <><div className="goal-criteria-progress-list">{visibleGoalCriteria.map((criterion) => <article key={criterion.id} className="goal-criterion-progress-row">
         <header><strong>{criterion.label}</strong>{(presentation.goal?.totalCriteria ?? 0) > 1 ? <span>{criterion.status}</span> : null}</header>
         <dl><div><dt>Ориентир</dt><dd>{criterion.target}</dd></div><div><dt>Сейчас</dt><dd>{criterion.current}</dd></div><div><dt>Динамика</dt><dd>{criterion.dynamics}</dd></div><div><dt>Данные</dt><dd>{criterion.lastDate ? `${criterion.lastDate} · ` : ''}{criterion.freshness} · {criterion.sufficiency}</dd></div></dl>
         {criterion.action === 'measurement' && <Link className="link" to={measurementLink}>Добавить актуальный замер</Link>}
         {criterion.action === 'workout' && <Link className="link" to={workoutLink}>Записать тренировку</Link>}
-      </article>)}</div> : presentation.goal.criterionLabel && <dl className="goal-foundation-facts">
+      </article>)}</div>{goalCriteria.length > 1 && <button
+        type="button"
+        className="link goal-criteria-toggle"
+        aria-expanded={goalCriteriaOpen}
+        onClick={() => setGoalCriteriaOpen((open) => !open)}
+      >{goalCriteriaOpen ? 'Показать только основной критерий' : `Показать все критерии · ${goalCriteria.length}`}</button>}</> : presentation.goal.criterionLabel && <dl className="goal-foundation-facts">
         <div><dt>Критерий</dt><dd>{presentation.goal.criterionLabel}</dd></div>
         <div><dt>Ориентир</dt><dd>{presentation.goal.targetLabel}</dd></div>
         {presentation.goal.currentLabel && <div><dt>Сейчас</dt><dd>{presentation.goal.currentLabel}</dd></div>}
@@ -575,8 +587,11 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
     workout.workoutDate >= today && workout.workoutDate <= storyRange.end)
 
   return <section className="ai-progress-card client-progress-card progress-story-card" aria-label="Прогресс тренировок" aria-busy={loading}>
-    <SummaryHeader client />
-    {ready && <PeriodTabs value={period} available={availablePeriods} onChange={changePeriod} />}
+    <section className="progress-story-period" aria-labelledby="client-progress-period-title">
+      <SummaryHeader />
+      <span className="sr-only" id="client-progress-period-title">Период прогресса</span>
+      {ready && <PeriodTabs value={period} available={availablePeriods} onChange={changePeriod} />}
+    </section>
     <AsyncView
       loading={loading}
       error={loadError}
