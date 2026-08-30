@@ -4,8 +4,8 @@
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
 
-Обновлено: 2026-08-30
-Проверенный базовый `main`: `058d4a4` (`feat(progress): visualize workout regularity (#699)`)
+Обновлено: 2026-08-31
+Проверенный базовый `main`: `a0a1d69` (`YAFIT-414: add confirmable Progress next step (#707)`)
 ## Текущий release gate
 
 - Foundation UI Identity v1 принята. Задачи 8–28 — клиентский, тренерский,
@@ -86,8 +86,10 @@
   доставляются автоматически через GitHub OIDC, private runner и forward-only
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
-  exercises и workout lifecycle работают на stage (`000001–000020`); revision
-  `796f958` прошёл migrations, runtime preflight и read/write smoke.
+  exercises и workout lifecycle представлены в отдельной цепочке
+  (`000001–000023`). Активная ветка добавляет `000024_app_feedback`: автор и
+  роль берутся из pilot session, `fit_api` не читает таблицу напрямую, а
+  операторы используют `ops_readonly.app_feedback`.
 - Native AI использует metadata IAM token без статического ключа; точную роль
   один раз выдаёт `fit-stage-api` администратор, а OIDC не меняет folder IAM.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
@@ -103,17 +105,15 @@
   на Supabase; полный cutover не выполнен.
 
 ## Проверки активной ветки
-
-- Этап 7 YAFIT-414: полный check зелёный — 971 frontend, 230 API и 66 infra
-  тестов, lint, typecheck и production build; DB/RLS — 886, actor API — 23.
-- Chromium — 6, WebKit — 1, focused visual — 3/3 Darwin и 3/3 exact Linux;
-  проверены 7 действий, safe LLM fallback, решения и отсутствие автозаписи.
-
+- `app_feedback`: 82 целевых route-теста и 24 локальных PostgreSQL actor/RLS
+  integration-теста зелёные. Полный `npm run check`: 971 frontend, 238 API и
+  66 infra тестов; Supabase DB gate — 74 файла / 886 тестов.
+- UI и production routing не менялись; удалённые миграции и deployment не
+  запускались.
 ## Ближайший порядок
-
-1. Завершить release gate этапа 7: PR, зелёный CI, merge, production deployment и smoke.
-2. После подтверждённой выкладки перейти к этапу 8 — сигналам только для тренера.
-
+1. Завершить isolated `app_feedback` slice и доставить его обычным stage gate.
+2. Перенести assistant/push state и заменить оставшийся legacy invite-client.
+3. После parity и export/import tooling провести две полные репетиции cutover.
 ## Отложено
 
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.

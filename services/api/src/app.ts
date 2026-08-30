@@ -15,6 +15,8 @@ import {
   PilotAccessDeniedError,
   PilotSessionInvalidError,
 } from './db/yandex-pilot-transaction.js'
+import { AppFeedbackCommandError } from './app-feedback-command.js'
+import { readAppFeedbackRequest } from './app-feedback-request.js'
 import { PilotConnectionCommandError } from './connection-commands.js'
 import { PilotDomainCommandError } from './domain-commands.js'
 import {
@@ -31,6 +33,7 @@ import {
   safeDatabaseErrorDiagnostics,
 } from './db/database-readiness.js'
 import type { PilotClientsReader } from './pilot-clients-reader.js'
+import type { PilotAppFeedbackWriter } from './pilot-app-feedback-writer.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import type { PilotDomainWriter } from './pilot-domain-writer.js'
@@ -83,6 +86,7 @@ interface BuildAppOptions {
   databasePool?: DatabasePool
   identityProvider?: YandexIdentityProvider
   oauthCodeProvider?: YandexOAuthCodeProvider
+  pilotAppFeedbackWriter?: PilotAppFeedbackWriter
   pilotClientsReader?: PilotClientsReader
   pilotConnectionsReader?: PilotConnectionsReader
   pilotConnectionsWriter?: PilotConnectionsWriter
@@ -653,6 +657,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       if (error instanceof PilotSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })
       }
+      if (error instanceof AppFeedbackCommandError) {
+        return reply
+          .code(error.failure === 'forbidden' ? 403 : 422)
+          .send({ error: error.failure === 'forbidden'
+            ? 'action_not_allowed'
+            : 'invalid_feedback' })
+      }
       if (error instanceof PilotConnectionCommandError) {
         if (error.failure === 'forbidden') {
           return reply.code(403).send({ error: 'action_not_allowed' })
@@ -695,6 +706,25 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return sendSafeDatabaseFailure(reply, error, 'Pilot command failed')
     }
   }
+
+  app.post('/v1/app-feedback', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const draft = readAppFeedbackRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (draft === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    const writer = options.pilotAppFeedbackWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.submit(sessionToken, draft),
+      (feedbackId) => reply
+        .header('cache-control', 'no-store')
+        .code(201)
+        .send({ feedback: { id: feedbackId } }),
+    )
+  })
 
   app.post('/v1/clients', async (request, reply) => {
     const sessionToken = request.headers['x-fit-pilot-session']

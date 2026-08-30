@@ -74,7 +74,10 @@ The following remain unchanged during the foundation phase:
    no production or Supabase data is read, and the token is not printed. The
    Feedback/reactions, questions, progress/chronicle, client overview and the
    goal-aware summary storage/API are now represented in the isolated Yandex
-   chain. Production routing and the tenant data copy remain pending.
+   chain. Application feedback storage and its authenticated insert API are
+   represented by `000024`, with operator reads limited to `ops_readonly`.
+   Production routing, the Telegram delivery transport and the tenant data copy
+   remain pending.
 8. Rehearse full tenant migration at least twice. Cut over one isolated tenant
    cohort only after all data it can mutate is migrated and writes are frozen
    for the cutover window.
@@ -193,7 +196,12 @@ Migration `000018_training_summaries` adds role-safe internal summaries and a
 physically separate client-safe projection. Native pilot routes authenticate
 summary generation and workout parsing with the hashed Fit session, read the
 facts and custom exercise catalog from Yandex PostgreSQL and do not require a
-Supabase JWT. Existing production routes remain intact.
+Supabase JWT. Migrations `000019`–`000023` add the relationship foundation,
+atomic client attachment and the current goal-criteria contract. Migration
+`000024_app_feedback` stores suggestion/problem submissions under the
+transaction actor, exposes only a validated insert command to `fit_api` and a
+curated operational view to stage readers. Existing production routes remain
+intact.
 Product work merged after the foundation still expands the contract required
 before a production tenant can be switched.
 
@@ -221,6 +229,12 @@ Port the current `main` behavior in this order:
     uses the API service account and short-lived metadata IAM tokens. A separate
     explicit paid synthetic generation/parse smoke is implemented and must pass
     once after deployment; tenant migration rehearsals remain before cutover).
+11. application feedback storage and authenticated submission (`000024` and
+    `POST /v1/app-feedback` are implemented in the isolated API; production
+    still submits through Supabase, and Telegram delivery remains on the legacy
+    transport until a reviewed Yandex outbox/sender slice exists).
+12. assistant durable state, push subscription/outbox state and any remaining
+    Edge Function contracts required by a migrated tenant.
 
 Each item is a separate vertical slice: PostgreSQL migration, grants/RLS and
 cross-tenant tests, API transaction/DTO, repository adapter and observable
