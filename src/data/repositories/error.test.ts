@@ -25,6 +25,13 @@ describe('repositoryError', () => {
     expect(error.message).toBe('У клиента уже идёт другая тренировка. Откройте её и продолжите.')
   })
 
+  it('explains a duplicate custom measurement without exposing database details', () => {
+    const error = repositoryError({ code: 'PT409', message: 'custom_metric_exists' })
+
+    expect(error.code).toBe('custom_metric_exists')
+    expect(error.message).toBe('Показатель с таким названием уже существует.')
+  })
+
   it('explains an invalid invitation without exposing database details', () => {
     const error = repositoryError({ code: 'PT404', message: 'invitation_invalid' })
 

@@ -9,24 +9,6 @@ export function trainerHomePath() {
   return isTodayStartRedesignEnabled() ? '/today' : '/clients'
 }
 
-export type MonochromeRolloutMode = 'on' | 'preview' | 'off'
-
-// Новый UI уже принят как production identity, но legacy-разметка и
-// персональный server-managed preview остаются доступными для безопасного
-// отката. Неизвестное/пустое значение трактуется как production default ON.
-export function monochromeRolloutMode(
-  value: unknown = import.meta.env.VITE_MONOCHROME_ROLLOUT_MODE,
-): MonochromeRolloutMode {
-  const normalized = String(value ?? '').trim().toLowerCase()
-  if (normalized === 'off' || normalized === 'preview') return normalized
-  return 'on'
-}
-
-export function isMonochromeUiEnabled(personalPreview = false): boolean {
-  const mode = monochromeRolloutMode()
-  return mode === 'on' || (mode === 'preview' && personalPreview)
-}
-
 // Верхняя навигация тренера «Ассистент» (возврат YAFIT-276 после отката
 // YAFIT-279) открывается только участникам пилота. В production безопасный
 // default — единственный тестовый e-mail; VITE_ASSISTANT_NAV_ENABLED=false
@@ -60,20 +42,6 @@ export function isAssistantNavPilotEnabled(userId: string, email?: string | null
 export function isWearablesPilotEnabled(userId: string) {
   if (import.meta.env.VITE_WEARABLES_ENABLED !== 'true') return false
   const allowedUserIds = String(import.meta.env.VITE_WEARABLES_PILOT_USER_IDS ?? '')
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean)
-  return allowedUserIds.includes(userId)
-}
-
-// Тёмная палитра из Figma-макета «Фит» поставляется в общем бандле, но
-// включается только участникам пилота и только когда пользователь сам выбрал
-// тёмную тему. Флаг намеренно default-off; allowlist не является границей
-// авторизации и содержит только публичные UUID аккаунтов — данные защищаются
-// существующими RLS/ownership-проверками.
-export function isDarkThemePilotEnabled(userId: string) {
-  if (import.meta.env.VITE_DARK_THEME_PILOT_ENABLED !== 'true') return false
-  const allowedUserIds = String(import.meta.env.VITE_DARK_THEME_PILOT_USER_IDS ?? '')
     .split(',')
     .map((value) => value.trim())
     .filter(Boolean)

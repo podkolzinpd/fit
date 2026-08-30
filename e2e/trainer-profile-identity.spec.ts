@@ -21,7 +21,7 @@ test('global rollout gives a new trainer the monochrome profile', async ({ page 
 
   await page.goto('/profile')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-profile-identity/)
-  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('html')).toHaveClass(/ui-identity/)
   await expect(page.getByRole('heading', { name: 'Основные данные' })).toBeVisible()
 })
 

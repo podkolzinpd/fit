@@ -15,9 +15,10 @@ import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canoni
 
 function Protected() {
   const { actor, loading, error } = useAuth(); const location = useLocation()
-  if (loading) return <main className="state">Восстанавливаем сессию…</main>
+  const systemStateClass = 'state ui-identity system-state-identity'
+  if (loading) return <main className={systemStateClass}>Восстанавливаем сессию…</main>
   if (!actor) return <Navigate to="/auth" state={{ from: `${location.pathname}${location.search}` }} replace />
-  if (error) return <main className="state error">{error}</main>
+  if (error) return <main className={`${systemStateClass} error`}>{error}</main>
   return <Outlet />
 }
 

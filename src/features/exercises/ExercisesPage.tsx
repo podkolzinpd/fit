@@ -2,9 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState, type FormEvent, type MouseEvent } from 'react'
 import { exercisesRepository, type CustomExercise } from '../../data/repositories/exercises.repository'
 import { useAuth } from '../../app/auth-context'
-import { isMonochromeUiEnabled } from '../../app/feature-flags'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
-import { CloseIcon, SearchIcon } from '../../shared/icons'
+import { ChevronRightIcon, CloseIcon, SearchIcon } from '../../shared/icons'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ExerciseImage } from './ExerciseImage'
@@ -55,24 +54,6 @@ function useCustomExercises() {
 }
 
 export function ExercisesPage() {
-  const { actor } = useAuth()
-  if (actor?.role === 'trainer' && isMonochromeUiEnabled(actor.featureFlags?.monochromePreview)) return <MonochromeExercisesPage />
-  return <LegacyExercisesPage />
-}
-
-function LegacyExercisesPage() {
-  const { archive, editing, query, save, setEditing, submit } = useCustomExercises()
-  return <Page className="exercise-catalog-page" title="Упражнения" back="/profile">
-    <section className="catalog-custom-section">
-      <div className="catalog-section-head"><div><p className="eyebrow">СВОЙ КАТАЛОГ</p><h2>{editing ? 'Изменить упражнение' : 'Мои упражнения'}</h2></div><span>{query.data?.filter((exercise) => !exercise.archivedAt).length ?? 0}</span></div>
-      <form className="stack compact catalog-custom-form" key={editing?.id ?? 'new'} onSubmit={(event) => void submit(event)}><Field label="Название"><input name="name" defaultValue={editing?.name} required /></Field><div className="split"><Field label="Группа"><select name="muscleGroup" defaultValue={editing?.muscleGroup ?? 'other'}><option value="legs">Ноги</option><option value="glutes">Ягодицы</option><option value="chest">Грудь</option><option value="back">Спина</option><option value="shoulders">Плечи</option><option value="arms">Руки</option><option value="core">Кор</option><option value="cardio">Кардио</option><option value="other">Другое</option></select></Field><Field label="Тип ввода"><select name="inputKind" defaultValue={editing?.inputKind ?? 'strength'}><option value="strength">Вес + повторы</option><option value="reps">Повторы</option><option value="duration">Время</option><option value="distance">Расстояние</option></select></Field></div>{save.error && <p className="error">{save.error.message}</p>}<div className="actions">{editing && <button type="button" className="secondary" onClick={() => setEditing(null)}>Отмена</button>}<button className="primary">{editing ? 'Сохранить' : 'Добавить'}</button></div></form>
-      <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length}><div className="catalog-custom-list">{query.data?.map((exercise) => <article className="catalog-custom-item" key={exercise.id}><div><strong>{exercise.name}</strong><p>{exercise.muscleGroup} · {exercise.inputKind}</p></div><div className="row-actions"><button className="link" onClick={() => setEditing(exercise)}>Изменить</button><button className="link danger" onClick={() => archive.mutate(exercise)}>{exercise.archivedAt ? 'Вернуть' : 'В архив'}</button></div></article>)}</div></AsyncView>
-    </section>
-    <details className="catalog-system-section"><summary><span><strong>Системный каталог</strong><small>{exercisesRepository.system.length} упражнений уже доступны при выборе</small></span><b>⌄</b></summary><div className="chips">{exercisesRepository.system.map((exercise) => <span className="chip" key={exercise.ref}>{exercise.name}</span>)}</div></details>
-  </Page>
-}
-
-function MonochromeExercisesPage() {
   const { archive, editing, query, save, setEditing, submit } = useCustomExercises()
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<ExerciseSnapshot | null>(null)
@@ -114,7 +95,7 @@ function MonochromeExercisesPage() {
           {visibleExercises.map((exercise) => <button type="button" className="catalog-media-card" key={exercise.ref} onClick={() => setSelected(exercise)}>
             <ExerciseImage src={exercise.imageUrl} alt="" />
             <span><strong>{exercise.name}</strong><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small></span>
-            <b aria-hidden="true">›</b>
+            <ChevronRightIcon />
           </button>)}
         </div>
         {visibleExercises.length < systemMatches.length && <button type="button" className="secondary compact catalog-load-more" onClick={() => setVisibleCount((count) => count + 48)}>Показать ещё</button>}

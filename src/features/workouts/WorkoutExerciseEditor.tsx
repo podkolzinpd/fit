@@ -6,7 +6,7 @@ import { RPE_OPTIONS } from '../../shared/rpe'
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, compactExerciseDetailSummary, groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, previousResultLine, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
 import { OverflowMenu, useConfirm } from '../../shared/ui'
-import { CloseIcon } from '../../shared/icons'
+import { ArrowDownIcon, ArrowUpIcon, CloseIcon } from '../../shared/icons'
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
 import { WorkoutExercise, WorkoutSetRow } from './WorkoutSurface'
@@ -250,8 +250,8 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   function reorderButtons(blockId: string, isFirst: boolean, isLast: boolean) {
     if (!reordering) return null
     return <span className="block-reorder">
-      <button type="button" className="reorder-btn" aria-label="Вверх" disabled={isFirst} onClick={() => commitExercises(moveBlock([...latestExercises.current], blockId, -1))}>↑</button>
-      <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast} onClick={() => commitExercises(moveBlock([...latestExercises.current], blockId, 1))}>↓</button>
+      <button type="button" className="reorder-btn" aria-label="Вверх" disabled={isFirst} onClick={() => commitExercises(moveBlock([...latestExercises.current], blockId, -1))}><ArrowUpIcon /></button>
+      <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast} onClick={() => commitExercises(moveBlock([...latestExercises.current], blockId, 1))}><ArrowDownIcon /></button>
     </span>
   }
 
@@ -289,7 +289,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
           <span className="sr-only">Подход {setIndex + 1}</span>
           {setFields(exercise, exerciseIndex, setIndex, showRpe)}
           {exercise.sets.length > 1
-            ? <button type="button" className="link planned-set-remove" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}>×</button>
+            ? <button type="button" className="link planned-set-remove" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}><CloseIcon /></button>
             : <span className="planned-set-remove" aria-hidden="true" />}
         </WorkoutSetRow>)}
       </WorkoutSetTable>

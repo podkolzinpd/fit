@@ -6,6 +6,7 @@ import { localDate } from './local-date'
 const criterion: GoalCriterion = {
   id: 'criterion-1', goalId: 'goal-1', metric: 'weight', operation: 'maintain_range',
   targetValue: null, rangeMin: 58.5, rangeMax: 59.5, unit: 'кг',
+  baselineValue: null, baselineRecordedOn: null,
   confirmationStatus: 'confirmed', position: 0, version: 1,
 }
 

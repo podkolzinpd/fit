@@ -19,6 +19,7 @@ const repositories = vi.hoisted(() => ({
   goal: vi.fn(),
   progress: vi.fn(),
   workouts: vi.fn(),
+  personalRecords: vi.fn(),
 }))
 vi.mock('../../app/auth-context', () => ({
   useAuth: () => ({ actor: { userId: 'viewer-1', role: 'client', timezone: 'Europe/Moscow' } }),
@@ -40,7 +41,7 @@ vi.mock('../../data/repositories/progress.repository', () => ({
   progressRepository: { list: repositories.progress },
 }))
 vi.mock('../../data/repositories/workouts.repository', () => ({
-  workoutsRepository: { list: repositories.workouts },
+  workoutsRepository: { list: repositories.workouts, personalRecords: repositories.personalRecords },
 }))
 vi.mock('../../shared/yandex-metrika', () => ({ trackGoal: vi.fn() }))
 
@@ -168,6 +169,7 @@ describe('Training summary card states', () => {
     repositories.goal.mockResolvedValue(null)
     repositories.progress.mockResolvedValue([])
     repositories.workouts.mockResolvedValue([])
+    repositories.personalRecords.mockResolvedValue([])
   })
 
   it('does not expose period or generation actions while trainer data is loading', () => {
@@ -226,6 +228,16 @@ describe('Training summary card states', () => {
     expect(document.body).not.toHaveTextContent(/custom_metric_key|workouts_per_week/)
   })
 
+  it('uses the matching male figure without changing the calculated zones', async () => {
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-08-10'))
+    repositories.listForClient.mockResolvedValue([publishedSummary])
+
+    render(<ClientTrainingSummaryCard clientId="client-1" gender="male" />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByRole('group', { name: 'Атлетичный мужчина, вид сзади' })).toBeVisible()
+    expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
+  })
+
   it('turns the client summary into a factual period, goal and upcoming-plan story', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-08-27T12:00:00Z'))
@@ -236,6 +248,7 @@ describe('Training summary card states', () => {
       targetDate: null, status: 'active', version: 1, stages: [], criteria: [{
         id: 'criterion-1', goalId: 'goal-1', metric: 'weight', operation: 'increase_to',
         targetValue: 85, rangeMin: null, rangeMax: null, unit: 'кг',
+        baselineValue: null, baselineRecordedOn: null,
         confirmationStatus: 'confirmed', position: 0, version: 1,
       }],
     })
@@ -269,19 +282,65 @@ describe('Training summary card states', () => {
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    const comparison = (await screen.findByRole('heading', { name: 'Изменения к предыдущему периоду' })).closest('section')
+    const comparison = (await screen.findByRole('heading', { name: 'Сравнение периодов' })).closest('section')
     expect(comparison).not.toBeNull()
-    expect(within(comparison!).getByText('+1')).toBeVisible()
-    expect(within(comparison!).getByText('+1')).toBeVisible()
-    expect(within(comparison!).queryByText('+2')).toBeNull()
+    expect(await within(comparison!).findAllByText('+1')).toHaveLength(2)
+    expect(within(comparison!).getByText('Выполненные подходы')).toBeVisible()
+    expect(within(comparison!).getByText('+2')).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Набрать мышечную массу и укрепить спину' })).toBeVisible()
-    expect(screen.getByText('Настроено')).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Изменить цель' })).toHaveAttribute('href', '/me/goal')
+    expect(screen.getByText('Движение к ориентиру')).toBeVisible()
     expect(screen.getByText('увеличить до 85 кг')).toBeVisible()
-    expect(screen.getByText(/Progress пока не делает вывод о достижении цели/)).toBeVisible()
+    expect(screen.getAllByText('81,5 кг')[0]).toBeVisible()
+    expect(screen.getByText(/80 → 81,5 кг \(\+1,5 кг\) · ближе к ориентиру/)).toBeVisible()
+    expect(screen.getByText(/Достаточно для динамики периода/)).toBeVisible()
+    expect(screen.getByText(/Свежие данные · 7 дн. назад/)).toBeVisible()
+    expect(screen.getByText(/пока не достиг заданного ориентира/)).toBeVisible()
+    expect(document.querySelector('.goal-foundation-facts')).toBeNull()
+    expect(document.querySelector('.goal-progress-details')).toBeNull()
     expect(screen.getByRole('heading', { name: '28 августа 2026 г. · 18:30' })).toBeVisible()
     expect(screen.getByText('Спина и плечи')).toBeVisible()
     expect(screen.getByText('3 × 70 кг × 10 повт.')).toBeVisible()
     expect(document.body).not.toHaveTextContent('Прогресс уже заметен, ты на верном пути')
+  })
+
+  it('keeps a composite goal compact and reveals additional criteria on demand', async () => {
+    const user = userEvent.setup()
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForClient.mockResolvedValue([publishedSummary])
+    repositories.goal.mockResolvedValue({
+      id: 'goal-1', clientId: 'client-1', title: 'Держать вес и тренироваться регулярно',
+      targetDate: null, status: 'active', version: 1, stages: [], criteria: [{
+        id: 'criterion-1', goalId: 'goal-1', metric: 'weight', operation: 'maintain_range',
+        targetValue: null, rangeMin: 58.5, rangeMax: 59.5, unit: 'кг',
+        baselineValue: null, baselineRecordedOn: null,
+        confirmationStatus: 'confirmed', position: 0, version: 1,
+      }, {
+        id: 'criterion-2', goalId: 'goal-1', metric: 'workout_regularity', operation: 'increase_to',
+        targetValue: 2, rangeMin: null, rangeMax: null, unit: 'трен.',
+        baselineValue: null, baselineRecordedOn: null, regularityPeriod: 'week', regularityMode: 'each_period',
+        confirmationStatus: 'confirmed', position: 1, version: 1,
+      }],
+    })
+    repositories.progress.mockResolvedValue([{
+      id: 'measurement-1', clientId: 'client-1', createdBy: 'client-1',
+      recordedOn: localDate('2026-08-15'), weightKg: 59, customMetrics: [], version: 1,
+    }])
+    repositories.workouts.mockResolvedValue([])
+
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    const goal = (await screen.findByRole('heading', { name: 'Держать вес и тренироваться регулярно' })).closest('section')
+    expect(goal).not.toBeNull()
+    expect(goal!.querySelectorAll('.goal-criterion-progress-row')).toHaveLength(1)
+    expect(within(goal!).queryByText('Регулярность тренировок')).toBeNull()
+
+    await user.click(within(goal!).getByRole('button', { name: 'Показать все критерии · 2' }))
+    expect(goal!.querySelectorAll('.goal-criterion-progress-row')).toHaveLength(2)
+    expect(within(goal!).getByText('Регулярность тренировок')).toBeVisible()
+
+    await user.click(within(goal!).getByRole('button', { name: 'Показать только основной критерий' }))
+    expect(goal!.querySelectorAll('.goal-criterion-progress-row')).toHaveLength(1)
   })
 
   it('keeps the readable legacy fallback when structured progress facts are absent', async () => {
@@ -434,6 +493,57 @@ describe('Training summary card states', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Попробуйте ещё раз через минуту')
     expect(screen.getByRole('button', { name: 'Обновить' })).toBeEnabled()
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
+
+    const mainNow = screen.getByRole('heading', { name: `Заметное изменение · ${longExerciseName}` }).closest('section')
+    const goalStory = document.querySelector('.client-progress-goal-story')
+    const bodyMap = document.querySelector('.body-progress-map')
+    const periodSummary = document.querySelector('.progress-story-summary')
+    expect(mainNow).not.toBeNull()
+    expect(goalStory).not.toBeNull()
+    expect(bodyMap).not.toBeNull()
+    expect(periodSummary).not.toBeNull()
+    expect(mainNow).toHaveAttribute('data-fact-id', expect.stringContaining('exercise:'))
+    expect(mainNow).toHaveAttribute('data-copy-source', 'deterministic')
+    expect(mainNow!.compareDocumentPosition(goalStory!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(goalStory!.compareDocumentPosition(bodyMap!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(bodyMap!.compareDocumentPosition(periodSummary!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('shows a verified personal record as the main fact and loads it only for a marked workout', async () => {
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForClient.mockResolvedValue([publishedSummary])
+    repositories.workouts.mockResolvedValue([{
+      id: 'record-workout', clientId: 'client-1', clientName: 'Антон', workoutDate: localDate('2026-08-18'),
+      startTime: null, endTime: null, startedAt: null, completedAt: '2026-08-18T10:00:00Z', status: 'done',
+      notes: null, stageId: null, stageTitle: null, version: 1, hasPr: true, exercises: [],
+    } as Workout])
+    repositories.personalRecords.mockResolvedValue([{
+      exerciseRef: 'bench-press', exerciseName: 'Жим лёжа', inputKind: 'strength', metric: 'weight_reps',
+      primaryValue: 75, weightKg: 75, reps: 8,
+    }])
+
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByRole('heading', { name: 'Новый личный рекорд · Жим лёжа' })).toBeVisible()
+    expect(screen.getByText('75 кг × 8 повт. · 18.08.2026')).toBeVisible()
+    expect(repositories.personalRecords).toHaveBeenCalledOnce()
+    expect(repositories.personalRecords).toHaveBeenCalledWith('record-workout')
+  })
+
+  it('does not repeat a missing plan as both the main fact and the next-step card', async () => {
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(null)
+    repositories.listForClient.mockResolvedValue([{
+      ...publishedSummary,
+      metrics: { ...publishedSummary.metrics, completedWorkouts: 0, activeWeeks: 0, progressFacts: [] },
+      summary: { ...publishedSummary.summary, headline: 'Пока нет сопоставимых результатов.' },
+    }])
+
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByRole('heading', { name: 'Ближайшая тренировка не запланирована' })).toBeVisible()
+    expect(screen.getAllByText('Ближайшая тренировка не запланирована')).toHaveLength(1)
+    expect(screen.getAllByRole('link', { name: 'Запланировать тренировку' })).toHaveLength(1)
+    expect(document.querySelector('.client-progress-upcoming')).toBeNull()
   })
 
   it('lets the client switch to load and retry a failed workout history request', async () => {
@@ -475,7 +585,14 @@ describe('Training summary card states', () => {
     await user.click(screen.getByRole('button', { name: 'Спереди' }))
     expect(screen.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
     await user.click(screen.getByLabelText('Грудь. Доля всех выполненных подходов: 33%'))
-    expect(screen.getByText('Жим лёжа: 1 подход')).toBeVisible()
+    const loadDetail = document.querySelector<HTMLElement>('.body-progress-detail')
+    expect(loadDetail).toHaveAttribute('data-copy-source', 'deterministic')
+    expect(loadDetail).toHaveTextContent('На зону «Грудь» приходится 33% всех выполненных подходов.')
+    expect(screen.queryByText('Жим лёжа: 1 подход')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Показать 2 упражнения' }))
+    const loadDialog = await screen.findByRole('dialog', { name: 'Грудь' })
+    expect(loadDialog).toHaveTextContent('Жим лёжа: 1 подход')
+    await user.click(within(loadDialog).getByRole('button', { name: 'Закрыть' }))
     await user.click(screen.getByRole('button', { name: 'Прогресс' }))
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('group', { name: 'Анатомическая схема мышц, вид сзади' })).toBeVisible()
@@ -504,10 +621,12 @@ describe('Training summary card states', () => {
     const map = document.querySelector<HTMLElement>('.body-progress-map')
     expect(map).not.toBeNull()
     if (!map) return
-    expect(within(map).getByText(/Тяга нижнего блока/)).toBeVisible()
+    expect(within(map).getByText('В зоне «Верх спины» лучший подтверждённый результат изменился на +36%.')).toBeVisible()
+    expect(within(map).queryByText(/Тяга нижнего блока/)).toBeNull()
     expect(within(map).queryByText(/Пуловер прямыми руками/)).toBeNull()
-    await user.click(within(map).getByRole('button', { name: 'Ещё 1 упражнение' }))
+    await user.click(within(map).getByRole('button', { name: 'Показать 3 упражнения' }))
     const dialog = await screen.findByRole('dialog', { name: 'Верх спины' })
+    expect(dialog).toHaveTextContent(longExerciseName)
     expect(dialog).toHaveTextContent('Тяга нижнего блока')
     expect(dialog).toHaveTextContent('Пуловер прямыми руками в блоке')
   })

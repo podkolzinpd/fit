@@ -1,4 +1,4 @@
-// schema-sha256: a1ba7fb2946d1496467f7fc5b5cb9b9a949441d385f0f5e6bdca323c019119a0
+// schema-sha256: bb67fdcdb6a711802bfcd67019dac90efcfab52d5b0bb6fa2252a42618b62f05
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1023,12 +1023,21 @@ export type Database = {
       goal_criteria: {
         Row: {
           archived_at: string | null
+          baseline_progress_id: string | null
+          baseline_recorded_on: string | null
+          baseline_value: number | null
           client_id: string
           confirmation_status: string
           confirmed_at: string | null
           confirmed_by: string | null
           created_at: string
           created_by: string
+          custom_exercise_id: string | null
+          custom_metric_id: string | null
+          custom_metric_name: string | null
+          exercise_name: string | null
+          exercise_ref: string | null
+          exercise_source: string | null
           goal_id: string
           id: string
           metric: string
@@ -1036,6 +1045,10 @@ export type Database = {
           position: number
           range_max: number | null
           range_min: number | null
+          regularity_mode: string | null
+          regularity_period: string | null
+          secondary_target_value: number | null
+          secondary_unit: string | null
           target_value: number | null
           trainer_id: string
           unit: string
@@ -1044,12 +1057,21 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          baseline_progress_id?: string | null
+          baseline_recorded_on?: string | null
+          baseline_value?: number | null
           client_id: string
           confirmation_status?: string
           confirmed_at?: string | null
           confirmed_by?: string | null
           created_at?: string
           created_by: string
+          custom_exercise_id?: string | null
+          custom_metric_id?: string | null
+          custom_metric_name?: string | null
+          exercise_name?: string | null
+          exercise_ref?: string | null
+          exercise_source?: string | null
           goal_id: string
           id?: string
           metric: string
@@ -1057,6 +1079,10 @@ export type Database = {
           position?: number
           range_max?: number | null
           range_min?: number | null
+          regularity_mode?: string | null
+          regularity_period?: string | null
+          secondary_target_value?: number | null
+          secondary_unit?: string | null
           target_value?: number | null
           trainer_id: string
           unit: string
@@ -1065,12 +1091,21 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          baseline_progress_id?: string | null
+          baseline_recorded_on?: string | null
+          baseline_value?: number | null
           client_id?: string
           confirmation_status?: string
           confirmed_at?: string | null
           confirmed_by?: string | null
           created_at?: string
           created_by?: string
+          custom_exercise_id?: string | null
+          custom_metric_id?: string | null
+          custom_metric_name?: string | null
+          exercise_name?: string | null
+          exercise_ref?: string | null
+          exercise_source?: string | null
           goal_id?: string
           id?: string
           metric?: string
@@ -1078,6 +1113,10 @@ export type Database = {
           position?: number
           range_max?: number | null
           range_min?: number | null
+          regularity_mode?: string | null
+          regularity_period?: string | null
+          secondary_target_value?: number | null
+          secondary_unit?: string | null
           target_value?: number | null
           trainer_id?: string
           unit?: string
@@ -1085,6 +1124,27 @@ export type Database = {
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "goal_criteria_baseline_progress_fk"
+            columns: ["baseline_progress_id", "trainer_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "client_progress"
+            referencedColumns: ["id", "trainer_id", "client_id"]
+          },
+          {
+            foreignKeyName: "goal_criteria_custom_exercise_fk"
+            columns: ["custom_exercise_id", "trainer_id"]
+            isOneToOne: false
+            referencedRelation: "custom_exercises"
+            referencedColumns: ["id", "trainer_id"]
+          },
+          {
+            foreignKeyName: "goal_criteria_custom_metric_fk"
+            columns: ["custom_metric_id", "trainer_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "client_custom_metrics"
+            referencedColumns: ["id", "trainer_id", "client_id"]
+          },
           {
             foreignKeyName: "goal_criteria_goal_fk"
             columns: ["goal_id", "trainer_id", "client_id"]
@@ -1669,6 +1729,26 @@ export type Database = {
         Returns: number
       }
       create_client: { Args: { p_client: Json }; Returns: string }
+      create_client_custom_metric: {
+        Args: { p_client_id: string; p_name: string; p_unit?: string }
+        Returns: {
+          archived_at: string | null
+          client_id: string
+          created_at: string
+          id: string
+          name: string
+          trainer_id: string
+          unit: string | null
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "client_custom_metrics"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_client_invitation: {
         Args: { p_client_id: string; p_target_role: string }
         Returns: string
@@ -1717,6 +1797,10 @@ export type Database = {
           planned_count: number
           skipped_count: number
         }[]
+      }
+      goal_criterion_payload_valid: {
+        Args: { p_client_id: string; p_criterion: Json; p_trainer_id: string }
+        Returns: boolean
       }
       initialize_account: {
         Args: {
@@ -1982,6 +2066,30 @@ export type Database = {
       save_workout: {
         Args: { p_expected_version?: number | null; p_workout: Json }
         Returns: string
+      }
+      set_client_custom_metric_archived: {
+        Args: {
+          p_archived: boolean
+          p_expected_version: number
+          p_metric_id: string
+        }
+        Returns: {
+          archived_at: string | null
+          client_id: string
+          created_at: string
+          id: string
+          name: string
+          trainer_id: string
+          unit: string | null
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "client_custom_metrics"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_client_workout_comment: {
         Args: {

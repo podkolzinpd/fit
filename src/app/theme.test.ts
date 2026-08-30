@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  applyAppTheme,
   applyThemeVariant,
   resolveAppTheme,
   resolveThemePreference,
@@ -26,20 +27,14 @@ describe('resolveAppTheme', () => {
 })
 
 describe('resolveThemeVariant', () => {
-  it('отдаёт пилотную палитру только вместе с выбранной тёмной темой', () => {
-    expect(resolveThemeVariant('dark', true)).toBe('dark-pilot')
-    expect(resolveThemeVariant('dark', false)).toBe('dark')
+  it('использует один вариант для каждой принятой темы', () => {
+    expect(resolveThemeVariant('dark')).toBe('dark')
+    expect(resolveThemeVariant('light')).toBe('light')
   })
 
-  it('не подменяет светлую тему пилотной палитрой', () => {
-    expect(resolveThemeVariant('light', true)).toBe('light')
-    expect(resolveThemeVariant('light', false)).toBe('light')
-  })
-
-  it('даёт каждому варианту свой класс, а базовой тёмной — ни одного', () => {
+  it('даёт светлой теме класс, а базовой тёмной — ни одного', () => {
     expect(themeVariantClass('light')).toBe('theme-light')
     expect(themeVariantClass('dark')).toBe('')
-    expect(themeVariantClass('dark-pilot')).toBe('theme-dark-pilot')
   })
 })
 
@@ -60,22 +55,28 @@ describe('applyThemeVariant', () => {
 
     applyThemeVariant('light')
     expect(document.documentElement.classList.contains('theme-light')).toBe(true)
-    expect(document.documentElement.classList.contains('theme-dark-pilot')).toBe(false)
-    expect(themeColor()).toBe('#f7f4ef')
-
-    applyThemeVariant('dark-pilot')
-    expect(document.documentElement.classList.contains('theme-light')).toBe(false)
-    expect(document.documentElement.classList.contains('theme-dark-pilot')).toBe(true)
-    expect(themeColor()).toBe('#000000')
+    expect(themeColor()).toBe('#FBFAF7')
 
     applyThemeVariant('dark')
     expect(document.documentElement.classList.contains('theme-light')).toBe(false)
-    expect(document.documentElement.classList.contains('theme-dark-pilot')).toBe(false)
-    expect(themeColor()).toBe('#15131a')
+    expect(themeColor()).toBe('#111214')
   })
 
   it('не падает, когда meta theme-color отсутствует', () => {
-    expect(() => applyThemeVariant('dark-pilot')).not.toThrow()
-    expect(document.documentElement.classList.contains('theme-dark-pilot')).toBe(true)
+    expect(() => applyThemeVariant('dark')).not.toThrow()
+  })
+
+  it('применяет принятую системную палитру до первого render', () => {
+    const meta = document.createElement('meta')
+    meta.setAttribute('name', 'theme-color')
+    document.head.append(meta)
+
+    applyAppTheme('dark')
+    expect(document.documentElement).toHaveClass('ui-identity')
+    expect(themeColor()).toBe('#111214')
+
+    applyAppTheme('light')
+    expect(document.documentElement).toHaveClass('ui-identity')
+    expect(themeColor()).toBe('#FBFAF7')
   })
 })

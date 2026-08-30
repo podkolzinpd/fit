@@ -4,22 +4,20 @@
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
 
-Обновлено: 2026-08-29
-Проверенный базовый `main`: `0a0c735` (`Progress 1.1: добавить подтверждённые критерии цели (#678)`)
+Обновлено: 2026-08-30
+Проверенный базовый `main`: `e0c4e43` (`Progress: поднять и упростить карту тела (#691)`)
 
 ## Текущий release gate
 
 - Foundation UI Identity v1 принята. Задачи 8–28 — клиентский, тренерский,
   полный auth scope, Assistant, accessibility и visual release gate —
   завершены последовательно.
-- Глобальный rollout новой identity работает через
-  `VITE_MONOCHROME_ROLLOUT_MODE`: `on` (default для всех), `preview` (прежний
-  server-managed `monochrome_preview` по `user_id`) и `off` (legacy UI для всех
-  одним переключателем и redeploy).
-- Legacy components, CSS и `public.user_feature_flags` пока не удаляются.
-  Email не участвует во frontend, routing или UI rollout conditions.
-- Task 28 не меняет product bundle: она стабилизирует только E2E navigation,
-  фиксирует финальную 390/430/1440 и WebKit/iOS matrix и release evidence.
+- Foundation UI Identity v1 становится единственным production UI: runtime-
+  режимы `on / preview / off`, персональный preview, dark pilot и route-level
+  old/new branches удалены в retirement-ветке.
+- Историческая `public.user_feature_flags` больше не читается приложением и
+  закрыта для frontend-ролей. Физический drop выполняется отдельным ручным
+  destructive-окном согласно migration policy репозитория.
 - Ручной видимый production smoke остаётся follow-up: встроенный браузер
   заблокирован admin-enforced policy; контроль не обходился.
 
@@ -43,14 +41,27 @@
 - Assistant trainer-only защищён `TrainerOnly`; durable turns/actions и narrow
   RPC сохраняют owner/RLS. Новые turn'ы создают workout draft, прежние карточки
   остаются читаемыми; исходная диктовка сохраняется при уточнении клиента.
-- PWA, ручной беговой MVP и локальный public-domain каталог работают. Web Push
-  `workout_reminder` отправляется клиенту в 9:00 его timezone через Postgres
-  producer/dispatcher/finalize и VAPID Cloud Function.
+- PWA, беговой MVP, локальный каталог и Web Push работают: `workout_reminder`
+  (9:00 по таймзоне клиента) и `workout_scheduled` (мгновенно при создании
+  тренером плановой тренировки клиенту, не при self-service). Transport
+  secrets — из Yandex Lockbox без вывода в repo/CI.
 - Client и Trainer Progress используют одну короткую историю подтверждённого
   периода: лучший результат, тренировки, `X/Y` недель, улучшенные упражнения,
   карта тела, сравнение с периодом, связь с целью и ближайший план. Тренер видит
   plan/fact, внутренние сигналы, редактор и статус публикации; выполнение плана
   не выдаётся за прогресс к цели.
+- Верх Progress закреплён в порядке `Период → Главное сейчас → Цель → Карта
+  тела → Сравнение периодов → Результаты периода`. Карта сохраняет режимы прогресса/нагрузки и виды
+  фигуры, но рядом с изображением показывает только выбранную зону, точное
+  рассчитанное значение и один короткий вывод; упражнения раскрываются отдельно.
+  LLM-текст допускается только при совпадении упражнения и рассчитанного значения,
+  иначе используется deterministic fallback без назначения программы.
+- Сравнение использует только окна одинаковой длины и подтверждённые факты:
+  цель, стандартные замеры, силовой результат и объём, кардио, активные недели,
+  тренировки и подходы. Видны четыре плоские приоритетные строки, остальные
+  раскрываются. LLM-текст обязан совпасть с предметом и минимум двумя числами
+  `раньше → сейчас`; вывод с советом, причиной или новым числом заменяется
+  deterministic fallback. Первый период остаётся нейтральной отправной точкой.
 - Карточка спортсмена у тренера — один нейтральный вход в планирование,
   равноправные переходы в историю/прогресс, действие «Добавить этапы». Выбор
   фигуры/схемы — настройка аккаунта тренера, не смешивается с выбором клиента.
@@ -68,10 +79,8 @@
   доставляются автоматически через GitHub OIDC, private runner и forward-only
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
 - Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
-  exercises, workout lifecycle и post-workout работают на stage (миграции
-  `000001–000020`). Run `33154423400` доставил revision `796f958`: миграции,
-  runtime DB preflight, exact read/write smoke и независимый summary list зелёные;
-  rollback не потребовался.
+  exercises и workout lifecycle работают на stage (`000001–000020`); revision
+  `796f958` прошёл migrations, runtime preflight и read/write smoke.
 - Native AI использует metadata IAM token без статического ключа; точную роль
   один раз выдаёт `fit-stage-api` администратор, а OIDC не меняет folder IAM.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
@@ -88,40 +97,26 @@
 
 ## Проверки активной ветки
 
-- Исправление self-service цели: клиент может создать, переформулировать,
-  разбить на этапы и архивировать свою цель без тренера и при активной связи с
-  тренером. Общая цель остаётся доступна связанному тренеру; посторонний тренер
-  и прямые записи в таблицы остаются запрещены.
-- YAFIT-414 / Progress 1.1: свободный текст цели дополнен необязательным ручным
-  критерием `weight/waist/chest/hips`; старые цели не интерпретируются по тексту.
-  Общая форма Trainer/Client и карточка Progress различают «Не настроено»,
-  «Нужны данные», «Настроено» и «Нужно проверить». Численный статус, динамика,
-  freshness и LLM остаются за пределами 1.1.
-- Tasks 25–26: PR `#672/#673`, auth и Assistant задеплоены; app/API, Chromium,
-  WebKit и Linux/Darwin visual matrix зелёные на 390/430/1440 в light/dark.
-  Yandex stage preview sync `33263066435` также зелёный.
-- Task 27: WCAG AA token pairs, screen-reader names, 44 px targets,
-  focus-visible и reduced motion добавлены в общий автоматический контракт.
-- Task 27: PR `#674`, merge `6e344d6`, production Vercel deployment
-  `6158408571` success; весь обязательный CI зелёный.
-- Task 28 final matrix: 72 applicable visual scenarios, 18 intentional
-  role/viewport skips, 73 Chromium behavior scenarios и оба WebKit shard
-  зелёные. В репозитории 346 согласованных Linux/Darwin snapshots для
-  390/430/1440.
-- Встроенный localhost browser заблокирован admin-enforced policy до загрузки;
-  стандартный Playwright runtime используется для реальной проверки.
-- Общий audit Home → Live → Progress прошёл без stabilization-задачи: едины
-  typography, spacing, radii, surfaces, actions, navigation и light/dark;
-  coral/purple и эффект простой перекраски отсутствуют.
+- `workout_scheduled` push подтверждён: 9 целевых pgTAP-тестов (уведомление
+  подписанному клиенту при создании плана тренером, no-op без подписки,
+  no-op на self-service создании клиентом себе), полный SQL-набор (885
+  тестов) зелёный, lint/typecheck/db:types:check зелёные.
+- Producer вызывается явно из `private.legacy_save_workout_request` (не
+  триггером — AGENTS.md запрещает бизнес-триггеры), только при создании
+  новой `planned`-тренировки трейнером для привязанного клиента.
+- YAFIT-415 добавляет на клиентскую историю тренировок переключатель
+  «Список / Календарь», месячную выборку без чтения всего архива, переход от
+  даты к существующим chronicle-карточкам и восстановление месяца/даты после
+  просмотра тренировки. Presentation model и компонент покрыты unit-тестами,
+  реальный create → calendar → detail → back сценарий — Chromium E2E; light и
+  dark проверены на 390/430 px.
 
 ## Ближайший порядок
 
-1. Выполнить короткий ручной visual smoke production под Client и Trainer test
-   accounts, когда browser policy снова разрешит доступ.
-2. Сохранять rollout `on`; при серьёзной проблеме установить
-   `VITE_MONOCHROME_ROLLOUT_MODE=off` и redeploy.
-3. Не удалять legacy UI, `preview` и feature flag минимум один стабильный
-   релизный цикл; cleanup выполнять отдельной задачей.
+1. Отдельно согласовать ручное удаление исторической feature-flag таблицы после
+   проверки внешних consumers.
+2. Выполнить короткий production visual smoke под Client и Trainer test accounts
+   после merge/deploy retirement.
 
 ## Отложено
 

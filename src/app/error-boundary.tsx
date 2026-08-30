@@ -26,7 +26,7 @@ export class AppErrorBoundary extends Component<Props, State> {
 
   render() {
     if (!this.state.failed) return this.props.children
-    return <main className="app-render-error" role="alert">
+    return <main className="app-render-error ui-identity system-state-identity" role="alert">
       <span className="app-render-error-mark" aria-hidden="true">!</span>
       <h1>Не удалось открыть экран</h1>
       <p>Ваши данные сохранены. Попробуйте открыть экран ещё раз или обновите приложение.</p>

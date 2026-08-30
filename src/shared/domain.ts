@@ -14,10 +14,6 @@ export type BlockPreset = 'set' | 'circuit' | 'interval'
 export type AccountRole = 'trainer' | 'client'
 export type TrainerReaction = 'thumbs_up' | 'fire' | 'strong'
 
-export interface SessionFeatureFlags {
-  monochromePreview: boolean
-}
-
 interface SessionActorBase {
   userId: UUID
   role: AccountRole
@@ -25,7 +21,6 @@ interface SessionActorBase {
   firstName: string | null
   lastName: string | null
   timezone: string
-  featureFlags: SessionFeatureFlags
 }
 
 export interface TrainerActor extends SessionActorBase {
@@ -110,7 +105,19 @@ export interface GoalStage {
   version: number
 }
 
-export type GoalCriterionMetric = 'weight' | 'waist' | 'chest' | 'hips'
+export type StandardGoalCriterionMetric = 'weight' | 'waist' | 'chest' | 'hips'
+
+export type GoalCriterionMetric = StandardGoalCriterionMetric
+  | 'exercise_working_weight'
+  | 'exercise_reps'
+  | 'exercise_volume'
+  | 'exercise_best_result'
+  | 'cardio_distance'
+  | 'cardio_duration'
+  | 'cardio_pace'
+  | 'cardio_distance_time'
+  | 'workout_regularity'
+  | 'custom'
 
 export type GoalCriterionOperation =
   | 'decrease_to'
@@ -120,6 +127,8 @@ export type GoalCriterionOperation =
   | 'track_only'
 
 export type GoalCriterionConfirmationStatus = 'suggested' | 'confirmed' | 'needs_review'
+export type GoalRegularityPeriod = 'week' | 'month'
+export type GoalRegularityMode = 'average' | 'each_period'
 
 export interface GoalCriterion {
   id: UUID
@@ -130,6 +139,18 @@ export interface GoalCriterion {
   rangeMin: number | null
   rangeMax: number | null
   unit: string
+  baselineValue: number | null
+  baselineRecordedOn: LocalDate | null
+  secondaryTargetValue?: number | null
+  secondaryUnit?: string | null
+  exerciseSource?: 'system' | 'custom' | null
+  exerciseRef?: string | null
+  exerciseName?: string | null
+  customExerciseId?: UUID | null
+  customMetricId?: UUID | null
+  customMetricName?: string | null
+  regularityPeriod?: GoalRegularityPeriod | null
+  regularityMode?: GoalRegularityMode | null
   confirmationStatus: GoalCriterionConfirmationStatus
   position: number
   version: number
@@ -154,6 +175,16 @@ export interface SaveGoalCriterionInput {
   rangeMin?: number | null
   rangeMax?: number | null
   unit: string
+  secondaryTargetValue?: number | null
+  secondaryUnit?: string | null
+  exerciseSource?: 'system' | 'custom' | null
+  exerciseRef?: string | null
+  exerciseName?: string | null
+  customExerciseId?: UUID | null
+  customMetricId?: UUID | null
+  customMetricName?: string | null
+  regularityPeriod?: GoalRegularityPeriod | null
+  regularityMode?: GoalRegularityMode | null
   confirmationStatus: 'confirmed'
   position?: number
   version?: number
@@ -165,6 +196,7 @@ export interface SaveClientGoalInput {
   title: string
   targetDate?: LocalDate | null
   criterion?: SaveGoalCriterionInput | null
+  criteria?: SaveGoalCriterionInput[] | null
   version?: number
 }
 

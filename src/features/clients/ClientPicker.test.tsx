@@ -21,9 +21,9 @@ describe('ClientPicker', () => {
     expect(screen.getByText('Борис Иванов')).toBeInTheDocument()
     expect(screen.queryByText('Анна Смирнова')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: '＋ Новый клиент' }))
+    await user.click(screen.getByRole('button', { name: 'Новый клиент' }))
     expect(screen.getByLabelText('Имя нового клиента')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '← К выбору' }))
+    await user.click(screen.getByRole('button', { name: 'К выбору' }))
     expect(screen.getByLabelText('Поиск клиента')).toBeInTheDocument()
 
     await user.click(screen.getByText('Борис Иванов'))

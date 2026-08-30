@@ -11,6 +11,7 @@ describe('AppErrorBoundary', () => {
   it('заменяет render error на безопасный экран и позволяет повторить', () => {
     const { rerender } = render(<AppErrorBoundary><ThrowsOnce shouldThrow /></AppErrorBoundary>)
     expect(screen.getByRole('alert')).toHaveTextContent('Не удалось открыть экран')
+    expect(screen.getByRole('alert')).toHaveClass('ui-identity', 'system-state-identity')
     expect(screen.queryByText('render failed')).toBeNull()
 
     rerender(<AppErrorBoundary><ThrowsOnce shouldThrow={false} /></AppErrorBoundary>)

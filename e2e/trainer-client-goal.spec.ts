@@ -23,7 +23,7 @@ test('global rollout gives a new trainer the Client Goal identity', async ({ pag
 
   await page.goto(`/clients/${demoClientId}/goal`)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-goal-identity/)
-  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('html')).toHaveClass(/ui-identity/)
 })
 
 test('trainer Client Goal keeps create and date validation under monochrome preview', async ({ page }) => {
@@ -49,10 +49,18 @@ test('trainer Client Goal keeps create and date validation under monochrome prev
   await page.getByLabel('Способ оценки').selectOption('maintain_range')
   await page.getByLabel('Минимум, кг').fill('64.5')
   await page.getByLabel('Максимум, кг').fill('65.5')
+  await page.getByRole('button', { name: '＋ Добавить критерий' }).click()
+  const regularity = page.locator('.goal-criterion-item').nth(1)
+  await regularity.getByLabel('Показатель').selectOption('workout_regularity')
+  await regularity.locator('select').nth(1).selectOption('week')
+  await regularity.locator('select').nth(2).selectOption('each_period')
+  await regularity.getByLabel('Способ оценки').selectOption('increase_to')
+  await regularity.getByLabel('Значение, трен.').fill('3')
   await page.getByRole('button', { name: 'Создать цель' }).click()
   await expect(page.getByText('Этапов пока нет')).toBeVisible()
   await expect(page.getByText('Вес', { exact: true })).toBeVisible()
   await expect(page.getByText('64,5–65,5 кг')).toBeVisible()
+  await expect(page.getByText('2 критерия подтверждены')).toBeVisible()
 
   await page.getByRole('button', { name: '＋ Добавить' }).click()
   await page.getByLabel('Название этапа').fill('Базовый объём')

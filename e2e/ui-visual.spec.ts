@@ -4,6 +4,49 @@ import { expectMonochromeAccessibility } from './accessibility-helpers'
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
+function comparisonWorkoutRow(id: string, date: string, weight: number, distance: number, strengthSets: number) {
+  const baseSet = (suffix: string, position: number, values: { weight?: number, reps?: number, distance?: number, duration?: number }) => ({
+    id: `${id}-${suffix}-${position}`, position,
+    plan_weight_kg: values.weight ?? null, plan_reps: values.reps ?? null,
+    plan_duration_min: values.duration ?? null, plan_duration_sec: null, plan_distance_km: values.distance ?? null, plan_rpe: null,
+    fact_weight_kg: values.weight ?? null, fact_reps: values.reps ?? null,
+    fact_duration_min: values.duration ?? null, fact_duration_sec: null, fact_distance_km: values.distance ?? null, fact_rpe: null,
+    confirmed_at: `${date}T10:00:00Z`, version: 1,
+  })
+  const exercise = (suffix: string, name: string, muscle: string, kind: string, sets: ReturnType<typeof baseSet>[]) => ({
+    id: `${id}-${suffix}`, position: suffix === 'press' ? 0 : 1, exercise_source: 'system', exercise_ref: suffix,
+    custom_exercise_id: null, exercise_name: name, muscle_group: muscle, input_kind: kind, block_id: `${id}-${suffix}-block`,
+    block_type: 'single', block_preset: 'set', block_rounds: 1, rest_between_exercises_sec: 0,
+    rest_between_rounds_sec: 0, rest_between_sets_sec: 60, trainer_comment: null, sets,
+  })
+  return {
+    id, client_id: demoClientId, trainer_id: '00000000-0000-4000-8000-000000000001', client_name: 'Анна Смирнова', created_by: null,
+    workout_date: date, start_time: null, end_time: null, started_at: `${date}T09:00:00Z`, completed_at: `${date}T10:00:00Z`,
+    status: 'done', notes: null, trainer_review: null, trainer_reaction: null, trainer_review_author_id: null,
+    trainer_reviewed_at: null, client_comment: null, session_rpe: null, wellbeing: null, discomfort: null, has_pr: false,
+    stage_id: null, stage_title: null, version: 1, total_count: 3,
+    exercises: [
+      exercise('press', 'Жим лёжа', 'chest', 'strength', Array.from({ length: strengthSets }, (_, index) => baseSet('press-set', index, { weight, reps: 10 }))),
+      exercise('run', 'Бег', 'cardio', 'distance', [baseSet('run-set', 0, { distance, duration: 30 })]),
+    ],
+  }
+}
+
+async function mockPeriodComparison(page: VisualPage) {
+  await page.route('**/rest/v1/rpc/list_workouts', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify([
+      comparisonWorkoutRow('81000000-0000-4000-8000-000000000001', '2026-07-05', 50, 5, 1),
+      comparisonWorkoutRow('81000000-0000-4000-8000-000000000002', '2026-08-05', 60, 7, 2),
+      comparisonWorkoutRow('81000000-0000-4000-8000-000000000003', '2026-08-12', 60, 7, 2),
+    ]),
+  }))
+  await page.route('**/rest/v1/client_progress?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
+    { id: '82000000-0000-4000-8000-000000000001', client_id: demoClientId, created_by: null, recorded_on: '2026-07-10', weight_kg: 60, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+    { id: '82000000-0000-4000-8000-000000000002', client_id: demoClientId, created_by: null, recorded_on: '2026-08-10', weight_kg: 61, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+  ]) }))
+  await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+}
+
 type VisualPage = import('@playwright/test').Page
 type VisualGotoOptions = Parameters<VisualPage['goto']>[1]
 
@@ -31,7 +74,111 @@ async function signIn(page: import('@playwright/test').Page, email: string, dest
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(destination)
+  await expect(page).toHaveURL(destination, { timeout: 15_000 })
+}
+
+async function removeScheduleVisualWorkouts(
+  page: import('@playwright/test').Page,
+  scheduleDate: string,
+  clientName: string,
+) {
+  await gotoStable(page, `/schedule?date=${scheduleDate}`, { waitUntil: 'domcontentloaded' })
+  await expect(page.locator('.schedule-selected-date span')).not.toHaveText('Загружаем…', { timeout: 15_000 })
+  const workoutUrls = await page.locator('.day-grid-event').filter({ hasText: clientName }).evaluateAll((events) => (
+    [...new Set(events.map((event) => event.getAttribute('href')).filter((href): href is string => Boolean(href)))]
+  ))
+
+  for (const workoutUrl of workoutUrls) {
+    await gotoStable(page, workoutUrl, { waitUntil: 'domcontentloaded' })
+    await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
+    await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+  }
+}
+
+async function mockRoleHomeWorkoutState(page: VisualPage) {
+  const emptyRows = (route: import('@playwright/test').Route) => route.fulfill({
+    contentType: 'application/json',
+    body: '[]',
+  })
+  await page.route('**/rest/v1/rpc/list_workouts', emptyRows)
+  await page.route('**/rest/v1/rpc/list_trainer_attention_workouts', emptyRows)
+}
+
+async function mockClientWorkoutHistory(page: import('@playwright/test').Page) {
+  const workoutRows = ['2026-08-10', '2026-08-03'].map((workoutDate, index) => ({
+    id: `b1000000-0000-4000-8000-00000000000${index + 1}`,
+    client_id: demoClientId,
+    trainer_id: '22222222-2222-4222-8222-222222222222',
+    client_name: 'Анна Смирнова',
+    created_by: '92000000-0000-4000-8000-000000000029',
+    workout_date: workoutDate,
+    start_time: '18:00:00',
+    end_time: '19:00:00',
+    started_at: `${workoutDate}T15:00:00Z`,
+    completed_at: `${workoutDate}T16:00:00Z`,
+    status: 'done',
+    notes: null,
+    trainer_review: index === 0 ? 'Отличная техника и ровный темп.' : null,
+    trainer_reaction: index === 0 ? 'strong' : null,
+    trainer_review_author_id: index === 0 ? '22222222-2222-4222-8222-222222222222' : null,
+    trainer_reviewed_at: index === 0 ? `${workoutDate}T18:00:00Z` : null,
+    client_comment: null,
+    session_rpe: index === 0 ? 7 : 6,
+    wellbeing: 'good',
+    discomfort: false,
+    has_pr: index === 0,
+    stage_id: null,
+    stage_title: null,
+    version: 1,
+    total_count: 2,
+    exercises: [{
+      id: `b2000000-0000-4000-8000-00000000000${index + 1}`,
+      position: 0,
+      exercise_source: 'system',
+      exercise_ref: 'bench-press',
+      custom_exercise_id: null,
+      exercise_name: 'Жим лёжа',
+      muscle_group: 'chest',
+      input_kind: 'strength',
+      block_id: `b2000000-0000-4000-8000-00000000000${index + 1}`,
+      block_type: 'single',
+      block_preset: 'set',
+      block_rounds: 1,
+      rest_between_exercises_sec: 0,
+      rest_between_rounds_sec: 90,
+      rest_between_sets_sec: 90,
+      trainer_comment: null,
+      sets: [{
+        id: `b3000000-0000-4000-8000-00000000000${index + 1}`,
+        position: 0,
+        plan_weight_kg: 40,
+        plan_reps: 10,
+        plan_duration_min: null,
+        plan_duration_sec: null,
+        plan_distance_km: null,
+        plan_rpe: null,
+        fact_weight_kg: 40 + index * 5,
+        fact_reps: 10,
+        fact_duration_min: null,
+        fact_duration_sec: null,
+        fact_distance_km: null,
+        fact_rpe: null,
+        confirmed_at: `${workoutDate}T15:30:00Z`,
+        version: 1,
+      }],
+    }],
+  }))
+  await page.route('**/rest/v1/rpc/list_workouts', async (route) => {
+    const body = route.request().postDataJSON() as { p_from?: string | null; p_to?: string | null; p_offset?: number }
+    const filtered = workoutRows.filter((workout) => (
+      (!body.p_from || workout.workout_date >= body.p_from)
+      && (!body.p_to || workout.workout_date <= body.p_to)
+    ))
+    const offset = body.p_offset ?? 0
+    const rows = filtered.slice(offset).map((workout) => ({ ...workout, total_count: filtered.length }))
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(rows) })
+  })
 }
 
 async function openClientProgress(page: import('@playwright/test').Page, options: { scheme?: boolean, dark?: boolean } = {}) {
@@ -54,6 +201,7 @@ async function openClientProgress(page: import('@playwright/test').Page, options
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/progress-identity/)
   await expect(page.locator('.client-progress-card')).toBeVisible()
+  await expect(page.locator('.client-progress-main-now')).toBeVisible()
 }
 
 async function expectVisualBaseline(
@@ -64,6 +212,7 @@ async function expectVisualBaseline(
   maskColor = '#f8f5ef',
 ) {
   await expectMonochromeAccessibility(page)
+  await expect(page.locator('.skeleton-block')).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await expect(page).toHaveScreenshot(name, {
     animations: 'disabled',
@@ -73,6 +222,25 @@ async function expectVisualBaseline(
     maskColor,
     maxDiffPixelRatio: 0.03,
   })
+}
+
+async function expectBodyMapBaseline(map: import('@playwright/test').Locator, name: string) {
+  const previousScrollTop = await map.evaluate(() => document.querySelector<HTMLElement>('.content')?.scrollTop ?? 0)
+  await map.scrollIntoViewIfNeeded()
+  await expect(map.locator('.body-progress-visual')).not.toHaveClass(/discovering/, { timeout: 3_000 })
+  try {
+    await expect(map).toHaveScreenshot(name, {
+      animations: 'disabled',
+      caret: 'hide',
+      maxDiffPixelRatio: 0.015,
+      stylePath: 'e2e/visual-body-map.css',
+    })
+  } finally {
+    await map.evaluate((_element, scrollTop) => {
+      const content = document.querySelector<HTMLElement>('.content')
+      if (content) content.scrollTop = scrollTop
+    }, previousScrollTop)
+  }
 }
 
 async function createStandaloneClient(
@@ -95,6 +263,7 @@ async function createStandaloneClient(
 }
 
 async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
+  await page.clock.install({ time: new Date('2026-08-29T18:00:00+03:00') })
   await signIn(page, 'client@fit.local', /\/me$/)
 
   await gotoStable(page, '/me/workouts')
@@ -127,7 +296,7 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
 test('auth family keeps light and dark visual baselines', async ({ page }) => {
   await gotoStable(page, '/auth')
   await expect(page.locator('.auth-flow-identity')).toBeVisible()
-  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('html')).toHaveClass(/ui-identity/)
   await expectVisualBaseline(page, `auth-login-${process.platform}.png`, [], true)
 
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
@@ -141,7 +310,6 @@ test('auth family keeps light and dark visual baselines', async ({ page }) => {
   await page.addInitScript(() => window.localStorage.setItem('fit.appTheme', 'dark'))
   await gotoStable(page, '/auth/forgot')
   await expect(page.getByRole('heading', { name: 'Восстановление пароля' })).toBeVisible()
-  await expect(page.locator('.auth-flow-identity')).not.toHaveClass(/theme-dark-pilot/)
   await expectVisualBaseline(page, `auth-forgot-dark-${process.platform}.png`, [], true, '#111214')
 
   await gotoStable(page, '/auth')
@@ -168,7 +336,6 @@ test('Join keeps manual and invitation states in the auth family', async ({ page
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/join')
   await expect(page.locator('.phone-frame')).toHaveClass(/auth-join-identity/)
-  await expect(page.locator('.phone-frame')).not.toHaveClass(/theme-dark-pilot/)
   await expect(page.locator('.tab-bar')).toHaveCSS('background-color', 'rgb(17, 18, 20)')
   await expect(page.locator('.tab-bar')).toHaveCSS('border-top-color', 'rgb(48, 49, 54)')
   await expectVisualBaseline(page, `auth-join-dark-${process.platform}.png`, [], true, '#111214')
@@ -176,6 +343,7 @@ test('Join keeps manual and invitation states in the auth family', async ({ page
 
 test('current role home keeps its visual baseline', async ({ page }, testInfo) => {
   const trainer = testInfo.project.name === 'visual-trainer-1440'
+  await mockRoleHomeWorkoutState(page)
   await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
   // Фиксируем время только после auth: приветствие и недельный период не
   // должны менять committed screenshot в зависимости от часа запуска CI.
@@ -216,6 +384,7 @@ test('current role home keeps its visual baseline', async ({ page }, testInfo) =
 
 test('trainer Today keeps its mobile visual baselines', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Trainer desktop is covered by the role-home baseline')
+  await mockRoleHomeWorkoutState(page)
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await gotoStable(page, '/today')
@@ -263,6 +432,8 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client routes use mobile visual profiles')
   await openClientProgress(page)
   await expect(page.locator('.client-progress-card .body-progress-map')).toBeVisible()
+  await expectBodyMapBaseline(page.locator('.client-progress-card .body-progress-map'), `client-body-map-female-${process.platform}.png`)
+  await expect(page.locator('.client-progress-main-now').getByText('Главное сейчас', { exact: true })).toBeVisible()
   const progressStats = page.locator('.client-progress-card .ai-progress-stats')
   await expect(progressStats.getByText(/трениров/).first()).toBeVisible()
   await expect(progressStats.getByText(/недел/).first()).toBeVisible()
@@ -274,6 +445,15 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   await expect(page.getByText('Прогресс уже заметен, ты на верном пути.')).toHaveCount(0)
   await expect(page.getByText('Проверяем цель…')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Обновить' })).toBeVisible()
+  await expect(page.locator('.client-progress-main-now').evaluate((element) => {
+    const goal = document.querySelector('.client-progress-goal-story')
+    const map = document.querySelector('.body-progress-map')
+    const summary = document.querySelector('.progress-story-summary')
+    return Boolean(goal && map && summary
+      && (element.compareDocumentPosition(goal) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (goal.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (map.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
+  })).resolves.toBe(true)
   const progressCoachmark = page.getByRole('button', { name: 'Понятно' })
   if (await progressCoachmark.isVisible()) await progressCoachmark.click()
   await expectVisualBaseline(page, `client-progress-${process.platform}.png`)
@@ -338,6 +518,7 @@ test('client Progress scheme keeps its visual baseline', async ({ page }, testIn
   await openClientProgress(page, { scheme: true })
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0)
   await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible({ timeout: 15_000 })
+  await expectBodyMapBaseline(page.locator('.client-progress-card .body-progress-map'), `client-body-map-scheme-${process.platform}.png`)
   await expectVisualBaseline(page, `client-progress-scheme-${process.platform}.png`)
 })
 
@@ -345,7 +526,92 @@ test('client Progress scheme keeps its dark visual baseline', async ({ page }, t
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
   await openClientProgress(page, { scheme: true, dark: true })
   await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible({ timeout: 15_000 })
+  await expectBodyMapBaseline(page.locator('.client-progress-card .body-progress-map'), `client-body-map-scheme-dark-${process.platform}.png`)
   await expectVisualBaseline(page, `client-progress-scheme-dark-${process.platform}.png`)
+})
+
+test('client Progress shows composite goal facts in both themes', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
+  await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+    id: 'a1000000-0000-4000-8000-000000000001', clientId: demoClientId,
+    title: 'Держать вес и тренироваться регулярно', targetDate: null, status: 'active', version: 1, stages: [],
+    criteria: [
+      { id: 'a2000000-0000-4000-8000-000000000002', goalId: 'a1000000-0000-4000-8000-000000000001', metric: 'weight', operation: 'maintain_range', targetValue: null, rangeMin: 58.5, rangeMax: 59.5, unit: 'кг', baselineValue: null, baselineRecordedOn: null, confirmationStatus: 'confirmed', position: 0, version: 1 },
+      { id: 'a2000000-0000-4000-8000-000000000003', goalId: 'a1000000-0000-4000-8000-000000000001', metric: 'workout_regularity', operation: 'increase_to', targetValue: 2, rangeMin: null, rangeMax: null, unit: 'трен.', baselineValue: null, baselineRecordedOn: null, regularityPeriod: 'week', regularityMode: 'each_period', confirmationStatus: 'confirmed', position: 1, version: 1 },
+    ],
+  }) }))
+  await page.route('**/rest/v1/client_progress?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
+    { id: 'a4000000-0000-4000-8000-000000000004', client_id: demoClientId, created_by: null, recorded_on: '2026-08-15', weight_kg: 59, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+  ]) }))
+  await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await openClientProgress(page)
+  const goal = page.locator('.client-progress-goal-story')
+  await expect(goal.locator('.goal-criterion-progress-row')).toHaveCount(1)
+  await expect(goal.getByText(/из 2 выполнено/)).toBeVisible()
+  await expect(goal.getByRole('button', { name: 'Показать все критерии · 2' })).toBeVisible()
+  await goal.evaluate((element) => element.scrollIntoView({ block: 'start' }))
+  await expectVisualBaseline(page, `client-progress-composite-${process.platform}.png`, [], true)
+  await goal.getByRole('button', { name: 'Показать все критерии · 2' }).click()
+  await expect(goal.locator('.goal-criterion-progress-row')).toHaveCount(2)
+  await goal.getByRole('button', { name: 'Показать только основной критерий' }).click()
+
+  await gotoStable(page, '/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await gotoStable(page, '/me/progress')
+  const darkGoal = page.locator('.client-progress-goal-story')
+  await expect(darkGoal.locator('.goal-criterion-progress-row')).toHaveCount(1)
+  await darkGoal.evaluate((element) => element.scrollIntoView({ block: 'start' }))
+  await expectVisualBaseline(page, `client-progress-composite-dark-${process.platform}.png`, [], true, '#1d1e21')
+})
+
+test('period comparison stays compact for client and trainer in both themes', async ({ page }, testInfo) => {
+  const trainer = testInfo.project.name === 'visual-trainer-1440'
+  const initialViewport = page.viewportSize()
+  await mockPeriodComparison(page)
+  if (trainer) {
+    await signIn(page, 'trainer@fit.local', /\/today$/)
+    await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+    await gotoStable(page, `/progress/${demoClientId}`)
+    await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
+  } else {
+    await openClientProgress(page)
+  }
+
+  let comparison = page.locator('.client-progress-comparison')
+  await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(4)
+  await expect(comparison.getByRole('button', { name: /Показать ещё/ })).toBeVisible()
+  await expect(comparison.locator('.period-comparison-conclusions > div')).toHaveCount(2)
+  expect(await comparison.evaluate((element) => {
+    const map = document.querySelector('.body-progress-map')
+    const summary = document.querySelector('.progress-story-summary')
+    return Boolean(map && summary
+      && (map.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
+  })).toBe(true)
+  expect(await comparison.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  expect(await comparison.getByRole('button', { name: /Показать ещё/ }).evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44)
+  if (!trainer) {
+    for (const width of [320, 375, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      expect(await comparison.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    }
+    if (initialViewport) await page.setViewportSize(initialViewport)
+  }
+  await comparison.scrollIntoViewIfNeeded()
+  await expect(comparison).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-period-comparison-${process.platform}.png`, {
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+  })
+
+  await gotoStable(page, trainer ? '/profile' : '/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
+  comparison = page.locator('.client-progress-comparison')
+  await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(4)
+  await comparison.scrollIntoViewIfNeeded()
+  await expect(comparison).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-period-comparison-dark-${process.platform}.png`, {
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+  })
 })
 
 test('client measurements keep their visual baseline', async ({ page }, testInfo) => {
@@ -360,22 +626,38 @@ test('client measurements keep their visual baseline', async ({ page }, testInfo
 
 test('client workouts keep their visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client workouts use mobile visual profiles')
+  await mockClientWorkoutHistory(page)
   await signIn(page, 'client@fit.local', /\/me$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await gotoStable(page, '/me/workouts')
   await expect(page.getByRole('heading', { name: 'Мои тренировки' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/client-workouts-identity/)
-  await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
-  await expect(page.getByText('Добавьте упражнения голосом, текстом или из каталога.')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Добавить тренировку' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'История' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Календарь' })).toBeVisible()
   await expectVisualBaseline(page, `client-workouts-${process.platform}.png`)
+
+  await page.getByRole('button', { name: 'Календарь' }).click()
+  await expect(page.getByRole('grid', { name: /История тренировок за/ })).toBeVisible()
+  const calendarDate = page.locator('.client-history-calendar-day.has-workout button').first()
+  await expect(calendarDate).toBeVisible()
+  await calendarDate.click()
+  await expect(page.locator('.client-history-calendar-selection')).toBeVisible()
+  await expectVisualBaseline(page, `client-workouts-calendar-${process.platform}.png`, [], true)
 
   await gotoStable(page, '/me/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/me/workouts')
   await expect(page.locator('.phone-frame')).toHaveClass(/client-workouts-identity/)
-  await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'История' })).toBeVisible()
   await expectVisualBaseline(page, `client-workouts-dark-${process.platform}.png`)
+
+  await page.getByRole('button', { name: 'Календарь' }).click()
+  await expect(page.getByRole('grid', { name: /История тренировок за/ })).toBeVisible()
+  const darkCalendarDate = page.locator('.client-history-calendar-day.has-workout button').first()
+  await expect(darkCalendarDate).toBeVisible()
+  await darkCalendarDate.click()
+  await expect(page.locator('.client-history-calendar-selection')).toBeVisible()
+  await expectVisualBaseline(page, `client-workouts-calendar-dark-${process.platform}.png`, [], true, '#1d1e21')
 
   await gotoStable(page, '/me/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
@@ -650,11 +932,24 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await expect(trainerAnalysis).toBeVisible()
   await expect(trainerAnalysis.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0)
   await expect(trainerAnalysis.locator('.body-progress-map')).toBeVisible()
+  await expectBodyMapBaseline(trainerAnalysis.locator('.body-progress-map'), `trainer-body-map-scheme-${process.platform}.png`)
   await expect(trainerAnalysis.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
   await expect(trainerAnalysis.getByRole('group', { name: 'Атлетичная женщина, вид спереди' })).toHaveCount(0)
+  await expect(trainerAnalysis.locator('.client-progress-main-now').evaluate((element) => {
+    const card = element.closest('.client-progress-card')
+    const goal = card?.querySelector('.client-progress-goal-story')
+    const map = card?.querySelector('.body-progress-map')
+    const summary = card?.querySelector('.progress-story-summary')
+    return Boolean(goal && map && summary
+      && (element.compareDocumentPosition(goal) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (goal.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (map.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
+  })).resolves.toBe(true)
   await expect(page.getByText(/AI-анализ/)).toHaveCount(0)
   const coachmark = page.getByRole('button', { name: 'Понятно' })
-  if (await coachmark.isVisible()) await coachmark.click()
+  if (await coachmark.isVisible()) await coachmark.evaluate((element) => {
+    (element as HTMLButtonElement).click()
+  })
   await expectVisualBaseline(page, 'trainer-progress.png')
 
   await page.getByRole('link', { name: 'Открыть замеры и показатели' }).click()
@@ -667,7 +962,7 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await gotoStable(page, `/progress/${demoClientId}`)
   const analysis = page.getByLabel('ИИ-анализ тренировок')
   await expect(analysis.locator('.body-progress-map')).toBeVisible()
-  await expect(analysis.getByText('Анализ прогресса')).toBeVisible()
+  await expect(analysis.getByRole('heading', { name: 'Период', exact: true })).toBeVisible()
   await expect(analysis.getByText('Динамика упражнений')).toHaveCount(0)
   await analysis.getByRole('button', { name: 'Подробный анализ' }).click()
   const detailedAnalysis = page.getByRole('dialog', { name: 'Подробный анализ' })
@@ -686,6 +981,7 @@ test('trainer Progress and measurements form keep their visual baselines in both
   await expect(page.getByLabel('ИИ-анализ тренировок')).toBeVisible()
   const coachmark = page.getByRole('button', { name: 'Понятно' })
   if (await coachmark.isVisible()) await coachmark.click()
+  await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
   await expectVisualBaseline(page, `trainer-progress-${profile}-${process.platform}.png`, [], true)
 
   await gotoStable(page, `/progress/${demoClientId}?view=measurements`)
@@ -698,6 +994,8 @@ test('trainer Progress and measurements form keep their visual baselines in both
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, `/progress/${demoClientId}`)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
+  await expect(page.getByLabel('ИИ-анализ тренировок')).toBeVisible()
+  await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
   await expectVisualBaseline(page, `trainer-progress-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
 
   await gotoStable(page, `/progress/${demoClientId}?view=measurements`)
@@ -807,10 +1105,20 @@ test('trainer Client Goal keeps its real create, stage and edit states in both t
   await gotoStable(page, `/clients/${clientId}/goal`)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-goal-identity/)
   await expect(page.getByLabel('Цель')).toBeVisible()
+  await page.getByLabel('Цель').fill('Держать вес и тренироваться регулярно')
   await page.getByLabel('Дата достижения').fill('2026-12-20')
+  await page.getByRole('switch', { name: 'Автоматическая оценка' }).check()
+  await page.getByLabel('Способ оценки').selectOption('maintain_range')
+  await page.getByLabel('Минимум, кг').fill('62.5')
+  await page.getByLabel('Максимум, кг').fill('63.5')
+  await page.getByRole('button', { name: '＋ Добавить критерий' }).click()
+  const regularity = page.locator('.goal-criterion-item').nth(1)
+  await regularity.getByLabel('Показатель').selectOption('workout_regularity')
+  await regularity.locator('select').nth(2).selectOption('each_period')
+  await regularity.getByLabel('Способ оценки').selectOption('increase_to')
+  await regularity.getByLabel('Значение, трен.').fill('3')
   await expectVisualBaseline(page, `trainer-client-goal-create-${profile}-${process.platform}.png`, [], true)
 
-  await page.getByLabel('Цель').fill('Пробежать первые 10 км уверенно')
   await page.getByRole('button', { name: 'Создать цель' }).click()
   await expect(page.getByRole('heading', { name: 'Этапы' })).toBeVisible()
   await expect(page.getByText('Этапов пока нет')).toBeVisible()
@@ -848,7 +1156,7 @@ test('trainer Client Goal keeps its real create, stage and edit states in both t
 })
 
 test('trainer Schedule keeps its compact workspace in both themes', async ({ page }, testInfo) => {
-  test.setTimeout(90_000)
+  test.setTimeout(180_000)
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : 'mobile'
@@ -858,6 +1166,10 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
   let workoutUrl: string | null = null
 
   try {
+    // A browser crash or a test timeout can interrupt cleanup after the record
+    // has already been saved. Remove any record left by an earlier retry before
+    // creating the single event used by this visual baseline.
+    await removeScheduleVisualWorkouts(page, scheduleDate, clientName)
     await gotoStable(page, `/workouts/new?client=${demoClientId}&date=${scheduleDate}`, { waitUntil: 'domcontentloaded' })
     await page.getByLabel('Начало').fill('18:30')
     await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
@@ -876,7 +1188,7 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
     await expect(page.locator('.day-grid-hour')).toHaveCount(24)
     await expect(page.locator('.schedule-selected-date')).toBeHidden()
     await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toBeVisible()
-    await expect(page.locator('.day-grid-event').filter({ hasText: clientName })).toBeVisible()
+    await expect(page.locator('.day-grid-event').filter({ hasText: clientName })).toHaveCount(1)
     await expectVisualBaseline(page, `trainer-schedule-${profile}-${process.platform}.png`)
 
     await gotoStable(page, '/profile')
@@ -885,14 +1197,12 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
     await expect(page.locator('.phone-frame')).toHaveClass(/trainer-schedule-identity/)
     await expectVisualBaseline(page, `trainer-schedule-${profile}-dark-${process.platform}.png`, [], false, '#1d1e21')
   } finally {
-    if (workoutUrl) {
-      await gotoStable(page, workoutUrl, { waitUntil: 'domcontentloaded' })
-      await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
-      await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
-      await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+    try {
+      if (workoutUrl) await removeScheduleVisualWorkouts(page, scheduleDate, clientName)
+    } finally {
+      await gotoStable(page, '/profile', { waitUntil: 'domcontentloaded' })
+      const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
+      if (await darkTheme.isChecked()) await darkTheme.uncheck()
     }
-    await gotoStable(page, '/profile', { waitUntil: 'domcontentloaded' })
-    const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
-    if (await darkTheme.isChecked()) await darkTheme.uncheck()
   }
 })

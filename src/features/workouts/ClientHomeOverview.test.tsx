@@ -116,7 +116,7 @@ describe('ClientHomeOverview', () => {
     expect(screen.queryByRole('link', { name: 'Открыть план' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '0 из 1 по плану' })).toBeVisible()
     expect(screen.getByText('Всего состоялось 2 тренировки · 2 самостоятельно')).toBeVisible()
-    expect(screen.getByRole('link', { name: 'Прогресс ›' })).toHaveAttribute('href', '/me/progress')
+    expect(screen.getByRole('link', { name: 'Прогресс' })).toHaveAttribute('href', '/me/progress')
   })
 
   it('counts a partially completed planned workout as an attended workout', () => {
