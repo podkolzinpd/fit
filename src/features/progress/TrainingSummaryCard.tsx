@@ -21,6 +21,7 @@ import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { TrainingBodyProgressMap } from './ClientBodyProgressMap'
 import { MeasurementProgressSection } from './MeasurementProgressSection'
+import { WorkoutRegularityProgressSection } from './WorkoutRegularityProgressSection'
 import { progressStoryPresentation } from './client-progress-presentation'
 import { progressFactChangeLabel } from './progress-facts'
 import { formatSummaryText, formatWorkoutsPerWeek, progressMetricNoun } from './summary-format'
@@ -396,6 +397,9 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
   const visibleComparisonFacts = comparisonOpen
     ? presentation.comparison.facts
     : presentation.comparison.facts.slice(0, 4)
+  const periodDays = daysBetween(summary.periodStart, summary.periodEnd) + 1
+  const previousPeriodStart = addDays(summary.periodStart, -periodDays)
+  const previousPeriodEnd = addDays(summary.periodStart, -1)
   const goalStory = <>
     {goalLoading && <section className="client-progress-story-state" role="status">Проверяем данные цели…</section>}
     {goalError && <section className="client-progress-story-state" role="alert">Не удалось загрузить цель. <button type="button" className="link" onClick={onGoalRetry}>Повторить</button></section>}
@@ -503,6 +507,19 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       error={measurementsError}
       onRetry={onMeasurementsRetry}
       llmCandidates={measurementCopyCandidates(summary, role)}
+    />
+    <WorkoutRegularityProgressSection
+      currentWorkouts={currentWorkouts}
+      previousWorkouts={previousWorkouts}
+      periodStart={summary.periodStart}
+      periodEnd={summary.periodEnd}
+      previousPeriodStart={previousPeriodStart}
+      previousPeriodEnd={previousPeriodEnd}
+      today={today}
+      loading={workoutsLoading}
+      error={workoutsError}
+      onRetry={onWorkoutsRetry}
+      llmCandidates={[summaryConsistency(summary)]}
     />
     <section className={`progress-story-summary${heroIsMain ? ' main-fact-removed' : ''}`} aria-label="Результаты периода">
       {!heroIsMain && <div className={`progress-story-hero${presentation.hero ? '' : ' empty'}`}>

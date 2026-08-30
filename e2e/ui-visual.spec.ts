@@ -68,6 +68,21 @@ async function mockMeasurementProgress(page: VisualPage) {
   ]) }))
 }
 
+async function mockRegularityProgress(page: VisualPage) {
+  const current = ['2026-08-03', '2026-08-10', '2026-08-12']
+  const previous = ['2026-07-02', '2026-07-05', '2026-07-08', '2026-07-12', '2026-07-16', '2026-07-20', '2026-07-24', '2026-07-28']
+  const rows = [...previous, ...current].map((date, index) => comparisonWorkoutRow(
+    `87000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+    date,
+    50 + index,
+    5,
+    1,
+  ))
+  await page.route('**/rest/v1/rpc/list_workouts', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify(rows),
+  }))
+}
+
 type VisualPage = import('@playwright/test').Page
 type VisualGotoOptions = Parameters<VisualPage['goto']>[1]
 
@@ -683,6 +698,58 @@ test('measurement trends stay readable for client and trainer in both themes', a
   await expect(measurements.getByRole('heading', { name: 'Тренд по значениям' })).toBeVisible()
   await measurements.scrollIntoViewIfNeeded()
   await expect(measurements).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-measurement-trends-dark-${process.platform}.png`, {
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+  })
+})
+
+test('weekly training rhythm stays visual and readable for client and trainer in both themes', async ({ page }, testInfo) => {
+  const trainer = testInfo.project.name === 'visual-trainer-1440'
+  const initialViewport = page.viewportSize()
+  await mockRegularityProgress(page)
+  if (trainer) {
+    await signIn(page, 'trainer@fit.local', /\/today$/)
+    await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+    await gotoStable(page, `/progress/${demoClientId}`)
+  } else {
+    await openClientProgress(page, { scheme: true })
+  }
+
+  let regularity = page.locator('.client-progress-regularity-story')
+  await expect(regularity.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
+  await expect(regularity.getByText('3 тренировки', { exact: true })).toBeVisible()
+  await expect(regularity.getByText('2 из 3', { exact: true })).toBeVisible()
+  await expect(regularity.getByText('Снижение частоты', { exact: true })).toBeVisible()
+  await expect(regularity.getByRole('list', { name: 'Завершённые тренировки по неделям' }).locator('li')).toHaveCount(3)
+  await expect(regularity.locator('li[aria-label*="Без тренировок"]')).toHaveCount(1)
+  await expect(regularity.locator('li[aria-label*="Текущая неделя"]')).toHaveCount(0)
+  expect(await regularity.evaluate((element) => {
+    const measurements = document.querySelector('.client-progress-measurements-story')
+    const summary = document.querySelector('.progress-story-summary')
+    return Boolean(measurements && summary
+      && (measurements.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
+  })).toBe(true)
+  expect(await regularity.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  if (!trainer) {
+    for (const width of [320, 375, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      expect(await regularity.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    }
+    if (initialViewport) await page.setViewportSize(initialViewport)
+  }
+  await regularity.scrollIntoViewIfNeeded()
+  await expect(regularity).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-workout-regularity-${process.platform}.png`, {
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+  })
+
+  await gotoStable(page, trainer ? '/profile' : '/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
+  regularity = page.locator('.client-progress-regularity-story')
+  await expect(regularity.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
+  await regularity.scrollIntoViewIfNeeded()
+  await expect(regularity).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-workout-regularity-dark-${process.platform}.png`, {
     animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
   })
 })
