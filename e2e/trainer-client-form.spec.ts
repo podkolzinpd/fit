@@ -13,7 +13,7 @@ test('global rollout gives a new trainer the Client Form identity', async ({ pag
 
   await page.goto('/clients/new')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-form-identity/)
-  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('html')).toHaveClass(/ui-identity/)
 })
 
 test('trainer Client Create keeps existing validation under monochrome preview', async ({ page }) => {

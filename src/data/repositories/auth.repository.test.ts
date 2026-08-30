@@ -5,7 +5,6 @@ const queries = vi.hoisted(() => ({
   signIn: vi.fn(),
   getLinkedClient: vi.fn(),
   getTrainer: vi.fn(),
-  getFeatureFlags: vi.fn(),
   initializeAccount: vi.fn(),
   getProfile: vi.fn(),
   updateProfile: vi.fn(),
@@ -16,7 +15,6 @@ vi.mock('../queries/auth.queries', () => ({
     signIn: queries.signIn,
     getLinkedClient: queries.getLinkedClient,
     getTrainer: queries.getTrainer,
-    getFeatureFlags: queries.getFeatureFlags,
     initializeAccount: queries.initializeAccount,
     getProfile: queries.getProfile,
     updateProfile: queries.updateProfile,
@@ -28,7 +26,6 @@ describe('authRepository.initialize', () => {
     queries.signIn.mockReset()
     queries.getLinkedClient.mockReset()
     queries.getTrainer.mockReset()
-    queries.getFeatureFlags.mockReset().mockResolvedValue({ data: null, error: null })
     queries.initializeAccount.mockReset()
     queries.getProfile.mockReset()
     queries.updateProfile.mockReset()
@@ -78,7 +75,6 @@ describe('authRepository.initialize', () => {
       firstName: 'Анна',
       lastName: 'Смирнова',
       timezone: 'Europe/Berlin',
-      featureFlags: { monochromePreview: false },
       clientId: 'client-1',
       trainerId: 'trainer-1',
       fullName: 'Анна Смирнова',
@@ -110,53 +106,6 @@ describe('authRepository.initialize', () => {
 
     expect(actor.kind).toBe('trainer')
     expect(queries.initializeAccount).toHaveBeenCalledWith('trainer', 'Ирина', undefined, expect.any(String))
-  })
-
-  it('maps the server-managed monochrome preview flag into the session actor', async () => {
-    queries.getLinkedClient.mockResolvedValue({ data: null, error: null })
-    queries.getTrainer.mockResolvedValue({ data: { profile_id: 'trainer-1' }, error: null })
-    queries.getProfile.mockResolvedValue({
-      data: {
-        account_role: 'trainer',
-        first_name: 'Ирина',
-        last_name: null,
-        timezone: 'Europe/Moscow',
-      },
-      error: null,
-    })
-    queries.getFeatureFlags.mockResolvedValue({ data: { monochrome_preview: true }, error: null })
-
-    const actor = await authRepository.initialize({
-      id: 'trainer-1',
-      email: 'trainer@example.test',
-      user_metadata: {},
-    })
-
-    expect(actor.featureFlags).toEqual({ monochromePreview: true })
-    expect(queries.getFeatureFlags).toHaveBeenCalledWith('trainer-1')
-  })
-
-  it('keeps preview off when the server flag cannot be read', async () => {
-    queries.getLinkedClient.mockResolvedValue({ data: null, error: null })
-    queries.getTrainer.mockResolvedValue({ data: { profile_id: 'trainer-1' }, error: null })
-    queries.getProfile.mockResolvedValue({
-      data: {
-        account_role: 'trainer',
-        first_name: 'Ирина',
-        last_name: null,
-        timezone: 'Europe/Moscow',
-      },
-      error: null,
-    })
-    queries.getFeatureFlags.mockResolvedValue({ data: null, error: new Error('network unavailable') })
-
-    const actor = await authRepository.initialize({
-      id: 'trainer-1',
-      email: 'trainer@example.test',
-      user_metadata: {},
-    })
-
-    expect(actor.featureFlags).toEqual({ monochromePreview: false })
   })
 
   it('не перезаписывает сохранённое имя регистрационными metadata', async () => {
@@ -191,7 +140,6 @@ describe('authRepository.initialize', () => {
       firstName: 'Ирина',
       lastName: null,
       timezone: 'Moscow',
-      featureFlags: { monochromePreview: false },
     })).rejects.toThrow('Укажите часовой пояс в формате Europe/Moscow')
     expect(queries.updateProfile).not.toHaveBeenCalled()
   })
