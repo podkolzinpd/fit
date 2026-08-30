@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { MicIcon, StopIcon } from '../../shared/icons'
+import { CloseIcon, MicIcon, StopIcon } from '../../shared/icons'
 import { BrowserAudioRecorder, decodeAudioToPcm16, type AudioRecorder } from './audio-recorder'
 import type { SpeechRecognizer } from './speech-recognizer'
 import { WhisperCppRecognizer } from './whisper-cpp-recognizer'
@@ -312,7 +312,7 @@ function VoiceInputStatus({ message, undo, onUndo, onDismiss }: { message: strin
   return <div className="voice-input-status" role={successful ? 'status' : 'alert'}>
     <small className={successful ? 'success' : 'error'}>{message}</small>
     {undo && <button type="button" className="link" onClick={onUndo}>Отменить</button>}
-    <button type="button" className="voice-status-dismiss" aria-label="Закрыть сообщение" onClick={onDismiss}>×</button>
+    <button type="button" className="voice-status-dismiss" aria-label="Закрыть сообщение" onClick={onDismiss}><CloseIcon /></button>
   </div>
 }
 

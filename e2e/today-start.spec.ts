@@ -186,7 +186,7 @@ test('today: быстрый старт ведёт к единому выбору
   await expect(page.getByText('Как сохранить?', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Запланировать', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await page.locator('.client-picker-trigger').click()
-  await page.getByRole('button', { name: '＋ Новый клиент' }).click()
+  await page.getByRole('button', { name: 'Новый клиент' }).click()
   await expect(page.getByLabel('Имя нового клиента')).toBeVisible()
   const quickClientName = `Тест ${testInfo.workerIndex}-${Date.now()}`
   await page.getByLabel('Имя нового клиента').fill(quickClientName)
