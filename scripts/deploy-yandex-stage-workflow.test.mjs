@@ -257,6 +257,7 @@ test('deploys Vercel only from main, stable stage, and explicit PR preview refs'
 test('creates isolated Vercel previews only when a collaborator requests their own PR', () => {
   assert.match(prPreviewWorkflow, /^  issue_comment:\n    types: \[created\]$/m)
   assert.match(prPreviewWorkflow, /^  pull_request:\n    types: \[closed\]$/m)
+  assert.match(prPreviewWorkflow, /^  contents: write$/m)
   assert.match(prPreviewWorkflow, /github\.event\.comment\.body == '\/preview'/)
   assert.match(prPreviewWorkflow, /OWNER.*MEMBER.*COLLABORATOR/)
   assert.match(prPreviewWorkflow, /'\.user\.login'/)
@@ -264,6 +265,7 @@ test('creates isolated Vercel previews only when a collaborator requests their o
   assert.match(prPreviewWorkflow, /"\$state" != 'open' \|\| "\$base_ref" != 'main'/)
   assert.match(prPreviewWorkflow, /"\$head_repository" != "\$REPOSITORY"/)
   assert.match(prPreviewWorkflow, /preview_branch="preview\/pr-\$PR_NUMBER"/)
+  assert.match(prPreviewWorkflow, /--method DELETE/)
   assert.doesNotMatch(prPreviewWorkflow, /pull_request_target|actions\/checkout|VERCEL_TOKEN/)
 })
 
