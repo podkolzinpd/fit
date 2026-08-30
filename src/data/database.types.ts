@@ -1,4 +1,4 @@
-// schema-sha256: d0b7c3be84447575ba1764f9eeece3f48464a02e84fa6ebff711f9ee2cafdbab
+// schema-sha256: 1156e93d7b75832765dd30189bbed4460b9861d1e13b52a22b59a2900c257dba
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1729,6 +1729,26 @@ export type Database = {
         Returns: number
       }
       create_client: { Args: { p_client: Json }; Returns: string }
+      create_client_custom_metric: {
+        Args: { p_client_id: string; p_name: string; p_unit?: string }
+        Returns: {
+          archived_at: string | null
+          client_id: string
+          created_at: string
+          id: string
+          name: string
+          trainer_id: string
+          unit: string | null
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "client_custom_metrics"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_client_invitation: {
         Args: { p_client_id: string; p_target_role: string }
         Returns: string
@@ -2046,6 +2066,30 @@ export type Database = {
       save_workout: {
         Args: { p_expected_version?: number | null; p_workout: Json }
         Returns: string
+      }
+      set_client_custom_metric_archived: {
+        Args: {
+          p_archived: boolean
+          p_expected_version: number
+          p_metric_id: string
+        }
+        Returns: {
+          archived_at: string | null
+          client_id: string
+          created_at: string
+          id: string
+          name: string
+          trainer_id: string
+          unit: string | null
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "client_custom_metrics"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_client_workout_comment: {
         Args: {

@@ -2107,10 +2107,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-progress-comparison article strong { overflow-wrap:anywhere; font-size:var(--type-body-size); font-variant-numeric:tabular-nums; line-height:var(--leading-tight) }
 .client-progress-comparison article.positive strong { color:var(--success-strong) }
 .client-progress-comparison article span { color:var(--muted); font-size:var(--type-micro-size); line-height:var(--leading-snug) }
-.client-progress-goal-story { display:grid; gap:6px; margin:var(--space-3) var(--card-padding) 0; padding-bottom:var(--space-3); border-bottom:1px solid var(--ai-divider) }
+.client-progress-goal-story { display:grid; gap:8px; margin:var(--space-3) var(--card-padding) 0; padding:var(--space-3); border:1px solid var(--ai-divider); border-radius:var(--radius-md); background:var(--surface-muted) }
 .client-progress-goal-story > span, .client-progress-upcoming > span { color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label); text-transform:uppercase }
 .client-progress-goal-story-head { display:flex; align-items:center; justify-content:space-between; gap:10px }
 .client-progress-goal-story-head > span { color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label); text-transform:uppercase }
+.goal-story-actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:4px 10px }
+.goal-story-actions > .link { min-height:36px; padding:4px 0; font-size:var(--type-caption-size); white-space:nowrap }
 .goal-foundation-status { display:inline-flex; align-items:center; min-height:28px; padding:4px 9px; border:1px solid var(--border); border-radius:999px; background:var(--surface-sunken); color:var(--fg); font-size:11px; font-weight:var(--weight-semibold); line-height:1.2 }
 .goal-foundation-status.needs_data,
 .goal-foundation-status.needs_review { border-style:dashed }
@@ -2131,7 +2133,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-story-plan-evidence { display:grid; gap:2px; margin-top:4px; padding-top:var(--space-2); border-top:1px solid var(--ai-divider) }
 .progress-story-plan-evidence > span { color:var(--muted); font-size:var(--type-micro-size); font-weight:var(--weight-semibold); letter-spacing:0; text-transform:none }
 .progress-story-plan-evidence p { color:var(--fg-strong) }
-.client-progress-goal-story.empty { border-bottom:0; padding:var(--space-3); border:1px solid var(--ai-divider); border-radius:var(--radius-md); background:var(--surface-muted) }
+.client-progress-goal-story.empty { border-bottom:1px solid var(--ai-divider) }
 .client-progress-story-state { margin:var(--space-3) var(--card-padding) 0; color:var(--muted); font-size:var(--type-caption-size) }
 .client-progress-upcoming { display:grid; gap:6px; margin:var(--space-3) var(--card-padding) 0; padding:var(--space-3); border:1px solid var(--accent-surface-border); border-radius:var(--radius-md); background:var(--accent-surface) }
 .client-progress-upcoming > div { display:grid; gap:6px; margin-top:2px }
@@ -4296,6 +4298,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-client-goal-identity .goal-criterion-form-head .switch-row { flex:0 0 auto }
 .trainer-client-goal-identity .goal-criterion-fields { display:grid; gap:12px; padding-top:14px; border-top:1px solid var(--border) }
 .trainer-client-goal-identity .goal-criterion-item { display:grid; gap:12px; padding:14px; border:1px solid var(--border); border-radius:16px; background:var(--surface-sunken) }
+.goal-custom-metric-field { display:grid; gap:6px }
+.goal-custom-metric-field > .link { width:fit-content; min-height:36px; padding:4px 0; font-size:12px }
 .goal-criteria-progress-list { display:grid; gap:12px; margin-top:14px }
 .goal-criterion-progress-card { display:grid; gap:12px; padding:14px; border:1px solid var(--border); border-radius:16px; background:var(--surface-raised) }
 .goal-criterion-progress-card header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
