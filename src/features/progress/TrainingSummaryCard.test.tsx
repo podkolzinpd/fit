@@ -218,7 +218,11 @@ describe('Training summary card states', () => {
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
     expect(document.querySelector('.body-progress-zone')).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Подробный анализ' }))
-    expect((await screen.findAllByText(/Рабочий вес: 50 → 68 кг/))[0]).toBeVisible()
+    const details = await screen.findByRole('dialog', { name: 'Подробный анализ' })
+    expect(within(details).getByRole('heading', { name: 'Результат периода' })).toBeVisible()
+    expect(within(details).getByRole('heading', { name: 'Связь с целью' })).toBeVisible()
+    expect(within(details).getByRole('heading', { name: 'На что обратить внимание' })).toBeVisible()
+    expect(within(details).queryByText(/Рабочий вес: 50 → 68 кг/)).toBeNull()
     expect(screen.getByText('6')).toBeVisible()
     expect(screen.getByText('3/5')).toBeVisible()
     expect(screen.getByText('недель с тренировками')).toBeVisible()
@@ -368,7 +372,7 @@ describe('Training summary card states', () => {
     expect(goal!.querySelectorAll('.goal-criterion-progress-row')).toHaveLength(1)
   })
 
-  it('keeps the readable legacy fallback when structured progress facts are absent', async () => {
+  it('hides low-value legacy fallback and keeps the structured detailed-analysis sections', async () => {
     repositories.firstCompletedWorkoutDate.mockResolvedValue(null)
     repositories.listForClient.mockResolvedValue([{
       ...publishedSummary,
@@ -380,7 +384,9 @@ describe('Training summary card states', () => {
 
     await screen.findByText('После завершённой тренировки покажем распределение нагрузки по зонам.')
     await user.click(screen.getByRole('button', { name: 'Подробный анализ' }))
-    expect(await screen.findByText('Служебный показатель равен 1,3.')).toBeVisible()
+    const details = await screen.findByRole('dialog', { name: 'Подробный анализ' })
+    expect(within(details).getByText('Все подтверждённые результаты уже показаны в карточках выше.')).toBeVisible()
+    expect(within(details).queryByText('Служебный показатель равен 1,3.')).toBeNull()
     expect(document.body).not.toHaveTextContent('custom_metric_key')
   })
 
