@@ -13,7 +13,6 @@ import type {
   Gender,
   PublishedTrainingSummary,
   TrainingSummary,
-  TrainingProgressFact,
 } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
 import { addDays, daysBetween, formatLocalDate, normalizeTimeZone, todayInTimeZone, type LocalDate } from '../../shared/local-date'
@@ -21,13 +20,14 @@ import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { TrainingBodyProgressMap } from './ClientBodyProgressMap'
 import { MeasurementProgressSection } from './MeasurementProgressSection'
+import { ProgressDetailedAnalysis } from './ProgressDetailedAnalysis'
 import { ProgressNextStepSection } from './ProgressNextStepSection'
 import { TrainerProgressSignalsSection } from './TrainerProgressSignalsSection'
 import { WorkoutRegularityProgressSection } from './WorkoutRegularityProgressSection'
 import { progressStoryPresentation } from './client-progress-presentation'
 import { buildProgressNextStep } from './next-step-recommendation'
-import { progressFactChangeLabel } from './progress-facts'
-import { formatSummaryText, formatWorkoutsPerWeek, progressMetricNoun } from './summary-format'
+import { buildProgressDetailedAnalysis } from './progress-detailed-analysis'
+import { formatSummaryText } from './summary-format'
 import { availableSummaryPeriods, SUMMARY_PERIODS, summaryPeriodMatch, summaryPeriodRange, type SummaryPeriod } from './summary-period'
 import { buildTrainerProgressSignals } from './trainer-progress-signals'
 import { buildWorkoutRegularityProgress } from './workout-regularity-progress'
@@ -46,30 +46,6 @@ function PeriodTabs({ value, available, onChange }: {
       onClick={() => onChange(period.key)}
     >{period.label}</button>)}
   </div>
-}
-
-function ProgressFacts({ facts, fallback, limit, onShowAll }: {
-  facts: readonly TrainingProgressFact[]
-  fallback: readonly string[]
-  limit?: number
-  onShowAll?: () => void
-}) {
-  const visibleFacts = limit ? facts.slice(0, limit) : facts
-  const visibleFallback = limit ? fallback.slice(0, limit) : fallback
-  const hiddenCount = facts.length > 0
-    ? Math.max(0, facts.length - visibleFacts.length)
-    : Math.max(0, fallback.length - visibleFallback.length)
-  if (facts.length === 0) {
-    return <><ul>{visibleFallback.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
-      {hiddenCount > 0 && onShowAll && <button type="button" className="link ai-progress-more" onClick={onShowAll}>Ещё {hiddenCount}</button>}
-    </>
-  }
-  return <><div className="ai-progress-facts">
-    {visibleFacts.map((fact) => <div className="ai-progress-fact" key={fact.exerciseName}>
-      <strong>{fact.exerciseName}</strong>
-      {fact.changes.map((change) => <span key={change.metric}>{progressFactChangeLabel(change)}</span>)}
-    </div>)}
-  </div>{hiddenCount > 0 && onShowAll && <button type="button" className="link ai-progress-more" onClick={onShowAll}>Ещё {hiddenCount} {hiddenCount === 1 ? 'упражнение' : 'упражнения'}</button>}</>
 }
 
 function SummaryHeader({ published }: { published?: boolean }) {
@@ -433,6 +409,36 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
     summaryCompletedWorkouts: summary.metrics.completedWorkouts,
     today,
   }) : []
+  const detailedAnalysis = buildProgressDetailedAnalysis({
+    summary,
+    role,
+    goalTitle: presentation.goal?.title,
+    visibleTexts: [
+      presentation.mainNow.title,
+      presentation.mainNow.explanation,
+      presentation.mainNow.evidence,
+      ...(presentation.hero ? [presentation.hero.exerciseName, presentation.hero.detail] : []),
+      ...wins.flatMap((item) => [item.title, item.detail]),
+      ...visibleComparisonFacts.flatMap((fact) => [fact.subject, fact.previousLabel, fact.currentLabel, fact.value]),
+      ...presentation.comparison.conclusions.map((conclusion) => conclusion.text),
+      ...(presentation.goal ? [
+        presentation.goal.title,
+        presentation.goal.statusLabel,
+        presentation.goal.message ?? '',
+        ...(presentation.goal.criteria ?? []).flatMap((criterion) => [
+          criterion.label,
+          criterion.target,
+          criterion.current,
+          criterion.dynamics,
+          criterion.status,
+        ]),
+      ] : []),
+      summaryConsistency(summary),
+      nextStep.recommendation.title,
+      nextStep.recommendation.explanation,
+      nextStep.recommendation.evidence,
+    ],
+  })
   const nextStepLinks = {
     add_measurement: measurementLink,
     schedule_workout: workoutLink,
@@ -603,22 +609,7 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       <button type="button" className="link" onClick={() => setDetailsOpen(true)}>Подробный анализ</button>
     </div>
     {detailsOpen && <SummarySheet title="Подробный анализ" onClose={() => setDetailsOpen(false)}>
-      <section className="client-progress-details-section">
-        <h3>Динамика упражнений</h3>
-        <ProgressFacts facts={summary.metrics.progressFacts} fallback={summaryFallbackProgress(summary)} />
-      </section>
-      <section className="client-progress-details-section">
-        <h3>Ритм тренировок</h3>
-        <p>{formatSummaryText(summaryConsistency(summary))}</p>
-        <p>
-          В среднем: {formatWorkoutsPerWeek(summary.metrics.workoutsPerWeek)} тренировки в неделю
-          {summary.metrics.longestGapDays !== null && <> · самая длинная пауза: {summary.metrics.longestGapDays} {progressMetricNoun(summary.metrics.longestGapDays, 'gapDay')}</>}
-        </p>
-      </section>
-      {presentation.orientations.length > 0 && <section className="client-progress-details-section">
-        <h3>Ориентиры</h3>
-        <ul>{presentation.orientations.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
-      </section>}
+      <ProgressDetailedAnalysis sections={detailedAnalysis} />
     </SummarySheet>}
   </>
 }

@@ -1907,7 +1907,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .ai-progress-periods button { min-height: var(--control-height-compact); padding: 7px var(--space-1); border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--muted); box-shadow:none; font-size: var(--type-caption-size) }
 .ai-progress-periods button.active { border-color: color-mix(in srgb, var(--accent) 28%, var(--ai-divider)); background: var(--surface-raised); color: var(--accent-strong); box-shadow:none}
 .ai-progress-hero { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--card-padding); border-block: 1px solid var(--ai-divider); background: var(--ai-subtle-surface) }
-.ai-progress-hero span, .ai-progress-regularity span { color: var(--accent-weak); font-size: var(--type-caption-size); font-weight: var(--weight-bold); letter-spacing: var(--tracking-label); text-transform: uppercase }
+.ai-progress-hero span { color: var(--accent-weak); font-size: var(--type-caption-size); font-weight: var(--weight-bold); letter-spacing: var(--tracking-label); text-transform: uppercase }
 .ai-progress-hero strong { min-width: 0; overflow-wrap: anywhere; font-size: var(--type-body-size); line-height: var(--leading-body) }
 .ai-progress-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; border-bottom: 1px solid var(--ai-divider); background: var(--ai-divider) }
 .ai-progress-stats div { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 12px 3px; background: var(--ai-stat-surface); text-align: center }
@@ -1917,15 +1917,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 @media (max-width: 400px) {
   .ai-progress-stats span { text-overflow: clip; white-space: normal }
 }
-.ai-progress-facts { display: grid; gap: var(--space-2) }
-.ai-progress-fact { display: grid; gap: 2px; padding-bottom: var(--space-2); border-bottom: 1px solid var(--ai-divider) }
-.ai-progress-fact:last-child { padding-bottom: 0; border-bottom: 0 }
-.ai-progress-fact strong { min-width: 0; overflow-wrap: anywhere; font-size: var(--type-caption-size); line-height: var(--leading-snug) }
-.ai-progress-fact span { min-width: 0; overflow-wrap: anywhere; color: var(--ai-copy); font-size: var(--type-caption-size); font-variant-numeric: tabular-nums; line-height: var(--leading-body) }
-.ai-progress-regularity { display: block; margin: var(--space-3) var(--card-padding) 0; padding: var(--space-3) 0 0; border-top: 1px solid var(--ai-divider) }
-.ai-progress-regularity div { display: flex; align-items: center; justify-content: space-between; gap: 10px }
-.ai-progress-regularity strong { font-size: var(--type-body-size) }
-.ai-progress-regularity p { margin: 4px 0 0; color: var(--muted); font-size: var(--type-caption-size); line-height: var(--leading-snug) }
 .ai-progress-goal { display: grid; gap: 6px; margin: var(--space-3) var(--card-padding) 0; padding-top: var(--space-3); border-top: 1px solid var(--ai-divider) }
 .ai-progress-goal h3 { margin: 0 0 2px; font-size: var(--type-body-size) }
 .ai-progress-goal > strong { min-width: 0; overflow-wrap: anywhere; font-size: var(--type-caption-size); line-height: var(--leading-body) }
@@ -1935,8 +1926,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .ai-progress-goal-empty .button { width: fit-content; min-height: 36px; padding: 8px 12px; font-size: var(--type-caption-size) }
 .ai-progress-goal-error { display: flex; align-items: center; justify-content: space-between; gap: 10px }
 .ai-progress-goal-error .link { min-height: 32px; padding: 4px 0 }
-.ai-progress-next-steps { padding-top: 15px }
-.ai-progress-more { min-height: 32px; align-self: flex-start; padding: 4px 0; color: var(--accent-strong); font-size: var(--type-caption-size); font-weight: var(--weight-bold) }
 .ai-progress-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-3); padding: var(--space-3) var(--card-padding); border-top: 1px solid var(--ai-divider); background: var(--ai-subtle-surface) }
 .ai-progress-footer > span { flex: 1 1 auto; color: var(--muted); font-size: var(--type-caption-size); line-height: var(--leading-snug) }
 .ai-progress-footer button { flex: 0 0 auto; min-height: var(--control-height-compact); padding: 7px var(--space-3); border-radius: var(--radius-sm); font-size: var(--type-caption-size) }
@@ -1957,7 +1946,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .ai-progress-sheet > header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3) }
 .ai-progress-sheet > header h2 { margin: 0; font-size: var(--type-title-size) }
 .ai-progress-sheet-content { min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: grid; gap: var(--space-3) }
-.ai-progress-sheet-content > .ai-progress-facts { gap: var(--space-3) }
 .ai-progress-sheet-list { display: grid; gap: var(--space-3) }
 .ai-progress-sheet-list p { margin: 0; padding-bottom: var(--space-3); border-bottom: 1px solid var(--border); font-size: var(--type-body-size); line-height: var(--leading-body) }
 .ai-progress-sheet-list p:last-child { padding-bottom: 0; border-bottom: 0 }
@@ -1968,9 +1956,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-page .ai-progress-title h2 { font-size: var(--type-section-size) }
 .trainer-progress-page .ai-progress-title p { font-size: 13px }
 .trainer-progress-page .ai-progress-hero strong { font-size: var(--type-body-size); font-weight: var(--weight-semibold); line-height: var(--leading-body) }
-.trainer-progress-page .ai-progress-fact strong { font-size: 13px }
-.trainer-progress-page .ai-progress-fact span,
-.trainer-progress-page .ai-progress-regularity p { font-size: 13px }
 .trainer-progress-page .ai-progress-footer { margin-top: var(--space-2) }
 .client-progress-card { border-color: var(--client-ai-card-border); background: var(--client-ai-card-background) }
 .client-progress-card .ai-progress-mark { border-color: var(--client-ai-mark-border); background: var(--client-ai-mark-background); box-shadow:none}
@@ -2040,17 +2025,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-story-hero.empty { min-height:132px; align-content:center; text-align:center }
 .progress-story-hero.empty h3 { font-size:var(--type-body-size) }
 .client-progress-wins { display:grid; gap:10px; margin:var(--space-3) var(--card-padding) 0; padding-bottom:var(--space-3); border-bottom:1px solid var(--ai-divider) }
-.client-progress-wins h3, .client-progress-insight h3, .client-progress-details-section h3 { margin:0; font-size:var(--type-body-size); line-height:var(--leading-tight) }
+.client-progress-wins h3 { margin:0; font-size:var(--type-body-size); line-height:var(--leading-tight) }
 .client-progress-wins > div { display:grid; gap:9px }
 .client-progress-wins article { min-width:0; display:grid; grid-template-columns:7px minmax(0,1fr); align-items:start; gap:9px }
 .client-progress-wins article > span { width:7px; height:7px; margin-top:5px; border-radius:50%; background:var(--success); box-shadow:none}
 .client-progress-wins article div { min-width:0 }
 .client-progress-wins article strong { display:block; overflow-wrap:anywhere; font-size:var(--type-caption-size); line-height:var(--leading-snug) }
 .client-progress-wins article p { margin:2px 0 0; overflow-wrap:anywhere; color:var(--muted); font-size:var(--type-caption-size); font-variant-numeric:tabular-nums; line-height:var(--leading-snug) }
-.client-progress-insight p, .client-progress-details-section p { margin:0; overflow-wrap:anywhere; font-size:var(--type-caption-size); line-height:var(--leading-body) }
-.client-progress-insight { display:grid; gap:4px; margin:var(--space-3) var(--card-padding) 0; padding-top:var(--space-3); border-top:1px solid var(--client-ai-note-border) }
-.client-progress-insight h3 { color:var(--client-ai-note-fg) }
-.client-progress-insight p { color:var(--muted) }
 .client-progress-main-now { display:grid; gap:7px }
 .client-progress-main-now > span { color:var(--secondary-label-fg); font-size:var(--type-caption-size); font-weight:var(--weight-semibold); letter-spacing:var(--tracking-label); text-transform:uppercase }
 .client-progress-main-now h3 { margin:0; overflow-wrap:anywhere; font-size:var(--type-section-size); line-height:var(--leading-tight) }
@@ -2203,10 +2184,15 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-signals-content li p span { color:var(--secondary-label-fg); font-size:var(--type-micro-size); font-weight:var(--weight-semibold); text-transform:uppercase }
 .client-progress-details-toggle { display:flex; justify-content:flex-start; margin:var(--space-2) var(--card-padding) 0 }
 .client-progress-details-toggle .link { min-height:var(--control-height-compact); padding:var(--space-1) 0; color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold) }
-.client-progress-details-section { display:grid; gap:var(--space-2) }
-.client-progress-details-section + .client-progress-details-section { padding-top:var(--space-3); border-top:1px solid var(--border) }
-.client-progress-details-section ul { display:grid; gap:var(--space-2); margin:0; padding-left:18px }
-.client-progress-details-section li { color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.progress-detailed-analysis { display:grid; gap:0 }
+.progress-detailed-analysis-lead { margin:0; padding:0 0 16px; color:var(--secondary-label-fg); font-size:14px; line-height:1.5 }
+.progress-detailed-analysis-section { display:grid; gap:9px; padding:16px 0; border-top:1px solid var(--border) }
+.progress-detailed-analysis-section:last-child { padding-bottom:0 }
+.progress-detailed-analysis-section h3 { margin:0; color:var(--fg); font-size:14px; font-weight:600; line-height:1.35 }
+.progress-detailed-analysis-section ul { display:grid; gap:10px; margin:0; padding:0; list-style:none }
+.progress-detailed-analysis-section li { position:relative; margin:0; padding-left:16px; overflow-wrap:anywhere; color:var(--fg); font-size:14px; line-height:1.5 }
+.progress-detailed-analysis-section li::before { content:""; position:absolute; top:.7em; left:1px; width:5px; height:5px; border-radius:50%; background:var(--accent-strong); transform:translateY(-50%) }
+.progress-detailed-analysis-empty { margin:0; overflow-wrap:anywhere; color:var(--secondary-label-fg); font-size:14px; line-height:1.5 }
 .client-progress-card .ai-progress-goal { margin-top:0; padding-top:var(--space-3) }
 @media (min-width:700px) {
   .trainer-progress-story-card .progress-story-hero { grid-template-columns:auto minmax(0,1fr); column-gap:var(--space-3); align-items:end }
