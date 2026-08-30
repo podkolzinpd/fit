@@ -45,7 +45,7 @@ export type ClientProgressPresentation = {
     measurementAction?: boolean
     completedCriteria?: number
     totalCriteria?: number
-    criteria?: Array<{ id: string; label: string; target: string; status: string; current: string; dynamics: string; lastDate?: string; freshness: string; sufficiency: string; action: 'measurement' | 'workout' | 'configure' | null }>
+    criteria?: Array<{ id: string; label: string; target: string; status: string; current: string; dynamics: string; lastDate?: string; freshness: string; sufficiency: string; dataOwner: 'measurement' | 'workout'; action: 'measurement' | 'workout' | 'configure' | null }>
   }
   nextWorkout?: { date: string; title: string; exercises: Array<{ name: string; plan?: string }> }
   mainNow: {
@@ -161,6 +161,7 @@ function goalStory(summary: ProgressSummary, options: StoryOptions): ClientProgr
       result,
       presentation: {
         id: criterion.id,
+        dataOwner: isStandardGoalCriterionMetric(criterion.metric) || criterion.metric === 'custom' ? 'measurement' as const : 'workout' as const,
         label: `${GOAL_CRITERION_METRICS[criterion.metric].label}${criterion.exerciseName ? ` · ${criterion.exerciseName}` : ''}${criterion.customMetricName ? ` · ${criterion.customMetricName}` : ''}`,
         target: goalCriterionTargetLabel(criterion), status: goalProgressStatusLabel(result.status, result.dynamics.direction),
         current: result.latestNow ? `${number.format(result.latestNow.value)} ${criterion.unit}${'secondaryCurrent' in result && result.secondaryCurrent != null ? ` за ${number.format(result.secondaryCurrent)} мин` : ''}` : 'Нет данных',

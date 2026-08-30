@@ -47,6 +47,27 @@ async function mockPeriodComparison(page: VisualPage) {
   await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
 }
 
+async function mockMeasurementProgress(page: VisualPage) {
+  await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+    id: '86000000-0000-4000-8000-000000000001', clientId: demoClientId,
+    title: 'Увеличить рабочий вес и сохранить талию', targetDate: null, status: 'active', version: 1, stages: [],
+    criteria: [{ id: '86000000-0000-4000-8000-000000000002', goalId: '86000000-0000-4000-8000-000000000001', metric: 'weight', operation: 'increase_to', targetValue: 83, rangeMin: null, rangeMax: null, unit: 'кг', baselineValue: null, baselineRecordedOn: null, confirmationStatus: 'confirmed', position: 0, version: 1 }],
+  }) }))
+  await page.route('**/rest/v1/client_progress?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
+    { id: '83000000-0000-4000-8000-000000000001', client_id: demoClientId, created_by: null, recorded_on: '2026-07-28', weight_kg: 80, chest_cm: 98, waist_cm: 82, hip_cm: 96, notes: null, version: 1 },
+    { id: '83000000-0000-4000-8000-000000000002', client_id: demoClientId, created_by: null, recorded_on: '2026-08-05', weight_kg: 80.8, chest_cm: 99, waist_cm: 81, hip_cm: 96.5, notes: null, version: 1 },
+    { id: '83000000-0000-4000-8000-000000000003', client_id: demoClientId, created_by: null, recorded_on: '2026-08-15', weight_kg: 81.4, chest_cm: 100, waist_cm: 80.5, hip_cm: 97, notes: null, version: 1 },
+  ]) }))
+  await page.route('**/rest/v1/client_custom_metrics?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
+    { id: '84000000-0000-4000-8000-000000000001', client_id: demoClientId, name: 'Плечи', unit: 'см', position: 0, version: 1 },
+  ]) }))
+  await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
+    { progress_id: '83000000-0000-4000-8000-000000000001', metric_id: '84000000-0000-4000-8000-000000000001', value: 112 },
+    { progress_id: '83000000-0000-4000-8000-000000000002', metric_id: '84000000-0000-4000-8000-000000000001', value: 113 },
+    { progress_id: '83000000-0000-4000-8000-000000000003', metric_id: '84000000-0000-4000-8000-000000000001', value: 114.5 },
+  ]) }))
+}
+
 type VisualPage = import('@playwright/test').Page
 type VisualGotoOptions = Parameters<VisualPage['goto']>[1]
 
@@ -614,13 +635,67 @@ test('period comparison stays compact for client and trainer in both themes', as
   })
 })
 
-test('client measurements keep their visual baseline', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client measurements use mobile visual profiles')
+test('measurement trends stay readable for client and trainer in both themes', async ({ page }, testInfo) => {
+  const trainer = testInfo.project.name === 'visual-trainer-1440'
+  const initialViewport = page.viewportSize()
+  await mockMeasurementProgress(page)
+  if (trainer) {
+    await signIn(page, 'trainer@fit.local', /\/today$/)
+    await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+    await gotoStable(page, `/progress/${demoClientId}`)
+  } else {
+    await openClientProgress(page, { scheme: true })
+  }
+
+  let measurements = page.locator('.client-progress-measurements-story')
+  await expect(measurements.getByRole('heading', { name: 'Тренд по значениям' })).toBeVisible()
+  await expect(measurements.getByRole('tab', { name: /Вес/ })).toBeVisible()
+  await expect(measurements.getByRole('tab', { name: /Плечи/ })).toBeVisible()
+  await expect(measurements.getByLabel('График показателя «Вес»')).toBeVisible()
+  await expect(measurements.locator('.recharts-tooltip-wrapper')).toHaveCount(0)
+  await expect(measurements.getByText('5 августа 2026 г.', { exact: true })).toHaveCount(0)
+  expect(await measurements.evaluate((element) => {
+    const comparison = document.querySelector('.client-progress-comparison')
+    const summary = document.querySelector('.progress-story-summary')
+    return Boolean(comparison && summary
+      && (comparison.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
+  })).toBe(true)
+  expect(await measurements.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  expect(await measurements.getByRole('tab', { name: /Вес/ }).evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44)
+  if (!trainer) {
+    for (const width of [320, 375, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      expect(await measurements.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    }
+    if (initialViewport) await page.setViewportSize(initialViewport)
+  }
+  await measurements.scrollIntoViewIfNeeded()
+  await expect(measurements).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-measurement-trends-${process.platform}.png`, {
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+  })
+
+  await gotoStable(page, trainer ? '/profile' : '/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
+  measurements = page.locator('.client-progress-measurements-story')
+  await expect(measurements.getByRole('heading', { name: 'Тренд по значениям' })).toBeVisible()
+  await measurements.scrollIntoViewIfNeeded()
+  await expect(measurements).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-measurement-trends-dark-${process.platform}.png`, {
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+  })
+})
+
+test('client measurement management keeps its visual baseline', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client measurement management uses mobile visual profiles')
+  await mockMeasurementProgress(page)
   await openClientProgress(page, { scheme: true })
-  await page.locator('.client-progress-measurement').scrollIntoViewIfNeeded()
-  await expect(page.getByRole('button', { name: 'Добавить замер' })).toBeVisible()
-  await page.locator('.client-progress-measurement-head').click({ position: { x: 4, y: 4 } })
-  await page.locator('.client-progress-measurement .recharts-tooltip-wrapper').evaluateAll((elements) => elements.forEach((element) => { (element as HTMLElement).style.visibility = 'hidden' }))
+  const management = page.locator('.client-progress-measurement')
+  await management.scrollIntoViewIfNeeded()
+  await expect(management.getByRole('button', { name: 'Добавить замер' })).toBeVisible()
+  await expect(management.getByRole('button', { name: /История/ })).toBeVisible()
+  await expect(management.getByRole('button', { name: /Настроить/ })).toBeVisible()
   await expectVisualBaseline(page, `client-measurements-${process.platform}.png`)
 })
 

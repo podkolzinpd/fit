@@ -18,6 +18,7 @@ const repositories = vi.hoisted(() => ({
   unpublish: vi.fn(),
   goal: vi.fn(),
   progress: vi.fn(),
+  metrics: vi.fn(),
   workouts: vi.fn(),
   personalRecords: vi.fn(),
 }))
@@ -38,7 +39,7 @@ vi.mock('../../data/repositories/goals.repository', () => ({
   goalsRepository: { get: repositories.goal },
 }))
 vi.mock('../../data/repositories/progress.repository', () => ({
-  progressRepository: { list: repositories.progress },
+  progressRepository: { list: repositories.progress, listMetrics: repositories.metrics },
 }))
 vi.mock('../../data/repositories/workouts.repository', () => ({
   workoutsRepository: { list: repositories.workouts, personalRecords: repositories.personalRecords },
@@ -168,6 +169,7 @@ describe('Training summary card states', () => {
     Object.values(repositories).forEach((mock) => mock.mockReset())
     repositories.goal.mockResolvedValue(null)
     repositories.progress.mockResolvedValue([])
+    repositories.metrics.mockResolvedValue([])
     repositories.workouts.mockResolvedValue([])
     repositories.personalRecords.mockResolvedValue([])
   })
@@ -292,10 +294,17 @@ describe('Training summary card states', () => {
     expect(screen.getByText('Движение к ориентиру')).toBeVisible()
     expect(screen.getByText('увеличить до 85 кг')).toBeVisible()
     expect(screen.getAllByText('81,5 кг')[0]).toBeVisible()
-    expect(screen.getByText(/80 → 81,5 кг \(\+1,5 кг\) · ближе к ориентиру/)).toBeVisible()
-    expect(screen.getByText(/Достаточно для динамики периода/)).toBeVisible()
-    expect(screen.getByText(/Свежие данные · 7 дн. назад/)).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Смотреть значения и график' })).toHaveAttribute('href', '#progress-measurements')
     expect(screen.getByText(/пока не достиг заданного ориентира/)).toBeVisible()
+    const measurements = screen.getByRole('heading', { name: 'Тренд по значениям' }).closest('section')
+    expect(measurements).not.toBeNull()
+    expect(within(measurements!).getByText('Вес (кг)')).toBeVisible()
+    expect(within(measurements!).getByText('80 кг → 81,5 кг')).toBeVisible()
+    expect(within(measurements!).getByText('Связан с целью')).toBeVisible()
+    expect(within(measurements!).getByText(/2 точки · достаточно для динамики/)).toBeVisible()
+    const comparisonIndex = Array.from(document.querySelectorAll('.progress-story-card > *')).indexOf(comparison!)
+    const measurementIndex = Array.from(document.querySelectorAll('.progress-story-card > *')).indexOf(measurements!)
+    expect(measurementIndex).toBeGreaterThan(comparisonIndex)
     expect(document.querySelector('.goal-foundation-facts')).toBeNull()
     expect(document.querySelector('.goal-progress-details')).toBeNull()
     expect(screen.getByRole('heading', { name: '28 августа 2026 г. · 18:30' })).toBeVisible()
