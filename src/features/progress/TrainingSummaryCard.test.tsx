@@ -434,6 +434,26 @@ describe('Training summary card states', () => {
     expect(screen.getByRole('button', { name: 'Версия для спортсмена' })).toBeVisible()
   })
 
+  it('keeps trainer signals collapsed and never renders the block in the client card', async () => {
+    const user = userEvent.setup()
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForTrainer.mockResolvedValue([trainerSummary])
+
+    const trainer = render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+    expect(await screen.findByText('Для тренера')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Показать' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText(/В анализе учтено 6 тренировок/)).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Показать' }))
+    expect(screen.getByText(/В анализе учтено 6 тренировок/)).toBeVisible()
+    expect(screen.getByText('Нужно ли обновить анализ перед обсуждением результатов?')).toBeVisible()
+    trainer.unmount()
+
+    repositories.listForClient.mockResolvedValue([publishedSummary])
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+    expect(await screen.findByText('Следующий шаг')).toBeVisible()
+    expect(screen.queryByText('Для тренера')).toBeNull()
+  })
+
   it('keeps the trainer card after a refresh error and confirms a successful retry', async () => {
     const user = userEvent.setup()
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
