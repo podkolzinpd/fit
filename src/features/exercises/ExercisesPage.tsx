@@ -4,7 +4,7 @@ import { exercisesRepository, type CustomExercise } from '../../data/repositorie
 import { useAuth } from '../../app/auth-context'
 import { isMonochromeUiEnabled } from '../../app/feature-flags'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
-import { CloseIcon, SearchIcon } from '../../shared/icons'
+import { ChevronRightIcon, CloseIcon, SearchIcon } from '../../shared/icons'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ExerciseImage } from './ExerciseImage'
@@ -114,7 +114,7 @@ function MonochromeExercisesPage() {
           {visibleExercises.map((exercise) => <button type="button" className="catalog-media-card" key={exercise.ref} onClick={() => setSelected(exercise)}>
             <ExerciseImage src={exercise.imageUrl} alt="" />
             <span><strong>{exercise.name}</strong><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small></span>
-            <b aria-hidden="true">›</b>
+            <ChevronRightIcon />
           </button>)}
         </div>
         {visibleExercises.length < systemMatches.length && <button type="button" className="secondary compact catalog-load-more" onClick={() => setVisibleCount((count) => count + 48)}>Показать ещё</button>}

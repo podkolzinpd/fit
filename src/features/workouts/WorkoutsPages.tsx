@@ -43,7 +43,7 @@ import { parseRunDurationInput, runDistanceKmFromInput, runDistanceLabel, runPac
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
 import { WorkoutCompletionCard } from './WorkoutCompletionCard'
-import { BackIcon, ChevronRightIcon, CloseIcon, HistoryIcon, RecordIcon, ScheduleIcon } from '../../shared/icons'
+import { ArrowDownIcon, ArrowUpIcon, BackIcon, ChevronRightIcon, CloseIcon, HistoryIcon, RecordIcon, ScheduleIcon } from '../../shared/icons'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
 import { chronicleExercisePreview } from './workout-chronicle'
@@ -222,7 +222,7 @@ export function PastWorkoutPlanCard({ workout, contextLabel, returnTo }: { worko
       {contextLabel && <small>{contextLabel}</small>}
       <WorkoutExercisesSummary workout={workout} maxItems={2} />
     </span>
-    <span className="past-workout-plan-action">Выбрать действие <b aria-hidden="true">›</b></span>
+    <span className="past-workout-plan-action">Выбрать действие <ChevronRightIcon /></span>
   </Link>
 }
 
@@ -1654,8 +1654,8 @@ export function LiveWorkoutPage() {
   function liveReorder(blockId: string, isFirst: boolean, isLast: boolean) {
     if (!canManageLiveStructure || !reordering) return null
     return <span className="block-reorder">
-      <button type="button" className="reorder-btn" aria-label="Вверх" disabled={isFirst || rootMutationPending} onClick={() => reorderBlock.mutate({ blockId, direction: -1 })}>↑</button>
-      <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast || rootMutationPending} onClick={() => reorderBlock.mutate({ blockId, direction: 1 })}>↓</button>
+      <button type="button" className="reorder-btn" aria-label="Вверх" disabled={isFirst || rootMutationPending} onClick={() => reorderBlock.mutate({ blockId, direction: -1 })}><ArrowUpIcon /></button>
+      <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast || rootMutationPending} onClick={() => reorderBlock.mutate({ blockId, direction: 1 })}><ArrowDownIcon /></button>
     </span>
   }
   // Форма одного подхода в live: подтверждение / правка / удаление / автосейв по blur.

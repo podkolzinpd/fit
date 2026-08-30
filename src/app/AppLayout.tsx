@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnalyticsIcon, AssistantIcon, ClientsIcon, HomeIcon, ProfileIcon, ScheduleIcon, TodayIcon } from '../shared/icons'
 import { useAuth } from './auth-context'
-import { applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from './theme'
+import { applyAppTheme, applyMonochromeThemeColor, applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from './theme'
 import { isAssistantNavPilotEnabled, isDarkThemePilotEnabled, isMonochromeUiEnabled, isTodayStartRedesignEnabled } from './feature-flags'
 import { useAppViewport } from './app-viewport'
 
@@ -57,12 +57,9 @@ export function AppLayout() {
     applyThemeVariant(themeVariant)
     const root = document.documentElement
     root.classList.toggle('identity-monochrome-preview', monochromeIdentity)
-    if (monochromeIdentity) {
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#FBFAF7' : '#111214')
-    }
+    if (monochromeIdentity) applyMonochromeThemeColor(theme)
     return () => {
-      root.classList.remove('identity-monochrome-preview')
-      applyThemeVariant(themeVariant)
+      applyAppTheme(theme, isMonochromeUiEnabled(false))
     }
   }, [monochromeIdentity, theme, themeVariant])
 

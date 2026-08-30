@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { WorkoutPersonalRecord } from '../../shared/domain'
-import { CheckIcon, RecordIcon } from '../../shared/icons'
+import { CheckIcon, ChevronRightIcon, RecordIcon } from '../../shared/icons'
 import { exerciseProgressValueLabel } from './ExerciseProgressSummary'
 
 function confirmedSetsLabel(count: number): string {
@@ -49,7 +49,7 @@ export function WorkoutCompletionCard({
             <span>{completionRecordLabel(record)}</span>
           </div>}
       <Link className="workout-completion-next" to={clientMode ? '/me/progress' : `/clients/${clientId}`}>
-        {clientMode ? 'Посмотреть прогресс' : 'Вернуться к клиенту'} <span aria-hidden="true">›</span>
+        {clientMode ? 'Посмотреть прогресс' : 'Вернуться к клиенту'} <ChevronRightIcon />
       </Link>
     </div>
   </section>
