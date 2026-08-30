@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useClientRealtime } from '../../app/use-client-realtime'
@@ -11,7 +11,8 @@ import { formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../
 import { ChevronRightIcon, CloseIcon } from '../../shared/icons'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ProgressChart, type MetricKey, type MetricSelector } from './ProgressChart'
-import { MEASURE_PRESETS, groupMetricRows, presetMetricNames } from './measure-presets'
+import { groupMetricRows } from './measure-presets'
+import { MetricsManager } from './MetricsManager'
 import { TrainerTrainingSummaryCard } from './TrainingSummaryCard'
 import { TrainerProgressOverviewCard } from './TrainerProgressOverviewCard'
 import { RunningProgressCard } from './RunningProgressCard'
@@ -51,7 +52,7 @@ export function ProgressPage() {
   const metrics = useQuery({ queryKey: ['metrics', clientId], queryFn: () => progressRepository.listMetrics(clientId) })
   const save = useMutation({ mutationFn: async (form: HTMLFormElement) => { const data = new FormData(form); const recordedOn = localDate(String(data.get('recordedOn'))); if (recordedOn > today) throw new Error('Нельзя добавить замер с будущей датой'); return progressRepository.save({ id: editing?.id, clientId, version: editing?.version, recordedOn, weightKg: numberValue(data.get('weightKg')), chestCm: numberValue(data.get('chestCm')), waistCm: numberValue(data.get('waistCm')), hipCm: numberValue(data.get('hipCm')), notes: String(data.get('notes') || '') || undefined, customMetrics: metrics.data?.filter((metric) => !metric.archivedAt).flatMap((metric) => { const value = numberValue(data.get(`metric-${metric.id}`)); return value === undefined ? [] : [{ metricId: metric.id, value }] }) ?? [] }) }, onSuccess: async () => { setEditing(null); setCreateFormOpen(false); await queryClient.invalidateQueries({ queryKey: ['progress', clientId] }); await queryClient.invalidateQueries({ queryKey: ['client', clientId] }) } })
   const remove = useMutation({ mutationFn: (entry: ProgressEntry) => progressRepository.remove(entry), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['progress', clientId] }) })
-  const createMetric = useMutation({ mutationFn: ({ name, unit }: { name: string; unit: string | null }) => progressRepository.createMetric(actor!.userId, clientId, name, unit), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }) })
+  const createMetric = useMutation({ mutationFn: ({ name, unit }: { name: string; unit: string | null }) => progressRepository.createMetric(clientId, name, unit), onSuccess: async () => Promise.all([queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }), queryClient.invalidateQueries({ queryKey: ['progress-metrics', clientId] })]) })
   const archiveMetric = useMutation({ mutationFn: (metric: CustomMetric) => progressRepository.setMetricArchived(metric, !metric.archivedAt), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }) })
   const loading = client.isLoading || entries.isLoading || metrics.isLoading; const error = client.error ?? entries.error ?? metrics.error
   const canManage = (entry: ProgressEntry) => actor?.role === 'client' || entry.createdBy === actor?.userId
@@ -135,7 +136,7 @@ export function ProgressPage() {
               ? <article className="card editing" key={entry.id}><ProgressForm entry={entry} metrics={metrics.data ?? []} today={today} busy={save.isPending} errorMessage={save.error?.message ?? null} onSubmit={(form) => save.mutate(form)} onCancel={() => setEditing(null)} /></article>
               : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{measurementSummaryText(entry, metrics.data ?? []) || 'Показатели не указаны'}</p></div>{canManage(entry) && <div className="row-actions"><button className="link" onClick={() => { setCreateError(null); setCreateFormOpen(false); setEditing(entry) }}>Изменить</button><button className="link danger" onClick={() => remove.mutate(entry)}>Удалить</button></div>}</article>)}</div>
           </section>}
-          {metricsOpen && <MetricsManager metrics={metrics.data ?? []} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />}
+          {metricsOpen && <MetricsManager metrics={metrics.data ?? []} busy={createMetric.isPending || archiveMetric.isPending} error={createMetric.error ?? archiveMetric.error} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />}
         </section>}
         {metricSheetOpen && <MetricOverflowSheet metrics={overflowMetrics} onPick={(id) => { setSelectedMetric(id); setMetricSheetOpen(false) }} onClose={() => setMetricSheetOpen(false)} />}
       </AsyncView>
@@ -175,33 +176,6 @@ function ProgressForm({ entry, metrics, today, busy, errorMessage, onSubmit, onC
       ? <Field key={row.metric.id} label={`${row.metric.name}${row.metric.unit ? `, ${row.metric.unit}` : ''}`}>{metricField(row.metric, entry)}</Field>
       : <Field key={row.base} label={`${row.base}${row.unit ? `, ${row.unit}` : ''}`}><div className="measure-pair">{row.left && metricField(row.left, entry, 'Л')}{row.right && metricField(row.right, entry, 'П')}</div></Field>
     )}<Field label="Заметка"><textarea name="notes" defaultValue={entry?.notes} /></Field>{errorMessage && <p className="error" role="alert">{errorMessage}</p>}<div className="actions">{onCancel && <button type="button" className="secondary" disabled={busy} onClick={onCancel}>Отмена</button>}<button className="primary" disabled={busy} aria-busy={busy}>{busy ? 'Сохраняем…' : 'Сохранить замер'}</button></div></form></section>
-}
-
-function MetricsManager({ metrics, onCreate, onArchive }: { metrics: CustomMetric[]; onCreate: (name: string, unit: string | null) => void; onArchive: (metric: CustomMetric) => void }) {
-  const [preset, setPreset] = useState('')
-  function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const data = new FormData(event.currentTarget); onCreate(String(data.get('name')), String(data.get('unit') || '') || null); event.currentTarget.reset() }
-  // Уже добавленные (в т.ч. в архиве) метрики — по имени, чтобы не плодить дубли.
-  const existing = new Set(metrics.map((metric) => metric.name))
-  const available = MEASURE_PRESETS.filter((option) => presetMetricNames(option).some((name) => !existing.has(name)))
-  function addPreset() {
-    const option = MEASURE_PRESETS.find((item) => item.id === preset)
-    if (!option) return
-    // Для парного создаём обе стороны; пропускаем уже существующие.
-    presetMetricNames(option).forEach((name) => { if (!existing.has(name)) onCreate(name, option.unit) })
-    setPreset('')
-  }
-  return <section className="metrics-manager"><div className="measurement-section-heading"><p className="eyebrow">НАСТРОЙКА</p><h2>Показатели замера</h2><span>Добавьте параметры, которые важно отслеживать для этого клиента.</span></div>
-    {available.length > 0 && <div className="metric-preset-row">
-      <select aria-label="Готовый замер" value={preset} onChange={(event) => setPreset(event.target.value)}>
-        <option value="">Выберите замер…</option>
-        {available.map((option) => <option key={option.id} value={option.id}>{option.base}, {option.unit}{option.paired ? ' (Л + П)' : ''}</option>)}
-      </select>
-      <button type="button" className="secondary" disabled={!preset} onClick={addPreset}>Добавить</button>
-    </div>}
-    <p className="muted metric-manual-hint">Или своя:</p>
-    <form className="inline-form" onSubmit={(event) => void submit(event)}><input name="name" placeholder="Название" required /><input name="unit" placeholder="Единица" /><button>Добавить</button></form>
-    {metrics.map((metric) => <div className="metric" key={metric.id}><span>{metric.name}{metric.unit ? `, ${metric.unit}` : ''}</span><button className="link danger" onClick={() => onArchive(metric)}>{metric.archivedAt ? 'Вернуть' : 'В архив'}</button></div>)}
-  </section>
 }
 
 function numberValue(value: FormDataEntryValue | null) { return value ? Number(value) : undefined }

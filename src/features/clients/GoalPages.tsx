@@ -13,6 +13,7 @@ import { orderedStages, stageStatus } from '../../shared/goal-rules'
 import { formatLocalDateShort, localDate, todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Field, Page, Switch, useConfirm } from '../../shared/ui'
 import { useExerciseCatalog } from '../exercises'
+import { MetricsManager } from '../progress/MetricsManager'
 
 const STATUS_LABEL: Record<string, string> = { done: 'завершён', current: 'идёт', upcoming: 'впереди' }
 
@@ -85,9 +86,9 @@ function blankCriterion(position: number): SaveGoalCriterionInput {
   return { metric: 'weight', operation: 'track_only', targetValue: null, rangeMin: null, rangeMax: null, unit: 'кг', confirmationStatus: 'confirmed', position }
 }
 
-function CriterionEditor({ value, exercises, metrics, onChange, onRemove }: {
+function CriterionEditor({ value, exercises, metrics, onChange, onRemove, onManageMetrics }: {
   value: SaveGoalCriterionInput; exercises: readonly ExerciseSnapshot[]; metrics: readonly CustomMetric[]
-  onChange: (value: SaveGoalCriterionInput) => void; onRemove: () => void
+  onChange: (value: SaveGoalCriterionInput) => void; onRemove: () => void; onManageMetrics: () => void
 }) {
   const definition = GOAL_CRITERION_METRICS[value.metric]
   const set = (patch: Partial<SaveGoalCriterionInput>) => onChange({ ...value, ...patch })
@@ -106,10 +107,10 @@ function CriterionEditor({ value, exercises, metrics, onChange, onRemove }: {
       const exercise = exercises.find((item) => item.ref === event.target.value)
       set(exercise ? { exerciseSource: exercise.source, exerciseRef: exercise.ref, exerciseName: exercise.name, customExerciseId: exercise.customExerciseId ?? null } : { exerciseSource: null, exerciseRef: null, exerciseName: null, customExerciseId: null })
     }}><option value="">Выберите из каталога</option>{availableExercises.map((exercise) => <option value={exercise.ref} key={`${exercise.source}:${exercise.ref}`}>{exercise.name}</option>)}</select></Field>}
-    {definition.family === 'custom' && <Field label="Показатель клиента"><select value={value.customMetricId ?? ''} onChange={(event) => {
+    {definition.family === 'custom' && <div className="goal-custom-metric-field"><Field label="Показатель клиента"><select value={value.customMetricId ?? ''} onChange={(event) => {
       const metric = metrics.find((item) => item.id === event.target.value)
       set(metric ? { customMetricId: metric.id, customMetricName: metric.name, unit: metric.unit ?? 'ед.' } : { customMetricId: null, customMetricName: null })
-    }}><option value="">Выберите показатель</option>{metrics.filter((metric) => !metric.archivedAt).map((metric) => <option value={metric.id} key={metric.id}>{metric.name}{metric.unit ? `, ${metric.unit}` : ''}</option>)}</select></Field>}
+    }}><option value="">Выберите показатель</option>{metrics.filter((metric) => !metric.archivedAt).map((metric) => <option value={metric.id} key={metric.id}>{metric.name}{metric.unit ? `, ${metric.unit}` : ''}</option>)}</select></Field><button type="button" className="link" onClick={onManageMetrics}>＋ Создать показатель</button></div>}
     {definition.family === 'regularity' && <div className="split"><Field label="Период"><select value={value.regularityPeriod ?? 'week'} onChange={(event) => set({ regularityPeriod: event.target.value as 'week' | 'month' })}><option value="week">Неделя</option><option value="month">Месяц</option></select></Field><Field label="Проверка"><select value={value.regularityMode ?? 'average'} onChange={(event) => set({ regularityMode: event.target.value as 'average' | 'each_period' })}><option value="average">В среднем</option><option value="each_period">В каждом периоде</option></select></Field></div>}
     {value.metric === 'exercise_best_result' && <Field label="Единица результата"><select value={value.unit} onChange={(event) => set({ unit: event.target.value })}><option value="кг">кг</option><option value="повт.">повт.</option><option value="км">км</option><option value="мин">мин</option><option value="кг·повт.">кг·повт.</option></select></Field>}
     <Field label="Способ оценки"><select value={value.operation} onChange={(event) => set({ operation: event.target.value as GoalCriterionOperation, targetValue: null, rangeMin: null, rangeMax: null })}>{Object.entries(GOAL_CRITERION_OPERATIONS).filter(([operation]) => operation !== 'change_by' || definition.family === 'standard').map(([operation, label]) => <option value={operation} key={operation}>{label}</option>)}</select></Field>
@@ -127,6 +128,7 @@ function GoalForm({ clientId, goal, initialTitle, onSaved, onCancel }: {
   onCancel?: () => void
 }) {
   const catalog = useExerciseCatalog()
+  const queryClient = useQueryClient()
   const metrics = useQuery({ queryKey: ['progress-metrics', clientId], queryFn: () => progressRepository.listMetrics(clientId) })
   const existingCriteria = goal?.criteria ?? []
   const [criterionEnabled, setCriterionEnabled] = useState(existingCriteria.length > 0)
@@ -134,6 +136,15 @@ function GoalForm({ clientId, goal, initialTitle, onSaved, onCancel }: {
   const [criterionReviewed, setCriterionReviewed] = useState(false)
   const [suggestionPending, setSuggestionPending] = useState(false)
   const [suggestionMessage, setSuggestionMessage] = useState<string | null>(null)
+  const [metricsOpen, setMetricsOpen] = useState(false)
+  const createMetric = useMutation({ mutationFn: ({ name, unit }: { name: string; unit: string | null }) => progressRepository.createMetric(clientId, name, unit), onSuccess: async () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['progress-metrics', clientId] }),
+    queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }),
+  ]) })
+  const archiveMetric = useMutation({ mutationFn: (metric: CustomMetric) => progressRepository.setMetricArchived(metric, !metric.archivedAt), onSuccess: async () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['progress-metrics', clientId] }),
+    queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }),
+  ]) })
   const defaults: GoalFormValues = {
     title: goal?.title ?? initialTitle ?? '',
     targetDate: goal?.targetDate ?? '',
@@ -186,7 +197,8 @@ function GoalForm({ clientId, goal, initialTitle, onSaved, onCancel }: {
       {criterionEnabled ? <div className="goal-criterion-fields">
         <button type="button" className="secondary" disabled={!title || suggestion.isPending || catalog.loading || metrics.isLoading} onClick={() => suggestion.mutate()}>{suggestion.isPending ? 'Анализируем…' : 'Предложить критерии с ИИ'}</button>
         {(suggestion.error || suggestionMessage) && <p className={suggestion.error ? 'error' : 'muted'} role={suggestion.error ? 'alert' : undefined}>{suggestion.error?.message ?? suggestionMessage}</p>}
-        {criteria.map((criterion, index) => <CriterionEditor key={criterion.id ?? `new-${index}`} value={criterion} exercises={catalog.exercises} metrics={metrics.data ?? []} onChange={(next) => setCriteria((current) => current.map((item, itemIndex) => itemIndex === index ? next : item))} onRemove={() => setCriteria((current) => current.filter((_, itemIndex) => itemIndex !== index).map((item, position) => ({ ...item, position })))} />)}
+        {criteria.map((criterion, index) => <CriterionEditor key={criterion.id ?? `new-${index}`} value={criterion} exercises={catalog.exercises} metrics={metrics.data ?? []} onChange={(next) => setCriteria((current) => current.map((item, itemIndex) => itemIndex === index ? next : item))} onRemove={() => setCriteria((current) => current.filter((_, itemIndex) => itemIndex !== index).map((item, position) => ({ ...item, position })))} onManageMetrics={() => setMetricsOpen(true)} />)}
+        {metricsOpen && <MetricsManager metrics={metrics.data ?? []} busy={createMetric.isPending || archiveMetric.isPending} error={createMetric.error ?? archiveMetric.error} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />}
         {criteria.length < 10 && <button type="button" className="secondary" onClick={() => setCriteria((current) => [...current, blankCriterion(current.length)])}>＋ Добавить критерий</button>}
         {(criterionNeedsReview || suggestionPending) && <label className="goal-criterion-confirm"><input type="checkbox" checked={criterionReviewed}
           onChange={(event) => setCriterionReviewed(event.currentTarget.checked)} />
