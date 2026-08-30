@@ -1,0 +1,36 @@
+name: Cleanup PR preview
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Remove the closed PR preview ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+            echo 'Pull request number must be a positive integer' >&2
+            exit 1
+          fi
+
+          preview_branch="preview/pr-$PR_NUMBER"
+          if gh api "repos/$REPOSITORY/git/ref/heads/$preview_branch" >/dev/null 2>&1; then
+            gh api --method DELETE \
+              "repos/$REPOSITORY/git/refs/heads/$preview_branch" >/dev/null
+          fi
