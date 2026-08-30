@@ -2914,6 +2914,36 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .app-render-error.system-state-identity .app-render-error-actions { gap:8px; margin-top:8px }
 .app-render-error.system-state-identity .app-render-error-actions button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
 
+/* Общие async/overlay primitives новой identity. Правила намеренно scoped:
+   legacy UI сохраняет прежний shimmer, blur и геометрию для rollback=off. */
+.identity-monochrome-preview .skeleton-block { border-radius:10px; background:var(--surface-sunken); animation:none }
+.identity-monochrome-preview .sheet-overlay,
+.identity-monochrome-preview .modal-overlay { background:color-mix(in srgb, var(--bg) 76%, transparent); backdrop-filter:none }
+.identity-monochrome-preview .modal-dialog {
+  gap:16px;
+  padding:20px;
+  border-color:var(--border);
+  border-radius:18px;
+  background:var(--surface-elevated);
+  box-shadow:none;
+}
+.identity-monochrome-preview .modal-message { color:var(--fg); font-size:14px; font-weight:400; line-height:1.45 }
+.identity-monochrome-preview .modal-dialog .actions { gap:8px }
+.identity-monochrome-preview .modal-dialog .actions button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.identity-monochrome-preview .modal-dialog .actions .danger { border-color:var(--danger); background:var(--surface-elevated); color:var(--danger) }
+.identity-monochrome-preview .picker-close svg { stroke-width:1.8 }
+.identity-monochrome-preview .coachmark-bubble {
+  gap:6px;
+  padding:16px;
+  border-color:var(--border);
+  border-radius:18px;
+  background:var(--surface-elevated);
+  box-shadow:none;
+}
+.identity-monochrome-preview .coachmark-bubble strong { color:var(--fg); font-size:16px; font-weight:600 }
+.identity-monochrome-preview .coachmark-bubble p { color:var(--secondary-label-fg); font-size:14px; font-weight:400; line-height:1.45 }
+.identity-monochrome-preview .coachmark-bubble button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+
 /* Gate 8 / Task 25 — весь доступ к продукту образует одну спокойную auth-family.
    Публичные маршруты получают эти правила через AuthIdentityScreen, а Join —
    через route-scoped shell. Legacy CSS остаётся рядом для rollout=off. */
@@ -3898,9 +3928,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-create-edit-identity .sheet-overlay,
 .workout-create-edit-identity .modal-overlay { background:color-mix(in srgb, var(--bg) 76%, transparent); backdrop-filter:none }
 .workout-create-edit-identity .exercise-picker,
-.workout-create-edit-identity .client-picker-sheet,
+.workout-create-edit-identity .client-picker,
 .workout-create-edit-identity .exercise-settings-sheet,
 .workout-create-edit-identity .modal-dialog { border-color:var(--border); background:var(--surface-elevated); box-shadow:none }
+.workout-create-edit-identity .client-picker,
+.workout-create-edit-identity .exercise-picker,
+.workout-create-edit-identity .exercise-settings-sheet { border-radius:18px 18px 0 0 }
 .workout-create-edit-identity .picker-header h1,
 .workout-create-edit-identity .picker-header h2 { color:var(--fg); font-size:18px; font-weight:600 }
 .workout-create-edit-identity .picker-close { width:44px; height:44px; border-radius:14px; color:var(--fg) }
@@ -3959,12 +3992,21 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 
 .workout-detail-history-identity .workout-completion { gap:14px; margin-bottom:18px; padding:18px; border-color:var(--success-border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
 .workout-detail-history-identity .workout-completion-mark { width:48px; height:48px; border-radius:14px; background:var(--surface-sunken); color:var(--success-fg) }
+.workout-detail-history-identity .workout-completion-mark svg { stroke-width:1.8 }
 .workout-detail-history-identity .workout-completion-kicker { color:var(--success-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
 .workout-detail-history-identity .workout-completion h2 { color:var(--fg); font-size:18px; font-weight:600 }
 .workout-detail-history-identity .workout-completion p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
 .workout-detail-history-identity .workout-completion-record strong { color:var(--success-fg); font-size:12px; font-weight:500 }
 .workout-detail-history-identity .workout-completion-record span { color:var(--fg); font-size:16px; font-weight:600 }
 .workout-detail-history-identity .workout-completion-next { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .workout-decision-sheet {
+  gap:16px;
+  padding:20px 20px calc(20px + env(safe-area-inset-bottom));
+  border-color:var(--border);
+  border-radius:18px 18px 0 0;
+  background:var(--surface-elevated);
+  box-shadow:none;
+}
 
 .workout-detail-history-identity .workout-detail-primary-actions { gap:8px; margin:0 0 16px }
 .workout-detail-history-identity .workout-detail-primary-actions .workout-cta,
