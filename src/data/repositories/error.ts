@@ -73,6 +73,9 @@ export function repositoryError(error: unknown): RepositoryError {
   if (code === 'PT409' && normalizedMessage.includes('active_workout_exists')) {
     return new RepositoryError('active_workout_exists', 'У клиента уже идёт другая тренировка. Откройте её и продолжите.')
   }
+  if (code === 'PT409' && normalizedMessage.includes('custom_metric_exists')) {
+    return new RepositoryError('custom_metric_exists', 'Показатель с таким названием уже существует.')
+  }
   if (code === 'PT409' || code === '40001') {
     return new RepositoryError(code, 'Данные уже изменились. Обновите страницу и повторите.')
   }

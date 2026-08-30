@@ -20,13 +20,11 @@ export const progressQueries = {
   }),
   listMetrics: (clientId: string) => supabase.from('client_custom_metrics')
     .select('id,client_id,name,unit,archived_at,version').eq('client_id', clientId).order('name'),
-  createMetric: (trainerId: string, clientId: string, name: string, unit: string | null) =>
-    supabase.from('client_custom_metrics').insert({ trainer_id: trainerId, client_id: clientId, name, unit })
-      .select('id,client_id,name,unit,archived_at,version').single(),
+  createMetric: (clientId: string, name: string, unit: string | null) =>
+    supabase.rpc('create_client_custom_metric', { p_client_id: clientId, p_name: name, ...(unit ? { p_unit: unit } : {}) }),
   updateMetric: (id: string, version: number, name: string, unit: string | null) =>
     supabase.from('client_custom_metrics').update({ name, unit, version: version + 1 })
       .eq('id', id).eq('version', version).select('id,client_id,name,unit,archived_at,version').single(),
   setMetricArchived: (id: string, version: number, archived: boolean) =>
-    supabase.from('client_custom_metrics').update({ archived_at: archived ? new Date().toISOString() : null, version: version + 1 })
-      .eq('id', id).eq('version', version).select('id,client_id,name,unit,archived_at,version').single(),
+    supabase.rpc('set_client_custom_metric_archived', { p_metric_id: id, p_expected_version: version, p_archived: archived }),
 }

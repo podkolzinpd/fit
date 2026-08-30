@@ -3,7 +3,7 @@ import type { ProgressEntry } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { findProgressDateConflict, groupCustomMetricValues, roundMetric } from './progress-rules'
 
-const queries = vi.hoisted(() => ({ regularity: vi.fn() }))
+const queries = vi.hoisted(() => ({ regularity: vi.fn(), createMetric: vi.fn(), setMetricArchived: vi.fn() }))
 vi.mock('../queries/progress.queries', () => ({ progressQueries: queries }))
 
 import { progressRepository } from './progress.repository'
@@ -30,6 +30,32 @@ describe('progressRepository.regularity', () => {
       partialCount: 0, skippedCount: 0, completionPercent: null,
     }])
     expect(queries.regularity).toHaveBeenCalledWith('client-1')
+  })
+})
+
+describe('progressRepository custom metrics', () => {
+  it('creates a client-owned metric through the guarded mutation', async () => {
+    queries.createMetric.mockResolvedValue({ data: {
+      id: 'metric-1', client_id: 'client-1', trainer_id: 'trainer-1', name: 'Плечи', unit: 'см',
+      archived_at: null, version: 1, created_at: '2026-08-30T10:00:00Z', updated_at: '2026-08-30T10:00:00Z',
+    }, error: null })
+
+    await expect(progressRepository.createMetric('client-1', 'Плечи', 'см')).resolves.toEqual({
+      id: 'metric-1', clientId: 'client-1', name: 'Плечи', unit: 'см', archivedAt: null, version: 1,
+    })
+    expect(queries.createMetric).toHaveBeenCalledWith('client-1', 'Плечи', 'см')
+  })
+
+  it('returns the new version after archiving a metric', async () => {
+    queries.setMetricArchived.mockResolvedValue({ data: {
+      id: 'metric-1', client_id: 'client-1', trainer_id: 'trainer-1', name: 'Плечи', unit: 'см',
+      archived_at: '2026-08-30T11:00:00Z', version: 2, created_at: '2026-08-30T10:00:00Z', updated_at: '2026-08-30T11:00:00Z',
+    }, error: null })
+
+    await expect(progressRepository.setMetricArchived({
+      id: 'metric-1', clientId: 'client-1', name: 'Плечи', unit: 'см', archivedAt: null, version: 1,
+    }, true)).resolves.toMatchObject({ archivedAt: '2026-08-30T11:00:00Z', version: 2 })
+    expect(queries.setMetricArchived).toHaveBeenCalledWith('metric-1', 1, true)
   })
 })
 

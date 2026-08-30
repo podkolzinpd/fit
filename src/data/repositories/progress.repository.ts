@@ -71,8 +71,8 @@ export const progressRepository = {
     return result.data.map((row) => ({ id: row.id, clientId: row.client_id, name: row.name,
       unit: row.unit, archivedAt: row.archived_at, version: row.version }))
   },
-  async createMetric(trainerId: string, clientId: string, name: string, unit: string | null): Promise<CustomMetric> {
-    const result = await progressQueries.createMetric(trainerId, clientId, name, unit)
+  async createMetric(clientId: string, name: string, unit: string | null): Promise<CustomMetric> {
+    const result = await progressQueries.createMetric(clientId, name, unit)
     if (result.error) throw repositoryError(result.error)
     return { id: result.data.id, clientId: result.data.client_id, name: result.data.name,
       unit: result.data.unit, archivedAt: result.data.archived_at, version: result.data.version }
