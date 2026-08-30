@@ -3,7 +3,7 @@ import { useAuth } from './auth-context'
 import { trackPageView } from '../shared/yandex-metrika'
 import { AppLayout } from './AppLayout'
 import { AppViewportProvider } from './app-viewport'
-import { isAssistantNavPilotEnabled, isMonochromeUiEnabled, trainerHomePath } from './feature-flags'
+import { isAssistantNavPilotEnabled, trainerHomePath } from './feature-flags'
 import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage, YandexPilotCallbackPage } from '../features/auth'
 import { ClientDetailPage, ClientFormPage, ClientProfilePage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyGoalPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
@@ -15,9 +15,7 @@ import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canoni
 
 function Protected() {
   const { actor, loading, error } = useAuth(); const location = useLocation()
-  const systemStateClass = isMonochromeUiEnabled(Boolean(actor?.featureFlags?.monochromePreview))
-    ? 'state identity-monochrome-preview system-state-identity'
-    : 'state'
+  const systemStateClass = 'state identity-monochrome-preview system-state-identity'
   if (loading) return <main className={systemStateClass}>Восстанавливаем сессию…</main>
   if (!actor) return <Navigate to="/auth" state={{ from: `${location.pathname}${location.search}` }} replace />
   if (error) return <main className={`${systemStateClass} error`}>{error}</main>

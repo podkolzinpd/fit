@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnalyticsIcon, AssistantIcon, ClientsIcon, HomeIcon, ProfileIcon, ScheduleIcon, TodayIcon } from '../shared/icons'
 import { useAuth } from './auth-context'
 import { applyAppTheme, applyMonochromeThemeColor, applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from './theme'
-import { isAssistantNavPilotEnabled, isDarkThemePilotEnabled, isMonochromeUiEnabled, isTodayStartRedesignEnabled } from './feature-flags'
+import { isAssistantNavPilotEnabled, isTodayStartRedesignEnabled } from './feature-flags'
 import { useAppViewport } from './app-viewport'
 
 export { appViewportMetrics } from './app-viewport'
@@ -20,48 +20,40 @@ export function AppLayout() {
   const workoutForm = pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname)
   const workoutDetail = pathname !== '/workouts/new' && /\/workouts\/[^/]+$/.test(pathname)
   const exerciseHistory = /\/workouts\/[^/]+\/history\/[^/]+$/.test(pathname)
-  const monochromeEnabled = isMonochromeUiEnabled(Boolean(actor?.featureFlags?.monochromePreview))
-  const monochromeClientHome = monochromeEnabled && pathname === '/me' && !todayStep
-  const monochromeLive = monochromeEnabled && liveSession
-  const monochromeProgress = monochromeEnabled && pathname === '/me/progress'
-  const monochromeClientGoal = monochromeEnabled && pathname === '/me/goal'
-  const monochromeClientWorkouts = monochromeEnabled && pathname === '/me/workouts'
-  const monochromeTrainerClientWorkouts = Boolean(monochromeEnabled && actor?.role === 'trainer' && /^\/clients\/[^/]+\/workouts$/.test(pathname))
-  const monochromeClientProfile = monochromeEnabled && pathname === '/me/profile'
-  const monochromeClientCardEdit = monochromeEnabled && pathname === '/me/edit'
-  const monochromeWorkoutCreateEdit = monochromeEnabled && (workoutForm || todayStep)
-  const monochromeWorkoutDetailHistory = monochromeEnabled && (workoutDetail || exerciseHistory)
-  const monochromeTrainerToday = Boolean(monochromeEnabled && actor?.role === 'trainer' && pathname === '/today' && !todayStep)
-  const monochromeTrainerClients = Boolean(monochromeEnabled && actor?.role === 'trainer' && pathname === '/clients')
-  const monochromeTrainerClientDetail = Boolean(monochromeEnabled && actor?.role === 'trainer' && /^\/clients\/[^/]+$/.test(pathname) && pathname !== '/clients/new')
-  const monochromeTrainerClientForm = Boolean(monochromeEnabled && actor?.role === 'trainer' && (pathname === '/clients/new' || /^\/clients\/[^/]+\/edit$/.test(pathname)))
-  const monochromeTrainerClientGoal = Boolean(monochromeEnabled && actor?.role === 'trainer' && /^\/clients\/[^/]+\/goal$/.test(pathname))
-  const monochromeTrainerSchedule = Boolean(monochromeEnabled && actor?.role === 'trainer' && pathname === '/schedule')
-  const monochromeTrainerProgress = Boolean(monochromeEnabled && actor?.role === 'trainer' && /^\/progress\/[^/]+$/.test(pathname))
-  const monochromeExerciseCatalog = Boolean(monochromeEnabled && actor?.role === 'trainer' && pathname === '/exercises')
-  const monochromeTrainerProfile = Boolean(monochromeEnabled && actor?.role === 'trainer' && pathname === '/profile')
-  const monochromeAuthJoin = monochromeEnabled && pathname === '/join'
-  const monochromeAssistant = monochromeEnabled && pathname === '/assistant'
-  const monochromeIdentity = monochromeClientHome || monochromeLive || monochromeProgress || monochromeClientGoal || monochromeClientWorkouts || monochromeTrainerClientWorkouts || monochromeClientProfile || monochromeClientCardEdit || monochromeWorkoutCreateEdit || monochromeWorkoutDetailHistory || monochromeTrainerToday || monochromeTrainerClients || monochromeTrainerClientDetail || monochromeTrainerClientForm || monochromeTrainerClientGoal || monochromeTrainerSchedule || monochromeTrainerProgress || monochromeExerciseCatalog || monochromeTrainerProfile || monochromeAuthJoin || monochromeAssistant
-  // main.tsx применяет тему до первого render, когда аккаунт ещё неизвестен.
-  // Пилотный вариант подключается здесь — как только auth вернул actor и
-  // allowlist можно проверить; вне allowlist вариант остаётся прежним тёмным.
-  // Monochrome dark — самостоятельная принятая палитра, а не прежний
-  // фиолетовый dark-pilot. Identity-токены задают dark values сами; старый
-  // pilot остаётся доступен только на legacy routes.
-  const themeVariant = resolveThemeVariant(theme, !monochromeIdentity && Boolean(actor && isDarkThemePilotEnabled(actor.userId)))
+  const monochromeClientHome = pathname === '/me' && !todayStep
+  const monochromeLive = liveSession
+  const monochromeProgress = pathname === '/me/progress'
+  const monochromeClientGoal = pathname === '/me/goal'
+  const monochromeClientWorkouts = pathname === '/me/workouts'
+  const monochromeTrainerClientWorkouts = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+\/workouts$/.test(pathname))
+  const monochromeClientProfile = pathname === '/me/profile'
+  const monochromeClientCardEdit = pathname === '/me/edit'
+  const monochromeWorkoutCreateEdit = workoutForm || todayStep
+  const monochromeWorkoutDetailHistory = workoutDetail || exerciseHistory
+  const monochromeTrainerToday = Boolean(actor?.role === 'trainer' && pathname === '/today' && !todayStep)
+  const monochromeTrainerClients = Boolean(actor?.role === 'trainer' && pathname === '/clients')
+  const monochromeTrainerClientDetail = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+$/.test(pathname) && pathname !== '/clients/new')
+  const monochromeTrainerClientForm = Boolean(actor?.role === 'trainer' && (pathname === '/clients/new' || /^\/clients\/[^/]+\/edit$/.test(pathname)))
+  const monochromeTrainerClientGoal = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+\/goal$/.test(pathname))
+  const monochromeTrainerSchedule = Boolean(actor?.role === 'trainer' && pathname === '/schedule')
+  const monochromeTrainerProgress = Boolean(actor?.role === 'trainer' && /^\/progress\/[^/]+$/.test(pathname))
+  const monochromeExerciseCatalog = Boolean(actor?.role === 'trainer' && pathname === '/exercises')
+  const monochromeTrainerProfile = Boolean(actor?.role === 'trainer' && pathname === '/profile')
+  const monochromeAuthJoin = pathname === '/join'
+  const monochromeAssistant = pathname === '/assistant'
+  const themeVariant = resolveThemeVariant(theme)
 
   useEffect(() => {
     // Класс живёт на <html>: фон вне рамки телефона и цвет системной панели
     // должны совпадать с палитрой внутри неё.
     applyThemeVariant(themeVariant)
     const root = document.documentElement
-    root.classList.toggle('identity-monochrome-preview', monochromeIdentity)
-    if (monochromeIdentity) applyMonochromeThemeColor(theme)
+    root.classList.add('identity-monochrome-preview')
+    applyMonochromeThemeColor(theme)
     return () => {
-      applyAppTheme(theme, isMonochromeUiEnabled(false))
+      applyAppTheme(theme)
     }
-  }, [monochromeIdentity, theme, themeVariant])
+  }, [theme, themeVariant])
 
   useEffect(() => {
     // Route content can grow again while its draft is restored. Reset on the
@@ -85,7 +77,7 @@ export function AppLayout() {
     liveSession ? 'live-session-shell' : '',
     workoutForm ? 'workout-form-shell' : '',
     assistant ? 'assistant-shell' : '',
-    monochromeIdentity ? 'identity-monochrome-preview' : '',
+    'identity-monochrome-preview',
     monochromeClientHome ? 'client-home-identity' : '',
     monochromeLive ? 'live-identity' : '',
     monochromeProgress ? 'progress-identity' : '',

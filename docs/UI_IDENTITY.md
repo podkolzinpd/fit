@@ -1,8 +1,8 @@
 # Fit — целевая айдентика интерфейса
 
-Статус: **Foundation UI Identity v1 принята и является production default;
-задачи 8–28 доставлены, финальный accessibility/visual/WebKit gate пройден,
-legacy rollback сохранён минимум на один стабильный релизный цикл**.
+Статус: **Foundation UI Identity v1 принята и является единственным production
+UI; задачи 8–28 доставлены, финальный accessibility/visual/WebKit gate пройден,
+rollback и персональный preview выведены из эксплуатации**.
 
 Этот документ фиксирует новый визуальный характер Fit. Он обязателен для
 планируемого редизайна и для новых UI-решений. Пока конкретный экран не
@@ -579,9 +579,9 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
 - Flow primary actions — base 48 px, choice/history controls — explicit compact
   44 px. Высота не кодирует semantic priority. Light/dark сохраняют одинаковую
   геометрию, keyboard viewport, inner draft scroll и bottom navigation.
-- `VITE_MONOCHROME_ROLLOUT_MODE=off` возвращает legacy Assistant UI одним
-  redeploy; orchestration, matching, fallback и сохранённые данные не требуют
-  отката.
+- Assistant использует ту же production identity без отдельной UI rollback-
+  ветви; его продуктовый allowlist и authorization остаются независимыми от
+  визуальной темы.
 
 
 

@@ -14,7 +14,7 @@ test('auth identity remains usable in WebKit light and dark themes', async ({ pa
 
   await page.addInitScript(() => window.localStorage.setItem('fit.appTheme', 'dark'))
   await page.goto('/auth/forgot')
-  await expect(page.locator('.auth-flow-identity')).not.toHaveClass(/theme-dark-pilot/)
+  await expect(page.locator('.auth-flow-identity')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Восстановление пароля' })).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
