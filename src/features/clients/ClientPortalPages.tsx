@@ -11,9 +11,9 @@ import type { CustomMetric, ProgressEntry } from '../../shared/domain'
 import { ScheduleIcon } from '../../shared/icons'
 import { formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, EmptyState, Field, Page, useConfirm } from '../../shared/ui'
-import { ClientTrainingSummaryCard, groupMetricRows, ProgressChart, RunningProgressCard } from '../progress'
+import { ClientTrainingSummaryCard, groupMetricRows, RunningProgressCard } from '../progress'
 import { MetricsManager } from '../progress/MetricsManager'
-import { measurementSummaryItems, measurementSummaryText } from '../progress/measurement-summary'
+import { measurementSummaryText } from '../progress/measurement-summary'
 import { LoadMoreButton, PastWorkoutPlanCard, WorkoutChronicleCard, WorkoutExercisesSummary, WorkoutStatusBadge, WORKOUT_HISTORY_PAGE_SIZE } from '../workouts'
 import { clientWorkoutAuthorLabel } from './workout-author'
 import { ClientWorkoutHistoryCalendar } from './ClientWorkoutHistoryCalendar'
@@ -183,10 +183,7 @@ export function MyProgressPage() {
     {entries.data && mine.data && <div className="client-progress-stack"><ClientTrainingSummaryCard clientId={mine.data.id} profileGoal={mine.data.goal} gender={mine.data.gender} />
       <RunningProgressCard clientId={mine.data.id} />
       <section className="client-progress-measurement" id="measurements">
-        <div className="client-progress-measurement-head"><div><p className="eyebrow">ЗАМЕРЫ И ПОКАЗАТЕЛИ</p><h2>{entries.data[0] ? 'Последний замер' : 'Замеров пока нет'}</h2></div></div>
-        {entries.data[0] && <div className="client-progress-measurement-latest"><span>{formatLocalDate(entries.data[0].recordedOn)}</span><div className="measurement-latest-values">{measurementSummaryItems(entries.data[0], metrics.data ?? []).slice(0, 4).map((item) => <span key={item.label}><small>{item.label}</small><strong>{item.value}</strong></span>)}</div></div>}
-        {!entries.data[0] && <p>Сохрани вес или объёмы — здесь появится последняя точка.</p>}
-        {entries.data.length > 0 && <section className="measurement-trend" aria-label="Динамика замеров"><ProgressChart entries={entries.data} metric="weightKg" label="Вес" unit="кг" windowEnd={null} onWindowChange={() => undefined} /></section>}
+        <div className="client-progress-measurement-head"><div><p className="eyebrow">УПРАВЛЕНИЕ</p><h2>Замеры и показатели</h2><span>Добавляй новые точки, исправляй историю и настраивай свои показатели.</span></div></div>
         <nav className="measurement-actions" aria-label="Действия с замерами"><button type="button" className="secondary measurement-primary-action" aria-expanded={measurementFormOpen} onClick={() => setMeasurementFormOpen((open) => !open)}>{measurementFormOpen ? 'Закрыть форму' : 'Добавить замер'}</button>{entries.data.length > 0 && <button type="button" className="link" aria-expanded={measurementHistoryOpen} onClick={() => setMeasurementHistoryOpen((open) => !open)}>История · {entries.data.length}</button>}<button type="button" className="link" aria-expanded={metricsOpen} onClick={() => setMetricsOpen((open) => !open)}>{metricsOpen ? 'Закрыть показатели' : 'Настроить показатели'}</button></nav>
         {measurementFormOpen && <ClientProgressForm entry={null} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, null)} onCancel={() => setMeasurementFormOpen(false)} />}
         {measurementHistoryOpen && <section className="client-progress-history"><div className="client-progress-section-head"><p className="eyebrow">ИСТОРИЯ</p><h2>Все замеры</h2></div><div className="cards">{entries.data.map((entry) => editing?.id === entry.id

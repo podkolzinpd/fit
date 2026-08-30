@@ -87,9 +87,12 @@ export interface ProgressChartProps {
   unit: string
   windowEnd: LocalDate | null
   onWindowChange: (value: LocalDate | null) => void
+  rangeStart?: LocalDate
+  rangeEnd?: LocalDate
+  compact?: boolean
 }
 
-export function ProgressChart({ entries, metric, label, unit, windowEnd, onWindowChange }: ProgressChartProps) {
+export function ProgressChart({ entries, metric, label, unit, windowEnd, onWindowChange, rangeStart, rangeEnd, compact = false }: ProgressChartProps) {
   const dragAreaRef = useRef<HTMLDivElement>(null)
   const dragStartRef = useRef<{ x: number; windowEnd: LocalDate } | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -102,12 +105,15 @@ export function ProgressChart({ entries, metric, label, unit, windowEnd, onWindo
   if (chartData.length === 0) return <p className="muted">Нет данных для отображения</p>
 
   const minDate = chartData[0]!.date; const maxDate = chartData[chartData.length - 1]!.date
+  const fixedRange = Boolean(rangeStart && rangeEnd)
   const earliestWindowEnd = addDays(minDate, WINDOW_DAYS - 1)
-  const canDrag = earliestWindowEnd < maxDate
+  const canDrag = !fixedRange && earliestWindowEnd < maxDate
 
   const effectiveEnd = clampDate(windowEnd ?? maxDate, earliestWindowEnd, maxDate)
   const windowStart = addDays(effectiveEnd, -(WINDOW_DAYS - 1))
-  const visibleData = chartData.filter((item) => item.date >= windowStart && item.date <= effectiveEnd)
+  const visibleStart = rangeStart ?? windowStart
+  const visibleEnd = rangeEnd ?? effectiveEnd
+  const visibleData = chartData.filter((item) => item.date >= visibleStart && item.date <= visibleEnd)
   const yDomain = visibleData.length > 0 ? computeYDomain(visibleData.map((item) => item.value)) : undefined
 
   const visibleValues = visibleData.map((item) => item.value)
@@ -137,21 +143,21 @@ export function ProgressChart({ entries, metric, label, unit, windowEnd, onWindo
     event.currentTarget.releasePointerCapture?.(event.pointerId)
   }
 
-  return <section className="chart">
+  return <section className={`chart${compact ? ' compact' : ''}`} aria-label={`График показателя «${label}»`}>
     <h2>{label} ({unit}){canDrag && <span className="chart-range"> · {formatShortDate(windowStart)} – {formatShortDate(effectiveEnd)}</span>}</h2>
     {visibleData.length === 0
       ? <div className="chart-empty-window">
           <p className="muted">Нет данных за этот период</p>
-          <button type="button" className="secondary" onClick={() => onWindowChange(null)}>Показать последние 28 дней</button>
+          {!fixedRange && <button type="button" className="secondary" onClick={() => onWindowChange(null)}>Показать последние 28 дней</button>}
         </div>
       : <div ref={dragAreaRef} className={`chart-drag-area${isDragging ? ' dragging' : ''}`}
           onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp}>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={compact ? 156 : 220}>
             <LineChart data={visibleData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="date" stroke="var(--muted)" height={40} tick={AxisTick} interval={Math.max(0, Math.ceil(visibleData.length / 5) - 1)} />
               <YAxis stroke="var(--muted)" style={{ fontSize: '12px' }} domain={yDomain} allowDecimals />
-              {!isDragging && <Tooltip
+              {!isDragging && !compact && <Tooltip
                 contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', borderRadius: 12 }}
                 labelStyle={{ color: 'var(--fg)', fontWeight: 700 }}
                 itemStyle={{ color: 'var(--fg)' }}
