@@ -4,6 +4,7 @@ import { YandexOAuthCodeClient } from './auth/yandex-oauth-code.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
 import { DatabasePilotClientsReader } from './pilot-clients-reader.js'
+import { DatabasePilotAppFeedbackWriter } from './pilot-app-feedback-writer.js'
 import { DatabasePilotConnectionsReader } from './pilot-connections-reader.js'
 import { DatabasePilotConnectionsWriter } from './pilot-connections-writer.js'
 import { DatabasePilotDomainWriter } from './pilot-domain-writer.js'
@@ -69,6 +70,10 @@ const pilotClientsReader =
   databasePool === undefined
     ? undefined
     : new DatabasePilotClientsReader(databasePool)
+const pilotAppFeedbackWriter =
+  databasePool === undefined
+    ? undefined
+    : new DatabasePilotAppFeedbackWriter(databasePool)
 const pilotConnectionsReader =
   databasePool === undefined
     ? undefined
@@ -144,6 +149,7 @@ const app = buildApp(
     ...(databasePool === undefined ? {} : { databasePool }),
     ...(identityProvider === undefined ? {} : { identityProvider }),
     ...(oauthCodeProvider === undefined ? {} : { oauthCodeProvider }),
+    ...(pilotAppFeedbackWriter === undefined ? {} : { pilotAppFeedbackWriter }),
     ...(pilotClientsReader === undefined ? {} : { pilotClientsReader }),
     ...(pilotConnectionsReader === undefined ? {} : { pilotConnectionsReader }),
     ...(pilotConnectionsWriter === undefined ? {} : { pilotConnectionsWriter }),

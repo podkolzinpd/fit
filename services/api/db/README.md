@@ -36,6 +36,14 @@ visibility: a client reads its own workouts, connected trainers read their own
 assignments plus completed client-authored history, and unrelated actors read
 nothing. Runtime insert, update and delete grants remain closed.
 
+Migration `000024` adds application feedback as an isolated Yandex vertical
+slice. The pilot session supplies the author UUID and account role; request
+bodies cannot choose either value. `fit_api` can execute only the validated
+insert command and cannot read or write the table directly. Human stage readers
+see new messages through the curated `ops_readonly.app_feedback` view, without
+profile names or user-agent data. Production feedback continues to use the
+existing Supabase RPC until sticky tenant routing is implemented.
+
 Stage delivery uses the private migration runner to load one deterministic,
 synthetic workout fixture for each enabled read-only trainer plus an isolated
 smoke actor. This route is disabled outside `APP_ENV=stage`, accepts no user
