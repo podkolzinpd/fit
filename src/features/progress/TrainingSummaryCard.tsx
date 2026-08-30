@@ -313,6 +313,14 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [goalCriteriaOpen, setGoalCriteriaOpen] = useState(false)
+  const personalRecordWorkout = [...(currentWorkouts ?? [])]
+    .filter((workout) => workout.status === 'done' && workout.hasPr)
+    .sort((left, right) => right.workoutDate.localeCompare(left.workoutDate))[0]
+  const personalRecords = useQuery({
+    queryKey: ['workout-personal-records', personalRecordWorkout?.id],
+    queryFn: () => workoutsRepository.personalRecords(personalRecordWorkout!.id),
+    enabled: Boolean(personalRecordWorkout),
+  })
   const presentation = progressStoryPresentation(summary, {
     currentWorkouts,
     previousWorkouts,
@@ -322,27 +330,59 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
     profileGoal,
     today,
     role,
+    personalRecords: personalRecords.data ?? [],
+    personalRecordWorkout,
   })
+  const heroIsMain = Boolean(presentation.hero && presentation.mainNow.subject === presentation.hero.exerciseName)
+  const visibleStats = presentation.mainNow.kind === 'exercise'
+    ? presentation.stats.filter((stat) => !stat.label.includes('улучш'))
+    : presentation.stats
   const wins = presentation.wins
-    .filter((item) => item.title !== presentation.hero?.exerciseName)
+    .filter((item) => item.title !== presentation.hero?.exerciseName && item.title !== presentation.mainNow.subject)
     .slice(0, 2)
   const goalLink = role === 'client' ? '/me/goal' : `/clients/${clientId}/goal`
   const measurementLink = role === 'client' ? '/me/progress#measurements' : `/progress/${clientId}?view=measurements`
   const workoutLink = role === 'client' ? '/workouts/new' : `/workouts/new?client=${clientId}`
+  const mainNowLink = presentation.mainNow.action === 'goal'
+    ? goalLink
+    : presentation.mainNow.action === 'measurement'
+      ? measurementLink
+      : presentation.mainNow.action === 'workout'
+        ? workoutLink
+        : null
+  const mainNowActionLabel = presentation.mainNow.action === 'goal'
+    ? 'Настроить цель'
+    : presentation.mainNow.action === 'measurement'
+      ? 'Добавить замер'
+      : presentation.mainNow.action === 'workout'
+        ? 'Запланировать тренировку'
+        : null
   const attention = role === 'trainer' && 'trainer' in summary ? summary.trainer.attention : []
   const goalCriteria = presentation.goal?.criteria ?? []
   const visibleGoalCriteria = goalCriteriaOpen ? goalCriteria : goalCriteria.slice(0, 1)
 
   return <>
-    <section className="progress-story-summary" aria-label="Результаты периода">
-      <div className={`progress-story-hero${presentation.hero ? '' : ' empty'}`}>
+    <section
+      className="client-progress-main-now"
+      aria-labelledby={`${role}-progress-main-now-title`}
+      data-fact-id={presentation.mainNow.factId}
+      data-copy-source={presentation.mainNow.source}
+    >
+      <span>Главное сейчас</span>
+      <h3 id={`${role}-progress-main-now-title`}>{presentation.mainNow.title}</h3>
+      <p>{presentation.mainNow.explanation}</p>
+      <strong>{presentation.mainNow.evidence}</strong>
+      {mainNowLink && mainNowActionLabel && <Link className="link" to={mainNowLink}>{mainNowActionLabel}</Link>}
+    </section>
+    <section className={`progress-story-summary${heroIsMain ? ' main-fact-removed' : ''}`} aria-label="Результаты периода">
+      {!heroIsMain && <div className={`progress-story-hero${presentation.hero ? '' : ' empty'}`}>
         <span>{presentation.hero ? 'Лучший результат периода' : 'Результаты периода'}</span>
         {presentation.hero
           ? <><strong>{presentation.hero.value}</strong><h3>{presentation.hero.exerciseName}</h3><p>{presentation.hero.detail}</p></>
           : <><h3>Собираем сопоставимые результаты</h3><p>Первые изменения появятся после повторного выполнения упражнений.</p></>}
-      </div>
-      <div className={`ai-progress-stats count-${presentation.stats.length}`}>
-        {presentation.stats.map((stat) => <div key={stat.label}><strong>{stat.value}</strong><span>{stat.label}</span></div>)}
+      </div>}
+      <div className={`ai-progress-stats count-${visibleStats.length}`}>
+        {visibleStats.map((stat) => <div key={stat.label}><strong>{stat.value}</strong><span>{stat.label}</span></div>)}
       </div>
     </section>
     <TrainingBodyProgressMap
@@ -402,7 +442,7 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       <p>{role === 'client' ? 'Добавь ориентир — тогда результаты можно будет оценивать в его контексте.' : 'Добавьте ориентир, чтобы оценивать результаты в контексте задачи клиента.'}</p>
       <Link className="link" to={goalLink}>{role === 'client' ? 'Добавить цель' : 'Указать цель'}</Link>
     </section>}
-    <section className="client-progress-upcoming" aria-labelledby={`${role}-progress-upcoming-title`}>
+    {presentation.mainNow.kind !== 'plan' && <section className="client-progress-upcoming" aria-labelledby={`${role}-progress-upcoming-title`}>
       <span>Следующий шаг</span>
       {presentation.nextWorkout
         ? <><h3 id={`${role}-progress-upcoming-title`}>{presentation.nextWorkout.date}</h3>
@@ -412,14 +452,10 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
           </article>)}</div></>
         : <><h3 id={`${role}-progress-upcoming-title`}>Ближайшая тренировка не запланирована</h3>
           <Link className="link" to={workoutLink}>Запланировать тренировку</Link></>}
-    </section>
+    </section>}
     {attention.length > 0 && <section className="progress-story-attention" aria-label="На что обратить внимание">
       <span aria-hidden="true">!</span><div><strong>На что обратить внимание</strong><p>{formatSummaryText(attention[0]!)}</p></div>
     </section>}
-    <section className="client-progress-insight" aria-labelledby={`${role}-progress-insight-title`}>
-      <h3 id={`${role}-progress-insight-title`}>{role === 'client' ? 'Главное сейчас' : 'Вывод за период'}</h3>
-      <p>{presentation.conclusion}</p>
-    </section>
     <div className="client-progress-details-toggle">
       <button type="button" className="link" onClick={() => setDetailsOpen(true)}>Подробный анализ</button>
     </div>

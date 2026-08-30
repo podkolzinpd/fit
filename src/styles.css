@@ -2051,6 +2051,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-progress-insight { display:grid; gap:4px; margin:var(--space-3) var(--card-padding) 0; padding-top:var(--space-3); border-top:1px solid var(--client-ai-note-border) }
 .client-progress-insight h3 { color:var(--client-ai-note-fg) }
 .client-progress-insight p { color:var(--muted) }
+.client-progress-main-now { display:grid; gap:7px }
+.client-progress-main-now > span { color:var(--secondary-label-fg); font-size:var(--type-caption-size); font-weight:var(--weight-semibold); letter-spacing:var(--tracking-label); text-transform:uppercase }
+.client-progress-main-now h3 { margin:0; overflow-wrap:anywhere; font-size:var(--type-section-size); line-height:var(--leading-tight) }
+.client-progress-main-now p { margin:0; overflow-wrap:anywhere; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.client-progress-main-now > strong { display:block; padding-top:9px; border-top:1px solid var(--border); overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); font-variant-numeric:tabular-nums; line-height:var(--leading-snug) }
+.client-progress-main-now > .link { width:fit-content; min-height:44px; padding:5px 0 }
 .client-progress-comparison { display:grid; gap:10px; margin:var(--space-3) var(--card-padding) 0; padding-bottom:var(--space-3); border-bottom:1px solid var(--ai-divider) }
 .client-progress-comparison h3, .client-progress-goal-story h3, .client-progress-upcoming h3 { margin:0; font-size:var(--type-body-size); line-height:var(--leading-tight) }
 .client-progress-comparison > div { display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); gap:8px }
@@ -3133,6 +3139,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .progress-story-card { display:grid; gap:12px; overflow:visible; border:0; border-radius:0; background:transparent }
 .progress-identity .progress-story-period,
 .progress-identity .progress-story-summary { overflow:hidden; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
+.progress-identity .progress-story-summary.main-fact-removed .ai-progress-stats div { min-height:64px }
 .progress-identity .ai-progress-header { padding:18px 18px 12px }
 .progress-identity .ai-progress-title { gap:10px }
 .progress-identity .ai-progress-title h2 { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.3; letter-spacing:.06em; text-transform:uppercase }
@@ -3174,6 +3181,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .client-progress-comparison,
 .progress-identity .client-progress-goal-story,
 .progress-identity .client-progress-upcoming,
+.progress-identity .client-progress-main-now,
 .progress-identity .client-progress-insight { margin:0; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
 .progress-identity .client-progress-wins,
 .progress-identity .client-progress-comparison,
@@ -3182,6 +3190,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .client-progress-comparison h3,
 .progress-identity .client-progress-goal-story h3,
 .progress-identity .client-progress-upcoming h3,
+.progress-identity .client-progress-main-now h3,
 .progress-identity .client-progress-insight h3 { color:var(--fg); font-size:14px; font-weight:600 }
 .progress-identity .client-progress-wins article { grid-template-columns:6px minmax(0,1fr) }
 .progress-identity .client-progress-wins article > span { width:6px; height:6px; background:var(--success); box-shadow:none}
@@ -3189,7 +3198,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .client-progress-wins article p,
 .progress-identity .client-progress-goal-story li,
 .progress-identity .client-progress-goal-story p,
+.progress-identity .client-progress-main-now p,
 .progress-identity .client-progress-insight p { font-size:12px }
+.progress-identity .client-progress-main-now { gap:8px; border-color:var(--mono-primary) }
+.progress-identity .client-progress-main-now > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.progress-identity .client-progress-main-now > strong { padding-top:10px; border-color:var(--border); font-size:12px; font-weight:600 }
+.progress-identity .client-progress-main-now > .link { color:var(--fg); font-size:12px; font-weight:500 }
 .progress-identity .client-progress-comparison article { border:1px solid var(--border); border-radius:10px; background:var(--surface-elevated) }
 .progress-identity .client-progress-comparison article strong { color:var(--fg); font-size:18px; font-weight:600 }
 .progress-identity .client-progress-comparison article.positive strong { color:var(--success-fg) }
@@ -4369,18 +4383,22 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-identity .client-progress-wins,
 .trainer-progress-identity .client-progress-comparison,
 .trainer-progress-identity .client-progress-goal-story,
+.trainer-progress-identity .client-progress-main-now,
 .trainer-progress-identity .client-progress-insight { margin-inline:18px; border-color:var(--border) }
 .trainer-progress-identity .client-progress-wins h3,
 .trainer-progress-identity .client-progress-comparison h3,
 .trainer-progress-identity .client-progress-goal-story h3,
 .trainer-progress-identity .client-progress-upcoming h3,
+.trainer-progress-identity .client-progress-main-now h3,
 .trainer-progress-identity .client-progress-insight h3 { color:var(--fg); font-size:14px; font-weight:600 }
 .trainer-progress-identity .client-progress-wins article > span { width:6px; height:6px; background:var(--success); box-shadow:none}
 .trainer-progress-identity .client-progress-wins article strong,
 .trainer-progress-identity .client-progress-wins article p,
 .trainer-progress-identity .client-progress-goal-story li,
 .trainer-progress-identity .client-progress-goal-story p,
+.trainer-progress-identity .client-progress-main-now p,
 .trainer-progress-identity .client-progress-insight p { font-size:12px }
+.trainer-progress-identity .client-progress-main-now { padding:14px; border-radius:14px; background:var(--surface-elevated) }
 .trainer-progress-identity .client-progress-comparison article { border:1px solid var(--border); border-radius:10px; background:var(--surface-elevated) }
 .trainer-progress-identity .client-progress-comparison article strong { color:var(--fg); font-size:18px; font-weight:600 }
 .trainer-progress-identity .client-progress-comparison article.positive strong { color:var(--success-fg) }
