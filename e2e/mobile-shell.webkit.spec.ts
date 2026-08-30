@@ -962,6 +962,14 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     await expect(analysis.getByRole('button', { name: 'Прогресс', exact: true })).toBeVisible()
     await expect(analysis.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
     await expect(analysis.getByRole('list', { name: 'Тренировки по неделям' })).toBeVisible()
+    const trainerSignals = analysis.locator('.trainer-progress-signals')
+    await expect(trainerSignals).toBeVisible()
+    await expect(trainerSignals.getByRole('button', { name: 'Показать' })).toHaveAttribute('aria-expanded', 'false')
+    if (viewport.width === 390) {
+      await trainerSignals.getByRole('button', { name: 'Показать' }).click()
+      await expect(trainerSignals.getByText('Факт', { exact: true }).first()).toBeVisible()
+      await expect(trainerSignals.getByText('Вопрос', { exact: true }).first()).toBeVisible()
+    }
     await analysis.getByRole('button', { name: 'Нагрузка', exact: true }).click()
     await expect(analysis.getByRole('heading', { name: 'Куда пришлась нагрузка' })).toBeVisible()
     await expect(page.locator('details')).toHaveCount(0)
@@ -979,6 +987,7 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     await page.setViewportSize(viewport)
     await login(page, 'client@fit.local')
     await page.goto('/me/progress')
+    await expect(page.locator('.trainer-progress-signals')).toHaveCount(0)
 
     await expect(page.getByLabel('Регулярность тренировок')).toHaveCount(0)
     const summary = page.locator('.client-progress-card')

@@ -2186,11 +2186,21 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-next-step-decision { display:grid; gap:9px; margin-top:0; padding-top:10px; border-top:1px solid var(--border) }
 .progress-next-step-decision > .secondary { width:fit-content; display:inline-flex; align-items:center; justify-content:center }
 .client-progress-next-step.state-rejected { border-style:dashed }
-.progress-story-attention { display:flex; align-items:flex-start; gap:9px; margin:var(--space-3) var(--card-padding) 0; padding:10px 11px; border:1px solid var(--ai-attention-border); border-radius:var(--radius-md); background:var(--ai-attention-surface) }
-.progress-story-attention > span { width:20px; height:20px; display:grid; place-items:center; flex:0 0 auto; border-radius:50%; color:var(--mono-on-primary); background:var(--warning); font-size:12px; font-weight:900 }
-.progress-story-attention > div { min-width:0; display:grid; gap:4px }
-.progress-story-attention strong { color:var(--ai-attention-fg); font-size:var(--type-caption-size); letter-spacing:var(--tracking-label); text-transform:uppercase }
-.progress-story-attention p { margin:0; overflow-wrap:anywhere; color:var(--ai-attention-fg); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.trainer-progress-signals { display:grid; gap:0; margin:var(--space-3) var(--card-padding) 0; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-raised) }
+.trainer-progress-signals > header { min-height:64px; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:11px 13px }
+.trainer-progress-signals > header > div { min-width:0; display:grid; gap:3px }
+.trainer-progress-signals > header span { color:var(--secondary-label-fg); font-size:var(--type-micro-size); font-weight:var(--weight-semibold); letter-spacing:var(--tracking-label); text-transform:uppercase }
+.trainer-progress-signals > header h3 { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
+.trainer-progress-signals > header .link { min-height:44px; flex:0 0 auto; padding:7px 0; color:var(--fg); font-size:var(--type-caption-size) }
+.trainer-progress-signals-content { display:grid; gap:0; padding:0 13px 13px; border-top:1px solid var(--border) }
+.trainer-progress-signals-content > p { margin:12px 0 0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.trainer-progress-signals-content > p .link { min-height:44px; padding:6px 0 }
+.trainer-progress-signals-content ol { display:grid; margin:0; padding:0; list-style:none }
+.trainer-progress-signals-content li { display:grid; gap:7px; padding:13px 0 }
+.trainer-progress-signals-content li + li { border-top:1px solid var(--border) }
+.trainer-progress-signals-content li > strong { color:var(--fg); font-size:var(--type-caption-size) }
+.trainer-progress-signals-content li p { display:grid; grid-template-columns:52px minmax(0,1fr); gap:8px; margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.trainer-progress-signals-content li p span { color:var(--secondary-label-fg); font-size:var(--type-micro-size); font-weight:var(--weight-semibold); text-transform:uppercase }
 .client-progress-details-toggle { display:flex; justify-content:flex-start; margin:var(--space-2) var(--card-padding) 0 }
 .client-progress-details-toggle .link { min-height:var(--control-height-compact); padding:var(--space-1) 0; color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold) }
 .client-progress-details-section { display:grid; gap:var(--space-2) }
@@ -4586,8 +4596,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-identity .client-progress-upcoming > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-progress-identity .client-progress-goal-story.empty,
 .trainer-progress-identity .client-progress-upcoming { margin-inline:18px; padding:14px; border-color:var(--border); border-radius:14px; background:var(--surface-elevated) }
-.trainer-progress-identity .progress-story-attention { border-color:var(--warning-border); border-radius:14px; background:var(--surface-elevated) }
-.trainer-progress-identity .progress-story-attention > span { color:var(--warning-fg); background:var(--surface-sunken); font-weight:600 }
+.trainer-progress-identity .trainer-progress-signals { margin-inline:18px; border-radius:14px; background:var(--surface-elevated) }
 .trainer-progress-identity .client-progress-details-toggle,
 .trainer-progress-identity .client-copy-toggle { margin-inline:18px; border-color:var(--border) }
 .trainer-progress-identity .client-progress-details-toggle .link,
