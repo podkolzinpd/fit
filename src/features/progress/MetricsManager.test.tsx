@@ -9,9 +9,9 @@ describe('MetricsManager', () => {
     const onCreate = vi.fn()
     render(<MetricsManager metrics={[]} onCreate={onCreate} onArchive={vi.fn()} />)
 
-    await user.type(screen.getByPlaceholderText('Например, плечи'), 'Плечи')
-    await user.type(screen.getByPlaceholderText('Например, см'), 'см')
-    await user.click(within(screen.getByPlaceholderText('Например, плечи').closest('form')!).getByRole('button', { name: 'Добавить' }))
+    await user.type(screen.getByRole('textbox', { name: 'Название показателя' }), 'Плечи')
+    await user.type(screen.getByRole('textbox', { name: 'Единица измерения' }), 'см')
+    await user.click(within(screen.getByRole('textbox', { name: 'Название показателя' }).closest('form')!).getByRole('button', { name: 'Добавить' }))
 
     expect(onCreate).toHaveBeenCalledWith('Плечи', 'см')
   })

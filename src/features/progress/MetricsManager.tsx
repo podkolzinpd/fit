@@ -33,7 +33,7 @@ export function MetricsManager({ metrics, busy = false, error, onCreate, onArchi
       <button type="button" className="secondary" disabled={!preset || busy} onClick={addPreset}>Добавить</button>
     </div>}
     <p className="muted metric-manual-hint">Или создайте свой показатель:</p>
-    <form className="inline-form" onSubmit={(event) => void submit(event)}><input name="name" placeholder="Например, плечи" maxLength={80} required /><input name="unit" placeholder="Например, см" maxLength={24} /><button disabled={busy}>Добавить</button></form>
+    <form className="inline-form" onSubmit={(event) => void submit(event)}><input name="name" placeholder="Название" aria-label="Название показателя" maxLength={80} required /><input name="unit" placeholder="Единица" aria-label="Единица измерения" maxLength={24} /><button disabled={busy}>Добавить</button></form>
     {error && <p className="error" role="alert">{error.message}</p>}
     {metrics.map((metric) => <div className="metric" key={metric.id}><span>{metric.name}{metric.unit ? `, ${metric.unit}` : ''}</span><button type="button" className="link danger" disabled={busy} onClick={() => onArchive(metric)}>{metric.archivedAt ? 'Вернуть' : 'В архив'}</button></div>)}
   </section>
