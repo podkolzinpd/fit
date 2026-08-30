@@ -2059,11 +2059,20 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-progress-main-now > .link { width:fit-content; min-height:44px; padding:5px 0 }
 .client-progress-comparison { display:grid; gap:10px; margin:var(--space-3) var(--card-padding) 0; padding-bottom:var(--space-3); border-bottom:1px solid var(--ai-divider) }
 .client-progress-comparison h3, .client-progress-goal-story h3, .client-progress-upcoming h3 { margin:0; font-size:var(--type-body-size); line-height:var(--leading-tight) }
-.client-progress-comparison > div { display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); gap:8px }
-.client-progress-comparison article { display:grid; align-content:start; gap:3px; min-width:0; padding:10px 11px; border-radius:var(--radius-sm); background:var(--surface-muted) }
-.client-progress-comparison article strong { overflow-wrap:anywhere; font-size:var(--type-body-size); font-variant-numeric:tabular-nums; line-height:var(--leading-tight) }
-.client-progress-comparison article.positive strong { color:var(--success-strong) }
-.client-progress-comparison article span { color:var(--muted); font-size:var(--type-micro-size); line-height:var(--leading-snug) }
+.client-progress-comparison > header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
+.client-progress-comparison > header p { margin:3px 0 0; color:var(--muted); font-size:var(--type-micro-size); font-variant-numeric:tabular-nums; line-height:var(--leading-snug) }
+.period-comparison-facts { display:grid; gap:0; margin:0; border-top:1px solid var(--border) }
+.period-comparison-facts > div { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; min-width:0; padding:11px 0; border-bottom:1px solid var(--border) }
+.period-comparison-facts dt { min-width:0; overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); font-weight:var(--weight-semibold); line-height:var(--leading-snug) }
+.period-comparison-facts dt span { display:block; margin-top:2px; color:var(--muted); font-size:var(--type-micro-size); font-variant-numeric:tabular-nums; font-weight:var(--weight-regular) }
+.period-comparison-facts dd { margin:0; color:var(--fg); font-size:var(--type-body-size); font-variant-numeric:tabular-nums; font-weight:var(--weight-semibold); white-space:nowrap }
+.period-comparison-facts > div.positive dd { color:var(--success-strong) }
+.period-comparison-toggle { width:fit-content; min-height:44px; padding:6px 0 }
+.period-comparison-conclusions { display:grid; gap:8px }
+.period-comparison-conclusions > div { display:grid; grid-template-columns:minmax(92px,.65fr) minmax(0,1.7fr); gap:10px; padding-top:10px; border-top:1px solid var(--border) }
+.period-comparison-conclusions span { color:var(--muted); font-size:var(--type-micro-size); line-height:var(--leading-snug) }
+.period-comparison-conclusions p,
+.period-comparison-empty { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); line-height:var(--leading-body) }
 .client-progress-goal-story { display:grid; gap:8px; margin:var(--space-3) var(--card-padding) 0; padding:var(--space-3); border:1px solid var(--ai-divider); border-radius:var(--radius-md); background:var(--surface-muted) }
 .client-progress-goal-story > span, .client-progress-upcoming > span { color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label); text-transform:uppercase }
 .client-progress-goal-story-head { display:flex; align-items:center; justify-content:space-between; gap:10px }
@@ -3204,9 +3213,14 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .client-progress-main-now > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .progress-identity .client-progress-main-now > strong { padding-top:10px; border-color:var(--border); font-size:12px; font-weight:600 }
 .progress-identity .client-progress-main-now > .link { color:var(--fg); font-size:12px; font-weight:500 }
-.progress-identity .client-progress-comparison article { border:1px solid var(--border); border-radius:10px; background:var(--surface-elevated) }
-.progress-identity .client-progress-comparison article strong { color:var(--fg); font-size:18px; font-weight:600 }
-.progress-identity .client-progress-comparison article.positive strong { color:var(--success-fg) }
+.progress-identity .client-progress-comparison > header p,
+.progress-identity .period-comparison-facts dt span,
+.progress-identity .period-comparison-conclusions span { color:var(--secondary-label-fg); font-size:11px }
+.progress-identity .period-comparison-facts dt,
+.progress-identity .period-comparison-conclusions p { font-size:12px }
+.progress-identity .period-comparison-facts dd { font-size:16px; font-weight:600 }
+.progress-identity .period-comparison-facts > div.positive dd { color:var(--success-fg) }
+.progress-identity .period-comparison-toggle { color:var(--fg); font-size:12px; font-weight:500 }
 .progress-identity .client-progress-goal-story > span,
 .progress-identity .client-progress-upcoming > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .progress-identity .client-progress-goal-story.empty,
@@ -4399,9 +4413,14 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-identity .client-progress-main-now p,
 .trainer-progress-identity .client-progress-insight p { font-size:12px }
 .trainer-progress-identity .client-progress-main-now { padding:14px; border-radius:14px; background:var(--surface-elevated) }
-.trainer-progress-identity .client-progress-comparison article { border:1px solid var(--border); border-radius:10px; background:var(--surface-elevated) }
-.trainer-progress-identity .client-progress-comparison article strong { color:var(--fg); font-size:18px; font-weight:600 }
-.trainer-progress-identity .client-progress-comparison article.positive strong { color:var(--success-fg) }
+.trainer-progress-identity .client-progress-comparison > header p,
+.trainer-progress-identity .period-comparison-facts dt span,
+.trainer-progress-identity .period-comparison-conclusions span { color:var(--secondary-label-fg); font-size:11px }
+.trainer-progress-identity .period-comparison-facts dt,
+.trainer-progress-identity .period-comparison-conclusions p { font-size:12px }
+.trainer-progress-identity .period-comparison-facts dd { font-size:16px; font-weight:600 }
+.trainer-progress-identity .period-comparison-facts > div.positive dd { color:var(--success-fg) }
+.trainer-progress-identity .period-comparison-toggle { color:var(--fg); font-size:12px; font-weight:500 }
 .trainer-progress-identity .client-progress-goal-story > span,
 .trainer-progress-identity .client-progress-upcoming > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-progress-identity .client-progress-goal-story.empty,

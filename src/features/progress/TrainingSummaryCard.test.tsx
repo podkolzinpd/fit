@@ -282,11 +282,11 @@ describe('Training summary card states', () => {
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    const comparison = (await screen.findByRole('heading', { name: 'Изменения к предыдущему периоду' })).closest('section')
+    const comparison = (await screen.findByRole('heading', { name: 'Сравнение периодов' })).closest('section')
     expect(comparison).not.toBeNull()
-    expect(within(comparison!).getByText('+1')).toBeVisible()
-    expect(within(comparison!).getByText('+1')).toBeVisible()
-    expect(within(comparison!).queryByText('+2')).toBeNull()
+    expect(await within(comparison!).findAllByText('+1')).toHaveLength(2)
+    expect(within(comparison!).getByText('Выполненные подходы')).toBeVisible()
+    expect(within(comparison!).getByText('+2')).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Набрать мышечную массу и укрепить спину' })).toBeVisible()
     expect(screen.getByRole('link', { name: 'Изменить цель' })).toHaveAttribute('href', '/me/goal')
     expect(screen.getByText('Движение к ориентиру')).toBeVisible()
