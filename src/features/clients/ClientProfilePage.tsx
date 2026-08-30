@@ -9,6 +9,7 @@ import { ClientTrainerConnections } from './ClientTrainerConnections'
 import { AppFeedbackForm } from '../profile/AppFeedbackForm'
 import { useState } from 'react'
 import { AppInstallPanel } from '../install'
+import { NotificationsSetting } from '../notifications'
 import { BodyMapAppearanceSetting } from '../progress/BodyMapAppearanceSetting'
 
 export function ClientProfilePage() {
@@ -53,6 +54,7 @@ export function ClientProfilePage() {
     <section className="profile-settings" aria-label="Настройки">
       <Switch label="Тёмная тема" checked={theme === 'dark'} onChange={(checked) => setAppTheme(checked ? 'dark' : 'light')} />
     </section>
+    <NotificationsSetting userId={actor.userId} />
     <div className="menu"><Link to="/join">Ввести код приглашения</Link><button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button><button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button></div>
     {installOpen && <AppInstallPanel onClose={() => setInstallOpen(false)} />}
     {feedbackOpen && <AppFeedbackForm onClose={() => setFeedbackOpen(false)} />}
