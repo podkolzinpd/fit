@@ -4,6 +4,7 @@
     "deploymentEnabled": {
       "main": true,
       "codex/yandex-id-stage-pilot": true,
+      "preview/**": true,
       "**": false
     }
   },

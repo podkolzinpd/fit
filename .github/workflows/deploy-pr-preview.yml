@@ -1,0 +1,96 @@
+name: Deploy PR preview
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: pr-preview-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request &&
+      github.event.comment.body == '/preview' &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or update the isolated Vercel preview ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          REQUESTED_BY: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+            echo 'Pull request number must be a positive integer' >&2
+            exit 1
+          fi
+
+          pull_request=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER")
+          state=$(jq -er '.state' <<<"$pull_request")
+          base_ref=$(jq -er '.base.ref' <<<"$pull_request")
+          head_repository=$(jq -er '.head.repo.full_name' <<<"$pull_request")
+          head_sha=$(jq -er '.head.sha' <<<"$pull_request")
+          author=$(jq -er '.user.login' <<<"$pull_request")
+
+          if [[ "$state" != 'open' || "$base_ref" != 'main' ]]; then
+            echo 'Only open pull requests targeting main can be deployed' >&2
+            exit 1
+          fi
+          if [[ "$head_repository" != "$REPOSITORY" ]]; then
+            echo 'Fork pull requests cannot use repository preview infrastructure' >&2
+            exit 1
+          fi
+          if [[ "$author" != "$REQUESTED_BY" ]]; then
+            echo 'Collaborators can deploy only their own pull requests' >&2
+            exit 1
+          fi
+
+          preview_branch="preview/pr-$PR_NUMBER"
+          preview_ref="refs/heads/$preview_branch"
+          if gh api "repos/$REPOSITORY/git/ref/heads/$preview_branch" >/dev/null 2>&1; then
+            jq -n --arg sha "$head_sha" '{ sha: $sha, force: true }' \
+              | gh api --method PATCH \
+                  "repos/$REPOSITORY/git/refs/heads/$preview_branch" --input - >/dev/null
+            action='updated'
+          else
+            jq -n --arg ref "$preview_ref" --arg sha "$head_sha" \
+              '{ ref: $ref, sha: $sha }' \
+              | gh api --method POST "repos/$REPOSITORY/git/refs" --input - >/dev/null
+            action='created'
+          fi
+
+          {
+            echo "### Vercel PR preview requested"
+            echo
+            echo "Branch \`$preview_branch\` was $action at \`$head_sha\`."
+            echo 'Vercel will publish the preview URL in the pull request checks.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  cleanup:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove the closed PR preview ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          preview_branch="preview/pr-$PR_NUMBER"
+          if gh api "repos/$REPOSITORY/git/ref/heads/$preview_branch" >/dev/null 2>&1; then
+            gh api --method DELETE \
+              "repos/$REPOSITORY/git/refs/heads/$preview_branch" >/dev/null
+          fi
