@@ -176,12 +176,9 @@ a second primitive family.
   disabled states and 44 px touch targets.
 - Respect `prefers-reduced-motion`.
 
-## Known implementation debt
+## Retired implementation
 
-The global stylesheet still contains historical pre-identity rules and selector
-names. Their removal is tracked in
-`docs/design/UI_IDENTITY_RETIREMENT_2026-08-30.md` and is intentionally
-sequenced after the concurrent Progress branch. This debt must not be copied
-into new feature CSS. Literal values that correctly express local geometry are
-not automatically debt; only visual inconsistency, duplication or unreachable
-legacy behavior justifies cleanup.
+The pre-identity stylesheet, rollback selectors, preview rollout and dark-pilot
+theme were retired after the Progress merge. `ui-identity` is a permanent root
+contract, not a feature switch. Historical migration and design records remain
+immutable; they must not be copied into new runtime code.

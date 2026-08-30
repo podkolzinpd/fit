@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 test('auth identity remains usable in WebKit light and dark themes', async ({ page }) => {
   await page.goto('/auth')
   await expect(page.locator('.auth-flow-identity')).toBeVisible()
-  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('html')).toHaveClass(/ui-identity/)
   await expect(page.getByLabel('Email')).toBeVisible()
   await expect(page.getByLabel('Пароль')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Войти' })).toBeEnabled()

@@ -72,11 +72,11 @@ describe('applyThemeVariant', () => {
     document.head.append(meta)
 
     applyAppTheme('dark')
-    expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+    expect(document.documentElement).toHaveClass('ui-identity')
     expect(themeColor()).toBe('#111214')
 
     applyAppTheme('light')
-    expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+    expect(document.documentElement).toHaveClass('ui-identity')
     expect(themeColor()).toBe('#FBFAF7')
   })
 })

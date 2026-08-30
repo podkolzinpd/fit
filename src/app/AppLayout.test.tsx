@@ -72,15 +72,15 @@ describe('AppLayout: единственная UI Identity', () => {
     authState.role = role
     renderLayout(path)
 
-    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', routeClass)
-    expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+    expect(document.querySelector('.phone-frame')).toHaveClass('ui-identity', routeClass)
+    expect(document.documentElement).toHaveClass('ui-identity')
   })
 
   it.each(['client', 'trainer'] as const)('применяет Live identity для %s', (role) => {
     authState.role = role
     renderLayout('/workouts/workout-1/live')
 
-    expect(document.querySelector('.phone-frame')).toHaveClass('identity-monochrome-preview', 'live-identity', 'live-session-shell')
+    expect(document.querySelector('.phone-frame')).toHaveClass('ui-identity', 'live-identity', 'live-session-shell')
   })
 
   it.each(['/workouts/new', '/workouts/workout-1/edit', '/today?view=review', '/me?view=save'])(
@@ -106,9 +106,9 @@ describe('AppLayout: единственная UI Identity', () => {
     renderLayout('/me')
 
     const frame = document.querySelector('.phone-frame')
-    expect(frame).toHaveClass('identity-monochrome-preview')
+    expect(frame).toHaveClass('ui-identity')
     expect(frame).not.toHaveClass('theme-light')
-    expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+    expect(document.documentElement).toHaveClass('ui-identity')
   })
 
   it('ограничивает Join точным маршрутом', () => {

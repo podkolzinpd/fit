@@ -62,7 +62,7 @@ export function applyThemeVariant(variant: ThemeVariant) {
 export function applyAppTheme(theme: AppTheme) {
   applyThemeVariant(resolveThemeVariant(theme))
   if (typeof document === 'undefined') return
-  document.documentElement.classList.add('identity-monochrome-preview')
+  document.documentElement.classList.add('ui-identity')
   applyMonochromeThemeColor(theme)
 }
 

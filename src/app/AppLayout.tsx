@@ -48,7 +48,7 @@ export function AppLayout() {
     // должны совпадать с палитрой внутри неё.
     applyThemeVariant(themeVariant)
     const root = document.documentElement
-    root.classList.add('identity-monochrome-preview')
+    root.classList.add('ui-identity')
     applyMonochromeThemeColor(theme)
     return () => {
       applyAppTheme(theme)
@@ -77,7 +77,7 @@ export function AppLayout() {
     liveSession ? 'live-session-shell' : '',
     workoutForm ? 'workout-form-shell' : '',
     assistant ? 'assistant-shell' : '',
-    'identity-monochrome-preview',
+    'ui-identity',
     monochromeClientHome ? 'client-home-identity' : '',
     monochromeLive ? 'live-identity' : '',
     monochromeProgress ? 'progress-identity' : '',

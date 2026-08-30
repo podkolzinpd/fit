@@ -28,10 +28,10 @@ function AuthIdentityScreen({ children, className }: PropsWithChildren<{ classNa
   useEffect(() => {
     applyThemeVariant(themeVariant)
     const root = document.documentElement
-    root.classList.add('identity-monochrome-preview')
+    root.classList.add('ui-identity')
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#FBFAF7' : '#111214')
     return () => {
-      root.classList.remove('identity-monochrome-preview')
+      root.classList.remove('ui-identity')
       applyThemeVariant(resolveThemeVariant(theme))
     }
   }, [theme, themeVariant])
@@ -39,7 +39,7 @@ function AuthIdentityScreen({ children, className }: PropsWithChildren<{ classNa
   return <main className={[
     'auth-screen',
     'auth-entry',
-    'identity-monochrome-preview auth-flow-identity',
+    'ui-identity auth-flow-identity',
     themeVariantClass(themeVariant),
     className,
   ].filter(Boolean).join(' ')}>{children}</main>

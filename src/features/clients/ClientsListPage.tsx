@@ -33,7 +33,7 @@ export function ClientsPage() {
       emptyTitle="Клиентов пока нет"
       emptyDescription="Добавьте первого клиента, чтобы планировать тренировки и отслеживать прогресс."
       emptyAction={<Link className="button" to="/clients/new">Добавить клиента</Link>}>
-      {showSearch && <div className="clients-search-pilot">
+      {showSearch && <div className="clients-search">
           <SearchIcon aria-hidden="true" />
           <input type="search" aria-label="Поиск клиента" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Поиск по имени" autoComplete="off" />
           {search !== '' && <button type="button" className="clients-search-clear" aria-label="Очистить поиск" onClick={() => setSearch('')}><CloseIcon /></button>}
