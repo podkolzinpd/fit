@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(21);
+select plan(22);
 
 -- Трейнер + клиент со связанным auth-аккаунтом (иначе клиент не пользуется
 -- приложением и push ему не нужен), таймзона фиксирована для предсказуемости.
@@ -71,6 +71,19 @@ select is(
   (select count(*)::int from private.push_notifications_outbox where dispatch_request_id is not null),
   0,
   'dispatch is a no-op when push secrets are not configured'
+);
+
+-- Регрессия на прод-баг: с настоящими секретами и ожидающей строкой в
+-- outbox dispatch обязан реально дойти до net.http_post (не упасть на
+-- "column must appear in GROUP BY" из-за ORDER BY/LIMIT поверх jsonb_agg
+-- без вложенного подзапроса) и проставить dispatch_request_id.
+select vault.create_secret('https://push.example/fit-send-push-notifications', 'push_function_url');
+select vault.create_secret('test-dispatch-secret', 'push_dispatch_secret');
+select private.dispatch_push_notifications();
+select is(
+  (select dispatch_request_id is not null from private.push_notifications_outbox where user_id = '61000000-0000-4000-8000-000000000002'),
+  true,
+  'dispatch reaches net.http_post and sets a request id when secrets and a pending subscription exist'
 );
 
 -- finalize: успешный batch-ответ Cloud Function (эмулирован прямой
