@@ -11,9 +11,15 @@ describe('MetricsManager', () => {
 
     await user.type(screen.getByRole('textbox', { name: 'Название показателя' }), 'Плечи')
     await user.type(screen.getByRole('textbox', { name: 'Единица измерения' }), 'см')
-    await user.click(within(screen.getByRole('textbox', { name: 'Название показателя' }).closest('form')!).getByRole('button', { name: 'Добавить' }))
+    await user.click(within(screen.getByRole('group', { name: 'Новый показатель' })).getByRole('button', { name: 'Добавить' }))
 
     expect(onCreate).toHaveBeenCalledWith('Плечи', 'см')
+  })
+
+  it('can be embedded in the goal form without nesting forms', () => {
+    const { container } = render(<form><MetricsManager metrics={[]} onCreate={vi.fn()} onArchive={vi.fn()} /></form>)
+
+    expect(container.querySelectorAll('form')).toHaveLength(1)
   })
 
   it('shows existing metrics and supports archiving them', async () => {
