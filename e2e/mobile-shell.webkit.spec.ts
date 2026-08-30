@@ -918,7 +918,7 @@ test('iPhone: voice-first и AI-поверхности сохраняют кон
   await expectNoHorizontalOverflow(page)
 })
 
-for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {
+for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }, { width: 390, height: 844 }, { width: 430, height: 932 }]) {
   test(`iPhone: Progress тренера остаётся компактным на ${viewport.width} px`, async ({ page }) => {
     await page.setViewportSize(viewport)
     await loginAsTrainer(page)
@@ -937,34 +937,38 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
     await expect(page.locator('details')).toHaveCount(0)
     await expect(page.getByRole('link', { name: 'Открыть замеры и показатели' })).toBeVisible()
     const coachmark = page.getByRole('button', { name: 'Понятно' })
-    if (await coachmark.isVisible()) await coachmark.click()
+    if (await coachmark.isVisible()) await coachmark.evaluate((element) => {
+      (element as HTMLButtonElement).click()
+    })
     await expectNoHorizontalOverflow(page)
   })
 }
 
-test('iPhone: client Progress keeps one compact result summary at 390 px', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
-  await login(page, 'client@fit.local')
-  await page.goto('/me/progress')
+for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }, { width: 390, height: 844 }, { width: 430, height: 932 }]) {
+  test(`iPhone: client Progress keeps one compact result summary at ${viewport.width} px`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await login(page, 'client@fit.local')
+    await page.goto('/me/progress')
 
-  await expect(page.getByLabel('Регулярность тренировок')).toHaveCount(0)
-  const summary = page.locator('.client-progress-card')
-  await expect(summary).toBeVisible()
-  await expect(summary.locator('.body-progress-map')).toBeVisible()
-  await summary.getByRole('button', { name: 'Прогресс', exact: true }).click()
-  await expect(summary.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
-  await summary.getByRole('button', { name: 'Нагрузка', exact: true }).click()
-  await expect(summary.getByRole('heading', { name: 'Куда пришлась нагрузка' })).toBeVisible()
-  await expect(summary.locator('.ai-progress-stats span').filter({ hasText: /недел/ })).toBeVisible()
-  await expect(summary.getByText('Для твоей цели', { exact: true })).toBeVisible()
-  await expect(summary.getByText('Подробный анализ', { exact: true })).toBeVisible()
-  await page.goto('/me/profile')
-  await page.getByRole('radio', { name: 'Схема' }).click()
-  await page.goto('/me/progress')
-  const schemeSummary = page.locator('.client-progress-card')
-  await expect(schemeSummary.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
-  await expectNoHorizontalOverflow(page)
-})
+    await expect(page.getByLabel('Регулярность тренировок')).toHaveCount(0)
+    const summary = page.locator('.client-progress-card')
+    await expect(summary).toBeVisible()
+    await expect(summary.locator('.body-progress-map')).toBeVisible()
+    await summary.getByRole('button', { name: 'Прогресс', exact: true }).click()
+    await expect(summary.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
+    await summary.getByRole('button', { name: 'Нагрузка', exact: true }).click()
+    await expect(summary.getByRole('heading', { name: 'Куда пришлась нагрузка' })).toBeVisible()
+    await expect(summary.locator('.ai-progress-stats span').filter({ hasText: /недел/ })).toBeVisible()
+    await expect(summary.getByText('Для твоей цели', { exact: true })).toBeVisible()
+    await expect(summary.getByText('Подробный анализ', { exact: true })).toBeVisible()
+    await page.goto('/me/profile')
+    await page.getByRole('radio', { name: 'Схема' }).click()
+    await page.goto('/me/progress')
+    const schemeSummary = page.locator('.client-progress-card')
+    await expect(schemeSummary.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+  })
+}
 
 for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {
   test(`iPhone: короткая история и длинное упражнение не ломают Progress на ${viewport.width} px`, async ({ page }) => {
@@ -1030,7 +1034,12 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
     await summary.getByRole('button', { name: 'Сзади' }).click()
     await expect(summary.getByRole('group', { name: 'Анатомическая схема мышц, вид сзади' })).toBeVisible()
     await summary.getByLabel('Верх спины. Лучший результат зоны: +36%').press('Enter')
-    await expect(summary.locator('.body-progress-detail').getByText('Тяга верхнего блока обратным узким хватом в кроссовере с дополнительной рукоятью', { exact: false })).toBeVisible()
+    await expect(summary.locator('.body-progress-detail')).toContainText('В зоне «Верх спины» лучший подтверждённый результат изменился на +36%.')
+    await expect(summary.locator('.body-progress-detail').getByText('Тяга верхнего блока обратным узким хватом в кроссовере с дополнительной рукоятью', { exact: false })).toHaveCount(0)
+    await summary.getByRole('button', { name: 'Показать 1 упражнение' }).click()
+    const bodyDetails = page.getByRole('dialog', { name: 'Верх спины' })
+    await expect(bodyDetails.getByText('Тяга верхнего блока обратным узким хватом в кроссовере с дополнительной рукоятью', { exact: false })).toBeVisible()
+    await bodyDetails.getByRole('button', { name: 'Закрыть' }).click()
     await summary.getByRole('button', { name: 'Подробный анализ' }).click()
     await expect(page.getByRole('dialog', { name: 'Подробный анализ' }).getByText('Рабочий вес: 50 → 68 кг', { exact: false })).toBeVisible()
     await expect(summary.getByRole('button', { name: '1 месяц' })).toBeVisible()
