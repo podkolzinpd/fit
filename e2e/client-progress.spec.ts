@@ -130,8 +130,8 @@ test('linked client sees only the published client progress view', async ({ page
   await expect(page.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
   await expect(page.getByText(/причина максимального перерыва/)).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Обновить' })).toBeVisible()
-  await page.getByText('ЗАМЕРЫ И ПОКАЗАТЕЛИ', { exact: true }).scrollIntoViewIfNeeded()
-  await expect(page.getByText('ЗАМЕРЫ И ПОКАЗАТЕЛИ', { exact: true })).toBeVisible()
+  await page.getByText('УПРАВЛЕНИЕ', { exact: true }).scrollIntoViewIfNeeded()
+  await expect(page.getByRole('heading', { name: 'Замеры и показатели' })).toBeVisible()
 
   await page.goto('/me/goal')
   await expect(page.locator('.phone-frame')).toHaveClass(/client-goal-identity/)
@@ -174,15 +174,33 @@ test('client sees deterministic standard-measurement goal facts', async ({ page 
   await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({
     contentType: 'application/json', body: '[]',
   }))
+  await page.route('**/rest/v1/client_custom_metrics?*', (route) => route.fulfill({
+    contentType: 'application/json', body: '[]',
+  }))
 
   await page.goto('/me/progress')
   const goal = page.locator('.client-progress-goal-story')
   await expect(goal.getByRole('heading', { name: 'Держать вес 59 кг' })).toBeVisible()
   await expect(goal.getByText('В диапазоне сейчас', { exact: true })).toBeVisible()
   await expect(goal.getByText('58,5–59,5 кг')).toBeVisible()
-  await expect(goal.getByText(/60 → 59 кг \(−1 кг\) · ближе к ориентиру/)).toBeVisible()
-  await expect(goal.getByText('Достаточно для проверки удержания')).toBeVisible()
+  await expect(goal.getByRole('link', { name: 'Смотреть значения и график' })).toHaveAttribute('href', '#progress-measurements')
   await expect(goal.getByText(/в окне удержания был замер за его пределами/)).toBeVisible()
+
+  const measurements = page.locator('.client-progress-measurements-story')
+  await expect(measurements.getByRole('heading', { name: 'Тренд по значениям' })).toBeVisible()
+  await expect(measurements.getByText('59 кг', { exact: true })).toBeVisible()
+  await expect(measurements.getByText('60 кг → 59 кг', { exact: true })).toBeVisible()
+  await expect(measurements.getByText('−1 кг', { exact: true })).toBeVisible()
+  await expect(measurements.getByText('Связан с целью', { exact: true })).toBeVisible()
+  await expect(measurements.getByText(/Свежие данные · 5 дн. · 2 точки · достаточно для динамики/)).toBeVisible()
+  await expect(measurements.getByLabel('График показателя «Вес»')).toBeVisible()
+  await expect(measurements.evaluate((element) => {
+    const comparison = document.querySelector('.client-progress-comparison')
+    const summary = document.querySelector('.progress-story-summary')
+    return Boolean(comparison && summary
+      && (comparison.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
+  })).resolves.toBe(true)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
 

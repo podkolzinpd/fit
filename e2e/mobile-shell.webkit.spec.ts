@@ -650,7 +650,7 @@ test('iPhone: client progress keeps one goal-aware LLM summary and compact runni
   await expect(runningProgress).toContainText('быстрее на 8%')
   await expect(runningProgress).toContainText('Последняя нагрузка: RPE 7')
 
-  await page.getByText('ЗАМЕРЫ И ПОКАЗАТЕЛИ', { exact: true }).scrollIntoViewIfNeeded()
+  await page.getByText('УПРАВЛЕНИЕ', { exact: true }).scrollIntoViewIfNeeded()
   await page.getByRole('button', { name: 'Добавить замер' }).click()
   await expect(page.getByRole('heading', { name: 'Новый замер' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Сохранить замер' })).toBeVisible()
@@ -674,12 +674,17 @@ test('iPhone: standard goal facts stay readable without horizontal overflow', as
     { id: 'b3000000-0000-4000-8000-000000000003', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: '2026-08-05', weight_kg: 60, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
   ]) }))
   await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await page.route('**/rest/v1/client_custom_metrics?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
 
   await page.goto('/me/progress')
   const goal = page.locator('.client-progress-goal-story')
   await expect(goal.getByText('В диапазоне сейчас', { exact: true })).toBeVisible()
-  await expect(goal.getByText(/60 → 59 кг \(−1 кг\)/)).toBeVisible()
-  await expect(goal.getByText('Достаточно для проверки удержания')).toBeVisible()
+  await expect(goal.getByRole('link', { name: 'Смотреть значения и график' })).toBeVisible()
+  const measurements = page.locator('.client-progress-measurements-story')
+  await expect(measurements.getByRole('heading', { name: 'Тренд по значениям' })).toBeVisible()
+  await expect(measurements.getByText('60 кг → 59 кг', { exact: true })).toBeVisible()
+  await expect(measurements.getByLabel('График показателя «Вес»')).toBeVisible()
+  await expect(measurements.getByText(/2 точки · достаточно для динамики/)).toBeVisible()
   await expectNoHorizontalOverflow(page)
 })
 

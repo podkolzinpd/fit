@@ -9,6 +9,7 @@ import { workoutsRepository } from '../../data/repositories/workouts.repository'
 import type {
   ClientGoal,
   ClientTrainingSummary,
+  CustomMetric,
   Gender,
   PublishedTrainingSummary,
   TrainingSummary,
@@ -19,6 +20,7 @@ import { addDays, daysBetween, formatLocalDate, normalizeTimeZone, todayInTimeZo
 import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { TrainingBodyProgressMap } from './ClientBodyProgressMap'
+import { MeasurementProgressSection } from './MeasurementProgressSection'
 import { progressStoryPresentation } from './client-progress-presentation'
 import { progressFactChangeLabel } from './progress-facts'
 import { formatSummaryText, formatWorkoutsPerWeek, progressMetricNoun } from './summary-format'
@@ -128,6 +130,11 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
     queryFn: () => progressRepository.list(clientId),
     enabled: ready && Boolean(summary),
   })
+  const customMetrics = useQuery({
+    queryKey: ['progress-metrics', clientId],
+    queryFn: () => progressRepository.listMetrics(clientId),
+    enabled: ready && Boolean(summary),
+  })
   const goal = useQuery({
     queryKey: ['client-goal', clientId],
     queryFn: () => goalsRepository.get(clientId),
@@ -188,6 +195,10 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
             previousWorkouts={previousWorkouts}
             upcomingWorkouts={upcomingWorkouts}
             measurements={measurements.data ?? []}
+            customMetrics={customMetrics.data ?? []}
+            measurementsLoading={measurements.isLoading || customMetrics.isLoading}
+            measurementsError={measurements.error ?? customMetrics.error}
+            onMeasurementsRetry={() => void Promise.all([measurements.refetch(), customMetrics.refetch()])}
             workoutsLoading={workouts.isLoading}
             workoutsError={workouts.error}
             onWorkoutsRetry={() => void workouts.refetch()}
@@ -224,7 +235,7 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
   </section>
 }
 
-function TrainerSummaryContent({ summary, clientId, gender, today, goal, profileGoal, goalLoading, goalError, onGoalRetry, currentWorkouts, previousWorkouts, upcomingWorkouts, measurements, workoutsLoading, workoutsError, onWorkoutsRetry, onChanged }: {
+function TrainerSummaryContent({ summary, clientId, gender, today, goal, profileGoal, goalLoading, goalError, onGoalRetry, currentWorkouts, previousWorkouts, upcomingWorkouts, measurements, customMetrics, measurementsLoading, measurementsError, onMeasurementsRetry, workoutsLoading, workoutsError, onWorkoutsRetry, onChanged }: {
   summary: TrainingSummary
   clientId: string
   gender: Gender | null
@@ -238,6 +249,10 @@ function TrainerSummaryContent({ summary, clientId, gender, today, goal, profile
   previousWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
   upcomingWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
   measurements: Awaited<ReturnType<typeof progressRepository.list>>
+  customMetrics: CustomMetric[]
+  measurementsLoading: boolean
+  measurementsError: Error | null
+  onMeasurementsRetry: () => void
   workoutsLoading: boolean
   workoutsError: Error | null
   onWorkoutsRetry: () => void
@@ -260,6 +275,10 @@ function TrainerSummaryContent({ summary, clientId, gender, today, goal, profile
       previousWorkouts={previousWorkouts}
       upcomingWorkouts={upcomingWorkouts}
       measurements={measurements}
+      customMetrics={customMetrics}
+      measurementsLoading={measurementsLoading}
+      measurementsError={measurementsError}
+      onMeasurementsRetry={onMeasurementsRetry}
       workoutsLoading={workoutsLoading}
       workoutsError={workoutsError}
       onWorkoutsRetry={onWorkoutsRetry}
@@ -292,7 +311,16 @@ function summaryConsistency(summary: ProgressStorySummary): string {
   return 'summary' in summary ? summary.summary.consistency : summary.trainer.consistency
 }
 
-function ProgressStoryContent({ summary, clientId, role, gender, today, goal, profileGoal, goalLoading, goalError, onGoalRetry, currentWorkouts, previousWorkouts, upcomingWorkouts, measurements, workoutsLoading, workoutsError, onWorkoutsRetry }: {
+function measurementCopyCandidates(summary: ProgressStorySummary, role: 'client' | 'trainer'): string[] {
+  if ('summary' in summary) {
+    return [summary.summary.headline, ...summary.summary.achievements, summary.summary.goalAlignment ?? '']
+  }
+  return role === 'trainer'
+    ? [summary.trainer.headline, ...summary.trainer.progress, summary.trainer.consistency]
+    : [summary.client.headline, ...summary.client.achievements, summary.client.goalAlignment ?? '']
+}
+
+function ProgressStoryContent({ summary, clientId, role, gender, today, goal, profileGoal, goalLoading, goalError, onGoalRetry, currentWorkouts, previousWorkouts, upcomingWorkouts, measurements, customMetrics, measurementsLoading, measurementsError, onMeasurementsRetry, workoutsLoading, workoutsError, onWorkoutsRetry }: {
   summary: ProgressStorySummary
   clientId: string
   role: 'client' | 'trainer'
@@ -307,6 +335,10 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
   previousWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
   upcomingWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
   measurements: Awaited<ReturnType<typeof progressRepository.list>>
+  customMetrics: CustomMetric[]
+  measurementsLoading: boolean
+  measurementsError: Error | null
+  onMeasurementsRetry: () => void
   workoutsLoading: boolean
   workoutsError: Error | null
   onWorkoutsRetry: () => void
@@ -373,7 +405,8 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       <h3 id={`${role}-progress-goal-title`}>{presentation.goal.title}</h3>
       {goalCriteria.length > 0 ? <><div className="goal-criteria-progress-list">{visibleGoalCriteria.map((criterion) => <article key={criterion.id} className="goal-criterion-progress-row">
         <header><strong>{criterion.label}</strong>{(presentation.goal?.totalCriteria ?? 0) > 1 ? <span>{criterion.status}</span> : null}</header>
-        <dl><div><dt>Ориентир</dt><dd>{criterion.target}</dd></div><div><dt>Сейчас</dt><dd>{criterion.current}</dd></div><div><dt>Динамика</dt><dd>{criterion.dynamics}</dd></div><div><dt>Данные</dt><dd>{criterion.lastDate ? `${criterion.lastDate} · ` : ''}{criterion.freshness} · {criterion.sufficiency}</dd></div></dl>
+        <dl><div><dt>Ориентир</dt><dd>{criterion.target}</dd></div>{criterion.dataOwner === 'workout' && <><div><dt>Сейчас</dt><dd>{criterion.current}</dd></div><div><dt>Динамика</dt><dd>{criterion.dynamics}</dd></div><div><dt>Данные</dt><dd>{criterion.lastDate ? `${criterion.lastDate} · ` : ''}{criterion.freshness} · {criterion.sufficiency}</dd></div></>}</dl>
+        {criterion.dataOwner === 'measurement' && criterion.action === null && <a className="link" href="#progress-measurements">Смотреть значения и график</a>}
         {criterion.action === 'measurement' && <Link className="link" to={measurementLink}>Добавить актуальный замер</Link>}
         {criterion.action === 'workout' && <Link className="link" to={workoutLink}>Записать тренировку</Link>}
       </article>)}</div>{goalCriteria.length > 1 && <button
@@ -457,6 +490,20 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
         </>
         : <p className="period-comparison-empty">{presentation.comparison.emptyMessage}</p>}
     </section>
+    <MeasurementProgressSection
+      clientId={clientId}
+      entries={measurements}
+      customMetrics={customMetrics}
+      goal={goal}
+      periodStart={summary.periodStart}
+      periodEnd={summary.periodEnd}
+      today={today}
+      role={role}
+      loading={measurementsLoading}
+      error={measurementsError}
+      onRetry={onMeasurementsRetry}
+      llmCandidates={measurementCopyCandidates(summary, role)}
+    />
     <section className={`progress-story-summary${heroIsMain ? ' main-fact-removed' : ''}`} aria-label="Результаты периода">
       {!heroIsMain && <div className={`progress-story-hero${presentation.hero ? '' : ' empty'}`}>
         <span>{presentation.hero ? 'Лучший результат периода' : 'Результаты периода'}</span>
@@ -623,6 +670,11 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
     queryFn: () => progressRepository.list(clientId),
     enabled: ready && Boolean(summary),
   })
+  const customMetrics = useQuery({
+    queryKey: ['progress-metrics', clientId],
+    queryFn: () => progressRepository.listMetrics(clientId),
+    enabled: ready && Boolean(summary),
+  })
   const goal = useQuery({
     queryKey: ['client-goal', clientId],
     queryFn: () => goalsRepository.get(clientId),
@@ -676,6 +728,10 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
           previousWorkouts={previousWorkouts}
           upcomingWorkouts={upcomingWorkouts}
           measurements={measurements.data ?? []}
+          customMetrics={customMetrics.data ?? []}
+          measurementsLoading={measurements.isLoading || customMetrics.isLoading}
+          measurementsError={measurements.error ?? customMetrics.error}
+          onMeasurementsRetry={() => void Promise.all([measurements.refetch(), customMetrics.refetch()])}
           workoutsLoading={workouts.isLoading}
           workoutsError={workouts.error}
           onWorkoutsRetry={() => void workouts.refetch()}
@@ -705,7 +761,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
   </section>
 }
 
-function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalLoading, goalError, onGoalRetry, currentWorkouts, previousWorkouts, upcomingWorkouts, measurements, workoutsLoading, workoutsError, onWorkoutsRetry }: {
+function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalLoading, goalError, onGoalRetry, currentWorkouts, previousWorkouts, upcomingWorkouts, measurements, customMetrics, measurementsLoading, measurementsError, onMeasurementsRetry, workoutsLoading, workoutsError, onWorkoutsRetry }: {
   summary: PublishedTrainingSummary
   goal: ClientGoal | null | undefined
   profileGoal?: string | null
@@ -718,6 +774,10 @@ function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalL
   previousWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
   upcomingWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
   measurements: Awaited<ReturnType<typeof progressRepository.list>>
+  customMetrics: CustomMetric[]
+  measurementsLoading: boolean
+  measurementsError: Error | null
+  onMeasurementsRetry: () => void
   workoutsLoading: boolean
   workoutsError: Error | null
   onWorkoutsRetry: () => void
@@ -737,6 +797,10 @@ function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalL
       previousWorkouts={previousWorkouts}
       upcomingWorkouts={upcomingWorkouts}
       measurements={measurements}
+      customMetrics={customMetrics}
+      measurementsLoading={measurementsLoading}
+      measurementsError={measurementsError}
+      onMeasurementsRetry={onMeasurementsRetry}
       workoutsLoading={workoutsLoading}
       workoutsError={workoutsError}
       onWorkoutsRetry={onWorkoutsRetry}

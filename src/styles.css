@@ -2073,6 +2073,37 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .period-comparison-conclusions span { color:var(--muted); font-size:var(--type-micro-size); line-height:var(--leading-snug) }
 .period-comparison-conclusions p,
 .period-comparison-empty { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.client-progress-measurements-story { display:grid; gap:12px; margin:var(--space-3) var(--card-padding) 0; padding-bottom:var(--space-3); border-bottom:1px solid var(--ai-divider) }
+.client-progress-measurements-story > header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
+.client-progress-measurements-story > header > div { display:grid; gap:3px; min-width:0 }
+.client-progress-measurements-story > header span { color:var(--muted); font-size:var(--type-micro-size); font-weight:var(--weight-semibold); letter-spacing:var(--tracking-label); text-transform:uppercase }
+.client-progress-measurements-story > header h3 { margin:0; overflow-wrap:anywhere; font-size:var(--type-body-size); line-height:var(--leading-tight) }
+.client-progress-measurements-story > header .link { flex:0 0 auto; min-height:36px; padding:5px 0; font-size:var(--type-caption-size) }
+.measurement-story-selector { display:flex; max-width:100%; gap:6px; padding-bottom:2px; overflow-x:auto; scrollbar-width:none }
+.measurement-story-selector::-webkit-scrollbar { display:none }
+.measurement-story-selector button { display:inline-flex; flex:0 0 auto; align-items:center; gap:6px; min-height:44px; padding:8px 11px; border:1px solid var(--border); border-radius:999px; background:transparent; color:var(--muted); font-size:var(--type-caption-size); font-weight:var(--weight-semibold) }
+.measurement-story-selector button[aria-selected='true'] { border-color:var(--fg); background:var(--surface-sunken); color:var(--fg) }
+.measurement-story-selector button span { padding:2px 5px; border-radius:999px; background:var(--surface-muted); color:var(--fg); font-size:9px; letter-spacing:0; text-transform:none }
+.measurement-story-current { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:12px; padding:12px 0; border-block:1px solid var(--border) }
+.measurement-story-current > div { display:grid; gap:2px; min-width:0 }
+.measurement-story-current > div:last-child { justify-items:end; text-align:right }
+.measurement-story-current span, .measurement-story-current small { color:var(--muted); font-size:var(--type-micro-size); line-height:var(--leading-snug) }
+.measurement-story-current strong { overflow-wrap:anywhere; color:var(--fg); font-size:clamp(26px,8vw,34px); font-variant-numeric:tabular-nums; line-height:1 }
+.measurement-story-current > div:last-child span { color:var(--fg); font-size:var(--type-caption-size); font-variant-numeric:tabular-nums; font-weight:var(--weight-semibold) }
+.client-progress-measurements-story .chart.compact { margin:0; padding:0; overflow:hidden; border:0; border-radius:0; background:transparent }
+.client-progress-measurements-story .chart.compact h2 { margin:0 0 6px; color:var(--fg); font-size:var(--type-caption-size); font-weight:var(--weight-semibold) }
+.client-progress-measurements-story .chart.compact .chart-empty-window { min-height:156px; justify-content:center; padding:20px 12px; border:1px dashed var(--border); border-radius:var(--radius-md) }
+.measurement-story-facts { display:grid; gap:0; margin:0; border-top:1px solid var(--border) }
+.measurement-story-facts > div { display:grid; grid-template-columns:minmax(108px,.8fr) minmax(0,1.5fr); gap:10px; padding:9px 0; border-bottom:1px solid var(--border) }
+.measurement-story-facts dt { color:var(--muted); font-size:var(--type-micro-size); line-height:var(--leading-snug) }
+.measurement-story-facts dd { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); font-variant-numeric:tabular-nums; font-weight:var(--weight-semibold); line-height:var(--leading-snug) }
+.measurement-story-after-period, .measurement-story-explanation p, .measurement-story-state, .measurement-story-empty p { margin:0; overflow-wrap:anywhere; font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.measurement-story-after-period { color:var(--muted) }
+.measurement-story-explanation { padding-top:10px; border-top:1px solid var(--border) }
+.measurement-story-explanation p { color:var(--fg) }
+.measurement-story-state { color:var(--muted) }
+.measurement-story-empty { display:grid; gap:7px; padding:14px 0; color:var(--muted) }
+.measurement-story-empty .link { width:fit-content; min-height:44px; padding:7px 0 }
 .client-progress-goal-story { display:grid; gap:8px; margin:var(--space-3) var(--card-padding) 0; padding:var(--space-3); border:1px solid var(--ai-divider); border-radius:var(--radius-md); background:var(--surface-muted) }
 .client-progress-goal-story > span, .client-progress-upcoming > span { color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label); text-transform:uppercase }
 .client-progress-goal-story-head { display:flex; align-items:center; justify-content:space-between; gap:10px }
@@ -3188,15 +3219,18 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 
 .progress-identity .client-progress-wins,
 .progress-identity .client-progress-comparison,
+.progress-identity .client-progress-measurements-story,
 .progress-identity .client-progress-goal-story,
 .progress-identity .client-progress-upcoming,
 .progress-identity .client-progress-main-now,
 .progress-identity .client-progress-insight { margin:0; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
 .progress-identity .client-progress-wins,
 .progress-identity .client-progress-comparison,
+.progress-identity .client-progress-measurements-story,
 .progress-identity .client-progress-insight { border-bottom:1px solid var(--border) }
 .progress-identity .client-progress-wins h3,
 .progress-identity .client-progress-comparison h3,
+.progress-identity .client-progress-measurements-story h3,
 .progress-identity .client-progress-goal-story h3,
 .progress-identity .client-progress-upcoming h3,
 .progress-identity .client-progress-main-now h3,
@@ -3221,6 +3255,14 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .period-comparison-facts dd { font-size:16px; font-weight:600 }
 .progress-identity .period-comparison-facts > div.positive dd { color:var(--success-fg) }
 .progress-identity .period-comparison-toggle { color:var(--fg); font-size:12px; font-weight:500 }
+.progress-identity .client-progress-measurements-story > header span,
+.progress-identity .measurement-story-current span,
+.progress-identity .measurement-story-current small,
+.progress-identity .measurement-story-facts dt { color:var(--secondary-label-fg); font-size:11px }
+.progress-identity .measurement-story-selector button,
+.progress-identity .measurement-story-facts dd,
+.progress-identity .measurement-story-explanation p,
+.progress-identity .measurement-story-after-period { font-size:12px }
 .progress-identity .client-progress-goal-story > span,
 .progress-identity .client-progress-upcoming > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .progress-identity .client-progress-goal-story.empty,
@@ -4432,11 +4474,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 
 .trainer-progress-identity .client-progress-wins,
 .trainer-progress-identity .client-progress-comparison,
+.trainer-progress-identity .client-progress-measurements-story,
 .trainer-progress-identity .client-progress-goal-story,
 .trainer-progress-identity .client-progress-main-now,
 .trainer-progress-identity .client-progress-insight { margin-inline:18px; border-color:var(--border) }
 .trainer-progress-identity .client-progress-wins h3,
 .trainer-progress-identity .client-progress-comparison h3,
+.trainer-progress-identity .client-progress-measurements-story h3,
 .trainer-progress-identity .client-progress-goal-story h3,
 .trainer-progress-identity .client-progress-upcoming h3,
 .trainer-progress-identity .client-progress-main-now h3,
@@ -4457,6 +4501,15 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-identity .period-comparison-facts dd { font-size:16px; font-weight:600 }
 .trainer-progress-identity .period-comparison-facts > div.positive dd { color:var(--success-fg) }
 .trainer-progress-identity .period-comparison-toggle { color:var(--fg); font-size:12px; font-weight:500 }
+.trainer-progress-identity .client-progress-measurements-story { margin-inline:18px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-elevated) }
+.trainer-progress-identity .client-progress-measurements-story > header span,
+.trainer-progress-identity .measurement-story-current span,
+.trainer-progress-identity .measurement-story-current small,
+.trainer-progress-identity .measurement-story-facts dt { color:var(--secondary-label-fg); font-size:11px }
+.trainer-progress-identity .measurement-story-selector button,
+.trainer-progress-identity .measurement-story-facts dd,
+.trainer-progress-identity .measurement-story-explanation p,
+.trainer-progress-identity .measurement-story-after-period { font-size:12px }
 .trainer-progress-identity .client-progress-goal-story > span,
 .trainer-progress-identity .client-progress-upcoming > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-progress-identity .client-progress-goal-story.empty,
