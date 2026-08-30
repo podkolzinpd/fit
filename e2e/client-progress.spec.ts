@@ -100,11 +100,13 @@ test('linked client sees only the published client progress view', async ({ page
   await expect(mainNow).toHaveAttribute('data-copy-source', 'deterministic')
   await expect(mainNow.getByRole('link', { name: 'Настроить цель' })).toHaveAttribute('href', '/me/goal')
   await expect(mainNow.evaluate((element) => {
+    const goal = document.querySelector('.client-progress-goal-story')
     const summary = document.querySelector('.progress-story-summary')
     const map = document.querySelector('.body-progress-map')
-    return Boolean(summary && map
-      && (element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (element.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING))
+    return Boolean(goal && summary && map
+      && (element.compareDocumentPosition(goal) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (goal.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (map.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
   })).resolves.toBe(true)
   await page.getByRole('button', { name: 'Прогресс', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
@@ -208,6 +210,15 @@ test('trainer reviews the client copy separately from internal attention items',
   await expect(trainerAnalysis.getByRole('group', { name: 'Атлетичная женщина, вид спереди' })).toHaveCount(0)
   await expect(trainerAnalysis.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
   await expect(trainerAnalysis.getByRole('heading', { name: 'Период', exact: true })).toBeVisible()
+  await expect(trainerAnalysis.locator('.client-progress-main-now').evaluate((element) => {
+    const goal = document.querySelector('.client-progress-goal-story')
+    const map = document.querySelector('.body-progress-map')
+    const summary = document.querySelector('.progress-story-summary')
+    return Boolean(goal && map && summary
+      && (element.compareDocumentPosition(goal) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (goal.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (map.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
+  })).resolves.toBe(true)
   await expect(trainerAnalysis.getByText('Доступно клиенту')).toBeVisible()
   await expect(trainerAnalysis.getByText('На что обратить внимание')).toBeVisible()
   await expect(trainerAnalysis.getByText('Динамика упражнений')).toHaveCount(0)

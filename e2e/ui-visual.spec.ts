@@ -77,6 +77,25 @@ async function expectVisualBaseline(
   })
 }
 
+async function expectBodyMapBaseline(map: import('@playwright/test').Locator, name: string) {
+  const previousScrollTop = await map.evaluate(() => document.querySelector<HTMLElement>('.content')?.scrollTop ?? 0)
+  await map.scrollIntoViewIfNeeded()
+  await expect(map.locator('.body-progress-visual')).not.toHaveClass(/discovering/, { timeout: 3_000 })
+  try {
+    await expect(map).toHaveScreenshot(name, {
+      animations: 'disabled',
+      caret: 'hide',
+      maxDiffPixelRatio: 0.015,
+      stylePath: 'e2e/visual-body-map.css',
+    })
+  } finally {
+    await map.evaluate((_element, scrollTop) => {
+      const content = document.querySelector<HTMLElement>('.content')
+      if (content) content.scrollTop = scrollTop
+    }, previousScrollTop)
+  }
+}
+
 async function createStandaloneClient(
   page: import('@playwright/test').Page,
   projectName: string,
@@ -264,6 +283,7 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client routes use mobile visual profiles')
   await openClientProgress(page)
   await expect(page.locator('.client-progress-card .body-progress-map')).toBeVisible()
+  await expectBodyMapBaseline(page.locator('.client-progress-card .body-progress-map'), `client-body-map-female-${process.platform}.png`)
   await expect(page.locator('.client-progress-main-now').getByText('Главное сейчас', { exact: true })).toBeVisible()
   const progressStats = page.locator('.client-progress-card .ai-progress-stats')
   await expect(progressStats.getByText(/трениров/).first()).toBeVisible()
@@ -276,6 +296,15 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   await expect(page.getByText('Прогресс уже заметен, ты на верном пути.')).toHaveCount(0)
   await expect(page.getByText('Проверяем цель…')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Обновить' })).toBeVisible()
+  await expect(page.locator('.client-progress-main-now').evaluate((element) => {
+    const goal = document.querySelector('.client-progress-goal-story')
+    const map = document.querySelector('.body-progress-map')
+    const summary = document.querySelector('.progress-story-summary')
+    return Boolean(goal && map && summary
+      && (element.compareDocumentPosition(goal) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (goal.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (map.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
+  })).resolves.toBe(true)
   const progressCoachmark = page.getByRole('button', { name: 'Понятно' })
   if (await progressCoachmark.isVisible()) await progressCoachmark.click()
   await expectVisualBaseline(page, `client-progress-${process.platform}.png`)
@@ -340,6 +369,7 @@ test('client Progress scheme keeps its visual baseline', async ({ page }, testIn
   await openClientProgress(page, { scheme: true })
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0)
   await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible({ timeout: 15_000 })
+  await expectBodyMapBaseline(page.locator('.client-progress-card .body-progress-map'), `client-body-map-scheme-${process.platform}.png`)
   await expectVisualBaseline(page, `client-progress-scheme-${process.platform}.png`)
 })
 
@@ -347,6 +377,7 @@ test('client Progress scheme keeps its dark visual baseline', async ({ page }, t
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
   await openClientProgress(page, { scheme: true, dark: true })
   await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible({ timeout: 15_000 })
+  await expectBodyMapBaseline(page.locator('.client-progress-card .body-progress-map'), `client-body-map-scheme-dark-${process.platform}.png`)
   await expectVisualBaseline(page, `client-progress-scheme-dark-${process.platform}.png`)
 })
 
@@ -686,11 +717,24 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await expect(trainerAnalysis).toBeVisible()
   await expect(trainerAnalysis.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0)
   await expect(trainerAnalysis.locator('.body-progress-map')).toBeVisible()
+  await expectBodyMapBaseline(trainerAnalysis.locator('.body-progress-map'), `trainer-body-map-scheme-${process.platform}.png`)
   await expect(trainerAnalysis.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
   await expect(trainerAnalysis.getByRole('group', { name: 'Атлетичная женщина, вид спереди' })).toHaveCount(0)
+  await expect(trainerAnalysis.locator('.client-progress-main-now').evaluate((element) => {
+    const card = element.closest('.client-progress-card')
+    const goal = card?.querySelector('.client-progress-goal-story')
+    const map = card?.querySelector('.body-progress-map')
+    const summary = card?.querySelector('.progress-story-summary')
+    return Boolean(goal && map && summary
+      && (element.compareDocumentPosition(goal) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (goal.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (map.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
+  })).resolves.toBe(true)
   await expect(page.getByText(/AI-анализ/)).toHaveCount(0)
   const coachmark = page.getByRole('button', { name: 'Понятно' })
-  if (await coachmark.isVisible()) await coachmark.click()
+  if (await coachmark.isVisible()) await coachmark.evaluate((element) => {
+    (element as HTMLButtonElement).click()
+  })
   await expectVisualBaseline(page, 'trainer-progress.png')
 
   await page.getByRole('link', { name: 'Открыть замеры и показатели' }).click()

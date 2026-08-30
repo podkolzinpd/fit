@@ -360,52 +360,7 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
   const attention = role === 'trainer' && 'trainer' in summary ? summary.trainer.attention : []
   const goalCriteria = presentation.goal?.criteria ?? []
   const visibleGoalCriteria = goalCriteriaOpen ? goalCriteria : goalCriteria.slice(0, 1)
-
-  return <>
-    <section
-      className="client-progress-main-now"
-      aria-labelledby={`${role}-progress-main-now-title`}
-      data-fact-id={presentation.mainNow.factId}
-      data-copy-source={presentation.mainNow.source}
-    >
-      <span>Главное сейчас</span>
-      <h3 id={`${role}-progress-main-now-title`}>{presentation.mainNow.title}</h3>
-      <p>{presentation.mainNow.explanation}</p>
-      <strong>{presentation.mainNow.evidence}</strong>
-      {mainNowLink && mainNowActionLabel && <Link className="link" to={mainNowLink}>{mainNowActionLabel}</Link>}
-    </section>
-    <section className={`progress-story-summary${heroIsMain ? ' main-fact-removed' : ''}`} aria-label="Результаты периода">
-      {!heroIsMain && <div className={`progress-story-hero${presentation.hero ? '' : ' empty'}`}>
-        <span>{presentation.hero ? 'Лучший результат периода' : 'Результаты периода'}</span>
-        {presentation.hero
-          ? <><strong>{presentation.hero.value}</strong><h3>{presentation.hero.exerciseName}</h3><p>{presentation.hero.detail}</p></>
-          : <><h3>Собираем сопоставимые результаты</h3><p>Первые изменения появятся после повторного выполнения упражнений.</p></>}
-      </div>}
-      <div className={`ai-progress-stats count-${visibleStats.length}`}>
-        {visibleStats.map((stat) => <div key={stat.label}><strong>{stat.value}</strong><span>{stat.label}</span></div>)}
-      </div>
-    </section>
-    <TrainingBodyProgressMap
-      summary={summary}
-      workouts={currentWorkouts ?? []}
-      clientId={clientId}
-      clientGender={gender}
-      loadLoading={workoutsLoading}
-      loadError={workoutsError}
-      onLoadRetry={onWorkoutsRetry}
-    />
-    {wins.length > 0 && <section className="client-progress-wins" aria-labelledby={`${role}-progress-wins-title`}>
-      <h3 id={`${role}-progress-wins-title`}>{role === 'client' ? 'Твои достижения' : 'Ключевые изменения'}</h3>
-      <div>{wins.map((item) => <article key={item.title}><span aria-hidden="true" /><div><strong>{item.title}</strong><p>{item.detail}</p></div></article>)}</div>
-    </section>}
-    <section className="client-progress-comparison" aria-labelledby={`${role}-progress-comparison-title`}>
-      <h3 id={`${role}-progress-comparison-title`}>{presentation.comparison.title}</h3>
-      {presentation.comparison.items.length > 0
-        ? <div>{presentation.comparison.items.map((item) => <article key={item.label} className={item.tone}>
-          <strong>{item.value}</strong><span>{item.label}</span>
-        </article>)}</div>
-        : <p>{presentation.comparison.emptyMessage}</p>}
-    </section>
+  const goalStory = <>
     {goalLoading && <section className="client-progress-story-state" role="status">Проверяем данные цели…</section>}
     {goalError && <section className="client-progress-story-state" role="alert">Не удалось загрузить цель. <button type="button" className="link" onClick={onGoalRetry}>Повторить</button></section>}
     {!goalLoading && !goalError && presentation.goal && <section className="client-progress-goal-story" aria-labelledby={`${role}-progress-goal-title`}>
@@ -432,9 +387,7 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       {presentation.goal.state === 'unconfigured' && <><p>Цель сохранена как текст. Автоматическая оценка не настроена.</p><Link className="link" to={goalLink}>Настроить оценку</Link></>}
       {presentation.goal.state === 'needs_review' && <><p>Формулировка цели изменилась. Проверь, подходит ли сохранённый критерий.</p><Link className="link" to={goalLink}>Проверить критерий</Link></>}
       {presentation.goal.state === 'needs_data' && <><p>Нет ни одного замера выбранного показателя.</p><Link className="link" to={measurementLink}>Добавить замер</Link></>}
-      {presentation.goal.state === 'configured' && <>
-        <p>{presentation.goal.message}</p>
-      </>}
+      {presentation.goal.state === 'configured' && <p>{presentation.goal.message}</p>}
     </section>}
     {!goalLoading && !goalError && !presentation.goal && <section className="client-progress-goal-story empty" aria-labelledby={`${role}-progress-goal-title`}>
       <span>{role === 'client' ? 'Для твоей цели' : 'Цель клиента'}</span>
@@ -442,6 +395,55 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       <p>{role === 'client' ? 'Добавь ориентир — тогда результаты можно будет оценивать в его контексте.' : 'Добавьте ориентир, чтобы оценивать результаты в контексте задачи клиента.'}</p>
       <Link className="link" to={goalLink}>{role === 'client' ? 'Добавить цель' : 'Указать цель'}</Link>
     </section>}
+  </>
+
+  return <>
+    <section
+      className="client-progress-main-now"
+      aria-labelledby={`${role}-progress-main-now-title`}
+      data-fact-id={presentation.mainNow.factId}
+      data-copy-source={presentation.mainNow.source}
+    >
+      <span>Главное сейчас</span>
+      <h3 id={`${role}-progress-main-now-title`}>{presentation.mainNow.title}</h3>
+      <p>{presentation.mainNow.explanation}</p>
+      <strong>{presentation.mainNow.evidence}</strong>
+      {mainNowLink && mainNowActionLabel && <Link className="link" to={mainNowLink}>{mainNowActionLabel}</Link>}
+    </section>
+    {goalStory}
+    <TrainingBodyProgressMap
+      summary={summary}
+      workouts={currentWorkouts ?? []}
+      clientId={clientId}
+      insightCandidates={summaryFallbackProgress(summary)}
+      clientGender={gender}
+      loadLoading={workoutsLoading}
+      loadError={workoutsError}
+      onLoadRetry={onWorkoutsRetry}
+    />
+    <section className={`progress-story-summary${heroIsMain ? ' main-fact-removed' : ''}`} aria-label="Результаты периода">
+      {!heroIsMain && <div className={`progress-story-hero${presentation.hero ? '' : ' empty'}`}>
+        <span>{presentation.hero ? 'Лучший результат периода' : 'Результаты периода'}</span>
+        {presentation.hero
+          ? <><strong>{presentation.hero.value}</strong><h3>{presentation.hero.exerciseName}</h3><p>{presentation.hero.detail}</p></>
+          : <><h3>Собираем сопоставимые результаты</h3><p>Первые изменения появятся после повторного выполнения упражнений.</p></>}
+      </div>}
+      <div className={`ai-progress-stats count-${visibleStats.length}`}>
+        {visibleStats.map((stat) => <div key={stat.label}><strong>{stat.value}</strong><span>{stat.label}</span></div>)}
+      </div>
+    </section>
+    {wins.length > 0 && <section className="client-progress-wins" aria-labelledby={`${role}-progress-wins-title`}>
+      <h3 id={`${role}-progress-wins-title`}>{role === 'client' ? 'Твои достижения' : 'Ключевые изменения'}</h3>
+      <div>{wins.map((item) => <article key={item.title}><span aria-hidden="true" /><div><strong>{item.title}</strong><p>{item.detail}</p></div></article>)}</div>
+    </section>}
+    <section className="client-progress-comparison" aria-labelledby={`${role}-progress-comparison-title`}>
+      <h3 id={`${role}-progress-comparison-title`}>{presentation.comparison.title}</h3>
+      {presentation.comparison.items.length > 0
+        ? <div>{presentation.comparison.items.map((item) => <article key={item.label} className={item.tone}>
+          <strong>{item.value}</strong><span>{item.label}</span>
+        </article>)}</div>
+        : <p>{presentation.comparison.emptyMessage}</p>}
+    </section>
     {presentation.mainNow.kind !== 'plan' && <section className="client-progress-upcoming" aria-labelledby={`${role}-progress-upcoming-title`}>
       <span>Следующий шаг</span>
       {presentation.nextWorkout
