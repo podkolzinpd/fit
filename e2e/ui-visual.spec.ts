@@ -4,6 +4,49 @@ import { expectMonochromeAccessibility } from './accessibility-helpers'
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
+function comparisonWorkoutRow(id: string, date: string, weight: number, distance: number, strengthSets: number) {
+  const baseSet = (suffix: string, position: number, values: { weight?: number, reps?: number, distance?: number, duration?: number }) => ({
+    id: `${id}-${suffix}-${position}`, position,
+    plan_weight_kg: values.weight ?? null, plan_reps: values.reps ?? null,
+    plan_duration_min: values.duration ?? null, plan_duration_sec: null, plan_distance_km: values.distance ?? null, plan_rpe: null,
+    fact_weight_kg: values.weight ?? null, fact_reps: values.reps ?? null,
+    fact_duration_min: values.duration ?? null, fact_duration_sec: null, fact_distance_km: values.distance ?? null, fact_rpe: null,
+    confirmed_at: `${date}T10:00:00Z`, version: 1,
+  })
+  const exercise = (suffix: string, name: string, muscle: string, kind: string, sets: ReturnType<typeof baseSet>[]) => ({
+    id: `${id}-${suffix}`, position: suffix === 'press' ? 0 : 1, exercise_source: 'system', exercise_ref: suffix,
+    custom_exercise_id: null, exercise_name: name, muscle_group: muscle, input_kind: kind, block_id: `${id}-${suffix}-block`,
+    block_type: 'single', block_preset: 'set', block_rounds: 1, rest_between_exercises_sec: 0,
+    rest_between_rounds_sec: 0, rest_between_sets_sec: 60, trainer_comment: null, sets,
+  })
+  return {
+    id, client_id: demoClientId, trainer_id: '00000000-0000-4000-8000-000000000001', client_name: 'Анна Смирнова', created_by: null,
+    workout_date: date, start_time: null, end_time: null, started_at: `${date}T09:00:00Z`, completed_at: `${date}T10:00:00Z`,
+    status: 'done', notes: null, trainer_review: null, trainer_reaction: null, trainer_review_author_id: null,
+    trainer_reviewed_at: null, client_comment: null, session_rpe: null, wellbeing: null, discomfort: null, has_pr: false,
+    stage_id: null, stage_title: null, version: 1, total_count: 3,
+    exercises: [
+      exercise('press', 'Жим лёжа', 'chest', 'strength', Array.from({ length: strengthSets }, (_, index) => baseSet('press-set', index, { weight, reps: 10 }))),
+      exercise('run', 'Бег', 'cardio', 'distance', [baseSet('run-set', 0, { distance, duration: 30 })]),
+    ],
+  }
+}
+
+async function mockPeriodComparison(page: VisualPage) {
+  await page.route('**/rest/v1/rpc/list_workouts', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify([
+      comparisonWorkoutRow('81000000-0000-4000-8000-000000000001', '2026-07-05', 50, 5, 1),
+      comparisonWorkoutRow('81000000-0000-4000-8000-000000000002', '2026-08-05', 60, 7, 2),
+      comparisonWorkoutRow('81000000-0000-4000-8000-000000000003', '2026-08-12', 60, 7, 2),
+    ]),
+  }))
+  await page.route('**/rest/v1/client_progress?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
+    { id: '82000000-0000-4000-8000-000000000001', client_id: demoClientId, created_by: null, recorded_on: '2026-07-10', weight_kg: 60, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+    { id: '82000000-0000-4000-8000-000000000002', client_id: demoClientId, created_by: null, recorded_on: '2026-08-10', weight_kg: 61, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+  ]) }))
+  await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+}
+
 type VisualPage = import('@playwright/test').Page
 type VisualGotoOptions = Parameters<VisualPage['goto']>[1]
 
@@ -519,6 +562,56 @@ test('client Progress shows composite goal facts in both themes', async ({ page 
   await expect(darkGoal.locator('.goal-criterion-progress-row')).toHaveCount(1)
   await darkGoal.evaluate((element) => element.scrollIntoView({ block: 'start' }))
   await expectVisualBaseline(page, `client-progress-composite-dark-${process.platform}.png`, [], true, '#1d1e21')
+})
+
+test('period comparison stays compact for client and trainer in both themes', async ({ page }, testInfo) => {
+  const trainer = testInfo.project.name === 'visual-trainer-1440'
+  const initialViewport = page.viewportSize()
+  await mockPeriodComparison(page)
+  if (trainer) {
+    await signIn(page, 'trainer@fit.local', /\/today$/)
+    await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+    await gotoStable(page, `/progress/${demoClientId}`)
+    await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
+  } else {
+    await openClientProgress(page)
+  }
+
+  let comparison = page.locator('.client-progress-comparison')
+  await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(4)
+  await expect(comparison.getByRole('button', { name: /Показать ещё/ })).toBeVisible()
+  await expect(comparison.locator('.period-comparison-conclusions > div')).toHaveCount(2)
+  expect(await comparison.evaluate((element) => {
+    const map = document.querySelector('.body-progress-map')
+    const summary = document.querySelector('.progress-story-summary')
+    return Boolean(map && summary
+      && (map.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
+  })).toBe(true)
+  expect(await comparison.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  expect(await comparison.getByRole('button', { name: /Показать ещё/ }).evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44)
+  if (!trainer) {
+    for (const width of [320, 375, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      expect(await comparison.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    }
+    if (initialViewport) await page.setViewportSize(initialViewport)
+  }
+  await comparison.scrollIntoViewIfNeeded()
+  await expect(comparison).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-period-comparison-${process.platform}.png`, {
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+  })
+
+  await gotoStable(page, trainer ? '/profile' : '/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
+  comparison = page.locator('.client-progress-comparison')
+  await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(4)
+  await comparison.scrollIntoViewIfNeeded()
+  await expect(comparison).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-period-comparison-dark-${process.platform}.png`, {
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+  })
 })
 
 test('client measurements keep their visual baseline', async ({ page }, testInfo) => {

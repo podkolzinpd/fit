@@ -103,10 +103,12 @@ test('linked client sees only the published client progress view', async ({ page
     const goal = document.querySelector('.client-progress-goal-story')
     const summary = document.querySelector('.progress-story-summary')
     const map = document.querySelector('.body-progress-map')
-    return Boolean(goal && summary && map
+    const comparison = document.querySelector('.client-progress-comparison')
+    return Boolean(goal && summary && map && comparison
       && (element.compareDocumentPosition(goal) & Node.DOCUMENT_POSITION_FOLLOWING)
       && (goal.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (map.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
+      && (map.compareDocumentPosition(comparison) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (comparison.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
   })).resolves.toBe(true)
   await page.getByRole('button', { name: 'Прогресс', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
@@ -214,10 +216,12 @@ test('trainer reviews the client copy separately from internal attention items',
     const goal = document.querySelector('.client-progress-goal-story')
     const map = document.querySelector('.body-progress-map')
     const summary = document.querySelector('.progress-story-summary')
-    return Boolean(goal && map && summary
+    const comparison = document.querySelector('.client-progress-comparison')
+    return Boolean(goal && map && summary && comparison
       && (element.compareDocumentPosition(goal) & Node.DOCUMENT_POSITION_FOLLOWING)
       && (goal.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (map.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
+      && (map.compareDocumentPosition(comparison) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (comparison.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
   })).resolves.toBe(true)
   await expect(trainerAnalysis.getByText('Доступно клиенту')).toBeVisible()
   await expect(trainerAnalysis.getByText('На что обратить внимание')).toBeVisible()
