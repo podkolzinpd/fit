@@ -53,6 +53,15 @@ async function removeScheduleVisualWorkouts(
   }
 }
 
+async function mockRoleHomeWorkoutState(page: VisualPage) {
+  const emptyRows = (route: import('@playwright/test').Route) => route.fulfill({
+    contentType: 'application/json',
+    body: '[]',
+  })
+  await page.route('**/rest/v1/rpc/list_workouts', emptyRows)
+  await page.route('**/rest/v1/rpc/list_trainer_attention_workouts', emptyRows)
+}
+
 async function mockClientWorkoutHistory(page: import('@playwright/test').Page) {
   const workoutRows = ['2026-08-10', '2026-08-03'].map((workoutDate, index) => ({
     id: `b1000000-0000-4000-8000-00000000000${index + 1}`,
@@ -291,6 +300,7 @@ test('Join keeps manual and invitation states in the auth family', async ({ page
 
 test('current role home keeps its visual baseline', async ({ page }, testInfo) => {
   const trainer = testInfo.project.name === 'visual-trainer-1440'
+  await mockRoleHomeWorkoutState(page)
   await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
   // Фиксируем время только после auth: приветствие и недельный период не
   // должны менять committed screenshot в зависимости от часа запуска CI.
@@ -331,6 +341,7 @@ test('current role home keeps its visual baseline', async ({ page }, testInfo) =
 
 test('trainer Today keeps its mobile visual baselines', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Trainer desktop is covered by the role-home baseline')
+  await mockRoleHomeWorkoutState(page)
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await gotoStable(page, '/today')
