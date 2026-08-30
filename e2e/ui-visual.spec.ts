@@ -34,6 +34,25 @@ async function signIn(page: import('@playwright/test').Page, email: string, dest
   await expect(page).toHaveURL(destination, { timeout: 15_000 })
 }
 
+async function removeScheduleVisualWorkouts(
+  page: import('@playwright/test').Page,
+  scheduleDate: string,
+  clientName: string,
+) {
+  await gotoStable(page, `/schedule?date=${scheduleDate}`, { waitUntil: 'domcontentloaded' })
+  await expect(page.locator('.schedule-selected-date span')).not.toHaveText('Загружаем…', { timeout: 15_000 })
+  const workoutUrls = await page.locator('.day-grid-event').filter({ hasText: clientName }).evaluateAll((events) => (
+    [...new Set(events.map((event) => event.getAttribute('href')).filter((href): href is string => Boolean(href)))]
+  ))
+
+  for (const workoutUrl of workoutUrls) {
+    await gotoStable(page, workoutUrl, { waitUntil: 'domcontentloaded' })
+    await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
+    await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+  }
+}
+
 async function openClientProgress(page: import('@playwright/test').Page, options: { scheme?: boolean, dark?: boolean } = {}) {
   await signIn(page, 'client@fit.local', /\/me$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
@@ -941,7 +960,7 @@ test('trainer Client Goal keeps its real create, stage and edit states in both t
 })
 
 test('trainer Schedule keeps its compact workspace in both themes', async ({ page }, testInfo) => {
-  test.setTimeout(90_000)
+  test.setTimeout(180_000)
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : 'mobile'
@@ -951,6 +970,10 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
   let workoutUrl: string | null = null
 
   try {
+    // A browser crash or a test timeout can interrupt cleanup after the record
+    // has already been saved. Remove any record left by an earlier retry before
+    // creating the single event used by this visual baseline.
+    await removeScheduleVisualWorkouts(page, scheduleDate, clientName)
     await gotoStable(page, `/workouts/new?client=${demoClientId}&date=${scheduleDate}`, { waitUntil: 'domcontentloaded' })
     await page.getByLabel('Начало').fill('18:30')
     await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
@@ -969,7 +992,7 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
     await expect(page.locator('.day-grid-hour')).toHaveCount(24)
     await expect(page.locator('.schedule-selected-date')).toBeHidden()
     await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toBeVisible()
-    await expect(page.locator('.day-grid-event').filter({ hasText: clientName })).toBeVisible()
+    await expect(page.locator('.day-grid-event').filter({ hasText: clientName })).toHaveCount(1)
     await expectVisualBaseline(page, `trainer-schedule-${profile}-${process.platform}.png`)
 
     await gotoStable(page, '/profile')
@@ -978,14 +1001,12 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
     await expect(page.locator('.phone-frame')).toHaveClass(/trainer-schedule-identity/)
     await expectVisualBaseline(page, `trainer-schedule-${profile}-dark-${process.platform}.png`, [], false, '#1d1e21')
   } finally {
-    if (workoutUrl) {
-      await gotoStable(page, workoutUrl, { waitUntil: 'domcontentloaded' })
-      await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
-      await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
-      await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+    try {
+      if (workoutUrl) await removeScheduleVisualWorkouts(page, scheduleDate, clientName)
+    } finally {
+      await gotoStable(page, '/profile', { waitUntil: 'domcontentloaded' })
+      const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
+      if (await darkTheme.isChecked()) await darkTheme.uncheck()
     }
-    await gotoStable(page, '/profile', { waitUntil: 'domcontentloaded' })
-    const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
-    if (await darkTheme.isChecked()) await darkTheme.uncheck()
   }
 })
