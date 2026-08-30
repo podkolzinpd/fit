@@ -15,6 +15,10 @@ const prPreviewWorkflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-pr-preview.yml'),
   'utf8',
 )
+const prPreviewCleanupWorkflow = readFileSync(
+  join(import.meta.dirname, '..', '.github', 'workflows', 'cleanup-pr-preview.yml'),
+  'utf8',
+)
 const vercelConfig = JSON.parse(
   readFileSync(join(import.meta.dirname, '..', 'vercel.json'), 'utf8'),
 )
@@ -256,8 +260,9 @@ test('deploys Vercel only from main, stable stage, and explicit PR preview refs'
 
 test('creates isolated Vercel previews only when a collaborator requests their own PR', () => {
   assert.match(prPreviewWorkflow, /^  issue_comment:\n    types: \[created\]$/m)
-  assert.match(prPreviewWorkflow, /^  pull_request:\n    types: \[closed\]$/m)
   assert.match(prPreviewWorkflow, /^  contents: write$/m)
+  assert.match(prPreviewWorkflow, /^  deployments: read$/m)
+  assert.match(prPreviewWorkflow, /^  pull-requests: write$/m)
   assert.match(prPreviewWorkflow, /github\.event\.comment\.body == '\/preview'/)
   assert.match(prPreviewWorkflow, /OWNER.*MEMBER.*COLLABORATOR/)
   assert.match(prPreviewWorkflow, /'\.user\.login'/)
@@ -265,8 +270,38 @@ test('creates isolated Vercel previews only when a collaborator requests their o
   assert.match(prPreviewWorkflow, /"\$state" != 'open' \|\| "\$base_ref" != 'main'/)
   assert.match(prPreviewWorkflow, /"\$head_repository" != "\$REPOSITORY"/)
   assert.match(prPreviewWorkflow, /preview_branch="preview\/pr-\$PR_NUMBER"/)
-  assert.match(prPreviewWorkflow, /--method DELETE/)
-  assert.doesNotMatch(prPreviewWorkflow, /pull_request_target|actions\/checkout|VERCEL_TOKEN/)
+  assert.match(prPreviewWorkflow, /uses: actions\/checkout@v4/)
+  assert.match(prPreviewWorkflow, /git commit --allow-empty/)
+  assert.match(prPreviewWorkflow, /preview_tree.*source_tree/)
+  assert.match(prPreviewWorkflow, /--force-with-lease=/)
+  assert.match(prPreviewWorkflow, /repos\/\$REPOSITORY\/deployments/)
+  assert.match(prPreviewWorkflow, /Vercel Preview готов/)
+  assert.match(prPreviewWorkflow, /issues\/\$PR_NUMBER\/comments/)
+  assert.doesNotMatch(
+    prPreviewWorkflow,
+    /^  pull_request(?:_target)?:|--method DELETE|VERCEL_TOKEN/m,
+  )
+})
+
+test('cleans preview refs from the trusted base context after a PR closes', () => {
+  assert.match(
+    prPreviewCleanupWorkflow,
+    /^  pull_request_target:\n    types: \[closed\]$/m,
+  )
+  assert.match(prPreviewCleanupWorkflow, /^  contents: write$/m)
+  assert.match(
+    prPreviewCleanupWorkflow,
+    /group: pr-preview-\$\{\{ github\.event\.pull_request\.number \}\}/,
+  )
+  assert.match(
+    prPreviewCleanupWorkflow,
+    /preview_branch="preview\/pr-\$PR_NUMBER"/,
+  )
+  assert.match(prPreviewCleanupWorkflow, /--method DELETE/)
+  assert.doesNotMatch(
+    prPreviewCleanupWorkflow,
+    /actions\/checkout|github\.event\.pull_request\.head|VERCEL_TOKEN/,
+  )
 })
 
 test('manages curated database readers only through an explicit private run', () => {
