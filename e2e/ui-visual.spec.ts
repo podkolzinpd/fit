@@ -754,6 +754,61 @@ test('weekly training rhythm stays visual and readable for client and trainer in
   })
 })
 
+test('next-step draft stays concise and explicit for client and trainer in both themes', async ({ page }, testInfo) => {
+  const trainer = testInfo.project.name === 'visual-trainer-1440'
+  const initialViewport = page.viewportSize()
+  await mockMeasurementProgress(page)
+  if (trainer) {
+    await signIn(page, 'trainer@fit.local', /\/today$/)
+    await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+    await gotoStable(page, `/progress/${demoClientId}`)
+  } else {
+    await openClientProgress(page, { scheme: true })
+  }
+
+  let nextStep = page.locator('.client-progress-next-step')
+  await expect(nextStep.getByText(/Черновик/)).toBeVisible()
+  await expect(nextStep.getByRole('button', { name: 'Подтвердить' })).toBeVisible()
+  await expect(nextStep.getByRole('button', { name: 'Изменить' })).toBeVisible()
+  await expect(nextStep.getByRole('button', { name: 'Отклонить' })).toBeVisible()
+  await expect(nextStep.locator('.progress-next-step-evidence')).toContainText('Основание:')
+  expect(await nextStep.evaluate((element) => {
+    const summary = element.closest('.client-progress-card')?.querySelector('.progress-story-summary')
+    const details = element.closest('.client-progress-card')?.querySelector('.client-progress-details-toggle')
+    return Boolean(summary && details
+      && (summary.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (element.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING))
+  })).toBe(true)
+  if (!trainer) {
+    for (const width of [320, 375, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      expect(await nextStep.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    }
+    if (initialViewport) await page.setViewportSize(initialViewport)
+  }
+  await nextStep.scrollIntoViewIfNeeded()
+  await expect(nextStep).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-progress-next-step-${process.platform}.png`, {
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+  })
+  await nextStep.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(nextStep.getByText('Черновик подтверждён. Ничего не сохранено и план не изменён автоматически.')).toBeVisible()
+  await expect(nextStep).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-progress-next-step-confirmed-${process.platform}.png`, {
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+  })
+
+  await gotoStable(page, trainer ? '/profile' : '/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
+  nextStep = page.locator('.client-progress-next-step')
+  await expect(nextStep.getByRole('button', { name: 'Подтвердить' })).toBeVisible()
+  await nextStep.getByRole('button', { name: 'Подтвердить' }).click()
+  await nextStep.scrollIntoViewIfNeeded()
+  await expect(nextStep).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-progress-next-step-confirmed-dark-${process.platform}.png`, {
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+  })
+})
+
 test('client measurement management keeps its visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client measurement management uses mobile visual profiles')
   await mockMeasurementProgress(page)
