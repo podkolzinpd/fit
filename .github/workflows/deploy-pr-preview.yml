@@ -3,15 +3,14 @@ name: Deploy PR preview
 on:
   issue_comment:
     types: [created]
-  pull_request:
-    types: [closed]
 
 permissions:
   contents: write
-  pull-requests: read
+  deployments: read
+  pull-requests: write
 
 concurrency:
-  group: pr-preview-${{ github.event.issue.number || github.event.pull_request.number }}
+  group: pr-preview-${{ github.event.issue.number }}
   cancel-in-progress: true
 
 jobs:
@@ -22,8 +21,10 @@ jobs:
       github.event.comment.body == '/preview' &&
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Create or update the isolated Vercel preview ref
+      - name: Validate the preview request
+        id: request
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.issue.number }}
@@ -56,41 +57,141 @@ jobs:
             echo 'Collaborators can deploy only their own pull requests' >&2
             exit 1
           fi
-
-          preview_branch="preview/pr-$PR_NUMBER"
-          preview_ref="refs/heads/$preview_branch"
-          if gh api "repos/$REPOSITORY/git/ref/heads/$preview_branch" >/dev/null 2>&1; then
-            jq -n --arg sha "$head_sha" '{ sha: $sha, force: true }' \
-              | gh api --method PATCH \
-                  "repos/$REPOSITORY/git/refs/heads/$preview_branch" --input - >/dev/null
-            action='updated'
-          else
-            jq -n --arg ref "$preview_ref" --arg sha "$head_sha" \
-              '{ ref: $ref, sha: $sha }' \
-              | gh api --method POST "repos/$REPOSITORY/git/refs" --input - >/dev/null
-            action='created'
+          if [[ ! "$head_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo 'Pull request head must be a full commit SHA' >&2
+            exit 1
           fi
 
+          preview_branch="preview/pr-$PR_NUMBER"
           {
-            echo "### Vercel PR preview requested"
-            echo
-            echo "Branch \`$preview_branch\` was $action at \`$head_sha\`."
-            echo 'Vercel will publish the preview URL in the pull request checks.'
-          } >> "$GITHUB_STEP_SUMMARY"
+            echo "head_sha=$head_sha"
+            echo "preview_branch=$preview_branch"
+          } >> "$GITHUB_OUTPUT"
 
-  cleanup:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Remove the closed PR preview ref
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.request.outputs.head_sha }}
+          fetch-depth: 0
+
+      - name: Push an isolated Vercel preview commit
+        id: publish
+        env:
+          HEAD_SHA: ${{ steps.request.outputs.head_sha }}
+          PREVIEW_BRANCH: ${{ steps.request.outputs.preview_branch }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          preview_ref="refs/heads/$PREVIEW_BRANCH"
+          if [[ "$PREVIEW_BRANCH" != "preview/pr-$PR_NUMBER" ]]; then
+            echo 'Preview branch does not match the requested pull request' >&2
+            exit 1
+          fi
+          if [[ "$(git rev-parse HEAD)" != "$HEAD_SHA" ]]; then
+            echo 'Checked out commit does not match the pull request head' >&2
+            exit 1
+          fi
+
+          source_tree=$(git rev-parse "${HEAD_SHA}^{tree}")
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit --allow-empty \
+            -m "chore(preview): deploy PR #$PR_NUMBER at ${HEAD_SHA:0:12}"
+
+          preview_sha=$(git rev-parse HEAD)
+          preview_tree=$(git rev-parse "${preview_sha}^{tree}")
+          if [[ "$preview_tree" != "$source_tree" ]]; then
+            echo 'Preview commit must preserve the exact pull request tree' >&2
+            exit 1
+          fi
+
+          remote_preview_sha=$(git ls-remote --heads origin "$preview_ref" | awk '{print $1}')
+          if [[ -n "$remote_preview_sha" ]]; then
+            if [[ ! "$remote_preview_sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo 'Existing preview ref returned an invalid commit SHA' >&2
+              exit 1
+            fi
+            git push \
+              --force-with-lease="$preview_ref:$remote_preview_sha" \
+              origin "HEAD:$preview_ref"
+          else
+            git push origin "HEAD:$preview_ref"
+          fi
+
+          echo "preview_sha=$preview_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for the Vercel deployment
+        id: vercel
         env:
           GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PREVIEW_BRANCH: ${{ steps.request.outputs.preview_branch }}
+          PREVIEW_SHA: ${{ steps.publish.outputs.preview_sha }}
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
-          preview_branch="preview/pr-$PR_NUMBER"
-          if gh api "repos/$REPOSITORY/git/ref/heads/$preview_branch" >/dev/null 2>&1; then
-            gh api --method DELETE \
-              "repos/$REPOSITORY/git/refs/heads/$preview_branch" >/dev/null
-          fi
+
+          for attempt in $(seq 1 45); do
+            deployment_id=$(gh api --method GET \
+              "repos/$REPOSITORY/deployments" \
+              -f sha="$PREVIEW_SHA" \
+              --jq '[.[] | select(.environment == "Preview")] | first | .id // empty')
+
+            if [[ -n "$deployment_id" ]]; then
+              if [[ ! "$deployment_id" =~ ^[0-9]+$ ]]; then
+                echo 'Vercel deployment returned an invalid ID' >&2
+                exit 1
+              fi
+
+              deployment_status=$(gh api --method GET \
+                "repos/$REPOSITORY/deployments/$deployment_id/statuses" \
+                --jq 'sort_by(.created_at) | last // {}')
+              state=$(jq -r '.state // empty' <<<"$deployment_status")
+              preview_url=$(jq -r '.environment_url // .target_url // empty' \
+                <<<"$deployment_status")
+
+              if [[ "$state" == 'success' && "$preview_url" == https://* ]]; then
+                {
+                  echo "preview_url=$preview_url"
+                  echo "preview_branch=$PREVIEW_BRANCH"
+                } >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              if [[ "$state" =~ ^(error|failure|inactive)$ ]]; then
+                echo "Vercel preview finished with state: $state" >&2
+                exit 1
+              fi
+            fi
+
+            echo "Waiting for Vercel preview (attempt $attempt/45)"
+            sleep 4
+          done
+
+          echo 'Timed out waiting for the Vercel preview URL' >&2
+          exit 1
+
+      - name: Publish the preview URL
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ steps.request.outputs.head_sha }}
+          PREVIEW_BRANCH: ${{ steps.vercel.outputs.preview_branch }}
+          PREVIEW_URL: ${{ steps.vercel.outputs.preview_url }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          comment=$(printf '%s\n\n%s\n\n%s' \
+            '### Vercel Preview готов' \
+            "[$PREVIEW_URL]($PREVIEW_URL)" \
+            "Ветка: \`$PREVIEW_BRANCH\`, исходный commit: \`${HEAD_SHA:0:12}\`.")
+          gh api --method POST \
+            "repos/$REPOSITORY/issues/$PR_NUMBER/comments" \
+            -f body="$comment" >/dev/null
+
+          {
+            echo '### Vercel Preview готов'
+            echo
+            echo "- URL: $PREVIEW_URL"
+            echo "- Branch: \`$PREVIEW_BRANCH\`"
+            echo "- Source: \`${HEAD_SHA:0:12}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
