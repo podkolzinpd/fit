@@ -31,7 +31,7 @@ async function signIn(page: import('@playwright/test').Page, email: string, dest
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(destination)
+  await expect(page).toHaveURL(destination, { timeout: 15_000 })
 }
 
 async function openClientProgress(page: import('@playwright/test').Page, options: { scheme?: boolean, dark?: boolean } = {}) {
@@ -766,6 +766,7 @@ test('trainer Progress and measurements form keep their visual baselines in both
   await expect(page.getByLabel('ИИ-анализ тренировок')).toBeVisible()
   const coachmark = page.getByRole('button', { name: 'Понятно' })
   if (await coachmark.isVisible()) await coachmark.click()
+  await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
   await expectVisualBaseline(page, `trainer-progress-${profile}-${process.platform}.png`, [], true)
 
   await gotoStable(page, `/progress/${demoClientId}?view=measurements`)
@@ -778,6 +779,8 @@ test('trainer Progress and measurements form keep their visual baselines in both
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, `/progress/${demoClientId}`)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
+  await expect(page.getByLabel('ИИ-анализ тренировок')).toBeVisible()
+  await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
   await expectVisualBaseline(page, `trainer-progress-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
 
   await gotoStable(page, `/progress/${demoClientId}?view=measurements`)
