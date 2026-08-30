@@ -47,7 +47,7 @@ export type ClientProgressPresentation = {
     totalCriteria?: number
     criteria?: Array<{ id: string; label: string; target: string; status: string; current: string; dynamics: string; lastDate?: string; freshness: string; sufficiency: string; dataOwner: 'measurement' | 'workout'; action: 'measurement' | 'workout' | 'configure' | null }>
   }
-  nextWorkout?: { date: string; title: string; exercises: Array<{ name: string; plan?: string }> }
+  nextWorkout?: { id: string; date: string; title: string; exercises: Array<{ name: string; plan?: string }> }
   mainNow: {
     factId: string
     kind: 'goal' | 'measurement' | 'personal_record' | 'exercise' | 'regularity' | 'gap' | 'data' | 'plan'
@@ -213,6 +213,7 @@ function nextWorkoutStory(workouts: readonly Workout[], today?: LocalDate): Clie
     .sort((left, right) => left.workoutDate.localeCompare(right.workoutDate) || (left.startTime ?? '').localeCompare(right.startTime ?? ''))[0]
   if (!next) return undefined
   return {
+    id: next.id,
     date: `${formatLocalDate(next.workoutDate)}${next.startTime ? ` · ${next.startTime}` : ''}`,
     title: next.stageTitle ?? 'Ближайшая тренировка',
     exercises: next.exercises.slice(0, 3).map((exercise) => ({

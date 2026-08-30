@@ -223,6 +223,7 @@ describe('clientProgressPresentation', () => {
     })
 
     expect(result.nextWorkout).toEqual({
+      id: 'next',
       date: '28 августа 2026 г. · 18:30', title: 'Ближайшая тренировка',
       exercises: [{ name: 'Жим гантелей лёжа', plan: '3 × 20 кг × 10 повт.' }],
     })
