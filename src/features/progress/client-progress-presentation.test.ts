@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { ProgressEntry, PublishedTrainingSummary, TrainingProgressFact, TrainingSummary, Workout } from '../../shared/domain'
+import type { ClientGoal, ProgressEntry, PublishedTrainingSummary, TrainingProgressFact, TrainingSummary, Workout, WorkoutPersonalRecord } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { clientProgressPresentation, progressStoryPresentation } from './client-progress-presentation'
 
@@ -31,6 +31,119 @@ function workout(id: string, date: string, confirmed: number, planned = confirme
 }
 
 describe('clientProgressPresentation', () => {
+  it('puts missing goal data above general training changes and exposes one exact action', () => {
+    const value = summary([{
+      exerciseName: 'Жим гантелей лёжа', kind: 'strength', sessionCount: 3,
+      changes: [{ metric: 'max_weight', from: 20, to: 25, changePercent: 25, favorable: true }],
+    }])
+    const goal: ClientGoal = {
+      id: 'goal-1', clientId: 'client-1', title: 'Увеличить вес до 85 кг', targetDate: null,
+      status: 'active', version: 1, stages: [], criteria: [{
+        id: 'criterion-1', goalId: 'goal-1', metric: 'weight', operation: 'increase_to',
+        targetValue: 85, rangeMin: null, rangeMax: null, unit: 'кг', baselineValue: null,
+        baselineRecordedOn: null, confirmationStatus: 'confirmed', position: 0, version: 1,
+      }],
+    }
+
+    const result = clientProgressPresentation(value, { goal, today: localDate('2026-08-26') })
+
+    expect(result.mainNow).toMatchObject({
+      factId: 'goal:criterion-1:measurement', kind: 'data', title: 'Добавь актуальный замер',
+      source: 'deterministic', action: 'measurement',
+    })
+    expect(result.mainNow.evidence).toContain('Вес · Нет данных')
+  })
+
+  it('describes movement away from a goal without turning it into positive copy', () => {
+    const goal: ClientGoal = {
+      id: 'goal-1', clientId: 'client-1', title: 'Увеличить вес до 85 кг', targetDate: null,
+      status: 'active', version: 1, stages: [], criteria: [{
+        id: 'criterion-1', goalId: 'goal-1', metric: 'weight', operation: 'increase_to',
+        targetValue: 85, rangeMin: null, rangeMax: null, unit: 'кг', baselineValue: null,
+        baselineRecordedOn: null, confirmationStatus: 'confirmed', position: 0, version: 1,
+      }],
+    }
+    const measurements: ProgressEntry[] = [{
+      id: 'm1', clientId: 'client-1', createdBy: 'client-1', recordedOn: localDate('2026-07-24'),
+      weightKg: 80, customMetrics: [], version: 1,
+    }, {
+      id: 'm2', clientId: 'client-1', createdBy: 'client-1', recordedOn: localDate('2026-08-24'),
+      weightKg: 79, customMetrics: [], version: 1,
+    }]
+
+    const result = clientProgressPresentation(summary(), { goal, measurements, today: localDate('2026-08-26') })
+
+    expect(result.mainNow).toMatchObject({
+      factId: 'goal:criterion-1:tracking', kind: 'goal', title: 'Положение стало дальше от ориентира',
+      source: 'deterministic',
+    })
+    expect(result.mainNow.evidence).toContain('79 кг · Дальше от ориентира')
+  })
+
+  it('uses a verified personal record instead of calling a period delta a record', () => {
+    const record: WorkoutPersonalRecord = {
+      exerciseRef: 'bench-press', exerciseName: 'Жим лёжа', inputKind: 'strength', metric: 'weight_reps',
+      primaryValue: 75, weightKg: 75, reps: 8,
+    }
+    const result = clientProgressPresentation(summary(), {
+      personalRecords: [record],
+      personalRecordWorkout: { id: 'workout-record', workoutDate: localDate('2026-08-24') },
+    })
+
+    expect(result.mainNow).toEqual({
+      factId: 'personal-record:workout-record:bench-press:weight_reps', kind: 'personal_record',
+      title: 'Новый личный рекорд · Жим лёжа', explanation: 'Результат подтверждён в завершённой тренировке.',
+      evidence: '75 кг × 8 повт. · 24.08.2026', source: 'deterministic', subject: 'Жим лёжа',
+    })
+  })
+
+  it('accepts LLM wording only when its subject and number match a deterministic fact', () => {
+    const value = summary([{
+      exerciseName: 'Тяга верхнего блока', kind: 'strength', sessionCount: 3,
+      changes: [{ metric: 'max_weight', from: 50, to: 68, changePercent: 36, favorable: true }],
+    }])
+    value.summary.headline = 'В тяге верхнего блока рабочий вес вырос на 36%.'
+
+    const result = clientProgressPresentation(value, { upcomingWorkouts: [
+      { ...workout('next', '2026-08-28', 0), status: 'planned', completedAt: null },
+    ] })
+
+    expect(result.mainNow.source).toBe('llm')
+    expect(result.mainNow.factId).toBe('exercise:тяга верхнего блока:36')
+    expect(result.mainNow.explanation).toBe('В тяге верхнего блока рабочий вес вырос на 36%.')
+    expect(result.mainNow.evidence).toContain('50 → 68 кг · +36%')
+  })
+
+  it('rejects an ungrounded LLM claim and keeps the deterministic fact', () => {
+    const value = summary([{
+      exerciseName: 'Тяга верхнего блока', kind: 'strength', sessionCount: 3,
+      changes: [{ metric: 'max_weight', from: 50, to: 68, changePercent: 36, favorable: true }],
+    }])
+    value.summary.headline = 'В приседаниях результат вырос на 99%.'
+
+    const result = clientProgressPresentation(value)
+
+    expect(result.mainNow).toMatchObject({
+      factId: 'exercise:тяга верхнего блока:36', source: 'deterministic',
+      explanation: 'Это наиболее выраженное подтверждённое изменение упражнения за период.',
+    })
+    expect(result.mainNow.explanation).not.toContain('99%')
+  })
+
+  it('prioritizes a long confirmed gap above positive load changes', () => {
+    const value = summary([{
+      exerciseName: 'Тяга верхнего блока', kind: 'strength', sessionCount: 3,
+      changes: [{ metric: 'max_weight', from: 50, to: 68, changePercent: 36, favorable: true }],
+    }])
+    value.metrics.longestGapDays = 18
+    value.summary.consistency = 'Самая длинная пауза составила 18 дней.'
+
+    expect(clientProgressPresentation(value).mainNow).toMatchObject({
+      factId: 'regularity:gap:18', kind: 'gap', title: 'В ритме была длинная пауза',
+      evidence: '18 дней без тренировок', source: 'llm',
+    })
+  })
+
   it('compares real workouts and one measurable exercise result with the previous period', () => {
     const currentFirst = workout('current-1', '2026-08-03', 3)
     const currentSecond = workout('current-2', '2026-08-10', 3)

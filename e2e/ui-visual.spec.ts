@@ -54,6 +54,7 @@ async function openClientProgress(page: import('@playwright/test').Page, options
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/progress-identity/)
   await expect(page.locator('.client-progress-card')).toBeVisible()
+  await expect(page.locator('.client-progress-main-now')).toBeVisible()
 }
 
 async function expectVisualBaseline(
@@ -263,6 +264,7 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client routes use mobile visual profiles')
   await openClientProgress(page)
   await expect(page.locator('.client-progress-card .body-progress-map')).toBeVisible()
+  await expect(page.locator('.client-progress-main-now').getByText('Главное сейчас', { exact: true })).toBeVisible()
   const progressStats = page.locator('.client-progress-card .ai-progress-stats')
   await expect(progressStats.getByText(/трениров/).first()).toBeVisible()
   await expect(progressStats.getByText(/недел/).first()).toBeVisible()

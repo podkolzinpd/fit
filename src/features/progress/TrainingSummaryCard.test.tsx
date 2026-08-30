@@ -19,6 +19,7 @@ const repositories = vi.hoisted(() => ({
   goal: vi.fn(),
   progress: vi.fn(),
   workouts: vi.fn(),
+  personalRecords: vi.fn(),
 }))
 vi.mock('../../app/auth-context', () => ({
   useAuth: () => ({ actor: { userId: 'viewer-1', role: 'client', timezone: 'Europe/Moscow' } }),
@@ -40,7 +41,7 @@ vi.mock('../../data/repositories/progress.repository', () => ({
   progressRepository: { list: repositories.progress },
 }))
 vi.mock('../../data/repositories/workouts.repository', () => ({
-  workoutsRepository: { list: repositories.workouts },
+  workoutsRepository: { list: repositories.workouts, personalRecords: repositories.personalRecords },
 }))
 vi.mock('../../shared/yandex-metrika', () => ({ trackGoal: vi.fn() }))
 
@@ -168,6 +169,7 @@ describe('Training summary card states', () => {
     repositories.goal.mockResolvedValue(null)
     repositories.progress.mockResolvedValue([])
     repositories.workouts.mockResolvedValue([])
+    repositories.personalRecords.mockResolvedValue([])
   })
 
   it('does not expose period or generation actions while trainer data is loading', () => {
@@ -481,6 +483,50 @@ describe('Training summary card states', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Попробуйте ещё раз через минуту')
     expect(screen.getByRole('button', { name: 'Обновить' })).toBeEnabled()
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
+
+    const mainNow = screen.getByRole('heading', { name: `Заметное изменение · ${longExerciseName}` }).closest('section')
+    const bodyMap = document.querySelector('.body-progress-map')
+    expect(mainNow).not.toBeNull()
+    expect(mainNow).toHaveAttribute('data-fact-id', expect.stringContaining('exercise:'))
+    expect(mainNow).toHaveAttribute('data-copy-source', 'deterministic')
+    expect(mainNow!.compareDocumentPosition(bodyMap!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('shows a verified personal record as the main fact and loads it only for a marked workout', async () => {
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForClient.mockResolvedValue([publishedSummary])
+    repositories.workouts.mockResolvedValue([{
+      id: 'record-workout', clientId: 'client-1', clientName: 'Антон', workoutDate: localDate('2026-08-18'),
+      startTime: null, endTime: null, startedAt: null, completedAt: '2026-08-18T10:00:00Z', status: 'done',
+      notes: null, stageId: null, stageTitle: null, version: 1, hasPr: true, exercises: [],
+    } as Workout])
+    repositories.personalRecords.mockResolvedValue([{
+      exerciseRef: 'bench-press', exerciseName: 'Жим лёжа', inputKind: 'strength', metric: 'weight_reps',
+      primaryValue: 75, weightKg: 75, reps: 8,
+    }])
+
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByRole('heading', { name: 'Новый личный рекорд · Жим лёжа' })).toBeVisible()
+    expect(screen.getByText('75 кг × 8 повт. · 18.08.2026')).toBeVisible()
+    expect(repositories.personalRecords).toHaveBeenCalledOnce()
+    expect(repositories.personalRecords).toHaveBeenCalledWith('record-workout')
+  })
+
+  it('does not repeat a missing plan as both the main fact and the next-step card', async () => {
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(null)
+    repositories.listForClient.mockResolvedValue([{
+      ...publishedSummary,
+      metrics: { ...publishedSummary.metrics, completedWorkouts: 0, activeWeeks: 0, progressFacts: [] },
+      summary: { ...publishedSummary.summary, headline: 'Пока нет сопоставимых результатов.' },
+    }])
+
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByRole('heading', { name: 'Ближайшая тренировка не запланирована' })).toBeVisible()
+    expect(screen.getAllByText('Ближайшая тренировка не запланирована')).toHaveLength(1)
+    expect(screen.getAllByRole('link', { name: 'Запланировать тренировку' })).toHaveLength(1)
+    expect(document.querySelector('.client-progress-upcoming')).toBeNull()
   })
 
   it('lets the client switch to load and retry a failed workout history request', async () => {
