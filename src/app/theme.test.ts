@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  applyAppTheme,
   applyThemeVariant,
   resolveAppTheme,
   resolveThemePreference,
@@ -77,5 +78,19 @@ describe('applyThemeVariant', () => {
   it('не падает, когда meta theme-color отсутствует', () => {
     expect(() => applyThemeVariant('dark-pilot')).not.toThrow()
     expect(document.documentElement.classList.contains('theme-dark-pilot')).toBe(true)
+  })
+
+  it('применяет принятую системную палитру до первого render только для monochrome rollout', () => {
+    const meta = document.createElement('meta')
+    meta.setAttribute('name', 'theme-color')
+    document.head.append(meta)
+
+    applyAppTheme('dark', true)
+    expect(document.documentElement).toHaveClass('identity-monochrome-preview')
+    expect(themeColor()).toBe('#111214')
+
+    applyAppTheme('light', false)
+    expect(document.documentElement).not.toHaveClass('identity-monochrome-preview')
+    expect(themeColor()).toBe('#f7f4ef')
   })
 })

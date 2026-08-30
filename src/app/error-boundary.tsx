@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react'
+import { isMonochromeUiEnabled } from './feature-flags'
 import { trackGoal } from '../shared/yandex-metrika'
 
 interface Props { children: ReactNode; onReload?: () => void }
@@ -26,7 +27,9 @@ export class AppErrorBoundary extends Component<Props, State> {
 
   render() {
     if (!this.state.failed) return this.props.children
-    return <main className="app-render-error" role="alert">
+    const monochromeIdentity = isMonochromeUiEnabled(false)
+      || (typeof document !== 'undefined' && document.documentElement.classList.contains('identity-monochrome-preview'))
+    return <main className={`app-render-error${monochromeIdentity ? ' identity-monochrome-preview system-state-identity' : ''}`} role="alert">
       <span className="app-render-error-mark" aria-hidden="true">!</span>
       <h1>Не удалось открыть экран</h1>
       <p>Ваши данные сохранены. Попробуйте открыть экран ещё раз или обновите приложение.</p>

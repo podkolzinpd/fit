@@ -18,6 +18,11 @@ const THEME_COLOR: Record<ThemeVariant, string> = {
   'dark-pilot': '#000000',
 }
 
+const MONOCHROME_THEME_COLOR: Record<AppTheme, string> = {
+  light: '#FBFAF7',
+  dark: '#111214',
+}
+
 const THEME_VARIANT_CLASS: Record<ThemeVariant, string> = {
   light: 'theme-light',
   dark: '',
@@ -66,8 +71,16 @@ export function applyThemeVariant(variant: ThemeVariant) {
 // Вызывается до первого render, когда аккаунт ещё неизвестен, поэтому пилотный
 // вариант здесь недоступен: его подключает AppLayout, как только auth вернул
 // actor и allowlist можно проверить.
-export function applyAppTheme(theme: AppTheme) {
+export function applyAppTheme(theme: AppTheme, monochromeIdentity = false) {
   applyThemeVariant(resolveThemeVariant(theme, false))
+  if (typeof document === 'undefined') return
+  document.documentElement.classList.toggle('identity-monochrome-preview', monochromeIdentity)
+  if (monochromeIdentity) applyMonochromeThemeColor(theme)
+}
+
+export function applyMonochromeThemeColor(theme: AppTheme) {
+  if (typeof document === 'undefined') return
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', MONOCHROME_THEME_COLOR[theme])
 }
 
 export function setAppTheme(theme: AppTheme, darkPilot = false) {

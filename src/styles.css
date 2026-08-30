@@ -2884,6 +2884,36 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   --bar-bg:#fbfaf7;
 }
 
+/* Branding/system shell: до монтирования route layout и при корневой ошибке
+   production UI не должен кратко возвращаться к legacy typography/palette.
+   Rollout=off не получает этот scope и сохраняет прежний fallback. */
+.system-state-identity {
+  min-height:100dvh;
+  padding:max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  background:var(--bg);
+  color:var(--secondary-label-fg);
+  font-family:"Onest Variable", -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
+  font-size:14px;
+  font-weight:400;
+  line-height:1.45;
+}
+.system-state-identity.error { color:var(--danger) }
+.app-render-error.system-state-identity { gap:12px; color:var(--fg) }
+.app-render-error.system-state-identity .app-render-error-mark {
+  width:44px;
+  height:44px;
+  border-color:var(--border);
+  border-radius:14px;
+  background:var(--surface-raised);
+  color:var(--danger);
+  font-size:18px;
+  font-weight:600;
+}
+.app-render-error.system-state-identity h1 { max-width:330px; font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.app-render-error.system-state-identity p { max-width:320px; color:var(--secondary-label-fg); font-size:14px; font-weight:400; line-height:1.45 }
+.app-render-error.system-state-identity .app-render-error-actions { gap:8px; margin-top:8px }
+.app-render-error.system-state-identity .app-render-error-actions button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+
 /* Gate 8 / Task 25 — весь доступ к продукту образует одну спокойную auth-family.
    Публичные маршруты получают эти правила через AuthIdentityScreen, а Join —
    через route-scoped shell. Legacy CSS остаётся рядом для rollout=off. */
