@@ -43,7 +43,7 @@ describe('production Yandex push notifications function', () => {
     setEnv()
     const result = await handler({
       httpMethod: 'POST',
-      headers: { authorization: 'Bearer wrong-secret' },
+      headers: { 'x-push-dispatch-secret': 'wrong-secret' },
       body: JSON.stringify({ notifications: [validNotification] }),
     })
     expect(result.statusCode).toBe(401)
@@ -53,7 +53,7 @@ describe('production Yandex push notifications function', () => {
     setEnv()
     const result = await handler({
       httpMethod: 'POST',
-      headers: { authorization: 'Bearer test-secret' },
+      headers: { 'x-push-dispatch-secret': 'test-secret' },
       body: JSON.stringify({ notifications: [] }),
     })
     expect(result.statusCode).toBe(400)
@@ -64,7 +64,7 @@ describe('production Yandex push notifications function', () => {
     sendNotification.mockResolvedValueOnce(undefined)
     const result = await handler({
       httpMethod: 'POST',
-      headers: { authorization: 'Bearer test-secret' },
+      headers: { 'x-push-dispatch-secret': 'test-secret' },
       body: JSON.stringify({ notifications: [validNotification] }),
     })
     expect(result.statusCode).toBe(200)
