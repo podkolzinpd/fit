@@ -21,11 +21,14 @@ import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { TrainingBodyProgressMap } from './ClientBodyProgressMap'
 import { MeasurementProgressSection } from './MeasurementProgressSection'
+import { ProgressNextStepSection } from './ProgressNextStepSection'
 import { WorkoutRegularityProgressSection } from './WorkoutRegularityProgressSection'
 import { progressStoryPresentation } from './client-progress-presentation'
+import { buildProgressNextStep } from './next-step-recommendation'
 import { progressFactChangeLabel } from './progress-facts'
 import { formatSummaryText, formatWorkoutsPerWeek, progressMetricNoun } from './summary-format'
 import { availableSummaryPeriods, SUMMARY_PERIODS, summaryPeriodMatch, summaryPeriodRange, type SummaryPeriod } from './summary-period'
+import { buildWorkoutRegularityProgress } from './workout-regularity-progress'
 
 function PeriodTabs({ value, available, onChange }: {
   value: SummaryPeriod
@@ -312,6 +315,10 @@ function summaryConsistency(summary: ProgressStorySummary): string {
   return 'summary' in summary ? summary.summary.consistency : summary.trainer.consistency
 }
 
+function summaryNextSteps(summary: ProgressStorySummary): readonly string[] {
+  return ('summary' in summary ? summary.summary.nextSteps : summary.client.nextSteps) ?? []
+}
+
 function measurementCopyCandidates(summary: ProgressStorySummary, role: 'client' | 'trainer'): string[] {
   if ('summary' in summary) {
     return [summary.summary.headline, ...summary.summary.achievements, summary.summary.goalAlignment ?? '']
@@ -400,6 +407,32 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
   const periodDays = daysBetween(summary.periodStart, summary.periodEnd) + 1
   const previousPeriodStart = addDays(summary.periodStart, -periodDays)
   const previousPeriodEnd = addDays(summary.periodStart, -1)
+  const regularity = buildWorkoutRegularityProgress({
+    currentWorkouts: currentWorkouts ?? [],
+    previousWorkouts,
+    periodStart: summary.periodStart,
+    periodEnd: summary.periodEnd,
+    previousPeriodStart,
+    previousPeriodEnd,
+    today,
+  })
+  const nextStep = buildProgressNextStep({
+    goal: presentation.goal,
+    nextWorkout: presentation.nextWorkout,
+    completedWorkouts: regularity.completedWorkouts,
+    activeWeeks: regularity.activeWeeks,
+    totalWeeks: Math.max(1, regularity.elapsedWeeks),
+    llmSuggestions: summaryNextSteps(summary),
+    role,
+  })
+  const nextStepLinks = {
+    add_measurement: measurementLink,
+    schedule_workout: workoutLink,
+    continue_rhythm: role === 'client' ? '/me/workouts' : `/clients/${clientId}/workouts`,
+    clarify_criterion: goalLink,
+    check_metric: measurementLink,
+    open_workout: (candidate: { targetId?: string }) => candidate.targetId ? `/workouts/${candidate.targetId}` : workoutLink,
+  }
   const goalStory = <>
     {goalLoading && <section className="client-progress-story-state" role="status">Проверяем данные цели…</section>}
     {goalError && <section className="client-progress-story-state" role="alert">Не удалось загрузить цель. <button type="button" className="link" onClick={onGoalRetry}>Повторить</button></section>}
@@ -536,17 +569,18 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       <h3 id={`${role}-progress-wins-title`}>{role === 'client' ? 'Твои достижения' : 'Ключевые изменения'}</h3>
       <div>{wins.map((item) => <article key={item.title}><span aria-hidden="true" /><div><strong>{item.title}</strong><p>{item.detail}</p></div></article>)}</div>
     </section>}
-    {presentation.mainNow.kind !== 'plan' && <section className="client-progress-upcoming" aria-labelledby={`${role}-progress-upcoming-title`}>
-      <span>Следующий шаг</span>
-      {presentation.nextWorkout
-        ? <><h3 id={`${role}-progress-upcoming-title`}>{presentation.nextWorkout.date}</h3>
-          {presentation.nextWorkout.title !== 'Ближайшая тренировка' && <p>{presentation.nextWorkout.title}</p>}
-          <div>{presentation.nextWorkout.exercises.map((exercise) => <article key={exercise.name}>
-            <strong>{exercise.name}</strong>{exercise.plan && <span>{exercise.plan}</span>}
-          </article>)}</div></>
-        : <><h3 id={`${role}-progress-upcoming-title`}>Ближайшая тренировка не запланирована</h3>
-          <Link className="link" to={workoutLink}>Запланировать тренировку</Link></>}
-    </section>}
+    <ProgressNextStepSection
+      result={nextStep}
+      links={nextStepLinks}
+      titleId={`${role}-progress-next-step-title`}
+      loading={goalLoading || workoutsLoading || measurementsLoading}
+      error={goalError ?? workoutsError ?? measurementsError}
+      onRetry={() => {
+        onGoalRetry()
+        onWorkoutsRetry()
+        onMeasurementsRetry()
+      }}
+    />
     {attention.length > 0 && <section className="progress-story-attention" aria-label="На что обратить внимание">
       <span aria-hidden="true">!</span><div><strong>На что обратить внимание</strong><p>{formatSummaryText(attention[0]!)}</p></div>
     </section>}

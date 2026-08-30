@@ -241,6 +241,7 @@ describe('Training summary card states', () => {
   })
 
   it('turns the client summary into a factual period, goal and upcoming-plan story', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-08-27T12:00:00Z'))
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
@@ -316,9 +317,15 @@ describe('Training summary card states', () => {
     expect(resultsIndex).toBeGreaterThan(regularityIndex)
     expect(document.querySelector('.goal-foundation-facts')).toBeNull()
     expect(document.querySelector('.goal-progress-details')).toBeNull()
-    expect(screen.getByRole('heading', { name: '28 августа 2026 г. · 18:30' })).toBeVisible()
-    expect(screen.getByText('Спина и плечи')).toBeVisible()
-    expect(screen.getByText('3 × 70 кг × 10 повт.')).toBeVisible()
+    const nextStepHeading = screen.getByRole('heading', { name: 'Проверить показатель · Вес' })
+    const nextStep = nextStepHeading.closest('section')
+    expect(nextStep).not.toBeNull()
+    expect(nextStep).toHaveAttribute('data-recommendation-source', 'deterministic')
+    expect(within(nextStep!).getByText('Основание: 81,5 кг · Движение к ориентиру')).toBeVisible()
+    const nextStepIndex = Array.from(document.querySelectorAll('.progress-story-card > *')).indexOf(nextStep!)
+    expect(nextStepIndex).toBeGreaterThan(resultsIndex)
+    await user.click(within(nextStep!).getByRole('button', { name: 'Изменить' }))
+    expect(within(nextStep!).getByRole('radio', { name: 'Открыть ближайшую тренировку · 28 августа 2026 г. · 18:30' })).toBeVisible()
     expect(document.body).not.toHaveTextContent('Прогресс уже заметен, ты на верном пути')
   })
 
@@ -406,19 +413,24 @@ describe('Training summary card states', () => {
     expect(repositories.listForTrainer).toHaveBeenCalledTimes(2)
   })
 
-  it('keeps role-specific planning actions and the trainer publication status explicit', async () => {
+  it('requires confirmation before role-specific goal actions and keeps publication status explicit', async () => {
+    const user = userEvent.setup()
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
     repositories.listForClient.mockResolvedValue([publishedSummary])
 
     const client = render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
-    expect(await screen.findByRole('link', { name: 'Запланировать тренировку' })).toHaveAttribute('href', '/workouts/new')
+    const clientDraft = await screen.findByRole('heading', { name: 'Сформулировать цель и критерий' })
+    await user.click(within(clientDraft.closest('section')!).getByRole('button', { name: 'Подтвердить' }))
+    expect(screen.getByRole('link', { name: 'Открыть цель' })).toHaveAttribute('href', '/me/goal')
     client.unmount()
 
     repositories.listForTrainer.mockResolvedValue([trainerSummary])
     render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
     expect(await screen.findByText('Доступно клиенту')).toBeVisible()
-    expect(screen.getByRole('link', { name: 'Запланировать тренировку' })).toHaveAttribute('href', '/workouts/new?client=client-1')
+    const trainerDraft = await screen.findByRole('heading', { name: 'Уточнить цель и критерий клиента' })
+    await user.click(within(trainerDraft.closest('section')!).getByRole('button', { name: 'Подтвердить' }))
+    expect(screen.getByRole('link', { name: 'Открыть цель' })).toHaveAttribute('href', '/clients/client-1/goal')
     expect(screen.getByRole('button', { name: 'Версия для спортсмена' })).toBeVisible()
   })
 
@@ -548,7 +560,7 @@ describe('Training summary card states', () => {
     expect(repositories.personalRecords).toHaveBeenCalledWith('record-workout')
   })
 
-  it('does not repeat a missing plan as both the main fact and the next-step card', async () => {
+  it('keeps a missing plan fact separate from the confirmable next-step draft', async () => {
     repositories.firstCompletedWorkoutDate.mockResolvedValue(null)
     repositories.listForClient.mockResolvedValue([{
       ...publishedSummary,
@@ -561,7 +573,8 @@ describe('Training summary card states', () => {
     expect(await screen.findByRole('heading', { name: 'Ближайшая тренировка не запланирована' })).toBeVisible()
     expect(screen.getAllByText('Ближайшая тренировка не запланирована')).toHaveLength(1)
     expect(screen.getAllByRole('link', { name: 'Запланировать тренировку' })).toHaveLength(1)
-    expect(document.querySelector('.client-progress-upcoming')).toBeNull()
+    expect(await screen.findByRole('heading', { name: 'Сформулировать цель и критерий' })).toBeVisible()
+    expect(document.querySelector('.client-progress-next-step')).not.toBeNull()
   })
 
   it('lets the client switch to load and retry a failed workout history request', async () => {
