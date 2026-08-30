@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-30
-Проверенный базовый `main`: `3f2bf82` (`fix(push): sync production transport secrets (#669)`)
+Проверенный базовый `main`: `67c334a` (`fix(progress): avoid nested custom metric forms (#683)`)
 
 ## Текущий release gate
 
@@ -107,6 +107,10 @@
   расчёт, status, direction, sufficiency и freshness остаются deterministic.
 - Tasks 25–28: auth/Assistant, WCAG AA, 44 px targets, reduced motion,
   app/API, Chromium/WebKit и Linux/Darwin visual matrix 390/430/1440 зелёные.
+- Post-Progress UI cleanup мигрировал branding/system states, shared overlays,
+  typography/icons и экранные хвосты, затем удалил только подтверждённый dead
+  CSS. Классификация A/B/C/D зафиксирована в
+  `docs/design/UI_IDENTITY_LEGACY_CLEANUP_2026-08-30.md`.
 - Production Vercel `6158408571` и Yandex stage preview sync `33263066435`
   зелёные; для локального visual smoke используется standard Playwright runtime.
 
@@ -116,8 +120,8 @@
    accounts, когда browser policy снова разрешит доступ.
 2. Сохранять rollout `on`; при серьёзной проблеме установить
    `VITE_MONOCHROME_ROLLOUT_MODE=off` и redeploy.
-3. Не удалять legacy UI, `preview` и feature flag минимум один стабильный
-   релизный цикл; cleanup выполнять отдельной задачей.
+3. Не удалять legacy UI, `preview`, `off` и feature flag до отдельного решения
+   об окончании rollback-window.
 
 ## Отложено
 

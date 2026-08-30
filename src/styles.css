@@ -483,14 +483,12 @@ p { margin: 6px 0 }
 .trainer-tab-bar:has(a[href="/assistant"]) { grid-template-columns: repeat(4, 1fr) }
 .trainer-tab-bar:has(a[href="/assistant"]):has(a[href="/profile"]) { grid-template-columns: repeat(5, 1fr) }
 .client-tab-bar:has(a[href="/assistant"]) { grid-template-columns: repeat(5, 1fr) }
-.client-shell .tab-bar { grid-template-columns: repeat(2, 1fr) }
 /* Локальный первый срез ассистента. Он использует только component state: здесь
    намеренно нет queries, repository или сетевых вызовов. Карточки повторяют
    Figma-паттерн «сообщение → структурированное действие», чтобы позднее тот же
    renderer получил типизированный результат Yandex Cloud API. */
 .assistant-page { position:relative; display:grid; grid-template-areas:"session" "thread" "context" "composer"; grid-template-rows:auto minmax(0, 1fr) auto auto; align-content:stretch; min-height:100%; gap:var(--space-4); padding:10px var(--space-4) calc(106px + env(safe-area-inset-bottom)); color:var(--fg); }
 .assistant-page:not(:has(> .assistant-context-panel)) { grid-template-areas:"session" "thread" "composer"; grid-template-rows:auto minmax(0, 1fr) auto; }
-.assistant-design-preview { width:min(100%, 390px); min-height:100vh; margin:0 auto; padding:24px 14px; background:var(--bg); color:var(--fg); }
 .assistant-page > * { position:relative; z-index:1; }
 .assistant-local-note { margin:0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug); }
 .assistant-thread { grid-area:thread; display:flex; flex-direction:column; gap:8px; min-height:0; padding:2px 2px 8px 0; }
@@ -547,18 +545,12 @@ p { margin: 6px 0 }
 .assistant-progress-preview span, .assistant-progress-preview small { color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug); }
 .assistant-progress-preview b { color:var(--accent-strong); }
 .assistant-progress-preview button { justify-self:start; min-height:38px; padding:7px 12px; font-size:var(--type-caption-size); }
-.assistant-workout-collection, .assistant-completion-card { display:grid; gap:var(--space-2); padding:var(--space-4); border:1px solid color-mix(in srgb, var(--accent-strong) 18%, var(--border)); border-radius:var(--radius-lg); background:linear-gradient(145deg, color-mix(in srgb, var(--surface-raised) 96%, var(--accent-surface)), var(--surface-raised)); }
-.assistant-workout-collection > small:first-child, .assistant-completion-card > small:first-child { color:var(--accent-strong); font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
-.assistant-workout-collection > strong, .assistant-completion-card > strong { font-size:19px; line-height:1.2; }
-.assistant-workout-collection > p, .assistant-workout-transcript p { margin:0; line-height:1.42; }
-.assistant-workout-collection > small, .assistant-completion-card > span { color:var(--muted); line-height:1.35; }
+.assistant-workout-transcript p { margin:0; line-height:1.42; }
 .assistant-workout-transcript { display:grid; gap:6px; padding:12px; border-radius:var(--radius-md); background:var(--input); }
 .assistant-workout-transcript small { color:var(--muted); font-weight:700; }
 .assistant-workout-transcript p { white-space:pre-line; }
-.assistant-workout-collection > button, .assistant-completion-card > a { justify-self:start; }
-.assistant-completion-card > a { color:var(--accent-strong); font-weight:750; }
 .assistant-context-panel { grid-area:context; display:grid; gap:var(--space-3); padding:var(--space-3); border:1px solid var(--accent-surface-border); border-radius:var(--radius-lg); background:color-mix(in srgb, var(--surface-raised) 94%, var(--accent-surface)); box-shadow:var(--shadow-card); }
-.assistant-context-panel > .assistant-workout-collection, .assistant-context-panel > .assistant-completion-card, .assistant-context-panel > .assistant-program-draft, .assistant-context-panel > .assistant-progress-preview { padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
+.assistant-context-panel > .assistant-program-draft, .assistant-context-panel > .assistant-progress-preview { padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
 .assistant-context-panel > .assistant-flow-card { padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
 .assistant-flow-card { min-width:0; display:grid; gap:12px; padding:16px; border:1px solid var(--accent-surface-border); border-radius:20px; background:var(--surface-raised); box-shadow:var(--shadow-soft); }
 .assistant-flow-card > header, .assistant-workout-draft-content > header, .assistant-workout-result > header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
@@ -838,20 +830,9 @@ p { margin: 6px 0 }
 .client-actions .button { text-align: center }
 .client-home-page .page-header { margin-bottom: 18px }
 .client-home-stack { gap: 16px }
-.client-home-hero { padding: 8px 0 2px }
-.client-home-hero .eyebrow { margin: 0 0 8px }
-.client-home-hero h2 { margin: 0; font-size: clamp(30px, 8.2vw, 36px); line-height: 1.08; letter-spacing: var(--tracking-tight) }
-.client-home-hero > p:last-child { max-width: 330px; margin: 10px 0 0; color: var(--muted); font-size: 16px; line-height: 1.42 }
 .client-home-summary { gap: 9px }
 .client-home-summary div { min-height: 76px; justify-content: center; border-radius: 18px; box-shadow: var(--shadow-card) }
 .client-home-summary strong { font-size: 18px }
-.client-home-routes { display: grid; gap: 10px }
-.client-home-route { position: relative; display: grid; gap: 3px; min-height: 89px; padding: 17px 54px 17px 18px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface-raised); color: var(--fg); text-decoration: none; box-shadow: var(--shadow-card) }
-.client-home-route span { font-size: 20px; font-weight: var(--weight-semibold); letter-spacing: -.02em }
-.client-home-route small { color: var(--muted); font-size: 14px }
-.client-home-route b { position: absolute; right: 19px; top: 50%; color: var(--accent-strong); font-size: 28px; font-weight: 400; transform: translateY(-52%) }
-.client-home-route.primary { border-color: var(--accent-border); background: var(--accent-grad); color: var(--on-accent) }
-.client-home-route.primary small, .client-home-route.primary b { color: var(--on-accent) }
 .client-home-connections { display: grid; gap: 10px; margin-top: 4px; padding: 18px; border: 1px solid var(--border); border-radius: 21px; background: var(--surface-raised); box-shadow: var(--shadow-card) }
 .client-home-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px }
 .client-home-section-head .eyebrow { margin: 0 0 4px }
@@ -863,7 +844,6 @@ p { margin: 6px 0 }
 .client-home-invitations { display: grid; gap: 8px }
 .client-home-invitations h3 { margin: 5px 0 0; font-size: 14px; color: var(--muted) }
 .today-assignment-self { margin: 0; padding: 13px 14px; border: 1px solid var(--accent-border); border-radius: 14px; background: var(--accent-soft); color: var(--accent-strong); font-weight: var(--weight-medium) }
-.client-onboarding { display:grid; gap:18px; max-width:640px; margin:0 auto; }.client-onboarding-hero { padding:8px 0 2px; }.client-onboarding-hero .eyebrow { margin:0 0 8px; }.client-onboarding-hero h2 { margin:0; font-size:clamp(30px, 8.2vw, 36px); line-height:1.08; letter-spacing:var(--tracking-tight); }.client-onboarding-hero > p:last-child { max-width:350px; margin:10px 0 0; color:var(--muted); font-size:16px; line-height:1.42; }
 .client-workouts-page .page-header, .client-progress-page .page-header { margin-bottom:var(--section-gap); }.client-workouts-stack, .client-progress-stack { display:grid; gap:var(--section-gap); }.client-workout-section, .client-progress-form, .client-progress-history { display:grid; gap:var(--space-2); }.client-workout-section-head, .client-progress-section-head { display:grid; gap:var(--space-1); }.client-workout-section-head .eyebrow, .client-progress-section-head .eyebrow { margin:0; }.client-workout-section-head h2, .client-progress-section-head h2 { margin:0; font-size:var(--type-title-size); letter-spacing:var(--tracking-tight); }.client-workout-cards { gap:var(--space-2); }.client-workout-card { min-height:78px; padding:var(--card-padding); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); }.client-workout-card strong { font-size:var(--type-body-size); }.client-workout-card p { margin:var(--space-1) 0 0; }.client-section-empty { margin:0; padding:var(--card-padding); border:1px dashed var(--border); border-radius:var(--radius-lg); color:var(--muted); background:var(--surface-raised); font-size:var(--type-body-size); line-height:var(--leading-body); }.client-progress-form, .client-progress-history { padding:var(--card-padding); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); box-shadow:var(--shadow-card); }.client-progress-form .compact { padding:0; border:0; background:transparent; }.client-progress-form .measure-grid input { background:var(--surface-sunken); }.client-progress-form .compact button { min-height:var(--control-height-primary); border-radius:var(--radius-lg); font-size:var(--type-body-size); font-weight:var(--weight-bold); }.client-progress-history .cards { gap:var(--space-2); }.client-progress-history .card { border-radius:var(--radius-lg); box-shadow:none; }
 .past-workout-plan-card { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:var(--space-3); padding:var(--space-3) var(--card-padding); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); color:var(--fg); text-decoration:none; box-shadow:var(--shadow-soft) }
 .past-workout-plan-copy { min-width:0; display:grid; gap:3px }
@@ -1447,7 +1427,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .eyebrow { margin:0; color:var(--accent-strong); font-size:13px; font-weight:750; letter-spacing:.06em; text-transform:uppercase; }
 .today-composer .workout-composer-card { padding:18px 18px 14px; border-radius:25px; }.today-composer .workout-composer-card .voice-note-field > label { padding-bottom:10px; font-size:17px; }.today-composer .workout-composer-card .voice-note-field textarea { min-height:148px; padding:8px 16px 14px 1px; resize:vertical; font-size:20px; }.today-composer .workout-composer-card .voice-input { min-height:52px; padding:7px 0 7px 18px; }.today-composer .workout-composer-card .voice-input-button { min-height:40px; padding:7px 0; color:var(--accent-strong); font-size:16px; }.today-composer .workout-composer-clear { min-height:52px; }.today-composer .workout-composer-clear .link { min-height:40px; padding:7px 0; font-size:16px; }.today-hint { margin:-5px 0 0; color:var(--text-muted); font-size:13px; }.today-primary-cta { min-height:58px; border-radius:18px; background:#f26b4a; border-color:#f26b4a; box-shadow:none; font-size:20px; }.today-picker-cta { display:grid; justify-items:center; gap:2px; min-height:88px; padding:14px; border-radius:19px; text-align:center; font-size:20px; }.today-picker-cta small { color:var(--text-muted); font-size:15px; font-weight:500; }.today-parse-preview, .today-empty { display:grid; gap:8px; padding:12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); }.today-parse-preview p, .today-unparsed p, .today-empty p { margin:0; }.today-unparsed { display:grid; gap:7px; color:var(--warning-fg); }
 .today-clarification { display:grid; gap:3px; padding:2px 1px 8px; color:var(--text); }.today-clarification p { margin:0; color:var(--text-muted); font-size:14px; line-height:1.35; }
-.today-review-head { display:grid; gap:8px; padding:4px 0 2px; }.today-review h1 { max-width:300px; margin:0; font-size:clamp(28px, 7.6vw, 33px); }.today-review-summary { margin:5px 0 0; color:var(--accent-strong); font-size:14px; font-weight:750; }.today-review-back { justify-self:start; min-height:32px; padding:2px 0; color:var(--muted); font-size:14px; font-weight:700; }.today-exercise-list { display:grid; gap:10px; }.today-exercise { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px; border:1px solid var(--border); border-radius:20px; background:var(--surface-raised); box-shadow:var(--shadow-card); }.today-exercise strong { display:block; }.today-exercise p { margin:4px 0 0; color:var(--muted); font-size:14px; }.today-exercise p.today-exercise-missing { color:var(--warning-fg); font-weight:700; }.today-exercise .icon-button { flex:0 0 auto; width:38px; height:38px; padding:0; border:1px solid var(--danger-border); border-radius:50%; background:var(--danger-surface); color:var(--danger); box-shadow:none; font-size:24px; line-height:1; }.today-exercise-empty { gap:12px; padding:16px; border-radius:18px; }.today-exercise-empty p { color:var(--muted); font-size:15px; line-height:1.4; }.today-exercise-empty .wide { margin:0; min-height:48px; }.today-client { display:grid; gap:7px; font-weight:700; }.today-client select { width:100%; }.today-new-client { justify-self:start; min-height:34px; padding:3px 0; color:var(--accent-strong); font-size:14px; font-weight:700; }.today-no-client { margin:0; color:var(--warning-fg); font-size:14px; }.today-quick-client { display:grid; gap:9px; padding:14px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:var(--shadow-card); }.today-quick-client-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }.today-quick-client-head .link { min-height:32px; padding:3px 0; color:var(--muted); font-size:14px; }.today-quick-client p { margin:0; color:var(--muted); font-size:14px; }.today-quick-client-form { display:flex; gap:8px; }.today-quick-client-form input { min-width:0; flex:1; }.today-quick-client-form .secondary { flex:0 0 auto; min-height:42px; padding:8px 12px; }.today-save-actions { display:grid; gap:10px; }.today-save-actions .wide { position:sticky; bottom:calc(76px + env(safe-area-inset-bottom)); z-index:4; margin:0; min-height:50px; box-shadow:0 8px 20px var(--accent-shadow); }.today-start-shell.keyboard-open .today-save-actions .wide { position:static; }.today-record-mode { display:grid; grid-template-columns:1fr 1fr; gap:3px; padding:3px; border:1px solid var(--border); border-radius:13px; background:var(--surface); }.today-record-mode button { min-height:42px; padding:8px 10px; border:0; border-radius:10px; background:transparent; color:var(--muted); box-shadow:none; font-weight:700; }.today-record-mode button.active { background:var(--surface-raised); color:var(--fg); box-shadow:0 1px 4px #17191d14; }.today-date-field { display:grid; gap:6px; font-size:14px; font-weight:700; }.today-date-field span { color:var(--muted); }.today-date-field input { min-width:0; width:100%; }
+.today-review-head { display:grid; gap:8px; padding:4px 0 2px; }.today-review h1 { max-width:300px; margin:0; font-size:clamp(28px, 7.6vw, 33px); }.today-review-summary { margin:5px 0 0; color:var(--accent-strong); font-size:14px; font-weight:750; }.today-review-back { justify-self:start; min-height:32px; padding:2px 0; color:var(--muted); font-size:14px; font-weight:700; }.today-exercise-list { display:grid; gap:10px; }.today-exercise { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px; border:1px solid var(--border); border-radius:20px; background:var(--surface-raised); box-shadow:var(--shadow-card); }.today-exercise strong { display:block; }.today-exercise p { margin:4px 0 0; color:var(--muted); font-size:14px; }.today-exercise p.today-exercise-missing { color:var(--warning-fg); font-weight:700; }.today-exercise .icon-button { flex:0 0 auto; width:38px; height:38px; padding:0; border:1px solid var(--danger-border); border-radius:50%; background:var(--danger-surface); color:var(--danger); box-shadow:none; font-size:24px; line-height:1; }.today-exercise-empty { gap:12px; padding:16px; border-radius:18px; }.today-exercise-empty p { color:var(--muted); font-size:15px; line-height:1.4; }.today-exercise-empty .wide { margin:0; min-height:48px; }.today-client { display:grid; gap:7px; font-weight:700; }.today-client select { width:100%; }.today-new-client { justify-self:start; min-height:34px; padding:3px 0; color:var(--accent-strong); font-size:14px; font-weight:700; }.today-no-client { margin:0; color:var(--warning-fg); font-size:14px; }.today-save-actions { display:grid; gap:10px; }.today-save-actions .wide { position:sticky; bottom:calc(76px + env(safe-area-inset-bottom)); z-index:4; margin:0; min-height:50px; box-shadow:0 8px 20px var(--accent-shadow); }.today-start-shell.keyboard-open .today-save-actions .wide { position:static; }.today-record-mode { display:grid; grid-template-columns:1fr 1fr; gap:3px; padding:3px; border:1px solid var(--border); border-radius:13px; background:var(--surface); }.today-record-mode button { min-height:42px; padding:8px 10px; border:0; border-radius:10px; background:transparent; color:var(--muted); box-shadow:none; font-weight:700; }.today-record-mode button.active { background:var(--surface-raised); color:var(--fg); box-shadow:0 1px 4px #17191d14; }.today-date-field { display:grid; gap:6px; font-size:14px; font-weight:700; }.today-date-field span { color:var(--muted); }.today-date-field input { min-width:0; width:100%; }
 /* Review-экран: сохранение остаётся частью формы, не плавает над контентом. */
 .today-start-page { padding-top: max(16px, calc(34px - env(safe-area-inset-top))); }
 .today-start-page .page-header { margin-bottom:6px; }
@@ -1952,11 +1932,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 @media (max-width: 400px) {
   .ai-progress-stats span { text-overflow: clip; white-space: normal }
 }
-.ai-progress-section { padding: var(--space-3) var(--card-padding) 0 }
-.ai-progress-section h3 { margin: 0 0 8px; font-size: var(--type-body-size) }
-.ai-progress-section ul { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none }
-.ai-progress-section li { position: relative; padding-left: 16px; color: var(--ai-copy); font-size: var(--type-caption-size); line-height: var(--leading-body) }
-.ai-progress-section li::before { content: ''; position: absolute; top: .55em; left: 1px; width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px #62d7861f }
 .ai-progress-facts { display: grid; gap: var(--space-2) }
 .ai-progress-fact { display: grid; gap: 2px; padding-bottom: var(--space-2); border-bottom: 1px solid var(--ai-divider) }
 .ai-progress-fact:last-child { padding-bottom: 0; border-bottom: 0 }
@@ -1976,11 +1951,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .ai-progress-goal-error { display: flex; align-items: center; justify-content: space-between; gap: 10px }
 .ai-progress-goal-error .link { min-height: 32px; padding: 4px 0 }
 .ai-progress-next-steps { padding-top: 15px }
-.ai-progress-attention { display: flex; align-items: flex-start; gap: 9px; margin: var(--space-3) var(--card-padding) 0; padding: 10px 11px; border: 1px solid var(--ai-attention-border); border-radius: var(--radius-md); background: var(--ai-attention-surface) }
-.ai-progress-attention > span { width: 20px; height: 20px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; color: #1b140b; background: #eab65d; font-size: 12px; font-weight: 900 }
-.ai-progress-attention p { margin: 1px 0 0; overflow-wrap: anywhere; color: var(--ai-attention-fg); font-size: var(--type-caption-size); line-height: var(--leading-body) }
-.ai-progress-attention > div { min-width: 0; display: flex; flex-direction: column; gap: 5px }
-.ai-progress-attention strong { color: var(--ai-attention-fg); font-size: var(--type-caption-size); letter-spacing: var(--tracking-label); text-transform: uppercase }
 .ai-progress-more { min-height: 32px; align-self: flex-start; padding: 4px 0; color: var(--accent-strong); font-size: var(--type-caption-size); font-weight: var(--weight-bold) }
 .ai-progress-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-3); padding: var(--space-3) var(--card-padding); border-top: 1px solid var(--ai-divider); background: var(--ai-subtle-surface) }
 .ai-progress-footer > span { flex: 1 1 auto; color: var(--muted); font-size: var(--type-caption-size); line-height: var(--leading-snug) }
@@ -2013,13 +1983,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-page .ai-progress-title h2 { font-size: var(--type-section-size) }
 .trainer-progress-page .ai-progress-title p { font-size: 13px }
 .trainer-progress-page .ai-progress-hero strong { font-size: var(--type-body-size); font-weight: var(--weight-semibold); line-height: var(--leading-body) }
-.trainer-progress-page .ai-progress-section h3 { font-size: var(--type-body-size) }
 .trainer-progress-page .ai-progress-fact strong { font-size: 13px }
 .trainer-progress-page .ai-progress-fact span,
-.trainer-progress-page .ai-progress-section li,
-.trainer-progress-page .ai-progress-regularity p,
-.trainer-progress-page .ai-progress-attention p { font-size: 13px }
-.trainer-progress-page .ai-progress-attention { padding: var(--space-2) var(--space-3) }
+.trainer-progress-page .ai-progress-regularity p { font-size: 13px }
 .trainer-progress-page .ai-progress-footer { margin-top: var(--space-2) }
 .client-progress-card { border-color: var(--client-ai-card-border); background: var(--client-ai-card-background) }
 .client-progress-card .ai-progress-mark { border-color: var(--client-ai-mark-border); background: var(--client-ai-mark-background); box-shadow: var(--client-ai-mark-shadow) }
@@ -2078,7 +2044,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 @media (prefers-reduced-motion:reduce) {
   .body-progress-visual.discovering.mode-progress .body-progress-region:not(.selected) .body-progress-region-fill { animation:none }
 }
-.client-progress-next > span { color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label); text-transform:uppercase }
 .client-progress-card .ai-progress-stats.count-2 { grid-template-columns:repeat(2, minmax(0,1fr)) }
 .client-progress-card .ai-progress-stats.count-3 { grid-template-columns:repeat(3, minmax(0,1fr)) }
 .client-progress-card .ai-progress-stats span { overflow:visible; text-overflow:clip; white-space:normal }
@@ -2090,15 +2055,14 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-story-hero.empty { min-height:132px; align-content:center; text-align:center }
 .progress-story-hero.empty h3 { font-size:var(--type-body-size) }
 .client-progress-wins { display:grid; gap:10px; margin:var(--space-3) var(--card-padding) 0; padding-bottom:var(--space-3); border-bottom:1px solid var(--ai-divider) }
-.client-progress-wins h3, .client-progress-next h3, .client-progress-insight h3, .client-progress-details-section h3 { margin:0; font-size:var(--type-body-size); line-height:var(--leading-tight) }
+.client-progress-wins h3, .client-progress-insight h3, .client-progress-details-section h3 { margin:0; font-size:var(--type-body-size); line-height:var(--leading-tight) }
 .client-progress-wins > div { display:grid; gap:9px }
 .client-progress-wins article { min-width:0; display:grid; grid-template-columns:7px minmax(0,1fr); align-items:start; gap:9px }
 .client-progress-wins article > span { width:7px; height:7px; margin-top:5px; border-radius:50%; background:var(--success); box-shadow:0 0 0 3px #62d7861f }
 .client-progress-wins article div { min-width:0 }
 .client-progress-wins article strong { display:block; overflow-wrap:anywhere; font-size:var(--type-caption-size); line-height:var(--leading-snug) }
 .client-progress-wins article p { margin:2px 0 0; overflow-wrap:anywhere; color:var(--muted); font-size:var(--type-caption-size); font-variant-numeric:tabular-nums; line-height:var(--leading-snug) }
-.client-progress-next { display:grid; gap:4px; margin:var(--space-3) var(--card-padding) 0; padding:var(--space-3); border:1px solid var(--accent-surface-border); border-radius:var(--radius-md); background:var(--accent-surface) }
-.client-progress-next p, .client-progress-insight p, .client-progress-details-section p { margin:0; overflow-wrap:anywhere; font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.client-progress-insight p, .client-progress-details-section p { margin:0; overflow-wrap:anywhere; font-size:var(--type-caption-size); line-height:var(--leading-body) }
 .client-progress-insight { display:grid; gap:4px; margin:var(--space-3) var(--card-padding) 0; padding-top:var(--space-3); border-top:1px solid var(--client-ai-note-border) }
 .client-progress-insight h3 { color:var(--client-ai-note-fg) }
 .client-progress-insight p { color:var(--muted) }
@@ -2122,11 +2086,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .goal-foundation-facts > div { display:grid; gap:2px; min-width:0; padding:10px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-sunken) }
 .goal-foundation-facts dt { color:var(--muted); font-size:11px; line-height:1.25 }
 .goal-foundation-facts dd { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); font-weight:var(--weight-semibold); line-height:var(--leading-body) }
-.goal-progress-details { display:grid; gap:8px; margin:8px 0 4px; padding:12px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-sunken) }
-.goal-progress-details > div { display:grid; grid-template-columns:minmax(0,0.9fr) minmax(0,1.5fr); gap:10px; align-items:start }
-.goal-progress-details dt { color:var(--muted); font-size:11px; line-height:1.35 }
-.goal-progress-details dd { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); font-weight:var(--weight-medium); line-height:var(--leading-body) }
-@media (max-width:430px) { .goal-progress-details > div { grid-template-columns:1fr } }
 .client-progress-goal-story > .link { width:fit-content; min-height:44px; padding:8px 0 }
 .client-progress-goal-story p, .client-progress-upcoming p { margin:0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
 .client-progress-goal-story ul { display:grid; gap:6px; margin:2px 0 0; padding:0; list-style:none }
@@ -2163,19 +2122,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-encouragement { display: flex; align-items: flex-start; gap: 9px; margin: var(--space-3) var(--card-padding) 0; padding-top: var(--space-3); border-top: 1px solid var(--client-ai-note-border) }
 .client-encouragement > span { color: var(--client-ai-note-icon) }
 .client-encouragement p { margin: 0; color: var(--client-ai-note-fg); font-size: 12px; line-height: 1.45 }
-.client-welcome { margin: -6px 0 18px; padding: 17px; border: 1px solid #3e3a49; border-radius: 18px; background: linear-gradient(145deg, #28252f, #201e27) }
-.client-welcome > span { color: var(--accent-weak); font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase }
-.client-welcome h2 { margin: 6px 0; font-size: var(--text-title); line-height: 1.2 }
-.client-welcome p { color: var(--muted); font-size: 12px }
 .client-profile-card { display: flex; align-items: center; gap: 13px; margin-bottom: 18px; padding: 17px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface-raised) }
 .client-profile-avatar { width: 50px; height: 50px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 16px; color: white; background: var(--avatar-grad-0); font-weight: 900 }
 .client-profile-card p { color: var(--muted); font-size: 13px }
-.client-access-card { display: flex; flex-direction: column; gap: 13px; margin: 16px 0; padding: 15px; border: 1px solid var(--accent-surface-border); border-radius: 16px; background: #211e1a }
-.client-access-card > div { display: flex; align-items: flex-start; gap: 10px }
-.client-access-card > div > span { width: 28px; height: 28px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 9px; color: var(--accent-weak); background: var(--accent-surface); font-weight: 900 }
-.client-access-card p { color: var(--muted); font-size: 12px }
-.client-access-card.connected { border-color: #367b4b; background: #19291f }
-.client-access-card.connected > div > span { color: #b5edc5; background: #255438 }
 .client-invite-form { display: flex; flex-direction: column; gap: 10px }
 .measure-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
 .inline-form { display: grid; grid-template-columns: 1.3fr .7fr auto; gap: 7px }
@@ -2460,10 +2409,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-profile-form .actions button:last-child { min-height: 52px; border-radius: 16px; font-size: 17px; font-weight: 800 }
 /* AI-карточки получают цвета только через семантические токены выше: светлая
    и тёмная темы меняют палитру без специальных селекторов на каждом элементе. */
-.theme-light .client-welcome { border-color: var(--border); background: var(--card-grad) }
-.theme-light .client-access-card { border-color: var(--accent-surface-border); background: #fdf6f2 }
-.theme-light .client-access-card.connected { border-color: #a6d9ba; background: #eef8f1 }
-.theme-light .client-access-card.connected > div > span { color: #1f7a44; background: #d7efdf }
 .theme-light .page-back { background: var(--surface-raised) }
 .theme-light .badge { color: #6d6673; background: #efeae6 }
 .theme-light .exercise-block { background: var(--surface-sunken) }
@@ -2567,7 +2512,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .today-empty-parse { display:grid; gap:3px; padding:12px; border:1px solid var(--accent-surface-border); border-radius:12px; background:var(--accent-surface); }.today-empty-parse span { color:var(--text-muted); font-size:14px; }
 .today-llm-status { margin:8px 0 0; font-size:14px; font-weight:650; }.today-llm-status.loading { color:var(--text-muted); }.today-llm-status.success { color:var(--success-fg); }.today-llm-status.error { color:var(--warning-fg); }
 .today-recognized { display:grid; gap:7px; }.today-recognized ul { display:grid; gap:5px; margin:0; padding:0; list-style:none; }.today-recognized li { display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:7px 9px; border-radius:9px; background:var(--accent-surface); color:var(--fg); font-size:14px; }.today-recognized li strong { min-width:0; }.today-recognized li span, .today-recognized small { color:var(--text-muted); font-size:12px; }.today-recognized li span { flex:0 0 auto; white-space:nowrap; }.today-recognized small { display:block; }
-.today-agenda { display:grid; gap:8px; }.today-agenda-head { display:flex; align-items:end; justify-content:space-between; }.today-agenda-head h2 { margin:2px 0 0; font-size:23px; }.today-current-workout, .today-planned-workout { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:9px; padding:12px; border:1px solid var(--border); border-radius:13px; background:var(--surface-raised); color:inherit; text-decoration:none; }.today-current-workout { background:var(--accent-surface); border-color:var(--accent-surface-border); }.today-current-workout span { display:grid; gap:3px; }.today-current-workout small, .today-planned-workout small { color:var(--text-muted); }.today-planned-workout > span { color:var(--accent-strong); font-size:13px; font-weight:750; }.today-planned-workout small { grid-column:2 / -1; font-size:13px; }.today-recent-workouts { display:grid; gap:6px; margin-top:4px; padding-top:12px; border-top:1px solid var(--border); }.today-recent-workouts > p { margin:0; color:var(--text-muted); font-size:13px; font-weight:750; }.today-recent-workout { display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; color:inherit; font-size:14px; text-decoration:none; }.today-recent-workout span, .today-recent-workout small { color:var(--text-muted); }.today-recent-workout small { font-size:12px; }
 /* Старт — утилитарный экран: обычный iOS-tabbar вплотную к низу, без плавающей
    капсулы и перекрытия поля. На клавиатуре он скрывается через VisualViewport. */
 .today-start-shell .tab-bar { left:50%; bottom:0; width:min(100%, 440px); transform:translateX(-50%); border:0; border-top:1px solid var(--border); border-radius:0; box-shadow:none; }.today-start-shell .content { padding-bottom:calc(86px + env(safe-area-inset-bottom)); }.today-start-shell.keyboard-open .tab-bar { display:none; }.today-start-shell.keyboard-open .content { padding-bottom:20px; }
@@ -2721,10 +2665,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   filter: none;
 }
 .theme-dark-pilot .exercise.current .live-confirm { box-shadow: 0 8px 22px var(--accent-shadow) }
-.theme-dark-pilot .client-welcome { border-color: var(--border); background: var(--card-grad) }
-.theme-dark-pilot .client-access-card { background: var(--surface-raised) }
-.theme-dark-pilot .client-access-card.connected { border-color: var(--success-border); background: var(--success-surface) }
-.theme-dark-pilot .client-access-card.connected > div > span { color: var(--success-fg); background: var(--success-mark-surface) }
 .theme-dark-pilot .exercise-picker { border-color: var(--border); background: var(--surface-elevated) }
 .theme-dark-pilot .picker-category { color: var(--fg); background: var(--input) }
 .theme-dark-pilot .picker-muscle.active { color: var(--accent-label) }
@@ -3083,8 +3023,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 }
 .auth-join-identity .tab-bar a { min-height:48px; gap:3px; padding:5px 3px; border-radius:10px; color:var(--muted); font-size:12px; font-weight:500; background:transparent }
 .auth-join-identity .tab-bar a svg { width:20px; height:20px; opacity:1; stroke-width:1.8; transform:none }
-.auth-join-identity .tab-bar a.active,
-.auth-join-identity.theme-dark-pilot .tab-bar a.active { background:transparent; color:var(--fg); font-weight:500 }
+.auth-join-identity .tab-bar a.active { background:transparent; color:var(--fg); font-weight:500 }
 .auth-join-identity .tab-bar a.active svg { transform:none }
 
 @media (max-width:480px) {
@@ -3917,10 +3856,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-create-edit-identity .planned-set-remove svg { width:18px; height:18px }
 .workout-create-edit-identity .today-exercise-editor summary,
 .workout-create-edit-identity .today-exercise-actions .link { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
-.workout-create-edit-identity .today-empty,
-.workout-create-edit-identity .today-quick-client { border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
-.workout-create-edit-identity .today-empty p,
-.workout-create-edit-identity .today-quick-client p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.workout-create-edit-identity .today-empty { border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.workout-create-edit-identity .today-empty p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
 .workout-create-edit-identity .today-review-next { min-height:48px; border-radius:14px }
 .workout-create-edit-identity .today-undo-remove { border-color:var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg) }
 
@@ -4185,8 +4122,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-today-identity .app-install-card { border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
 .trainer-today-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
 .trainer-today-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
-.trainer-today-identity .tab-bar a.active,
-.trainer-today-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+.trainer-today-identity .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
 
 @media (max-width:375px) {
   .trainer-today-identity .today-start-page { padding-inline:14px }
@@ -4233,8 +4169,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-clients-identity .state-panel-error .state-panel-mark { color:var(--danger); background:var(--surface-sunken) }
 .trainer-clients-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
 .trainer-clients-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
-.trainer-clients-identity .tab-bar a.active,
-.trainer-clients-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+.trainer-clients-identity .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
 
 @media (max-width:480px) {
   .trainer-clients-identity .clients-page { padding:12px 16px calc(env(safe-area-inset-bottom) + 104px) }
@@ -4343,8 +4278,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-client-form-identity .state-panel p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
 .trainer-client-form-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
 .trainer-client-form-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
-.trainer-client-form-identity .tab-bar a.active,
-.trainer-client-form-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+.trainer-client-form-identity .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
 
 @media (max-width:480px) {
   .trainer-client-form-identity .page { padding:12px 16px calc(env(safe-area-inset-bottom) + 20px) }
@@ -4436,8 +4370,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-client-goal-identity .state-panel p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
 .trainer-client-goal-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
 .trainer-client-goal-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
-.trainer-client-goal-identity .tab-bar a.active,
-.trainer-client-goal-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+.trainer-client-goal-identity .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
 
 @media (max-width:480px) {
   .trainer-client-goal-identity .page { padding:12px 16px calc(env(safe-area-inset-bottom) + 104px) }
@@ -4519,8 +4452,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-schedule-identity .state-panel p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
 .trainer-schedule-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
 .trainer-schedule-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
-.trainer-schedule-identity .tab-bar a.active,
-.trainer-schedule-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+.trainer-schedule-identity .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
 
 @media (max-width:480px) {
   .trainer-schedule-identity .schedule-page { padding:12px 14px 0 }
@@ -4642,8 +4574,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-identity .client-progress-goal-story > span,
 .trainer-progress-identity .client-progress-upcoming > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-progress-identity .client-progress-goal-story.empty,
-.trainer-progress-identity .client-progress-upcoming,
-.trainer-progress-identity .client-progress-next { margin-inline:18px; padding:14px; border-color:var(--border); border-radius:14px; background:var(--surface-elevated) }
+.trainer-progress-identity .client-progress-upcoming { margin-inline:18px; padding:14px; border-color:var(--border); border-radius:14px; background:var(--surface-elevated) }
 .trainer-progress-identity .progress-story-attention { border-color:var(--warning-border); border-radius:14px; background:var(--surface-elevated) }
 .trainer-progress-identity .progress-story-attention > span { color:var(--warning-fg); background:var(--surface-sunken); font-weight:600 }
 .trainer-progress-identity .client-progress-details-toggle,
@@ -4738,8 +4669,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-identity .picker-item { min-height:48px; border-color:var(--border); background:transparent; color:var(--fg); font-size:14px; font-weight:500 }
 .trainer-progress-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
 .trainer-progress-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
-.trainer-progress-identity .tab-bar a.active,
-.trainer-progress-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+.trainer-progress-identity .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
 
 @media (max-width:640px) {
   .trainer-progress-identity .progress-page { padding:12px 14px calc(env(safe-area-inset-bottom) + 104px) }
@@ -4856,8 +4786,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-catalog-identity .catalog-detail-note { margin:0; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-elevated); color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
 .exercise-catalog-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
 .exercise-catalog-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
-.exercise-catalog-identity .tab-bar a.active,
-.exercise-catalog-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+.exercise-catalog-identity .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
 
 @media (max-width:640px) {
   .exercise-catalog-identity .exercise-catalog-preview { padding:12px 14px calc(env(safe-area-inset-bottom) + 104px) }
@@ -4964,8 +4893,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-profile-identity .profile-page > .danger.secondary { min-height:48px; margin:0; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--danger); font-size:14px; font-weight:500; box-shadow:none }
 .trainer-profile-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
 .trainer-profile-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
-.trainer-profile-identity .tab-bar a.active,
-.trainer-profile-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+.trainer-profile-identity .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
 
 @media (max-width:640px) {
   .trainer-profile-identity .profile-page { padding:12px 14px calc(env(safe-area-inset-bottom) + 104px) }
@@ -5049,31 +4977,21 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .assistant-identity .assistant-flow-card,
 .assistant-identity .assistant-action-card,
 .assistant-identity .assistant-workout-card,
-.assistant-identity .assistant-workout-collection,
-.assistant-identity .assistant-completion-card,
 .assistant-identity .assistant-inline-summary { border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); background-image:none; box-shadow:none }
 .assistant-identity .assistant-context-panel { gap:14px; padding:16px }
 .assistant-identity .assistant-context-panel > .assistant-flow-card,
-.assistant-identity .assistant-context-panel > .assistant-workout-collection,
-.assistant-identity .assistant-context-panel > .assistant-completion-card,
 .assistant-identity .assistant-context-panel > .assistant-progress-preview { border:0; border-radius:0; background:transparent }
 .assistant-identity .assistant-flow-card,
 .assistant-identity .assistant-action-card,
 .assistant-identity .assistant-workout-card,
-.assistant-identity .assistant-workout-collection,
-.assistant-identity .assistant-completion-card,
 .assistant-identity .assistant-inline-summary { gap:12px; padding:16px }
 .assistant-identity .assistant-flow-card > header small,
 .assistant-identity .assistant-workout-draft-content > header small,
 .assistant-identity .assistant-workout-result > header small,
-.assistant-identity .assistant-workout-collection > small:first-child,
-.assistant-identity .assistant-completion-card > small:first-child,
 .assistant-identity .assistant-workout-ambiguous-head small { color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:0; text-transform:none }
 .assistant-identity .assistant-flow-card > header strong,
 .assistant-identity .assistant-workout-draft-content > header strong,
 .assistant-identity .assistant-workout-result > header strong,
-.assistant-identity .assistant-workout-collection > strong,
-.assistant-identity .assistant-completion-card > strong,
 .assistant-identity .assistant-workout-ambiguous-head strong { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.018em }
 .assistant-identity .assistant-flow-status { min-height:28px; display:inline-flex; align-items:center; padding:0 9px; border:1px solid var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--fg); font-size:12px; font-weight:500 }
 .assistant-identity .assistant-flow-empty,
@@ -5194,8 +5112,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .assistant-identity .assistant-workout-saved small { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .assistant-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none }
 .assistant-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
-.assistant-identity .tab-bar a.active,
-.assistant-identity.theme-dark-pilot .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
+.assistant-identity .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
 
 @media (min-width:641px) {
   .assistant-identity .assistant-page { width:min(100%, 760px); margin:0 auto; padding:20px 24px calc(112px + env(safe-area-inset-bottom)) }
