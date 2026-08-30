@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties, type MouseEvent } from 'react'
 import type { Client } from '../../shared/domain'
-import { CloseIcon } from '../../shared/icons'
+import { AddIcon, BackIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon } from '../../shared/icons'
 import { recentClientIds, recordRecentClient, resolveRecentClients } from './recent-clients'
 
 export type ClientPickerSelection = Pick<Client, 'id' | 'fullName'>
@@ -89,18 +89,18 @@ export function ClientPicker({ userId, clients, selectedId, onChange, label = '�
   }
 
   function stopPropagation(event: MouseEvent) { event.stopPropagation() }
-  const item = (client: ClientPickerSelection, section: string) => <button type="button" className="client-picker-item" data-client-id={client.id} key={`${section}-${client.id}`} onClick={() => choose(client)}><span className="client-picker-avatar" aria-hidden="true">{client.fullName.trim().slice(0, 1).toUpperCase()}</span><span>{client.fullName}</span><span aria-hidden="true">→</span></button>
+  const item = (client: ClientPickerSelection, section: string) => <button type="button" className="client-picker-item" data-client-id={client.id} key={`${section}-${client.id}`} onClick={() => choose(client)}><span className="client-picker-avatar" aria-hidden="true">{client.fullName.trim().slice(0, 1).toUpperCase()}</span><span>{client.fullName}</span><ChevronRightIcon /></button>
 
   return <div className="client-picker-control">
     <input type="hidden" name="clientId" value={selectedId} />
     <span className="client-picker-label">{label}</span>
-    <button type="button" className="client-picker-trigger" aria-label={`${label}: ${selected?.fullName ?? 'Выберите клиента'}`} aria-describedby={selectionError ? 'client-picker-selection-error' : undefined} aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(true)}><span>{selected?.fullName ?? 'Выберите клиента'}</span><span aria-hidden="true">⌄</span></button>
+    <button type="button" className="client-picker-trigger" aria-label={`${label}: ${selected?.fullName ?? 'Выберите клиента'}`} aria-describedby={selectionError ? 'client-picker-selection-error' : undefined} aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(true)}><span>{selected?.fullName ?? 'Выберите клиента'}</span><ChevronDownIcon /></button>
     {selectionError && <p id="client-picker-selection-error" className="error" role="alert">{selectionError}</p>}
     {open && <div className={`sheet-overlay${keyboardOpen ? ' keyboard-open' : ''}`} style={viewportStyle} onClick={close}>
       <section className="client-picker" role="dialog" aria-modal="true" aria-label="Выбор клиента" onClick={stopPropagation}>
         <header className="picker-header"><h1>{creating ? 'Новый клиент' : 'Выберите клиента'}</h1><button type="button" className="picker-close" aria-label="Закрыть" onClick={creating ? () => { setCreating(false); setCreateError(null) } : close}><CloseIcon /></button></header>
         {creating ? <div className="client-picker-create">
-          <button type="button" className="link" onClick={() => { setCreating(false); setCreateError(null) }}>← К выбору</button>
+          <button type="button" className="link" onClick={() => { setCreating(false); setCreateError(null) }}><BackIcon />К выбору</button>
           <p>Укажите имя — остальные данные можно заполнить позже.</p>
           <label className="field">Имя клиента<input aria-label="Имя нового клиента" value={name} onChange={(event) => setName(event.target.value)} placeholder="Например, Анна Смирнова" autoFocus /></label>
           {createError && <p className="error">{createError}</p>}
@@ -115,7 +115,7 @@ export function ClientPicker({ userId, clients, selectedId, onChange, label = '�
             {list.map((client) => item(client, 'all'))}
             {!filtered.length && <div className="state"><strong>{clients.length ? 'Никого не нашли' : 'Клиентов пока нет'}</strong><p>{clients.length ? 'Измените запрос или создайте нового клиента.' : 'Создайте первую карточку, чтобы назначить тренировку.'}</p></div>}
           </div>}
-          {onCreate && <button type="button" className="secondary wide client-picker-create-action" onClick={() => { setName(search.trim()); setCreating(true) }}>＋ Новый клиент</button>}
+          {onCreate && <button type="button" className="secondary wide client-picker-create-action" onClick={() => { setName(search.trim()); setCreating(true) }}><AddIcon />Новый клиент</button>}
         </>}
       </section>
     </div>}

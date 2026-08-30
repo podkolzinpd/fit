@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from 'react'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
-import { CloseIcon } from '../../shared/icons'
+import { AddIcon, CheckIcon, ChevronRightIcon, CloseIcon } from '../../shared/icons'
 import { ExerciseImage } from './ExerciseImage'
 import { CONTINUOUS_RUNNING_FORMATS, INTERVAL_RUNNING_FORMATS, type RunningFormat } from '../../shared/running-formats'
 import { MUSCLE_GROUP_LABELS, MUSCLE_GROUPS, RUNNING_EXERCISE_REFS } from '../../shared/system-exercises'
@@ -221,7 +221,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   // Одна строка списка (используется и для недавних, и для основного списка).
   function item(exercise: ExerciseSnapshot, keyPrefix: string) {
     const checked = selected.has(exerciseKey(exercise))
-    return <button type="button" aria-pressed={multiple ? checked : undefined} className={`picker-item${checked ? ' selected' : ''}`} data-exercise-ref={exercise.ref} data-exercise-source={exercise.source} key={`${keyPrefix}-${exercise.source}-${exercise.ref}`} onClick={() => pick(exercise)}><ExerciseImage src={exercise.imageUrl} /><span className="picker-item-copy"><span className="picker-item-name">{exercise.name}</span><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small></span>{multiple && <span className="picker-select-mark" aria-hidden="true">{checked ? '✓' : '＋'}</span>}</button>
+    return <button type="button" aria-pressed={multiple ? checked : undefined} className={`picker-item${checked ? ' selected' : ''}`} data-exercise-ref={exercise.ref} data-exercise-source={exercise.source} key={`${keyPrefix}-${exercise.source}-${exercise.ref}`} onClick={() => pick(exercise)}><ExerciseImage src={exercise.imageUrl} /><span className="picker-item-copy"><span className="picker-item-name">{exercise.name}</span><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small></span>{multiple && <span className="picker-select-mark" aria-hidden="true">{checked ? <CheckIcon /> : <AddIcon />}</span>}</button>
   }
   // Выбор группы сбрасывает выбранную мышцу (иначе останется от прошлой группы).
   function selectGroup(next: 'all' | MuscleGroup) { setCategory(next); setMuscle(null); setEquipment(null) }
@@ -274,7 +274,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
             <div className="running-format-heading"><p className="picker-section-label">Формат бега</p><span>Выберите основу тренировки. Значения можно изменить после добавления.</span></div>
             <div className="running-format-list">
               {CONTINUOUS_RUNNING_FORMATS.map((option) => <button type="button" className="running-format-option" data-running-format={option.format} data-exercise-ref={option.format === 'free' ? 'running' : undefined} disabled={!runningExercise} key={option.format} onClick={() => pickRunningFormat(option.format)}><strong>{option.title}</strong><span>{option.description}</span></button>)}
-              <button type="button" className="running-format-option featured" disabled={!runningExercise} onClick={() => setRunningStep('intervals')}><strong>Интервалы</strong><span>Повторяющиеся рабочие отрезки и восстановление</span><b aria-hidden="true">›</b></button>
+              <button type="button" className="running-format-option featured" disabled={!runningExercise} onClick={() => setRunningStep('intervals')}><strong>Интервалы</strong><span>Повторяющиеся рабочие отрезки и восстановление</span><ChevronRightIcon /></button>
             </div>
             <div className="running-drills"><p className="picker-section-label">СБУ</p><span>Специальные беговые упражнения</span>{runningDrills.map((exercise) => item(exercise, 'running-drill'))}</div>
           </> : <>

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import type { ClientGoal, TrainerReaction, Workout, WorkoutPersonalRecord, WorkoutRegularity } from '../../shared/domain'
 import { currentStage } from '../../shared/goal-rules'
 import { addDays, formatLocalDate, type LocalDate } from '../../shared/local-date'
-import { RecordIcon } from '../../shared/icons'
+import { ChevronRightIcon, RecordIcon } from '../../shared/icons'
 import { exerciseProgressValueLabel } from './ExerciseProgressSummary'
 import { ClientFirstRunIntro } from './FirstRunExperience'
 
@@ -102,7 +102,7 @@ function NextActionCard({ next, today }: { next: NextWorkout; today: LocalDate }
           <small>{workoutTiming(next.workout, today)}</small>
           <strong>{exerciseSummary(next.workout)}</strong>
         </span>
-        <b aria-hidden="true">›</b>
+        <ChevronRightIcon />
       </Link>
     </section>
   }
@@ -124,7 +124,7 @@ function PastPlanCard({ workouts }: { workouts: Workout[] }) {
     <p className="eyebrow">ПЛАН НА {formatLocalDate(workout.workoutDate)}</p>
     <Link to={`/workouts/${workout.id}`} state={{ returnTo: '/me' }}>
       <span><h2 id="client-home-past-plan-title">{exerciseSummary(workout)}</h2>{workouts.length > 1 && <small>Ещё планов: {workouts.length - 1}</small>}</span>
-      <b>Выбрать действие ›</b>
+      <b>Выбрать действие <ChevronRightIcon /></b>
     </Link>
   </section>
 }
@@ -145,7 +145,7 @@ function WeekCard({ week, loading }: { week: WorkoutRegularity | undefined; load
         : `Всего состоялось ${completed} ${workoutCountLabel(completed)}`
     : completed === 1 ? 'Самостоятельно' : completed === 2 ? 'Обе — самостоятельно' : 'Все — самостоятельно'
   return <section className="client-home-week" aria-labelledby="client-home-week-title">
-    <div className="client-home-section-head"><div><p className="eyebrow">ЭТА НЕДЕЛЯ</p><h2 id="client-home-week-title">{title}</h2></div><Link to="/me/progress">Прогресс ›</Link></div>
+    <div className="client-home-section-head"><div><p className="eyebrow">ЭТА НЕДЕЛЯ</p><h2 id="client-home-week-title">{title}</h2></div><Link to="/me/progress">Прогресс <ChevronRightIcon /></Link></div>
     <p>{description}</p>
   </section>
 }
@@ -162,7 +162,7 @@ function workoutCountLabel(count: number): string {
 function HighlightCard({ highlight, today }: { highlight: HomeHighlight; today: LocalDate }) {
   if (highlight.kind === 'goal') {
     const stage = currentStage(highlight.goal, today)
-    return <section className="client-home-highlight" aria-labelledby="client-home-highlight-title"><p className="eyebrow">ВАШ ФОКУС</p><Link to="/me/progress"><span><h2 id="client-home-highlight-title">{highlight.goal.title}</h2><small>{stage ? `Текущий этап: ${stage.title}` : 'Текущий этап ещё не задан'}</small></span><b>›</b></Link></section>
+    return <section className="client-home-highlight" aria-labelledby="client-home-highlight-title"><p className="eyebrow">ВАШ ФОКУС</p><Link to="/me/progress"><span><h2 id="client-home-highlight-title">{highlight.goal.title}</h2><small>{stage ? `Текущий этап: ${stage.title}` : 'Текущий этап ещё не задан'}</small></span><ChevronRightIcon /></Link></section>
   }
   const response = highlight.kind === 'response'
   const reaction = highlight.workout.trainerReaction ? reactionLabels[highlight.workout.trainerReaction] : ''
@@ -177,7 +177,7 @@ function HighlightCard({ highlight, today }: { highlight: HomeHighlight; today: 
     : `/workouts/${highlight.workout.id}/history/${encodeURIComponent(record!.exerciseRef)}`
   return <section className={`client-home-highlight${response ? '' : ' record'}`} aria-labelledby="client-home-highlight-title">
     <p className="eyebrow">{response ? 'ОТ ТРЕНЕРА' : <><RecordIcon /> НОВЫЙ ЛИЧНЫЙ РЕКОРД</>}</p>
-    <Link to={link} state={{ returnTo: '/me' }}><span><h2 id="client-home-highlight-title">{response ? `${reaction} Новый ответ` : record!.exerciseName}</h2><small>{response ? highlight.workout.trainerReview?.trim() || 'Тренер отметил вашу тренировку' : recordValue}</small></span><b>›</b></Link>
+    <Link to={link} state={{ returnTo: '/me' }}><span><h2 id="client-home-highlight-title">{response ? `${reaction} Новый ответ` : record!.exerciseName}</h2><small>{response ? highlight.workout.trainerReview?.trim() || 'Тренер отметил вашу тренировку' : recordValue}</small></span><ChevronRightIcon /></Link>
   </section>
 }
 

@@ -66,6 +66,18 @@ export function ChevronRightIcon(props: IconProps) {
   return <Icon data-icon="chevron-right" {...props}><path d="m9 18 6-6-6-6" /></Icon>
 }
 
+export function ChevronDownIcon(props: IconProps) {
+  return <Icon data-icon="chevron-down" {...props}><path d="m6 9 6 6 6-6" /></Icon>
+}
+
+export function ArrowUpIcon(props: IconProps) {
+  return <Icon data-icon="arrow-up" {...props}><path d="m6.5 10.5 5.5-5.5 5.5 5.5M12 5v14" /></Icon>
+}
+
+export function ArrowDownIcon(props: IconProps) {
+  return <Icon data-icon="arrow-down" {...props}><path d="m6.5 13.5 5.5 5.5 5.5-5.5M12 19V5" /></Icon>
+}
+
 export function MoreIcon(props: IconProps) {
   return <Icon data-icon="more" {...props}><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none" /></Icon>
 }
