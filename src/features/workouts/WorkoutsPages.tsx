@@ -238,7 +238,7 @@ const chronicleReactionLabels: Record<TrainerReaction, string> = {
   strong: '💪',
 }
 
-export function WorkoutChronicleCard({ workout, contextLabel }: { workout: Workout; contextLabel?: string | null }) {
+export function WorkoutChronicleCard({ workout, contextLabel, returnTo }: { workout: Workout; contextLabel?: string | null; returnTo?: string }) {
   const done = workout.status === 'done'
   const duration = workoutDurationLabel(workout.startedAt, workout.completedAt)
   const tonnage = workoutTonnage(workout)
@@ -246,7 +246,7 @@ export function WorkoutChronicleCard({ workout, contextLabel }: { workout: Worko
   const hasFeedback = workout.sessionRpe !== undefined && workout.wellbeing !== undefined
   const exercisePreview = chronicleExercisePreview(workout.exercises)
 
-  return <Link className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}`} to={`/workouts/${workout.id}`}>
+  return <Link className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}`} to={`/workouts/${workout.id}`} state={returnTo ? { returnTo } : undefined}>
     <div className="workout-chronicle-head">
       <strong>{formatLocalDate(workout.workoutDate)}</strong>
       <div className="workout-chronicle-head-badges">
