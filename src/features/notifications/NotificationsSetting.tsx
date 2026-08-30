@@ -20,7 +20,7 @@ export function NotificationsSetting({ userId }: { userId: string }) {
 
   const checked = status.data?.subscribed && status.data.workoutReminderEnabled
 
-  return <section className="notifications-setting" aria-label="Уведомления">
+  return <>
     <Switch
       label="Напоминания о тренировках"
       checked={Boolean(checked)}
@@ -28,5 +28,5 @@ export function NotificationsSetting({ userId }: { userId: string }) {
       onChange={(next) => toggle.mutate(next)}
     />
     {toggle.error && <small className="error">{toggle.error instanceof Error ? toggle.error.message : 'Не удалось изменить настройку.'}</small>}
-  </section>
+  </>
 }
