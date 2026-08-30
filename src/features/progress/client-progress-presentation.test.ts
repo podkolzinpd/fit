@@ -155,10 +155,14 @@ describe('clientProgressPresentation', () => {
       previousWorkouts: [previous],
     })
 
-    expect(result.comparison?.items).toEqual(expect.arrayContaining([
-      { value: '+1', label: 'тренировка к предыдущему периоду', tone: 'positive' },
-      { value: '+25%', label: 'Жим гантелей лёжа: рабочий вес 20 → 25 кг', tone: 'positive' },
+    expect(result.comparison.facts).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        value: '+25%', subject: 'Жим гантелей лёжа · рабочий вес',
+        previousLabel: '20 кг', currentLabel: '25 кг', tone: 'positive',
+      }),
+      expect.objectContaining({ kind: 'load', subject: 'Силовой объём' }),
     ]))
+    expect(result.comparison.facts.some((fact) => fact.kind === 'regularity')).toBe(false)
     expect(result.stats.slice(0, 2)).toEqual([
       { value: '2', label: 'тренировки' },
       { value: '2/6', label: 'недель с тренировками' },
@@ -226,9 +230,11 @@ describe('clientProgressPresentation', () => {
 
   it('keeps an honest comparison baseline without inventing goal movement or a next step', () => {
     const result = clientProgressPresentation(summary())
-    expect(result.comparison).toEqual({
+    expect(result.comparison).toMatchObject({
       title: 'Сравнение периодов',
-      items: [],
+      comparable: true,
+      facts: [],
+      conclusions: [],
       emptyMessage: 'Текущий период сохранён как отправная точка. Сравнение появится, когда накопится следующий сопоставимый период.',
     })
     expect(result.goal).toBeUndefined()

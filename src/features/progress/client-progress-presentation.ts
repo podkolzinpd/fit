@@ -3,7 +3,8 @@ import type { ClientGoal, GoalCriterionMetric, ProgressEntry, PublishedTrainingS
 import { GOAL_CRITERION_METRICS, goalCriterionTargetLabel, isStandardGoalCriterionMetric, type GoalCriterionFoundationState } from '../../shared/goal-criterion-rules'
 import { calculateStandardGoalProgress, type GoalProgressDirection, type GoalProgressStatus } from '../../shared/goal-progress'
 import { calculateTrainingGoalProgress } from '../../shared/goal-training-progress'
-import { formatLocalDate, formatLocalDateShort, type LocalDate } from '../../shared/local-date'
+import { addDays, daysBetween, formatLocalDate, formatLocalDateShort, type LocalDate } from '../../shared/local-date'
+import { buildPeriodComparison, type PeriodComparison, type PeriodComparisonFactKind } from './period-comparison'
 import { progressFactChangeLabel } from './progress-facts'
 import { progressMetricNoun } from './summary-format'
 
@@ -26,11 +27,7 @@ export type ClientProgressPresentation = {
   hero?: { value: string; exerciseName: string; detail: string }
   stats: Array<{ value: string; label: string }>
   wins: Array<{ title: string; detail: string }>
-  comparison: {
-    title: string
-    items: Array<{ value: string; label: string; tone: 'positive' | 'neutral' }>
-    emptyMessage?: string
-  }
+  comparison: PeriodComparison
   goal?: {
     title: string
     state: GoalCriterionFoundationState
@@ -79,51 +76,6 @@ function done(workouts: readonly Workout[]): Workout[] {
   return workouts.filter((workout) => workout.status === 'done')
 }
 
-type ExerciseWeightResult = { exerciseName: string; value: number }
-
-function bestWorkingWeights(workouts: readonly Workout[]): Map<string, ExerciseWeightResult> {
-  const results = new Map<string, ExerciseWeightResult>()
-  for (const workout of done(workouts)) {
-    for (const exercise of workout.exercises) {
-      const values = exercise.sets
-        .filter((set) => Boolean(set.confirmedAt))
-        .map((set) => set.fact?.weightKg ?? set.weightKg)
-        .filter((value): value is number => typeof value === 'number' && value > 0)
-      const value = values.length > 0 ? Math.max(...values) : undefined
-      if (value === undefined) continue
-      const key = `${exercise.ref ?? ''}:${exercise.name}`.toLocaleLowerCase('ru-RU')
-      const existing = results.get(key)
-      if (!existing || value > existing.value) results.set(key, { exerciseName: exercise.name, value })
-    }
-  }
-  return results
-}
-
-function mostImportantMeasuredChange(
-  current: readonly Workout[],
-  previous: readonly Workout[],
-): { value: string; label: string; tone: 'positive' | 'neutral' } | undefined {
-  const currentWeights = bestWorkingWeights(current)
-  const previousWeights = bestWorkingWeights(previous)
-  const candidates = [...currentWeights.entries()].flatMap(([key, currentResult]) => {
-    const previousResult = previousWeights.get(key)
-    if (!previousResult || previousResult.value <= 0 || previousResult.value === currentResult.value) return []
-    return [{
-      exerciseName: currentResult.exerciseName,
-      from: previousResult.value,
-      to: currentResult.value,
-      percent: Math.round(((currentResult.value - previousResult.value) / previousResult.value) * 100),
-    }]
-  }).sort((left, right) => Math.abs(right.percent) - Math.abs(left.percent))
-  const best = candidates[0]
-  if (!best) return undefined
-  return {
-    value: `${best.percent > 0 ? '+' : ''}${best.percent}%`,
-    label: `${best.exerciseName}: рабочий вес ${number.format(best.from)} → ${number.format(best.to)} кг`,
-    tone: best.percent > 0 ? 'positive' : 'neutral',
-  }
-}
-
 function mondayKey(value: LocalDate): string {
   const [year, month, day] = value.split('-').map(Number)
   const date = new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1))
@@ -142,33 +94,6 @@ function periodWeeks(start: LocalDate, end: LocalDate): number {
   const startDate = new Date(`${startKey}T00:00:00Z`)
   const endDate = new Date(`${endKey}T00:00:00Z`)
   return Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / 604_800_000) + 1)
-}
-
-function comparison(current: readonly Workout[], previous: readonly Workout[]): ClientProgressPresentation['comparison'] {
-  const currentDone = done(current).length
-  const previousDone = done(previous).length
-  if (previousDone === 0) return {
-    title: 'Сравнение периодов',
-    items: [],
-    emptyMessage: 'Текущий период сохранён как отправная точка. Сравнение появится, когда накопится следующий сопоставимый период.',
-  }
-
-  const items: NonNullable<ClientProgressPresentation['comparison']>['items'] = []
-  const workoutDelta = currentDone - previousDone
-  items.push({
-    value: workoutDelta > 0 ? `+${workoutDelta}` : workoutDelta === 0 ? 'Столько же' : String(currentDone),
-    label: workoutDelta > 0
-      ? `${progressMetricNoun(workoutDelta, 'workout')} к предыдущему периоду`
-      : workoutDelta === 0
-        ? `${currentDone} ${progressMetricNoun(currentDone, 'workout')} в обоих периодах`
-        : `${progressMetricNoun(currentDone, 'workout')} сейчас · было ${previousDone}`,
-    tone: workoutDelta > 0 ? 'positive' : 'neutral',
-  })
-
-  const measuredChange = mostImportantMeasuredChange(current, previous)
-  if (measuredChange) items.push(measuredChange)
-
-  return { title: 'Изменения к предыдущему периоду', items: items.slice(0, 2) }
 }
 
 const GOAL_STATE_LABELS: Record<GoalCriterionFoundationState, string> = {
@@ -346,6 +271,20 @@ function clientCopy(summary: ProgressSummary) {
   return 'summary' in summary ? summary.summary : summary.client
 }
 
+function comparisonCopyCandidates(summary: ProgressSummary, role: StoryOptions['role']): string[] {
+  if ('summary' in summary) {
+    return [
+      summary.summary.headline,
+      ...summary.summary.achievements,
+      summary.summary.consistency,
+      summary.summary.goalAlignment ?? '',
+    ].filter(Boolean)
+  }
+  return role === 'trainer'
+    ? [summary.trainer.headline, ...summary.trainer.progress, summary.trainer.consistency]
+    : [summary.client.headline, ...summary.client.achievements, summary.client.consistency, summary.client.goalAlignment ?? '']
+}
+
 function usefulOrientations(summary: ProgressSummary): string[] {
   const copy = clientCopy(summary)
   const generic = /продолжать отслеживать|поддерживать регулярность|сравнивать текущие результаты|на верном пути/i
@@ -499,6 +438,7 @@ function goalCandidates(goal: ClientProgressPresentation['goal']): MainNowCandid
           : 'Положение относительно цели обновлено',
     explanation: reached ? 'Вывод основан на последнем актуальном результате.' : 'Текущее положение рассчитано по подтверждённому показателю.',
     evidence: `${primary.label} · ${primary.current} · ${primary.status}`,
+    subject: primary.label,
     anchors: [primary.label, goal.title, ...anchorWords(primary.label), ...anchorWords(goal.title)],
     numbers: numeric, llmKinds: ['goal'],
   }]
@@ -601,11 +541,25 @@ export function progressStoryPresentation(summary: ProgressSummary, options: Sto
   if (favorableCount > 0) stats.push({ value: String(favorableCount), label: improvedExerciseLabel(favorableCount) })
   const goal = goalStory(summary, options)
   const main = mainNow(summary, options, goal, totalWeeks)
-  const periodComparison = comparison(options.currentWorkouts ?? [], options.previousWorkouts ?? [])
-  const filteredComparison = main.subject ? {
-    ...periodComparison,
-    items: periodComparison.items.filter((item) => !searchable(item.label).includes(searchable(main.subject!))),
-  } : periodComparison
+  const periodDays = daysBetween(summary.periodStart, summary.periodEnd) + 1
+  const currentPeriod = { start: summary.periodStart, end: summary.periodEnd }
+  const previousPeriod = { start: addDays(summary.periodStart, -periodDays), end: addDays(summary.periodStart, -1) }
+  const excludedKinds: PeriodComparisonFactKind[] = main.kind === 'regularity' || main.kind === 'gap'
+    ? ['regularity']
+    : []
+  const periodComparison = buildPeriodComparison({
+    currentPeriod,
+    previousPeriod,
+    currentWorkouts: options.currentWorkouts ?? [],
+    previousWorkouts: options.previousWorkouts ?? [],
+    measurements: options.measurements,
+    goal: options.goal,
+    llmCandidates: comparisonCopyCandidates(summary, options.role),
+    excludedSubject: main.kind === 'exercise' || main.kind === 'personal_record' || main.kind === 'measurement' || main.kind === 'goal'
+      ? main.subject
+      : undefined,
+    excludedKinds,
+  })
   return {
     hero: best ? {
       value: `+${best.percent}%`,
@@ -614,7 +568,7 @@ export function progressStoryPresentation(summary: ProgressSummary, options: Sto
     } : undefined,
     stats,
     wins: presentationWins(summary),
-    comparison: filteredComparison,
+    comparison: periodComparison,
     goal,
     nextWorkout: nextWorkoutStory(options.upcomingWorkouts ?? [], options.today),
     mainNow: main,

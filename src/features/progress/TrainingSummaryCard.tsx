@@ -313,6 +313,7 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [goalCriteriaOpen, setGoalCriteriaOpen] = useState(false)
+  const [comparisonOpen, setComparisonOpen] = useState(false)
   const personalRecordWorkout = [...(currentWorkouts ?? [])]
     .filter((workout) => workout.status === 'done' && workout.hasPr)
     .sort((left, right) => right.workoutDate.localeCompare(left.workoutDate))[0]
@@ -360,6 +361,9 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
   const attention = role === 'trainer' && 'trainer' in summary ? summary.trainer.attention : []
   const goalCriteria = presentation.goal?.criteria ?? []
   const visibleGoalCriteria = goalCriteriaOpen ? goalCriteria : goalCriteria.slice(0, 1)
+  const visibleComparisonFacts = comparisonOpen
+    ? presentation.comparison.facts
+    : presentation.comparison.facts.slice(0, 4)
   const goalStory = <>
     {goalLoading && <section className="client-progress-story-state" role="status">Проверяем данные цели…</section>}
     {goalError && <section className="client-progress-story-state" role="alert">Не удалось загрузить цель. <button type="button" className="link" onClick={onGoalRetry}>Повторить</button></section>}
@@ -421,6 +425,38 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       loadError={workoutsError}
       onLoadRetry={onWorkoutsRetry}
     />
+    <section className="client-progress-comparison" aria-labelledby={`${role}-progress-comparison-title`}>
+      <header>
+        <div>
+          <h3 id={`${role}-progress-comparison-title`}>{presentation.comparison.title}</h3>
+          <p>{presentation.comparison.periodLabel}</p>
+        </div>
+      </header>
+      {workoutsLoading && currentWorkouts === undefined
+        ? <p className="period-comparison-empty" role="status">Собираем данные двух периодов…</p>
+        : visibleComparisonFacts.length > 0
+        ? <>
+          <dl className="period-comparison-facts">{visibleComparisonFacts.map((fact) => <div key={fact.factId} className={fact.tone} data-fact-id={fact.factId}>
+            <dt>{fact.subject}<span>{fact.previousLabel} → {fact.currentLabel}</span></dt>
+            <dd>{fact.value}</dd>
+          </div>)}</dl>
+          {presentation.comparison.facts.length > 4 && <button
+            type="button"
+            className="link period-comparison-toggle"
+            aria-expanded={comparisonOpen}
+            onClick={() => setComparisonOpen((open) => !open)}
+          >{comparisonOpen ? 'Скрыть дополнительные изменения' : `Показать ещё · ${presentation.comparison.facts.length - 4}`}</button>}
+          {presentation.comparison.conclusions.length > 0 && <div className="period-comparison-conclusions">
+            {presentation.comparison.conclusions.map((conclusion) => <div
+              key={`${conclusion.kind}:${conclusion.factIds.join(':')}`}
+              className={conclusion.kind}
+              data-fact-ids={conclusion.factIds.join(',')}
+              data-copy-source={conclusion.source}
+            ><span>{conclusion.kind === 'change' ? 'Главное изменение' : 'Ограничение'}</span><p>{conclusion.text}</p></div>)}
+          </div>}
+        </>
+        : <p className="period-comparison-empty">{presentation.comparison.emptyMessage}</p>}
+    </section>
     <section className={`progress-story-summary${heroIsMain ? ' main-fact-removed' : ''}`} aria-label="Результаты периода">
       {!heroIsMain && <div className={`progress-story-hero${presentation.hero ? '' : ' empty'}`}>
         <span>{presentation.hero ? 'Лучший результат периода' : 'Результаты периода'}</span>
@@ -436,14 +472,6 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       <h3 id={`${role}-progress-wins-title`}>{role === 'client' ? 'Твои достижения' : 'Ключевые изменения'}</h3>
       <div>{wins.map((item) => <article key={item.title}><span aria-hidden="true" /><div><strong>{item.title}</strong><p>{item.detail}</p></div></article>)}</div>
     </section>}
-    <section className="client-progress-comparison" aria-labelledby={`${role}-progress-comparison-title`}>
-      <h3 id={`${role}-progress-comparison-title`}>{presentation.comparison.title}</h3>
-      {presentation.comparison.items.length > 0
-        ? <div>{presentation.comparison.items.map((item) => <article key={item.label} className={item.tone}>
-          <strong>{item.value}</strong><span>{item.label}</span>
-        </article>)}</div>
-        : <p>{presentation.comparison.emptyMessage}</p>}
-    </section>
     {presentation.mainNow.kind !== 'plan' && <section className="client-progress-upcoming" aria-labelledby={`${role}-progress-upcoming-title`}>
       <span>Следующий шаг</span>
       {presentation.nextWorkout
