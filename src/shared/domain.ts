@@ -14,10 +14,6 @@ export type BlockPreset = 'set' | 'circuit' | 'interval'
 export type AccountRole = 'trainer' | 'client'
 export type TrainerReaction = 'thumbs_up' | 'fire' | 'strong'
 
-export interface SessionFeatureFlags {
-  monochromePreview: boolean
-}
-
 interface SessionActorBase {
   userId: UUID
   role: AccountRole
@@ -25,7 +21,6 @@ interface SessionActorBase {
   firstName: string | null
   lastName: string | null
   timezone: string
-  featureFlags: SessionFeatureFlags
 }
 
 export interface TrainerActor extends SessionActorBase {

@@ -21,7 +21,7 @@ test('global rollout gives a new trainer the monochrome exercise catalog', async
 
   await page.goto('/exercises')
   await expect(page.locator('.phone-frame')).toHaveClass(/exercise-catalog-identity/)
-  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('html')).toHaveClass(/ui-identity/)
   await expect(page.getByRole('heading', { name: 'Системные упражнения' })).toBeVisible()
   await expect(page.getByLabel('Поиск упражнения')).toBeVisible()
 })

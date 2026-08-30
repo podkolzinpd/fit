@@ -3,7 +3,7 @@ import { expect, type Page } from '@playwright/test'
 type AccessibilityIssue = { selector: string; reason: string; width?: number; height?: number }
 
 export async function expectMonochromeAccessibility(page: Page) {
-  const identity = page.locator('.identity-monochrome-preview, .auth-flow-identity').first()
+  const identity = page.locator('.ui-identity, .auth-flow-identity').first()
   if (await identity.count() === 0) return
 
   const issues = await page.evaluate(() => {

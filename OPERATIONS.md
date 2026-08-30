@@ -16,14 +16,11 @@ Development-сборка программно отклоняет любой Supa
 
 После merge миграции применяет `.github/workflows/deploy-database.yml`. Запуск SQL через Dashboard запрещён. Publishable key может находиться в frontend deployment environment; service role и DB password — никогда.
 
-Закрытый rollout Foundation UI Identity v1 использует server-managed таблицу
-`public.user_feature_flags`. Флаг `monochrome_preview` по умолчанию выключен;
-authenticated пользователь может прочитать через RLS только собственную строку
-и не имеет прав на insert/update/delete. Включение и kill switch выполняются
-административной ролью на сервере и не требуют новой frontend-сборки. Frontend
-не содержит email allowlist: первоначальная production-настройка один раз
-разрешает согласованные email в Auth UUID внутри migration, после чего runtime
-работает только с `user_id`.
+Foundation UI Identity v1 является единственным production UI. Отдельного
+rollout-переключателя, пользовательского preview allowlist и rollback-режима у
+frontend больше нет. Историческая таблица `public.user_feature_flags` закрыта
+для `anon` и `authenticated`; её физическое удаление выполняется только через
+отдельное согласованное окно destructive migration.
 
 Изменения `summarize-client-training` после merge выкатывает отдельный
 `.github/workflows/deploy-summary-function.yml`. Он публикует только эту Edge
@@ -78,29 +75,10 @@ frontend bundle, поэтому этот механизм служит толь�
 не является границей авторизации: данные и мутации защищаются существующими
 RLS/ownership-проверками.
 
-Закрытый пилот тёмной палитры из Figma-макета «Фит» управляется build-time
-переменными Vercel:
-
-```text
-VITE_DARK_THEME_PILOT_ENABLED=true
-VITE_DARK_THEME_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
-```
-
-Механизм default-off и повторяет форму allowlist Apple Health: по умолчанию, при
-пустом списке или любом значении флага кроме точного `true` тёмная тема остаётся
-прежней. Список открыт и тренерским, и клиентским аккаунтам. Переменные только
-открывают доступ к новой палитре: она применяется, когда участник пилота сам
-включил тёмную тему в профиле, и этот выбор хранится в `localStorage` устройства,
-то есть включается на каждом устройстве отдельно. Изменение списка требует нового
-deployment.
-
-Эта же пара переменных раскатывает обновлённое поле поиска в списке клиентов
-(полная ширина, иконка лупы, кнопка сброса, показ от шести клиентов). В отличие
-от палитры оно не зависит от выбранной темы и включается сразу для аккаунтов из
-списка. Отдельного флага сознательно не заводили: аудитория закрытого пилота
-одна и та же, а новая переменная потребовала бы ручной настройки в Vercel. UUID попадают во frontend bundle, поэтому этот механизм служит только
-для rollout оформления и не является границей авторизации: данные и мутации
-защищаются существующими RLS/ownership-проверками.
+Светлая и тёмная палитры Foundation UI Identity v1 доступны всем пользователям
+и выбираются обычной настройкой темы в профиле. Отдельных Figma/dark pilot
+переменных и allowlist нет. Обновлённый поиск клиентов также является штатным
+интерфейсом и появляется по продуктовой логике списка.
 
 - Site URL: `https://<production-domain>`;
 - Redirect URLs: `https://<production-domain>/auth/callback` и `https://<production-domain>/auth/reset`;

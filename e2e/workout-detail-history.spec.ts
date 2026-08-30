@@ -14,6 +14,6 @@ test('global rollout gives a new client the workout detail and exercise history 
   for (const path of ['/workouts/missing-workout', '/workouts/missing-workout/history/bench-press']) {
     await page.goto(path)
     await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
-    await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+    await expect(page.locator('html')).toHaveClass(/ui-identity/)
   }
 })

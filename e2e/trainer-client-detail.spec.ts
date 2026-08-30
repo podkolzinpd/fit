@@ -13,5 +13,5 @@ test('global rollout gives a new trainer the Client Detail identity', async ({ p
 
   await page.goto('/clients/11111111-1111-4111-8111-111111111111')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-detail-identity/)
-  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('html')).toHaveClass(/ui-identity/)
 })

@@ -10,7 +10,7 @@ test('auth shell matches mobile baseline', async ({ page }) => {
   await page.goto('/auth')
   await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
   await expect(page.locator('.auth-flow-identity')).toBeVisible()
-  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('html')).toHaveClass(/ui-identity/)
   await expect(page.getByRole('button', { name: 'Продолжить с Google' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Проверить Yandex ID' })).toHaveCount(0)
   await expect(page).toHaveScreenshot('auth-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03 })

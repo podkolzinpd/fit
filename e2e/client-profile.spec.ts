@@ -29,9 +29,9 @@ test('global rollout gives a new client the Profile and Card Edit identity', asy
   await page.goto('/me/profile')
   await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/client-profile-shell-identity/)
-  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('html')).toHaveClass(/ui-identity/)
 
   await page.goto('/me/edit')
   await expect(page.locator('.phone-frame')).toHaveClass(/client-card-edit-identity/)
-  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('html')).toHaveClass(/ui-identity/)
 })

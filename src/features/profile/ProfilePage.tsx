@@ -2,7 +2,6 @@ import { useMutation } from '@tanstack/react-query'
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
-import { isDarkThemePilotEnabled } from '../../app/feature-flags'
 import { setRpeDisplay, useRpeDisplay } from '../../app/rpe-display'
 import { setAppTheme, useAppTheme } from '../../app/theme'
 import { authRepository } from '../../data/repositories/auth.repository'
@@ -29,10 +28,8 @@ export function ProfilePage() {
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setSaved(false); update.mutate(event.currentTarget) }
   // Отмена сбрасывает несохранённые правки к текущим значениям профиля.
   function cancel() { formRef.current?.reset(); setSaved(false) }
-  // Переключатель остаётся «светлая/тёмная». Пилотную палитру подставляет
-  // allowlist, поэтому вариант считается здесь же, без задержки на один кадр.
   function toggleTheme(dark: boolean) {
-    setAppTheme(dark ? 'dark' : 'light', Boolean(actor && isDarkThemePilotEnabled(actor.userId)))
+    setAppTheme(dark ? 'dark' : 'light')
   }
   function toggleShowArchived(checked: boolean) {
     setShowArchived(checked)

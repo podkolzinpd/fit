@@ -23,7 +23,7 @@ test('global rollout gives a new trainer the Client Goal identity', async ({ pag
 
   await page.goto(`/clients/${demoClientId}/goal`)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-goal-identity/)
-  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('html')).toHaveClass(/ui-identity/)
 })
 
 test('trainer Client Goal keeps create and date validation under monochrome preview', async ({ page }) => {

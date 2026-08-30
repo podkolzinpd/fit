@@ -13,7 +13,7 @@ test('global rollout gives a new trainer the Schedule identity', async ({ page }
 
   await page.goto('/schedule')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-schedule-identity/)
-  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('html')).toHaveClass(/ui-identity/)
 })
 
 test('trainer Schedule preview keeps real date controls usable and compact', async ({ page }) => {
