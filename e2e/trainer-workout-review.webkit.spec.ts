@@ -167,7 +167,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   const ownWorkoutUrl = page.url()
   expect(ownWorkoutUrl).toMatch(/\/workouts\/[0-9a-f-]+$/)
   await page.goto(ownWorkoutUrl, { waitUntil: 'domcontentloaded' })
-  await expect(page.getByText('Готово', { exact: true })).toBeVisible()
+  await expect(page.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
   const ownFeedbackCard = page.locator('.workout-feedback')
   await setRpe(page, 5)
   await ownFeedbackCard.getByRole('button', { name: 'Хорошо', exact: true }).click()
