@@ -318,10 +318,12 @@ test('iPhone: тренер назначает интервалы, спортсм
     await expect(client.getByRole('button', { name: 'Готово', exact: true })).toHaveCount(0)
     await client.getByRole('button', { name: 'Завершить тренировку' }).click()
     await expect(client).toHaveURL(workoutUrl)
-    await expect(client.getByText('Готово', { exact: true }).first()).toBeVisible()
+    await expect(client.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
+    await expect(client.locator('.completed-exercise-list')).toBeVisible()
 
     await trainer.goto(workoutUrl)
-    await expect(trainer.getByText('Готово', { exact: true }).first()).toBeVisible()
+    await expect(trainer.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
+    await expect(trainer.locator('.completed-exercise-list')).toBeVisible()
     await expect(trainer.locator('.block-badge')).toContainText('Интервалы · 6 кр.')
   } finally {
     await trainerContext.close()
