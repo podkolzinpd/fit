@@ -5,18 +5,19 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-30
-Проверенный базовый `main`: `34dbaac` (`Progress: упорядочить экран и компактно показать цель (#685)`)
+Проверенный базовый `main`: `da40d6b` (`Retire legacy UI identity and rollout (#687)`)
 
 ## Текущий release gate
 
 - Foundation UI Identity v1 принята. Задачи 8–28 — клиентский, тренерский,
   полный auth scope, Assistant, accessibility и visual release gate —
   завершены последовательно.
-- Глобальный rollout новой identity работает через
-  `VITE_MONOCHROME_ROLLOUT_MODE`: `on` (default), `preview` (server-managed
-  `monochrome_preview` по `user_id`) и `off` (legacy UI для всех и redeploy).
-- Legacy components, CSS и `public.user_feature_flags` пока не удаляются.
-  Email не участвует во frontend, routing или UI rollout conditions.
+- Foundation UI Identity v1 становится единственным production UI: runtime-
+  режимы `on / preview / off`, персональный preview, dark pilot и route-level
+  old/new branches удалены в retirement-ветке.
+- Историческая `public.user_feature_flags` больше не читается приложением и
+  закрыта для frontend-ролей. Физический drop выполняется отдельным ручным
+  destructive-окном согласно migration policy репозитория.
 - Ручной видимый production smoke остаётся follow-up: встроенный браузер
   заблокирован admin-enforced policy; контроль не обходился.
 
@@ -111,19 +112,18 @@
   typography/icons и экранные хвосты, затем удалил только подтверждённый dead
   CSS. Классификация A/B/C/D зафиксирована в
   `docs/design/UI_IDENTITY_LEGACY_CLEANUP_2026-08-30.md`.
-- Финальная regression: полный check зелёный; visual 390/430/1440 прошёл на
-  clean seed; rollout smoke `on` и rollback `off` прошли для auth и обеих ролей.
+- Retirement regression: полный `npm run check` прошёл (908 app, 64 infra и
+  230 API tests), visual на clean seed прошёл без перезаписи эталонов:
+  390 — 30/30, 430 — 30/30, desktop — 17/17 применимых сценариев.
 - Production Vercel `6158408571` и Yandex stage preview sync `33263066435`
   зелёные; для локального visual smoke используется standard Playwright runtime.
 
 ## Ближайший порядок
 
-1. Выполнить короткий ручной visual smoke production под Client и Trainer test
-   accounts, когда browser policy снова разрешит доступ.
-2. Сохранять rollout `on`; при серьёзной проблеме установить
-   `VITE_MONOCHROME_ROLLOUT_MODE=off` и redeploy.
-3. Не удалять legacy UI, `preview`, `off` и feature flag до отдельного решения
-   об окончании rollback-window.
+1. Отдельно согласовать ручное удаление исторической feature-flag таблицы после
+   проверки внешних consumers.
+2. Выполнить короткий production visual smoke под Client и Trainer test accounts
+   после merge/deploy retirement.
 
 ## Отложено
 

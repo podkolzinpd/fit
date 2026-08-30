@@ -17,7 +17,6 @@ import { VoiceInputButton, VoiceNoteField, type VoiceInputPhase } from '../voice
 import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
-import { isMonochromeUiEnabled } from '../../app/feature-flags'
 import { AnalyticsIcon, ChevronRightIcon, HistoryIcon, ScheduleIcon } from '../../shared/icons'
 
 export function MyClientPage() {
@@ -205,7 +204,7 @@ function ClientGoalBlock({ client }: { client: Client }) {
     const stage = currentStage(goal, today)
     const progress = stageProgress(goal, today)
     return <section className="goal-block">
-      <div className="goal-head"><h2>Цель</h2><Link className="link" to={`/clients/${client.id}/goal`}>{isMonochromeUiEnabled(actor?.featureFlags?.monochromePreview) ? <><span>Открыть</span><ChevronRightIcon /></> : 'Открыть →'}</Link></div>
+      <div className="goal-head"><h2>Цель</h2><Link className="link" to={`/clients/${client.id}/goal`}><span>Открыть</span><ChevronRightIcon /></Link></div>
       <p className="goal-title">{goal.title}</p>
       {goal.targetDate && <p className="goal-deadline">До {formatLocalDateShort(localDate(goal.targetDate))}{days !== null ? ` · ${targetHint(days)}` : ''}</p>}
       {progress && progress.total > 0 && <p className="goal-stage-line">

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 async function expectTokenContrast(page: Page) {
-  const results = await page.locator('.identity-monochrome-preview').first().evaluate((element) => {
+  const results = await page.locator('.ui-identity').first().evaluate((element) => {
     const styles = getComputedStyle(element)
     const color = (token: string) => styles.getPropertyValue(token).trim()
     const rgb = (value: string) => {

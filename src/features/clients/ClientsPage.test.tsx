@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { Client } from '../../shared/domain'
 import { ClientsPage } from './ClientsListPage'
 
@@ -15,13 +15,6 @@ vi.mock('../../data/repositories/clients.repository', () => ({
 // поиск, а не расчёт. Заглушка держит тест на одном модуле вместо всего
 // репозитория тренировок.
 vi.mock('../../data/repositories/workouts.repository', () => ({ bmiLabel: () => '23.3' }))
-
-const auth = vi.hoisted(() => ({ pilot: vi.fn() }))
-vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { userId: 'trainer-1' } }) }))
-vi.mock('../../app/feature-flags', () => ({
-  isDarkThemePilotEnabled: auth.pilot,
-  isMonochromeUiEnabled: auth.pilot,
-}))
 
 const client = (id: string, fullName: string): Client => ({
   id, fullName, canonicalFullName: fullName, hasAccount: false, gender: null,
@@ -38,8 +31,6 @@ function renderPage(clients: Client[]) {
 }
 
 describe('ClientsPage search', () => {
-  beforeEach(() => auth.pilot.mockReturnValue(true))
-
   it('filters by name and clears the query from the field itself', async () => {
     const user = userEvent.setup()
     renderPage(NAMES.map((name, index) => client(`c${index}`, name)))
@@ -69,18 +60,5 @@ describe('ClientsPage search', () => {
 
     expect(await screen.findByText('Анна Смирнова')).toBeVisible()
     expect(screen.queryByLabelText('Поиск клиента')).not.toBeInTheDocument()
-  })
-
-  // Global rollout=off возвращает прежнее правило поиска вместе с legacy UI.
-  it('keeps the previous field when monochrome rollout is off', async () => {
-    auth.pilot.mockReturnValue(false)
-    const user = userEvent.setup()
-    renderPage(NAMES.slice(0, 2).map((name, index) => client(`c${index}`, name)))
-
-    const field = await screen.findByLabelText('Поиск клиента')
-    await user.type(field, 'Борис')
-    expect(screen.getByText('Борис Иванов')).toBeVisible()
-    expect(screen.queryByText('Анна Смирнова')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Очистить поиск' })).not.toBeInTheDocument()
   })
 })

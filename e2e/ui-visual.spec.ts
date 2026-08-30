@@ -65,6 +65,7 @@ async function expectVisualBaseline(
   maskColor = '#f8f5ef',
 ) {
   await expectMonochromeAccessibility(page)
+  await expect(page.locator('.skeleton-block')).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await expect(page).toHaveScreenshot(name, {
     animations: 'disabled',
@@ -96,6 +97,7 @@ async function createStandaloneClient(
 }
 
 async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
+  await page.clock.install({ time: new Date('2026-08-29T18:00:00+03:00') })
   await signIn(page, 'client@fit.local', /\/me$/)
 
   await gotoStable(page, '/me/workouts')
@@ -128,7 +130,7 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
 test('auth family keeps light and dark visual baselines', async ({ page }) => {
   await gotoStable(page, '/auth')
   await expect(page.locator('.auth-flow-identity')).toBeVisible()
-  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('html')).toHaveClass(/ui-identity/)
   await expectVisualBaseline(page, `auth-login-${process.platform}.png`, [], true)
 
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
@@ -142,7 +144,6 @@ test('auth family keeps light and dark visual baselines', async ({ page }) => {
   await page.addInitScript(() => window.localStorage.setItem('fit.appTheme', 'dark'))
   await gotoStable(page, '/auth/forgot')
   await expect(page.getByRole('heading', { name: 'Восстановление пароля' })).toBeVisible()
-  await expect(page.locator('.auth-flow-identity')).not.toHaveClass(/theme-dark-pilot/)
   await expectVisualBaseline(page, `auth-forgot-dark-${process.platform}.png`, [], true, '#111214')
 
   await gotoStable(page, '/auth')
@@ -169,7 +170,6 @@ test('Join keeps manual and invitation states in the auth family', async ({ page
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/join')
   await expect(page.locator('.phone-frame')).toHaveClass(/auth-join-identity/)
-  await expect(page.locator('.phone-frame')).not.toHaveClass(/theme-dark-pilot/)
   await expect(page.locator('.tab-bar')).toHaveCSS('background-color', 'rgb(17, 18, 20)')
   await expect(page.locator('.tab-bar')).toHaveCSS('border-top-color', 'rgb(48, 49, 54)')
   await expectVisualBaseline(page, `auth-join-dark-${process.platform}.png`, [], true, '#111214')

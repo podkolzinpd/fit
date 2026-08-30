@@ -9,7 +9,7 @@ import {
   type YandexPilotTrainingData as YandexPilotTrainingDataState,
 } from '../../data/repositories/yandex-pilot.repository'
 import { useAuth } from '../../app/auth-context'
-import { getYandexIdPilotConfig, isMonochromeUiEnabled, trainerHomePath } from '../../app/feature-flags'
+import { getYandexIdPilotConfig, trainerHomePath } from '../../app/feature-flags'
 import { applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from '../../app/theme'
 import { ProfileIcon } from '../../shared/icons'
 import { AsyncView, Field } from '../../shared/ui'
@@ -23,31 +23,24 @@ type Mode = 'login' | 'register'
 
 function AuthIdentityScreen({ children, className }: PropsWithChildren<{ className?: string }>) {
   const theme = useAppTheme()
-  // Публичные auth routes не имеют authenticated user_id. В режиме preview
-  // они намеренно остаются legacy; production mode=on включает их глобально.
-  const monochromeEnabled = isMonochromeUiEnabled(false)
-  // Новый dark живёт в identity tokens и не должен подключать старый
-  // фиолетовый theme-dark-pilot class.
-  const themeVariant = resolveThemeVariant(theme, false)
+  const themeVariant = resolveThemeVariant(theme)
 
   useEffect(() => {
     applyThemeVariant(themeVariant)
     const root = document.documentElement
-    root.classList.toggle('identity-monochrome-preview', monochromeEnabled)
-    if (monochromeEnabled) {
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#FBFAF7' : '#111214')
-    }
+    root.classList.add('ui-identity')
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#FBFAF7' : '#111214')
     return () => {
-      root.classList.remove('identity-monochrome-preview')
-      applyThemeVariant(resolveThemeVariant(theme, false))
+      root.classList.remove('ui-identity')
+      applyThemeVariant(resolveThemeVariant(theme))
     }
-  }, [monochromeEnabled, theme, themeVariant])
+  }, [theme, themeVariant])
 
   return <main className={[
     'auth-screen',
     'auth-entry',
-    monochromeEnabled ? 'identity-monochrome-preview auth-flow-identity' : '',
-    monochromeEnabled ? themeVariantClass(themeVariant) : '',
+    'ui-identity auth-flow-identity',
+    themeVariantClass(themeVariant),
     className,
   ].filter(Boolean).join(' ')}>{children}</main>
 }

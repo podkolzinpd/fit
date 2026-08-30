@@ -13,5 +13,5 @@ test('global rollout gives a new client the My Workouts identity', async ({ page
   await page.goto('/me/workouts')
   await expect(page.getByRole('heading', { name: 'Мои тренировки' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/client-workouts-identity/)
-  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('html')).toHaveClass(/ui-identity/)
 })

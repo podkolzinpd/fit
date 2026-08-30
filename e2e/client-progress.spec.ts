@@ -13,7 +13,7 @@ test('global rollout gives a new client the monochrome Progress identity', async
   await page.goto('/me/progress')
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/progress-identity/)
-  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('html')).toHaveClass(/ui-identity/)
 })
 
 test('standalone client creates and formulates an own goal', async ({ page }, testInfo) => {

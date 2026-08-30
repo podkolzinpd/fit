@@ -23,7 +23,7 @@ test('global rollout gives a new trainer the Progress identity', async ({ page }
 
   await page.goto(`/progress/${demoClientId}`)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
-  await expect(page.locator('html')).toHaveClass(/identity-monochrome-preview/)
+  await expect(page.locator('html')).toHaveClass(/ui-identity/)
 })
 
 test('trainer Progress preview keeps real summary and measurement controls usable', async ({ page }) => {
