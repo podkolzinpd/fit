@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   getYandexIdPilotConfig,
+  getYandexSessionLinkingConfig,
   isAssistantNavPilotEnabled,
   isProductionAssistantPilotEmail,
   isTodayGreetingPilotEnabled,
   isTodayStartRedesignEnabled,
   isWearablesPilotEnabled,
+  isYandexSessionLinkingPilotEnabled,
   trainerHomePath,
 } from './feature-flags'
 
@@ -191,5 +193,72 @@ describe('Yandex ID pilot config', () => {
     vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
     vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'http://stage.example.test')
     expect(getYandexIdPilotConfig()).toBeNull()
+  })
+})
+
+describe('Yandex session linking pilot flag', () => {
+  it('is disabled when the enabled flag is missing or not exactly "true", even for an allowlisted user', () => {
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', '')
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS', 'trainer-1')
+    expect(isYandexSessionLinkingPilotEnabled('trainer-1')).toBe(false)
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', 'TRUE')
+    expect(isYandexSessionLinkingPilotEnabled('trainer-1')).toBe(false)
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', '1')
+    expect(isYandexSessionLinkingPilotEnabled('trainer-1')).toBe(false)
+  })
+
+  it('is enabled for an allowlisted user when the flag is exactly "true"', () => {
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS', 'trainer-1,trainer-2')
+    expect(isYandexSessionLinkingPilotEnabled('trainer-1')).toBe(true)
+  })
+
+  it('is disabled for a user outside the allowlist', () => {
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS', 'trainer-1,trainer-2')
+    expect(isYandexSessionLinkingPilotEnabled('trainer-3')).toBe(false)
+  })
+
+  it('is disabled for everyone when the allowlist is empty or missing', () => {
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS', '')
+    expect(isYandexSessionLinkingPilotEnabled('trainer-1')).toBe(false)
+  })
+
+  it('trims whitespace and drops empty allowlist entries', () => {
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS', ' , trainer-1 , ,trainer-2, ')
+    expect(isYandexSessionLinkingPilotEnabled('trainer-1')).toBe(true)
+    expect(isYandexSessionLinkingPilotEnabled('trainer-2')).toBe(true)
+    expect(isYandexSessionLinkingPilotEnabled('')).toBe(false)
+  })
+
+  it('does not leak access between users and stays independent from another feature allowlist', () => {
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS', 'trainer-1')
+    vi.stubEnv('VITE_WEARABLES_ENABLED', 'true')
+    vi.stubEnv('VITE_WEARABLES_PILOT_USER_IDS', 'client-9')
+    vi.stubEnv('VITE_YANDEX_ID_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
+
+    expect(isYandexSessionLinkingPilotEnabled('trainer-1')).toBe(true)
+    expect(isYandexSessionLinkingPilotEnabled('client-9')).toBe(false)
+    expect(isWearablesPilotEnabled('trainer-1')).toBe(false)
+  })
+
+  it('requires the base Yandex public config before exposing the linking config', () => {
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS', 'trainer-1')
+    vi.stubEnv('VITE_YANDEX_ID_PILOT_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', '')
+    expect(getYandexSessionLinkingConfig('trainer-1')).toBeNull()
+
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test/')
+    expect(getYandexSessionLinkingConfig('trainer-1')).toEqual({
+      apiBaseUrl: 'https://stage.example.test',
+      clientId: 'public-client-id',
+    })
   })
 })

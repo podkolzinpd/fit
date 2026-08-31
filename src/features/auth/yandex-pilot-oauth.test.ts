@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   consumeYandexAuthorizationCallback,
   createYandexAuthorizationUrl,
+  peekPendingYandexAuthorizationIntent,
 } from './yandex-pilot-oauth'
 
 const storage = new Map<string, string>()
@@ -47,10 +48,27 @@ describe('Yandex ID pilot OAuth', () => {
     const result = consumeYandexAuthorizationCallback(`?code=oauth-code&state=${state}`, storageAdapter)
     expect(result.code).toBe('oauth-code')
     expect(result.codeVerifier.length).toBeGreaterThanOrEqual(43)
+    expect(result.intent).toBe('pilot')
     expect(() => consumeYandexAuthorizationCallback(
       `?code=oauth-code&state=${state}`,
       storageAdapter,
     )).toThrow('Не удалось безопасно подтвердить вход')
+  })
+
+  it('marks account-linking authorization and consumes the intent with the verifier', async () => {
+    const authorizationUrl = new URL(await createYandexAuthorizationUrl(
+      'public-client-id',
+      'http://localhost:5173/auth/yandex/callback',
+      storageAdapter,
+      'link',
+    ))
+    const state = authorizationUrl.searchParams.get('state')
+    expect(peekPendingYandexAuthorizationIntent(storageAdapter)).toBe('link')
+
+    const result = consumeYandexAuthorizationCallback(`?code=oauth-code&state=${state}`, storageAdapter)
+
+    expect(result.intent).toBe('link')
+    expect(peekPendingYandexAuthorizationIntent(storageAdapter)).toBe('pilot')
   })
 
   it('rejects a mismatched state and OAuth errors', async () => {

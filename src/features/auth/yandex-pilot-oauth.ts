@@ -1,5 +1,7 @@
 const OAUTH_STATE_KEY = 'fit.yandexIdPilot.oauthState'
 const OAUTH_VERIFIER_KEY = 'fit.yandexIdPilot.oauthVerifier'
+const OAUTH_INTENT_KEY = 'fit.yandexIdPilot.oauthIntent'
+export type YandexAuthorizationIntent = 'pilot' | 'link'
 
 function randomBase64Url(byteLength: number): string {
   const bytes = crypto.getRandomValues(new Uint8Array(byteLength))
@@ -19,11 +21,13 @@ export async function createYandexAuthorizationUrl(
   clientId: string,
   redirectUri: string,
   storage: Pick<Storage, 'setItem'> = sessionStorage,
+  intent: YandexAuthorizationIntent = 'pilot',
 ): Promise<string> {
   const state = randomBase64Url(24)
   const verifier = randomBase64Url(64)
   storage.setItem(OAUTH_STATE_KEY, state)
   storage.setItem(OAUTH_VERIFIER_KEY, verifier)
+  storage.setItem(OAUTH_INTENT_KEY, intent)
 
   const url = new URL('https://oauth.yandex.ru/authorize')
   url.searchParams.set('response_type', 'code')
@@ -39,6 +43,21 @@ export async function createYandexAuthorizationUrl(
 export interface YandexAuthorizationCode {
   code: string
   codeVerifier: string
+  intent: YandexAuthorizationIntent
+}
+
+export function peekPendingYandexAuthorizationIntent(
+  storage: Pick<Storage, 'getItem'> = sessionStorage,
+): YandexAuthorizationIntent {
+  return storage.getItem(OAUTH_INTENT_KEY) === 'link' ? 'link' : 'pilot'
+}
+
+export function clearPendingYandexAuthorization(
+  storage: Pick<Storage, 'removeItem'> = sessionStorage,
+): void {
+  storage.removeItem(OAUTH_STATE_KEY)
+  storage.removeItem(OAUTH_VERIFIER_KEY)
+  storage.removeItem(OAUTH_INTENT_KEY)
 }
 
 export function consumeYandexAuthorizationCallback(
@@ -48,8 +67,8 @@ export function consumeYandexAuthorizationCallback(
   const params = new URLSearchParams(search.replace(/^\?/, ''))
   const expectedState = storage.getItem(OAUTH_STATE_KEY)
   const verifier = storage.getItem(OAUTH_VERIFIER_KEY)
-  storage.removeItem(OAUTH_STATE_KEY)
-  storage.removeItem(OAUTH_VERIFIER_KEY)
+  const intent = peekPendingYandexAuthorizationIntent(storage)
+  clearPendingYandexAuthorization(storage)
 
   if (params.get('error') !== null) throw new Error('Вход через Yandex ID был отменён или отклонён.')
   const returnedState = params.get('state')
@@ -60,5 +79,5 @@ export function consumeYandexAuthorizationCallback(
   if (code === null || code.length === 0 || verifier === null || verifier.length === 0) {
     throw new Error('Yandex ID не вернул данные для входа. Начните заново.')
   }
-  return { code, codeVerifier: verifier }
+  return { code, codeVerifier: verifier, intent }
 }

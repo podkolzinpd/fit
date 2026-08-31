@@ -3,7 +3,7 @@
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
 Обновлено: 2026-08-31
-Проверенный базовый `main`: `1f6d301` (`feat(yandex): add session linking foundation (#721)`)
+Проверенный базовый `main`: `e5362ff` (`feat(progress): compact workout regularity (#722)`)
 ## Текущий release gate
 
 - Foundation UI Identity v1 принята. Задачи 8–28 — клиентский, тренерский,
@@ -46,6 +46,8 @@
   периода: лучший результат, тренировки, `X/Y` недель, улучшенные упражнения,
   карта тела, сравнение, связь с целью и ближайший план. Тренер видит plan/fact,
   сигналы и публикацию; выполнение плана не выдаётся за прогресс к цели.
+- Регулярность в Progress — недельная шкала и три рассчитанных показателя без
+  отдельной легенды, общего текста и локального сравнения.
 - Верх Progress закреплён в порядке `Период → Главное сейчас → Цель → Карта
   тела → Сравнение → Измерения → Регулярность → Результаты → Следующий шаг →
   Подробный анализ`. Карта тела компактная: фигура ограничена 210 px,
@@ -103,18 +105,19 @@
 - Реальный invite → join → leave/remove smoke — внешняя проверка. Production
   остаётся на Supabase; полный cutover не выполнен.
 ## Проверки активной ветки
-- YAFIT-421, пункт 5: регулярность сокращена до недельной шкалы и трёх
-  рассчитанных показателей; легенда, общий текст и локальное сравнение удалены.
-  Полный `npm run check` зелёный: frontend 994/994, API 275/275, infra 72/72,
-  lint/typecheck/build; Client Chromium 6/6 и iPhone/WebKit 1/1. Локальный
-  database gate зелёный: Supabase SQL/RLS 886/886, PostgreSQL actor/RLS 28/28,
-  generated types и migration safety. Visual baselines клиента 390/430 и
-  тренера 1440 в light/dark обновлены, просмотрены и повторены без обновления на
-  Darwin и Linux; после rebase Darwin повторён 3/3. Перед merge обязательны
-  зелёные `app`, `database`, `e2e` и production smoke.
+- `codex/yandex-session-linking-ui` добавляет default-off карточку привязки
+  Yandex ID в профиль тренера/клиента и link-mode callback поверх уже
+  существующего `POST /v1/auth/yandex/link`. Вне
+  `VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS` UI не меняется; основной вход,
+  `auth-context`, production routing и Supabase остаются прежними.
+- Проверено локально: targeted tests для feature flags, PKCE intent,
+  linking-card, linking callback и read-only Yandex pilot callback; `npm run
+  check`; WebKit default-off и flag-on для тренера/клиента на 390 px. После
+  merge с `e5362ff` повторены targeted tests, полный check и WebKit smoke.
 ## Ближайший порядок
-1. Завершить пункт 5 YAFIT-421: полный gate, PR, CI, merge и production smoke.
-2. Только после production перейти к пункту 6 — сравнению периодов.
-3. Assistant, `app_feedback` и Yandex parity/cutover ведутся отдельно.
+1. Залить PR с UI-привязкой Yandex ID за default-off rollout.
+2. После merge подключить основной Assistant UI к Yandex API через sticky tenant routing
+   после явного session/linking контракта.
+3. После export/import tooling провести две репетиции cutover.
 ## Отложено
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.
