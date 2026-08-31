@@ -1,11 +1,9 @@
 # Fit — текущее состояние проекта
-
 > Rolling snapshot для продолжения между сессиями. Максимум 120 строк.
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
-
 Обновлено: 2026-08-31
-Проверенный базовый `main`: `b9d1727` (`Progress: компактная карта тела (#717)`)
+Проверенный базовый `main`: `300b584` (`feat(yandex): add native pilot assistant turn (#719)`)
 ## Текущий release gate
 
 - Foundation UI Identity v1 принята. Задачи 8–28 — клиентский, тренерский,
@@ -57,8 +55,10 @@
   показатель, текущее значение, delta, компактный график выбранного периода,
   начало/конец, min/max, связь с целью, freshness и sufficiency. Поддерживаются
   вес, стандартные и пользовательские показатели; карточка цели показывает
-  только «сейчас» и ориентир, а подробная динамика живёт в измерениях.
-  Добавление, история, исправление и настройка остаются в нижнем блоке управления.
+  только «сейчас» и ориентир, а подробная динамика живёт в измерениях. График
+  показывает подтверждённый ориентир линией или диапазон удержания полосой.
+  Добавление, история, исправление и настройка раскрываются внутри того же блока;
+  отдельной административной карточки нет.
 - «Следующий шаг» — отдельное компактное предложение после результатов. Код
   формирует семь допустимых типов действия, а ИИ может выбрать один только при
   совпадении смысла и чисел. Выбор, замена и скрытие ничего не сохраняют;
@@ -90,31 +90,24 @@
   Assistant и push secrets не выставляются через `ops_readonly`.
 - Native AI использует metadata IAM token без статического ключа; точную роль
   один раз выдаёт `fit-stage-api` администратор, а OIDC не меняет folder IAM.
-- Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
-  нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
-- Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
-  `main` без force-push; callback URL и CORS origin не меняются. Все остальные
-  ветки исключены из Vercel Git deployments.
-- Callback показывает pilot profile, clients, connections и training data, но
-  pilot UI read-only. Client/custom-exercise и Planned/Live writes — только
-  через stage API, production routing не затрагивают.
-- Реальный invite → join → leave/remove smoke на двух Yandex ID — внешняя
-  stage-проверка; локальный lifecycle и RLS-матрица зелёные. Production остаётся
-  на Supabase; полный cutover не выполнен.
+- Yandex OAuth использует PKCE и публичный Client ID; secret browser-контракту
+  не нужен, Supabase-сессия при пилотном входе не создаётся.
+- Стабильный Vercel Preview синхронизируется с каждым verified `main`; callback,
+  CORS и история не меняются, прочие ветки исключены из Git deployments.
+- Pilot UI read-only; Client/custom-exercise и Planned/Live writes идут через
+  stage API без изменения production routing.
+- Реальный invite → join → leave/remove smoke — внешняя проверка. Production
+  остаётся на Supabase; полный cutover не выполнен.
 ## Проверки активной ветки
-- `codex/yandex-native-turn-routing` добавляет native stage endpoint
-  `POST /v1/assistant/turn`, общий parser turn request, `DatabasePilotAssistantTurnRunner`
-  и typed frontend transport `yandexPilotRepository.sendAssistantTurn`.
-- Endpoint использует только opaque `x-fit-pilot-session`, actor transaction,
-  deterministic capabilities/workout turn/fallback и idempotent replay; повтор
-  `turn_id` с другим текстом отдаёт conflict. Основной UI и production routing
-  не переключались.
-- `npm run check` зелёный: 984 frontend tests, 72 infra policy tests, API
-  `lint/typecheck/test/build` зелёные (269 API tests, 26 skipped). БД не менялась,
-  `db:reset/db:test` не запускались.
+- YAFIT-421, пункт 4: ориентир цели добавлен на график; добавление, история и
+  пользовательские показатели встроены в аналитику и доступны до первой сводки.
+  Локально зелёные `npm run check` (987 frontend, 263 API, 72 infra), Supabase
+  886/886, PostgreSQL actor/RLS 26/26, Chromium 2/2, WebKit 3/3 и повторяемые
+  visual baselines клиента 390/430 light/dark и тренера 1440 light/dark.
+  Перед merge обязательны `app`, `database`, `e2e` и production smoke.
 ## Ближайший порядок
-1. Подключить основной Assistant UI к Yandex API через sticky tenant routing
-   после явного session/linking контракта.
-2. После export/import tooling провести две репетиции cutover.
+1. Завершить пункт 4 YAFIT-421: PR, CI, merge и production smoke.
+2. Только после production перейти к пункту 5 — компактной регулярности.
+3. Assistant, `app_feedback` и Yandex parity/cutover ведутся отдельно.
 ## Отложено
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.
