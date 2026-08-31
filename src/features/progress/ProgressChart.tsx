@@ -1,7 +1,8 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { CartesianGrid, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { ProgressEntry } from '../../shared/domain'
 import { formatLocalDate, localDate, type LocalDate } from '../../shared/local-date'
+import type { MeasurementGoalGuide } from './measurement-progress'
 
 export type MetricKey = 'weightKg' | 'chestCm' | 'waistCm' | 'hipCm'
 export type MetricSelector = MetricKey | { customMetricId: string }
@@ -90,9 +91,10 @@ export interface ProgressChartProps {
   rangeStart?: LocalDate
   rangeEnd?: LocalDate
   compact?: boolean
+  goalGuide?: MeasurementGoalGuide | null
 }
 
-export function ProgressChart({ entries, metric, label, unit, windowEnd, onWindowChange, rangeStart, rangeEnd, compact = false }: ProgressChartProps) {
+export function ProgressChart({ entries, metric, label, unit, windowEnd, onWindowChange, rangeStart, rangeEnd, compact = false, goalGuide = null }: ProgressChartProps) {
   const dragAreaRef = useRef<HTMLDivElement>(null)
   const dragStartRef = useRef<{ x: number; windowEnd: LocalDate } | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -114,7 +116,9 @@ export function ProgressChart({ entries, metric, label, unit, windowEnd, onWindo
   const visibleStart = rangeStart ?? windowStart
   const visibleEnd = rangeEnd ?? effectiveEnd
   const visibleData = chartData.filter((item) => item.date >= visibleStart && item.date <= visibleEnd)
-  const yDomain = visibleData.length > 0 ? computeYDomain(visibleData.map((item) => item.value)) : undefined
+  const domainValues = visibleData.map((item) => item.value)
+  if (goalGuide) domainValues.push(goalGuide.min, goalGuide.max)
+  const yDomain = domainValues.length > 0 ? computeYDomain(domainValues) : undefined
 
   const visibleValues = visibleData.map((item) => item.value)
   const minValue = visibleValues.length ? Math.min(...visibleValues) : undefined
@@ -145,6 +149,7 @@ export function ProgressChart({ entries, metric, label, unit, windowEnd, onWindo
 
   return <section className={`chart${compact ? ' compact' : ''}`} aria-label={`График показателя «${label}»`}>
     <h2>{label} ({unit}){canDrag && <span className="chart-range"> · {formatShortDate(windowStart)} – {formatShortDate(effectiveEnd)}</span>}</h2>
+    {goalGuide && <span className="sr-only">{goalGuide.label}</span>}
     {visibleData.length === 0
       ? <div className="chart-empty-window">
           <p className="muted">Нет данных за этот период</p>
@@ -157,6 +162,22 @@ export function ProgressChart({ entries, metric, label, unit, windowEnd, onWindo
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="date" stroke="var(--muted)" height={40} tick={AxisTick} interval={Math.max(0, Math.ceil(visibleData.length / 5) - 1)} />
               <YAxis stroke="var(--muted)" style={{ fontSize: '12px' }} domain={yDomain} allowDecimals />
+              {goalGuide && goalGuide.min !== goalGuide.max && <ReferenceArea
+                y1={goalGuide.min}
+                y2={goalGuide.max}
+                fill="var(--surface-muted)"
+                fillOpacity={0.72}
+                stroke="var(--fg)"
+                strokeDasharray="5 4"
+                label={{ value: goalGuide.label, position: 'insideTopRight', fill: 'var(--muted)', fontSize: 11 }}
+              />}
+              {goalGuide && goalGuide.min === goalGuide.max && <ReferenceLine
+                y={goalGuide.min}
+                stroke="var(--fg)"
+                strokeWidth={1.5}
+                strokeDasharray="5 4"
+                label={{ value: goalGuide.label, position: 'insideTopRight', fill: 'var(--muted)', fontSize: 11 }}
+              />}
               {!isDragging && !compact && <Tooltip
                 contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', borderRadius: 12 }}
                 labelStyle={{ color: 'var(--fg)', fontWeight: 700 }}

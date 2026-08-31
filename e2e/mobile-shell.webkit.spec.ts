@@ -716,7 +716,7 @@ test('iPhone: client progress keeps one goal-aware LLM summary and compact runni
   expect(navigationBox).not.toBeNull()
   expect(actionsBox!.y + actionsBox!.height).toBeLessThanOrEqual(navigationBox!.y)
 
-  await page.getByText('УПРАВЛЕНИЕ', { exact: true }).scrollIntoViewIfNeeded()
+  await page.locator('.measurement-story-management').scrollIntoViewIfNeeded()
   await page.getByRole('button', { name: 'Добавить замер' }).click()
   await expect(page.getByRole('heading', { name: 'Новый замер' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Сохранить замер' })).toBeVisible()
@@ -752,6 +752,7 @@ test('iPhone: standard goal facts stay readable without horizontal overflow', as
   await expect(measurements.getByRole('heading', { name: 'Тренд по значениям' })).toBeVisible()
   await expect(measurements.getByText('60 кг → 59 кг', { exact: true })).toBeVisible()
   await expect(measurements.getByLabel('График показателя «Вес»')).toBeVisible()
+  await expect(measurements.getByText('Цель · 58,5–59,5 кг').first()).toBeVisible()
   await expect(measurements.getByText(/2 точки · достаточно для динамики/)).toBeVisible()
   await expectNoHorizontalOverflow(page)
 })

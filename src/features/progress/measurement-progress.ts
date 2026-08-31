@@ -32,6 +32,12 @@ export interface MeasurementObservation {
   value: number
 }
 
+export interface MeasurementGoalGuide {
+  min: number
+  max: number
+  label: string
+}
+
 export interface MeasurementProgressMetric {
   factId: string
   selector: MetricSelector
@@ -39,6 +45,7 @@ export interface MeasurementProgressMetric {
   unit: string
   goalRelated: boolean
   targetLabel?: string
+  goalGuide: MeasurementGoalGuide | null
   latest: MeasurementObservation | null
   periodStart: MeasurementObservation | null
   periodEnd: MeasurementObservation | null
@@ -80,6 +87,28 @@ const STANDARD_DEFINITIONS: Array<MetricDefinition & { standardMetric: StandardG
 ]
 
 const number = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 3 })
+
+function goalGuideFor(criterion: GoalCriterion | undefined): MeasurementGoalGuide | null {
+  if (!criterion || criterion.operation === 'track_only') return null
+  if (criterion.operation === 'maintain_range') {
+    if (criterion.rangeMin === null || criterion.rangeMax === null) return null
+    return {
+      min: criterion.rangeMin,
+      max: criterion.rangeMax,
+      label: `Цель · ${number.format(criterion.rangeMin)}–${number.format(criterion.rangeMax)} ${criterion.unit}`,
+    }
+  }
+  const value = criterion.operation === 'change_by'
+    ? criterion.baselineValue === null || criterion.targetValue === null
+      ? null
+      : criterion.baselineValue + criterion.targetValue
+    : criterion.targetValue
+  return value === null ? null : {
+    min: value,
+    max: value,
+    label: `Цель · ${number.format(value)} ${criterion.unit}`,
+  }
+}
 
 function valueFor(entry: ProgressEntry, definition: MetricDefinition): number | undefined {
   if (typeof definition.selector === 'string') return entry[definition.selector]
@@ -162,6 +191,7 @@ function buildMetric(
     unit: definition.unit,
     goalRelated: Boolean(criterion),
     ...(criterion ? { targetLabel: goalCriterionTargetLabel(criterion) } : {}),
+    goalGuide: goalGuideFor(criterion),
     latest,
     periodStart: first,
     periodEnd: last,

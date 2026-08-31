@@ -163,8 +163,13 @@ test('linked client sees only the published client progress view', async ({ page
   await expect(page.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
   await expect(page.getByText(/причина максимального перерыва/)).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Обновить' })).toBeVisible()
-  await page.getByText('УПРАВЛЕНИЕ', { exact: true }).scrollIntoViewIfNeeded()
-  await expect(page.getByRole('heading', { name: 'Замеры и показатели' })).toBeVisible()
+  const measurementSection = page.locator('.client-progress-measurements-story')
+  await measurementSection.scrollIntoViewIfNeeded()
+  await expect(measurementSection.getByRole('button', { name: 'Добавить замер' })).toBeVisible()
+  await expect(measurementSection.getByRole('button', { name: /История/ })).toBeVisible()
+  await expect(measurementSection.getByRole('button', { name: 'Настроить показатели' })).toBeVisible()
+  await expect(page.getByText('УПРАВЛЕНИЕ', { exact: true })).toHaveCount(0)
+  await expect(page.locator('.client-progress-measurement')).toHaveCount(0)
 
   await page.goto('/me/goal')
   await expect(page.locator('.phone-frame')).toHaveClass(/client-goal-identity/)
@@ -228,6 +233,7 @@ test('client sees deterministic standard-measurement goal facts', async ({ page 
   await expect(measurements.getByText('−1 кг', { exact: true })).toBeVisible()
   await expect(measurements.getByText('Связан с целью', { exact: true })).toBeVisible()
   await expect(measurements.getByText(/Свежие данные · 5 дн. · 2 точки · достаточно для динамики/)).toBeVisible()
+  await expect(measurements.getByText('Цель · 58,5–59,5 кг').first()).toBeVisible()
   await expect(measurements.getByLabel('График показателя «Вес»')).toBeVisible()
   await expect(measurements.evaluate((element) => {
     const comparison = document.querySelector('.client-progress-comparison')

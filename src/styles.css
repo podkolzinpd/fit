@@ -2085,6 +2085,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .measurement-story-state { color:var(--muted) }
 .measurement-story-empty { display:grid; gap:7px; padding:14px 0; color:var(--muted) }
 .measurement-story-empty .link { width:fit-content; min-height:44px; padding:7px 0 }
+.measurement-story-management { min-width:0; padding-top:12px; border-top:1px solid var(--border) }
+.client-measurement-management { display:grid; gap:12px; min-width:0 }
+.measurement-story-management .measurement-actions { padding-top:0; border-top:0 }
+.measurement-story-management .client-progress-form,
+.measurement-story-management .client-progress-history,
+.measurement-story-management .metrics-manager { margin:0; padding:16px 0 0; border:0; border-top:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
 .client-progress-regularity-story { display:grid; gap:12px; margin:var(--space-3) var(--card-padding) 0; padding-bottom:var(--space-3); border-bottom:1px solid var(--ai-divider) }
 .client-progress-regularity-story > header > div { display:grid; gap:3px }
 .client-progress-regularity-story > header span { color:var(--muted); font-size:var(--type-micro-size); font-weight:var(--weight-semibold); letter-spacing:var(--tracking-label); text-transform:uppercase }
@@ -2606,6 +2612,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 }
 @media (max-width: 480px) { .measurement-actions { grid-template-columns:repeat(2,minmax(0,1fr)) }.measurement-actions .measurement-primary-action { grid-column:1 / -1 }.trainer-measurements-workspace { gap:var(--space-3) } }
 @media (max-width: 480px) { .client-progress-measurement .measurement-actions { grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr) }.client-progress-measurement .measurement-actions .measurement-primary-action { grid-column:auto } }
+@media (max-width: 480px) { .measurement-story-management .measurement-actions { grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr) }.measurement-story-management .measurement-actions .measurement-primary-action { grid-column:auto }.measurement-story-management .measurement-actions > :last-child { grid-column:1 / -1 } }
 @media (max-width: 360px) { .measure-grid { grid-template-columns: 1fr }.inline-form { grid-template-columns: 1fr }.inline-form button { grid-column: 1 }.tab-bar a { font-size: 11px } }
 
 /* Единый component contract тренировки (YAFIT-315): создание, live и
@@ -3386,6 +3393,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .measurement-actions button { min-height:48px; border-radius:14px; font-size:12px; font-weight:500 }
 .progress-identity .measurement-actions .secondary { border-color:var(--border); background:var(--surface-elevated); color:var(--fg); box-shadow:none}
 .progress-identity .measurement-actions .link { color:var(--fg) }
+.progress-identity .measurement-story-management .client-progress-form,
+.progress-identity .measurement-story-management .client-progress-history,
+.progress-identity .measurement-story-management .metrics-manager { background:transparent }
 .progress-identity .client-progress-form,
 .progress-identity .client-progress-history { padding-top:16px; border-color:var(--border); background:transparent; box-shadow:none}
 .progress-identity .client-progress-form .field { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
