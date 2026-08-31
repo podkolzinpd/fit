@@ -56,8 +56,11 @@ async function mockAutomaticSummaryGeneration(page: VisualPage) {
   await page.route('**/functions/v1/summarize-client-training', (route) => route.fulfill(response))
 }
 
-async function mockTrainerProgressVisual(page: VisualPage) {
+test.beforeEach(async ({ page }) => {
   await mockAutomaticSummaryGeneration(page)
+})
+
+async function mockTrainerProgressVisual(page: VisualPage) {
   await mockPeriodComparison(page)
   await page.route('**/rest/v1/rpc/get_workout_regularity', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify([{
@@ -601,7 +604,8 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   await expect(page.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
   await expect(page.getByText('Прогресс уже заметен, ты на верном пути.')).toHaveCount(0)
   await expect(page.getByText('Проверяем цель…')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Обновить' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Обновить' })).toHaveCount(0)
+  await expect(page.locator('.ai-progress-footer')).toHaveCount(0)
   await expect(page.locator('.client-progress-main-now').evaluate((element) => {
     const goal = document.querySelector('.client-progress-goal-story')
     const map = document.querySelector('.body-progress-map')
@@ -904,10 +908,12 @@ test('next-step suggestion stays concise and explicit for client and trainer in 
   await expect(nextStep.locator('.progress-next-step-evidence')).toContainText('Учтено:')
   expect(await nextStep.evaluate((element) => {
     const summary = element.closest('.client-progress-card')?.querySelector('.progress-story-summary')
-    const details = element.closest('.client-progress-card')?.querySelector('.client-progress-details-toggle')
-    return Boolean(summary && details
+    const mainNow = element.closest('.client-progress-card')?.querySelector('.client-progress-main-now')
+    const details = mainNow?.querySelector('.client-progress-details-trigger')
+    return Boolean(summary && mainNow && details
       && (summary.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (element.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING))
+      && mainNow.contains(details)
+      && !document.querySelector('.client-progress-details-toggle'))
   })).toBe(true)
   if (!trainer) {
     for (const width of [320, 375, 390, 430]) {

@@ -251,7 +251,10 @@ export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCa
   const [mode, setMode] = useState<BodyMapMode>(initialMode)
   const data = mode === 'progress' ? progress : load
   const [selectedGroup, setSelectedGroup] = useState<BodyMapZone | undefined>(data.regions[0]?.group)
-  const [side, setSide] = useState<BodyFigureSide>('front')
+  const [side, setSide] = useState<BodyFigureSide>(() => {
+    const firstGroup = data.regions[0]?.group
+    return firstGroup ? bodyZoneSides(variant, firstGroup)[0] ?? 'front' : 'front'
+  })
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [discovering, setDiscovering] = useState(true)
 
