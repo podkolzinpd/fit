@@ -24,8 +24,8 @@ function assistantMarkup(context = '') {
               ${context}
               <form class="assistant-composer" data-testid="composer">
                 <textarea aria-label="Сообщение ассистенту" placeholder="Опишите тренировку"></textarea>
-                <button class="assistant-icon-button" type="button">М</button>
-                <button class="assistant-icon-button" type="button">→</button>
+                <div class="voice-input voice-input-icon"><button class="assistant-icon-button" type="button" aria-label="Голосовой ввод">М</button></div>
+                <button class="assistant-icon-button" type="submit" aria-label="Отправить сообщение">→</button>
               </form>
             </main>
           </div>
@@ -214,17 +214,23 @@ test('assistant composer stays contained and keeps accessible controls on mobile
   for (const width of [390, 430]) {
     await page.setViewportSize({ width, height: 844 })
     await page.setContent(assistantMarkup())
+    await page.getByRole('textbox', { name: 'Сообщение ассистенту' }).evaluate((element) => { element.style.height = '96px' })
 
     const composer = await page.getByTestId('composer').boundingBox()
     const textarea = await page.getByRole('textbox', { name: 'Сообщение ассистенту' }).boundingBox()
+    const microphone = await page.getByRole('button', { name: 'Голосовой ввод' }).boundingBox()
+    const submit = await page.getByRole('button', { name: 'Отправить сообщение' }).boundingBox()
     const buttons = await page.locator('.assistant-composer .assistant-icon-button').all()
 
     expect(composer).not.toBeNull()
     expect(textarea).not.toBeNull()
+    expect(microphone).not.toBeNull()
+    expect(submit).not.toBeNull()
     expect(composer!.x).toBeGreaterThanOrEqual(16)
     expect(width - (composer!.x + composer!.width)).toBeGreaterThanOrEqual(16)
     expect(textarea!.x).toBeGreaterThanOrEqual(composer!.x)
     expect(textarea!.x + textarea!.width).toBeLessThanOrEqual(composer!.x + composer!.width)
+    expect(Math.abs((microphone!.y + microphone!.height) - (submit!.y + submit!.height))).toBeLessThanOrEqual(1)
 
     for (const button of buttons) {
       const box = await button.boundingBox()
