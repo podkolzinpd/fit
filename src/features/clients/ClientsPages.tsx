@@ -156,8 +156,8 @@ function ClientForm({
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions">{onCancel && <button type="button" className="secondary" disabled={mutation.isPending} onClick={onCancel}>Отмена</button>}<button className="primary" disabled={mutation.isPending} aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : createMode === 'self' && !existing ? 'Сохранить профиль' : 'Сохранить'}</button></div>
     </form>
-  const title = createMode === 'self'
-    ? existing ? 'Мои данные' : 'Профиль спортсмена'
+  const title = createMode === 'self' && !existing
+    ? 'Профиль спортсмена'
     : existing ? 'Редактировать клиента' : 'Новый клиент'
   return embedded ? contents : <Page title={title} className={createMode === 'self' ? 'client-self-edit-page' : undefined}>{contents}</Page>
 }
