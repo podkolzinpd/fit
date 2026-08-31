@@ -2158,6 +2158,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-next-step-decision > .secondary { min-height:44px; font-size:var(--type-caption-size); font-weight:var(--weight-semibold) }
 .progress-next-step-actions .secondary,
 .progress-next-step-decision > .secondary { padding:8px 12px; border:1px solid var(--fg); border-radius:var(--radius-sm); background:var(--fg); color:var(--bg); text-decoration:none }
+.client-progress-next-step > .progress-next-step-actions .secondary,
+.progress-next-step-editor > .progress-next-step-actions .secondary,
+.progress-next-step-decision > .secondary { width:100%; min-height:48px }
 .progress-next-step-actions .link { padding:7px 0 }
 .progress-next-step-editor { display:grid; gap:10px; padding-top:10px; border-top:1px solid var(--border) }
 .progress-next-step-editor fieldset { display:grid; gap:7px; margin:0; padding:0; border:0 }
@@ -2165,7 +2168,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-next-step-editor label { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:start; gap:9px; min-height:44px; padding:10px; border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--fg); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
 .progress-next-step-editor input { width:18px; height:18px; margin:0 }
 .progress-next-step-decision { display:grid; gap:9px; margin-top:0; padding-top:10px; border-top:1px solid var(--border) }
-.progress-next-step-decision > .secondary { width:fit-content; display:inline-flex; align-items:center; justify-content:center }
+.progress-next-step-decision > p { color:var(--secondary-label-fg) }
+.progress-next-step-decision > p strong { color:var(--fg); font-weight:var(--weight-semibold) }
+.progress-next-step-decision > .secondary { display:inline-flex; align-items:center; justify-content:center }
 .client-progress-next-step.state-rejected { border-style:dashed }
 .trainer-progress-signals { display:grid; gap:0; margin:var(--space-3) var(--card-padding) 0; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-raised) }
 .trainer-progress-signals > header { min-height:64px; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:11px 13px }
@@ -3216,7 +3221,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   box-shadow:none;
 }
 .progress-identity .content { padding-bottom:calc(82px + env(safe-area-inset-bottom)); background:var(--bg) }
-.progress-identity .client-progress-page { max-width:560px; padding:max(12px, calc(24px - env(safe-area-inset-top))) 16px 28px }
+.progress-identity .client-progress-page { max-width:560px; padding:max(12px, calc(24px - env(safe-area-inset-top))) 16px calc(28px + env(safe-area-inset-bottom)) }
 .progress-identity .client-progress-page > .page-header { min-height:44px; margin-bottom:16px }
 .progress-identity .client-progress-page > .page-header h1 { font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
 .progress-identity .client-progress-stack { gap:12px }

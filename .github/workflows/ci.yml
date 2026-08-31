@@ -133,18 +133,23 @@ jobs:
       - name: Pull pinned Playwright runtime
         run: docker pull "$PLAYWRIGHT_IMAGE"
       # Visual checks run against the clean seed before behavior scenarios mutate
-      # shared demo records. This removes the second database reset.
+      # shared demo records. Every profile gets a fresh seed: otherwise a client
+      # created by one viewport changes the baseline of the next viewport.
       - name: Run isolated visual baselines
         run: |
-          docker run --rm --init --ipc=host --network host \
-            --env CI=true \
-            --env VITE_SUPABASE_URL \
-            --env VITE_SUPABASE_PUBLISHABLE_KEY \
-            --volume "${{ github.workspace }}:/work" \
-            --volume "/usr/share/fonts:/usr/share/fonts:ro" \
-            --workdir /work \
-            "$PLAYWRIGHT_IMAGE" \
-            bash -lc 'fc-cache -f >/dev/null && exec npx playwright test --project=visual-client-390 --project=visual-client-430 --project=visual-trainer-1440 --workers=1'
+          for project in visual-client-390 visual-client-430 visual-trainer-1440; do
+            supabase db reset --local
+            docker run --rm --init --ipc=host --network host \
+              --env CI=true \
+              --env VITE_SUPABASE_URL \
+              --env VITE_SUPABASE_PUBLISHABLE_KEY \
+              --env PLAYWRIGHT_PROJECT="$project" \
+              --volume "${{ github.workspace }}:/work" \
+              --volume "/usr/share/fonts:/usr/share/fonts:ro" \
+              --workdir /work \
+              "$PLAYWRIGHT_IMAGE" \
+              bash -lc 'fc-cache -f >/dev/null && exec npx playwright test --project="$PLAYWRIGHT_PROJECT" --workers=1'
+          done
       - name: Run Chromium behavior scenarios
         run: |
           docker run --rm --init --ipc=host --network host \

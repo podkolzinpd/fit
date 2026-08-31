@@ -36,35 +36,39 @@ describe('ProgressNextStepSection', () => {
   it('requires confirmation before exposing the concrete action', async () => {
     const user = userEvent.setup()
     view()
-    expect(screen.getByText('Черновик · ИИ')).toBeVisible()
+    expect(screen.getByText('Подобрал помощник')).toBeVisible()
     expect(screen.queryByRole('link', { name: 'Открыть показатель' })).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Подтвердить' }))
-    expect(screen.getByText('Черновик подтверждён. Ничего не сохранено и план не изменён автоматически.')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Выбрать этот шаг' }))
+    expect(screen.getByText('Данные не изменены.', { exact: false })).toBeVisible()
     expect(screen.getByRole('link', { name: 'Открыть показатель' })).toHaveAttribute('href', '/me/progress#measurements')
   })
 
-  it('lets the user replace the draft and then reject it without saving', async () => {
+  it('lets the user select another step and hide the suggestion', async () => {
     const user = userEvent.setup()
     view()
-    await user.click(screen.getByRole('button', { name: 'Изменить' }))
+    await user.click(screen.getByRole('button', { name: 'Другой вариант' }))
     await user.click(screen.getByRole('radio', { name: 'Запланировать ближайшую тренировку' }))
-    await user.click(screen.getByRole('button', { name: 'Применить к черновику' }))
-    expect(screen.getByText('Изменённый черновик')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Выбрать' }))
+    expect(screen.getByText('Выбрано тобой')).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Запланировать ближайшую тренировку' })).toBeVisible()
-    await user.click(screen.getByRole('button', { name: 'Отклонить' }))
-    expect(screen.getByRole('heading', { name: 'Рекомендация отклонена' })).toBeVisible()
-    expect(screen.getByText('Ничего не сохранено и план остался без изменений.')).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Открыть планирование' })).toHaveAttribute('href', '/workouts/new')
+    await user.click(screen.getByRole('button', { name: 'Не сейчас' }))
+    expect(screen.getByRole('heading', { name: 'Предложение скрыто' })).toBeVisible()
+    expect(screen.queryByText('Запланировать ближайшую тренировку')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Показать снова' }))
+    expect(screen.getByRole('button', { name: 'Выбрать этот шаг' })).toBeVisible()
   })
 
   it('shows loading and a retryable error state', async () => {
     const retry = vi.fn()
     const rendered = view({ loading: true })
-    expect(screen.getByText('Подбираем действие по подтверждённым данным…')).toBeVisible()
+    expect(screen.getByText('Ищем полезный следующий шаг…')).toBeVisible()
     rendered.rerender(<MemoryRouter><ProgressNextStepSection
       result={result} links={{}} loading={false} error={new Error('offline')}
       onRetry={retry} titleId="test-next-step"
     /></MemoryRouter>)
-    await userEvent.click(screen.getByRole('button', { name: 'Повторить' }))
+    expect(screen.getByText('Не удалось подобрать следующий шаг.')).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Подобрать снова' }))
     expect(retry).toHaveBeenCalledOnce()
   })
 })
