@@ -5,6 +5,30 @@ export const yandexPilotQueries = {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ code, codeVerifier }),
   }),
+  exchangeCodeForAppSession: (
+    apiBaseUrl: string,
+    code: string,
+    codeVerifier: string,
+  ) => fetch(`${apiBaseUrl}/v1/auth/yandex/session`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ code, codeVerifier }),
+  }),
+  linkYandexAccount: (
+    apiBaseUrl: string,
+    supabaseAccessToken: string,
+    code: string,
+    codeVerifier: string,
+  ) => fetch(`${apiBaseUrl}/v1/auth/yandex/link`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      authorization: `Bearer ${supabaseAccessToken}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ code, codeVerifier }),
+  }),
   listClients: (apiBaseUrl: string, sessionToken: string) => fetch(`${apiBaseUrl}/v1/clients`, {
     cache: 'no-store',
     headers: { 'x-fit-pilot-session': sessionToken },

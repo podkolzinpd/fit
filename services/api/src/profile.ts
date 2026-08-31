@@ -11,7 +11,7 @@ interface ProfileRow extends QueryResultRow {
 }
 
 export interface ProfileResponse {
-  accessMode: 'read_only'
+  accessMode: 'read_only' | 'read_write'
   profile: {
     id: string
     firstName: string | null
@@ -23,6 +23,7 @@ export interface ProfileResponse {
 
 export async function readOwnProfile(
   client: DatabaseClient,
+  accessMode: ProfileResponse['accessMode'] = 'read_only',
 ): Promise<ProfileResponse | undefined> {
   const rows = await client.query<ProfileRow>(`
     select id, first_name, last_name, timezone, account_role
@@ -33,7 +34,7 @@ export async function readOwnProfile(
   if (row === undefined) return undefined
 
   return {
-    accessMode: 'read_only',
+    accessMode,
     profile: {
       id: row.id,
       firstName: row.first_name,

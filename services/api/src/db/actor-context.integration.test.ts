@@ -89,6 +89,19 @@ import {
   PilotEnrollmentConflictError,
 } from './yandex-pilot-enrollment.js'
 import {
+  DatabaseYandexAccountLinker,
+  YandexAccountLinkError,
+} from '../yandex-account-linking.js'
+import {
+  DatabaseYandexAppSessionIssuer,
+  DatabaseYandexAppSessionRevoker,
+} from '../yandex-app-session.js'
+import {
+  YandexAppSessionDeniedError,
+  YandexAppSessionInvalidError,
+  withYandexAppSessionTransaction,
+} from './yandex-app-transaction.js'
+import {
   PilotAccessDeniedError,
   PilotSessionInvalidError,
   withYandexPilotActorTransaction,
@@ -145,6 +158,11 @@ const LIVE_STRUCTURE_OPERATION_IDS = {
 const PILOT_SUBJECT_HASH = 'b'.repeat(64)
 const OUTSIDE_SUBJECT_HASH = 'c'.repeat(64)
 const ENROLLMENT_SUBJECT_HASH = 'e'.repeat(64)
+const APP_ACTOR_ID = '53ec8d8f-8d29-4a1d-9f40-1e00ba797da0'
+const APP_SUBJECT_HASH = 'f'.repeat(64)
+const LINK_ACTOR_ID = 'a6145f94-3889-47b3-8e63-b0f72df8f2ee'
+const LINK_SUBJECT_HASH = '6'.repeat(64)
+const OTHER_LINK_SUBJECT_HASH = '7'.repeat(64)
 const RUNTIME_PASSWORD = 'fit-api-test-only'
 const READER_ROLE = 'fit_ops_reader_test'
 const READER_PASSWORD = 'fit-ops-reader-test-only'
@@ -357,6 +375,11 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
          where full_name = 'Тестовый клиент Yandex stage'`,
       )
       await ownerPool.query(
+        `delete from public.clients
+         where trainer_id = $1 and full_name = 'Клиент из Assistant'`,
+        [ACTOR_ID],
+      )
+      await ownerPool.query(
         'delete from public.profiles where id = $1',
         [stageWorkoutFixtureIds(STAGE_SMOKE_PROFILE_ID).clientActorId],
       )
@@ -387,6 +410,32 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         'delete from public.profiles where id = $1',
         [LIFECYCLE_CLIENT_ACTOR_ID],
       )
+      await ownerPool.query(
+        'delete from app_private.yandex_app_sessions where profile_id = any($1::uuid[])',
+        [[APP_ACTOR_ID, LINK_ACTOR_ID]],
+      )
+      await ownerPool.query(
+        `
+          delete from app_private.auth_identities
+          where provider = 'yandex'
+            and (
+              provider_subject_sha256 = any($1::text[])
+              or profile_id = any($2::uuid[])
+            )
+        `,
+        [
+          [APP_SUBJECT_HASH, LINK_SUBJECT_HASH, OTHER_LINK_SUBJECT_HASH],
+          [APP_ACTOR_ID, LINK_ACTOR_ID],
+        ],
+      )
+      await ownerPool.query(
+        'delete from app_private.profile_rollout_assignments where profile_id = any($1::uuid[])',
+        [[APP_ACTOR_ID, LINK_ACTOR_ID]],
+      )
+      await ownerPool.query(
+        'delete from public.profiles where id = any($1::uuid[])',
+        [[APP_ACTOR_ID, LINK_ACTOR_ID]],
+      )
 
       await ownerPool.query(
         `
@@ -397,6 +446,18 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             account_role = excluded.account_role
         `,
         [ACTOR_ID, OTHER_ACTOR_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into public.profiles (id, first_name, account_role)
+          values
+            ($1, 'App actor', 'trainer'),
+            ($2, 'Link actor', 'client')
+          on conflict (id) do update set
+            first_name = excluded.first_name,
+            account_role = excluded.account_role
+        `,
+        [APP_ACTOR_ID, LINK_ACTOR_ID],
       )
       await ownerPool.query(
         `
@@ -566,6 +627,28 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             enabled = excluded.enabled
         `,
         [ACTOR_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into app_private.auth_identities (
+            provider, provider_subject_sha256, profile_id
+          ) values ('yandex', $1, $2)
+          on conflict (provider, provider_subject_sha256) do update set
+            profile_id = excluded.profile_id
+        `,
+        [APP_SUBJECT_HASH, APP_ACTOR_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into app_private.profile_rollout_assignments (
+            profile_id, target_backend, access_mode, enabled
+          ) values ($1, 'yandex', 'read_write', true)
+          on conflict (profile_id) do update set
+            target_backend = excluded.target_backend,
+            access_mode = excluded.access_mode,
+            enabled = excluded.enabled
+        `,
+        [APP_ACTOR_ID],
       )
 
       const runtimeUrl = new URL(ownerUrl)
@@ -786,6 +869,119 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await expect(
         clientsReader.readClients(expiredToken),
       ).rejects.toBeInstanceOf(PilotSessionInvalidError)
+      expect(await readActor(runtimePool)).toBeNull()
+    })
+
+    it('issues and revokes a read-write Yandex app session only for enabled rollout', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const issuer = new DatabaseYandexAppSessionIssuer(
+        runtimePool,
+        () => new Date('2026-08-31T10:00:00.000Z'),
+      )
+      const revoker = new DatabaseYandexAppSessionRevoker(runtimePool)
+      const session = await issuer.issue(APP_SUBJECT_HASH)
+
+      expect(session?.accessMode).toBe('read_write')
+      expect(session?.profile.id).toBe(APP_ACTOR_ID)
+      expect(session?.session.token).toMatch(/^[A-Za-z0-9_-]{43}$/)
+      const sessionDigest = session === undefined
+        ? undefined
+        : hashPilotSessionToken(session.session.token)
+      const storedSessions = await ownerPool.query<SessionDigestRow>(
+        `
+          select token_sha256
+          from app_private.yandex_app_sessions
+          where profile_id = $1 and expires_at > now()
+          order by created_at desc
+          limit 1
+        `,
+        [APP_ACTOR_ID],
+      )
+      expect(storedSessions.rows).toEqual([{ token_sha256: sessionDigest }])
+      expect(storedSessions.rows[0]?.token_sha256).not.toBe(session?.session.token)
+
+      const resolvedActor = await withYandexAppSessionTransaction(
+        runtimePool,
+        sessionDigest ?? '',
+        async (client) => {
+          const rows = await client.query<ActorRow>(
+            'select auth.uid() as actor_id',
+          )
+          return rows[0]?.actor_id ?? null
+        },
+      )
+      expect(resolvedActor).toBe(APP_ACTOR_ID)
+      expect(await revoker.revoke(session?.session.token ?? '')).toBe(true)
+      await expect(
+        withYandexAppSessionTransaction(
+          runtimePool,
+          sessionDigest ?? '',
+          () => Promise.resolve(undefined),
+        ),
+      ).rejects.toBeInstanceOf(YandexAppSessionInvalidError)
+
+      await ownerPool.query(
+        'update app_private.profile_rollout_assignments set enabled = false where profile_id = $1',
+        [APP_ACTOR_ID],
+      )
+      await expect(
+        issuer.issue(APP_SUBJECT_HASH),
+      ).rejects.toBeInstanceOf(YandexAppSessionDeniedError)
+      await ownerPool.query(
+        'update app_private.profile_rollout_assignments set enabled = true where profile_id = $1',
+        [APP_ACTOR_ID],
+      )
+
+      await expect(
+        issuer.issue(PILOT_SUBJECT_HASH),
+      ).rejects.toBeInstanceOf(YandexAppSessionDeniedError)
+      expect(await readActor(runtimePool)).toBeNull()
+    })
+
+    it('links Yandex ID to the current FIT actor without granting rollout access', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const linker = new DatabaseYandexAccountLinker(runtimePool)
+
+      await expect(
+        linker.linkActor(LINK_ACTOR_ID, LINK_SUBJECT_HASH),
+      ).resolves.toEqual({ profileId: LINK_ACTOR_ID })
+      await expect(
+        linker.linkActor(LINK_ACTOR_ID, LINK_SUBJECT_HASH),
+      ).resolves.toEqual({ profileId: LINK_ACTOR_ID })
+
+      const linkedIdentities = await ownerPool.query<CountRow>(
+        `
+          select count(*)::int as count
+          from app_private.auth_identities
+          where provider = 'yandex'
+            and provider_subject_sha256 = $1
+            and profile_id = $2
+        `,
+        [LINK_SUBJECT_HASH, LINK_ACTOR_ID],
+      )
+      expect(linkedIdentities.rows).toEqual([{ count: 1 }])
+      const rolloutRows = await ownerPool.query<CountRow>(
+        `
+          select count(*)::int as count
+          from app_private.profile_rollout_assignments
+          where profile_id = $1
+        `,
+        [LINK_ACTOR_ID],
+      )
+      expect(rolloutRows.rows).toEqual([{ count: 0 }])
+
+      await expect(
+        linker.linkActor(OTHER_ACTOR_ID, LINK_SUBJECT_HASH),
+      ).rejects.toBeInstanceOf(YandexAccountLinkError)
+      await expect(
+        linker.linkActor(LINK_ACTOR_ID, OTHER_LINK_SUBJECT_HASH),
+      ).rejects.toBeInstanceOf(YandexAccountLinkError)
       expect(await readActor(runtimePool)).toBeNull()
     })
 

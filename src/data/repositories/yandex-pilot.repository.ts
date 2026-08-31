@@ -1,15 +1,17 @@
 import { z } from 'zod'
 import { yandexPilotQueries } from '../queries/yandex-pilot.queries'
 
+const profilePayloadSchema = z.object({
+  id: z.uuid(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
+  timezone: z.string().min(1),
+  accountRole: z.enum(['trainer', 'client']),
+})
+
 const profileSchema = z.object({
   accessMode: z.literal('read_only'),
-  profile: z.object({
-    id: z.uuid(),
-    firstName: z.string().nullable(),
-    lastName: z.string().nullable(),
-    timezone: z.string().min(1),
-    accountRole: z.enum(['trainer', 'client']),
-  }),
+  profile: profilePayloadSchema,
 })
 
 const sessionSchema = profileSchema.extend({
@@ -18,6 +20,17 @@ const sessionSchema = profileSchema.extend({
     expiresAt: z.iso.datetime(),
   }),
 })
+
+const appSessionSchema = z.object({
+  accessMode: z.literal('read_write'),
+  profile: profilePayloadSchema,
+  session: z.object({
+    token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+    expiresAt: z.iso.datetime(),
+  }),
+})
+
+const linkedYandexIdentitySchema = z.object({ profileId: z.uuid() })
 
 const clientSchema = z.object({
   id: z.uuid(),
@@ -236,6 +249,8 @@ const generatedSummarySchema = z.object({
 })
 
 export type YandexPilotSession = z.infer<typeof sessionSchema>
+export type YandexAppSession = z.infer<typeof appSessionSchema>
+export type YandexLinkedIdentity = z.infer<typeof linkedYandexIdentitySchema>
 export type YandexPilotClient = z.infer<typeof clientSchema>
 export type YandexPilotMembership = z.infer<typeof membershipSchema>
 export type YandexPilotInvitation = z.infer<typeof invitationSchema>
@@ -252,6 +267,28 @@ function responseError(status: number): Error {
   if (status === 404) return new Error('Профиль для пилота не найден.')
   if (status === 503) return new Error('Пилот временно недоступен. Попробуйте позднее.')
   return new Error('Не удалось проверить доступ к пилоту.')
+}
+
+function appSessionResponseError(status: number): Error {
+  if (status === 401) return new Error('Yandex ID не подтвердил вход. Начните заново.')
+  if (status === 403) {
+    return new Error('Yandex ID связан, но профиль ещё не включён в основной Yandex Cloud rollout.')
+  }
+  if (status === 503) return new Error('Yandex Cloud вход временно недоступен. Попробуйте позднее.')
+  return new Error('Не удалось открыть сессию через Yandex ID.')
+}
+
+function linkResponseError(status: number): Error {
+  if (status === 401) {
+    return new Error('Не удалось подтвердить текущий FIT-аккаунт или Yandex ID. Войдите заново.')
+  }
+  if (status === 403) return new Error('Недостаточно прав для связывания Yandex ID.')
+  if (status === 404) return new Error('Профиль текущего FIT-аккаунта не найден.')
+  if (status === 409) {
+    return new Error('Этот Yandex ID уже связан с другим профилем или профиль уже связан с другим Yandex ID.')
+  }
+  if (status === 503) return new Error('Связывание Yandex ID временно недоступно. Попробуйте позднее.')
+  return new Error('Не удалось связать Yandex ID с FIT-профилем.')
 }
 
 function clientsResponseError(status: number): Error {
@@ -335,6 +372,44 @@ export const yandexPilotRepository = {
     if (!response.ok) throw responseError(response.status)
     const result = sessionSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат сессии.')
+    return result.data
+  },
+  async exchangeCodeForAppSession(
+    apiBaseUrl: string,
+    code: string,
+    codeVerifier: string,
+  ): Promise<YandexAppSession> {
+    let response: Response
+    try {
+      response = await yandexPilotQueries.exchangeCodeForAppSession(apiBaseUrl, code, codeVerifier)
+    } catch {
+      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    }
+    if (!response.ok) throw appSessionResponseError(response.status)
+    const result = appSessionSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый формат Yandex ID сессии.')
+    return result.data
+  },
+  async linkYandexAccount(
+    apiBaseUrl: string,
+    supabaseAccessToken: string,
+    code: string,
+    codeVerifier: string,
+  ): Promise<YandexLinkedIdentity> {
+    let response: Response
+    try {
+      response = await yandexPilotQueries.linkYandexAccount(
+        apiBaseUrl,
+        supabaseAccessToken,
+        code,
+        codeVerifier,
+      )
+    } catch {
+      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    }
+    if (!response.ok) throw linkResponseError(response.status)
+    const result = linkedYandexIdentitySchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый результат связывания.')
     return result.data
   },
   async listClients(apiBaseUrl: string, sessionToken: string): Promise<YandexPilotClient[]> {
