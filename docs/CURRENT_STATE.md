@@ -114,10 +114,19 @@
   linking-card, linking callback и read-only Yandex pilot callback; `npm run
   check`; WebKit default-off и flag-on для тренера/клиента на 390 px. После
   merge с `e5362ff` повторены targeted tests, полный check и WebKit smoke.
+- YAFIT-421, пункт 6: сравнение сокращается до трёх главных изменений, короткой
+  подписи месяцев и одного ограничения выборки; пустые состояния не показывают
+  диапазоны дат и служебный текст. Полный `npm run check` зелёный: frontend
+  995/995, API 276/276, infra 72/72, lint/typecheck/build. Локальный database
+  gate зелёный: Supabase SQL/RLS 886/886, PostgreSQL actor/RLS 28/28, generated
+  types и migration safety. Точечные тесты 45/45; visual baselines клиента
+  390/430 и тренера 1440 в light/dark просмотрены и повторены без обновления на
+  Darwin и Linux, по 3/3. Перед merge обязательны зелёные `app`, `database`,
+  `e2e` и production smoke.
 ## Ближайший порядок
-1. Залить PR с UI-привязкой Yandex ID за default-off rollout.
-2. После merge подключить основной Assistant UI к Yandex API через sticky tenant routing
-   после явного session/linking контракта.
-3. После export/import tooling провести две репетиции cutover.
+1. Завершить пункт 6 YAFIT-421: полный gate, PR, CI, merge и production smoke.
+2. Только после production перейти к пункту 7 — подробному анализу.
+3. Assistant, `app_feedback` и Yandex parity/cutover ведутся отдельно; после
+   session linking подключить основной Assistant UI через sticky tenant routing.
 ## Отложено
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.

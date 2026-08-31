@@ -236,7 +236,7 @@ describe('clientProgressPresentation', () => {
       comparable: true,
       facts: [],
       conclusions: [],
-      emptyMessage: 'Текущий период сохранён как отправная точка. Сравнение появится, когда накопится следующий сопоставимый период.',
+      emptyMessage: 'Сравнение появится, когда будут данные за два периода.',
     })
     expect(result.goal).toBeUndefined()
     expect(result.nextWorkout).toBeUndefined()
