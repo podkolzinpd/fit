@@ -25,6 +25,7 @@ import type { PilotClientsResponse } from './clients.js'
 import type { PilotClientsReader } from './pilot-clients-reader.js'
 import type { PilotAppFeedbackWriter } from './pilot-app-feedback-writer.js'
 import type { PilotAssistantState } from './pilot-assistant-state.js'
+import type { PilotAssistantTurnRunner } from './pilot-assistant-turn.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import { PilotConnectionCommandError } from './connection-commands.js'
@@ -720,6 +721,19 @@ function buildAssistantState(error?: Error): {
     completeSummary,
     cancelAction,
   }
+}
+
+function buildAssistantTurnRunner(error?: Error): {
+  pilotAssistantTurnRunner: PilotAssistantTurnRunner
+  runTurn: ReturnType<typeof vi.fn>
+} {
+  const runTurn = vi.fn(() => error === undefined
+    ? Promise.resolve({
+        reply: 'Могу коротко пообщаться и записать тренировку.',
+        action: null,
+      })
+    : Promise.reject(error))
+  return { pilotAssistantTurnRunner: { runTurn }, runTurn }
 }
 
 function buildPushNotifications(error?: Error): {
@@ -2972,6 +2986,39 @@ describe('pilot assistant state', () => {
     expect(state.cancelAction).toHaveBeenCalledWith(sessionToken, PROFILE_ID, 1)
   })
 
+  it('dispatches native turns through the opaque Yandex pilot session', async () => {
+    const turnRunner = buildAssistantTurnRunner()
+    const app = buildApp({
+      pilotAssistantTurnRunner: turnRunner.pilotAssistantTurnRunner,
+      logger: false,
+    })
+    apps.push(app)
+    const turnId = '6e577cc7-3b56-4a86-bc85-1ce2426ce249'
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/assistant/turn',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        conversation_id: PROFILE_ID,
+        turn_id: turnId,
+        message: '  что ты умеешь?  ',
+      },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.json()).toEqual({
+      reply: 'Могу коротко пообщаться и записать тренировку.',
+      action: null,
+    })
+    expect(turnRunner.runTurn).toHaveBeenCalledWith(sessionToken, {
+      conversationId: PROFILE_ID,
+      turnId,
+      message: 'что ты умеешь?',
+    })
+  })
+
   it('validates input and maps state failures without database details', async () => {
     const invalidState = buildAssistantState()
     const invalidApp = buildApp({
@@ -3003,12 +3050,33 @@ describe('pilot assistant state', () => {
     expect(conflict.statusCode).toBe(409)
     expect(conflict.json()).toEqual({ error: 'version_conflict' })
     expect(conflict.body).not.toContain('Assistant state operation failed')
+
+    const turnState = buildAssistantTurnRunner(new AssistantStateError('conflict'))
+    const turnApp = buildApp({
+      pilotAssistantTurnRunner: turnState.pilotAssistantTurnRunner,
+      logger: false,
+    })
+    apps.push(turnApp)
+    const turnConflict = await turnApp.inject({
+      method: 'POST',
+      url: '/v1/assistant/turn',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        conversation_id: PROFILE_ID,
+        turn_id: PROFILE_ID,
+        message: 'Привет',
+      },
+    })
+    expect(turnConflict.statusCode).toBe(409)
+    expect(turnConflict.json()).toEqual({ error: 'version_conflict' })
   })
 
   it('requires an opaque pilot session before reading state', async () => {
     const state = buildAssistantState()
+    const turnRunner = buildAssistantTurnRunner()
     const app = buildApp({
       pilotAssistantState: state.pilotAssistantState,
+      pilotAssistantTurnRunner: turnRunner.pilotAssistantTurnRunner,
       logger: false,
     })
     apps.push(app)
@@ -3020,5 +3088,16 @@ describe('pilot assistant state', () => {
 
     expect(response.statusCode).toBe(401)
     expect(state.listConversations).not.toHaveBeenCalled()
+
+    const turnResponse = await app.inject({
+      method: 'POST',
+      url: '/v1/assistant/turn',
+      payload: {
+        conversation_id: PROFILE_ID,
+        message: 'Привет',
+      },
+    })
+    expect(turnResponse.statusCode).toBe(401)
+    expect(turnRunner.runTurn).not.toHaveBeenCalled()
   })
 })

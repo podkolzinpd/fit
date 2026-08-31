@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-31
-Проверенный базовый `main`: `11a8965` (`feat(yandex): port push notification state (#715)`)
+Проверенный базовый `main`: `b4ab65c` (`feat(yandex): port assistant state (#718)`)
 ## Текущий release gate
 
 - Foundation UI Identity v1 принята. Задачи 8–28 — клиентский, тренерский,
@@ -47,19 +47,10 @@
   периода: лучший результат, тренировки, `X/Y` недель, улучшенные упражнения,
   карта тела, сравнение, связь с целью и ближайший план. Тренер видит plan/fact,
   сигналы и публикацию; выполнение плана не выдаётся за прогресс к цели.
-- Верх Progress закреплён в порядке `Период → Главное сейчас → Цель → Карта
-  тела → Сравнение → Измерения → Регулярность → Результаты → Следующий шаг →
-  Подробный анализ`. Карта сохраняет режимы прогресса/нагрузки и виды
-  фигуры, но рядом с изображением показывает только выбранную зону, точное
-  рассчитанное значение и один короткий вывод; упражнения раскрываются отдельно.
-  LLM-текст допускается только при совпадении упражнения и рассчитанного значения,
-  иначе используется deterministic fallback без назначения программы.
-- Сравнение использует только окна одинаковой длины и подтверждённые факты:
-  цель, стандартные замеры, силовой результат и объём, кардио, активные недели,
-  тренировки и подходы. Видны четыре плоские приоритетные строки, остальные
-  раскрываются. LLM-текст обязан совпасть с предметом и минимум двумя числами
-  `раньше → сейчас`; вывод с советом, причиной или новым числом заменяется
-  deterministic fallback. Первый период остаётся нейтральной отправной точкой.
+- Progress закреплён в порядке `Период → Главное сейчас → Цель → Карта тела →
+  Сравнение → Измерения → Регулярность → Результаты → Следующий шаг →
+  Подробный анализ`. LLM-текст допускается только при совпадении предмета и
+  рассчитанных чисел, иначе используется deterministic fallback.
 - Измерения вынесены в самостоятельный аналитический блок: приоритетный
   показатель, текущее значение, delta, компактный график выбранного периода,
   начало/конец, min/max, связь с целью, freshness и sufficiency. Поддерживаются
@@ -91,9 +82,9 @@
 - Stage содержит Managed PostgreSQL 17 и Serverless Containers. Миграции
   доставляются автоматически через GitHub OIDC, private runner и forward-only
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
-- Ограниченный Yandex ID pilot и доменная цепочка представлены в `000001–000025`.
-  Активная ветка добавляет `000026_assistant_state`: actor-scoped conversations,
-  messages/actions, idempotent turn и versioned apply/cancel/summary. Состояние
+- Ограниченный Yandex ID pilot и доменная цепочка представлены в `000001–000026`.
+  `000026_assistant_state` добавляет actor-scoped conversations/messages/actions,
+  versioned apply/cancel/summary и grants только через `fit_api`. Состояние
   Assistant и push secrets не выставляются через `ops_readonly`.
 - Native AI использует metadata IAM token без статического ключа; точную роль
   один раз выдаёт `fit-stage-api` администратор, а OIDC не меняет folder IAM.
@@ -109,13 +100,19 @@
   stage-проверка; локальный lifecycle и RLS-матрица зелёные. Production остаётся
   на Supabase; полный cutover не выполнен.
 ## Проверки активной ветки
-- Assistant state: 97 целевых API и 26 Yandex actor/RLS тестов зелёные;
-  `npm run check` — 983 frontend, 263 API и 67 infra; Supabase 74/886 зелёный.
-- Неиспользуемый email Edge Function `invite-client` удалён: production UI уже
-  использует одноразовый код. UI, production routing и deployment не менялись.
+- `codex/yandex-native-turn-routing` добавляет native stage endpoint
+  `POST /v1/assistant/turn`, общий parser turn request, `DatabasePilotAssistantTurnRunner`
+  и typed frontend transport `yandexPilotRepository.sendAssistantTurn`.
+- Endpoint использует только opaque `x-fit-pilot-session`, actor transaction,
+  deterministic capabilities/workout turn/fallback и idempotent replay; повтор
+  `turn_id` с другим текстом отдаёт conflict. Основной UI и production routing
+  не переключались.
+- `npm run check` зелёный: 984 frontend tests, 72 infra policy tests, API
+  `lint/typecheck/test/build` зелёные (269 API tests, 26 skipped). БД не менялась,
+  `db:reset/db:test` не запускались.
 ## Ближайший порядок
-1. Завершить isolated Assistant state slice и доставить его обычным stage gate.
-2. Перенести native turn orchestration и подключить sticky tenant routing.
-3. После export/import tooling провести две репетиции cutover.
+1. Подключить основной Assistant UI к Yandex API через sticky tenant routing
+   после явного session/linking контракта.
+2. После export/import tooling провести две репетиции cutover.
 ## Отложено
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.

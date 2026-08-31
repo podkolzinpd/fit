@@ -21,6 +21,7 @@ import { AssistantStateError } from './assistant-state.js'
 import {
   readAssistantActionRequest,
   readAssistantConversationRequest,
+  readAssistantTurnRequest,
   readAssistantVersionRequest,
 } from './assistant-state-request.js'
 import { PushNotificationCommandError } from './push-notifications-command.js'
@@ -47,6 +48,7 @@ import {
 import type { PilotClientsReader } from './pilot-clients-reader.js'
 import type { PilotAppFeedbackWriter } from './pilot-app-feedback-writer.js'
 import type { PilotAssistantState } from './pilot-assistant-state.js'
+import type { PilotAssistantTurnRunner } from './pilot-assistant-turn.js'
 import type { PilotPushNotifications } from './pilot-push-notifications.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
@@ -102,6 +104,7 @@ interface BuildAppOptions {
   oauthCodeProvider?: YandexOAuthCodeProvider
   pilotAppFeedbackWriter?: PilotAppFeedbackWriter
   pilotAssistantState?: PilotAssistantState
+  pilotAssistantTurnRunner?: PilotAssistantTurnRunner
   pilotPushNotifications?: PilotPushNotifications
   pilotClientsReader?: PilotClientsReader
   pilotConnectionsReader?: PilotConnectionsReader
@@ -793,6 +796,22 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         .header('cache-control', 'no-store')
         .code(201)
         .send({ conversation }),
+    )
+  })
+
+  app.post('/v1/assistant/turn', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const command = readAssistantTurnRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (command === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    const runner = options.pilotAssistantTurnRunner
+    if (runner === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => runner.runTurn(sessionToken, command),
+      (result) => reply.header('cache-control', 'no-store').send(result),
     )
   })
 
