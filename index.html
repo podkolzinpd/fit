@@ -328,27 +328,29 @@ h3 {
   font-size: 18px;
   line-height: 1.25;
 }
-.problem-trainer-flow {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  min-height: 78px;
-}
-.problem-trainer-flow span {
-  position: relative;
-  padding: 9px 22px 0 18px;
+.problem-trainer-context {
+  display: flex;
+  align-items: center;
+  min-height: 58px;
+  padding: 0 22px;
   border-left: 1px solid rgba(255,255,255,.14);
+  border-right: 1px solid rgba(255,255,255,.14);
+}
+.problem-trainer-context span {
   color: rgba(246,242,234,.76);
-  font-size: 17px;
-  line-height: 1.25;
+  font-size: 18px;
+  line-height: 1.2;
+  white-space: nowrap;
 }
-.problem-trainer-flow span::after {
-  content: "→";
-  position: absolute;
-  top: 7px;
-  right: 7px;
+.problem-trainer-context i {
+  flex: 1 1 auto;
+  min-width: 24px;
+  margin: 0 15px;
   color: rgba(246,242,234,.28);
+  font-size: 18px;
+  font-style: normal;
+  text-align: center;
 }
-.problem-trainer-flow span:last-child::after { content: ""; }
 .problem-consequence {
   position: absolute;
   left: 92px;
@@ -1780,12 +1782,8 @@ h3 {
       </div>
       <div class="trainer-layer">
         <div class="trainer-layer-label"><span>ТРЕНЕРСКИЙ СЛОЙ</span><strong>Единый контекст сопровождения</strong></div>
-        <div class="problem-trainer-flow">
-          <span>Понять цель</span>
-          <span>Дать программу</span>
-          <span>Увидеть факт</span>
-          <span>Дать обратную связь</span>
-          <span>Скорректировать план</span>
+        <div class="problem-trainer-context">
+          <span>Цель</span><i>→</i><span>Программа</span><i>→</i><span>Факт</span><i>→</i><span>Обратная связь</span><i>→</i><span>Корректировка</span>
         </div>
       </div>
       <div class="problem-consequence">
