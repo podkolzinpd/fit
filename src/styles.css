@@ -4154,12 +4154,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-clients-identity .clients-page .page-header { min-height:44px; margin-bottom:16px }
 .trainer-clients-identity .clients-page .page-header h1 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
 .trainer-clients-identity .clients-page .page-header .button { display:inline-flex; align-items:center; justify-content:center; height:44px; min-height:44px; padding:0 14px; border:1px solid var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:500; line-height:1; white-space:nowrap; box-shadow:none}
-.trainer-clients-identity .clients-search,
-.trainer-clients-identity .clients-search input { min-height:48px; margin-bottom:12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); box-shadow:none}
-.trainer-clients-identity .clients-search { padding:0 8px 0 14px }
+.trainer-clients-identity .clients-search { min-height:48px; margin-bottom:12px; padding:0 8px 0 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); box-shadow:none}
 .trainer-clients-identity .clients-search:focus-within { border-color:var(--fg); box-shadow:none}
 .trainer-clients-identity .clients-search > svg { color:var(--secondary-label-fg) }
-.trainer-clients-identity .clients-search input { color:var(--fg); font-size:16px; font-weight:400 }
+.trainer-clients-identity .clients-search input { min-height:46px; margin:0; padding:0; border:0; border-radius:0; outline:0; background:transparent; color:var(--fg); font-size:16px; font-weight:400; box-shadow:none}
+.trainer-clients-identity .clients-search input:focus-visible { outline:0 }
 .trainer-clients-identity .clients-search input::placeholder { color:var(--secondary-label-fg) }
 .trainer-clients-identity .clients-search-clear { width:44px; height:44px; min-height:44px; color:var(--secondary-label-fg) }
 .trainer-clients-identity .clients-search-clear:focus-visible { outline:2px solid var(--fg); outline-offset:-2px }
