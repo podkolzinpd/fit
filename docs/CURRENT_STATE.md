@@ -3,7 +3,7 @@
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
 Обновлено: 2026-08-31
-Проверенный базовый `main`: `605a0bf` (`Progress: встроить замеры и ориентир цели (#720)`)
+Проверенный базовый `main`: `1f6d301` (`feat(yandex): add session linking foundation (#721)`)
 ## Текущий release gate
 
 - Foundation UI Identity v1 принята. Задачи 8–28 — клиентский, тренерский,
@@ -98,18 +98,17 @@
 - Реальный invite → join → leave/remove smoke — внешняя проверка. Production
   остаётся на Supabase; полный cutover не выполнен.
 ## Проверки активной ветки
-- `codex/yandex-session-linking` добавляет foundation для полноценной Yandex ID
-  session и безопасного linking: `POST /v1/auth/yandex/session`,
-  `POST /v1/auth/yandex/link`, `app_private.yandex_app_sessions`,
-  `public.link_yandex_identity` и typed frontend methods. Production UI,
-  `auth-context` и sticky routing не переключались.
-- Проверено локально: `npm --prefix services/api run check`,
-  `TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:55432/fit_actor_test npm --prefix services/api run test:db`,
-  `npm run db:reset`, `npm run db:test`, `npm run migrations:check`,
-  `npm run check` после merge с `605a0bf`.
+- `codex/yandex-session-linking-ui` добавляет default-off карточку привязки
+  Yandex ID в профиль тренера/клиента и link-mode callback поверх уже
+  существующего `POST /v1/auth/yandex/link`. Вне
+  `VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS` UI не меняется; основной вход,
+  `auth-context`, production routing и Supabase остаются прежними.
+- Проверено локально: targeted tests для feature flags, PKCE intent,
+  linking-card, linking callback и read-only Yandex pilot callback; `npm run
+  check`; WebKit default-off и flag-on для тренера/клиента на 390 px.
 ## Ближайший порядок
-1. Подключить UI linking/обычной Yandex ID session за default-off rollout.
-2. Подключить основной Assistant UI к Yandex API через sticky tenant routing
+1. Залить PR с UI-привязкой Yandex ID за default-off rollout.
+2. После merge подключить основной Assistant UI к Yandex API через sticky tenant routing
    после явного session/linking контракта.
 3. После export/import tooling провести две репетиции cutover.
 ## Отложено

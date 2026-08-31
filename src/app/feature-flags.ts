@@ -62,6 +62,14 @@ export function isTodayGreetingPilotEnabled(userId: string) {
   return allowedUserIds.includes(userId)
 }
 
+function isUserInPublicAllowlist(userId: string, value: unknown): boolean {
+  const allowedUserIds = String(value ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  return allowedUserIds.includes(userId)
+}
+
 export interface YandexIdPilotConfig {
   apiBaseUrl: string
   clientId: string
@@ -87,4 +95,17 @@ export function getYandexIdPilotConfig(): YandexIdPilotConfig | null {
   const apiBaseUrl = String(import.meta.env.VITE_YANDEX_API_BASE_URL ?? '').trim().replace(/\/$/, '')
   if (clientId.length === 0 || clientId.length > 200 || !isSafePilotApiUrl(apiBaseUrl)) return null
   return { apiBaseUrl, clientId }
+}
+
+// Привязка существующего FIT-профиля к Yandex ID — отдельный default-off
+// rollout. Он намеренно не переиспользует read-only pilot и Apple Health
+// allowlist: UUID видны во frontend bundle и служат только для показа UI.
+export function isYandexSessionLinkingPilotEnabled(userId: string): boolean {
+  if (import.meta.env.VITE_YANDEX_SESSION_LINKING_ENABLED !== 'true') return false
+  return isUserInPublicAllowlist(userId, import.meta.env.VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS)
+}
+
+export function getYandexSessionLinkingConfig(userId: string): YandexIdPilotConfig | null {
+  if (!isYandexSessionLinkingPilotEnabled(userId)) return null
+  return getYandexIdPilotConfig()
 }
