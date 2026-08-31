@@ -195,6 +195,32 @@ const parsedWorkoutSchema = z.object({
     suggestedExerciseRefs: z.array(z.string()),
   })),
 })
+const assistantTurnActionSchema = z.object({
+  id: z.uuid().optional(),
+  tool: z.enum([
+    'record_workout',
+    'create_client_draft',
+    'create_program_draft',
+    'schedule_program',
+    'summarize_progress',
+  ]),
+  status: z.enum(['needs_input', 'proposed']),
+  title: z.string().min(1).max(200),
+  description: z.string().min(1).max(1_000),
+  payload: z.record(z.string(), z.unknown()),
+  lifecycleStatus: z.enum([
+    'proposed',
+    'applying',
+    'applied',
+    'failed',
+    'cancelled',
+  ]).optional(),
+  result: z.record(z.string(), z.unknown()).nullable().optional(),
+})
+const assistantTurnSchema = z.object({
+  reply: z.string().min(1).max(4_000),
+  action: assistantTurnActionSchema.nullable(),
+})
 const storedSummarySchema = z.object({
   id: z.uuid(),
   client_id: z.uuid(),
@@ -217,6 +243,7 @@ export type YandexPilotConnections = Omit<z.infer<typeof connectionsSchema>, 'ac
 export type YandexPilotCreatedInvitation = z.infer<typeof createdInvitationSchema>['invitation']
 export type YandexPilotTrainingData = Omit<z.infer<typeof trainingDataSchema>, 'accessMode'>
 export type YandexPilotParsedWorkout = z.infer<typeof parsedWorkoutSchema>
+export type YandexPilotAssistantTurn = z.infer<typeof assistantTurnSchema>
 export type YandexPilotStoredSummary = z.infer<typeof storedSummarySchema>
 
 function responseError(status: number): Error {
@@ -241,6 +268,16 @@ function commandResponseError(status: number): Error {
   if (status === 422) return new Error('Основного тренера нельзя отключить или вывести из пространства.')
   if (status === 503) return new Error('Пилот временно недоступен. Попробуйте позднее.')
   return new Error('Не удалось изменить связи в stage.')
+}
+
+function assistantTurnResponseError(status: number): Error {
+  if (status === 401) return new Error('Сессия пилота истекла. Начните вход через Yandex ID заново.')
+  if (status === 403) return new Error('Недостаточно прав для ассистента.')
+  if (status === 404) return new Error('Диалог ассистента уже недоступен. Обновите страницу.')
+  if (status === 409) return new Error('Этот запрос ассистента уже был использован с другим текстом.')
+  if (status === 400) return new Error('Запрос ассистента имеет некорректный формат.')
+  if (status === 503) return new Error('Ассистент stage временно недоступен. Попробуйте позднее.')
+  return new Error('Не удалось выполнить запрос ассистента.')
 }
 
 async function commandResponse(request: () => Promise<Response>): Promise<Response> {
@@ -274,6 +311,17 @@ async function aiResponse(request: () => Promise<Response>): Promise<Response> {
     throw new Error('ИИ временно недоступен. Попробуйте позднее.')
   }
   throw new Error('Не удалось выполнить запрос ИИ.')
+}
+
+async function assistantTurnResponse(request: () => Promise<Response>): Promise<Response> {
+  let response: Response
+  try {
+    response = await request()
+  } catch {
+    throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+  }
+  if (!response.ok) throw assistantTurnResponseError(response.status)
+  return response
 }
 
 export const yandexPilotRepository = {
@@ -345,6 +393,20 @@ export const yandexPilotRepository = {
     ))
     const result = parsedWorkoutSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат разбора тренировки.')
+    return result.data
+  },
+  async sendAssistantTurn(
+    apiBaseUrl: string,
+    sessionToken: string,
+    conversationId: string,
+    turnId: string,
+    message: string,
+  ): Promise<YandexPilotAssistantTurn> {
+    const response = await assistantTurnResponse(() => yandexPilotQueries.sendAssistantTurn(
+      apiBaseUrl, sessionToken, conversationId, turnId, message,
+    ))
+    const result = assistantTurnSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый формат ответа ассистента.')
     return result.data
   },
   async listTrainingSummaries(

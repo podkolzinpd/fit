@@ -1,5 +1,10 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
+import {
+  readAssistantTurnRequest,
+  type AssistantTurnRequest,
+} from '../assistant-state-request.js'
+
 const completionUrl = 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion'
 const releaseSha = process.env.RELEASE_SHA?.trim() || 'unknown'
 const assistantSystemPrompt = 'Ты безопасный ассистент фитнес-приложения. Не ставь диагнозов и не давай опасных рекомендаций. Любое write-действие только как предложенная карточка с подтверждением; никогда не утверждай, что данные уже сохранены.'
@@ -12,7 +17,6 @@ const tools = ['record_workout', 'create_client_draft', 'create_program_draft', 
 const enabledTools = ['record_workout'] as const
 type Tool = typeof tools[number]
 
-export type AssistantTurnRequest = { conversationId: string; message: string; turnId?: string }
 export type AssistantAction = { id?: string; tool: Tool; status: 'needs_input' | 'proposed'; title: string; description: string; payload: Record<string, unknown> }
 export type AssistantTurnResponse = { reply: string; action: AssistantAction | null }
 
@@ -215,14 +219,7 @@ export function summaryTurn(
   })
 }
 
-export function readAssistantTurnRequest(value: unknown): AssistantTurnRequest | undefined {
-  if (!record(value) || typeof value.conversation_id !== 'string' || typeof value.message !== 'string') return undefined
-  const message = value.message.trim()
-  if (!UUID.test(value.conversation_id) || message.length === 0 || message.length > 4_000) return undefined
-  const turnId = value.turn_id === undefined ? undefined : typeof value.turn_id === 'string' && UUID.test(value.turn_id) ? value.turn_id : undefined
-  if (value.turn_id !== undefined && turnId === undefined) return undefined
-  return { conversationId: value.conversation_id, ...(turnId === undefined ? {} : { turnId }), message }
-}
+export { readAssistantTurnRequest }
 
 export function isTurnIdReuse(existingContent: unknown, requestedContent: string): boolean {
   return typeof existingContent === 'string' && existingContent !== requestedContent

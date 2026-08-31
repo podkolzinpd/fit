@@ -198,6 +198,32 @@ describe('yandexPilotQueries', () => {
       },
     )
 
+    await yandexPilotQueries.sendAssistantTurn(
+      baseUrl,
+      token,
+      id,
+      'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b',
+      'что ты умеешь?',
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/assistant/turn`,
+      {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          'content-type': 'application/json',
+          'x-fit-pilot-session': token,
+        },
+        body: JSON.stringify({
+          conversation_id: id,
+          turn_id: 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b',
+          message: 'что ты умеешь?',
+        }),
+      },
+    )
+    expect(fetchMock.mock.calls.at(-1)?.[1]?.headers)
+      .not.toHaveProperty('authorization')
+
     await yandexPilotQueries.applyAssistantAction(
       baseUrl,
       token,

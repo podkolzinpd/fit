@@ -8,6 +8,7 @@ const queries = vi.hoisted(() => ({
   listConnections: vi.fn(),
   listTrainingData: vi.fn(),
   parseWorkout: vi.fn(),
+  sendAssistantTurn: vi.fn(),
   listTrainingSummaries: vi.fn(),
   generateTrainingSummary: vi.fn(),
   claimInvitation: vi.fn(),
@@ -172,6 +173,7 @@ describe('yandexPilotRepository', () => {
     queries.listConnections.mockReset()
     queries.listTrainingData.mockReset()
     queries.parseWorkout.mockReset()
+    queries.sendAssistantTurn.mockReset()
     queries.listTrainingSummaries.mockReset()
     queries.generateTrainingSummary.mockReset()
     queries.claimInvitation.mockReset()
@@ -213,6 +215,46 @@ describe('yandexPilotRepository', () => {
       'https://stage.example.test', 's'.repeat(43), CLIENT_ID,
       '2026-08-01', '2026-08-26',
     )).resolves.toEqual({ data: generated, cached: false })
+  })
+
+  it('validates native Assistant turn responses and maps turn conflicts', async () => {
+    queries.sendAssistantTurn.mockResolvedValueOnce(new Response(JSON.stringify({
+      reply: 'Продолжайте диктовку.',
+      action: {
+        tool: 'record_workout',
+        status: 'needs_input',
+        title: 'Новая тренировка',
+        description: 'Диктуйте упражнения.',
+        payload: { step: 'workout' },
+      },
+    }), { status: 200 }))
+
+    await expect(yandexPilotRepository.sendAssistantTurn(
+      'https://stage.example.test',
+      's'.repeat(43),
+      CLIENT_ID,
+      'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b',
+      'запиши тренировку',
+    )).resolves.toMatchObject({
+      reply: 'Продолжайте диктовку.',
+      action: { tool: 'record_workout', status: 'needs_input' },
+    })
+    expect(queries.sendAssistantTurn).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      's'.repeat(43),
+      CLIENT_ID,
+      'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b',
+      'запиши тренировку',
+    )
+
+    queries.sendAssistantTurn.mockResolvedValueOnce(new Response('{}', { status: 409 }))
+    await expect(yandexPilotRepository.sendAssistantTurn(
+      'https://stage.example.test',
+      's'.repeat(43),
+      CLIENT_ID,
+      'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b',
+      'другой текст',
+    )).rejects.toThrow('уже был использован')
   })
 
   it('explains an empty summary period without invitation wording', async () => {
