@@ -19,7 +19,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Trainer response | После завершения клиент видит реакцию 👍 / 🔥 / 💪 и короткий ответ ответственного тренера | Implemented: trainer-author для назначения, root trainer для client-authored workout, автор/время, idempotent versioned RPC, realtime/refetch и RLS matrix |
 | Trainer attention | Клиент явно задаёт вопрос по завершённой тренировке, а основной тренер видит одну приоритетную задачу на клиента | Implemented: question → discomfort → planning priority, reply/explicit resolution, two-week planning snooze, realtime, RLS/SQL and mobile WebKit acceptance |
 | Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; Trainer first shows current week and the shared AI card, with running and measurements on explicit subroutes; Client starts with an interactive front/back body map of confirmed progress and performed-set load; duplicate-date create opens the existing entry without a failing DB request; visual regression covers Client 390/430 and Trainer 390/430/1440 px |
-| Assistant | Trainer-only history, idempotent turns, proposed actions and explicit confirmation | Implemented in production Supabase; Yandex stage now has actor-scoped durable conversations/messages/actions and versioned apply/cancel/summary contracts, while UI routing and native Yandex turn orchestration remain pending |
+| Assistant | Trainer-only history, idempotent turns, proposed actions and explicit confirmation | Implemented in production Supabase; Yandex stage now has actor-scoped durable conversations/messages/actions, native `POST /v1/assistant/turn` for deterministic workout turns, and versioned apply/cancel/summary contracts; main UI sticky routing remains pending |
 | Wearables | Клиент подключает системное health-хранилище и видит локальные показатели активности и восстановления | Prototype: iOS HealthKit read-only PoC for sleep, steps, active energy, resting HR and HRV; server sync, trainer visibility and real-device acceptance pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; acceptance matrix pending |
 
@@ -69,9 +69,12 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
   версиями и tenant-проверками. Callback по-прежнему показывает тренировки
   только для чтения. Post-workout feedback, trainer reaction/response,
   questions, explicit resolution и attention snooze перенесены в отдельный
-  stage API contract с `000015`, actor/RLS и idempotency-проверками; основной UI
-  на этот API пока не переключён. Production продолжает использовать Supabase, а Yandex callback
-  не открывает основное приложение.
+  stage API contract с `000015`, actor/RLS и idempotency-проверками. Assistant
+  state в `000026` поддерживает native turn endpoint через opaque Yandex pilot
+  session: capabilities, idempotent replay, conflict при повторе turnId с другим
+  текстом и proposed workout draft с persistent action id. Основной UI на эти
+  stage API пока не переключён. Production продолжает использовать Supabase, а
+  Yandex callback не открывает основное приложение.
 - Client overview в stage возвращает последний вес, количество завершённых
   тренировок, процент выполнения, дату последней тренировки, дни в работе
   и attention-сигнал только из доступных actor-у фактов. Pilot callback обновляет

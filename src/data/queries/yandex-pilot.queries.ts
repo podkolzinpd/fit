@@ -57,6 +57,25 @@ export const yandexPilotQueries = {
     cache: 'no-store',
     headers: { 'x-fit-pilot-session': sessionToken },
   }),
+  sendAssistantTurn: (
+    apiBaseUrl: string,
+    sessionToken: string,
+    conversationId: string,
+    turnId: string,
+    message: string,
+  ) => fetch(`${apiBaseUrl}/v1/assistant/turn`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      'content-type': 'application/json',
+      'x-fit-pilot-session': sessionToken,
+    },
+    body: JSON.stringify({
+      conversation_id: conversationId,
+      turn_id: turnId,
+      message,
+    }),
+  }),
   listAssistantActions: (
     apiBaseUrl: string,
     sessionToken: string,

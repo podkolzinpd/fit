@@ -139,6 +139,13 @@ YANDEX_CLOUD_MODEL_ID=yandexgpt
 Yandex Cloud только агрегаты завершённых тренировок и сохраняет usage модели
 для контроля стоимости.
 
+Stage API для Assistant turn (`POST /v1/assistant/turn`) использует opaque
+`x-fit-pilot-session`, actor-context в PostgreSQL и deterministic fallback для
+маленькой болталки. Отдельный Supabase JWT, OAuth Client secret или новый
+YandexGPT secret для этого endpoint не нужны. Наличие endpoint не переключает
+production Assistant: основной UI переедет на него только отдельным sticky tenant
+routing rollout.
+
 ## Google OAuth
 
 Создайте отдельный Google Web OAuth client для V2 и добавьте redirect URI:
