@@ -171,4 +171,52 @@ describe('yandexPilotQueries', () => {
       expect.objectContaining({ method: 'DELETE' }),
     )
   })
+
+  it('uses the opaque session for Assistant history and versioned actions', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValue(new Response('{}', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const baseUrl = 'https://stage.example.test'
+    const token = 's'.repeat(43)
+    const id = '6e577cc7-3b56-4a86-bc85-1ce2426ce249'
+
+    await yandexPilotQueries.createAssistantConversation(baseUrl, token, 'План')
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/assistant/conversations`,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ title: 'План' }),
+      }),
+    )
+
+    await yandexPilotQueries.listAssistantMessages(baseUrl, token, id)
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/assistant/conversations/${id}/messages`,
+      {
+        cache: 'no-store',
+        headers: { 'x-fit-pilot-session': token },
+      },
+    )
+
+    await yandexPilotQueries.applyAssistantAction(
+      baseUrl,
+      token,
+      id,
+      { workout: { id } },
+      3,
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/assistant/actions/${id}/apply`,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ input: { workout: { id } }, expectedVersion: 3 }),
+      }),
+    )
+    const request = fetchMock.mock.calls.at(-1)?.[1]
+    expect(request?.headers).toEqual({
+      'content-type': 'application/json',
+      'x-fit-pilot-session': token,
+    })
+    expect(request?.headers).not.toHaveProperty('authorization')
+  })
 })
