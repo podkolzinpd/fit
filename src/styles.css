@@ -1735,6 +1735,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-set-compact-values { min-width:0; display:flex; flex-direction:column; gap:1px; overflow:hidden }
 .live-set-compact-values strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--fg); font-size:var(--type-body-size) }
 .live-set-compact-values small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:var(--type-caption-size) }
+.live-set-fill-action { grid-column:2 / -1; width:100%; min-height:44px; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px; padding:0 2px 0 0; border:0; border-radius:var(--radius-sm); background:transparent; color:var(--fg); text-align:left }
+.live-set-fill-action:hover { background:var(--surface-sunken) }
+.live-set-fill-action:focus-visible { outline:2px solid var(--fg); outline-offset:2px }
+.live-set-fill-label { display:inline-flex; align-items:center; gap:2px; min-height:44px; padding-left:8px; font-size:var(--type-body-size); font-weight:var(--weight-medium); white-space:nowrap }
+.live-set-fill-label svg { width:16px; height:16px }
 .live-set-compact-action { min-height:44px; padding:6px 8px; border-radius:var(--radius-sm); background:var(--accent); color:var(--on-accent); font-size:var(--type-caption-size); font-weight:var(--weight-bold); text-align:center }
 .live-set-compact.confirmed .live-set-compact-action { min-height:44px; padding:4px 2px; background:transparent; color:var(--success-fg); font-size:18px }
 .live-set-grid { position:relative; display:grid; grid-template-columns:28px minmax(0, 1fr) minmax(0, 1fr) 44px; gap:6px; min-height:50px; padding:5px 0; border-top:0 }
@@ -3145,6 +3150,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-identity .live-set-compact { grid-template-columns:24px minmax(0,1fr) 52px; min-height:56px; border-color:var(--border) }
 .live-identity .live-set-compact-values strong { color:var(--fg); font-size:14px; font-weight:500 }
 .live-identity .live-set-compact-values small { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.live-identity .live-set-fill-action { border-radius:10px; color:var(--fg) }
+.live-identity .live-set-fill-label { font-size:14px; font-weight:500 }
 .live-identity .live-set-compact-action { min-height:44px; border-radius:10px; background:var(--surface-sunken); color:var(--fg); font-size:12px; font-weight:500 }
 .live-identity .live-set-compact.confirmed .live-set-compact-action { color:var(--success-fg) }
 .live-identity .live-add-set { min-height:44px; color:var(--fg); font-size:14px; font-weight:500 }

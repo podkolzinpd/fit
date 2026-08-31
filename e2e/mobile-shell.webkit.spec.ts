@@ -1401,6 +1401,10 @@ test('iPhone: длинное название и 10 подходов не лом
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
   await expect(page.locator('.live-session-progress')).toContainText('подход 1 из 10')
   await expect(page.locator('.live-exercise.current')).toContainText(longName)
+  const fillNextSet = page.getByRole('button', { name: 'Заполнить подход 2' })
+  await expect(fillNextSet).toBeVisible()
+  await expect(fillNextSet).toContainText('Заполнить')
+  expect((await fillNextSet.boundingBox())!.height).toBeGreaterThanOrEqual(44)
   await expectNoHorizontalOverflow(page)
 })
 

@@ -209,16 +209,20 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.live-set-table')).toHaveCount(1)
   await expect(page.locator('.live-set-table > .live-set')).toHaveCount(1)
   await expect(page.locator('.live-set-table > .live-set-compact')).toHaveCount(1)
-  const compactInputAction = page.getByRole('button', { name: 'Ввести подход 2' })
+  const compactInputAction = page.getByRole('button', { name: 'Заполнить подход 2' })
   await expect(compactInputAction).toBeVisible()
+  await expect(compactInputAction).toContainText('План 35 кг × 12 повт.')
+  await expect(compactInputAction).toContainText('Заполнить')
   const compactActionStyle = await compactInputAction.evaluate((element) => {
     const style = getComputedStyle(element)
-    return { backgroundColor: style.backgroundColor, color: style.color, height: element.getBoundingClientRect().height }
+    const box = element.getBoundingClientRect()
+    return { backgroundColor: style.backgroundColor, color: style.color, height: box.height, width: box.width }
   })
-  expect(compactActionStyle.backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
+  expect(compactActionStyle.backgroundColor).toBe('rgba(0, 0, 0, 0)')
   const liveForeground = await page.locator('.phone-frame').evaluate((element) => getComputedStyle(element).color)
   expect(compactActionStyle.color).toBe(liveForeground)
   expect(compactActionStyle.height).toBeGreaterThanOrEqual(44)
+  expect(compactActionStyle.width).toBeGreaterThan(200)
   const addSetBackground = await page.getByRole('button', { name: '＋ Подход' }).evaluate((element) => getComputedStyle(element).backgroundColor)
   expect(addSetBackground).toBe('rgba(0, 0, 0, 0)')
   // Факт сразу начинается с плановых значений; тренер правит число напрямую.
@@ -253,7 +257,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // строка сворачивается, но показывает только что сохранённые числа.
   await page.getByLabel('Фактический вес').first().fill('37.5')
   await page.getByLabel('Фактические повторы').first().fill('11')
-  await page.getByRole('button', { name: 'Ввести подход 3' }).click()
+  await page.getByRole('button', { name: 'Заполнить подход 3' }).click()
   await expect(page.locator('.live-set-compact.upcoming')).toContainText('Введено 37.5 кг × 11 повт.')
   await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Берпи')
