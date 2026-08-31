@@ -509,6 +509,9 @@ describe('Training summary card states', () => {
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Нагрузка' }))
     expect(await screen.findByLabelText('Верх спины. Доля всех выполненных подходов: 67%')).toBeVisible()
+    const sideSwitch = screen.getByLabelText('Сторона тела')
+    expect(within(sideSwitch).getByRole('button', { name: 'Спереди' })).toBeVisible()
+    expect(within(sideSwitch).getByRole('button', { name: 'Сзади' })).toHaveAttribute('aria-pressed', 'true')
     expect(repositories.workouts).toHaveBeenCalledWith(
       localDate('2026-06-18'),
       addDays(todayInTimeZone('Europe/Moscow'), 45),
