@@ -348,7 +348,6 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [goalCriteriaOpen, setGoalCriteriaOpen] = useState(false)
-  const [comparisonOpen, setComparisonOpen] = useState(false)
   const personalRecordWorkout = [...(currentWorkouts ?? [])]
     .filter((workout) => workout.status === 'done' && workout.hasPr)
     .sort((left, right) => right.workoutDate.localeCompare(left.workoutDate))[0]
@@ -406,9 +405,8 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
     : presentation.mainNow.evidence
   const goalHandlesMainAction = presentation.mainNow.action === 'goal'
     || (presentation.mainNow.action === 'measurement' && goalCriteria.some((criterion) => criterion.action === 'measurement'))
-  const visibleComparisonFacts = comparisonOpen
-    ? presentation.comparison.facts
-    : presentation.comparison.facts.slice(0, 4)
+  const visibleComparisonFacts = presentation.comparison.facts.slice(0, 3)
+  const comparisonLimitation = presentation.comparison.conclusions.find((conclusion) => conclusion.kind === 'limitation')
   const periodDays = daysBetween(summary.periodStart, summary.periodEnd) + 1
   const previousPeriodStart = addDays(summary.periodStart, -periodDays)
   const previousPeriodEnd = addDays(summary.periodStart, -1)
@@ -541,31 +539,22 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       <header>
         <div>
           <h3 id={`${role}-progress-comparison-title`}>{presentation.comparison.title}</h3>
-          <p>{presentation.comparison.periodLabel}</p>
+          {visibleComparisonFacts.length > 0 && <p>{presentation.comparison.periodLabel}</p>}
         </div>
       </header>
       {workoutsLoading && currentWorkouts === undefined
-        ? <p className="period-comparison-empty" role="status">Собираем данные двух периодов…</p>
+        ? <p className="period-comparison-empty" role="status">Сравниваем периоды…</p>
         : visibleComparisonFacts.length > 0
         ? <>
           <dl className="period-comparison-facts">{visibleComparisonFacts.map((fact) => <div key={fact.factId} className={fact.tone} data-fact-id={fact.factId}>
             <dt>{fact.subject}<span>{fact.previousLabel} → {fact.currentLabel}</span></dt>
             <dd>{fact.value}</dd>
           </div>)}</dl>
-          {presentation.comparison.facts.length > 4 && <button
-            type="button"
-            className="link period-comparison-toggle"
-            aria-expanded={comparisonOpen}
-            onClick={() => setComparisonOpen((open) => !open)}
-          >{comparisonOpen ? 'Скрыть дополнительные изменения' : `Показать ещё · ${presentation.comparison.facts.length - 4}`}</button>}
-          {presentation.comparison.conclusions.length > 0 && <div className="period-comparison-conclusions">
-            {presentation.comparison.conclusions.map((conclusion) => <div
-              key={`${conclusion.kind}:${conclusion.factIds.join(':')}`}
-              className={conclusion.kind}
-              data-fact-ids={conclusion.factIds.join(',')}
-              data-copy-source={conclusion.source}
-            ><span>{conclusion.kind === 'change' ? 'Главное изменение' : 'Ограничение'}</span><p>{conclusion.text}</p></div>)}
-          </div>}
+          {comparisonLimitation && <p
+            className="period-comparison-limitation"
+            data-fact-ids={comparisonLimitation.factIds.join(',')}
+            data-copy-source={comparisonLimitation.source}
+          >{comparisonLimitation.text}</p>}
         </>
         : <p className="period-comparison-empty">{presentation.comparison.emptyMessage}</p>}
     </section>

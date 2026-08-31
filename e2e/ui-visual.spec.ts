@@ -47,6 +47,14 @@ async function mockPeriodComparison(page: VisualPage) {
   await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
 }
 
+async function mockTrainerProgressVisual(page: VisualPage) {
+  await mockPeriodComparison(page)
+  await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+    id: '85000000-0000-4000-8000-000000000001', clientId: demoClientId,
+    title: 'Вернуться к бегу', targetDate: null, status: 'active', version: 1, stages: [], criteria: [],
+  }) }))
+}
+
 async function mockMeasurementProgress(page: VisualPage) {
   await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
     id: '86000000-0000-4000-8000-000000000001', clientId: demoClientId,
@@ -708,9 +716,12 @@ test('period comparison stays compact for client and trainer in both themes', as
   }
 
   let comparison = page.locator('.client-progress-comparison')
-  await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(4)
-  await expect(comparison.getByRole('button', { name: /Показать ещё/ })).toBeVisible()
-  await expect(comparison.locator('.period-comparison-conclusions > div')).toHaveCount(2)
+  await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(3)
+  await expect(comparison.getByText('июль → август 2026', { exact: true })).toBeVisible()
+  await expect(comparison.getByRole('button', { name: /Показать ещё/ })).toHaveCount(0)
+  await expect(comparison.getByText('Главное изменение', { exact: true })).toHaveCount(0)
+  await expect(comparison.locator('.period-comparison-limitation')).toHaveCount(1)
+  await expect(comparison.getByText('Мало данных: в одном из периодов только 1 завершённая тренировка.', { exact: true })).toBeVisible()
   expect(await comparison.evaluate((element) => {
     const map = document.querySelector('.body-progress-map')
     const summary = document.querySelector('.progress-story-summary')
@@ -719,7 +730,6 @@ test('period comparison stays compact for client and trainer in both themes', as
       && (element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
   })).toBe(true)
   expect(await comparison.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
-  expect(await comparison.getByRole('button', { name: /Показать ещё/ }).evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44)
   if (!trainer) {
     for (const width of [320, 375, 390, 430]) {
       await page.setViewportSize({ width, height: 844 })
@@ -737,7 +747,7 @@ test('period comparison stays compact for client and trainer in both themes', as
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
   comparison = page.locator('.client-progress-comparison')
-  await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(4)
+  await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(3)
   await comparison.scrollIntoViewIfNeeded()
   await expect(comparison).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-period-comparison-dark-${process.platform}.png`, {
     animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
@@ -1291,6 +1301,9 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
 })
 
 test('trainer Progress and measurements form keep their visual baselines in both themes', async ({ page }, testInfo) => {
+  // This full-page baseline must not depend on records left by another visual
+  // scenario. Pin the goal and workout history before the first navigation.
+  await mockTrainerProgressVisual(page)
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : 'mobile'
@@ -1298,6 +1311,8 @@ test('trainer Progress and measurements form keep their visual baselines in both
   await gotoStable(page, `/progress/${demoClientId}`)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
   await expect(page.getByLabel('ИИ-анализ тренировок')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Вернуться к бегу' })).toBeVisible()
+  await expect(page.locator('.client-progress-comparison .period-comparison-facts > div')).toHaveCount(3)
   const coachmark = page.getByRole('button', { name: 'Понятно' })
   if (await coachmark.isVisible()) await coachmark.click()
   await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
