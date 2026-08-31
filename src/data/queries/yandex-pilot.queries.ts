@@ -31,6 +31,85 @@ export const yandexPilotQueries = {
     },
     body: JSON.stringify({ text, systemCatalog }),
   }),
+  listAssistantConversations: (apiBaseUrl: string, sessionToken: string) =>
+    fetch(`${apiBaseUrl}/v1/assistant/conversations`, {
+      cache: 'no-store',
+      headers: { 'x-fit-pilot-session': sessionToken },
+    }),
+  createAssistantConversation: (
+    apiBaseUrl: string,
+    sessionToken: string,
+    title: string | null,
+  ) => fetch(`${apiBaseUrl}/v1/assistant/conversations`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      'content-type': 'application/json',
+      'x-fit-pilot-session': sessionToken,
+    },
+    body: JSON.stringify({ title }),
+  }),
+  listAssistantMessages: (
+    apiBaseUrl: string,
+    sessionToken: string,
+    conversationId: string,
+  ) => fetch(`${apiBaseUrl}/v1/assistant/conversations/${conversationId}/messages`, {
+    cache: 'no-store',
+    headers: { 'x-fit-pilot-session': sessionToken },
+  }),
+  listAssistantActions: (
+    apiBaseUrl: string,
+    sessionToken: string,
+    conversationId?: string,
+  ) => fetch(`${apiBaseUrl}/v1/assistant/actions${conversationId === undefined
+    ? ''
+    : `?conversationId=${encodeURIComponent(conversationId)}`}`, {
+    cache: 'no-store',
+    headers: { 'x-fit-pilot-session': sessionToken },
+  }),
+  applyAssistantAction: (
+    apiBaseUrl: string,
+    sessionToken: string,
+    actionId: string,
+    input: Record<string, unknown>,
+    expectedVersion: number,
+  ) => fetch(`${apiBaseUrl}/v1/assistant/actions/${actionId}/apply`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      'content-type': 'application/json',
+      'x-fit-pilot-session': sessionToken,
+    },
+    body: JSON.stringify({ input, expectedVersion }),
+  }),
+  completeAssistantSummary: (
+    apiBaseUrl: string,
+    sessionToken: string,
+    actionId: string,
+    expectedVersion: number,
+  ) => fetch(`${apiBaseUrl}/v1/assistant/actions/${actionId}/complete-summary`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      'content-type': 'application/json',
+      'x-fit-pilot-session': sessionToken,
+    },
+    body: JSON.stringify({ expectedVersion }),
+  }),
+  cancelAssistantAction: (
+    apiBaseUrl: string,
+    sessionToken: string,
+    actionId: string,
+    expectedVersion: number,
+  ) => fetch(`${apiBaseUrl}/v1/assistant/actions/${actionId}/cancel`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      'content-type': 'application/json',
+      'x-fit-pilot-session': sessionToken,
+    },
+    body: JSON.stringify({ expectedVersion }),
+  }),
   listTrainingSummaries: (apiBaseUrl: string, sessionToken: string, clientId: string) =>
     fetch(`${apiBaseUrl}/v1/clients/${clientId}/training-summaries`, {
       cache: 'no-store',

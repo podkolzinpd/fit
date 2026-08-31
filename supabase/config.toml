@@ -416,7 +416,3 @@ enabled = true
 [functions.summarize-client-training]
 enabled = true
 verify_jwt = false
-
-[functions.invite-client]
-enabled = true
-verify_jwt = true

@@ -54,6 +54,15 @@ producer, scheduler, dispatcher or sender, so applying it cannot send a push.
 Subscription enable/disable and the matching reminder preference update happen
 atomically inside the database command.
 
+Migration `000026` ports durable Assistant conversations, messages and actions.
+Only trainer actors can create or read their own history; user turns and model
+responses are idempotent by `turn_id`, and action confirmation uses optimistic
+versions. Record-workout, client draft, program draft and progress-summary
+actions reuse the existing actor-scoped domain functions. The runtime exposes
+history and confirmation endpoints behind the opaque pilot session, while the
+production Assistant continues to use Supabase until sticky tenant routing is
+enabled. Assistant content is intentionally absent from `ops_readonly`.
+
 Before delivery is enabled, the transport slice must add a reviewed public
 Web Push endpoint/egress policy, queue claim/lease semantics, bounded retries,
 producer tests and sender finalization. Storage parity alone is not permission
