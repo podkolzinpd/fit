@@ -28,6 +28,39 @@ async function expectNoHorizontalOverflow(page: import('@playwright/test').Page)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 }
 
+async function expectCompactBodyMap(map: Locator) {
+  await expect(map).toBeVisible()
+  const geometry = await map.evaluate((element) => {
+    const rect = (selector: string) => {
+      const node = element.querySelector<HTMLElement>(selector)
+      if (!node) return null
+      const box = node.getBoundingClientRect()
+      return { top: box.top, bottom: box.bottom, width: box.width, height: box.height }
+    }
+    return {
+      modes: rect('.body-progress-modes'),
+      sides: rect('.body-progress-sides'),
+      visual: rect('.body-progress-visual'),
+      detail: rect('.body-progress-detail'),
+    }
+  })
+
+  expect(geometry.modes).not.toBeNull()
+  expect(geometry.modes!.width).toBeLessThanOrEqual(186)
+  expect(geometry.modes!.height).toBeLessThanOrEqual(50)
+  expect(geometry.visual).not.toBeNull()
+  expect(geometry.visual!.width).toBeLessThanOrEqual(212)
+  expect(geometry.visual!.height).toBeLessThanOrEqual(445)
+  if (geometry.sides) {
+    expect(geometry.sides.width).toBeLessThanOrEqual(162)
+    expect(geometry.sides.height).toBeLessThanOrEqual(50)
+  }
+  if (geometry.detail) {
+    expect(geometry.detail.top).toBeGreaterThanOrEqual(geometry.visual!.bottom)
+    expect(geometry.detail.top - geometry.visual!.bottom).toBeLessThanOrEqual(12)
+  }
+}
+
 async function expectActionTextVerticallyCentered(action: Locator) {
   const geometry = await action.evaluate((element) => {
     const range = document.createRange()
@@ -985,6 +1018,7 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     }
     await analysis.getByRole('button', { name: 'Нагрузка', exact: true }).click()
     await expect(analysis.getByRole('heading', { name: 'Куда пришлась нагрузка' })).toBeVisible()
+    await expectCompactBodyMap(analysis.locator('.body-progress-map'))
     await expect(page.locator('details')).toHaveCount(0)
     await expect(page.getByRole('link', { name: 'Открыть замеры и показатели' })).toBeVisible()
     const coachmark = page.getByRole('button', { name: 'Понятно' })
@@ -1012,6 +1046,7 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     await expect(summary.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
     await summary.getByRole('button', { name: 'Нагрузка', exact: true }).click()
     await expect(summary.getByRole('heading', { name: 'Куда пришлась нагрузка' })).toBeVisible()
+    await expectCompactBodyMap(summary.locator('.body-progress-map'))
     await expect(summary.locator('.ai-progress-stats span').filter({ hasText: /недел/ })).toBeVisible()
     await expect(summary.getByText('Для твоей цели', { exact: true })).toBeVisible()
     await expect(summary.getByText('Подробный анализ', { exact: true })).toBeVisible()
