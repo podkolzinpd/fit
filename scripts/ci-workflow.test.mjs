@@ -35,10 +35,21 @@ test('keeps one required E2E result while skipping heavy jobs only for a safe sc
 test('resets the visual database between viewport profiles', () => {
   assert.match(
     workflow,
-    /for project in visual-client-390 visual-client-430 visual-trainer-1440; do\n\s+supabase db reset --local/,
+    /for project in visual-client-390 visual-client-430 visual-trainer-1440; do\n\s+supabase db reset --local\n\s+node scripts\/wait-for-local-auth\.mjs/,
   )
   assert.match(workflow, /--env PLAYWRIGHT_PROJECT="\$project"/)
   assert.match(workflow, /--project="\$PLAYWRIGHT_PROJECT" --workers=1/)
+})
+
+test('waits for local auth readiness before auth-dependent E2E jobs', () => {
+  assert.match(
+    workflow,
+    /e2e-chromium-visual:[\s\S]*supabase db reset --local\n\s+node scripts\/wait-for-local-auth\.mjs/,
+  )
+  assert.match(
+    workflow,
+    /e2e-webkit:[\s\S]*- run: supabase db reset --local\n\s+- run: node scripts\/wait-for-local-auth\.mjs/,
+  )
 })
 
 test('cancels a superseded CI run for the same pull request', () => {

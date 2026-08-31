@@ -139,6 +139,7 @@ jobs:
         run: |
           for project in visual-client-390 visual-client-430 visual-trainer-1440; do
             supabase db reset --local
+            node scripts/wait-for-local-auth.mjs
             docker run --rm --init --ipc=host --network host \
               --env CI=true \
               --env VITE_SUPABASE_URL \
@@ -198,6 +199,7 @@ jobs:
           version: 2.109.1
       - run: supabase start --exclude mailpit
       - run: supabase db reset --local
+      - run: node scripts/wait-for-local-auth.mjs
       - name: Pull pinned Playwright runtime
         run: docker pull "$PLAYWRIGHT_IMAGE"
       - name: Run iPhone behavior scenarios in isolated parallel lanes
