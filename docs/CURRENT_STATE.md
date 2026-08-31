@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-31
-Проверенный базовый `main`: `11a8965` (`feat(yandex): port push notification state (#715)`)
+Проверенный базовый `main`: `b4ab65c` (`feat(yandex): port assistant state (#718)`)
 ## Текущий release gate
 
 - Foundation UI Identity v1 принята. Задачи 8–28 — клиентский, тренерский,
@@ -113,9 +113,15 @@
   `npm run check` — 983 frontend, 263 API и 67 infra; Supabase 74/886 зелёный.
 - Неиспользуемый email Edge Function `invite-client` удалён: production UI уже
   использует одноразовый код. UI, production routing и deployment не менялись.
+- YAFIT-421, пункт 3: компактная карта тела. Фигура ограничена 210 px,
+  переключатели — 184/160 px с областью нажатия 44 px, вывод остаётся сразу
+  под картой, легенда не добавляется. Локально зелёные lint/typecheck/build,
+  50 профильных тестов, 886 SQL/RLS + 24 API-теста, WebKit на 320/375/390/430 px
+  и visual baselines клиента 390/430 light/dark и тренера 1440 px. Перед merge
+  обязательны `app`, `database`, `e2e` и production smoke.
 ## Ближайший порядок
-1. Завершить isolated Assistant state slice и доставить его обычным stage gate.
-2. Перенести native turn orchestration и подключить sticky tenant routing.
-3. После export/import tooling провести две репетиции cutover.
+1. Завершить пункт 3 YAFIT-421: PR, CI, merge и production smoke.
+2. Только после production перейти к пункту 4 YAFIT-421 — замерам.
+3. Assistant orchestration, `app_feedback` и Yandex parity/cutover ведутся отдельно.
 ## Отложено
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.
