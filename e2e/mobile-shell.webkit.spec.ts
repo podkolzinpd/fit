@@ -1107,6 +1107,23 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
 }
 
 test('iPhone: ручной выбор начинает с недавних, а не с разминки на 390 px', async ({ page }, testInfo) => {
+  async function expectPickerItemsToKeepTheirGeometry() {
+    const itemLayout = await page.locator('.picker-item').evaluateAll((items) => items.slice(0, 8).map((item, index, visibleItems) => {
+      const rect = item.getBoundingClientRect()
+      const image = item.querySelector('.exercise-image')?.getBoundingClientRect()
+      const copy = item.querySelector('.picker-item-copy')?.getBoundingClientRect()
+      const next = visibleItems[index + 1]?.getBoundingClientRect()
+      return {
+        height: rect.height,
+        imageContained: Boolean(image && image.top >= rect.top && image.bottom <= rect.bottom),
+        copyContained: Boolean(copy && copy.top >= rect.top && copy.bottom <= rect.bottom),
+        overlapsNext: Boolean(next && rect.bottom > next.top),
+      }
+    }))
+    expect(itemLayout.length).toBeGreaterThan(3)
+    expect(itemLayout.every((item) => item.height >= 64 && item.imageContained && item.copyContained && !item.overlapsNext)).toBe(true)
+  }
+
   await page.setViewportSize({ width: 390, height: 844 })
   await page.route('**/exercises/base-bench-press.jpg', (route) => route.abort())
   await loginAsTrainer(page)
@@ -1128,8 +1145,34 @@ test('iPhone: ручной выбор начинает с недавних, а �
   const catalogImageBox = await catalogImage.boundingBox()
   expect(catalogImageBox?.width).toBe(catalogImageBox?.height)
   expect(catalogImageBox?.width).toBeGreaterThanOrEqual(48)
+  await expectPickerItemsToKeepTheirGeometry()
   await expectNoHorizontalOverflow(page)
   await page.screenshot({ path: testInfo.outputPath('exercise-images-picker.png'), fullPage: true })
+
+  await page.evaluate(() => window.localStorage.setItem('fit.appTheme', 'dark'))
+  await page.reload()
+  await selectClient(page)
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
+  await expect(page.locator('html')).not.toHaveClass(/theme-light/)
+  await expectPickerItemsToKeepTheirGeometry()
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('exercise-images-picker-dark.png'), fullPage: true })
+
+  await page.setViewportSize({ width: 430, height: 932 })
+  await expectPickerItemsToKeepTheirGeometry()
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('exercise-images-picker-dark-430.png'), fullPage: true })
+
+  await page.evaluate(() => window.localStorage.setItem('fit.appTheme', 'light'))
+  await page.reload()
+  await selectClient(page)
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
+  await expect(page.locator('html')).toHaveClass(/theme-light/)
+  await expectPickerItemsToKeepTheirGeometry()
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('exercise-images-picker-430.png'), fullPage: true })
 })
 
 test('iPhone: создание тренировки сфокусировано и меню не перекрывает действия на 390 px', async ({ page }) => {
