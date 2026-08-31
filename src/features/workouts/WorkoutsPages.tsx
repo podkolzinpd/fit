@@ -1472,7 +1472,7 @@ export function LiveWorkoutPage() {
   }
   function saveOpenLiveSet(exercise: WorkoutExerciseModel, targetSetId: string) {
     // PointerDown происходит до blur: это единственный надёжный момент на iOS
-    // для чтения числа из строки, когда тренер тапаeт «Ввести» у следующей.
+    // для чтения числа из строки, когда тренер тапаeт «Заполнить» у следующей.
     // При клавиатурной активации fallback берёт единственную открытую форму.
     const focused = document.activeElement instanceof HTMLElement
       ? document.activeElement.closest<HTMLFormElement>('form[data-live-set-id]')
@@ -1677,12 +1677,15 @@ export function LiveWorkoutPage() {
     if (!isExpanded) {
       const plan = planLine(exercise.inputKind, set)
       const fact = set.confirmedAt ? factLine(displayedSet) : enteredFactLine(displayedSet)
+      const compactValues = <span className="live-set-compact-values"><strong>{fact ? `${set.confirmedAt ? 'Факт' : 'Введено'} ${fact}` : plan ? `План ${plan}` : 'Без значений'}</strong>{fact && plan && <small>План {plan}</small>}</span>
       return <div className={`live-set-compact ${set.confirmedAt ? 'confirmed' : 'upcoming'}`} key={set.id}>
         <span className="live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        <span className="live-set-compact-values"><strong>{fact ? `${set.confirmedAt ? 'Факт' : 'Введено'} ${fact}` : plan ? `План ${plan}` : 'Без значений'}</strong>{fact && plan && <small>План {plan}</small>}</span>
         {set.confirmedAt
-          ? <button type="button" className="link live-set-compact-action" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>
-          : <button type="button" className="link live-set-compact-action" aria-label={`Ввести подход ${setNumber ?? ''}`} onPointerDown={() => saveOpenLiveSet(exercise, set.id)} onClick={() => openLiveSet(exercise, set.id)}>Ввести</button>}
+          ? <>{compactValues}<button type="button" className="link live-set-compact-action" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button></>
+          : <button type="button" className="link live-set-fill-action" aria-label={`Заполнить подход ${setNumber ?? ''}`} onPointerDown={() => saveOpenLiveSet(exercise, set.id)} onClick={() => openLiveSet(exercise, set.id)}>
+              {compactValues}
+              <span className="live-set-fill-label">Заполнить <ChevronRightIcon /></span>
+            </button>}
       </div>
     }
     const showRpe = isRpeVisible(exercise.id)

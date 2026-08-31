@@ -71,7 +71,9 @@ describe('assistant program draft saving', () => {
     const existing = { items: [{ sourceText: 'Жим', exerciseRef: 'barbell-bench-press', confidence: 1, sets: [{ reps: 10, weightKg: 50 }] }, { sourceText: 'Тяга', exerciseRef: 'row', confidence: 1, sets: [{}] }], unmatched: [] }
     const edited = updateWorkoutParseMetrics(existing, 'Жим', { setCount: 3, reps: 12, weightKg: 55 })
     expect(edited.items[0]?.sets).toEqual([{ reps: 12, weightKg: 55 }, { reps: 12, weightKg: 55 }, { reps: 12, weightKg: 55 }])
-    expect(removeWorkoutParseSource(edited, 'Жим').items.map((item) => item.sourceText)).toEqual(['Тяга'])
+    const cleared = updateWorkoutParseMetrics(edited, 'Жим', { reps: undefined, weightKg: undefined })
+    expect(cleared.items[0]?.sets).toEqual([{}, {}, {}])
+    expect(removeWorkoutParseSource(cleared, 'Жим').items.map((item) => item.sourceText)).toEqual(['Тяга'])
   })
 
   it('extracts only the newly dictated tail from a cumulative transcript', () => {

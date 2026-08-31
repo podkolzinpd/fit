@@ -541,6 +541,13 @@ export function recordWorkoutTurn(
       ...(workoutTextProvided(pendingTranscript) ? { transcript: pendingTranscript } : {}),
     })
   }
+  const unmatchedClientHint = previousStep === 'client' || /(?:^|\s)для\s+[\p{L}-]{3,}/iu.test(message)
+  if (!selectedClient && clients.length > 0 && unmatchedClientHint) {
+    return workoutAction('Выберите клиента', 'Не нашла точного совпадения. Выберите клиента из списка.', 'needs_input', {
+      step: 'client', candidates: clients.map(({ id, fullName }) => ({ id, fullName })),
+      ...(workoutTextProvided(pendingTranscript) ? { transcript: pendingTranscript } : {}),
+    })
+  }
   if (!selectedClient) {
     return workoutAction('Уточните клиента', 'Для кого записать тренировку? Напишите имя или фамилию клиента.', 'needs_input', {
       step: 'client',
