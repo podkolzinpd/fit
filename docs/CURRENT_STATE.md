@@ -101,7 +101,7 @@
 ## Проверки активной ветки
 - YAFIT-421, пункт 4: ориентир цели добавлен на график; добавление, история и
   пользовательские показатели встроены в аналитику и доступны до первой сводки.
-  Локально зелёные `npm run check` (987 frontend, 263 API, 72 infra), Supabase
+  Локально зелёные `npm run check` (988 frontend, 269 API, 72 infra), Supabase
   886/886, PostgreSQL actor/RLS 26/26, Chromium 2/2, WebKit 3/3 и повторяемые
   visual baselines клиента 390/430 light/dark и тренера 1440 light/dark.
   Перед merge обязательны `app`, `database`, `e2e` и production smoke.
