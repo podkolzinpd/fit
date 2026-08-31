@@ -7,6 +7,49 @@ afterEach(() => {
 })
 
 describe('yandexPilotQueries', () => {
+  it('exchanges Yandex OAuth codes for app sessions and links accounts explicitly', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValue(new Response('{}', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const baseUrl = 'https://stage.example.test'
+    const code = 'oauth-code'
+    const codeVerifier = 'v'.repeat(43)
+
+    await yandexPilotQueries.exchangeCodeForAppSession(baseUrl, code, codeVerifier)
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/auth/yandex/session`,
+      {
+        method: 'POST',
+        cache: 'no-store',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ code, codeVerifier }),
+      },
+    )
+    expect(fetchMock.mock.calls.at(-1)?.[1]?.headers)
+      .not.toHaveProperty('authorization')
+    expect(fetchMock.mock.calls.at(-1)?.[1]?.headers)
+      .not.toHaveProperty('x-fit-pilot-session')
+
+    await yandexPilotQueries.linkYandexAccount(
+      baseUrl,
+      'supabase-session',
+      code,
+      codeVerifier,
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/auth/yandex/link`,
+      {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          authorization: 'Bearer supabase-session',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ code, codeVerifier }),
+      },
+    )
+  })
+
   it('sends the Fit pilot session outside the Yandex IAM Authorization header', async () => {
     const fetchMock = vi.fn<typeof fetch>()
       .mockResolvedValue(new Response('{}', { status: 200 }))

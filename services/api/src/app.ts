@@ -15,6 +15,7 @@ import {
   PilotAccessDeniedError,
   PilotSessionInvalidError,
 } from './db/yandex-pilot-transaction.js'
+import { YandexAppSessionDeniedError } from './db/yandex-app-transaction.js'
 import { AppFeedbackCommandError } from './app-feedback-command.js'
 import { readAppFeedbackRequest } from './app-feedback-request.js'
 import { AssistantStateError } from './assistant-state.js'
@@ -55,6 +56,13 @@ import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import type { PilotDomainWriter } from './pilot-domain-writer.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer } from './pilot-session.js'
+import type { YandexAppSessionIssuer } from './yandex-app-session.js'
+import {
+  ExistingActorUnavailableError,
+  YandexAccountLinkError,
+  type ExistingActorProvider,
+  type YandexAccountLinker,
+} from './yandex-account-linking.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
 import type { PilotProgressData } from './progress-data.js'
 import type { PilotWorkoutsWriter } from './pilot-workouts-writer.js'
@@ -120,6 +128,9 @@ interface BuildAppOptions {
   pilotTrainingSummaryReader?: PilotTrainingSummaryReader
   legacyWorkoutParser?: LegacyWorkoutParser
   legacySummaryHandler?: LegacySummaryHandler
+  existingActorProvider?: ExistingActorProvider
+  yandexAccountLinker?: YandexAccountLinker
+  yandexAppSessionIssuer?: YandexAppSessionIssuer
   logger?: boolean
   releaseId?: string
 }
@@ -144,7 +155,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         .header('access-control-allow-methods', 'GET, POST, PUT, DELETE, OPTIONS')
         .header(
           'access-control-allow-headers',
-          'authorization, content-type, x-fit-pilot-session, x-supabase-authorization',
+          'authorization, content-type, x-fit-pilot-session, x-fit-session, x-supabase-authorization',
         )
         .header(
           'access-control-expose-headers',
@@ -394,6 +405,61 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
   }
 
+  function readYandexCodeRequest(body: unknown) {
+    if (
+      typeof body !== 'object' ||
+      body === null ||
+      !('code' in body) ||
+      !('codeVerifier' in body)
+    ) {
+      return undefined
+    }
+    const code = body.code
+    const codeVerifier = body.codeVerifier
+    if (
+      typeof code !== 'string' ||
+      code.length === 0 ||
+      code.length > 2_048 ||
+      typeof codeVerifier !== 'string' ||
+      !codeVerifierPattern.test(codeVerifier)
+    ) {
+      return undefined
+    }
+    return { code, codeVerifier }
+  }
+
+  async function readYandexSubjectHash(command: { code: string; codeVerifier: string }) {
+    if (
+      options.oauthCodeProvider === undefined ||
+      options.identityProvider === undefined
+    ) {
+      return undefined
+    }
+
+    const token = await options.oauthCodeProvider.exchangeCode(
+      command.code,
+      command.codeVerifier,
+    )
+    const identity = await options.identityProvider.verifyAccessToken(token)
+    return identity.subjectHash
+  }
+
+  function sendYandexOAuthFailure(reply: FastifyReply, error: unknown) {
+    if (
+      error instanceof YandexOAuthCodeRejectedError ||
+      error instanceof YandexIdentityRejectedError
+    ) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (
+      error instanceof YandexOAuthCodeUnavailableError ||
+      error instanceof YandexIdentityUnavailableError
+    ) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return undefined
+  }
+
   app.get('/v1/profile', async (request, reply) => {
     const token = readBearerToken(request.headers.authorization)
     if (token === undefined) {
@@ -458,6 +524,111 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     } catch (error) {
       if (error instanceof PilotAccessDeniedError) {
         return reply.code(403).send({ error: 'pilot_access_denied' })
+      }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.post('/v1/auth/yandex/session', async (request, reply) => {
+    const command = readYandexCodeRequest(request.body)
+    if (command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (
+      options.oauthCodeProvider === undefined ||
+      options.identityProvider === undefined ||
+      options.yandexAppSessionIssuer === undefined
+    ) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+
+    let subjectHash: string
+    try {
+      const resolvedSubjectHash = await readYandexSubjectHash(command)
+      if (resolvedSubjectHash === undefined) {
+        return reply.code(503).send({ error: 'service_unavailable' })
+      }
+      subjectHash = resolvedSubjectHash
+    } catch (error) {
+      const response = sendYandexOAuthFailure(reply, error)
+      if (response !== undefined) return response
+      throw error
+    }
+
+    try {
+      const session = await options.yandexAppSessionIssuer.issue(subjectHash)
+      if (session === undefined) {
+        return reply.code(403).send({ error: 'yandex_session_denied' })
+      }
+      return reply.header('cache-control', 'no-store').send(session)
+    } catch (error) {
+      if (error instanceof YandexAppSessionDeniedError) {
+        return reply.code(403).send({ error: 'yandex_session_denied' })
+      }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.post('/v1/auth/yandex/link', async (request, reply) => {
+    const actorToken = readBearerToken(request.headers.authorization)
+    if (actorToken === undefined) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    const command = readYandexCodeRequest(request.body)
+    if (command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (
+      options.oauthCodeProvider === undefined ||
+      options.identityProvider === undefined ||
+      options.existingActorProvider === undefined ||
+      options.yandexAccountLinker === undefined
+    ) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+
+    let actorId: string
+    try {
+      const resolvedActorId = await options.existingActorProvider.resolveActor(actorToken)
+      if (resolvedActorId === undefined) {
+        return reply.code(401).send({ error: 'unauthorized' })
+      }
+      actorId = resolvedActorId
+    } catch (error) {
+      if (error instanceof ExistingActorUnavailableError) {
+        return reply.code(503).send({ error: 'service_unavailable' })
+      }
+      throw error
+    }
+
+    let subjectHash: string
+    try {
+      const resolvedSubjectHash = await readYandexSubjectHash(command)
+      if (resolvedSubjectHash === undefined) {
+        return reply.code(503).send({ error: 'service_unavailable' })
+      }
+      subjectHash = resolvedSubjectHash
+    } catch (error) {
+      const response = sendYandexOAuthFailure(reply, error)
+      if (response !== undefined) return response
+      throw error
+    }
+
+    try {
+      const link = await options.yandexAccountLinker.linkActor(actorId, subjectHash)
+      return reply.header('cache-control', 'no-store').send(link)
+    } catch (error) {
+      if (error instanceof YandexAccountLinkError) {
+        if (error.failure === 'conflict') {
+          return reply.code(409).send({ error: 'yandex_identity_conflict' })
+        }
+        if (error.failure === 'not_found') {
+          return reply.code(404).send({ error: 'profile_not_found' })
+        }
+        if (error.failure === 'invalid') {
+          return reply.code(400).send({ error: 'invalid_request' })
+        }
+        return reply.code(403).send({ error: 'action_not_allowed' })
       }
       return reply.code(503).send({ error: 'service_unavailable' })
     }
@@ -638,6 +809,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   const uuidPattern =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  const codeVerifierPattern = /^[A-Za-z0-9._~-]{43,128}$/
   const datePattern = /^\d{4}-\d{2}-\d{2}$/
   const validDate = (value: unknown): value is string => {
     if (typeof value !== 'string' || !datePattern.test(value)) return false

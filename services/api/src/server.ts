@@ -21,6 +21,11 @@ import { DatabasePilotTrainingSummaries } from './training-summary.js'
 import { SupabaseWorkoutParser } from './legacy-workout-parser.js'
 import { YandexWorkoutParser } from './legacy-workout-parser.js'
 import { readSupabaseBridgeConfig, SupabaseBridge } from './supabase-bridge.js'
+import {
+  DatabaseYandexAccountLinker,
+  SupabaseExistingActorProvider,
+} from './yandex-account-linking.js'
+import { DatabaseYandexAppSessionIssuer } from './yandex-app-session.js'
 import { summarizeClientTraining } from './legacy-summary/index.js'
 import { buildYandexAiAuthorization } from './yandex-ai-authorization.js'
 
@@ -69,6 +74,14 @@ const pilotSessionIssuer =
   databasePool === undefined
     ? undefined
     : new DatabasePilotSessionIssuer(databasePool)
+const yandexAppSessionIssuer =
+  databasePool === undefined
+    ? undefined
+    : new DatabaseYandexAppSessionIssuer(databasePool)
+const yandexAccountLinker =
+  databasePool === undefined
+    ? undefined
+    : new DatabaseYandexAccountLinker(databasePool)
 const pilotClientsReader =
   databasePool === undefined
     ? undefined
@@ -138,6 +151,10 @@ const pilotTrainingSummaryGenerator =
     ? undefined
     : pilotTrainingSummaryReader
 const supabaseBridgeConfig = readSupabaseBridgeConfig()
+const existingActorProvider =
+  supabaseBridgeConfig === undefined
+    ? undefined
+    : new SupabaseExistingActorProvider(new SupabaseBridge(supabaseBridgeConfig))
 const legacyWorkoutParser =
   supabaseBridgeConfig === undefined
     || process.env.YANDEX_CLOUD_API_KEY === undefined
@@ -174,6 +191,9 @@ const app = buildApp(
     ...(pilotDomainWriter === undefined ? {} : { pilotDomainWriter }),
     ...(pilotProfileReader === undefined ? {} : { pilotProfileReader }),
     ...(pilotSessionIssuer === undefined ? {} : { pilotSessionIssuer }),
+    ...(yandexAppSessionIssuer === undefined ? {} : { yandexAppSessionIssuer }),
+    ...(yandexAccountLinker === undefined ? {} : { yandexAccountLinker }),
+    ...(existingActorProvider === undefined ? {} : { existingActorProvider }),
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),
     ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),
     ...(pilotProgressData === undefined ? {} : { pilotProgressData }),

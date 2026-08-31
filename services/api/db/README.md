@@ -63,6 +63,16 @@ history and confirmation endpoints behind the opaque pilot session, while the
 production Assistant continues to use Supabase until sticky tenant routing is
 enabled. Assistant content is intentionally absent from `ops_readonly`.
 
+Migration `000027` adds the foundation for normal Yandex ID sessions without
+switching production auth. A user who is already signed in through the existing
+provider can link one app-scoped Yandex identity digest to their existing
+profile. Linking is idempotent for the same pair, rejects subject/profile
+collisions and does not create rollout access by itself. A separate opaque
+read-write app session can be issued only when the linked profile already has
+an enabled `yandex`/`read_write` rollout assignment. Provider OAuth tokens,
+raw Yandex identifiers and the app session token are never stored; only SHA-256
+digests are persisted.
+
 Before delivery is enabled, the transport slice must add a reviewed public
 Web Push endpoint/egress policy, queue claim/lease semantics, bounded retries,
 producer tests and sender finalization. Storage parity alone is not permission
