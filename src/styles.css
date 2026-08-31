@@ -925,6 +925,14 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .menu { display: flex; flex-direction: column; margin: 22px 0; border-block: 1px solid var(--border) }
 .menu a, .menu > button { min-height: 52px; display: flex; align-items: center; justify-content: flex-start; padding: 15px 4px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; color: var(--fg); font: inherit; text-align: left; text-decoration: none; box-shadow:none}.menu > :last-child { border-bottom: 0 }
 .profile-settings { margin: 20px 0 22px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow:none}
+.yandex-account-linking-card { display:grid; gap:var(--space-3); margin:20px 0 22px; padding:var(--space-3); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); box-shadow:none}
+.yandex-account-linking-card .eyebrow { margin:0 0 var(--space-1) }
+.yandex-account-linking-card h2 { margin:0; font-size:var(--type-section-size); line-height:var(--leading-snug) }
+.yandex-account-linking-card p { margin:0; color:var(--muted); font-size:var(--type-body-size); line-height:var(--leading-body) }
+.yandex-account-linking-card .secondary { min-height:var(--control-height-primary); border-radius:var(--radius-lg); box-shadow:none}
+.yandex-account-linking-card .secondary:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--muted) }
+.yandex-account-linking-card .error { color:var(--danger); font-size:var(--text-xs); font-weight:var(--weight-semibold) }
+.yandex-account-linking-card .yandex-account-linking-note { font-size:var(--text-xs) }
 .body-map-appearance-setting { display:grid; gap:var(--space-3); margin:20px 0 22px; padding:var(--space-3); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); box-shadow:none}
 .body-map-appearance-setting > div:first-child { display:grid; gap:3px }
 .body-map-appearance-setting > div:first-child strong { font-size:var(--type-body-size); line-height:var(--leading-tight) }
@@ -3571,6 +3579,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-profile-shell-identity .client-home-connections,
 .client-profile-shell-identity .body-map-appearance-setting,
 .client-profile-shell-identity .profile-settings,
+.client-profile-shell-identity .yandex-account-linking-card,
 .client-profile-shell-identity .menu,
 .client-profile-shell-identity .app-install-card,
 .client-profile-shell-identity .app-feedback-card { margin:0; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none}
@@ -3625,18 +3634,25 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-profile-shell-identity .client-profile-page > .danger.secondary { min-height:48px; margin:0; border-color:var(--border); border-radius:14px; background:transparent; color:var(--danger); font-size:14px; font-weight:500; box-shadow:none}
 
 .client-profile-shell-identity .app-install-card,
+.client-profile-shell-identity .yandex-account-linking-card,
 .client-profile-shell-identity .app-feedback-card { gap:16px; padding:18px }
 .client-profile-shell-identity .app-install-card .eyebrow,
+.client-profile-shell-identity .yandex-account-linking-card .eyebrow,
 .client-profile-shell-identity .app-feedback-card .eyebrow { color:var(--muted); font-size:12px; font-weight:500; letter-spacing:.06em }
 .client-profile-shell-identity .app-install-card h2,
+.client-profile-shell-identity .yandex-account-linking-card h2,
 .client-profile-shell-identity .app-feedback-card h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
 .client-profile-shell-identity .app-install-head .link,
 .client-profile-shell-identity .app-feedback-head .link { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
 .client-profile-shell-identity .app-install-copy,
 .client-profile-shell-identity .app-install-steps,
+.client-profile-shell-identity .yandex-account-linking-card p,
 .client-profile-shell-identity .app-feedback-context { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .client-profile-shell-identity .app-install-card .secondary,
+.client-profile-shell-identity .yandex-account-linking-card .secondary,
 .client-profile-shell-identity .app-feedback-card button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.client-profile-shell-identity .yandex-account-linking-card .secondary:disabled { background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.client-profile-shell-identity .yandex-account-linking-card .error { color:var(--danger); font-size:12px; font-weight:500 }
 .client-profile-shell-identity .app-feedback-kinds { gap:3px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
 .client-profile-shell-identity .app-feedback-kinds button { min-height:44px; border-radius:10px; background:transparent; color:var(--muted); font-size:12px; font-weight:500 }
 .client-profile-shell-identity .app-feedback-kinds button.active { background:var(--surface-elevated); color:var(--fg); box-shadow:none}
@@ -4863,6 +4879,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 
 .trainer-profile-identity .profile-settings,
 .trainer-profile-identity .body-map-appearance-setting,
+.trainer-profile-identity .yandex-account-linking-card,
 .trainer-profile-identity .menu,
 .trainer-profile-identity .app-install-card,
 .trainer-profile-identity .app-feedback-card { margin:0; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none}
@@ -4894,20 +4911,28 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-profile-identity .menu > button:focus-visible { outline:2px solid var(--fg); outline-offset:-3px }
 
 .trainer-profile-identity .app-install-card,
+.trainer-profile-identity .yandex-account-linking-card,
 .trainer-profile-identity .app-feedback-card { gap:16px; padding:18px }
 .trainer-profile-identity .app-install-card .eyebrow,
+.trainer-profile-identity .yandex-account-linking-card .eyebrow,
 .trainer-profile-identity .app-feedback-card .eyebrow { margin:0 0 4px }
 .trainer-profile-identity .app-install-card h2,
+.trainer-profile-identity .yandex-account-linking-card h2,
 .trainer-profile-identity .app-feedback-card h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
 .trainer-profile-identity .app-install-head .link,
 .trainer-profile-identity .app-feedback-head .link { min-height:44px; padding:0; color:var(--fg); font-size:12px; font-weight:500 }
 .trainer-profile-identity .app-install-copy,
 .trainer-profile-identity .app-install-steps,
+.trainer-profile-identity .yandex-account-linking-card p,
 .trainer-profile-identity .app-feedback-context { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.45 }
 .trainer-profile-identity .app-install-card .secondary,
+.trainer-profile-identity .yandex-account-linking-card .secondary,
 .trainer-profile-identity .app-feedback-card button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500; box-shadow:none}
 .trainer-profile-identity .app-install-card .secondary,
+.trainer-profile-identity .yandex-account-linking-card .secondary,
 .trainer-profile-identity .app-feedback-card .secondary { border:1px solid var(--border); background:transparent; color:var(--fg) }
+.trainer-profile-identity .yandex-account-linking-card .secondary:disabled { background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.trainer-profile-identity .yandex-account-linking-card .error { color:var(--danger); font-size:12px; font-weight:500 }
 .trainer-profile-identity .app-feedback-card .primary { border:1px solid var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
 .trainer-profile-identity .app-install-success { border-color:var(--border); border-radius:14px; background:var(--surface-elevated); color:var(--success-fg); font-size:14px; font-weight:500 }
 .trainer-profile-identity .app-feedback-kinds { gap:3px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
