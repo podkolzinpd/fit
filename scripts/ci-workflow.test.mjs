@@ -32,6 +32,15 @@ test('keeps one required E2E result while skipping heavy jobs only for a safe sc
   assert.match(workflow, /E2E skipped: changes do not affect the browser runtime/)
 })
 
+test('resets the visual database between viewport profiles', () => {
+  assert.match(
+    workflow,
+    /for project in visual-client-390 visual-client-430 visual-trainer-1440; do\n\s+supabase db reset --local/,
+  )
+  assert.match(workflow, /--env PLAYWRIGHT_PROJECT="\$project"/)
+  assert.match(workflow, /--project="\$PLAYWRIGHT_PROJECT" --workers=1/)
+})
+
 test('cancels a superseded CI run for the same pull request', () => {
   assert.match(workflow, /concurrency:\n  group: ci-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}/)
   assert.match(workflow, /cancel-in-progress: true/)

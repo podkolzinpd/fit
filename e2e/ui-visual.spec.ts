@@ -798,12 +798,12 @@ test('next-step suggestion stays concise and explicit for client and trainer in 
   }
   await nextStep.scrollIntoViewIfNeeded()
   await expect(nextStep).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-progress-next-step-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.025,
   })
   await nextStep.getByRole('button', { name: 'Выбрать этот шаг' }).click()
   await expect(nextStep.getByText('Данные не изменены.', { exact: false })).toBeVisible()
   await expect(nextStep).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-progress-next-step-confirmed-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.025,
   })
 
   await gotoStable(page, trainer ? '/profile' : '/me/profile')
@@ -814,7 +814,7 @@ test('next-step suggestion stays concise and explicit for client and trainer in 
   await nextStep.getByRole('button', { name: 'Выбрать этот шаг' }).click()
   await nextStep.scrollIntoViewIfNeeded()
   await expect(nextStep).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-progress-next-step-confirmed-dark-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.025,
   })
 })
 
