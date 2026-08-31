@@ -9,6 +9,12 @@ import type {
 
 type RecommendationState = 'draft' | 'editing' | 'confirmed' | 'rejected'
 
+function recommendationSourceLabel(source: ProgressNextStepRecommendation['source']) {
+  if (source === 'llm') return 'Подобрал помощник'
+  if (source === 'user') return 'Выбрано тобой'
+  return 'Подобрано по данным'
+}
+
 export function ProgressNextStepSection({ result, links, loading, error, onRetry, titleId }: {
   result: ProgressNextStepResult
   links: Partial<Record<ProgressNextStepAction, string | ((candidate: ProgressNextStepCandidate) => string)>>
@@ -31,11 +37,11 @@ export function ProgressNextStepSection({ result, links, loading, error, onRetry
   }, [result.recommendation.id, result.recommendation.source, result.recommendation.title])
 
   if (loading) return <section className="client-progress-upcoming client-progress-next-step" role="status">
-    <span>Следующий шаг</span><p>Подбираем действие по подтверждённым данным…</p>
+    <span>Следующий шаг</span><p>Ищем полезный следующий шаг…</p>
   </section>
   if (error) return <section className="client-progress-upcoming client-progress-next-step" role="alert">
-    <span>Следующий шаг</span><p>Не удалось проверить данные для рекомендации.</p>
-    <button type="button" className="link" onClick={onRetry}>Повторить</button>
+    <span>Следующий шаг</span><p>Не удалось подобрать следующий шаг.</p>
+    <button type="button" className="link" onClick={onRetry}>Подобрать снова</button>
   </section>
 
   const linkValue = links[recommendation.action]
@@ -47,51 +53,50 @@ export function ProgressNextStepSection({ result, links, loading, error, onRetry
   >
     <header className="progress-next-step-head">
       <span>Следующий шаг</span>
-      <strong>{recommendation.source === 'llm' ? 'Черновик · ИИ' : recommendation.source === 'user' ? 'Изменённый черновик' : 'Черновик · правила'}</strong>
+      {state !== 'rejected' && <strong>{recommendationSourceLabel(recommendation.source)}</strong>}
     </header>
     {state !== 'rejected' && <>
       <h3 id={titleId}>{recommendation.title}</h3>
       <p>{recommendation.explanation}</p>
-      <small className="progress-next-step-evidence">Основание: {recommendation.evidence}</small>
+      <small className="progress-next-step-evidence">Учтено: {recommendation.evidence}</small>
     </>}
-    {state === 'draft' && <div className="progress-next-step-actions" aria-label="Действия с черновиком рекомендации">
-      <button type="button" className="secondary" onClick={() => setState('confirmed')}>Подтвердить</button>
-      {choices.length > 1 && <button type="button" className="link" onClick={() => setState('editing')}>Изменить</button>}
-      <button type="button" className="link" onClick={() => setState('rejected')}>Отклонить</button>
+    {state === 'draft' && <div className="progress-next-step-actions" aria-label="Действия с предложением">
+      <button type="button" className="secondary" onClick={() => setState('confirmed')}>Выбрать этот шаг</button>
+      {choices.length > 1 && <button type="button" className="link" onClick={() => setState('editing')}>Другой вариант</button>}
+      <button type="button" className="link" onClick={() => setState('rejected')}>Не сейчас</button>
     </div>}
     {state === 'editing' && <form className="progress-next-step-editor" onSubmit={(event) => {
       event.preventDefault()
       const selected = choices.find((item) => item.id === editedId)
       if (selected) setRecommendation({ ...selected, source: 'user' })
-      setState('draft')
+      setState('confirmed')
     }}>
-      <fieldset><legend>Выбери другой допустимый шаг</legend>
+      <fieldset><legend>Выбери следующий шаг</legend>
         {choices.map((item) => <label key={item.id}>
           <input type="radio" name="next-step" value={item.id} checked={editedId === item.id} onChange={() => setEditedId(item.id)} />
           <span>{item.title}</span>
         </label>)}
       </fieldset>
       <div className="progress-next-step-actions">
-        <button type="submit" className="secondary">Применить к черновику</button>
-        <button type="button" className="link" onClick={() => setState('draft')}>Отмена</button>
+        <button type="submit" className="secondary">Выбрать</button>
+        <button type="button" className="link" onClick={() => setState('draft')}>Назад</button>
       </div>
     </form>}
     {state === 'confirmed' && <div className="progress-next-step-decision" role="status">
-      <p>Черновик подтверждён. Ничего не сохранено и план не изменён автоматически.</p>
+      <p><strong>Шаг выбран.</strong> Данные не изменены.</p>
       {actionHref && recommendation.actionLabel && <Link className="secondary" to={actionHref}>{recommendation.actionLabel}</Link>}
       <div className="progress-next-step-actions">
-        {choices.length > 1 && <button type="button" className="link" onClick={() => setState('editing')}>Изменить</button>}
-        <button type="button" className="link" onClick={() => setState('rejected')}>Отклонить</button>
+        {choices.length > 1 && <button type="button" className="link" onClick={() => setState('editing')}>Другой вариант</button>}
+        <button type="button" className="link" onClick={() => setState('rejected')}>Не сейчас</button>
       </div>
     </div>}
     {state === 'rejected' && <div className="progress-next-step-decision" role="status">
-      <h3 id={titleId}>Рекомендация отклонена</h3>
-      <p>Ничего не сохранено и план остался без изменений.</p>
+      <h3 id={titleId}>Предложение скрыто</h3>
       <button type="button" className="link" onClick={() => {
         setRecommendation(result.recommendation)
         setEditedId(result.recommendation.id)
         setState('draft')
-      }}>Вернуть черновик</button>
+      }}>Показать снова</button>
     </div>}
   </section>
 }
