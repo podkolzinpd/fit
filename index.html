@@ -293,15 +293,62 @@ h3 {
   position: absolute;
   left: 92px;
   right: 92px;
-  top: 330px;
+  top: 310px;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 30px;
 }
-.fragment { min-height: 200px; padding-top: 25px; border-top: 2px solid rgba(255,255,255,.22); }
-.fragment:nth-child(2), .fragment:nth-child(4) { transform: translateY(48px); }
+.fragment { min-height: 146px; padding-top: 20px; border-top: 2px solid rgba(255,255,255,.22); }
+.fragment:nth-child(2), .fragment:nth-child(4) { transform: none; }
 .fragment span { display: block; color: #999a9f; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
-.fragment b { display: block; margin-top: 34px; max-width: 210px; font-size: 27px; line-height: 1.16; }
+.fragment b { display: block; margin-top: 25px; max-width: 210px; font-size: 26px; line-height: 1.16; }
+.trainer-layer {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  top: 510px;
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 34px;
+  align-items: start;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,.18);
+}
+.trainer-layer-label span {
+  display: block;
+  color: #999a9f;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+.trainer-layer-label strong {
+  display: block;
+  margin-top: 11px;
+  max-width: 220px;
+  font-size: 18px;
+  line-height: 1.25;
+}
+.trainer-flow {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  min-height: 78px;
+}
+.trainer-flow span {
+  position: relative;
+  padding: 9px 22px 0 18px;
+  border-left: 1px solid rgba(255,255,255,.14);
+  color: rgba(246,242,234,.76);
+  font-size: 17px;
+  line-height: 1.25;
+}
+.trainer-flow span::after {
+  content: "→";
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  color: rgba(246,242,234,.28);
+}
+.trainer-flow span:last-child::after { content: ""; }
 .problem-consequence {
   position: absolute;
   left: 92px;
@@ -314,7 +361,7 @@ h3 {
   border-top: 1px solid rgba(255,255,255,.18);
 }
 .problem-consequence span { color: #999a9f; font-size: 15px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.problem-consequence strong { font-size: 26px; line-height: 1.3; }
+.problem-consequence strong { max-width: 1120px; font-size: 25px; line-height: 1.28; }
 
 /* Product proof */
 .product-proof { padding-right: 760px; }
@@ -1475,7 +1522,8 @@ h3 {
   font-size: 22px;
   line-height: 1.38;
 }
-.slide-dark[data-section="Проблема"] .fragmented { top: 344px; }
+.slide-dark[data-section="Проблема"] .fragmented { top: 310px; }
+.slide-dark[data-section="Проблема"] .trainer-layer-label span { color: var(--dark-muted); font-weight: 600; }
 
 .ai-product-slide h2 { max-width: 1330px; }
 .ai-product-copy { top: 257px; width: 640px; }
@@ -1722,19 +1770,29 @@ h3 {
     <section class="slide slide-dark" data-section="Проблема">
       <div class="eyebrow">01 · ПРОБЛЕМА</div>
       <h2>Начать трудно. Удержаться ещё труднее</h2>
-      <p class="subhead">Человек часто не знает, как начать, где найти тренера и что поможет превратить занятия в привычку.</p>
+      <p class="subhead">Клиенту нужен понятный следующий шаг. Тренеру — единый контекст, чтобы этот шаг вовремя дать.</p>
       <div class="fragmented">
-        <div class="fragment"><span>Старт</span><b>Как вообще начать?</b></div>
-        <div class="fragment"><span>Тренер</span><b>Где найти подходящего?</b></div>
+        <div class="fragment"><span>Старт</span><b>Где и как начать?</b></div>
+        <div class="fragment"><span>Тренер</span><b>Кому довериться?</b></div>
         <div class="fragment"><span>План</span><b>Что делать сегодня?</b></div>
-        <div class="fragment"><span>Факт</span><b>Что уже выполнено?</b></div>
-        <div class="fragment"><span>Привычка</span><b>Почему возвращаться?</b></div>
+        <div class="fragment"><span>Факт</span><b>Что получилось?</b></div>
+        <div class="fragment"><span>Прогресс</span><b>Что делать дальше?</b></div>
+      </div>
+      <div class="trainer-layer">
+        <div class="trainer-layer-label"><span>ТРЕНЕРСКИЙ СЛОЙ</span><strong>Единый контекст сопровождения</strong></div>
+        <div class="trainer-flow">
+          <span>Понять цель</span>
+          <span>Дать программу</span>
+          <span>Увидеть факт</span>
+          <span>Дать обратную связь</span>
+          <span>Скорректировать план</span>
+        </div>
       </div>
       <div class="problem-consequence">
         <span>Результат</span>
-        <strong>План, факт и прогресс живут раздельно — следующий шаг каждый раз приходится собирать заново.</strong>
+        <strong>Клиент теряет следующий шаг, а тренер — контекст и время. Fit соединяет их в одном цикле.</strong>
       </div>
-      <aside class="speaker-notes">Проблема начинается до первой тренировки: человеку сложно выбрать способ начать и найти поддержку. После старта маршрут остаётся фрагментированным, поэтому действие не закрепляется в привычку.</aside>
+      <aside class="speaker-notes">Клиент — массовая аудитория и основной продукт. Тренер — не равная по масштабу аудитория, а усилитель результата, удержания и дистрибуции. Fit может работать для самостоятельного спортсмена через ИИ и аналитику; если тренер есть, продукт связывает план, факт, обратную связь и корректировку в одном контексте.</aside>
     </section>
 
     <section class="slide" data-section="Идея">
