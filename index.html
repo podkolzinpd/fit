@@ -328,12 +328,12 @@ h3 {
   font-size: 18px;
   line-height: 1.25;
 }
-.trainer-flow {
+.problem-trainer-flow {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   min-height: 78px;
 }
-.trainer-flow span {
+.problem-trainer-flow span {
   position: relative;
   padding: 9px 22px 0 18px;
   border-left: 1px solid rgba(255,255,255,.14);
@@ -341,14 +341,14 @@ h3 {
   font-size: 17px;
   line-height: 1.25;
 }
-.trainer-flow span::after {
+.problem-trainer-flow span::after {
   content: "→";
   position: absolute;
   top: 7px;
   right: 7px;
   color: rgba(246,242,234,.28);
 }
-.trainer-flow span:last-child::after { content: ""; }
+.problem-trainer-flow span:last-child::after { content: ""; }
 .problem-consequence {
   position: absolute;
   left: 92px;
@@ -1780,7 +1780,7 @@ h3 {
       </div>
       <div class="trainer-layer">
         <div class="trainer-layer-label"><span>ТРЕНЕРСКИЙ СЛОЙ</span><strong>Единый контекст сопровождения</strong></div>
-        <div class="trainer-flow">
+        <div class="problem-trainer-flow">
           <span>Понять цель</span>
           <span>Дать программу</span>
           <span>Увидеть факт</span>
