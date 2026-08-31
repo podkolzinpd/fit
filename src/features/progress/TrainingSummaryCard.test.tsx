@@ -299,8 +299,10 @@ describe('Training summary card states', () => {
     expect(screen.getByText('Движение к ориентиру')).toBeVisible()
     expect(screen.getByText('увеличить до 85 кг')).toBeVisible()
     expect(screen.getAllByText('81,5 кг')[0]).toBeVisible()
-    expect(screen.getByRole('link', { name: 'Смотреть значения и график' })).toHaveAttribute('href', '#progress-measurements')
-    expect(screen.getByText(/пока не достиг заданного ориентира/)).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Ты приближаешься к цели' })).toBeVisible()
+    expect(screen.getByText('80 → 81,5 кг (+1,5 кг) · ближе к цели')).toBeVisible()
+    expect(screen.queryByRole('link', { name: 'Смотреть значения и график' })).toBeNull()
+    expect(screen.queryByText(/пока не достиг заданного ориентира/)).toBeNull()
     const measurements = screen.getByRole('heading', { name: 'Тренд по значениям' }).closest('section')
     expect(measurements).not.toBeNull()
     expect(within(measurements!).getByText('Вес (кг)')).toBeVisible()
@@ -333,7 +335,7 @@ describe('Training summary card states', () => {
     expect(document.body).not.toHaveTextContent('Прогресс уже заметен, ты на верном пути')
   })
 
-  it('keeps a composite goal compact and reveals additional criteria on demand', async () => {
+  it('combines the main result with the goal and shows no more than two criteria at first', async () => {
     const user = userEvent.setup()
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
     repositories.listForClient.mockResolvedValue([publishedSummary])
@@ -349,6 +351,11 @@ describe('Training summary card states', () => {
         targetValue: 2, rangeMin: null, rangeMax: null, unit: 'трен.',
         baselineValue: null, baselineRecordedOn: null, regularityPeriod: 'week', regularityMode: 'each_period',
         confirmationStatus: 'confirmed', position: 1, version: 1,
+      }, {
+        id: 'criterion-3', goalId: 'goal-1', metric: 'waist', operation: 'decrease_to',
+        targetValue: 80, rangeMin: null, rangeMax: null, unit: 'см',
+        baselineValue: null, baselineRecordedOn: null,
+        confirmationStatus: 'confirmed', position: 2, version: 1,
       }],
     })
     repositories.progress.mockResolvedValue([{
@@ -361,15 +368,20 @@ describe('Training summary card states', () => {
 
     const goal = (await screen.findByRole('heading', { name: 'Держать вес и тренироваться регулярно' })).closest('section')
     expect(goal).not.toBeNull()
-    expect(goal!.querySelectorAll('.goal-criterion-progress-row')).toHaveLength(1)
-    expect(within(goal!).queryByText('Регулярность тренировок')).toBeNull()
-
-    await user.click(within(goal!).getByRole('button', { name: 'Показать все критерии · 2' }))
+    expect(goal).toHaveClass('client-progress-overview')
+    expect(within(goal!).getByText('Главное сейчас', { exact: true })).toBeVisible()
+    expect(within(goal!).queryByText('По завершённым тренировкам')).toBeNull()
     expect(goal!.querySelectorAll('.goal-criterion-progress-row')).toHaveLength(2)
     expect(within(goal!).getByText('Регулярность тренировок')).toBeVisible()
+    expect(within(goal!).queryByText('Талия')).toBeNull()
+    expect(within(goal!).getByText('3 показателя')).toBeVisible()
 
-    await user.click(within(goal!).getByRole('button', { name: 'Показать только основной критерий' }))
-    expect(goal!.querySelectorAll('.goal-criterion-progress-row')).toHaveLength(1)
+    await user.click(within(goal!).getByRole('button', { name: 'Ещё 1 критерий' }))
+    expect(goal!.querySelectorAll('.goal-criterion-progress-row')).toHaveLength(3)
+    expect(within(goal!).getByText('Талия')).toBeVisible()
+
+    await user.click(within(goal!).getByRole('button', { name: 'Скрыть дополнительные критерии' }))
+    expect(goal!.querySelectorAll('.goal-criterion-progress-row')).toHaveLength(2)
   })
 
   it('hides low-value legacy fallback and keeps the structured detailed-analysis sections', async () => {
