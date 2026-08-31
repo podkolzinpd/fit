@@ -176,6 +176,30 @@ async function mockRoleHomeWorkoutState(page: VisualPage) {
   await page.route('**/rest/v1/rpc/list_trainer_attention_workouts', emptyRows)
 }
 
+async function mockTrainerClients(page: VisualPage) {
+  const names = ['Анна Смирнова', 'Борис Иванов', 'Вера Кузнецова', 'Глеб Орлов', 'Дарья Ершова', 'Егор Панов']
+  await page.route('**/rest/v1/rpc/list_clients', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify(names.map((fullName, index) => ({
+      id: index === 0 ? demoClientId : `71000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      has_account: index === 0,
+      full_name: fullName,
+      canonical_full_name: fullName,
+      gender: null,
+      age_years: 25 + index,
+      age_updated_at: '2026-08-01',
+      height_cm: 170 + index,
+      goal: null,
+      note: null,
+      current_weight_kg: 65 + index,
+      last_activity_at: `2026-08-${String(16 - index).padStart(2, '0')}T10:00:00Z`,
+      archived_at: null,
+      version: 1,
+      membership_version: 1,
+    }))),
+  }))
+}
+
 async function mockClientWorkoutHistory(page: import('@playwright/test').Page) {
   const workoutRows = ['2026-08-10', '2026-08-03'].map((workoutDate, index) => ({
     id: `b1000000-0000-4000-8000-00000000000${index + 1}`,
@@ -1335,18 +1359,44 @@ test('trainer Clients list keeps its desktop visual baselines', async ({ page },
 
 test('trainer Clients list keeps its mobile visual baselines', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Trainer desktop has a dedicated visual test')
+  await mockTrainerClients(page)
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await gotoStable(page, '/clients')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
   await expect(page.getByRole('link', { name: /Анна Смирнова/ }).first()).toBeVisible()
   await expectVisualBaseline(page, `trainer-clients-mobile-${process.platform}.png`, [], true)
+  const search = page.getByRole('searchbox', { name: 'Поиск клиента' })
+  await page.mouse.move(0, 0)
+  await search.focus()
+  const searchGeometry = await search.evaluate((element) => {
+    const inputStyle = getComputedStyle(element)
+    const shell = element.closest<HTMLElement>('.clients-search')!
+    const shellStyle = getComputedStyle(shell)
+    const inputBox = element.getBoundingClientRect()
+    const shellBox = shell.getBoundingClientRect()
+    return {
+      inputBorderWidth: inputStyle.borderWidth,
+      inputMarginBottom: inputStyle.marginBottom,
+      inputOutlineStyle: inputStyle.outlineStyle,
+      shellBorderWidth: shellStyle.borderWidth,
+      contained: inputBox.top >= shellBox.top && inputBox.bottom <= shellBox.bottom,
+    }
+  })
+  expect(searchGeometry).toEqual({ inputBorderWidth: '0px', inputMarginBottom: '0px', inputOutlineStyle: 'none', shellBorderWidth: '1px', contained: true })
+  await expect(search).toBeFocused()
+  await expect(page).toHaveScreenshot(`trainer-clients-mobile-search-focus-${process.platform}.png`, { animations: 'disabled', caret: 'hide', fullPage: true, maxDiffPixelRatio: 0.03 })
 
   await gotoStable(page, '/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/clients')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
   await expectVisualBaseline(page, `trainer-clients-mobile-dark-${process.platform}.png`, [], true, '#1d1e21')
+  const darkSearch = page.getByRole('searchbox', { name: 'Поиск клиента' })
+  await page.mouse.move(0, 0)
+  await darkSearch.focus()
+  await expect(darkSearch).toBeFocused()
+  await expect(page).toHaveScreenshot(`trainer-clients-mobile-search-focus-dark-${process.platform}.png`, { animations: 'disabled', caret: 'hide', fullPage: true, maxDiffPixelRatio: 0.03 })
 })
 
 test('trainer Client Detail keeps its visual baselines', async ({ page }, testInfo) => {
