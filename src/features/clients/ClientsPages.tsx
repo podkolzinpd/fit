@@ -71,15 +71,16 @@ export function ClientFormPage() {
 
 export function MyClientEditPage() {
   const navigate = useNavigate(); const queryClient = useQueryClient()
-  const { refresh } = useAuth()
+  const { actor, refresh } = useAuth()
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
   useClientRealtime(query.data?.id)
-  return <AsyncView loading={query.isLoading} error={query.error} empty={!query.data} onRetry={() => void query.refetch()}>
-    {query.data && <ClientForm existing={query.data} createMode="self" onSaved={async () => {
+  const initialFullName = [actor?.firstName, actor?.lastName].filter(Boolean).join(' ').trim()
+  return <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
+    {!query.isLoading && <ClientForm existing={query.data ?? undefined} initialFullName={initialFullName} createMode="self" onSaved={async () => {
       await queryClient.invalidateQueries({ queryKey: ['my-client'] })
       await refresh()
       navigate('/me')
-    }} onCancel={() => navigate('/me/profile')} />}
+    }} onCancel={() => navigate(query.data ? '/me/profile' : '/me')} />}
   </AsyncView>
 }
 
@@ -135,7 +136,7 @@ function ClientForm({
         <Field label="Имя" error={form.formState.errors.fullName?.message}><input {...form.register('fullName')} /></Field>
         <Field label="Пол"><select {...form.register('gender')}><option value="">Выберите</option><option value="female">Женский</option><option value="male">Мужской</option></select></Field>
         <div className="split"><Field label="Возраст"><input type="number" {...form.register('ageYears')} /></Field><Field label="Рост, см"><input type="number" step="0.1" {...form.register('heightCm')} /></Field></div>
-        {!existing && <Field label="Начальный вес, кг"><input type="number" step="0.1" {...form.register('initialWeightKg')} /></Field>}
+        {!existing && <Field label="Начальный вес, кг" error={form.formState.errors.initialWeightKg?.message}><input type="number" step="0.1" {...form.register('initialWeightKg', { setValueAs: (value: unknown) => value === '' ? undefined : Number(value) })} /></Field>}
         <Field label="Цель"><textarea {...form.register('goal')} /></Field>
         {createMode === 'trainer' && <Controller
           control={form.control}
@@ -153,9 +154,12 @@ function ClientForm({
         <Controller control={form.control} name="privateNote" render={({ field }) => <VoiceNoteField name={field.name} source="client_form" label="Личная заметка" value={field.value ?? ''} onValueChange={field.onChange} />} />
       </section>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions">{onCancel && <button type="button" className="secondary" disabled={mutation.isPending} onClick={onCancel}>Отмена</button>}<button className="primary" disabled={mutation.isPending} aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : createMode === 'self' && !existing ? 'Создать карточку' : 'Сохранить'}</button></div>
+      <div className="actions">{onCancel && <button type="button" className="secondary" disabled={mutation.isPending} onClick={onCancel}>Отмена</button>}<button className="primary" disabled={mutation.isPending} aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : createMode === 'self' && !existing ? 'Сохранить профиль' : 'Сохранить'}</button></div>
     </form>
-  return embedded ? contents : <Page title={existing ? 'Редактировать клиента' : 'Новый клиент'} className={createMode === 'self' ? 'client-self-edit-page' : undefined}>{contents}</Page>
+  const title = createMode === 'self'
+    ? existing ? 'Мои данные' : 'Профиль спортсмена'
+    : existing ? 'Редактировать клиента' : 'Новый клиент'
+  return embedded ? contents : <Page title={title} className={createMode === 'self' ? 'client-self-edit-page' : undefined}>{contents}</Page>
 }
 
 // update_client пишет goal и note одной транзакцией с optimistic-lock (version).
