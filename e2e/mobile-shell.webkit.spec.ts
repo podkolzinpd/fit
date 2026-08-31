@@ -650,9 +650,9 @@ test('iPhone: client progress keeps one goal-aware LLM summary and compact runni
   await expect(page.getByText('Прогресс уже заметен, ты на верном пути.')).toHaveCount(0)
   const nextStep = page.locator('.client-progress-next-step')
   await expect(nextStep.getByText('Следующий шаг', { exact: true })).toBeVisible()
-  await expect(nextStep.getByRole('button', { name: 'Подтвердить' })).toBeVisible()
-  await expect(nextStep.getByRole('button', { name: 'Изменить' })).toBeVisible()
-  await expect(nextStep.getByRole('button', { name: 'Отклонить' })).toBeVisible()
+  await expect(nextStep.getByRole('button', { name: 'Выбрать этот шаг' })).toBeVisible()
+  await expect(nextStep.getByRole('button', { name: 'Другой вариант' })).toBeVisible()
+  await expect(nextStep.getByRole('button', { name: 'Не сейчас' })).toBeVisible()
   await expect(nextStep.getByRole('link')).toHaveCount(0)
   await expect(nextStep.evaluate((element) => {
     const summary = document.querySelector('.progress-story-summary')
@@ -661,8 +661,8 @@ test('iPhone: client progress keeps one goal-aware LLM summary and compact runni
       && (summary.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
       && (element.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING))
   })).resolves.toBe(true)
-  await nextStep.getByRole('button', { name: 'Подтвердить' }).click()
-  await expect(nextStep.getByText('Черновик подтверждён. Ничего не сохранено и план не изменён автоматически.')).toBeVisible()
+  await nextStep.getByRole('button', { name: 'Выбрать этот шаг' }).click()
+  await expect(nextStep.getByText('Данные не изменены.', { exact: false })).toBeVisible()
   await expect(nextStep.getByRole('link')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Обновить' })).toBeVisible()
   const runningProgress = page.getByLabel('Беговой прогресс')
@@ -672,6 +672,16 @@ test('iPhone: client progress keeps one goal-aware LLM summary and compact runni
   await expect(runningProgress).toContainText('6,5')
   await expect(runningProgress).toContainText('быстрее на 8%')
   await expect(runningProgress).toContainText('Последняя нагрузка: RPE 7')
+
+  const measurementActions = page.getByRole('navigation', { name: 'Действия с замерами' })
+  await measurementActions.scrollIntoViewIfNeeded()
+  const [actionsBox, navigationBox] = await Promise.all([
+    measurementActions.boundingBox(),
+    page.getByRole('navigation', { name: 'Основная навигация' }).boundingBox(),
+  ])
+  expect(actionsBox).not.toBeNull()
+  expect(navigationBox).not.toBeNull()
+  expect(actionsBox!.y + actionsBox!.height).toBeLessThanOrEqual(navigationBox!.y)
 
   await page.getByText('УПРАВЛЕНИЕ', { exact: true }).scrollIntoViewIfNeeded()
   await page.getByRole('button', { name: 'Добавить замер' }).click()

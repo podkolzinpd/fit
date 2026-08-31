@@ -325,10 +325,10 @@ describe('Training summary card states', () => {
     const nextStep = nextStepHeading.closest('section')
     expect(nextStep).not.toBeNull()
     expect(nextStep).toHaveAttribute('data-recommendation-source', 'deterministic')
-    expect(within(nextStep!).getByText('Основание: 81,5 кг · Движение к ориентиру')).toBeVisible()
+    expect(within(nextStep!).getByText('Учтено: 81,5 кг · Движение к ориентиру')).toBeVisible()
     const nextStepIndex = Array.from(document.querySelectorAll('.progress-story-card > *')).indexOf(nextStep!)
     expect(nextStepIndex).toBeGreaterThan(resultsIndex)
-    await user.click(within(nextStep!).getByRole('button', { name: 'Изменить' }))
+    await user.click(within(nextStep!).getByRole('button', { name: 'Другой вариант' }))
     expect(within(nextStep!).getByRole('radio', { name: 'Открыть ближайшую тренировку · 28 августа 2026 г. · 18:30' })).toBeVisible()
     expect(document.body).not.toHaveTextContent('Прогресс уже заметен, ты на верном пути')
   })
@@ -426,7 +426,7 @@ describe('Training summary card states', () => {
 
     const client = render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
     const clientDraft = await screen.findByRole('heading', { name: 'Сформулировать цель и критерий' })
-    await user.click(within(clientDraft.closest('section')!).getByRole('button', { name: 'Подтвердить' }))
+    await user.click(within(clientDraft.closest('section')!).getByRole('button', { name: 'Выбрать этот шаг' }))
     expect(screen.getByRole('link', { name: 'Открыть цель' })).toHaveAttribute('href', '/me/goal')
     client.unmount()
 
@@ -435,7 +435,7 @@ describe('Training summary card states', () => {
 
     expect(await screen.findByText('Доступно клиенту')).toBeVisible()
     const trainerDraft = await screen.findByRole('heading', { name: 'Уточнить цель и критерий клиента' })
-    await user.click(within(trainerDraft.closest('section')!).getByRole('button', { name: 'Подтвердить' }))
+    await user.click(within(trainerDraft.closest('section')!).getByRole('button', { name: 'Выбрать этот шаг' }))
     expect(screen.getByRole('link', { name: 'Открыть цель' })).toHaveAttribute('href', '/clients/client-1/goal')
     expect(screen.getByRole('button', { name: 'Версия для спортсмена' })).toBeVisible()
   })
