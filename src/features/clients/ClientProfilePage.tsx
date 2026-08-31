@@ -5,6 +5,7 @@ import { setAppTheme, useAppTheme } from '../../app/theme'
 import { authRepository } from '../../data/repositories/auth.repository'
 import { clientsRepository } from '../../data/repositories/clients.repository'
 import { AsyncView, Page, Switch } from '../../shared/ui'
+import { YandexAccountLinkingCard } from '../auth'
 import { ClientTrainerConnections } from './ClientTrainerConnections'
 import { AppFeedbackForm } from '../profile/AppFeedbackForm'
 import { useState } from 'react'
@@ -55,6 +56,7 @@ export function ClientProfilePage() {
       <Switch label="Тёмная тема" checked={theme === 'dark'} onChange={(checked) => setAppTheme(checked ? 'dark' : 'light')} />
       <NotificationsSetting userId={actor.userId} />
     </section>
+    <YandexAccountLinkingCard actor={actor} />
     <div className="menu"><Link to="/join">Ввести код приглашения</Link><button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button><button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button></div>
     {installOpen && <AppInstallPanel onClose={() => setInstallOpen(false)} />}
     {feedbackOpen && <AppFeedbackForm onClose={() => setFeedbackOpen(false)} />}
