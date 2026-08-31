@@ -87,10 +87,23 @@ type VisualPage = import('@playwright/test').Page
 type VisualGotoOptions = Parameters<VisualPage['goto']>[1]
 
 async function gotoStable(page: VisualPage, url: string, options?: VisualGotoOptions) {
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  const protectedNavigation = !new URL(url, 'http://127.0.0.1').pathname.startsWith('/auth')
+  for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       await page.goto(url, options)
       await page.locator('#root > *').first().waitFor({ state: 'attached', timeout: 5_000 })
+      if (protectedNavigation) {
+        try {
+          await page.locator('.phone-frame').waitFor({ state: 'attached', timeout: 5_000 })
+        } catch (error) {
+          const authRedirect = new URL(page.url()).pathname === '/auth'
+          if (attempt < 2 && authRedirect) {
+            await page.waitForTimeout(500 * (2 ** attempt))
+            continue
+          }
+          throw error
+        }
+      }
       return
     } catch (error) {
       const browserInternal = error instanceof Error && error.message.includes('encountered an internal error')
@@ -99,7 +112,7 @@ async function gotoStable(page: VisualPage, url: string, options?: VisualGotoOpt
       // an empty document without throwing. Retry only those two browser-level
       // states once; populated application, network and assertion failures
       // still surface immediately.
-      if (attempt > 0 || (!browserInternal && !emptyAppDocument)) throw error
+      if (attempt > 1 || (!browserInternal && !emptyAppDocument)) throw error
       await page.waitForTimeout(100)
     }
   }
@@ -369,6 +382,23 @@ test('visual sign-in retries a transient local auth gateway failure', async ({ p
 
   await signIn(page, 'trainer@fit.local', /\/today$/)
   expect(tokenRequests).toBe(2)
+
+  let linkedClientRequests = 0
+  await page.route('**/rest/v1/clients?*', async (route) => {
+    linkedClientRequests += 1
+    if (linkedClientRequests === 1) {
+      await route.fulfill({
+        status: 502,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'An invalid response was received from the upstream server' }),
+      })
+      return
+    }
+    await route.continue()
+  })
+  await gotoStable(page, '/profile')
+  await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
+  expect(linkedClientRequests).toBeGreaterThanOrEqual(2)
 })
 
 test('auth family keeps light and dark visual baselines', async ({ page }) => {
@@ -1081,6 +1111,13 @@ async function openWorkoutForDetailReview(page: import('@playwright/test').Page,
 
 test('workout detail, completion and exercise history keep their visual baselines', async ({ page }, testInfo) => {
   const trainer = testInfo.project.name === 'visual-trainer-1440'
+  await page.route('**/rest/v1/rpc/list_workout_personal_records', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify([{
+      exercise_name: 'Жим лёжа (Штанга)', exercise_ref: 'bench-press', input_kind: 'strength',
+      metric: 'weight_reps', primary_value: 382.5, reps: 9, weight_kg: 42.5,
+    }]),
+  }))
   await openWorkoutForDetailReview(page, trainer)
   await page.getByLabel('Фактический вес').first().fill('42.5')
   await page.getByLabel('Фактические повторы').first().fill('9')
@@ -1302,6 +1339,9 @@ test('trainer Clients list keeps its mobile visual baselines', async ({ page }, 
 })
 
 test('trainer Client Detail keeps its visual baselines', async ({ page }, testInfo) => {
+  await page.route('**/rest/v1/rpc/list_workout_summaries', (route) => route.fulfill({
+    contentType: 'application/json', body: '[]',
+  }))
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await gotoStable(page, `/clients/${demoClientId}`)
