@@ -1302,12 +1302,17 @@ h3 {
   top: 235px;
   width: 600px;
   height: 590px;
-  display: flex;
-  gap: 28px;
-  align-items: flex-start;
-  justify-content: center;
+  display: block;
+  border: 0;
+  background: var(--paper);
+  z-index: 4;
 }
-.ai-screen { margin: 0; }
+.ai-screen {
+  position: absolute;
+  top: 0;
+  width: 255px;
+  margin: 0;
+}
 .ai-screen img {
   display: block;
   border: 1px solid var(--line);
@@ -1321,7 +1326,7 @@ h3 {
   font-weight: 500;
 }
 .ai-screen-compose {
-  width: 255px;
+  left: 30px;
   overflow: visible;
 }
 .ai-screen-compose img {
@@ -1332,7 +1337,7 @@ h3 {
   object-position: top;
   transform: none;
 }
-.ai-screen-review { width: 255px; }
+.ai-screen-review { right: 30px; }
 .ai-screen-review img {
   width: 255px;
   height: 552px;
