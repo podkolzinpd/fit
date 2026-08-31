@@ -322,7 +322,7 @@ function goalAwareMainTitle(title: string, role: 'client' | 'trainer'): string {
   return title
 }
 
-function ProgressStoryContent({ summary, clientId, role, gender, today, goal, profileGoal, goalLoading, goalError, onGoalRetry, currentWorkouts, previousWorkouts, upcomingWorkouts, measurements, customMetrics, measurementsLoading, measurementsError, onMeasurementsRetry, workoutsLoading, workoutsError, onWorkoutsRetry }: {
+function ProgressStoryContent({ summary, clientId, role, gender, today, goal, profileGoal, goalLoading, goalError, onGoalRetry, currentWorkouts, previousWorkouts, upcomingWorkouts, measurements, customMetrics, measurementsLoading, measurementsError, onMeasurementsRetry, measurementManagement, workoutsLoading, workoutsError, onWorkoutsRetry }: {
   summary: ProgressStorySummary
   clientId: string
   role: 'client' | 'trainer'
@@ -341,6 +341,7 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
   measurementsLoading: boolean
   measurementsError: Error | null
   onMeasurementsRetry: () => void
+  measurementManagement?: ReactNode
   workoutsLoading: boolean
   workoutsError: Error | null
   onWorkoutsRetry: () => void
@@ -581,6 +582,7 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       error={measurementsError}
       onRetry={onMeasurementsRetry}
       llmCandidates={measurementCopyCandidates(summary, role)}
+      management={measurementManagement}
     />
     <WorkoutRegularityProgressSection
       currentWorkouts={currentWorkouts}
@@ -701,10 +703,11 @@ function ClientCopyEditor({ summary, clientId, onChanged }: {
   </form>
 }
 
-export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null }: {
+export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null, measurementManagement }: {
   clientId: string
   profileGoal?: string | null
   gender?: Gender | null
+  measurementManagement?: ReactNode
 }) {
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
@@ -748,12 +751,12 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
   const measurements = useQuery({
     queryKey: ['client-progress-story-measurements', clientId],
     queryFn: () => progressRepository.list(clientId),
-    enabled: ready && Boolean(summary),
+    enabled: ready,
   })
   const customMetrics = useQuery({
     queryKey: ['progress-metrics', clientId],
     queryFn: () => progressRepository.listMetrics(clientId),
-    enabled: ready && Boolean(summary),
+    enabled: ready,
   })
   const goal = useQuery({
     queryKey: ['client-goal', clientId],
@@ -812,13 +815,30 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
           measurementsLoading={measurements.isLoading || customMetrics.isLoading}
           measurementsError={measurements.error ?? customMetrics.error}
           onMeasurementsRetry={() => void Promise.all([measurements.refetch(), customMetrics.refetch()])}
+          measurementManagement={measurementManagement}
           workoutsLoading={workouts.isLoading}
           workoutsError={workouts.error}
           onWorkoutsRetry={() => void workouts.refetch()}
-        /> : <div className="ai-progress-empty">
-        <strong>Анализ за этот период ещё не создан</strong>
-        <p>Создай его по завершённым тренировкам.</p>
-      </div>}
+        /> : <>
+          <div className="ai-progress-empty">
+            <strong>Анализ за этот период ещё не создан</strong>
+            <p>Создай его по завершённым тренировкам.</p>
+          </div>
+          {measurementManagement && <MeasurementProgressSection
+            clientId={clientId}
+            entries={measurements.data ?? []}
+            customMetrics={customMetrics.data ?? []}
+            goal={goal.data}
+            periodStart={workoutRange.start}
+            periodEnd={workoutRange.end}
+            today={today}
+            role="client"
+            loading={measurements.isLoading || customMetrics.isLoading}
+            error={measurements.error ?? customMetrics.error}
+            onRetry={() => void Promise.all([measurements.refetch(), customMetrics.refetch()])}
+            management={measurementManagement}
+          />}
+        </>}
     </AsyncView>
     {ready && <footer className="ai-progress-footer">
       <span role={generationMessage ? 'status' : undefined}>
@@ -841,7 +861,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
   </section>
 }
 
-function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalLoading, goalError, onGoalRetry, currentWorkouts, previousWorkouts, upcomingWorkouts, measurements, customMetrics, measurementsLoading, measurementsError, onMeasurementsRetry, workoutsLoading, workoutsError, onWorkoutsRetry }: {
+function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalLoading, goalError, onGoalRetry, currentWorkouts, previousWorkouts, upcomingWorkouts, measurements, customMetrics, measurementsLoading, measurementsError, onMeasurementsRetry, measurementManagement, workoutsLoading, workoutsError, onWorkoutsRetry }: {
   summary: PublishedTrainingSummary
   goal: ClientGoal | null | undefined
   profileGoal?: string | null
@@ -858,6 +878,7 @@ function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalL
   measurementsLoading: boolean
   measurementsError: Error | null
   onMeasurementsRetry: () => void
+  measurementManagement?: ReactNode
   workoutsLoading: boolean
   workoutsError: Error | null
   onWorkoutsRetry: () => void
@@ -881,6 +902,7 @@ function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalL
       measurementsLoading={measurementsLoading}
       measurementsError={measurementsError}
       onMeasurementsRetry={onMeasurementsRetry}
+      measurementManagement={measurementManagement}
       workoutsLoading={workoutsLoading}
       workoutsError={workoutsError}
       onWorkoutsRetry={onWorkoutsRetry}

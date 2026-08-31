@@ -1,11 +1,9 @@
 # Fit — текущее состояние проекта
-
 > Rolling snapshot для продолжения между сессиями. Максимум 120 строк.
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
-
 Обновлено: 2026-08-31
-Проверенный базовый `main`: `300b584` (`feat(yandex): add native pilot assistant turn (#719)`)
+Проверенный базовый `main`: `605a0bf` (`Progress: встроить замеры и ориентир цели (#720)`)
 ## Текущий release gate
 
 - Foundation UI Identity v1 принята. Задачи 8–28 — клиентский, тренерский,
@@ -52,9 +50,13 @@
   допускается только при совпадении предмета и рассчитанных чисел, иначе
   используется deterministic fallback.
 - Измерения вынесены в самостоятельный аналитический блок: приоритетный
-  показатель, график периода, начало/конец, min/max, связь с целью, freshness
-  и sufficiency. Вес, стандартные и пользовательские показатели поддерживаются;
-  добавление, история, исправление и настройка остаются в нижнем блоке управления.
+  показатель, текущее значение, delta, компактный график выбранного периода,
+  начало/конец, min/max, связь с целью, freshness и sufficiency. Поддерживаются
+  вес, стандартные и пользовательские показатели; карточка цели показывает
+  только «сейчас» и ориентир, а подробная динамика живёт в измерениях. График
+  показывает подтверждённый ориентир линией или диапазон удержания полосой.
+  Добавление, история, исправление и настройка раскрываются внутри того же блока;
+  отдельной административной карточки нет.
 - «Следующий шаг» — отдельное компактное предложение после результатов. Код
   формирует семь допустимых типов действия, а ИИ может выбрать один только при
   совпадении смысла и чисел. Выбор, замена и скрытие ничего не сохраняют;
@@ -87,17 +89,14 @@
   secrets не выставляются через `ops_readonly`.
 - Native AI использует metadata IAM token без статического ключа; точную роль
   один раз выдаёт `fit-stage-api` администратор, а OIDC не меняет folder IAM.
-- Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
-  нужен browser-контракту; Supabase-сессия при пилотном входе не создаётся.
-- Стабильный branch-scoped Vercel Preview синхронизируется с каждым verified
-  `main` без force-push; callback URL и CORS origin не меняются. Все остальные
-  ветки исключены из Vercel Git deployments.
-- Callback показывает pilot profile, clients, connections и training data, но
-  pilot UI read-only. Client/custom-exercise и Planned/Live writes — только
-  через stage API, production routing не затрагивают.
-- Реальный invite → join → leave/remove smoke на двух Yandex ID — внешняя
-  stage-проверка; локальный lifecycle и RLS-матрица зелёные. Production остаётся
-  на Supabase; полный cutover не выполнен.
+- Yandex OAuth использует PKCE и публичный Client ID; secret browser-контракту
+  не нужен, Supabase-сессия при пилотном входе не создаётся.
+- Стабильный Vercel Preview синхронизируется с каждым verified `main`; callback,
+  CORS и история не меняются, прочие ветки исключены из Git deployments.
+- Pilot UI read-only; Client/custom-exercise и Planned/Live writes идут через
+  stage API без изменения production routing.
+- Реальный invite → join → leave/remove smoke — внешняя проверка. Production
+  остаётся на Supabase; полный cutover не выполнен.
 ## Проверки активной ветки
 - `codex/yandex-session-linking` добавляет foundation для полноценной Yandex ID
   session и безопасного linking: `POST /v1/auth/yandex/session`,
@@ -107,7 +106,7 @@
 - Проверено локально: `npm --prefix services/api run check`,
   `TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:55432/fit_actor_test npm --prefix services/api run test:db`,
   `npm run db:reset`, `npm run db:test`, `npm run migrations:check`,
-  `npm run check`.
+  `npm run check` после merge с `605a0bf`.
 ## Ближайший порядок
 1. Подключить UI linking/обычной Yandex ID session за default-off rollout.
 2. Подключить основной Assistant UI к Yandex API через sticky tenant routing
