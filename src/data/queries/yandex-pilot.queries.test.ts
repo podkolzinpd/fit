@@ -105,4 +105,70 @@ describe('yandexPilotQueries', () => {
       expect.objectContaining({ method: 'DELETE' }),
     )
   })
+
+  it('keeps Web Push secrets in actor-authenticated request bodies only', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValue(new Response(null, { status: 204 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const token = 's'.repeat(43)
+
+    await yandexPilotQueries.getPushNotificationStatus(
+      'https://stage.example.test',
+      token,
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://stage.example.test/v1/push-notifications/status',
+      {
+        cache: 'no-store',
+        headers: { 'x-fit-pilot-session': token },
+      },
+    )
+
+    await yandexPilotQueries.upsertPushSubscription(
+      'https://stage.example.test',
+      token,
+      {
+        endpoint: 'https://push.example/subscription',
+        p256dh: 'public-key',
+        authKey: 'auth-secret',
+      },
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://stage.example.test/v1/push-notifications/subscription',
+      {
+        method: 'PUT',
+        cache: 'no-store',
+        headers: {
+          'content-type': 'application/json',
+          'x-fit-pilot-session': token,
+        },
+        body: JSON.stringify({
+          endpoint: 'https://push.example/subscription',
+          p256dh: 'public-key',
+          authKey: 'auth-secret',
+        }),
+      },
+    )
+    expect(fetchMock.mock.calls.at(-1)?.[0]).not.toContain('auth-secret')
+
+    await yandexPilotQueries.setPushNotificationPreference(
+      'https://stage.example.test',
+      token,
+      'workout_reminder',
+      false,
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://stage.example.test/v1/push-notifications/preferences/workout_reminder',
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify({ enabled: false }) }),
+    )
+
+    await yandexPilotQueries.deletePushSubscription(
+      'https://stage.example.test',
+      token,
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://stage.example.test/v1/push-notifications/subscription',
+      expect.objectContaining({ method: 'DELETE' }),
+    )
+  })
 })

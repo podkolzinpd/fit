@@ -5,7 +5,7 @@
 > полная история хранится в Git, PR и Tracker.
 
 Обновлено: 2026-08-31
-Проверенный базовый `main`: `f3861aa` (`feat(progress): finish goal analysis stage 9 (#712)`)
+Проверенный базовый `main`: `5a92d95` (`feat(progress): simplify next-step suggestion (#713)`)
 ## Текущий release gate
 
 - Foundation UI Identity v1 принята. Задачи 8–28 — клиентский, тренерский,
@@ -89,11 +89,10 @@
 - Stage содержит Managed PostgreSQL 17 и Serverless Containers. Миграции
   доставляются автоматически через GitHub OIDC, private runner и forward-only
   policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
-- Ограниченный Yandex ID pilot, clients, memberships, invitations, custom
-  exercises и workout lifecycle представлены в отдельной цепочке
-  (`000001–000023`). Активная ветка добавляет `000024_app_feedback`: автор и
-  роль берутся из pilot session, `fit_api` не читает таблицу напрямую, а
-  операторы используют `ops_readonly.app_feedback`.
+- Ограниченный Yandex ID pilot и доменная цепочка представлены в `000001–000024`.
+  Активная ветка добавляет `000025_push_state`: actor-scoped subscription и
+  preferences плюс закрытый outbox без producer/cron/sender. Endpoint и Web
+  Push keys не возвращаются API и не выставляются через `ops_readonly`.
 - Native AI использует metadata IAM token без статического ключа; точную роль
   один раз выдаёт `fit-stage-api` администратор, а OIDC не меняет folder IAM.
 - Yandex OAuth использует PKCE и публичный Client ID. OAuth Client secret не
@@ -108,13 +107,13 @@
   stage-проверка; локальный lifecycle и RLS-матрица зелёные. Production остаётся
   на Supabase; полный cutover не выполнен.
 ## Проверки активной ветки
-- YAFIT-421, пункт 1: упрощение карточки следующего шага и регрессия safe area.
-  До merge должны быть зелёными `app`, `database`, `e2e`, browser/WebKit и
-  обновлённые visual baselines.
+- Push state: 103 целевых API/query-теста; `npm run check` — 982 frontend,
+  256 API и 67 infra; Supabase 74/886 и Yandex actor/RLS 25 — зелёные.
+- UI, production routing и реальная push-доставка не менялись; удалённые
+  миграции и deployment не запускались.
 ## Ближайший порядок
-1. Завершить пункт 1 YAFIT-421: PR, CI, merge и production smoke.
-2. Только после production перейти к пункту 2 YAFIT-421 — компактному первому
-   экрану Progress.
-3. Delivery `app_feedback` и Yandex parity/cutover ведутся отдельно.
+1. Завершить isolated push-state slice и доставить его обычным stage gate.
+2. Перенести assistant state/legacy invite-client; push transport — отдельным review.
+3. После parity и export/import tooling провести две репетиции cutover.
 ## Отложено
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.

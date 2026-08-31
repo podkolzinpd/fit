@@ -57,6 +57,44 @@ export const yandexPilotQueries = {
       force,
     }),
   }),
+  getPushNotificationStatus: (apiBaseUrl: string, sessionToken: string) =>
+    fetch(`${apiBaseUrl}/v1/push-notifications/status`, {
+      cache: 'no-store',
+      headers: { 'x-fit-pilot-session': sessionToken },
+    }),
+  upsertPushSubscription: (
+    apiBaseUrl: string,
+    sessionToken: string,
+    subscription: { endpoint: string; p256dh: string; authKey: string },
+  ) => fetch(`${apiBaseUrl}/v1/push-notifications/subscription`, {
+    method: 'PUT',
+    cache: 'no-store',
+    headers: {
+      'content-type': 'application/json',
+      'x-fit-pilot-session': sessionToken,
+    },
+    body: JSON.stringify(subscription),
+  }),
+  deletePushSubscription: (apiBaseUrl: string, sessionToken: string) =>
+    fetch(`${apiBaseUrl}/v1/push-notifications/subscription`, {
+      method: 'DELETE',
+      cache: 'no-store',
+      headers: { 'x-fit-pilot-session': sessionToken },
+    }),
+  setPushNotificationPreference: (
+    apiBaseUrl: string,
+    sessionToken: string,
+    kind: 'workout_reminder' | 'workout_scheduled',
+    enabled: boolean,
+  ) => fetch(`${apiBaseUrl}/v1/push-notifications/preferences/${kind}`, {
+    method: 'PUT',
+    cache: 'no-store',
+    headers: {
+      'content-type': 'application/json',
+      'x-fit-pilot-session': sessionToken,
+    },
+    body: JSON.stringify({ enabled }),
+  }),
   createInvitation: (
     apiBaseUrl: string,
     sessionToken: string,

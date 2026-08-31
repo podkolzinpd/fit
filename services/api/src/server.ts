@@ -5,6 +5,7 @@ import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
 import { DatabasePilotClientsReader } from './pilot-clients-reader.js'
 import { DatabasePilotAppFeedbackWriter } from './pilot-app-feedback-writer.js'
+import { DatabasePilotPushNotifications } from './pilot-push-notifications.js'
 import { DatabasePilotConnectionsReader } from './pilot-connections-reader.js'
 import { DatabasePilotConnectionsWriter } from './pilot-connections-writer.js'
 import { DatabasePilotDomainWriter } from './pilot-domain-writer.js'
@@ -74,6 +75,10 @@ const pilotAppFeedbackWriter =
   databasePool === undefined
     ? undefined
     : new DatabasePilotAppFeedbackWriter(databasePool)
+const pilotPushNotifications =
+  databasePool === undefined
+    ? undefined
+    : new DatabasePilotPushNotifications(databasePool)
 const pilotConnectionsReader =
   databasePool === undefined
     ? undefined
@@ -150,6 +155,7 @@ const app = buildApp(
     ...(identityProvider === undefined ? {} : { identityProvider }),
     ...(oauthCodeProvider === undefined ? {} : { oauthCodeProvider }),
     ...(pilotAppFeedbackWriter === undefined ? {} : { pilotAppFeedbackWriter }),
+    ...(pilotPushNotifications === undefined ? {} : { pilotPushNotifications }),
     ...(pilotClientsReader === undefined ? {} : { pilotClientsReader }),
     ...(pilotConnectionsReader === undefined ? {} : { pilotConnectionsReader }),
     ...(pilotConnectionsWriter === undefined ? {} : { pilotConnectionsWriter }),
