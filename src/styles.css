@@ -3913,6 +3913,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-history-identity .workout-cta[data-variant='primary'] { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none}
 .workout-detail-history-identity button.secondary,
 .workout-detail-history-identity .button.secondary { border-color:var(--border); background:var(--surface-elevated); color:var(--fg); box-shadow:none}
+.ui-identity .workout-feedback .workout-choice[data-control-state='selected'] { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.ui-identity .workout-feedback .workout-choice[data-control-state='selected'][data-tone='destructive'] { border-color:var(--danger-border); background:var(--danger-surface); color:var(--danger) }
 .workout-detail-history-identity button:disabled,
 .workout-detail-history-identity .button[aria-disabled='true'] { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg); box-shadow:none}
 

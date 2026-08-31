@@ -70,4 +70,27 @@ describe('assistant workout production surface', () => {
     expect(screen.getByRole('textbox', { name: 'Текст диктовки' })).toHaveValue('присед 3 по 15 80 кг')
     expect(screen.getByText('Надиктуйте следующее упражнение — оно добавится сюда.')).toBeInTheDocument()
   })
+
+  it('allows clearing numeric metrics before entering a replacement value', async () => {
+    const user = userEvent.setup()
+    render(<InteractiveSurface />)
+    const sets = screen.getAllByLabelText('Подходы')[0]!
+    const reps = screen.getAllByLabelText('Повторы')[0]!
+    const weight = screen.getAllByLabelText('Вес')[0]!
+
+    await user.clear(sets)
+    expect(sets).toHaveValue(null)
+    await user.type(sets, '2')
+    expect(sets).toHaveValue(2)
+
+    await user.clear(reps)
+    await user.clear(weight)
+    expect(reps).toHaveValue(null)
+    expect(weight).toHaveValue(null)
+
+    await user.type(reps, '12')
+    await user.type(weight, '72.5')
+    expect(reps).toHaveValue(12)
+    expect(weight).toHaveValue(72.5)
+  })
 })
