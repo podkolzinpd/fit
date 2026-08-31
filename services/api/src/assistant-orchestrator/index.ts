@@ -83,6 +83,12 @@ type ClientContextRow = {
   gender: string | null
 }
 
+export async function loadAssistantClientContext(actorClient: SupabaseClient): Promise<ClientContextRow[]> {
+  const result: unknown = await actorClient.rpc('list_clients', { p_include_archived: false })
+  if (!record(result) || result.error) throw new HttpError(503, 'context_unavailable')
+  return clientContextRows(result.data)
+}
+
 function clientContextRows(value: unknown): ClientContextRow[] {
   if (!Array.isArray(value)) return []
   return value.flatMap((row): ClientContextRow[] => {
@@ -758,10 +764,10 @@ export async function runAssistantTurn(authorization: string, command: Assistant
     return persistAssistantResponse(service, command.conversationId, turnId, result)
   }
 
-  const { data: clients, error: clientsError } = await service.from('clients')
-    .select('id,full_name,goal,age_years,height_cm,gender').eq('trainer_id', user.id).is('archived_at', null).order('full_name').limit(50)
-  if (clientsError) throw new HttpError(503, 'context_unavailable')
-  const clientRows = clientContextRows(clients)
+  // Use the same actor-scoped source as the Clients screen. A direct
+  // clients.trainer_id filter misses clients connected through
+  // client_trainers and also loses the trainer-specific alias.
+  const clientRows = await loadAssistantClientContext(actorClient)
   const { data: rows, error: historyError } = await service.from('assistant_messages')
     .select('author,content,action').eq('conversation_id', command.conversationId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(20)
   if (historyError) throw new HttpError(503, 'history_unavailable')
