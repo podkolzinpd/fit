@@ -1443,7 +1443,7 @@ h3 {
   right: 92px;
   top: 252px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: .9fr 1.08fr 1.24fr;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
@@ -1634,12 +1634,14 @@ h3 {
   font-size: 16px;
   line-height: 1.35;
 }
-.audience-hypothesis {
+.audience-core {
   color: var(--white);
   background: var(--ink);
 }
-.audience-hypothesis > span,
-.audience-hypothesis p { color: var(--dark-muted) !important; }
+.audience-core > span,
+.audience-core p { color: var(--dark-muted) !important; }
+.audience-broad strong,
+.audience-core strong { font-size: 46px; }
 .audience-proof {
   position: absolute;
   left: 92px;
@@ -1910,20 +1912,19 @@ h3 {
     </section>
 
     <section class="slide audience-slide" data-section="Аудитория">
-      <div class="eyebrow">06 · ДОСТУПНАЯ АУДИТОРИЯ</div>
-      <h2>Спортивная аудитория может исчисляться миллионами — точный сегмент нужно измерить</h2>
+      <div class="eyebrow">06 · МАСШТАБ АУДИТОРИИ</div>
+      <h2>В России около 42 млн человек регулярно занимаются спортом</h2>
       <div class="audience-metrics">
-        <div><span>МАСШТАБ ЭКОСИСТЕМЫ</span><strong>136 млн</strong><p>активных аккаунтов Яндекс ID в день</p></div>
-        <div><span>АДРЕСУЕМАЯ БАЗА</span><strong>49,4 млн</strong><p>подписчиков Яндекс Плюса</p></div>
-        <div><span>РЕГУЛЯРНО ЗАНИМАЮТСЯ</span><strong>29%</strong><p>россиян по данным ВЦИОМ</p></div>
-        <div class="audience-hypothesis"><span>РАСЧЁТНАЯ ГИПОТЕЗА</span><strong>≈14 млн</strong><p>потенциально регулярно занимающихся внутри Плюса*</p></div>
+        <div class="audience-population"><span>НАСЕЛЕНИЕ РОССИИ</span><strong>146,1 млн</strong><p>человек на 1 января 2025 года</p></div>
+        <div class="audience-broad"><span>ЗАНИМАЮТСЯ ХОТЯ БЫ ИНОГДА</span><strong>78% · ≈114 млн</strong><p>широкий контур интереса к спорту</p></div>
+        <div class="audience-core"><span>ЗАНИМАЮТСЯ РЕГУЛЯРНО</span><strong>29% · ≈42 млн</strong><p>ядро потенциальной аудитории Fit</p></div>
       </div>
       <div class="audience-proof">
         <span>ЧТО НУЖНО ДОКАЗАТЬ ПИЛОТОМ</span>
-        <strong>Реальное пересечение аудитории Яндекса со спортом, активацию в Fit и удержание W4.</strong>
+        <strong>Какую часть спортивной аудитории Яндекс способен привлечь в Fit и удержать до четвёртой недели.</strong>
       </div>
-      <p class="audience-method">* 49,4 млн × 29% = 14,3 млн. Это сценарная оценка, а не измеренное пересечение. 136 млн — аккаунты, не уникальные люди.</p>
-      <aside class="speaker-notes">[Sources]\nЯндекс ID: https://yandex.ru/company/news/18-07-2025-02 — 136 млн активных аккаунтов, авторизованных в день; это аккаунты, не уникальные люди.\nЯндекс Плюс: https://yandex.ru/company/news/29-07-2026 — 49,4 млн подписчиков во II квартале 2026.\nСпортивная активность: https://wciom.ru/analytical-reviews/analiticheskii-obzor/zozh-2026 — 29% занимаются регулярно.\nРасчёт ≈14,3 млн — внешняя гипотеза при допущении, что аудитория Плюса повторяет общероссийский профиль. В основной речи не выдавать за измеренный overlap.</aside>
+      <p class="audience-method">Расчёт: 146,1 млн × 78% ≈ 114 млн; 146,1 млн × 29% ≈ 42 млн. Это оценка пользовательской базы, а не TAM или прогноз конверсии.</p>
+      <aside class="speaker-notes">[Sources]\nНаселение России на 1 января 2025 года: Росстат — https://www.rosstat.gov.ru/storage/mediabank/osn-01-2025.pdf — 146 119,9 тыс. человек.\nСпортивная активность: ВЦИОМ, «ЗОЖ-2026» — https://wciom.ru/analytical-reviews/analiticheskii-obzor/zozh-2026 — 78% занимаются хотя бы иногда, 29% занимаются регулярно.\nРасчёты ≈114 млн и ≈42 млн выполнены от численности населения. Это верхнеуровневая оценка потенциальной пользовательской базы; не выдавать её за TAM, достижимую аудиторию или прогноз активации.</aside>
     </section>
 
     <section class="slide channel-slide acquisition-slide" data-section="Дистрибуция">
