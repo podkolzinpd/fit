@@ -16,11 +16,13 @@ import {
 import {
   YandexOAuthCodeRejectedError,
   type YandexOAuthCodeProvider,
+  YandexOAuthCodeUnavailableError,
 } from './auth/yandex-oauth-code.js'
 import {
   PilotAccessDeniedError,
   PilotSessionInvalidError,
 } from './db/yandex-pilot-transaction.js'
+import { YandexAppSessionDeniedError } from './db/yandex-app-transaction.js'
 import type { PilotClientsResponse } from './clients.js'
 import type { PilotClientsReader } from './pilot-clients-reader.js'
 import type { PilotAppFeedbackWriter } from './pilot-app-feedback-writer.js'
@@ -38,6 +40,16 @@ import type {
 import type { PilotDomainWriter } from './pilot-domain-writer.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer, PilotSessionResponse } from './pilot-session.js'
+import type {
+  YandexAppSessionIssuer,
+  YandexAppSessionResponse,
+} from './yandex-app-session.js'
+import {
+  ExistingActorUnavailableError,
+  YandexAccountLinkError,
+  type ExistingActorProvider,
+  type YandexAccountLinker,
+} from './yandex-account-linking.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
 import type { PilotWorkoutsWriter } from './pilot-workouts-writer.js'
 import type { PlannedWorkoutDraft } from './planned-workout-request.js'
@@ -333,6 +345,7 @@ describe('browser pilot CORS', () => {
     expect(preflight.headers['access-control-allow-methods']).toContain('PUT')
     expect(preflight.headers['access-control-allow-headers']).toContain('authorization')
     expect(preflight.headers['access-control-allow-headers']).toContain('x-fit-pilot-session')
+    expect(preflight.headers['access-control-allow-headers']).toContain('x-fit-session')
     expect(preflight.headers['access-control-expose-headers']).toContain('x-fit-release-id')
     expect(preflight.headers['access-control-expose-headers']).toContain('x-fit-error-code')
 
@@ -462,7 +475,9 @@ function buildIdentityProvider(
   return { identityProvider: { verifyAccessToken }, verifyAccessToken }
 }
 
-function buildOAuthCodeProvider(error?: YandexOAuthCodeRejectedError): {
+function buildOAuthCodeProvider(
+  error?: YandexOAuthCodeRejectedError | YandexOAuthCodeUnavailableError,
+): {
   oauthCodeProvider: YandexOAuthCodeProvider
   exchangeCode: ReturnType<typeof vi.fn>
 } {
@@ -488,6 +503,15 @@ const SESSION_RESPONSE: PilotSessionResponse = {
   session: {
     token: 's'.repeat(43),
     expiresAt: '2026-08-20T13:15:00.000Z',
+  },
+}
+
+const APP_SESSION_RESPONSE: YandexAppSessionResponse = {
+  ...PROFILE_RESPONSE,
+  accessMode: 'read_write',
+  session: {
+    token: 'a'.repeat(43),
+    expiresAt: '2026-08-31T13:15:00.000Z',
   },
 }
 
@@ -642,6 +666,44 @@ function buildSessionIssuer(
     result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
   )
   return { pilotSessionIssuer: { issue }, issue }
+}
+
+function buildYandexAppSessionIssuer(
+  result: YandexAppSessionResponse | undefined | Error = APP_SESSION_RESPONSE,
+): {
+  yandexAppSessionIssuer: YandexAppSessionIssuer
+  issue: ReturnType<typeof vi.fn>
+} {
+  const issue = vi.fn(() =>
+    result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
+  )
+  return { yandexAppSessionIssuer: { issue }, issue }
+}
+
+function buildExistingActorProvider(
+  result: string | null | Error = PROFILE_ID,
+): {
+  existingActorProvider: ExistingActorProvider
+  resolveActor: ReturnType<typeof vi.fn>
+} {
+  const resolveActor = vi.fn(() =>
+    result instanceof Error
+      ? Promise.reject(result)
+      : Promise.resolve(result ?? undefined),
+  )
+  return { existingActorProvider: { resolveActor }, resolveActor }
+}
+
+function buildYandexAccountLinker(
+  result: { profileId: string } | Error = { profileId: PROFILE_ID },
+): {
+  yandexAccountLinker: YandexAccountLinker
+  linkActor: ReturnType<typeof vi.fn>
+} {
+  const linkActor = vi.fn(() =>
+    result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
+  )
+  return { yandexAccountLinker: { linkActor }, linkActor }
 }
 
 function buildClientsReader(
@@ -1211,6 +1273,184 @@ describe('Yandex PKCE pilot callback', () => {
     expect(response.statusCode).toBe(401)
     expect(response.json()).toEqual({ error: 'unauthorized' })
     expect(response.body).not.toContain('rejected-code')
+  })
+})
+
+describe('Yandex ID app session and account linking endpoints', () => {
+  it('exchanges a Yandex code for a read-write app session without exposing provider tokens', async () => {
+    const oauth = buildOAuthCodeProvider()
+    const identity = buildIdentityProvider()
+    const appSession = buildYandexAppSessionIssuer()
+    const app = buildApp({
+      oauthCodeProvider: oauth.oauthCodeProvider,
+      identityProvider: identity.identityProvider,
+      yandexAppSessionIssuer: appSession.yandexAppSessionIssuer,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/session',
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(APP_SESSION_RESPONSE)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.body).not.toContain('temporary-yandex-token')
+    expect(oauth.exchangeCode).toHaveBeenCalledWith('one-time-code', 'v'.repeat(43))
+    expect(identity.verifyAccessToken).toHaveBeenCalledWith('temporary-yandex-token')
+    expect(appSession.issue).toHaveBeenCalledWith(SUBJECT_HASH)
+  })
+
+  it('keeps linked but disabled users outside the read-write Yandex rollout', async () => {
+    const appSession = buildYandexAppSessionIssuer(
+      new YandexAppSessionDeniedError(),
+    )
+    const app = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      yandexAppSessionIssuer: appSession.yandexAppSessionIssuer,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/session',
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(403)
+    expect(response.json()).toEqual({ error: 'yandex_session_denied' })
+  })
+
+  it('rejects malformed app-session input before contacting Yandex OAuth', async () => {
+    const oauth = buildOAuthCodeProvider()
+    const app = buildApp({
+      oauthCodeProvider: oauth.oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      yandexAppSessionIssuer: buildYandexAppSessionIssuer().yandexAppSessionIssuer,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/session',
+      payload: { code: 'one-time-code', codeVerifier: 'too-short' },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_request' })
+    expect(oauth.exchangeCode).not.toHaveBeenCalled()
+  })
+
+  it('links Yandex ID only after proving ownership of the current FIT account', async () => {
+    const oauth = buildOAuthCodeProvider()
+    const identity = buildIdentityProvider()
+    const actor = buildExistingActorProvider()
+    const linker = buildYandexAccountLinker()
+    const app = buildApp({
+      oauthCodeProvider: oauth.oauthCodeProvider,
+      identityProvider: identity.identityProvider,
+      existingActorProvider: actor.existingActorProvider,
+      yandexAccountLinker: linker.yandexAccountLinker,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/link',
+      headers: { authorization: 'Bearer supabase-session-token' },
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ profileId: PROFILE_ID })
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.body).not.toContain('temporary-yandex-token')
+    expect(response.body).not.toContain('supabase-session-token')
+    expect(actor.resolveActor).toHaveBeenCalledWith('supabase-session-token')
+    expect(oauth.exchangeCode).toHaveBeenCalledWith('one-time-code', 'v'.repeat(43))
+    expect(identity.verifyAccessToken).toHaveBeenCalledWith('temporary-yandex-token')
+    expect(linker.linkActor).toHaveBeenCalledWith(PROFILE_ID, SUBJECT_HASH)
+  })
+
+  it('does not contact Yandex OAuth when the existing FIT session is missing or invalid', async () => {
+    const oauth = buildOAuthCodeProvider()
+    const actor = buildExistingActorProvider(null)
+    const linker = buildYandexAccountLinker()
+    const app = buildApp({
+      oauthCodeProvider: oauth.oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      existingActorProvider: actor.existingActorProvider,
+      yandexAccountLinker: linker.yandexAccountLinker,
+      logger: false,
+    })
+    apps.push(app)
+
+    const missingAuth = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/link',
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+    const invalidAuth = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/link',
+      headers: { authorization: 'Bearer invalid-supabase-session' },
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+
+    expect(missingAuth.statusCode).toBe(401)
+    expect(invalidAuth.statusCode).toBe(401)
+    expect(actor.resolveActor).toHaveBeenCalledOnce()
+    expect(oauth.exchangeCode).not.toHaveBeenCalled()
+    expect(linker.linkActor).not.toHaveBeenCalled()
+  })
+
+  it('maps existing-auth outages and account conflicts without leaking identifiers', async () => {
+    const unavailableActor = buildExistingActorProvider(
+      new ExistingActorUnavailableError(),
+    )
+    const unavailableApp = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      existingActorProvider: unavailableActor.existingActorProvider,
+      yandexAccountLinker: buildYandexAccountLinker().yandexAccountLinker,
+      logger: false,
+    })
+    apps.push(unavailableApp)
+    const unavailable = await unavailableApp.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/link',
+      headers: { authorization: 'Bearer supabase-session-token' },
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+    expect(unavailable.statusCode).toBe(503)
+    expect(unavailable.body).not.toContain('supabase-session-token')
+
+    const conflictLinker = buildYandexAccountLinker(
+      new YandexAccountLinkError('conflict'),
+    )
+    const conflictApp = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      existingActorProvider: buildExistingActorProvider().existingActorProvider,
+      yandexAccountLinker: conflictLinker.yandexAccountLinker,
+      logger: false,
+    })
+    apps.push(conflictApp)
+    const conflict = await conflictApp.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/link',
+      headers: { authorization: 'Bearer supabase-session-token' },
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+    expect(conflict.statusCode).toBe(409)
+    expect(conflict.json()).toEqual({ error: 'yandex_identity_conflict' })
   })
 })
 

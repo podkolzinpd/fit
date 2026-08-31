@@ -4,6 +4,8 @@ import { yandexPilotRepository } from './yandex-pilot.repository'
 
 const queries = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
+  exchangeCodeForAppSession: vi.fn(),
+  linkYandexAccount: vi.fn(),
   listClients: vi.fn(),
   listConnections: vi.fn(),
   listTrainingData: vi.fn(),
@@ -31,6 +33,15 @@ const session = {
   session: {
     token: 's'.repeat(43),
     expiresAt: '2026-08-20T13:15:00.000Z',
+  },
+}
+
+const appSession = {
+  ...session,
+  accessMode: 'read_write',
+  session: {
+    token: 'a'.repeat(43),
+    expiresAt: '2026-08-31T13:15:00.000Z',
   },
 }
 
@@ -169,6 +180,8 @@ const trainingData = {
 describe('yandexPilotRepository', () => {
   beforeEach(() => {
     queries.exchangeCodeForSession.mockReset()
+    queries.exchangeCodeForAppSession.mockReset()
+    queries.linkYandexAccount.mockReset()
     queries.listClients.mockReset()
     queries.listConnections.mockReset()
     queries.listTrainingData.mockReset()
@@ -276,6 +289,70 @@ describe('yandexPilotRepository', () => {
       'code',
       'verifier',
     )).resolves.toEqual(session)
+  })
+
+  it('accepts the explicit read-write app session contract', async () => {
+    queries.exchangeCodeForAppSession.mockResolvedValue(
+      new Response(JSON.stringify(appSession), { status: 200 }),
+    )
+
+    await expect(yandexPilotRepository.exchangeCodeForAppSession(
+      'https://stage.example.test',
+      'code',
+      'verifier',
+    )).resolves.toEqual(appSession)
+  })
+
+  it('keeps a read-only pilot session outside the app session contract', async () => {
+    queries.exchangeCodeForAppSession.mockResolvedValue(
+      new Response(JSON.stringify(session), { status: 200 }),
+    )
+
+    await expect(yandexPilotRepository.exchangeCodeForAppSession(
+      'https://stage.example.test',
+      'code',
+      'verifier',
+    )).rejects.toThrow('Stage вернул неподдерживаемый формат Yandex ID сессии')
+  })
+
+  it('maps a disabled app rollout to a Yandex Cloud rollout message', async () => {
+    queries.exchangeCodeForAppSession.mockResolvedValue(new Response('{}', { status: 403 }))
+
+    await expect(yandexPilotRepository.exchangeCodeForAppSession(
+      'https://stage.example.test',
+      'code',
+      'verifier',
+    )).rejects.toThrow('профиль ещё не включён')
+  })
+
+  it('links Yandex ID to the existing FIT profile with a validated result', async () => {
+    queries.linkYandexAccount.mockResolvedValue(new Response(JSON.stringify({
+      profileId: session.profile.id,
+    }), { status: 200 }))
+
+    await expect(yandexPilotRepository.linkYandexAccount(
+      'https://stage.example.test',
+      'supabase-session',
+      'code',
+      'verifier',
+    )).resolves.toEqual({ profileId: session.profile.id })
+    expect(queries.linkYandexAccount).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      'supabase-session',
+      'code',
+      'verifier',
+    )
+  })
+
+  it('maps Yandex ID linking conflicts without exposing identifiers', async () => {
+    queries.linkYandexAccount.mockResolvedValue(new Response('{}', { status: 409 }))
+
+    await expect(yandexPilotRepository.linkYandexAccount(
+      'https://stage.example.test',
+      'supabase-session',
+      'code',
+      'verifier',
+    )).rejects.toThrow('уже связан')
   })
 
   it('keeps non-allowlisted identities outside the pilot', async () => {
