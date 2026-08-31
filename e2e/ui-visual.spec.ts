@@ -109,8 +109,30 @@ async function signIn(page: import('@playwright/test').Page, email: string, dest
   await gotoStable(page, '/auth')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(destination, { timeout: 15_000 })
+  const submit = page.getByRole('button', { name: 'Войти' })
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const tokenResponse = page.waitForResponse((response) => (
+      response.request().method() === 'POST'
+      && response.url().includes('/auth/v1/token?grant_type=password')
+    ))
+    await submit.click()
+    const response = await tokenResponse
+
+    if (response.ok()) {
+      await expect(page).toHaveURL(destination, { timeout: 15_000 })
+      return
+    }
+
+    const retryableUpstreamFailure = [502, 503, 504].includes(response.status())
+    if (!retryableUpstreamFailure || attempt === 4) {
+      await expect(page, `Sign-in returned HTTP ${response.status()}`).toHaveURL(destination, { timeout: 15_000 })
+      return
+    }
+
+    await expect(submit).toBeEnabled()
+    await page.waitForTimeout(500 * (2 ** attempt))
+  }
 }
 
 async function removeScheduleVisualWorkouts(
@@ -328,6 +350,26 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Live-тренировка' })).toBeVisible()
 }
+
+test('visual sign-in retries a transient local auth gateway failure', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'visual-trainer-1440', 'One profile is enough to verify the shared sign-in helper')
+  let tokenRequests = 0
+  await page.route('**/auth/v1/token?grant_type=password', async (route) => {
+    tokenRequests += 1
+    if (tokenRequests === 1) {
+      await route.fulfill({
+        status: 502,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'An invalid response was received from the upstream server' }),
+      })
+      return
+    }
+    await route.continue()
+  })
+
+  await signIn(page, 'trainer@fit.local', /\/today$/)
+  expect(tokenRequests).toBe(2)
+})
 
 test('auth family keeps light and dark visual baselines', async ({ page }) => {
   await gotoStable(page, '/auth')
