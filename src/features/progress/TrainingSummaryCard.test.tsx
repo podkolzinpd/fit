@@ -200,6 +200,21 @@ describe('Training summary card states', () => {
     expect(screen.getByRole('button', { name: 'Создать анализ' })).toBeVisible()
   })
 
+  it('keeps client measurement management available before the first summary exists', async () => {
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(null)
+    repositories.listForClient.mockResolvedValue([])
+
+    render(<ClientTrainingSummaryCard
+      clientId="client-1"
+      measurementManagement={<button type="button">Добавить замер</button>}
+    />, { wrapper: wrapper(queryClient()) })
+
+    expect(await screen.findByText('Анализ за этот период ещё не создан')).toBeVisible()
+    const measurements = screen.getByRole('region', { name: 'Тренд по значениям' })
+    expect(within(measurements).getByRole('button', { name: 'Добавить замер' })).toBeVisible()
+    expect(repositories.progress).toHaveBeenCalledWith('client-1')
+  })
+
   it('accepts a short history, a long exercise name and no client goal without leaking technical text', async () => {
     const user = userEvent.setup()
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-08-10'))

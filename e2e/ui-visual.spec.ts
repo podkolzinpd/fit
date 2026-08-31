@@ -737,6 +737,7 @@ test('measurement trends stay readable for client and trainer in both themes', a
   await expect(measurements.getByRole('tab', { name: /Вес/ })).toBeVisible()
   await expect(measurements.getByRole('tab', { name: /Плечи/ })).toBeVisible()
   await expect(measurements.getByLabel('График показателя «Вес»')).toBeVisible()
+  await expect(measurements.getByText('Цель · 83 кг').first()).toBeVisible()
   await expect(measurements.locator('.recharts-tooltip-wrapper')).toHaveCount(0)
   await expect(measurements.getByText('5 августа 2026 г.', { exact: true })).toHaveCount(0)
   expect(await measurements.evaluate((element) => {
@@ -892,11 +893,13 @@ test('client measurement management keeps its visual baseline', async ({ page },
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client measurement management uses mobile visual profiles')
   await mockMeasurementProgress(page)
   await openClientProgress(page, { scheme: true })
-  const management = page.locator('.client-progress-measurement')
+  const management = page.locator('.client-progress-measurements-story')
   await management.scrollIntoViewIfNeeded()
   await expect(management.getByRole('button', { name: 'Добавить замер' })).toBeVisible()
   await expect(management.getByRole('button', { name: /История/ })).toBeVisible()
   await expect(management.getByRole('button', { name: /Настроить/ })).toBeVisible()
+  await expect(management.locator('.measurement-story-management')).toBeVisible()
+  await expect(page.locator('.client-progress-measurement')).toHaveCount(0)
   await expectVisualBaseline(page, `client-measurements-${process.platform}.png`)
 })
 
