@@ -3,7 +3,7 @@
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
 Обновлено: 2026-08-31
-Проверенный базовый `main`: `605a0bf` (`Progress: встроить замеры и ориентир цели (#720)`)
+Проверенный базовый `main`: `1f6d301` (`feat(yandex): add session linking foundation (#721)`)
 ## Текущий release gate
 
 - Foundation UI Identity v1 принята. Задачи 8–28 — клиентский, тренерский,
@@ -98,19 +98,18 @@
 - Реальный invite → join → leave/remove smoke — внешняя проверка. Production
   остаётся на Supabase; полный cutover не выполнен.
 ## Проверки активной ветки
-- `codex/yandex-session-linking` добавляет foundation для полноценной Yandex ID
-  session и безопасного linking: `POST /v1/auth/yandex/session`,
-  `POST /v1/auth/yandex/link`, `app_private.yandex_app_sessions`,
-  `public.link_yandex_identity` и typed frontend methods. Production UI,
-  `auth-context` и sticky routing не переключались.
-- Проверено локально: `npm --prefix services/api run check`,
-  `TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:55432/fit_actor_test npm --prefix services/api run test:db`,
-  `npm run db:reset`, `npm run db:test`, `npm run migrations:check`,
-  `npm run check` после merge с `605a0bf`.
+- YAFIT-421, пункт 5: регулярность сокращена до недельной шкалы и трёх
+  рассчитанных показателей; легенда, общий текст и локальное сравнение удалены.
+  Полный `npm run check` зелёный: frontend 994/994, API 275/275, infra 72/72,
+  lint/typecheck/build; Client Chromium 6/6 и iPhone/WebKit 1/1. Локальный
+  database gate зелёный: Supabase SQL/RLS 886/886, PostgreSQL actor/RLS 28/28,
+  generated types и migration safety. Visual baselines клиента 390/430 и
+  тренера 1440 в light/dark обновлены, просмотрены и повторены без обновления на
+  Darwin и Linux; после rebase Darwin повторён 3/3. Перед merge обязательны
+  зелёные `app`, `database`, `e2e` и production smoke.
 ## Ближайший порядок
-1. Подключить UI linking/обычной Yandex ID session за default-off rollout.
-2. Подключить основной Assistant UI к Yandex API через sticky tenant routing
-   после явного session/linking контракта.
-3. После export/import tooling провести две репетиции cutover.
+1. Завершить пункт 5 YAFIT-421: полный gate, PR, CI, merge и production smoke.
+2. Только после production перейти к пункту 6 — сравнению периодов.
+3. Assistant, `app_feedback` и Yandex parity/cutover ведутся отдельно.
 ## Отложено
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.
