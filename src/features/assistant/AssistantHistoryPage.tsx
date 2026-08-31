@@ -604,7 +604,7 @@ function CancelActionButton({ onCancel }: { onCancel: () => void }) {
 
 function AssistantClientChoices({ tool, candidates, onSuggestion, onCancel }: { tool: AssistantOrchestratorAction['tool']; candidates: { id: string; fullName: string }[]; onSuggestion: (value: string) => void; onCancel: () => void }) {
   const prefix = tool === 'summarize_progress' ? 'Сводка прогресса для' : tool === 'record_workout' ? 'Записать тренировку для' : 'Подготовить программу для'
-  return <div className="assistant-flow-card"><header><span><small>Уточните клиента</small><strong>Нашла несколько совпадений</strong></span></header><div className="assistant-client-choices">{candidates.map((candidate) => <button key={candidate.id} type="button" onClick={() => onSuggestion(`${prefix} ${candidate.fullName}`)}><strong>{candidate.fullName}</strong><span>Выбрать</span></button>)}</div><CancelActionButton onCancel={onCancel} /></div>
+  return <div className="assistant-flow-card"><header><span><small>Уточните клиента</small><strong>Выберите клиента из списка</strong></span></header><div className="assistant-client-choices">{candidates.map((candidate) => <button key={candidate.id} type="button" onClick={() => onSuggestion(`${prefix} ${candidate.fullName}`)}><strong>{candidate.fullName}</strong><span>Выбрать</span></button>)}</div><CancelActionButton onCancel={onCancel} /></div>
 }
 
 function SummaryPeriodChoices({ clientName, options, onSuggestion, onCancel }: { clientName: string; options: string[]; onSuggestion: (value: string) => void; onCancel: () => void }) {

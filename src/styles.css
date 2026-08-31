@@ -683,6 +683,7 @@ p { margin: 6px 0 }
 .assistant-workout-saved small { color:var(--muted); }
 .assistant-icon-button { display:grid; place-items:center; width:48px; min-height:48px; padding:0; border-radius:50%; }
 .assistant-icon-button svg { width:22px; height:22px; }
+.assistant-composer > .voice-input-icon { align-self:end; }
 .assistant-reset { grid-column:1 / -1; justify-self:center; min-height:auto; padding:4px 8px; border:0; background:transparent; color:var(--muted); box-shadow:none; font-size:var(--type-caption-size); }
 .assistant-reset:hover { color:var(--fg); }
 @media (max-width: 480px) {
