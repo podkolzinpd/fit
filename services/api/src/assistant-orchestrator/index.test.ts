@@ -183,6 +183,27 @@ describe('assistant orchestrator contract', () => {
     expect(result?.action?.payload).toMatchObject({ candidates: [{ id: 'client-1' }, { id: 'client-2' }] })
   })
 
+  it('offers the client list when a nickname has no exact match', () => {
+    const clients = [
+      { id: 'client-1', fullName: 'Антон Князев', goal: null, ageYears: null, heightCm: null, gender: null },
+      { id: 'client-2', fullName: 'Борис Петров', goal: null, ageYears: null, heightCm: null, gender: null },
+    ]
+
+    const result = recordWorkoutTurn('Запиши тренировку для Антохи', clients, null)
+
+    expect(result?.action).toMatchObject({
+      tool: 'record_workout', status: 'needs_input', title: 'Выберите клиента',
+      description: 'Не нашла точного совпадения. Выберите клиента из списка.',
+      payload: {
+        step: 'client',
+        candidates: [
+          { id: 'client-1', fullName: 'Антон Князев' },
+          { id: 'client-2', fullName: 'Борис Петров' },
+        ],
+      },
+    })
+  })
+
   it('keeps a request to prepare a workout in the deterministic recording flow', () => {
     const clients = [{ id: 'client-1', fullName: 'Сан Саныч', goal: null, ageYears: null, heightCm: null, gender: null }]
     const result = recordWorkoutTurn('Давай подготовим запись тренировки для Сан Саныча', clients, null)
