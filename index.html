@@ -254,11 +254,34 @@ h3 {
 .fit-mark span { color: var(--coral); font-size: .75em; }
 
 /* Journey */
+.journey-zones {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  top: 278px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: end;
+}
+.journey-zone {
+  padding-bottom: 13px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .09em;
+}
+.zone-entry { grid-column: 1; }
+.zone-core {
+  grid-column: 2 / 5;
+  text-align: center;
+  color: var(--ink);
+}
+.zone-exit { grid-column: 5; text-align: right; }
 .journey-line {
   position: absolute;
   left: 92px;
   right: 92px;
-  top: 322px;
+  top: 326px;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 0;
@@ -284,6 +307,8 @@ h3 {
 }
 .journey-step:not(:first-child)::before { left: 28px; }
 .journey-step.active-step::before { background: var(--ink); box-shadow: 0 0 0 8px var(--paper-2); }
+.journey-step.fit-core { background: rgba(29,30,33,.035); }
+.journey-step.fit-core-start { border-left: 1px solid var(--line); }
 .journey-step b { display: block; color: var(--coral-dark); font-size: 15px; margin-bottom: 44px; }
 .journey-step strong { display: block; font-size: 27px; line-height: 1.12; }
 .journey-step span { display: block; margin-top: 12px; color: var(--muted); font-size: 18px; line-height: 1.32; }
@@ -1806,15 +1831,20 @@ h3 {
     <section class="slide" data-section="Идея">
       <div class="eyebrow">02 · СПОРТИВНЫЙ ПУТЬ</div>
       <h2>Fit собирает весь спортивный путь в одну систему</h2>
-      <div class="journey-line">
-        <div class="journey-step"><b>01</b><strong>Найти</strong><span>место или тренера</span></div>
-        <div class="journey-step"><b>02</b><strong>Получить план</strong><span>под цель и контекст</span></div>
-        <div class="journey-step active-step"><b>03</b><strong>Тренироваться</strong><span>фиксировать план и факт</span></div>
-        <div class="journey-step"><b>04</b><strong>Увидеть прогресс</strong><span>понимать следующий шаг</span></div>
-        <div class="journey-step"><b>05</b><strong>Купить нужное</strong><span>услуги и товары вокруг спорта</span></div>
+      <div class="journey-zones" aria-hidden="true">
+        <span class="journey-zone zone-entry">ВХОД ИЗ ЭКОСИСТЕМЫ</span>
+        <span class="journey-zone zone-core">ЯДРО FIT</span>
+        <span class="journey-zone zone-exit">ТРАНЗАКЦИЯ В ЭКОСИСТЕМЕ</span>
       </div>
-      <p class="closing-line">Не ещё один трекер тренировок — единый маршрут от намерения до результата.</p>
-      <aside class="speaker-notes">Этот слайд задаёт полный маршрут. Следующие слайды последовательно раскрывают, что уже делает Fit, куда развивается продукт и за счёт чего Яндекс может дать ему масштаб.</aside>
+      <div class="journey-line">
+        <div class="journey-step ecosystem-entry"><b>01</b><strong>Найти</strong><span>место, формат или тренера</span></div>
+        <div class="journey-step fit-core fit-core-start"><b>02</b><strong>Получить план</strong><span>от ИИ или тренера</span></div>
+        <div class="journey-step fit-core"><b>03</b><strong>Тренироваться</strong><span>фиксировать план и факт</span></div>
+        <div class="journey-step fit-core fit-core-end"><b>04</b><strong>Увидеть прогресс</strong><span>понимать следующий шаг вместе</span></div>
+        <div class="journey-step ecosystem-exit"><b>05</b><strong>Купить нужное</strong><span>товары, питание и услуги</span></div>
+      </div>
+      <p class="closing-line">Fit хранит тренировочный контекст. Сервисы Яндекса приводят пользователя в спорт и закрывают потребности вокруг него.</p>
+      <aside class="speaker-notes">Слайд распределяет роли в маршруте. Поиск и Карты помогают найти место, формат или тренера. Fit вместе с ИИ и тренером управляет планом, фактом, прогрессом и следующим шагом. Маркет, Еда и Go закрывают возникающие потребности вокруг спорта. Следующий слайд показывает, какая часть центральной петли уже работает в продукте.</aside>
     </section>
 
     <section class="slide product-proof" data-section="Продукт">
