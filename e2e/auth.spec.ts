@@ -428,10 +428,13 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByLabel('Фактическое время').fill('20:00')
   await page.getByLabel('Фактическая дистанция').fill('3')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
-  await page.getByRole('button', { name: 'Завершить тренировку' }).click()
+  // Дожидаемся подтверждения единственного подхода. Иначе завершение может
+  // прочитать старый query state и открыть partial-confirm, а после быстрого
+  // refetch — сразу закончить тренировку, делая следующий селектор гонкой.
+  await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
   await Promise.all([
     page.waitForURL(preAttachWorkoutUrl),
-    page.getByRole('button', { name: 'Завершить', exact: true }).click(),
+    page.getByRole('button', { name: 'Завершить тренировку' }).click(),
   ])
   await expect(page.getByText(/3 км × 20:00 · темп 6:40\/км/)).toBeVisible()
 

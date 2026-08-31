@@ -17,6 +17,12 @@ import {
 } from './db/yandex-pilot-transaction.js'
 import { AppFeedbackCommandError } from './app-feedback-command.js'
 import { readAppFeedbackRequest } from './app-feedback-request.js'
+import { PushNotificationCommandError } from './push-notifications-command.js'
+import {
+  readNotificationPreferenceRequest,
+  readPushNotificationKind,
+  readPushSubscriptionRequest,
+} from './push-notifications-request.js'
 import { PilotConnectionCommandError } from './connection-commands.js'
 import { PilotDomainCommandError } from './domain-commands.js'
 import {
@@ -34,6 +40,7 @@ import {
 } from './db/database-readiness.js'
 import type { PilotClientsReader } from './pilot-clients-reader.js'
 import type { PilotAppFeedbackWriter } from './pilot-app-feedback-writer.js'
+import type { PilotPushNotifications } from './pilot-push-notifications.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import type { PilotDomainWriter } from './pilot-domain-writer.js'
@@ -87,6 +94,7 @@ interface BuildAppOptions {
   identityProvider?: YandexIdentityProvider
   oauthCodeProvider?: YandexOAuthCodeProvider
   pilotAppFeedbackWriter?: PilotAppFeedbackWriter
+  pilotPushNotifications?: PilotPushNotifications
   pilotClientsReader?: PilotClientsReader
   pilotConnectionsReader?: PilotConnectionsReader
   pilotConnectionsWriter?: PilotConnectionsWriter
@@ -664,6 +672,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
             ? 'action_not_allowed'
             : 'invalid_feedback' })
       }
+      if (error instanceof PushNotificationCommandError) {
+        return reply
+          .code(error.failure === 'forbidden' ? 403 : 422)
+          .send({ error: error.failure === 'forbidden'
+            ? 'action_not_allowed'
+            : 'invalid_push_notifications' })
+      }
       if (error instanceof PilotConnectionCommandError) {
         if (error.failure === 'forbidden') {
           return reply.code(403).send({ error: 'action_not_allowed' })
@@ -723,6 +738,78 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         .header('cache-control', 'no-store')
         .code(201)
         .send({ feedback: { id: feedbackId } }),
+    )
+  })
+
+  app.get('/v1/push-notifications/status', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    const pushNotifications = options.pilotPushNotifications
+    if (pushNotifications === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return sendPilotCommand(
+      reply,
+      () => pushNotifications.readStatus(sessionToken),
+      (status) => reply.header('cache-control', 'no-store').send({ status }),
+    )
+  })
+
+  app.put('/v1/push-notifications/subscription', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const draft = readPushSubscriptionRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (draft === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    const pushNotifications = options.pilotPushNotifications
+    if (pushNotifications === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return sendPilotCommand(
+      reply,
+      () => pushNotifications.upsertSubscription(sessionToken, draft),
+      () => reply.header('cache-control', 'no-store').code(204).send(),
+    )
+  })
+
+  app.delete('/v1/push-notifications/subscription', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    const pushNotifications = options.pilotPushNotifications
+    if (pushNotifications === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return sendPilotCommand(
+      reply,
+      () => pushNotifications.deleteSubscription(sessionToken),
+      () => reply.header('cache-control', 'no-store').code(204).send(),
+    )
+  })
+
+  app.put('/v1/push-notifications/preferences/:kind', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { kind: rawKind } = request.params as { kind?: unknown }
+    const kind = readPushNotificationKind(rawKind)
+    const preference = readNotificationPreferenceRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (kind === undefined || preference === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const pushNotifications = options.pilotPushNotifications
+    if (pushNotifications === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return sendPilotCommand(
+      reply,
+      () => pushNotifications.setPreference(sessionToken, kind, preference.enabled),
+      () => reply.header('cache-control', 'no-store').code(204).send(),
     )
   })
 

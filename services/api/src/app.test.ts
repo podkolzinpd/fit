@@ -5,6 +5,8 @@ import type { PilotConnectionsResponse } from './connections.js'
 import { buildApp } from './app.js'
 import { AppFeedbackCommandError } from './app-feedback-command.js'
 import type { AppFeedbackDraft } from './app-feedback-request.js'
+import { PushNotificationCommandError } from './push-notifications-command.js'
+import type { PilotPushNotifications } from './pilot-push-notifications.js'
 import {
   YandexIdentityRejectedError,
   type YandexIdentityProvider,
@@ -671,6 +673,40 @@ function buildAppFeedbackWriter(error?: Error): {
     ? Promise.resolve(PROFILE_ID)
     : Promise.reject(error))
   return { pilotAppFeedbackWriter: { submit }, submit }
+}
+
+function buildPushNotifications(error?: Error): {
+  pilotPushNotifications: PilotPushNotifications
+  readStatus: ReturnType<typeof vi.fn>
+  upsertSubscription: ReturnType<typeof vi.fn>
+  deleteSubscription: ReturnType<typeof vi.fn>
+  setPreference: ReturnType<typeof vi.fn>
+} {
+  const result = <Value>(value: Value) => error === undefined
+    ? Promise.resolve(value)
+    : Promise.reject(error)
+  const readStatus = vi.fn(() => result({
+    subscribed: true,
+    preferences: {
+      workout_reminder: false,
+      workout_scheduled: true,
+    },
+  }))
+  const upsertSubscription = vi.fn(() => result(undefined))
+  const deleteSubscription = vi.fn(() => result(undefined))
+  const setPreference = vi.fn(() => result(undefined))
+  return {
+    pilotPushNotifications: {
+      readStatus,
+      upsertSubscription,
+      deleteSubscription,
+      setPreference,
+    },
+    readStatus,
+    upsertSubscription,
+    deleteSubscription,
+    setPreference,
+  }
 }
 
 function buildTrainingDataReader(
@@ -1617,6 +1653,181 @@ describe('pilot app feedback command', () => {
     expect(response.statusCode).toBe(status)
     expect(response.json()).toEqual({ error: responseError })
     expect(response.body).not.toContain('App feedback command failed')
+  })
+})
+
+describe('pilot push notification state', () => {
+  const sessionToken = 's'.repeat(43)
+
+  it('returns actor-scoped status without exposing subscription secrets', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/push-notifications/status',
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.json()).toEqual({
+      status: {
+        subscribed: true,
+        preferences: {
+          workout_reminder: false,
+          workout_scheduled: true,
+        },
+      },
+    })
+    expect(response.body).not.toContain('endpoint')
+    expect(response.body).not.toContain('authKey')
+    expect(push.readStatus).toHaveBeenCalledWith(sessionToken)
+  })
+
+  it('stores only a validated browser subscription for the pilot session actor', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/v1/push-notifications/subscription',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        endpoint: ' https://push.example/subscription ',
+        p256dh: ' public-key ',
+        authKey: ' auth-secret ',
+        userId: '974f21af-f304-421f-81bd-050dbfabdd46',
+      },
+    })
+
+    expect(response.statusCode).toBe(204)
+    expect(push.upsertSubscription).toHaveBeenCalledWith(sessionToken, {
+      endpoint: 'https://push.example/subscription',
+      p256dh: 'public-key',
+      authKey: 'auth-secret',
+    })
+  })
+
+  it('rejects malformed subscriptions before invoking the database command', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/v1/push-notifications/subscription',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { endpoint: 'http://push.example', p256dh: '', authKey: 'secret' },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_request' })
+    expect(push.upsertSubscription).not.toHaveBeenCalled()
+  })
+
+  it('deletes the current actor subscription idempotently', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: '/v1/push-notifications/subscription',
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+
+    expect(response.statusCode).toBe(204)
+    expect(push.deleteSubscription).toHaveBeenCalledWith(sessionToken)
+  })
+
+  it('sets only a supported explicit preference', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/v1/push-notifications/preferences/workout_reminder',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { enabled: false },
+    })
+
+    expect(response.statusCode).toBe(204)
+    expect(push.setPreference).toHaveBeenCalledWith(
+      sessionToken,
+      'workout_reminder',
+      false,
+    )
+
+    const invalid = await app.inject({
+      method: 'PUT',
+      url: '/v1/push-notifications/preferences/marketing',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { enabled: true },
+    })
+    expect(invalid.statusCode).toBe(400)
+    expect(push.setPreference).toHaveBeenCalledOnce()
+  })
+
+  it('requires a pilot session for every push-state route', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/push-notifications/status',
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json()).toEqual({ error: 'unauthorized' })
+    expect(push.readStatus).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['forbidden', 403, 'action_not_allowed'],
+    ['invalid', 422, 'invalid_push_notifications'],
+  ] as const)('maps %s database failures without exposing details', async (
+    failure, status, responseError,
+  ) => {
+    const push = buildPushNotifications(new PushNotificationCommandError(failure))
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/v1/push-notifications/preferences/workout_scheduled',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { enabled: false },
+    })
+
+    expect(response.statusCode).toBe(status)
+    expect(response.json()).toEqual({ error: responseError })
+    expect(response.body).not.toContain('Push notification command failed')
   })
 })
 

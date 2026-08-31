@@ -201,7 +201,10 @@ atomic client attachment and the current goal-criteria contract. Migration
 `000024_app_feedback` stores suggestion/problem submissions under the
 transaction actor, exposes only a validated insert command to `fit_api` and a
 curated operational view to stage readers. Existing production routes remain
-intact.
+intact. Migration `000025_push_state` ports actor-scoped Web Push subscriptions,
+opt-out preferences and the private outbox. It intentionally has no producer,
+cron, dispatcher or sender: stage can validate storage parity without sending
+real notifications or exposing endpoint/key material.
 Product work merged after the foundation still expands the contract required
 before a production tenant can be switched.
 
@@ -234,7 +237,9 @@ Port the current `main` behavior in this order:
     still submits through Supabase, and Telegram delivery remains on the legacy
     transport until a reviewed Yandex outbox/sender slice exists).
 12. assistant durable state, push subscription/outbox state and any remaining
-    Edge Function contracts required by a migrated tenant.
+    Edge Function contracts required by a migrated tenant. Push storage and its
+    authenticated API are ported in `000025`; producer/dispatcher/sender parity
+    and assistant durable state remain separate slices before tenant cutover.
 
 Each item is a separate vertical slice: PostgreSQL migration, grants/RLS and
 cross-tenant tests, API transaction/DTO, repository adapter and observable

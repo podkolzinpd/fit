@@ -6,6 +6,12 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { hashPilotSessionToken } from '../auth/pilot-session-token.js'
 import { submitAppFeedback } from '../app-feedback-command.js'
+import {
+  deletePushSubscription,
+  readPushNotificationStatus,
+  setNotificationPreference,
+  upsertPushSubscription,
+} from '../push-notifications-command.js'
 import { readAccessibleClients } from '../clients.js'
 import { readAccessibleConnections } from '../connections.js'
 import {
@@ -172,6 +178,13 @@ interface AppFeedbackAuditRow extends QueryResultRow {
   message: string
   screen_path: string
   user_agent: string
+  user_id: string
+}
+
+interface PushSubscriptionAuditRow extends QueryResultRow {
+  auth_key: string
+  endpoint: string
+  p256dh: string
   user_id: string
 }
 
@@ -3076,6 +3089,141 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await ownerPool.query(
           'delete from public.app_feedback where id = any($1::uuid[])',
           [createdIds],
+        )
+      }
+    })
+
+    it('stores actor-scoped push state while keeping secrets and the outbox private', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      try {
+        await ownerPool.query(
+          'delete from public.notification_preferences where user_id = any($1::uuid[])',
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )
+        await ownerPool.query(
+          'delete from public.push_subscriptions where user_id = any($1::uuid[])',
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )
+
+        const initial = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          readPushNotificationStatus,
+        )
+        expect(initial).toEqual({
+          subscribed: false,
+          preferences: {
+            workout_reminder: true,
+            workout_scheduled: true,
+          },
+        })
+
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          upsertPushSubscription(client, {
+            endpoint: 'https://push.example/actor',
+            p256dh: 'actor-public-key',
+            authKey: 'actor-auth-secret',
+          }))
+        expect((await ownerPool.query(
+          `select enabled from public.notification_preferences
+           where user_id = $1 and kind = 'workout_reminder'`,
+          [ACTOR_ID],
+        )).rows).toEqual([{ enabled: true }])
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          setNotificationPreference(client, 'workout_reminder', false))
+
+        const actorStatus = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          readPushNotificationStatus,
+        )
+        expect(actorStatus).toEqual({
+          subscribed: true,
+          preferences: {
+            workout_reminder: false,
+            workout_scheduled: true,
+          },
+        })
+        const otherStatus = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          readPushNotificationStatus,
+        )
+        expect(otherStatus).toEqual({
+          subscribed: false,
+          preferences: {
+            workout_reminder: true,
+            workout_scheduled: true,
+          },
+        })
+
+        const stored = await ownerPool.query<PushSubscriptionAuditRow>(
+          'select user_id, endpoint, p256dh, auth_key from public.push_subscriptions',
+        )
+        expect(stored.rows).toEqual([{
+          user_id: ACTOR_ID,
+          endpoint: 'https://push.example/actor',
+          p256dh: 'actor-public-key',
+          auth_key: 'actor-auth-secret',
+        }])
+
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => client.query('select endpoint from public.push_subscriptions'),
+        )).rejects.toMatchObject({ code: '42501' })
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => client.query('select id from app_private.push_notifications_outbox'),
+        )).rejects.toMatchObject({ code: '42501' })
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => client.query(
+            "select public.upsert_push_subscription('http://invalid', 'key', 'secret')",
+          ),
+        )).rejects.toMatchObject({
+          message: 'push_notifications_invalid',
+          code: 'PT422',
+        })
+
+        expect((await ownerPool.query(
+          `select id from app_private.push_notifications_outbox
+           where user_id = any($1::uuid[])`,
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )).rows).toEqual([])
+
+        await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          deletePushSubscription,
+        )
+        await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          deletePushSubscription,
+        )
+        expect((await ownerPool.query(
+          'select user_id from public.push_subscriptions where user_id = $1',
+          [ACTOR_ID],
+        )).rows).toEqual([])
+        expect((await ownerPool.query(
+          `select enabled from public.notification_preferences
+           where user_id = $1 and kind = 'workout_reminder'`,
+          [ACTOR_ID],
+        )).rows).toEqual([{ enabled: false }])
+      } finally {
+        await ownerPool.query(
+          'delete from public.notification_preferences where user_id = any($1::uuid[])',
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )
+        await ownerPool.query(
+          'delete from public.push_subscriptions where user_id = any($1::uuid[])',
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
         )
       }
     })

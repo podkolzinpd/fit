@@ -44,6 +44,21 @@ see new messages through the curated `ops_readonly.app_feedback` view, without
 profile names or user-agent data. Production feedback continues to use the
 existing Supabase RPC until sticky tenant routing is implemented.
 
+Migration `000025` ports Web Push state without enabling delivery. It stores one
+browser subscription per actor, opt-out preferences for the two existing kinds
+and a provider-neutral private outbox. The public API returns only subscription
+presence and preference booleans; endpoint and Web Push keys are never returned
+or exposed through `ops_readonly`. `fit_api` executes narrow actor-derived
+functions and has no direct table access. The migration deliberately creates no
+producer, scheduler, dispatcher or sender, so applying it cannot send a push.
+Subscription enable/disable and the matching reminder preference update happen
+atomically inside the database command.
+
+Before delivery is enabled, the transport slice must add a reviewed public
+Web Push endpoint/egress policy, queue claim/lease semantics, bounded retries,
+producer tests and sender finalization. Storage parity alone is not permission
+to make outbound requests.
+
 Stage delivery uses the private migration runner to load one deterministic,
 synthetic workout fixture for each enabled read-only trainer plus an isolated
 smoke actor. This route is disabled outside `APP_ENV=stage`, accepts no user
@@ -66,8 +81,8 @@ Human stage readers never receive either role. Migration `000013` creates the
 `ops_readonly` schema with explicit security-definer views and a private,
 owner-only grant/revoke function. The views omit profile/client names, goals,
 membership notes, invitation hashes, workout notes and trainer comments. They
-never expose `app_private`. A direct `fit_api` grant would allow actor-context
-impersonation and is prohibited.
+never expose `app_private`, push endpoints or Web Push key material. A direct
+`fit_api` grant would allow actor-context impersonation and is prohibited.
 
 The private migration runner exposes the access function only in stage. The
 manual `Manage Yandex stage database access` GitHub workflow calls it with an
