@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
 
-type MetricPatch = { setCount?: number; reps?: number; weightKg?: number }
+type MetricPatch = { setCount?: number; reps?: number | undefined; weightKg?: number | undefined }
 
 export function AssistantWorkoutDraftSurface({
   mode, clientName, workoutDate, startTime, rawFragments, result, catalog, parsing, catalogLoading,
@@ -37,9 +37,23 @@ export function AssistantWorkoutDraftSurface({
 }
 
 function WorkoutMetricFields({ sourceText, setCount, reps, weightKg, onChange }: { sourceText: string; setCount: number; reps?: number; weightKg?: number; onChange: (sourceText: string, patch: MetricPatch) => void }) {
+  const [setCountValue, setSetCountValue] = useState(String(setCount))
+  const [repsValue, setRepsValue] = useState(reps === undefined ? '' : String(reps))
+  const [weightValue, setWeightValue] = useState(weightKg === undefined ? '' : String(weightKg))
+
+  useEffect(() => setSetCountValue(String(setCount)), [setCount])
+  useEffect(() => setRepsValue(reps === undefined ? '' : String(reps)), [reps])
+  useEffect(() => setWeightValue(weightKg === undefined ? '' : String(weightKg)), [weightKg])
+
   return <div className="assistant-workout-metrics" aria-label="Параметры упражнения">
-    <label><input aria-label="Подходы" type="number" min="1" max="20" value={setCount} onChange={(event) => onChange(sourceText, { setCount: Number(event.target.value) || 1 })} /><small>подх.</small></label>
-    <label><input aria-label="Повторы" type="number" min="1" value={reps ?? ''} placeholder="—" onChange={(event) => { const value = Number(event.target.value); if (value > 0) onChange(sourceText, { reps: value }) }} /><small>повт.</small></label>
-    <label><input aria-label="Вес" type="number" min="0" step="0.5" value={weightKg ?? ''} placeholder="—" onChange={(event) => { const value = Number(event.target.value); if (value >= 0 && event.target.value !== '') onChange(sourceText, { weightKg: value }) }} /><small>кг</small></label>
+    <label><input aria-label="Подходы" type="number" min="1" max="20" value={setCountValue}
+      onChange={(event) => { const next = event.target.value; setSetCountValue(next); const value = Number(next); if (next !== '' && value >= 1 && value <= 20) onChange(sourceText, { setCount: value }) }}
+      onBlur={() => { const value = Number(setCountValue); if (setCountValue === '' || value < 1 || value > 20) setSetCountValue(String(setCount)) }} /><small>подх.</small></label>
+    <label><input aria-label="Повторы" type="number" min="1" value={repsValue} placeholder="—"
+      onChange={(event) => { const next = event.target.value; setRepsValue(next); const value = Number(next); if (next === '') onChange(sourceText, { reps: undefined }); else if (value > 0) onChange(sourceText, { reps: value }) }}
+      onBlur={() => { if (repsValue !== '' && Number(repsValue) <= 0) setRepsValue(reps === undefined ? '' : String(reps)) }} /><small>повт.</small></label>
+    <label><input aria-label="Вес" type="number" min="0" step="0.5" value={weightValue} placeholder="—"
+      onChange={(event) => { const next = event.target.value; setWeightValue(next); const value = Number(next); if (next === '') onChange(sourceText, { weightKg: undefined }); else if (value >= 0) onChange(sourceText, { weightKg: value }) }}
+      onBlur={() => { if (weightValue !== '' && Number(weightValue) < 0) setWeightValue(weightKg === undefined ? '' : String(weightKg)) }} /><small>кг</small></label>
   </div>
 }
