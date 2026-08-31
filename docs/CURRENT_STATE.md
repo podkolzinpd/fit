@@ -3,7 +3,7 @@
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
 Обновлено: 2026-08-31
-Проверенный базовый `main`: `1f6d301` (`feat(yandex): add session linking foundation (#721)`)
+Проверенный базовый `main`: `e5362ff` (`feat(progress): compact workout regularity (#722)`)
 ## Текущий release gate
 
 - Foundation UI Identity v1 принята. Задачи 8–28 — клиентский, тренерский,
@@ -43,6 +43,8 @@
   периода: лучший результат, тренировки, `X/Y` недель, улучшенные упражнения,
   карта тела, сравнение, связь с целью и ближайший план. Тренер видит plan/fact,
   сигналы и публикацию; выполнение плана не выдаётся за прогресс к цели.
+- Регулярность в Progress — недельная шкала и три рассчитанных показателя без
+  отдельной легенды, общего текста и локального сравнения.
 - Верх Progress закреплён в порядке `Период → Главное сейчас → Цель → Карта
   тела → Сравнение → Измерения → Регулярность → Результаты → Следующий шаг →
   Подробный анализ`. Карта тела компактная: фигура ограничена 210 px,
@@ -105,7 +107,8 @@
   `auth-context`, production routing и Supabase остаются прежними.
 - Проверено локально: targeted tests для feature flags, PKCE intent,
   linking-card, linking callback и read-only Yandex pilot callback; `npm run
-  check`; WebKit default-off и flag-on для тренера/клиента на 390 px.
+  check`; WebKit default-off и flag-on для тренера/клиента на 390 px. После
+  merge с `e5362ff` повторены targeted tests, полный check и WebKit smoke.
 ## Ближайший порядок
 1. Залить PR с UI-привязкой Yandex ID за default-off rollout.
 2. После merge подключить основной Assistant UI к Yandex API через sticky tenant routing
