@@ -46,20 +46,23 @@ describe('WorkoutRegularityProgressSection', () => {
     const section = screen.getByRole('region', { name: 'Тренировочный ритм' })
 
     expect(within(section).getByText('4 тренировки')).toBeVisible()
-    expect(within(section).getByText('4 из 4')).toBeVisible()
+    expect(within(section).getByText('Активные: 4 из 4')).toBeVisible()
     expect(within(section).getByRole('list', { name: 'Завершённые тренировки по неделям' }).children).toHaveLength(4)
     expect(within(section).getByLabelText(/1 тренировка · 03.08.2026–09.08.2026/)).toBeVisible()
-    expect(within(section).getByText('7 дн. / 7 дн.')).toBeVisible()
-    expect(within(section).getByText('4 недели')).toBeVisible()
-    expect(within(section).getByText('0,5 → 1 трен./нед. · +0,5')).toBeVisible()
-    expect(within(section).getByText('Стабильность')).toBeVisible()
+    expect(within(section).getByText('4 нед.')).toBeVisible()
+    expect(within(section).getAllByText('7 дн.')).toHaveLength(2)
+    expect(within(section).queryByText('Частота к прошлому периоду')).toBeNull()
+    expect(section.querySelector('.regularity-story-explanation')).toBeNull()
   })
 
-  it('keeps zero data explicit without inventing a pattern', () => {
+  it('keeps zero data explicit without filler or invented values', () => {
     render(<WorkoutRegularityProgressSection {...base} currentWorkouts={[]} previousWorkouts={undefined} />)
-    expect(screen.getByText('0 тренировок')).toBeVisible()
-    expect(screen.getByText('Недостаточно данных')).toBeVisible()
-    expect(screen.getByText(/ритм оценить нельзя/)).toBeVisible()
+    const section = screen.getByRole('region', { name: 'Тренировочный ритм' })
+    expect(within(section).getByText('0 тренировок')).toBeVisible()
+    expect(within(section).getByText('Активные: 0 из 4')).toBeVisible()
+    expect(within(section).getAllByText('—')).toHaveLength(3)
+    expect(within(section).queryByText('Недостаточно данных')).toBeNull()
+    expect(section.querySelector('.regularity-story-explanation')).toBeNull()
   })
 
   it('shows loading and recoverable error states', async () => {
