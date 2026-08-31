@@ -7,6 +7,15 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { hashPilotSessionToken } from '../auth/pilot-session-token.js'
 import { submitAppFeedback } from '../app-feedback-command.js'
 import {
+  applyAssistantAction,
+  appendAssistantUserMessage,
+  createAssistantConversation,
+  listAssistantActions,
+  listAssistantConversations,
+  listAssistantMessages,
+  persistAssistantResponse,
+} from '../assistant-state.js'
+import {
   deletePushSubscription,
   readPushNotificationStatus,
   setNotificationPreference,
@@ -104,6 +113,8 @@ const ROOT_WORKOUT_ID = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
 const MEMBER_WORKOUT_ID = 'd3cff30a-7aa2-4407-b62d-0683167cf4c8'
 const CLIENT_WORKOUT_ID = '6e2d8d63-7c3a-4301-b9ba-76d875210f1f'
 const POST_WORKOUT_ID = 'cd691fd5-86ee-4740-838c-b37166df7e71'
+const ASSISTANT_TURN_ID = 'a16c6f9e-86ee-4740-838c-b37166df7e71'
+const ASSISTANT_ACTION_ID = 'ea691fd5-86ee-4740-838c-b37166df7e71'
 const PROGRESS_WORKOUT_EXERCISE_ID = '736e9f0c-634a-42e0-a13b-2c5b070fe5ef'
 const PROGRESS_WORKOUT_SET_ID = '9a15f723-44cb-4cf1-9bcf-4659c43cc764'
 const ROOT_WORKOUT_EXERCISE_ID = 'd40b742b-5d5b-41ab-91df-ed464414d034'
@@ -3725,6 +3736,144 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         ) values ($1, $2, current_date, current_date, 'x', '{}'::jsonb, '{}'::jsonb,
           'model', 'prompt', 'fingerprint')`, [ACTOR_ID, CLIENT_ID])))
         .rejects.toMatchObject({ code: '42501' })
+    })
+
+    it('keeps Assistant history and actions durable, idempotent and actor-scoped', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      await ownerPool.query(
+        'delete from public.assistant_conversations where owner_id = any($1::uuid[])',
+        [[ACTOR_ID, MEMBER_TRAINER_ID]],
+      )
+      await ownerPool.query(
+        `delete from public.clients where trainer_id = $1
+          and full_name = 'Клиент из Assistant'`,
+        [ACTOR_ID],
+      )
+
+      const conversation = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => createAssistantConversation(client, 'Проверка Assistant'),
+      )
+      await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        appendAssistantUserMessage(
+          client,
+          conversation.id,
+          ASSISTANT_TURN_ID,
+          'Добавь клиента',
+        ))
+      await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        appendAssistantUserMessage(
+          client,
+          conversation.id,
+          ASSISTANT_TURN_ID,
+          'Добавь клиента',
+        ))
+      await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        appendAssistantUserMessage(
+          client,
+          conversation.id,
+          ASSISTANT_TURN_ID,
+          'Другой текст',
+        ))).rejects.toMatchObject({ failure: 'conflict' })
+
+      const responseAction = {
+        id: ASSISTANT_ACTION_ID,
+        tool: 'create_client_draft',
+        status: 'proposed',
+        title: 'Новый клиент',
+        description: 'Проверьте имя',
+        payload: { step: 'confirm' },
+      }
+      const persisted = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        persistAssistantResponse(
+          client,
+          conversation.id,
+          ASSISTANT_TURN_ID,
+          'Готов черновик клиента',
+          responseAction,
+        ))
+      const repeated = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        persistAssistantResponse(
+          client,
+          conversation.id,
+          ASSISTANT_TURN_ID,
+          'Этот текст не заменит сохранённый',
+          responseAction,
+        ))
+      expect(persisted.deduplicated).toBe(false)
+      expect(repeated).toMatchObject({
+        deduplicated: true,
+        content: 'Готов черновик клиента',
+      })
+
+      const applied = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        applyAssistantAction(
+          client,
+          ASSISTANT_ACTION_ID,
+          { fullName: 'Клиент из Assistant' },
+          1,
+        ))
+      const appliedAgain = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => applyAssistantAction(client, ASSISTANT_ACTION_ID, {}, 2),
+      )
+      expect(applied).toMatchObject({ status: 'applied', version: 2 })
+      expect(appliedAgain).toMatchObject({ status: 'applied', version: 2 })
+      const createdCount = await ownerPool.query<CountRow>(
+        `select count(*)::integer count from public.clients
+          where trainer_id = $1 and full_name = 'Клиент из Assistant'`,
+        [ACTOR_ID],
+      )
+      expect(createdCount.rows[0]?.count).toBe(1)
+
+      const ownState = await withActorTransaction(runtimePool, ACTOR_ID, async (client) => ({
+        conversations: await listAssistantConversations(client),
+        messages: await listAssistantMessages(client, conversation.id),
+        actions: await listAssistantActions(client, conversation.id),
+      }))
+      expect(ownState.conversations).toHaveLength(1)
+      expect(ownState.messages).toHaveLength(2)
+      expect(ownState.actions).toMatchObject([{
+        id: ASSISTANT_ACTION_ID,
+        status: 'applied',
+        version: 2,
+      }])
+
+      const foreignState = await withActorTransaction(
+        runtimePool,
+        MEMBER_TRAINER_ID,
+        async (client) => ({
+          conversations: await listAssistantConversations(client),
+          messages: await listAssistantMessages(client, conversation.id),
+          actions: await listAssistantActions(client, conversation.id),
+        }),
+      )
+      expect(foreignState).toEqual({
+        conversations: [],
+        messages: [],
+        actions: [],
+      })
+      await expect(withActorTransaction(runtimePool, MEMBER_TRAINER_ID, (client) =>
+        persistAssistantResponse(
+          client,
+          conversation.id,
+          ASSISTANT_TURN_ID,
+          'Чужой ответ',
+          null,
+        ))).rejects.toMatchObject({ failure: 'not_found' })
+      await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+        createAssistantConversation(client, null)))
+        .rejects.toMatchObject({ failure: 'forbidden' })
+      await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        client.query(
+          `insert into public.assistant_conversations (owner_id)
+            values ($1)`,
+          [ACTOR_ID],
+        ))).rejects.toMatchObject({ code: '42501' })
     })
   },
 )

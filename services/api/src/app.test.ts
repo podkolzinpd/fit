@@ -5,6 +5,7 @@ import type { PilotConnectionsResponse } from './connections.js'
 import { buildApp } from './app.js'
 import { AppFeedbackCommandError } from './app-feedback-command.js'
 import type { AppFeedbackDraft } from './app-feedback-request.js'
+import { AssistantStateError } from './assistant-state.js'
 import { PushNotificationCommandError } from './push-notifications-command.js'
 import type { PilotPushNotifications } from './pilot-push-notifications.js'
 import {
@@ -23,6 +24,7 @@ import {
 import type { PilotClientsResponse } from './clients.js'
 import type { PilotClientsReader } from './pilot-clients-reader.js'
 import type { PilotAppFeedbackWriter } from './pilot-app-feedback-writer.js'
+import type { PilotAssistantState } from './pilot-assistant-state.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import { PilotConnectionCommandError } from './connection-commands.js'
@@ -673,6 +675,51 @@ function buildAppFeedbackWriter(error?: Error): {
     ? Promise.resolve(PROFILE_ID)
     : Promise.reject(error))
   return { pilotAppFeedbackWriter: { submit }, submit }
+}
+
+function buildAssistantState(error?: Error): {
+  pilotAssistantState: PilotAssistantState
+  listConversations: ReturnType<typeof vi.fn>
+  createConversation: ReturnType<typeof vi.fn>
+  listMessages: ReturnType<typeof vi.fn>
+  listActions: ReturnType<typeof vi.fn>
+  applyAction: ReturnType<typeof vi.fn>
+  completeSummary: ReturnType<typeof vi.fn>
+  cancelAction: ReturnType<typeof vi.fn>
+} {
+  const result = <Value>(value: Value) => error === undefined
+    ? Promise.resolve(value)
+    : Promise.reject(error)
+  const conversation = {
+    id: PROFILE_ID,
+    title: 'Новый диалог',
+    createdAt: '2026-08-31T10:00:00.000Z',
+  }
+  const listConversations = vi.fn(() => result([conversation]))
+  const createConversation = vi.fn(() => result(conversation))
+  const listMessages = vi.fn(() => result([]))
+  const listActions = vi.fn(() => result([]))
+  const applyAction = vi.fn(() => result({ status: 'applied', version: 2 }))
+  const completeSummary = vi.fn(() => result({ status: 'applied', version: 2 }))
+  const cancelAction = vi.fn(() => result({ status: 'cancelled', version: 2 }))
+  return {
+    pilotAssistantState: {
+      listConversations,
+      createConversation,
+      listMessages,
+      listActions,
+      applyAction,
+      completeSummary,
+      cancelAction,
+    },
+    listConversations,
+    createConversation,
+    listMessages,
+    listActions,
+    applyAction,
+    completeSummary,
+    cancelAction,
+  }
 }
 
 function buildPushNotifications(error?: Error): {
@@ -2830,5 +2877,148 @@ describe('pilot invitation and membership commands', () => {
 
     expect(response.statusCode).toBe(401)
     expect(writer.revokeInvitation).not.toHaveBeenCalled()
+  })
+})
+
+describe('pilot assistant state', () => {
+  const sessionToken = 's'.repeat(43)
+
+  it('lists and creates actor-owned conversations without cache', async () => {
+    const state = buildAssistantState()
+    const app = buildApp({
+      pilotAssistantState: state.pilotAssistantState,
+      logger: false,
+    })
+    apps.push(app)
+
+    const listed = await app.inject({
+      method: 'GET',
+      url: '/v1/assistant/conversations',
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+    const created = await app.inject({
+      method: 'POST',
+      url: '/v1/assistant/conversations',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { title: '  Новый диалог  ' },
+    })
+
+    expect(listed.statusCode).toBe(200)
+    expect(listed.headers['cache-control']).toBe('no-store')
+    expect(listed.json()).toMatchObject({
+      conversations: [{ id: PROFILE_ID, title: 'Новый диалог' }],
+    })
+    expect(created.statusCode).toBe(201)
+    expect(state.listConversations).toHaveBeenCalledWith(sessionToken)
+    expect(state.createConversation).toHaveBeenCalledWith(
+      sessionToken,
+      'Новый диалог',
+    )
+  })
+
+  it('reads history and dispatches versioned action commands', async () => {
+    const state = buildAssistantState()
+    const app = buildApp({
+      pilotAssistantState: state.pilotAssistantState,
+      logger: false,
+    })
+    apps.push(app)
+
+    const messages = await app.inject({
+      method: 'GET',
+      url: `/v1/assistant/conversations/${PROFILE_ID}/messages`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+    const actions = await app.inject({
+      method: 'GET',
+      url: `/v1/assistant/actions?conversationId=${PROFILE_ID}`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+    const applied = await app.inject({
+      method: 'POST',
+      url: `/v1/assistant/actions/${PROFILE_ID}/apply`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 1, input: { workout: {} } },
+    })
+    const completed = await app.inject({
+      method: 'POST',
+      url: `/v1/assistant/actions/${PROFILE_ID}/complete-summary`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 1 },
+    })
+    const cancelled = await app.inject({
+      method: 'POST',
+      url: `/v1/assistant/actions/${PROFILE_ID}/cancel`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 1 },
+    })
+
+    expect([
+      messages.statusCode,
+      actions.statusCode,
+      applied.statusCode,
+      completed.statusCode,
+      cancelled.statusCode,
+    ]).toEqual([200, 200, 200, 200, 200])
+    expect(state.listMessages).toHaveBeenCalledWith(sessionToken, PROFILE_ID)
+    expect(state.listActions).toHaveBeenCalledWith(sessionToken, PROFILE_ID)
+    expect(state.applyAction).toHaveBeenCalledWith(
+      sessionToken,
+      PROFILE_ID,
+      { workout: {} },
+      1,
+    )
+    expect(state.completeSummary).toHaveBeenCalledWith(sessionToken, PROFILE_ID, 1)
+    expect(state.cancelAction).toHaveBeenCalledWith(sessionToken, PROFILE_ID, 1)
+  })
+
+  it('validates input and maps state failures without database details', async () => {
+    const invalidState = buildAssistantState()
+    const invalidApp = buildApp({
+      pilotAssistantState: invalidState.pilotAssistantState,
+      logger: false,
+    })
+    apps.push(invalidApp)
+    const invalid = await invalidApp.inject({
+      method: 'POST',
+      url: `/v1/assistant/actions/${PROFILE_ID}/cancel`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 0 },
+    })
+    expect(invalid.statusCode).toBe(400)
+    expect(invalidState.cancelAction).not.toHaveBeenCalled()
+
+    const conflictState = buildAssistantState(new AssistantStateError('conflict'))
+    const conflictApp = buildApp({
+      pilotAssistantState: conflictState.pilotAssistantState,
+      logger: false,
+    })
+    apps.push(conflictApp)
+    const conflict = await conflictApp.inject({
+      method: 'POST',
+      url: `/v1/assistant/actions/${PROFILE_ID}/cancel`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 1 },
+    })
+    expect(conflict.statusCode).toBe(409)
+    expect(conflict.json()).toEqual({ error: 'version_conflict' })
+    expect(conflict.body).not.toContain('Assistant state operation failed')
+  })
+
+  it('requires an opaque pilot session before reading state', async () => {
+    const state = buildAssistantState()
+    const app = buildApp({
+      pilotAssistantState: state.pilotAssistantState,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/assistant/conversations',
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(state.listConversations).not.toHaveBeenCalled()
   })
 })

@@ -17,6 +17,12 @@ import {
 } from './db/yandex-pilot-transaction.js'
 import { AppFeedbackCommandError } from './app-feedback-command.js'
 import { readAppFeedbackRequest } from './app-feedback-request.js'
+import { AssistantStateError } from './assistant-state.js'
+import {
+  readAssistantActionRequest,
+  readAssistantConversationRequest,
+  readAssistantVersionRequest,
+} from './assistant-state-request.js'
 import { PushNotificationCommandError } from './push-notifications-command.js'
 import {
   readNotificationPreferenceRequest,
@@ -40,6 +46,7 @@ import {
 } from './db/database-readiness.js'
 import type { PilotClientsReader } from './pilot-clients-reader.js'
 import type { PilotAppFeedbackWriter } from './pilot-app-feedback-writer.js'
+import type { PilotAssistantState } from './pilot-assistant-state.js'
 import type { PilotPushNotifications } from './pilot-push-notifications.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
@@ -94,6 +101,7 @@ interface BuildAppOptions {
   identityProvider?: YandexIdentityProvider
   oauthCodeProvider?: YandexOAuthCodeProvider
   pilotAppFeedbackWriter?: PilotAppFeedbackWriter
+  pilotAssistantState?: PilotAssistantState
   pilotPushNotifications?: PilotPushNotifications
   pilotClientsReader?: PilotClientsReader
   pilotConnectionsReader?: PilotConnectionsReader
@@ -672,6 +680,18 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
             ? 'action_not_allowed'
             : 'invalid_feedback' })
       }
+      if (error instanceof AssistantStateError) {
+        if (error.failure === 'forbidden') {
+          return reply.code(403).send({ error: 'action_not_allowed' })
+        }
+        if (error.failure === 'not_found') {
+          return reply.code(404).send({ error: 'resource_not_found' })
+        }
+        if (error.failure === 'conflict') {
+          return reply.code(409).send({ error: 'version_conflict' })
+        }
+        return reply.code(422).send({ error: 'invalid_assistant_state' })
+      }
       if (error instanceof PushNotificationCommandError) {
         return reply
           .code(error.failure === 'forbidden' ? 403 : 422)
@@ -738,6 +758,162 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         .header('cache-control', 'no-store')
         .code(201)
         .send({ feedback: { id: feedbackId } }),
+    )
+  })
+
+  app.get('/v1/assistant/conversations', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    const state = options.pilotAssistantState
+    if (state === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => state.listConversations(sessionToken),
+      (conversations) => reply
+        .header('cache-control', 'no-store')
+        .send({ conversations }),
+    )
+  })
+
+  app.post('/v1/assistant/conversations', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const draft = readAssistantConversationRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (draft === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    const state = options.pilotAssistantState
+    if (state === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => state.createConversation(sessionToken, draft.title),
+      (conversation) => reply
+        .header('cache-control', 'no-store')
+        .code(201)
+        .send({ conversation }),
+    )
+  })
+
+  app.get('/v1/assistant/conversations/:conversationId/messages', async (
+    request,
+    reply,
+  ) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { conversationId } = request.params as { conversationId?: unknown }
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const state = options.pilotAssistantState
+    if (state === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => state.listMessages(sessionToken, conversationId),
+      (messages) => reply.header('cache-control', 'no-store').send({ messages }),
+    )
+  })
+
+  app.get('/v1/assistant/actions', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { conversationId: rawConversationId } = request.query as {
+      conversationId?: unknown
+    }
+    const conversationId = rawConversationId === undefined
+      ? null
+      : rawConversationId
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (conversationId !== null
+      && (typeof conversationId !== 'string' || !uuidPattern.test(conversationId))) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const state = options.pilotAssistantState
+    if (state === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => state.listActions(sessionToken, conversationId),
+      (actions) => reply.header('cache-control', 'no-store').send({ actions }),
+    )
+  })
+
+  app.post('/v1/assistant/actions/:actionId/apply', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { actionId } = request.params as { actionId?: unknown }
+    const command = readAssistantActionRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof actionId !== 'string' || !uuidPattern.test(actionId)
+      || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const state = options.pilotAssistantState
+    if (state === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => state.applyAction(
+        sessionToken,
+        actionId,
+        command.input,
+        command.expectedVersion,
+      ),
+      (result) => reply.header('cache-control', 'no-store').send({ result }),
+    )
+  })
+
+  app.post('/v1/assistant/actions/:actionId/complete-summary', async (
+    request,
+    reply,
+  ) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { actionId } = request.params as { actionId?: unknown }
+    const command = readAssistantVersionRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof actionId !== 'string' || !uuidPattern.test(actionId)
+      || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const state = options.pilotAssistantState
+    if (state === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => state.completeSummary(
+        sessionToken,
+        actionId,
+        command.expectedVersion,
+      ),
+      (result) => reply.header('cache-control', 'no-store').send({ result }),
+    )
+  })
+
+  app.post('/v1/assistant/actions/:actionId/cancel', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-pilot-session']
+    const { actionId } = request.params as { actionId?: unknown }
+    const command = readAssistantVersionRequest(request.body)
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (typeof actionId !== 'string' || !uuidPattern.test(actionId)
+      || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const state = options.pilotAssistantState
+    if (state === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => state.cancelAction(
+        sessionToken,
+        actionId,
+        command.expectedVersion,
+      ),
+      (result) => reply.header('cache-control', 'no-store').send({ result }),
     )
   })
 
