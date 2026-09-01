@@ -2329,6 +2329,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 @media (prefers-reduced-motion: reduce) { .exercise-image-motion .exercise-image-frame-end { animation:none; opacity:0 } }
 .exercise-image svg { width:45%; height:45% }
 .exercise-image-thumbnail { width:48px }
+.exercise-image-preview { width:48px }
 .exercise-image-detail { width:104px }
 .exercise-image-technique { width:100%; aspect-ratio:3 / 2; border-radius:var(--radius-lg) }
 .exercise-image-empty { background:var(--surface-sunken) }

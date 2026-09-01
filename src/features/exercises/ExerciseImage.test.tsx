@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ExerciseImage } from './ExerciseImage'
 
@@ -31,7 +31,7 @@ describe('ExerciseImage', () => {
     expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
   })
 
-  it('uses a silent looping video only in the technique variant', () => {
+  it('uses a silent looping video in technique and visible catalog preview variants', () => {
     const { container, rerender } = render(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="technique" />)
     const video = container.querySelector('video')
     expect(video).toHaveAttribute('src', '/exercises/technique.mp4')
@@ -43,6 +43,29 @@ describe('ExerciseImage', () => {
 
     rerender(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" />)
     expect(container.querySelector('video')).not.toBeInTheDocument()
+
+    rerender(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="preview" />)
+    expect(container.querySelector('video')).toHaveAttribute('preload', 'none')
+  })
+
+  it('mounts catalog video only while its preview is near the viewport', () => {
+    let notify: IntersectionObserverCallback | undefined
+    const observe = vi.fn()
+    const disconnect = vi.fn()
+    vi.stubGlobal('IntersectionObserver', vi.fn(function (callback: IntersectionObserverCallback) {
+      notify = callback
+      return { observe, disconnect }
+    }))
+
+    const { container, unmount } = render(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" variant="preview" />)
+    expect(observe).toHaveBeenCalledOnce()
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+    act(() => notify?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver))
+    expect(container.querySelector('video')).toBeInTheDocument()
+    act(() => notify?.([{ isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver))
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+    unmount()
+    expect(disconnect).toHaveBeenCalledOnce()
   })
 
   it('falls back to the two technique frames when video loading fails', () => {
@@ -53,6 +76,13 @@ describe('ExerciseImage', () => {
     expect(container.querySelectorAll('img')).toHaveLength(2)
   })
 
+  it('keeps the catalog cover when preview video loading fails', () => {
+    const { container } = render(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/broken.mp4" alt="Присед" variant="preview" />)
+    fireEvent.error(container.querySelector('video')!)
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Присед' })).toHaveAttribute('src', '/exercises/start.jpg')
+  })
+
   it('does not autoplay video when reduced motion is enabled', () => {
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
       matches: true,
@@ -60,9 +90,12 @@ describe('ExerciseImage', () => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     }))
-    const { container } = render(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="technique" />)
+    const { container, rerender } = render(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="technique" />)
     expect(container.querySelector('video')).not.toBeInTheDocument()
     expect(container.firstElementChild).toHaveClass('exercise-image-motion')
+    rerender(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="preview" />)
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Присед' })).toBeVisible()
   })
 
   it('shows the same neutral placeholder for missing and failed media', () => {
