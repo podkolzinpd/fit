@@ -2,6 +2,7 @@ import { pathToFileURL } from 'node:url'
 
 const MAX_RANGE_MS = 60 * 60 * 1000
 const SAFE_ROW_KEYS = new Set([
+  'second',
   'minute',
   'status',
   'path',
@@ -15,6 +16,7 @@ const SAFE_ROW_KEYS = new Set([
 
 export const EDGE_AUTH_QUERY = `
 select
+  toString(toStartOfSecond(timestamp)) as second,
   toString(toStartOfMinute(timestamp)) as minute,
   toInt32OrZero(log_attributes['response.status_code']) as status,
   log_attributes['request.path'] as path,
@@ -24,16 +26,24 @@ select
 from logs
 where source = 'edge_logs'
   and log_attributes['request.path'] = '/auth/v1/token'
-group by minute, status, path
-order by minute asc, status asc
+group by second, minute, status, path
+order by second asc, status asc
 limit 200`
 
 export const AUTH_SERVICE_QUERY = `
 select
+  toString(toStartOfSecond(timestamp)) as second,
   toString(toStartOfMinute(timestamp)) as minute,
   severity_text as severity,
   multiIf(
     positionCaseInsensitive(event_message, 'invalid login credentials') > 0, 'invalid_credentials',
+    positionCaseInsensitive(event_message, 'email not confirmed') > 0, 'email_not_confirmed',
+    positionCaseInsensitive(event_message, 'rate limit') > 0 or positionCaseInsensitive(event_message, 'too many requests') > 0, 'rate_limited',
+    positionCaseInsensitive(event_message, 'captcha') > 0, 'captcha',
+    positionCaseInsensitive(event_message, 'database') > 0 or positionCaseInsensitive(event_message, 'schema') > 0, 'database',
+    positionCaseInsensitive(event_message, 'refresh token') > 0, 'refresh_token',
+    positionCaseInsensitive(event_message, 'request completed') > 0, 'request_completed',
+    positionCaseInsensitive(event_message, 'connection') > 0 or positionCaseInsensitive(event_message, 'network') > 0, 'connection',
     positionCaseInsensitive(event_message, 'timed out') > 0 or positionCaseInsensitive(event_message, 'timeout') > 0, 'timeout',
     positionCaseInsensitive(event_message, 'error') > 0 or positionCaseInsensitive(event_message, 'failed') > 0, 'error',
     positionCaseInsensitive(event_message, 'token') > 0, 'token',
@@ -42,8 +52,8 @@ select
   count() as events
 from logs
 where source = 'auth_logs'
-group by minute, severity, category
-order by minute asc, severity asc, category asc
+group by second, minute, severity, category
+order by second asc, severity asc, category asc
 limit 200`
 
 export function parseLogRange(startValue, endValue) {
