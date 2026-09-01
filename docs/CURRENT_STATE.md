@@ -3,7 +3,7 @@
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
 Обновлено: 2026-09-01
-Проверенный базовый `main`: `aedaf62` (`feat(assistant): открыть всем тренерам (#736)`)
+Проверенный базовый `main`: `b4acc26` (`feat(yandex): sticky-route trainer assistant (#737)`)
 ## Последняя проверенная продуктовая точка
 - Главные страницы обеих ролей сохраняют voice-first действие и ввод текстом;
   Client Home показывает ближайшее назначение, состоявшуюся неделю и максимум
@@ -85,7 +85,7 @@
 - `main` содержит отдельную 14-дневную read-write Yandex ID-сессию: stage
   валидирует и отзывает opaque token, frontend восстанавливает профиль после
   перезагрузки и блокирует истёкшую/неразрешённую сессию.
-- Активная ветка добавляет независимый default-off sticky route основного
+- `main` содержит независимый default-off sticky route основного
   Trainer Assistant для одного перенесённого профиля. История, turns/actions,
   упражнения, parser и training summaries используют одну `x-fit-session` и
   Yandex API; mismatch или ошибка не переключают отдельный запрос на Supabase.
@@ -97,15 +97,18 @@
 - Реальный invite → join → leave/remove smoke — внешняя проверка. Production
   остаётся на Supabase; полный cutover не выполнен.
 ## Проверки активной ветки
-- Sticky Assistant: frontend/backend selection, matching actor/session, запрет
-  mixed credentials и per-request fallback, read-write summary publication.
-- Yandex DB migration `000028` прошла 28/28 local PostgreSQL actor/RLS tests;
-  targeted feature/route tests, WebKit 390/430/1440, `npm run check` и diff зелёны.
+- Tenant migration tooling: 28-table encrypted manifest, read-only repeatable
+  export, mandatory rollback dry-run, serializable/idempotent apply и точная
+  count/checksum validation. Локальный синтетический export → dry-run → apply →
+  повторный apply → validate прошёл на двух Podman PostgreSQL; изменённая
+  target-строка корректно отклонена.
+- Yandex DB migration `000029` сохраняет `workouts.stage_id` и
+  `client_progress.updated_by`; production routing и удалённые БД не менялись.
 ## Ближайший порядок
-1. Завершить sticky Assistant PR без включения production rollout.
-2. Подготовить export/import + validation и две полные rehearsal для одного
-   тестового tenant-а.
-3. После проверки данных оценить production infrastructure и провести
+1. Завершить PR export/import/validation без удалённых подключений и rollout.
+2. Провести две полные rehearsal для одного production-like, но
+   non-production tenant-а.
+3. После репетиций оценить production infrastructure и провести
    отдельный согласованный rollout/rollback gate.
 ## Отложено
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.
