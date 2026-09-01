@@ -3891,6 +3891,56 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(memberInternal).toHaveLength(1)
       expect(memberInternal[0]?.trainer_summary).toEqual(trainerSummary)
 
+      const sourceSummary = await ownerPool.query<QueryResultRow & {
+        id: string
+        version: number
+      }>(
+        `select id, version
+         from public.client_training_summaries
+         where trainer_id = $1 and client_id = $2
+           and period_start = date '2026-08-01'
+           and period_end = date '2026-08-26'`,
+        [ACTOR_ID, CLIENT_ID],
+      )
+      const source = sourceSummary.rows[0]
+      if (source === undefined) throw new Error('Training summary fixture is missing')
+      const publishedClientSummary = {
+        ...clientSummary,
+        encouragement: 'Опубликовано через read-write Assistant contract.',
+      }
+      const publication = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => client.query<QueryResultRow & {
+          published_id: string
+          next_version: number
+        }>(
+          'select * from public.publish_training_summary($1, $2::jsonb, $3)',
+          [source.id, JSON.stringify(publishedClientSummary), source.version],
+        ),
+      )
+      expect(publication).toHaveLength(1)
+      expect(publication[0]?.published_id).toMatch(/^[0-9a-f-]{36}$/)
+      expect(Number(publication[0]?.next_version)).toBe(Number(source.version) + 1)
+      await expect(withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => client.query(
+          'select * from public.publish_training_summary($1, $2::jsonb, $3)',
+          [source.id, JSON.stringify(clientSummary), source.version],
+        ),
+      )).rejects.toMatchObject({ code: 'PT409' })
+
+      const publishedThroughAssistant = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => client.query<QueryResultRow & { summary: unknown }>(
+          'select summary from public.client_published_training_summaries where client_id = $1',
+          [CLIENT_ID],
+        ),
+      )
+      expect(publishedThroughAssistant[0]?.summary).toEqual(publishedClientSummary)
+
       const clientInternal = await withActorTransaction(
         runtimePool,
         OTHER_ACTOR_ID,

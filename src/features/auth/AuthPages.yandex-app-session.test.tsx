@@ -132,17 +132,42 @@ describe('Yandex app session auth flow', () => {
     expect(establish).not.toHaveBeenCalled()
   })
 
-  it('does not create a parallel session for an already authenticated FIT actor', async () => {
+  it('opens a matching Yandex app session for the authenticated FIT actor', async () => {
     authState.mockReturnValue({
       actor: { userId: PROFILE_ID, role: 'trainer' },
       loading: false,
       error: null,
     })
     window.history.replaceState(null, '', `/auth/yandex/callback${await appCallbackSearch()}`)
+    render(<MemoryRouter initialEntries={['/auth/yandex/callback']}>
+      <Routes>
+        <Route path="/auth/yandex/callback" element={<YandexPilotCallbackPage />} />
+        <Route path="/assistant" element={<p>assistant route</p>} />
+      </Routes>
+    </MemoryRouter>)
+
+    expect(await screen.findByText('assistant route')).toBeVisible()
+    expect(repository.exchangeCodeForAppSession).toHaveBeenCalledOnce()
+    expect(establish).toHaveBeenCalledWith(session)
+  })
+
+  it('revokes a Yandex app session linked to another FIT actor', async () => {
+    authState.mockReturnValue({
+      actor: { userId: '6e577cc7-3b56-4a86-bc85-1ce2426ce249', role: 'trainer' },
+      loading: false,
+      error: null,
+    })
+    window.history.replaceState(null, '', `/auth/yandex/callback${await appCallbackSearch()}`)
     render(<MemoryRouter><YandexPilotCallbackPage /></MemoryRouter>)
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Вы уже вошли в FIT')
-    expect(repository.exchangeCodeForAppSession).not.toHaveBeenCalled()
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Yandex ID связан с другим FIT-профилем.',
+    )
+    expect(repository.revokeAppSession).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      session.session.token,
+    )
+    expect(establish).not.toHaveBeenCalled()
   })
 
   it('shows a restored session and logs out without exposing the token', async () => {

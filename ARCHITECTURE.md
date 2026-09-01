@@ -27,6 +27,16 @@ route/page → feature UI/hooks → repository → query → Supabase Data API/R
 - Workout/progress aggregates — explicit RPC, одна транзакция.
 - RLS — финальная граница tenant access; UUID не является механизмом авторизации.
 - `version` обеспечивает optimistic concurrency для mutable aggregate roots.
+- Основной Assistant выбирает backend один раз на уровне actor route. Вне
+  default-off rollout используется прежний Supabase repository; выбранный actor
+  использует Yandex repository для всей цепочки Assistant через одну read-write
+  app-session. Per-request fallback между БД запрещён: неоднозначный результат
+  mutation показывается как ошибка и не повторяется автоматически в другой БД.
+- Frontend rollout UUID не является авторизацией. Sticky Yandex route требует
+  совпадения UUID текущего FIT actor и восстановленной Yandex app-session, а API
+  повторно устанавливает actor-context из server-side session digest и проверяет
+  ownership/RLS. Одновременная передача read-only и read-write credentials
+  отклоняется.
 
 ## Решения
 

@@ -8,7 +8,13 @@ import { matchesExplicitWorkoutEquipment, parseQuickWorkoutEntry, splitWorkoutTe
  */
 export const REQUIRED_EXERCISE_CONFIDENCE = 0.97
 
-type WorkoutParseOptions = { requireLocalDisambiguation?: boolean }
+type WorkoutParseOptions = {
+  requireLocalDisambiguation?: boolean
+  remoteParser?: (
+    text: string,
+    systemCatalog: readonly ExerciseSnapshot[],
+  ) => Promise<WorkoutParseResponse>
+}
 
 export async function parseWorkoutWithLlm(text: string, catalog: readonly ExerciseSnapshot[], options: WorkoutParseOptions = {}) {
   // Сначала отделяем однозначно найденные упражнения. Это даёт LLM и
@@ -17,7 +23,10 @@ export async function parseWorkoutWithLlm(text: string, catalog: readonly Exerci
   const preparedText = splitWorkoutText(text, catalog).join('\n')
   const local = localWorkoutParse(preparedText, catalog)
   try {
-    const remote = await exercisesRepository.parseWorkout(preparedText, catalog.filter((exercise) => exercise.source === 'system'))
+    const remote = await (options.remoteParser ?? exercisesRepository.parseWorkout)(
+      preparedText,
+      catalog.filter((exercise) => exercise.source === 'system'),
+    )
     return requireExerciseConfirmation(mergeWorkoutParse(remote, local, catalog), catalog, options)
   } catch (error) {
     // Явные названия и числовые значения не должны пропадать только из-за

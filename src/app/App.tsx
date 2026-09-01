@@ -9,7 +9,7 @@ import { ClientDetailPage, ClientFormPage, ClientProfilePage, ClientsPage, GoalP
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
-import { AssistantHistoryPage } from '../features/assistant'
+import { YandexAssistantRoute } from '../features/assistant'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
 import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canonical-client-route'
 
@@ -45,7 +45,7 @@ function Home() {
 }
 
 function AssistantPage() {
-  return <AssistantHistoryPage />
+  return <YandexAssistantRoute />
 }
 
 const router = createBrowserRouter([
