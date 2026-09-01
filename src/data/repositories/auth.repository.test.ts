@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { authRepository } from './auth.repository'
 
 const queries = vi.hoisted(() => ({
@@ -31,6 +31,10 @@ describe('authRepository.initialize', () => {
     queries.updateProfile.mockReset()
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('повторяет вход один раз после краткого сетевого обрыва', async () => {
     queries.signIn
       .mockResolvedValueOnce({ error: new TypeError('Failed to fetch') })
@@ -45,6 +49,30 @@ describe('authRepository.initialize', () => {
 
     await expect(authRepository.signIn('trainer@example.test', 'wrong-password')).rejects.toThrow('Неверный email или пароль')
     expect(queries.signIn).toHaveBeenCalledTimes(1)
+  })
+
+  it('завершает зависший вход, повторяет запрос и возвращает понятную ошибку', async () => {
+    vi.useFakeTimers()
+    queries.signIn.mockImplementation(() => new Promise(() => undefined))
+
+    const signIn = authRepository.signIn('trainer@example.test', 'FitLocal123!')
+    const result = expect(signIn).rejects.toThrow('Не удалось войти. Проверьте интернет и попробуйте ещё раз.')
+
+    await vi.runAllTimersAsync()
+    await result
+    expect(queries.signIn).toHaveBeenCalledTimes(2)
+  })
+
+  it('возвращает понятную ошибку после двух сетевых сбоев', async () => {
+    vi.useFakeTimers()
+    queries.signIn.mockResolvedValue({ error: new TypeError('Failed to fetch') })
+
+    const signIn = authRepository.signIn('trainer@example.test', 'FitLocal123!')
+    const result = expect(signIn).rejects.toThrow('Не удалось войти. Проверьте интернет и попробуйте ещё раз.')
+
+    await vi.runAllTimersAsync()
+    await result
+    expect(queries.signIn).toHaveBeenCalledTimes(2)
   })
 
   it('resolves a linked client without creating a trainer profile', async () => {
