@@ -828,6 +828,16 @@ p { margin: 6px 0 }
 .client-home-section-head .secondary { min-height: 38px; padding: 8px 11px }
 .client-home-connections > .card, .client-home-invitations { box-shadow:none}
 .client-home-connections > .card, .client-home-invitations .card { border-radius: 14px; background: var(--surface-sunken) }
+.invitation-code-card { display:grid; align-items:stretch; gap:10px }
+.invitation-code-row { min-width:0; display:flex; align-items:center; justify-content:space-between; gap:12px }
+.invitation-code-content { min-width:0 }
+.invitation-code-content > strong { overflow-wrap:anywhere; line-height:1.35 }
+.invitation-code-value { font-variant-numeric:tabular-nums; letter-spacing:.04em; -webkit-user-select:all; user-select:all }
+.invitation-code-copy { flex:0 0 auto; min-height:44px; display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:0 12px; border-radius:14px; font-size:12px; font-weight:500; white-space:nowrap }
+.invitation-code-copy svg { width:18px; height:18px }
+.invitation-code-copy[data-state='copied'] { color:var(--success-fg) }
+.invitation-code-card > p { margin:0 }
+.invitation-code-card .invitation-code-error { color:var(--danger) }
 .client-trainer-disconnect-success { margin: 0; color: var(--success-text); font-weight: 700; }
 .client-home-invitations { display: grid; gap: 8px }
 .client-home-invitations h3 { margin: 5px 0 0; font-size: 14px; color: var(--muted) }
@@ -1596,9 +1606,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .first-plan-success .eyebrow, .first-plan-success h2, .first-plan-success p { margin:0; }
 .first-plan-success h2 { color:var(--fg); font-size:24px; line-height:1.12; }
 .first-plan-success > div:first-child > p:last-child { color:var(--muted); font-size:14px; }
-.first-plan-invite-code { display:grid; gap:3px; padding:12px 14px; border:1px solid var(--success-border); border-radius:14px; background:var(--surface-raised); }
-.first-plan-invite-code span, .first-plan-invite-code small { color:var(--muted); font-size:12px; }
-.first-plan-invite-code strong { color:var(--fg); font-size:22px; letter-spacing:.08em; }
 .join-invitation { margin-top:14px; }
 .client-home-next, .client-home-past-plan, .client-home-week, .client-home-highlight, .client-home-self-training.compact, .client-home-error { padding:16px; border:1px solid var(--voice-context-border); border-radius:20px; background:var(--voice-surface); box-shadow:none; }
 .client-home-next, .client-home-week, .client-home-highlight, .client-home-self-training { min-width:0; }
@@ -3088,6 +3095,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .client-home-identity .page { padding-inline:14px }
 .client-home-identity .first-run-copy h2 { font-size:18px }
   .client-home-identity .voice-action { min-height:108px; padding:16px }
+}
+@media (max-width:360px) {
+  .invitation-code-row { align-items:stretch; flex-direction:column }
+  .invitation-code-copy { width:100% }
 }
 
 /* ── Gate 4 / Live: один рабочий экран поверх принятой Identity v1.

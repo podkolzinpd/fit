@@ -90,6 +90,10 @@ export function CheckIcon(props: IconProps) {
   return <Icon data-icon="check" {...props}><path d="m5 12.5 4.2 4.2L19 7" /></Icon>
 }
 
+export function CopyIcon(props: IconProps) {
+  return <Icon data-icon="copy" {...props}><rect x="8" y="8" width="11" height="11" rx="2.5" /><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8" /></Icon>
+}
+
 export function AlertIcon(props: IconProps) {
   return <Icon data-icon="alert" {...props}><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5M12 16.5h.01" /></Icon>
 }

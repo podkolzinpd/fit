@@ -303,6 +303,8 @@ test('iPhone: тренер назначает интервалы, спортсм
     const codeText = await trainer.getByText(/Код клиента:/).textContent()
     const code = codeText?.match(/[A-F0-9]{12}/)?.[0]
     expect(code).toBeTruthy()
+    await trainer.getByRole('button', { name: 'Скопировать код клиента' }).click()
+    await expect(trainer.getByRole('button', { name: 'Код клиента скопирован' })).toBeVisible()
 
     await register(client, 'Интервальный спортсмен', `interval-client-${suffix}@fit.local`, 'client')
     await expect(client.getByRole('heading', { name: 'Тренируйтесь и следите за прогрессом' })).toBeVisible()
@@ -515,6 +517,9 @@ test('iPhone: client voice-first home сохраняет тренировку т
   ])
   await expect(page.getByText('Клиент Обновлённый', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Пригласить тренера' })).toBeInViewport()
+  await page.getByRole('button', { name: 'Пригласить тренера' }).click()
+  await page.getByRole('button', { name: 'Скопировать код для тренера' }).click()
+  await expect(page.getByRole('button', { name: 'Код для тренера скопирован' })).toBeVisible()
   await page.reload()
   await expect(page.getByText('Клиент Обновлённый', { exact: true })).toBeVisible()
   await expectNoHorizontalOverflow(page)

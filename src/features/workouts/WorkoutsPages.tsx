@@ -48,6 +48,7 @@ import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, Wor
 import { liveSessionProgress } from './live-session-progress'
 import { chronicleExercisePreview } from './workout-chronicle'
 import { formatScheduleDateLabel, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes } from './schedule-presentation'
+import { InvitationCodeCard } from '../../shared/invitation-code-card'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -731,9 +732,7 @@ export function WorkoutDetailPage() {
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       {!clientMode && navigationState?.firstPlanClient && <section className="first-plan-success" aria-labelledby="first-plan-success-title">
         <div><p className="eyebrow">ГОТОВО</p><h2 id="first-plan-success-title">Тренировка запланирована</h2><p>Первый план для {navigationState.firstPlanClient.fullName} готов.</p></div>
-        {firstPlanInviteCode ? <div className="first-plan-invite-code" role="status">
-          <span>Код приглашения</span><strong>{firstPlanInviteCode}</strong><small>Отправьте код спортсмену — после подключения он сразу увидит план.</small>
-        </div> : <button className="primary wide" disabled={firstPlanInvite.isPending} onClick={() => firstPlanInvite.mutate()}>{firstPlanInvite.isPending ? 'Создаём приглашение…' : 'Пригласить спортсмена'}</button>}
+        {firstPlanInviteCode ? <InvitationCodeCard code={firstPlanInviteCode} label="Код приглашения" description="Отправьте код спортсмену — после подключения он сразу увидит план." /> : <button className="primary wide" disabled={firstPlanInvite.isPending} onClick={() => firstPlanInvite.mutate()}>{firstPlanInvite.isPending ? 'Создаём приглашение…' : 'Пригласить спортсмена'}</button>}
         {firstPlanInvite.error && <p className="error" role="alert">{firstPlanInvite.error.message}</p>}
         <Link className="button secondary wide" to="/today">Перейти на главную</Link>
       </section>}
