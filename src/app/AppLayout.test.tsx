@@ -158,8 +158,8 @@ describe('AppLayout navigation', () => {
   )
 })
 
-describe('AppLayout: пилот вкладки ассистента', () => {
-  it('тренер из allowlist видит «Ассистент» в существующем нижнем таб-баре', () => {
+describe('AppLayout: вкладка ассистента', () => {
+  it('тренер из local allowlist видит вкладку и одноразовую подсказку', () => {
     vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
     vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'pilot-trainer')
     authState.role = 'trainer'
@@ -168,6 +168,7 @@ describe('AppLayout: пилот вкладки ассистента', () => {
     const navigation = screen.getByRole('navigation', { name: 'Основная навигация' })
     expect(within(navigation).getAllByRole('link').map((link) => link.textContent)).toEqual(['Сегодня', 'Клиенты', 'Ассистент', 'Расписание'])
     expect(iconName(within(navigation).getByRole('link', { name: 'Ассистент' }))).toBe('assistant')
+    expect(screen.getByRole('status')).toHaveTextContent('Ассистент теперь доступен')
   })
 
   it('не показывает trainer-only вкладку клиенту', () => {

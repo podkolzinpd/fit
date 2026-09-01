@@ -9,22 +9,16 @@ export function trainerHomePath() {
   return isTodayStartRedesignEnabled() ? '/today' : '/clients'
 }
 
-// Верхняя навигация тренера «Ассистент» (возврат YAFIT-276 после отката
-// YAFIT-279) открывается только участникам пилота. В production безопасный
-// default — единственный тестовый e-mail; VITE_ASSISTANT_NAV_ENABLED=false
-// остаётся мгновенным kill switch. Allowlist не является границей авторизации:
-// данные защищаются существующими RLS/ownership-проверками.
-export function isProductionAssistantPilotEmail(email?: string | null) {
-  return email?.trim().toLowerCase() === 'test@test.com'
-}
-
+// Ассистент доступен всем тренерам в production; TrainerOnly и RLS/ownership
+// остаются границами роли и данных. VITE_ASSISTANT_NAV_ENABLED=false —
+// мгновенный production kill switch. В development allowlist сохраняет
+// изолированный локальный пилот.
 export function isAssistantNavPilotEnabled(userId: string, email?: string | null) {
   const enabledValue = String(import.meta.env.VITE_ASSISTANT_NAV_ENABLED ?? '').trim()
   const enabled = enabledValue === 'true' || (import.meta.env.PROD && enabledValue !== 'false')
   if (!enabled) return false
-  // Production must never inherit an old UUID allowlist from Vercel. The
-  // public pilot is deliberately one account wide until the next rollout.
-  if (import.meta.env.PROD) return isProductionAssistantPilotEmail(email)
+  // Production must never inherit an old UUID/e-mail allowlist from Vercel.
+  if (import.meta.env.PROD) return true
   const allowedUserIds = String(import.meta.env.VITE_ASSISTANT_NAV_PILOT_USER_IDS ?? '')
     .split(',')
     .map((value) => value.trim())
@@ -127,11 +121,6 @@ export function isYandexAssistantRoutingPilotEnabled(userId: string): boolean {
     .map((item) => item.trim())
     .filter(Boolean)
   return pilotUserIds.length === 1 && pilotUserIds[0] === userId
-}
-
-export function isAssistantRouteEnabled(userId: string, email?: string | null): boolean {
-  return isAssistantNavPilotEnabled(userId, email)
-    || isYandexAssistantRoutingPilotEnabled(userId)
 }
 
 // Привязка существующего FIT-профиля к Yandex ID — отдельный default-off

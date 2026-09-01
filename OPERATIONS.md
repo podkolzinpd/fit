@@ -60,20 +60,18 @@ VITE_WEARABLES_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
 нового deployment. UUID попадают во frontend bundle, поэтому этот механизм
 служит только для rollout интерфейса и не является границей авторизации.
 
-Закрытый пилот верхней навигации тренера («Ассистент», YAFIT-317) управляется
-build-time переменными Vercel:
+Ассистент в production доступен всем тренерам. Build-time переменная
+Vercel остаётся мгновенным kill switch:
 
 ```text
 VITE_ASSISTANT_NAV_ENABLED=true
-VITE_ASSISTANT_NAV_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
 ```
 
-Механизм default-off: по умолчанию, при пустом allowlist или любом значении
-флага кроме точного `true` навигация тренера остаётся прежней (нижний таб-бар,
-экран «Сегодня»). Изменение списка требует нового deployment. UUID попадают во
-frontend bundle, поэтому этот механизм служит только для rollout интерфейса и
-не является границей авторизации: данные и мутации защищаются существующими
-RLS/ownership-проверками.
+По умолчанию production rollout включён; точное `false` скрывает вкладку и закрывает
+маршрут для всех тренеров после нового deployment. `VITE_ASSISTANT_NAV_PILOT_USER_IDS`
+и `VITE_ASSISTANT_NAV_PILOT_EMAILS` сохраняются только для изолированной local/preview-разработки
+и в production игнорируются. Роль защищает `TrainerOnly`, данные и мутации — существующие
+RLS/ownership-проверки.
 
 Закрытый пилот приветствия в шапке «Сегодня»/«Кабинет» управляется build-time
 переменными Vercel:
@@ -140,6 +138,10 @@ Sticky routing основного Trainer Assistant имеет отдельны�
 VITE_YANDEX_ASSISTANT_ROUTING_ENABLED=true
 VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS=<one-auth-user-uuid>
 ```
+
+Общий `VITE_ASSISTANT_NAV_ENABLED=false` остаётся глобальным kill switch:
+sticky-флаг выбирает backend и не может сам открыть скрытую вкладку
+или прямой маршрут.
 
 Флаг включается только при точном `true`; пустой/отсутствующий allowlist или
 профиль вне него сохраняет прежний Supabase Assistant. Для первой репетиции в

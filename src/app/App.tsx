@@ -3,7 +3,7 @@ import { useAuth } from './auth-context'
 import { trackPageView } from '../shared/yandex-metrika'
 import { AppLayout } from './AppLayout'
 import { AppViewportProvider } from './app-viewport'
-import { isAssistantRouteEnabled, trainerHomePath } from './feature-flags'
+import { isAssistantNavPilotEnabled, trainerHomePath } from './feature-flags'
 import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage, YandexAppSessionPage, YandexPilotCallbackPage } from '../features/auth'
 import { ClientDetailPage, ClientFormPage, ClientProfilePage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyGoalPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
@@ -34,7 +34,7 @@ function ClientOnly() {
 
 function AssistantPilotOnly() {
   const { actor } = useAuth()
-  return actor && isAssistantRouteEnabled(actor.userId, actor.email)
+  return actor && isAssistantNavPilotEnabled(actor.userId, actor.email)
     ? <Outlet />
     : <Navigate to={actor?.role === 'client' ? '/me' : trainerHomePath()} replace />
 }
