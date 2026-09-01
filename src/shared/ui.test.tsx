@@ -136,10 +136,10 @@ describe('Coachmark', () => {
       right: left + width, bottom: top + height,
       toJSON: () => ({}),
     }) as DOMRect
-    const geometry = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function () {
-      if ((this as Element).classList.contains('phone-frame')) return rect(0, 0, 390, 844)
-      if ((this as Element).classList.contains('coachmark-anchor')) return rect(180, 760, 80, 60)
-      if ((this as Element).classList.contains('coachmark-bubble')) return rect(0, 0, 280, 120)
+    const geometry = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      if (this.classList.contains('phone-frame')) return rect(0, 0, 390, 844)
+      if (this.classList.contains('coachmark-anchor')) return rect(180, 760, 80, 60)
+      if (this.classList.contains('coachmark-bubble')) return rect(0, 0, 280, 120)
       return rect(0, 0, 0, 0)
     })
     try {
