@@ -458,7 +458,17 @@ test('visual sign-in retries a transient local auth gateway failure', async ({ p
     await route.continue()
   })
 
-  await signIn(page, 'trainer@fit.local', /\/today$/)
+  await gotoStable(page, '/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  const successfulRetry = page.waitForResponse((response) => (
+    response.request().method() === 'POST'
+    && response.url().includes('/auth/v1/token?grant_type=password')
+    && response.ok()
+  ))
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await successfulRetry
+  await expect(page).toHaveURL(/\/today$/, { timeout: 15_000 })
   expect(tokenRequests).toBe(2)
 
   let linkedClientRequests = 0
