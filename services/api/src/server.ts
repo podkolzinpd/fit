@@ -25,7 +25,11 @@ import {
   DatabaseYandexAccountLinker,
   SupabaseExistingActorProvider,
 } from './yandex-account-linking.js'
-import { DatabaseYandexAppSessionIssuer } from './yandex-app-session.js'
+import {
+  DatabaseYandexAppSessionIssuer,
+  DatabaseYandexAppSessionReader,
+  DatabaseYandexAppSessionRevoker,
+} from './yandex-app-session.js'
 import { summarizeClientTraining } from './legacy-summary/index.js'
 import { buildYandexAiAuthorization } from './yandex-ai-authorization.js'
 
@@ -78,6 +82,14 @@ const yandexAppSessionIssuer =
   databasePool === undefined
     ? undefined
     : new DatabaseYandexAppSessionIssuer(databasePool)
+const yandexAppSessionReader =
+  databasePool === undefined
+    ? undefined
+    : new DatabaseYandexAppSessionReader(databasePool)
+const yandexAppSessionRevoker =
+  databasePool === undefined
+    ? undefined
+    : new DatabaseYandexAppSessionRevoker(databasePool)
 const yandexAccountLinker =
   databasePool === undefined
     ? undefined
@@ -192,6 +204,8 @@ const app = buildApp(
     ...(pilotProfileReader === undefined ? {} : { pilotProfileReader }),
     ...(pilotSessionIssuer === undefined ? {} : { pilotSessionIssuer }),
     ...(yandexAppSessionIssuer === undefined ? {} : { yandexAppSessionIssuer }),
+    ...(yandexAppSessionReader === undefined ? {} : { yandexAppSessionReader }),
+    ...(yandexAppSessionRevoker === undefined ? {} : { yandexAppSessionRevoker }),
     ...(yandexAccountLinker === undefined ? {} : { yandexAccountLinker }),
     ...(existingActorProvider === undefined ? {} : { existingActorProvider }),
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),

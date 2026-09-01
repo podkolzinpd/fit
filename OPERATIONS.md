@@ -112,6 +112,30 @@ Supabase-сессию в stage API, а данные и мутации защищ
 ownership/RLS-проверками. OAuth Client Secret в Vite/Vercel frontend variables
 не добавляется.
 
+Полноценная browser-сессия после Yandex ID использует те же публичные
+`VITE_YANDEX_OAUTH_CLIENT_ID` и `VITE_YANDEX_API_BASE_URL`, но имеет собственный
+default-off rollout:
+
+```text
+VITE_YANDEX_APP_SESSION_ENABLED=true
+VITE_YANDEX_APP_SESSION_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
+```
+
+Без точного `true`, при пустом allowlist или для профиля вне списка сессия не
+сохраняется. До завершения OAuth внутренний UUID профиля неизвестен, поэтому
+кнопка входа защищена глобальным kill switch, а настоящая серверная граница —
+`profile_rollout_assignments` со значениями `provider=yandex` и
+`access_mode=read_write`. Frontend повторно проверяет UUID после callback и при
+каждом восстановлении. Изменение флага или списка требует нового deployment.
+
+Opaque session token хранится в browser localStorage только для восстановления
+после перезагрузки, передаётся API в `x-fit-session`, не попадает в URL, UI,
+логи или аналитику и отзывается через API при выходе. Как и UUID allowlist, он
+доступен исполняемому frontend JavaScript, поэтому защита от доступа к данным
+остаётся на backend ownership/tenant-проверках. Этот rollout пока открывает
+только экран проверки сессии и не переключает основные вкладки с Supabase на
+Yandex API.
+
 Светлая и тёмная палитры Foundation UI Identity v1 доступны всем пользователям
 и выбираются обычной настройкой темы в профиле. Отдельных Figma/dark pilot
 переменных и allowlist нет. Обновлённый поиск клиентов также является штатным

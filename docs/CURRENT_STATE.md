@@ -3,7 +3,7 @@
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
 Обновлено: 2026-09-01
-Проверенный базовый `main`: `1dfa7da` (`fix(progress): close post-release visual audit (#732)`)
+Проверенный базовый `main`: `453a65a` (`fix(progress): align and slim body map controls (#733)`)
 ## Текущий release gate
 - Foundation UI Identity v1 принята. Задачи 8–28 — клиентский, тренерский,
   полный auth scope, Assistant, accessibility и visual release gate —
@@ -100,6 +100,11 @@
   один раз выдаёт `fit-stage-api` администратор, а OIDC не меняет folder IAM.
 - Yandex OAuth использует PKCE и публичный Client ID; secret browser-контракту
   не нужен, Supabase-сессия при пилотном входе не создаётся.
+- Активная ветка добавляет отдельную 14-дневную read-write Yandex ID-сессию:
+  stage валидирует и отзывает opaque token, frontend восстанавливает профиль
+  после перезагрузки, закрывает истёкшую/неразрешённую сессию и показывает
+  отдельный session gate. Текущий Supabase `AuthProvider` и основные вкладки не
+  переключаются; sticky tenant routing остаётся отдельным следующим PR.
 - Стабильный Vercel Preview синхронизируется с каждым verified `main`; callback,
   CORS и история не меняются, прочие ветки исключены из Git deployments.
 - Pilot UI read-only; Client/custom-exercise и Planned/Live writes идут через
@@ -107,14 +112,14 @@
 - Реальный invite → join → leave/remove smoke — внешняя проверка. Production
   остаётся на Supabase; полный cutover не выполнен.
 ## Проверки активной ветки
-- YAFIT-421, пункт 10: обе группы переключателей карты тела должны совпадать по
-  центральной оси у клиента и тренера на 320/375/390/430 px и desktop, в обеих
-  темах. Размеры 164/120 px, высоты 36/24 px и touch target 44 px сохраняются.
-  Обязательны geometry/visual QA, полный gate, зелёный CI и production smoke.
+- Yandex app-session: API restore/revoke, frontend restore/expiry/retry/logout,
+  отдельный OAuth intent, default-off allowlist и закрытый session route.
+- Обязательны targeted frontend/API tests, WebKit 390/430 px, `npm run check`
+  и проверка diff. Миграций БД в ветке нет.
 ## Ближайший порядок
-1. Завершить пункт 10 YAFIT-421: gate, PR, CI, merge и production smoke.
-2. После production сверить общую ось и закрыть задачу.
-3. Assistant, `app_feedback` и Yandex parity/cutover ведутся отдельно; после
-   session linking подключить основной Assistant UI через sticky tenant routing.
+1. Завершить и слить Yandex app-session без изменения production routing.
+2. Подключить основной Assistant UI к Yandex API через sticky tenant routing
+   для одного test tenant с сохранением мгновенного rollback на Supabase.
+3. Затем продолжить export/import rehearsal и production infrastructure gate.
 ## Отложено
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.

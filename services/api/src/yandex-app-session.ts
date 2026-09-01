@@ -27,6 +27,10 @@ export interface YandexAppSessionIssuer {
   issue(subjectHash: string): Promise<YandexAppSessionResponse | undefined>
 }
 
+export interface YandexAppSessionReader {
+  read(sessionToken: string): Promise<ProfileResponse>
+}
+
 export interface YandexAppSessionRevoker {
   revoke(sessionToken: string): Promise<boolean>
 }
@@ -60,6 +64,21 @@ export class DatabaseYandexAppSessionIssuer implements YandexAppSessionIssuer {
             }
       },
     )
+  }
+}
+
+export class DatabaseYandexAppSessionReader implements YandexAppSessionReader {
+  constructor(private readonly pool: DatabasePool) {}
+
+  read(sessionToken: string): Promise<ProfileResponse> {
+    const tokenHash = hashPilotSessionToken(sessionToken)
+    if (tokenHash === undefined) throw new YandexAppSessionInvalidError()
+
+    return withYandexAppSessionTransaction(this.pool, tokenHash, async (client) => {
+      const profile = await readOwnProfile(client, 'read_write')
+      if (profile === undefined) throw new YandexAppSessionInvalidError()
+      return profile
+    })
   }
 }
 
