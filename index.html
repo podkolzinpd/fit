@@ -1786,6 +1786,7 @@ h3 {
 
 /* Evidence: proven category demand and proven behaviour-change mechanics. */
 .demand-proof-slide h2,
+.monetization-proof-slide h2,
 .behavior-proof-slide h2 {
   max-width: 1390px;
   font-size: 51px;
@@ -1808,6 +1809,13 @@ h3 {
 .benchmark-brand {
   font-size: 29px;
   letter-spacing: -.025em;
+}
+.benchmark-brand--closest small {
+  display: block;
+  margin-top: 8px;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: .09em;
 }
 .benchmark-scale {
   display: grid;
@@ -1833,6 +1841,20 @@ h3 {
   color: var(--muted);
   font-size: 19px;
   line-height: 1.34;
+}
+.benchmark-row p b { color: var(--ink); }
+.benchmark-row--closest {
+  position: relative;
+  background: var(--paper-2);
+}
+.benchmark-row--closest::before {
+  content: "";
+  position: absolute;
+  left: -18px;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: var(--ink);
 }
 .benchmark-conclusion {
   position: absolute;
@@ -1862,6 +1884,102 @@ h3 {
   margin-top: 9px;
   color: var(--muted);
   font-size: 13px;
+  line-height: 1.3;
+}
+
+.revenue-ledger {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  top: 236px;
+  border-top: 2px solid var(--ink);
+}
+.revenue-head,
+.revenue-row {
+  display: grid;
+  grid-template-columns: 230px 315px 380px 1fr;
+  column-gap: 25px;
+  align-items: center;
+}
+.revenue-head {
+  height: 42px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .09em;
+}
+.revenue-row {
+  position: relative;
+  min-height: 100px;
+  border-top: 1px solid var(--line);
+}
+.revenue-row > strong {
+  font-size: 27px;
+  letter-spacing: -.025em;
+}
+.revenue-row > strong small {
+  display: block;
+  margin-top: 7px;
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: .09em;
+}
+.revenue-row > div b {
+  display: block;
+  font-size: 25px;
+  line-height: 1.08;
+  letter-spacing: -.025em;
+}
+.revenue-row > div small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+}
+.revenue-row > p {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.3;
+}
+.revenue-row--closest { background: var(--paper-2); }
+.revenue-row--closest::before {
+  content: "";
+  position: absolute;
+  left: -18px;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: var(--ink);
+}
+.revenue-conclusion {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  bottom: 72px;
+  display: grid;
+  grid-template-columns: 230px 1fr;
+  gap: 25px;
+  align-items: start;
+  padding-top: 19px;
+  border-top: 2px solid var(--ink);
+}
+.revenue-conclusion > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .09em;
+}
+.revenue-conclusion strong {
+  display: block;
+  font-size: 23px;
+  line-height: 1.25;
+}
+.revenue-conclusion small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
   line-height: 1.3;
 }
 
@@ -2183,22 +2301,22 @@ Fit остаётся отдельным приложением, потому ч�
         <div class="benchmark-row">
           <strong class="benchmark-brand">Strava</strong>
           <div class="benchmark-scale"><b>195+ млн</b><span>спортсменов</span></div>
-          <p>Фиксация активности, прогресс и социальная поддержка</p>
+          <p><b>&gt;50%</b> роста новых пользователей за 2024 год</p>
         </div>
         <div class="benchmark-row">
           <strong class="benchmark-brand">Keep</strong>
           <div class="benchmark-scale"><b>21,8 млн</b><span>средний MAU · 2025</span></div>
-          <p>Готовые тренировки, данные, подписка и товары вокруг спорта</p>
+          <p><b>2,7 млн</b> подписчиков · <b>12,6%</b> проникновения подписки</p>
         </div>
-        <div class="benchmark-row">
-          <strong class="benchmark-brand">Hevy</strong>
-          <div class="benchmark-scale"><b>15+ млн</b><span>пользователей</span></div>
-          <p>Простой дневник тренировок, аналитика прогресса и сообщество</p>
+        <div class="benchmark-row benchmark-row--closest">
+          <strong class="benchmark-brand benchmark-brand--closest">Hevy<small>БЛИЖАЙШИЙ АНАЛОГ FIT</small></strong>
+          <div class="benchmark-scale"><b>16+ млн</b><span>пользователей</span></div>
+          <p><b>112 млн</b> тренировок за 2025 год · <b>4,9</b> по 590 тыс. оценок</p>
         </div>
         <div class="benchmark-row">
           <strong class="benchmark-brand">Trainerize</strong>
           <div class="benchmark-scale"><b>1,6+ млн</b><span>клиентов</span></div>
-          <p>План тренера, отчёт клиента, обратная связь и контроль выполнения</p>
+          <p><b>5 млн</b> тренировок и <b>23 млн</b> приёмов пищи в месяц</p>
         </div>
       </div>
       <div class="benchmark-conclusion">
@@ -2212,7 +2330,7 @@ Fit остаётся отдельным приложением, потому ч�
 Доказать не будущий масштаб Fit, а существование массовой категории и повторяющейся пользовательской потребности.
 
 ЧТО ГОВОРИМ
-Мы не просим поверить, что люди внезапно захотят пользоваться цифровым спортивным помощником. Они уже это делают. Strava доказала массовый спрос на фиксацию прогресса и социальную мотивацию. Keep — на сочетание тренировочного контента, данных, подписки и спортивных товаров. Hevy — на предельно простой дневник силовых тренировок. Trainerize — на постоянный цифровой контур между тренером и клиентом.
+Мы не просим поверить, что люди внезапно захотят пользоваться цифровым спортивным помощником. Они уже это делают. Strava доказала массовый спрос на фиксацию прогресса и социальную мотивацию. Keep — на сочетание тренировочного контента, данных, подписки и спортивных товаров. Hevy — ближайший продуктовый аналог Fit: дневник силовых тренировок, аналитика прогресса и социальный контур уже выросли до 16 миллионов пользователей и 112 миллионов зафиксированных тренировок за один год. Trainerize доказал спрос на постоянную цифровую связку тренера и клиента.
 
 Эти показатели нельзя складывать или напрямую сравнивать: здесь одновременно показаны спортсмены, пользователи, MAU и клиенты. Их задача — подтвердить масштаб разных моделей внутри одной категории, а не спрогнозировать аудиторию Fit.
 
@@ -2220,17 +2338,75 @@ Fit остаётся отдельным приложением, потому ч�
 Масштаб аналогов не гарантирует успех Fit. Он снимает другой риск: потребность не нужно создавать с нуля. Пилот должен проверить, способен ли Яндекс собрать доказанные механики в более цельный локальный продукт и получить удержание W4.
 
 ПЕРЕХОД
-Масштаб подтверждает спрос на категорию. Исследования объясняют, какие именно механики помогают людям продолжать заниматься и возвращаться в продукт.
+Масштаб подтверждает спрос на категорию. Следующий вопрос для руководства — умеют ли такие продукты превращать этот спрос в деньги.
 
 [Sources]
 Strava, About — более 195 млн спортсменов: https://press.strava.com/about
-Keep Inc., audited annual results 2025 — средний MAU 21,8 млн: https://financialfilings.com/filings/keep-inc/earnings-release/2026/33036143/
-Hevy, About Us — сообщество 15+ млн пользователей: https://www.hevyapp.com/about-us/
-ABC Trainerize, About — 400 тыс. тренеров, 1,6 млн клиентов и более 5 млн тренировок в месяц: https://www.trainerize.com/about/</aside>
+Strava, пресс-релиз 19.08.2025 — рост новых пользователей более чем на 50% за предыдущий год: https://press.strava.com/en-gb/articles/strava-finalizes-leadership-team-for-next-stage-of-growth
+Keep Inc., Annual Report 2025 — средний MAU 21,8 млн, 2,7 млн подписчиков и penetration 12,6%: https://manager.wisdomir.com/files/676/2026/0423/20260423171501_44046414_en.pdf
+Hevy, Partners — 16+ млн пользователей, 112+ млн тренировок в 2025 году, рейтинг 4,9 по 590+ тыс. оценок: https://www.hevyapp.com/partners/
+ABC Trainerize, About — 400 тыс. тренеров, 1,6 млн клиентов, 5 млн тренировок и 23 млн приёмов пищи в месяц: https://www.trainerize.com/about/</aside>
+    </section>
+
+    <section class="slide monetization-proof-slide" data-section="Доказанная монетизация">
+      <div class="eyebrow">06 · ДОКАЗАННАЯ МОНЕТИЗАЦИЯ</div>
+      <h2>Категория уже зарабатывает — через подписку, товары и B2B</h2>
+      <div class="revenue-ledger">
+        <div class="revenue-head"><span>ПРОДУКТ</span><span>ОБЩИЙ ДОХОД</span><span>НА ЕДИНИЦУ БАЗЫ</span><span>ОСНОВАНИЕ</span></div>
+        <div class="revenue-row">
+          <strong>Strava</strong>
+          <div><b>≈ $500 млн ARR</b><small>2025</small></div>
+          <div><b>≈ $3,3 в год</b><small>на зарегистрированного спортсмена</small></div>
+          <p>Данные компании · расчёт по базе 150 млн</p>
+        </div>
+        <div class="revenue-row">
+          <strong>Keep</strong>
+          <div><b>1,64 млрд ¥</b><small>выручка · 2025</small></div>
+          <div><b>75,6 ¥ в год</b><small>на средний MAU · 6,3 ¥ в месяц</small></div>
+          <p>Аудированная отчётность</p>
+        </div>
+        <div class="revenue-row revenue-row--closest">
+          <strong>Hevy<small>БЛИЖАЙШИЙ АНАЛОГ FIT</small></strong>
+          <div><b>≈ $1,92 млн</b><small>годовой темп · 2024</small></div>
+          <div><b>≈ $0,4–0,5 в год</b><small>на зарегистрированного пользователя</small></div>
+          <p>Внешняя публичная оценка</p>
+        </div>
+        <div class="revenue-row">
+          <strong>Trainerize</strong>
+          <div><b>$20 млн ARR</b><small>2022</small></div>
+          <div><b>≈ $10 в год</b><small>на подключённого клиента</small></div>
+          <p>Данные компании · расчёт по базе 2 млн</p>
+        </div>
+      </div>
+      <div class="revenue-conclusion">
+        <span>ВЫВОД</span>
+        <div><strong>Пользовательская потребность монетизируется разными способами. Fit может соединить их в одной модели.</strong><small>Показатели не являются единым ARPU: различаются периоды, базы пользователей и состав выручки.</small></div>
+      </div>
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Показать, что рынок доказал не только пользовательский спрос, но и способность зарабатывать на цифровом сопровождении спорта.
+
+ЧТО ГОВОРИМ
+Здесь важен не рейтинг компаний по ARPU, а наличие нескольких работающих моделей. Strava монетизирует массовую пользовательскую базу подпиской. Keep получает выручку и от цифровых сервисов, и от собственных спортивных товаров. Hevy — ближайший продуктовый аналог Fit — показывает, что даже сфокусированный дневник силовых тренировок способен органически вырасти и стать прибыльным подписным продуктом. Trainerize доказывает B2B-модель вокруг тренера и его клиентской базы.
+
+Цифры «на единицу базы» нужны только для понимания порядка монетизации. Это не сопоставимый отраслевой ARPU: Strava и Hevy используют зарегистрированную аудиторию, Keep — средний MAU, Trainerize — число подключённых клиентов. У Keep в выручку входят физические товары, а данные Hevy являются внешней оценкой, а не финансовой отчётностью.
+
+ОБЯЗАТЕЛЬНАЯ ОГОВОРКА
+Эти показатели не переносятся напрямую в модель Fit. Они доказывают, что ценность уже оплачивается рынком. Конкретный revenue mix Fit и доход на активного пользователя должны проверяться пилотом.
+
+ПЕРЕХОД
+Категория доказала спрос и деньги. Независимые исследования объясняют, почему цифровое сопровождение помогает людям больше двигаться и возвращаться к тренировкам.
+
+[Sources]
+Strava, пресс-релиз 19.08.2025 — более 150 млн спортсменов и приближение к $500 млн ARR: https://press.strava.com/en-gb/articles/strava-finalizes-leadership-team-for-next-stage-of-growth
+Keep Inc., Annual Report 2025 — выручка RMB1,637 млрд, средний MAU 21,772 млн и среднемесячная выручка на MAU RMB6,3: https://manager.wisdomir.com/files/676/2026/0423/20260423171501_44046414_en.pdf
+Hevy, Starter Story, 02.11.2024 — внешняя оценка $160 тыс. MRR; годовой темп $1,92 млн рассчитан как 12 × MRR: https://www.starterstory.com/hevy-breakdown
+Hevy, публичные сообщения команды в 2024 году — база 4–5 млн пользователей для ориентировочного расчёта дохода на зарегистрированного пользователя: https://www.reddit.com/r/Hevy/comments/1dy9f3z/ и https://www.reddit.com/r/Hevy/comments/1hdg7um/
+ABC Trainerize, 24.05.2022 — достижение $20 млн ARR: https://www.trainerize.com/blog/vancouver-startup-trainerize-levels-up-its-leadership-sets-its-sights-on-50m-arr-usd/
+ABC Trainerize, 15.12.2022 — 2 млн клиентов; показатель на клиента рассчитан как ARR / клиентская база: https://www.trainerize.com/blog/2022-trainerize-awards-winners/</aside>
     </section>
 
     <section class="slide behavior-proof-slide" data-section="Доказанный спрос">
-      <div class="eyebrow">06 · ПОЧЕМУ ВОЗВРАЩАЮТСЯ</div>
+      <div class="eyebrow">07 · ПОЧЕМУ ВОЗВРАЩАЮТСЯ</div>
       <h2>Люди возвращаются, когда приложение превращает данные в следующий полезный шаг</h2>
       <div class="research-proof">
         <div><strong>+1 329</strong><span>шагов в день</span></div>
@@ -2268,10 +2444,10 @@ Laranjo et al., 2021, British Journal of Sports Medicine — приложени�
     </section>
 
     <section class="slide competitor-slide" data-section="Конкуренты">
-      <div class="eyebrow">07 · ФРАГМЕНТАЦИЯ РЫНКА</div>
+      <div class="eyebrow">08 · ФРАГМЕНТАЦИЯ РЫНКА</div>
       <h2>Спрос доказан, но весь спортивный путь пока не собран в одном продукте</h2>
       <div class="competitive-grid">
-        <div class="competitive-column"><span>ТРЕКЕРЫ И ТРЕНИРОВКИ</span><strong>Strava · Nike</strong><p>активность</p><p>планы</p><p>прогресс</p><small>Нет локальной дистрибуции и транзакционного контура Яндекса</small></div>
+        <div class="competitive-column"><span>ТРЕКЕРЫ И ТРЕНИРОВКИ</span><strong>Hevy · Strava · Nike</strong><p>активность</p><p>планы</p><p>прогресс</p><small>Hevy — ближайший аналог Fit. Нет локальной дистрибуции и транзакционного контура Яндекса</small></div>
         <div class="competitive-column"><span>АГРЕГАТОРЫ</span><strong>FITMOST</strong><p>место</p><p>бронирование</p><p>абонемент</p><small>Нет непрерывного контекста плана, факта и прогресса</small></div>
         <div class="competitive-column"><span>РИТЕЙЛ</span><strong>Маркетплейсы</strong><p>товар</p><p>оплата</p><p>логистика</p><small>Не знают, что происходит на тренировке и что нужно дальше</small></div>
         <div class="competitive-column fit-advantage"><span>YANDEX FIT</span><strong>Единый цикл</strong><p>намерение + ИИ-план</p><p>факт + прогресс</p><p>покупка + повтор</p><small>Yandex ID · дистрибуция · данные · транзакция · лояльность</small></div>
@@ -2284,7 +2460,7 @@ Laranjo et al., 2021, British Journal of Sports Medicine — приложени�
 Обосновать право Яндекса на продукт без заявления «у конкурентов ничего нет».
 
 ЧТО ГОВОРИМ
-Мировые продукты уже доказали спрос на отдельные элементы спортивного сопровождения, но рынок остаётся фрагментированным. Трекеры хорошо фиксируют активность и показывают прогресс. Агрегаторы помогают найти площадку и купить доступ. Маркетплейсы закрывают товар и логистику. Внешние ИИ могут составить текстовый план, но обычно не живут внутри накопленного тренировочного контекста.
+Мировые продукты уже доказали спрос на отдельные элементы спортивного сопровождения, но рынок остаётся фрагментированным. Hevy — ближайший аналог Fit по дневнику тренировок, аналитике прогресса и социальной механике. Strava и Nike также хорошо фиксируют активность и показывают прогресс. Агрегаторы помогают найти площадку и купить доступ. Маркетплейсы закрывают товар и логистику. Внешние ИИ могут составить текстовый план, но обычно не живут внутри накопленного тренировочного контекста.
 
 Преимущество Fit не в одной уникальной функции. Оно в замкнутом контуре: намерение — план — факт — прогресс — покупка — повтор. Яндекс может соединить его через ID, собственную дистрибуцию, данные, платежи, логистику и лояльность.
 
@@ -2295,13 +2471,14 @@ Laranjo et al., 2021, British Journal of Sports Medicine — приложени�
 
 [Sources]
 Strava features: https://support.strava.com/en-us/articles/15402044-strava-subscription-features
+Hevy features: https://www.hevyapp.com/features/
 Nike Training Club: https://www.nike.com/help/a/ntc-info/app
 FITMOST: https://www.fitmost.ru/kzn/
 Сравнение основано на публично описанных продуктовых поверхностях. Тезис относится к совокупности контура, а не к отсутствию каждой отдельной функции у конкурентов.</aside>
     </section>
 
     <section class="slide audience-slide" data-section="Аудитория">
-      <div class="eyebrow">08 · МАСШТАБ АУДИТОРИИ</div>
+      <div class="eyebrow">09 · МАСШТАБ АУДИТОРИИ</div>
       <h2>Около 22 млн россиян 18–55 лет регулярно занимаются спортом</h2>
       <div class="audience-metrics">
         <div class="audience-population"><span>18–55 ЛЕТ · ЦЕЛЕВОЙ СЕГМЕНТ</span><strong>≈74 млн</strong><p>потенциальная аудитория первого этапа</p></div>
@@ -2333,7 +2510,7 @@ FITMOST: https://www.fitmost.ru/kzn/
     </section>
 
     <section class="slide channel-slide acquisition-slide" data-section="Дистрибуция">
-      <div class="eyebrow">09 · ПРИВЛЕЧЕНИЕ И УДЕРЖАНИЕ</div>
+      <div class="eyebrow">10 · ПРИВЛЕЧЕНИЕ И УДЕРЖАНИЕ</div>
       <h2>Входим через спортивный момент — возвращаем через следующий полезный шаг</h2>
       <div class="channel-stack">
         <div class="channel-row channel-pilot"><b>01</b><strong>Тренеры</strong><span>дают готовую программу; получают бонус за активного клиента W4</span><em>ПИЛОТ</em></div>
@@ -2372,7 +2549,7 @@ UrbanAds: https://yandex.ru/support/urbanads/ru/</aside>
     </section>
 
     <section class="slide retention-slide" data-section="Удержание">
-      <div class="eyebrow">10 · ПРОДУКТОВОЕ УДЕРЖАНИЕ</div>
+      <div class="eyebrow">11 · ПРОДУКТОВОЕ УДЕРЖАНИЕ</div>
       <h2>Fit становится рабочим местом тренера и спортивным профилем клиента</h2>
       <div class="retention-columns">
         <article class="retention-role trainer-role">
@@ -2417,7 +2594,7 @@ UrbanAds: https://yandex.ru/support/urbanads/ru/</aside>
     </section>
 
     <section class="slide value-slide" data-section="Ценность Яндексу">
-      <div class="eyebrow">11 · ЦЕННОСТЬ ДЛЯ ЯНДЕКСА</div>
+      <div class="eyebrow">12 · ЦЕННОСТЬ ДЛЯ ЯНДЕКСА</div>
       <h2>Fit создаёт три уровня ценности для Яндекса</h2>
       <div class="value-planes">
         <div class="value-plane direct"><span>01</span><h3>Прямая выручка Fit</h3><p>Комиссии, реклама, B2B, профессиональные функции.</p></div>
@@ -2444,7 +2621,7 @@ Fit создаёт для Яндекса три уровня ценности, �
     </section>
 
     <section class="slide unit-model" data-section="Финансовая модель">
-      <div class="eyebrow">12 · ЮНИТ-ЭКОНОМИКА · БАЗОВЫЙ СЦЕНАРИЙ 2029</div>
+      <div class="eyebrow">13 · ЮНИТ-ЭКОНОМИКА · БАЗОВЫЙ СЦЕНАРИЙ 2029</div>
       <h2>Зрелый W4-пользователь приносит 83 ₽ contribution в месяц</h2>
       <div class="unit-bridge">
         <div class="unit-source"><span>ТОВАРЫ</span><strong>60 ₽</strong><p>13% покупателей × 1,2 заказа × 5 500 ₽ × 7%</p></div>
@@ -2464,7 +2641,7 @@ Fit создаёт для Яндекса три уровня ценности, �
     </section>
 
     <section class="slide pnl-slide" data-section="Финансовая модель">
-      <div class="eyebrow">13 · P&amp;L · БАЗОВЫЙ СЦЕНАРИЙ</div>
+      <div class="eyebrow">14 · P&amp;L · БАЗОВЫЙ СЦЕНАРИЙ</div>
       <h2>Годовой EBITDA становится положительным на третий год</h2>
       <div class="pnl-table">
         <div class="pnl-head"><span>млрд ₽, кроме MAU</span><strong>2027</strong><strong>2028</strong><strong>2029</strong></div>
@@ -2482,7 +2659,7 @@ Fit создаёт для Яндекса три уровня ценности, �
     </section>
 
     <section class="slide scenario-model" data-section="Финансовая модель">
-      <div class="eyebrow">14 · СЦЕНАРИИ · 2029</div>
+      <div class="eyebrow">15 · СЦЕНАРИИ · 2029</div>
       <h2>Экономика сходится только при масштабе и повторной коммерции</h2>
       <div class="model-scenarios">
         <div class="model-scenario"><span>КОНСЕРВАТИВНЫЙ</span><strong>0,6 млн MAU</strong><dl><dt>GMV</dt><dd>4,7 млрд ₽</dd><dt>Выручка</dt><dd>0,42 млрд ₽</dd><dt>EBITDA</dt><dd class="negative">−0,88 млрд ₽</dd><dt>Payback</dt><dd>23,6 мес.</dd><dt>LTV / CAC</dt><dd>1,0×</dd></dl></div>
@@ -2494,7 +2671,7 @@ Fit создаёт для Яндекса три уровня ценности, �
     </section>
 
     <section class="slide investment-slide" data-section="Инвестиции">
-      <div class="eyebrow">15 · ИНВЕСТИЦИИ И ТОЧКА РЕШЕНИЯ</div>
+      <div class="eyebrow">16 · ИНВЕСТИЦИИ И ТОЧКА РЕШЕНИЯ</div>
       <h2>Сейчас просим 95 млн ₽ на проверку — не 1,1 млрд ₽ на масштаб</h2>
       <div class="investment-layout">
         <div class="pilot-investment">
@@ -2515,7 +2692,7 @@ Fit создаёт для Яндекса три уровня ценности, �
     </section>
 
     <section class="slide gate-slide" data-section="Гейты">
-      <div class="eyebrow">16 · ГЕЙТЫ МАСШТАБИРОВАНИЯ</div>
+      <div class="eyebrow">17 · ГЕЙТЫ МАСШТАБИРОВАНИЯ</div>
       <h2>Запуск продолжается только при доказанной активности и экономике</h2>
       <div class="gates">
         <div class="gate"><span>АКТИВАЦИЯ</span><strong>≥ 45%</strong><p>регистрация → первая тренировка</p></div>
@@ -2531,7 +2708,7 @@ Fit создаёт для Яндекса три уровня ценности, �
     </section>
 
     <section class="slide slide-decision" data-section="Решение">
-      <div class="eyebrow">17 · РЕШЕНИЕ</div>
+      <div class="eyebrow">18 · РЕШЕНИЕ</div>
       <h2>Что нужно утвердить сейчас</h2>
       <div class="decision-list">
         <div><b>01</b><strong>24-недельный пилот отдельного приложения Fit</strong></div>
@@ -2641,7 +2818,7 @@ Fit создаёт для Яндекса три уровня ценности, �
 
   <button class="nav nav-prev" id="prev" aria-label="Предыдущий слайд">←</button>
   <button class="nav nav-next" id="next" aria-label="Следующий слайд">→</button>
-  <div class="slide-meta"><span id="sectionName">Решение</span><span id="counter">01 / 25</span></div>
+  <div class="slide-meta"><span id="sectionName">Решение</span><span id="counter">01 / 26</span></div>
   <div class="notes-panel" id="notesPanel" aria-hidden="true"><button id="closeNotes" aria-label="Закрыть заметки">×</button><div id="notesContent"></div></div>
   <script>
 const slides = [...document.querySelectorAll('.slide')]
