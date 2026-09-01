@@ -227,6 +227,8 @@ export interface ExerciseSnapshot {
   imageUrl?: string
   /** Второй локальный кадр техники: конечное положение упражнения. */
   motionImageUrl?: string
+  /** Короткая локальная петля техники; изображения остаются обязательным fallback. */
+  techniqueVideoUrl?: string
   instructions?: string[]
 }
 
