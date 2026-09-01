@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { SYSTEM_EXERCISES, SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISE_CATALOG_VERSION } from './system-exercises'
 import { IMPORTED_EXERCISES } from './system-exercises.generated'
 import { BASE_EXERCISES } from './system-exercises.base.generated'
+import { VITAL_FREE_PACK_ASSETS, VITAL_FREE_PACK_EXERCISES } from './vital-free-pack'
 
 const EXERCISE_MEDIA_PATHS = new Set(
-  Object.keys(import.meta.glob('../../public/exercises/*.jpg', { query: '?url', import: 'default' }))
+  Object.keys(import.meta.glob('../../public/exercises/**/*.jpg', { query: '?url', import: 'default' }))
     .map((path) => path.replace('../../public', '')),
 )
 const EXERCISE_VIDEO_PATHS = new Set(
@@ -14,7 +15,7 @@ const EXERCISE_VIDEO_PATHS = new Set(
 
 describe('system exercise catalog', () => {
   it('matches the V1 baseline catalog', () => {
-    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(4)
+    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(5)
     expect(SYSTEM_EXERCISES).toHaveLength(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.ref)).size).toBe(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.name)).size).toBe(49)
@@ -63,9 +64,9 @@ describe('system exercise catalog', () => {
 
   it('добавляет импортированный каталог поверх базового без дублей', () => {
     // Полный каталог = 49 базовых + импортированные, ref уникальны.
-    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(521)
+    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(542)
     expect(IMPORTED_EXERCISES).toHaveLength(451)
-    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(SYSTEM_EXERCISES.length + IMPORTED_EXERCISES.length + 21)
+    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(SYSTEM_EXERCISES.length + IMPORTED_EXERCISES.length + 42)
     expect(new Set(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.ref)).size).toBe(SYSTEM_EXERCISE_CATALOG.length)
   })
 
@@ -150,13 +151,12 @@ describe('system exercise catalog', () => {
     }
   })
 
-  it('добавляет видео только упражнениям с точным совпадением техники', () => {
-    const expected = new Map([
-      ['barbell-squat', '/exercises/vital/barbell-squat.mp4'],
-      ['romanian-deadlift', '/exercises/vital/romanian-deadlift.mp4'],
-      ['triceps-pushdown', '/exercises/vital/triceps-pushdown.mp4'],
-      ['lateral-raise', '/exercises/vital/lateral-raise.mp4'],
-    ])
+  it('подключает все 50 видео бесплатного пака только к точным упражнениям', () => {
+    const expected = new Map<string, string>(VITAL_FREE_PACK_ASSETS.map((asset) => [asset.ref, `/exercises/vital/${asset.file}.mp4`]))
+    expect(VITAL_FREE_PACK_ASSETS).toHaveLength(50)
+    expect(new Set(VITAL_FREE_PACK_ASSETS.map((asset) => asset.id))).toEqual(new Set(Array.from({ length: 50 }, (_, index) => String(index + 51).padStart(4, '0'))))
+    expect(new Set(VITAL_FREE_PACK_ASSETS.map((asset) => asset.ref)).size).toBe(50)
+    expect(new Set(VITAL_FREE_PACK_ASSETS.map((asset) => asset.file)).size).toBe(50)
     const withVideo = SYSTEM_EXERCISE_CATALOG.filter((exercise) => exercise.techniqueVideoUrl)
     expect(withVideo).toHaveLength(expected.size)
     for (const exercise of withVideo) {
@@ -165,8 +165,18 @@ describe('system exercise catalog', () => {
     }
   })
 
+  it('добавляет отдельные карточки только для отсутствующих движений Free50', () => {
+    expect(VITAL_FREE_PACK_EXERCISES).toHaveLength(21)
+    for (const exercise of VITAL_FREE_PACK_EXERCISES) {
+      expect(exercise.name).toMatch(/\([^)]+\)$/)
+      expect(exercise.instructions?.length).toBeGreaterThanOrEqual(3)
+      expect(EXERCISE_MEDIA_PATHS.has(exercise.imageUrl!)).toBe(true)
+      expect(EXERCISE_MEDIA_PATHS.has(exercise.motionImageUrl!)).toBe(true)
+    }
+  })
+
   it('каталог = обогащённые базовые + импортированные без дублей', () => {
-    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(BASE_EXERCISES.length + IMPORTED_EXERCISES.length + 21)
+    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(BASE_EXERCISES.length + IMPORTED_EXERCISES.length + 42)
     expect(new Set(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.ref)).size).toBe(SYSTEM_EXERCISE_CATALOG.length)
   })
 
