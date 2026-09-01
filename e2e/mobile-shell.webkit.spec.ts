@@ -40,6 +40,7 @@ async function expectNoHorizontalOverflow(page: import('@playwright/test').Page)
 async function expectCompactBodyMap(map: Locator) {
   await expect(map).toBeVisible()
   const geometry = await map.evaluate((element) => {
+    const mapStyle = getComputedStyle(element)
     const rect = (selector: string) => {
       const node = element.querySelector<HTMLElement>(selector)
       if (!node) return null
@@ -49,6 +50,8 @@ async function expectCompactBodyMap(map: Locator) {
     const sidesElement = element.querySelector<HTMLElement>('.body-progress-sides')
     const sidesTrack = sidesElement ? getComputedStyle(sidesElement, '::before') : null
     return {
+      borderRadius: Number.parseFloat(mapStyle.borderTopLeftRadius),
+      borderWidth: Number.parseFloat(mapStyle.borderTopWidth),
       modes: rect('.body-progress-modes'),
       modeButtons: Array.from(element.querySelectorAll<HTMLElement>('.body-progress-modes button')).map((node) => node.getBoundingClientRect().height),
       sides: rect('.body-progress-sides'),
@@ -62,6 +65,8 @@ async function expectCompactBodyMap(map: Locator) {
   })
 
   expect(geometry.modes).not.toBeNull()
+  expect(geometry.borderRadius).toBeGreaterThanOrEqual(16)
+  expect(geometry.borderWidth).toBeGreaterThanOrEqual(1)
   expect(geometry.modes!.width).toBeLessThanOrEqual(166)
   expect(geometry.modes!.height).toBeLessThanOrEqual(44)
   expect(geometry.modeButtons.every((height) => height >= 44)).toBe(true)
@@ -1158,7 +1163,7 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     const summary = page.locator('.client-progress-card')
     await summary.getByRole('button', { name: 'Спереди' }).click()
     await expect(summary.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
-    await summary.getByLabel('Грудь. Лучший результат зоны: +20%').click()
+    await summary.getByLabel('Грудь. Результат зоны: +20%').click()
     await summary.locator('.body-progress-visual').evaluate((element) => {
       const swipe = (type: 'touchstart' | 'touchend', clientX: number) => {
         const event = new Event(type, { bubbles: true })
@@ -1170,8 +1175,8 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     })
     await expect(summary.getByRole('group', { name: 'Анатомическая схема мышц, вид сзади' })).toBeVisible()
     await expectCompactBodyMap(summary.locator('.body-progress-map'))
-    await summary.getByLabel('Верх спины. Лучший результат зоны: +36%').press('Enter')
-    await expect(summary.locator('.body-progress-detail')).toContainText('В зоне «Верх спины» лучший подтверждённый результат изменился на +36%.')
+    await summary.getByLabel('Верх спины. Результат зоны: +36%').press('Enter')
+    await expect(summary.locator('.body-progress-detail')).toContainText('Результат вырос на 36%.')
     await expect(summary.locator('.body-progress-detail').getByText('Тяга верхнего блока обратным узким хватом в кроссовере с дополнительной рукоятью', { exact: false })).toHaveCount(0)
     await summary.getByRole('button', { name: 'Показать 1 упражнение' }).click()
     const bodyDetails = page.getByRole('dialog', { name: 'Верх спины' })
