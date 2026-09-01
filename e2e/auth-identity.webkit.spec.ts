@@ -19,6 +19,23 @@ test('auth identity remains usable in WebKit light and dark themes', async ({ pa
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
 
+test('password sign-in retries a network failure and unlocks the WebKit form', async ({ page }) => {
+  let requests = 0
+  await page.route('**/auth/v1/token?grant_type=password', async (route) => {
+    requests += 1
+    await route.abort('failed')
+  })
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('client@example.test')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти', exact: true }).click()
+
+  await expect(page.getByRole('alert')).toHaveText('Не удалось войти. Проверьте интернет и попробуйте ещё раз.')
+  await expect(page.getByRole('button', { name: 'Войти', exact: true })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Войти', exact: true })).toHaveAttribute('aria-busy', 'false')
+  expect(requests).toBe(2)
+})
+
 test('Yandex ID app session restores and logs out in mobile WebKit', async ({ page }) => {
   const allowlist = (process.env.VITE_YANDEX_APP_SESSION_PILOT_USER_IDS ?? '')
     .split(',')
