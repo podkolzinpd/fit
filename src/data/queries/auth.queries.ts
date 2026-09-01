@@ -10,6 +10,7 @@ export const authQueries = {
       callback(event, session)
       return Promise.resolve()
     }),
+  clearLocalSession: () => supabase.auth.signOut({ scope: 'local' }),
   signIn: (email: string, password: string) => supabase.auth.signInWithPassword({ email, password }),
   signUp: (email: string, password: string, firstName: string, role: 'trainer' | 'client') =>
     supabase.auth.signUp({ email, password, options: { data: { first_name: firstName, account_role: role } } }),
