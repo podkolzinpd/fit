@@ -37,6 +37,9 @@ select
   severity_text as severity,
   multiIf(
     positionCaseInsensitive(event_message, 'invalid login credentials') > 0, 'invalid_credentials',
+    positionCaseInsensitive(event_message, 'refresh token not found') > 0, 'refresh_token_not_found',
+    positionCaseInsensitive(event_message, 'refresh token') > 0 and positionCaseInsensitive(event_message, 'already used') > 0, 'refresh_token_already_used',
+    positionCaseInsensitive(event_message, 'no valid session') > 0, 'session_not_found',
     positionCaseInsensitive(event_message, 'email not confirmed') > 0, 'email_not_confirmed',
     positionCaseInsensitive(event_message, 'rate limit') > 0 or positionCaseInsensitive(event_message, 'too many requests') > 0, 'rate_limited',
     positionCaseInsensitive(event_message, 'captcha') > 0, 'captcha',
