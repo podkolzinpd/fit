@@ -48,21 +48,25 @@ async function expectCompactBodyMap(map: Locator) {
     }
     return {
       modes: rect('.body-progress-modes'),
+      modeButtons: Array.from(element.querySelectorAll<HTMLElement>('.body-progress-modes button')).map((node) => node.getBoundingClientRect().height),
       sides: rect('.body-progress-sides'),
+      sideButtons: Array.from(element.querySelectorAll<HTMLElement>('.body-progress-sides button')).map((node) => node.getBoundingClientRect().height),
       visual: rect('.body-progress-visual'),
       detail: rect('.body-progress-detail'),
     }
   })
 
   expect(geometry.modes).not.toBeNull()
-  expect(geometry.modes!.width).toBeLessThanOrEqual(186)
-  expect(geometry.modes!.height).toBeLessThanOrEqual(50)
+  expect(geometry.modes!.width).toBeLessThanOrEqual(166)
+  expect(geometry.modes!.height).toBeLessThanOrEqual(44)
+  expect(geometry.modeButtons.every((height) => height >= 44)).toBe(true)
   expect(geometry.visual).not.toBeNull()
   expect(geometry.visual!.width).toBeLessThanOrEqual(212)
   expect(geometry.visual!.height).toBeLessThanOrEqual(445)
   if (geometry.sides) {
-    expect(geometry.sides.width).toBeLessThanOrEqual(162)
-    expect(geometry.sides.height).toBeLessThanOrEqual(50)
+    expect(geometry.sides.width).toBeLessThanOrEqual(146)
+    expect(geometry.sides.height).toBeLessThanOrEqual(44)
+    expect(geometry.sideButtons.every((height) => height >= 44)).toBe(true)
   }
   if (geometry.detail) {
     expect(geometry.detail.top).toBeGreaterThanOrEqual(geometry.visual!.bottom)
@@ -1017,6 +1021,9 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
       await expect(trainerSignals.getByText('Факт', { exact: true }).first()).toBeVisible()
       await expect(trainerSignals.getByText('Вопрос', { exact: true }).first()).toBeVisible()
     }
+    await analysis.getByRole('button', { name: 'Прогресс', exact: true }).click()
+    await expect(analysis.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
+    await expectCompactBodyMap(analysis.locator('.body-progress-map'))
     await analysis.getByRole('button', { name: 'Нагрузка', exact: true }).click()
     await expect(analysis.getByRole('heading', { name: 'Куда пришлась нагрузка' })).toBeVisible()
     await expectCompactBodyMap(analysis.locator('.body-progress-map'))
@@ -1026,6 +1033,16 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     if (await coachmark.isVisible()) await coachmark.evaluate((element) => {
       (element as HTMLButtonElement).click()
     })
+    await expectNoHorizontalOverflow(page)
+    await page.evaluate(() => {
+      window.localStorage.setItem('fit.appTheme', 'dark')
+      window.dispatchEvent(new Event('fit-theme-change'))
+    })
+    await expect(page.locator('html')).not.toHaveClass(/theme-light/)
+    const darkAnalysis = page.getByLabel('ИИ-анализ тренировок')
+    await darkAnalysis.getByRole('button', { name: 'Прогресс', exact: true }).click()
+    await expect(darkAnalysis.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
+    await expectCompactBodyMap(darkAnalysis.locator('.body-progress-map'))
     await expectNoHorizontalOverflow(page)
   })
 }
@@ -1045,22 +1062,34 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     await expect(summary.getByRole('list', { name: 'Тренировки по неделям' })).toBeVisible()
     await summary.getByRole('button', { name: 'Прогресс', exact: true }).click()
     await expect(summary.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
+    await expectCompactBodyMap(summary.locator('.body-progress-map'))
     await summary.getByRole('button', { name: 'Нагрузка', exact: true }).click()
     await expect(summary.getByRole('heading', { name: 'Куда пришлась нагрузка' })).toBeVisible()
     await expectCompactBodyMap(summary.locator('.body-progress-map'))
     await expect(summary.locator('.ai-progress-stats span').filter({ hasText: /недел/ })).toBeVisible()
     await expect(summary.getByText('Для твоей цели', { exact: true })).toBeVisible()
     await expect(summary.getByText('Подробный анализ', { exact: true })).toBeVisible()
+    await page.evaluate(() => {
+      window.localStorage.setItem('fit.appTheme', 'dark')
+      window.dispatchEvent(new Event('fit-theme-change'))
+    })
+    await expect(page.locator('html')).not.toHaveClass(/theme-light/)
+    const darkSummary = page.locator('.client-progress-card')
+    await darkSummary.getByRole('button', { name: 'Прогресс', exact: true }).click()
+    await expect(darkSummary.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
+    await expectCompactBodyMap(darkSummary.locator('.body-progress-map'))
+    await expectNoHorizontalOverflow(page)
     await page.goto('/me/profile')
     await page.getByRole('radio', { name: 'Схема' }).click()
     await page.goto('/me/progress')
     const schemeSummary = page.locator('.client-progress-card')
     await expect(schemeSummary.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
+    await expectCompactBodyMap(schemeSummary.locator('.body-progress-map'))
     await expectNoHorizontalOverflow(page)
   })
 }
 
-for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {
+for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }, { width: 390, height: 844 }, { width: 430, height: 932 }]) {
   test(`iPhone: короткая история и длинное упражнение не ломают Progress на ${viewport.width} px`, async ({ page }) => {
     await page.setViewportSize(viewport)
     await mockAutomaticSummaryGeneration(page)
@@ -1124,6 +1153,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
     await summary.getByLabel('Грудь. Лучший результат зоны: +20%').click()
     await summary.getByRole('button', { name: 'Сзади' }).click()
     await expect(summary.getByRole('group', { name: 'Анатомическая схема мышц, вид сзади' })).toBeVisible()
+    await expectCompactBodyMap(summary.locator('.body-progress-map'))
     await summary.getByLabel('Верх спины. Лучший результат зоны: +36%').press('Enter')
     await expect(summary.locator('.body-progress-detail')).toContainText('В зоне «Верх спины» лучший подтверждённый результат изменился на +36%.')
     await expect(summary.locator('.body-progress-detail').getByText('Тяга верхнего блока обратным узким хватом в кроссовере с дополнительной рукоятью', { exact: false })).toHaveCount(0)
@@ -1139,6 +1169,12 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
     await expect(detailedAnalysis.getByText('Рабочий вес: 50 → 68 кг', { exact: false })).toHaveCount(0)
     await expect(summary.getByRole('button', { name: '1 месяц' })).toBeVisible()
     await expect(summary.getByRole('button', { name: '3 месяца' })).toHaveCount(0)
+    await page.evaluate(() => {
+      window.localStorage.setItem('fit.appTheme', 'dark')
+      window.dispatchEvent(new Event('fit-theme-change'))
+    })
+    await expect(page.locator('html')).not.toHaveClass(/theme-light/)
+    await expectCompactBodyMap(summary.locator('.body-progress-map'))
     await expectNoHorizontalOverflow(page)
   })
 }
