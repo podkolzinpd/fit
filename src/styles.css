@@ -467,6 +467,8 @@ p { margin: 6px 0 }
 .trainer-tab-bar { grid-template-columns: repeat(3, 1fr) }
 .trainer-tab-bar:has(a[href="/assistant"]) { grid-template-columns: repeat(4, 1fr) }
 .trainer-tab-bar:has(a[href="/assistant"]):has(a[href="/profile"]) { grid-template-columns: repeat(5, 1fr) }
+.trainer-tab-bar > .coachmark-anchor { min-width:0 }
+.trainer-tab-bar > .coachmark-anchor > a { height:100% }
 .client-tab-bar:has(a[href="/assistant"]) { grid-template-columns: repeat(5, 1fr) }
 /* Локальный первый срез ассистента. Он использует только component state: здесь
    намеренно нет queries, repository или сетевых вызовов. Карточки повторяют
