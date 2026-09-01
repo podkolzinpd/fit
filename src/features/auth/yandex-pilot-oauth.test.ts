@@ -71,6 +71,22 @@ describe('Yandex ID pilot OAuth', () => {
     expect(peekPendingYandexAuthorizationIntent(storageAdapter)).toBe('pilot')
   })
 
+  it('keeps the app-session intent separate from read-only pilot and linking', async () => {
+    const authorizationUrl = new URL(await createYandexAuthorizationUrl(
+      'public-client-id',
+      'http://localhost:5173/auth/yandex/callback',
+      storageAdapter,
+      'app',
+    ))
+    const state = authorizationUrl.searchParams.get('state')
+    expect(peekPendingYandexAuthorizationIntent(storageAdapter)).toBe('app')
+
+    const result = consumeYandexAuthorizationCallback(`?code=oauth-code&state=${state}`, storageAdapter)
+
+    expect(result.intent).toBe('app')
+    expect(peekPendingYandexAuthorizationIntent(storageAdapter)).toBe('pilot')
+  })
+
   it('rejects a mismatched state and OAuth errors', async () => {
     await createYandexAuthorizationUrl('public-client-id', 'http://localhost/callback', storageAdapter)
     expect(() => consumeYandexAuthorizationCallback(

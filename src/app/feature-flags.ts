@@ -75,6 +75,13 @@ export interface YandexIdPilotConfig {
   clientId: string
 }
 
+function getYandexPublicConfig(): YandexIdPilotConfig | null {
+  const clientId = String(import.meta.env.VITE_YANDEX_OAUTH_CLIENT_ID ?? '').trim()
+  const apiBaseUrl = String(import.meta.env.VITE_YANDEX_API_BASE_URL ?? '').trim().replace(/\/$/, '')
+  if (clientId.length === 0 || clientId.length > 200 || !isSafePilotApiUrl(apiBaseUrl)) return null
+  return { apiBaseUrl, clientId }
+}
+
 function isSafePilotApiUrl(value: string): boolean {
   try {
     const url = new URL(value)
@@ -91,10 +98,21 @@ function isSafePilotApiUrl(value: string): boolean {
 // безопасного API URL. Client secret во frontend не используется.
 export function getYandexIdPilotConfig(): YandexIdPilotConfig | null {
   if (import.meta.env.VITE_YANDEX_ID_PILOT_ENABLED !== 'true') return null
-  const clientId = String(import.meta.env.VITE_YANDEX_OAUTH_CLIENT_ID ?? '').trim()
-  const apiBaseUrl = String(import.meta.env.VITE_YANDEX_API_BASE_URL ?? '').trim().replace(/\/$/, '')
-  if (clientId.length === 0 || clientId.length > 200 || !isSafePilotApiUrl(apiBaseUrl)) return null
-  return { apiBaseUrl, clientId }
+  return getYandexPublicConfig()
+}
+
+// Полноценная Yandex ID сессия — отдельный default-off rollout. До завершения
+// OAuth внутренний UUID профиля неизвестен, поэтому entry point защищён
+// глобальным kill switch и серверным rollout assignment. Публичный UUID
+// allowlist дополнительно проверяется сразу после обмена кода и при restore.
+export function getYandexAppSessionEntryConfig(): YandexIdPilotConfig | null {
+  if (import.meta.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true') return null
+  return getYandexPublicConfig()
+}
+
+export function isYandexAppSessionPilotEnabled(userId: string): boolean {
+  if (import.meta.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true') return false
+  return isUserInPublicAllowlist(userId, import.meta.env.VITE_YANDEX_APP_SESSION_PILOT_USER_IDS)
 }
 
 // Привязка существующего FIT-профиля к Yandex ID — отдельный default-off
