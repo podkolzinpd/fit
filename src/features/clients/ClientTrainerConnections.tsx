@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { invitationsRepository } from '../../data/repositories/invitations.repository'
 import { useConfirm } from '../../shared/ui'
+import { InvitationCodeCard } from '../../shared/invitation-code-card'
 
 export function ClientTrainerConnections({ clientId }: { clientId: string }) {
   const queryClient = useQueryClient()
@@ -20,7 +21,7 @@ export function ClientTrainerConnections({ clientId }: { clientId: string }) {
   })
   const [confirm, confirmDialog] = useConfirm()
   return <section className="client-home-connections"><div className="client-home-section-head"><div><p className="eyebrow">СВЯЗЬ С ТРЕНЕРОМ</p><h2>Тренеры</h2></div><button className="secondary" disabled={invite.isPending} onClick={() => invite.mutate()}>Пригласить тренера</button></div>
-    {invite.data && <div className="card"><div><strong>Код для тренера: {invite.data}</strong><p>Действует 7 дней и используется один раз.</p></div></div>}
+    {invite.data && <InvitationCodeCard code={invite.data} label="Код для тренера" description="Действует 7 дней и используется один раз." />}
     {invite.error && <p className="error">{invite.error.message}</p>}
     {trainers.isLoading && <p className="muted">Загрузка тренеров…</p>}
     {trainers.error && <div><p className="error">{trainers.error.message}</p><button className="secondary" onClick={() => void trainers.refetch()}>Повторить</button></div>}
