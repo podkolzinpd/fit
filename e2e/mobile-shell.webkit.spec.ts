@@ -24,6 +24,15 @@ async function login(page: import('@playwright/test').Page, email: string) {
   await expect(page).toHaveURL(/\/me$/)
 }
 
+async function mockAutomaticSummaryGeneration(page: Page) {
+  const response = {
+    contentType: 'application/json',
+    body: JSON.stringify({ data: { generated_at: '2026-08-20T08:00:00Z' }, cached: true }),
+  }
+  await page.route('**/v1/legacy/summarize-client-training', (route) => route.fulfill(response))
+  await page.route('**/functions/v1/summarize-client-training', (route) => route.fulfill(response))
+}
+
 async function expectNoHorizontalOverflow(page: import('@playwright/test').Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 }
@@ -694,15 +703,18 @@ test('iPhone: client progress keeps one goal-aware LLM summary and compact runni
   await expect(nextStep.getByRole('link')).toHaveCount(0)
   await expect(nextStep.evaluate((element) => {
     const summary = document.querySelector('.progress-story-summary')
-    const details = document.querySelector('.client-progress-details-toggle')
-    return Boolean(summary && details
+    const mainNow = document.querySelector('.client-progress-main-now')
+    const details = mainNow?.querySelector('.client-progress-details-trigger')
+    return Boolean(summary && mainNow && details
       && (summary.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (element.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING))
+      && mainNow.contains(details)
+      && !document.querySelector('.client-progress-details-toggle'))
   })).resolves.toBe(true)
   await nextStep.getByRole('button', { name: 'Выбрать этот шаг' }).click()
   await expect(nextStep.getByText('Данные не изменены.', { exact: false })).toBeVisible()
   await expect(nextStep.getByRole('link')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Обновить' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Обновить' })).toHaveCount(0)
+  await expect(page.locator('.ai-progress-footer')).toHaveCount(0)
   const runningProgress = page.getByLabel('Беговой прогресс')
   await expect(runningProgress).toContainText('2 пробежки')
   await expect(runningProgress).toContainText('10 км · 58 мин')
@@ -1068,6 +1080,7 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
 for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {
   test(`iPhone: короткая история и длинное упражнение не ломают Progress на ${viewport.width} px`, async ({ page }) => {
     await page.setViewportSize(viewport)
+    await mockAutomaticSummaryGeneration(page)
     await login(page, 'client@fit.local')
     await page.clock.install({ time: new Date('2026-08-20T18:00:00+03:00') })
     await page.route('**/rest/v1/workouts?*', async (route) => {

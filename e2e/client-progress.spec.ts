@@ -125,12 +125,9 @@ test('linked client sees only the published client progress view', async ({ page
   await expect(nextStep.getByRole('heading', { name: 'Настроить критерий цели' })).toBeVisible()
   await expect(nextStep.getByText('Подобрано по данным', { exact: true })).toBeVisible()
   await expect(nextStep.getByRole('link', { name: 'Открыть цель' })).toHaveCount(0)
-  await expect(nextStep.evaluate((element) => {
-    const summary = document.querySelector('.progress-story-summary')
-    const details = document.querySelector('.client-progress-details-toggle')
-    return Boolean(summary && details
-      && (summary.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (element.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING))
+  await expect(page.getByRole('button', { name: 'Подробный анализ' }).evaluate((element) => {
+    const main = document.querySelector('.client-progress-main-now')
+    return Boolean(main?.contains(element) && !document.querySelector('.client-progress-details-toggle'))
   })).resolves.toBe(true)
   await nextStep.getByRole('button', { name: 'Выбрать этот шаг' }).click()
   await expect(nextStep.getByText('Данные не изменены.', { exact: false })).toBeVisible()
@@ -162,7 +159,8 @@ test('linked client sees only the published client progress view', async ({ page
   await expect(page.getByText(/Рост рабочего веса поддерживает цель/)).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
   await expect(page.getByText(/причина максимального перерыва/)).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Обновить' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Обновить' })).toHaveCount(0)
+  await expect(page.locator('.ai-progress-footer')).toHaveCount(0)
   const measurementSection = page.locator('.client-progress-measurements-story')
   await measurementSection.scrollIntoViewIfNeeded()
   await expect(measurementSection.getByRole('button', { name: 'Добавить замер' })).toBeVisible()

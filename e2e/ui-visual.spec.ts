@@ -33,6 +33,32 @@ function comparisonWorkoutRow(id: string, date: string, weight: number, distance
 }
 
 async function mockPeriodComparison(page: VisualPage) {
+  const clientSummary = {
+    headline: 'Прогресс уже заметен', achievements: ['Жим лёжа стал сильнее'],
+    consistency: 'Тренировки продолжаются', encouragement: 'Продолжай в том же темпе', next_steps: [],
+  }
+  const displayMetrics = {
+    completed_workouts: 2, workouts_per_week: 0.5, active_weeks: 2, longest_gap_days: 7,
+    progress_facts: [{ exercise_name: 'Жим лёжа', kind: 'strength', session_count: 2, changes: [
+      { metric: 'max_weight', from: 72, to: 75, change_percent: 4, favorable: true },
+    ] }],
+  }
+  await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify([{
+      id: '80000000-0000-4000-8000-000000000001', source_summary_id: '80000000-0000-4000-8000-000000000002',
+      client_id: demoClientId, period_start: '2026-08-01', period_end: '2026-08-31', summary: clientSummary,
+      display_metrics: displayMetrics, generated_at: '2026-08-31T12:00:00Z', published_at: '2026-08-31T12:00:00Z',
+    }]),
+  }))
+  await page.route('**/rest/v1/client_training_summaries?*', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify([{
+      id: '80000000-0000-4000-8000-000000000002', client_id: demoClientId,
+      period_start: '2026-08-01', period_end: '2026-08-31',
+      trainer_summary: { headline: 'Прогресс уже заметен', progress: ['Жим лёжа стал сильнее'], consistency: 'Тренировки продолжаются', attention: [] },
+      client_summary: clientSummary, display_metrics: displayMetrics,
+      generated_at: '2026-08-31T12:00:00Z', version: 1,
+    }]),
+  }))
   await page.route('**/rest/v1/rpc/list_workouts', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify([
       comparisonWorkoutRow('81000000-0000-4000-8000-000000000001', '2026-07-05', 50, 5, 1),
@@ -47,8 +73,28 @@ async function mockPeriodComparison(page: VisualPage) {
   await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
 }
 
+async function mockAutomaticSummaryGeneration(page: VisualPage) {
+  const response = {
+    contentType: 'application/json',
+    body: JSON.stringify({ data: { generated_at: '2026-08-16T12:00:00Z' }, cached: true }),
+  }
+  await page.route('**/v1/legacy/summarize-client-training', (route) => route.fulfill(response))
+  await page.route('**/functions/v1/summarize-client-training', (route) => route.fulfill(response))
+}
+
+test.beforeEach(async ({ page }) => {
+  await mockAutomaticSummaryGeneration(page)
+})
+
 async function mockTrainerProgressVisual(page: VisualPage) {
   await mockPeriodComparison(page)
+  await page.route('**/rest/v1/rpc/get_workout_regularity', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify([{
+      period: 'week', period_start: '2026-08-10', period_end: '2026-08-16',
+      planned_count: 2, completed_count: 4, completed_planned_count: 2,
+      partial_count: 0, skipped_count: 0, completion_percent: 100,
+    }]),
+  }))
   await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
     id: '85000000-0000-4000-8000-000000000001', clientId: demoClientId,
     title: 'Вернуться к бегу', targetDate: null, status: 'active', version: 1, stages: [], criteria: [],
@@ -584,7 +630,8 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   await expect(page.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
   await expect(page.getByText('Прогресс уже заметен, ты на верном пути.')).toHaveCount(0)
   await expect(page.getByText('Проверяем цель…')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Обновить' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Обновить' })).toHaveCount(0)
+  await expect(page.locator('.ai-progress-footer')).toHaveCount(0)
   await expect(page.locator('.client-progress-main-now').evaluate((element) => {
     const goal = document.querySelector('.client-progress-goal-story')
     const map = document.querySelector('.body-progress-map')
@@ -887,10 +934,12 @@ test('next-step suggestion stays concise and explicit for client and trainer in 
   await expect(nextStep.locator('.progress-next-step-evidence')).toContainText('Учтено:')
   expect(await nextStep.evaluate((element) => {
     const summary = element.closest('.client-progress-card')?.querySelector('.progress-story-summary')
-    const details = element.closest('.client-progress-card')?.querySelector('.client-progress-details-toggle')
-    return Boolean(summary && details
+    const mainNow = element.closest('.client-progress-card')?.querySelector('.client-progress-main-now')
+    const details = mainNow?.querySelector('.client-progress-details-trigger')
+    return Boolean(summary && mainNow && details
       && (summary.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (element.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING))
+      && mainNow.contains(details)
+      && !document.querySelector('.client-progress-details-toggle'))
   })).toBe(true)
   if (!trainer) {
     for (const width of [320, 375, 390, 430]) {
@@ -1313,6 +1362,12 @@ test('trainer Progress and measurements form keep their visual baselines in both
   await expect(page.getByLabel('ИИ-анализ тренировок')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Вернуться к бегу' })).toBeVisible()
   await expect(page.locator('.client-progress-comparison .period-comparison-facts > div')).toHaveCount(3)
+  await expect(page.getByRole('button', { name: 'Подробный анализ' }).evaluate((element) => {
+    const mainNow = element.closest('.client-progress-main-now')
+    return Boolean(mainNow?.querySelector('.client-progress-main-now-head')?.contains(element))
+  })).resolves.toBe(true)
+  await expect(page.locator('.client-progress-details-toggle')).toHaveCount(0)
+  await expect(page.locator('.ai-progress-footer')).toHaveCount(0)
   const coachmark = page.getByRole('button', { name: 'Понятно' })
   if (await coachmark.isVisible()) await coachmark.click()
   await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
