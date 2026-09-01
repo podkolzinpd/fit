@@ -105,7 +105,7 @@ export function AuthPage() {
       <Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>
       <Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required /></Field>
       {error && <p className="error" role="alert">{error}</p>}
-      <button className="primary" disabled={busy}>{busy ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}</button>
+      <button className="primary" disabled={busy} aria-busy={busy}>{busy ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}</button>
     </form>
     <button className="secondary auth-google" onClick={() => void authRepository.signInWithGoogle(mode === 'register' ? role : 'trainer')}>Продолжить с Google</button>
     {(yandexAppSessionConfig ?? yandexPilotConfig) && <button className="secondary auth-yandex" disabled={yandexBusy} onClick={() => {
