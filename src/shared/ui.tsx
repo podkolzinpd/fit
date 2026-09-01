@@ -261,7 +261,10 @@ export function Coachmark({ id, userId, title, description, children }: PropsWit
     const minLeft = frameRect.left + 8
     const maxLeft = Math.max(minLeft, frameRect.right - bubbleRect.width - 8)
     const left = Math.min(Math.max(anchorRect.left, minLeft), maxLeft)
-    const top = anchorRect.bottom + gap
+    const below = anchorRect.bottom + gap
+    const top = below + bubbleRect.height <= frameRect.bottom - 8
+      ? below
+      : Math.max(frameRect.top + 8, anchorRect.top - bubbleRect.height - gap)
     setPosition({ top, left })
   }, [])
 

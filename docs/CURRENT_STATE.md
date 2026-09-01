@@ -3,17 +3,7 @@
 > После подтверждённого merge сведения заменяются, а не накапливаются:
 > полная история хранится в Git, PR и Tracker.
 Обновлено: 2026-09-01
-Проверенный базовый `main`: `453a65a` (`fix(progress): align and slim body map controls (#733)`)
-## Текущий release gate
-- Foundation UI Identity v1 принята. Задачи 8–28 — клиентский, тренерский,
-  полный auth scope, Assistant, accessibility и visual release gate —
-  завершены последовательно.
-- Foundation UI Identity v1 становится единственным production UI: runtime-
-  режимы `on / preview / off`, персональный preview, dark pilot и route-level
-  old/new branches удалены в retirement-ветке.
-- Историческая `public.user_feature_flags` больше не читается приложением и
-  закрыта для frontend-ролей. Физический drop выполняется отдельным ручным
-  destructive-окном согласно migration policy репозитория.
+Проверенный базовый `main`: `c2436fb` (`fix(progress): simplify body map result card (#735)`)
 ## Последняя проверенная продуктовая точка
 - Главные страницы обеих ролей сохраняют voice-first действие и ввод текстом;
   Client Home показывает ближайшее назначение, состоявшуюся неделю и максимум
@@ -32,7 +22,8 @@
 - ИИ-сводка и production-разбор — через Yandex Cloud Functions, локальный разбор
   — в Supabase. Tracker sync `app_feedback` остановлен; команда читает через
   `analytics.app_feedback` и Telegram (`notify-app-feedback-telegram`).
-- Assistant trainer-only защищён `TrainerOnly`; durable turns/actions и narrow
+- Assistant открыт всем тренерским аккаунтам и защищён `TrainerOnly`;
+  `VITE_ASSISTANT_NAV_ENABLED=false` остаётся общим kill switch. Durable turns/actions и narrow
   RPC сохраняют owner/RLS. Новые turn'ы создают workout draft, прежние карточки
   остаются читаемыми; исходная диктовка сохраняется при уточнении клиента.
   Числовые поля черновика допускают полную очистку перед вводом нового значения;

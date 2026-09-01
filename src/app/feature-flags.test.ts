@@ -4,7 +4,6 @@ import {
   getYandexAppSessionEntryConfig,
   getYandexSessionLinkingConfig,
   isAssistantNavPilotEnabled,
-  isProductionAssistantPilotEmail,
   isTodayGreetingPilotEnabled,
   isTodayStartRedesignEnabled,
   isWearablesPilotEnabled,
@@ -30,10 +29,13 @@ describe('today start redesign flag', () => {
 })
 
 describe('assistant nav pilot flag', () => {
-  it('matches only the explicitly approved production pilot email', () => {
-    expect(isProductionAssistantPilotEmail('TEST@test.com')).toBe(true)
-    expect(isProductionAssistantPilotEmail('trainer@test.com')).toBe(false)
-    expect(isProductionAssistantPilotEmail(null)).toBe(false)
+  it('enables every production identity and preserves the global kill switch', () => {
+    vi.stubEnv('PROD', true)
+    vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', '')
+    expect(isAssistantNavPilotEnabled('trainer-1', 'first@example.test')).toBe(true)
+    expect(isAssistantNavPilotEnabled('trainer-2', 'second@example.test')).toBe(true)
+    vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'false')
+    expect(isAssistantNavPilotEnabled('trainer-1', 'first@example.test')).toBe(false)
   })
 
   it('is disabled when the enabled flag is missing or not exactly "true", even for an allowlisted user', () => {
