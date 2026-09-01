@@ -9,8 +9,9 @@ test('exercise catalog search and technique detail work in the iOS shell', async
 
   await page.goto('/exercises')
   await expect(page.locator('.phone-frame')).toHaveClass(/exercise-catalog-identity/)
-  await page.getByLabel('Поиск упражнения').fill('Присед со штангой')
+  await page.getByLabel('Поиск упражнения').fill('лестница')
   const result = page.locator('.catalog-media-card').first()
+  await expect(result.getByText('Лестничный тренажёр (Степмилл)')).toBeVisible()
   await expect(result.locator('.exercise-image')).toBeVisible()
   const previewVideo = result.locator('.exercise-image-preview video')
   await expect(previewVideo).toBeVisible()
