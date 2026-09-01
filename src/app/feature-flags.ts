@@ -109,6 +109,20 @@ export function isYandexAppSessionPilotEnabled(userId: string): boolean {
   return isUserInPublicAllowlist(userId, import.meta.env.VITE_YANDEX_APP_SESSION_PILOT_USER_IDS)
 }
 
+// Sticky routing основного Assistant — отдельный default-off rollout. Он не
+// переиспользует allowlist входа: после включения выбранный профиль работает
+// только с Yandex API и не откатывает отдельные запросы на Supabase.
+export function isYandexAssistantRoutingPilotEnabled(userId: string): boolean {
+  if (import.meta.env.VITE_YANDEX_ASSISTANT_ROUTING_ENABLED !== 'true') return false
+  const pilotUserIds = String(
+    import.meta.env.VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS ?? '',
+  )
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  return pilotUserIds.length === 1 && pilotUserIds[0] === userId
+}
+
 // Привязка существующего FIT-профиля к Yandex ID — отдельный default-off
 // rollout. Он намеренно не переиспользует read-only pilot и Apple Health
 // allowlist: UUID видны во frontend bundle и служат только для показа UI.

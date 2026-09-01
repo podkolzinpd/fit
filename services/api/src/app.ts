@@ -77,6 +77,7 @@ import type { PilotWorkoutParser } from './pilot-workout-parser.js'
 import {
   PilotTrainingSummaryError,
   type PilotTrainingSummaryGenerator,
+  type PilotTrainingSummaryPublisher,
   type PilotTrainingSummaryReader,
 } from './training-summary.js'
 import {
@@ -103,6 +104,7 @@ import { PilotWorkoutCommandError } from './workout-commands.js'
 import { WorkoutParseError, type LegacyWorkoutParser } from './legacy-workout-parser.js'
 import { HttpError as SummaryModelError } from './legacy-summary/index.js'
 import { readAssistantProgressRequest } from './assistant-progress-request.js'
+import { readYandexActorSession } from './yandex-actor-session.js'
 import {
   readVersionedGoalRequest,
   readVersionedGoalStageRequest,
@@ -132,6 +134,7 @@ interface BuildAppOptions {
   pilotWorkoutsWriter?: PilotWorkoutsWriter
   pilotWorkoutParser?: PilotWorkoutParser
   pilotTrainingSummaryGenerator?: PilotTrainingSummaryGenerator
+  pilotTrainingSummaryPublisher?: PilotTrainingSummaryPublisher
   pilotTrainingSummaryReader?: PilotTrainingSummaryReader
   legacyWorkoutParser?: LegacyWorkoutParser
   legacySummaryHandler?: LegacySummaryHandler
@@ -251,8 +254,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.post('/v1/assistant/yandex/parse-workout', async (request, reply) => {
-    const sessionToken = request.headers['x-fit-pilot-session']
-    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     if (options.pilotWorkoutParser === undefined) {
@@ -260,9 +263,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
     try {
       return reply.header('cache-control', 'no-store')
-        .send(await options.pilotWorkoutParser.parse(sessionToken, request.body))
+        .send(await options.pilotWorkoutParser.parse(session, request.body))
     } catch (error) {
-      if (error instanceof PilotSessionInvalidError) {
+      if (error instanceof PilotSessionInvalidError
+        || error instanceof YandexAppSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })
       }
       if (error instanceof WorkoutParseError) {
@@ -273,9 +277,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.get('/v1/clients/:clientId/training-summaries', async (request, reply) => {
-    const sessionToken = request.headers['x-fit-pilot-session']
+    const session = readYandexActorSession(request.headers)
     const { clientId } = request.params as { clientId?: unknown }
-    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+    if (session === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     if (typeof clientId !== 'string' || !uuidPattern.test(clientId)) {
@@ -286,7 +290,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         .code(503).send({ error: 'service_unavailable' })
     }
     try {
-      const summaries = await options.pilotTrainingSummaryReader.list(sessionToken, clientId)
+      const summaries = await options.pilotTrainingSummaryReader.list(session, clientId)
       return reply.header('cache-control', 'no-store').send({ summaries })
     } catch (error) {
       return sendPilotSummaryError(error, reply)
@@ -294,10 +298,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.post('/v1/clients/:clientId/training-summaries/generate', async (request, reply) => {
-    const sessionToken = request.headers['x-fit-pilot-session']
+    const session = readYandexActorSession(request.headers)
     const { clientId } = request.params as { clientId?: unknown }
     const command = readAssistantProgressRequest(request.body)
-    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+    if (session === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     if (typeof clientId !== 'string' || !uuidPattern.test(clientId)
@@ -310,15 +314,50 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
     try {
       return reply.header('cache-control', 'no-store').send(
-        await options.pilotTrainingSummaryGenerator.generate(sessionToken, command),
+        await options.pilotTrainingSummaryGenerator.generate(session, command),
       )
     } catch (error) {
       return sendPilotSummaryError(error, reply)
     }
   })
 
+  app.post('/v1/training-summaries/:summaryId/publish', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { summaryId } = request.params as { summaryId?: unknown }
+    const body = request.body as {
+      clientSummary?: unknown
+      expectedVersion?: unknown
+    } | null
+    const clientSummary = body?.clientSummary
+    const expectedVersion = body?.expectedVersion
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') {
+      return reply.code(403).send({ error: 'read_write_session_required' })
+    }
+    if (typeof summaryId !== 'string' || !uuidPattern.test(summaryId)
+      || typeof clientSummary !== 'object' || clientSummary === null
+      || Array.isArray(clientSummary)
+      || !Number.isSafeInteger(expectedVersion) || Number(expectedVersion) < 1) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const publisher = options.pilotTrainingSummaryPublisher
+    if (publisher === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    try {
+      await publisher.publish(
+        session,
+        summaryId,
+        clientSummary as Record<string, unknown>,
+        Number(expectedVersion),
+      )
+      return reply.header('cache-control', 'no-store').code(204).send()
+    } catch (error) {
+      return sendPilotSummaryError(error, reply)
+    }
+  })
+
   function sendPilotSummaryError(error: unknown, reply: FastifyReply) {
-    if (error instanceof PilotSessionInvalidError) {
+    if (error instanceof PilotSessionInvalidError
+      || error instanceof YandexAppSessionInvalidError) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     if (error instanceof PilotTrainingSummaryError) {
@@ -731,8 +770,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.get('/v1/training-data', async (request, reply) => {
-    const sessionToken = request.headers['x-fit-pilot-session']
-    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     if (options.pilotTrainingDataReader === undefined) {
@@ -742,9 +781,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     try {
       return reply
         .header('cache-control', 'no-store')
-        .send(await options.pilotTrainingDataReader.readTrainingData(sessionToken))
+        .send(await options.pilotTrainingDataReader.readTrainingData(session))
     } catch (error) {
-      if (error instanceof PilotSessionInvalidError) {
+      if (error instanceof PilotSessionInvalidError
+        || error instanceof YandexAppSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })
       }
       return sendSafeDatabaseFailure(reply, error, 'Pilot training data query failed')
@@ -894,8 +934,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     try {
       return send(await work())
     } catch (error) {
-      if (error instanceof PilotSessionInvalidError) {
+      if (error instanceof PilotSessionInvalidError
+        || error instanceof YandexAppSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })
+      }
+      if (error instanceof YandexAppSessionDeniedError) {
+        return reply.code(403).send({ error: 'action_not_allowed' })
       }
       if (error instanceof AppFeedbackCommandError) {
         return reply
@@ -986,15 +1030,15 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.get('/v1/assistant/conversations', async (request, reply) => {
-    const sessionToken = request.headers['x-fit-pilot-session']
-    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     const state = options.pilotAssistantState
     if (state === undefined) return reply.code(503).send({ error: 'service_unavailable' })
     return sendPilotCommand(
       reply,
-      () => state.listConversations(sessionToken),
+      () => state.listConversations(session),
       (conversations) => reply
         .header('cache-control', 'no-store')
         .send({ conversations }),
@@ -1002,9 +1046,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.post('/v1/assistant/conversations', async (request, reply) => {
-    const sessionToken = request.headers['x-fit-pilot-session']
+    const session = readYandexActorSession(request.headers)
     const draft = readAssistantConversationRequest(request.body)
-    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+    if (session === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     if (draft === undefined) return reply.code(400).send({ error: 'invalid_request' })
@@ -1012,7 +1056,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (state === undefined) return reply.code(503).send({ error: 'service_unavailable' })
     return sendPilotCommand(
       reply,
-      () => state.createConversation(sessionToken, draft.title),
+      () => state.createConversation(session, draft.title),
       (conversation) => reply
         .header('cache-control', 'no-store')
         .code(201)
@@ -1021,9 +1065,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.post('/v1/assistant/turn', async (request, reply) => {
-    const sessionToken = request.headers['x-fit-pilot-session']
+    const session = readYandexActorSession(request.headers)
     const command = readAssistantTurnRequest(request.body)
-    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+    if (session === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     if (command === undefined) return reply.code(400).send({ error: 'invalid_request' })
@@ -1031,7 +1075,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (runner === undefined) return reply.code(503).send({ error: 'service_unavailable' })
     return sendPilotCommand(
       reply,
-      () => runner.runTurn(sessionToken, command),
+      () => runner.runTurn(session, command),
       (result) => reply.header('cache-control', 'no-store').send(result),
     )
   })
@@ -1040,9 +1084,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     request,
     reply,
   ) => {
-    const sessionToken = request.headers['x-fit-pilot-session']
+    const session = readYandexActorSession(request.headers)
     const { conversationId } = request.params as { conversationId?: unknown }
-    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+    if (session === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId)) {
@@ -1052,20 +1096,20 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (state === undefined) return reply.code(503).send({ error: 'service_unavailable' })
     return sendPilotCommand(
       reply,
-      () => state.listMessages(sessionToken, conversationId),
+      () => state.listMessages(session, conversationId),
       (messages) => reply.header('cache-control', 'no-store').send({ messages }),
     )
   })
 
   app.get('/v1/assistant/actions', async (request, reply) => {
-    const sessionToken = request.headers['x-fit-pilot-session']
+    const session = readYandexActorSession(request.headers)
     const { conversationId: rawConversationId } = request.query as {
       conversationId?: unknown
     }
     const conversationId = rawConversationId === undefined
       ? null
       : rawConversationId
-    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+    if (session === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     if (conversationId !== null
@@ -1076,16 +1120,16 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (state === undefined) return reply.code(503).send({ error: 'service_unavailable' })
     return sendPilotCommand(
       reply,
-      () => state.listActions(sessionToken, conversationId),
+      () => state.listActions(session, conversationId),
       (actions) => reply.header('cache-control', 'no-store').send({ actions }),
     )
   })
 
   app.post('/v1/assistant/actions/:actionId/apply', async (request, reply) => {
-    const sessionToken = request.headers['x-fit-pilot-session']
+    const session = readYandexActorSession(request.headers)
     const { actionId } = request.params as { actionId?: unknown }
     const command = readAssistantActionRequest(request.body)
-    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+    if (session === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     if (typeof actionId !== 'string' || !uuidPattern.test(actionId)
@@ -1097,7 +1141,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return sendPilotCommand(
       reply,
       () => state.applyAction(
-        sessionToken,
+        session,
         actionId,
         command.input,
         command.expectedVersion,
@@ -1110,10 +1154,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     request,
     reply,
   ) => {
-    const sessionToken = request.headers['x-fit-pilot-session']
+    const session = readYandexActorSession(request.headers)
     const { actionId } = request.params as { actionId?: unknown }
     const command = readAssistantVersionRequest(request.body)
-    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+    if (session === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     if (typeof actionId !== 'string' || !uuidPattern.test(actionId)
@@ -1125,7 +1169,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return sendPilotCommand(
       reply,
       () => state.completeSummary(
-        sessionToken,
+        session,
         actionId,
         command.expectedVersion,
       ),
@@ -1134,10 +1178,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.post('/v1/assistant/actions/:actionId/cancel', async (request, reply) => {
-    const sessionToken = request.headers['x-fit-pilot-session']
+    const session = readYandexActorSession(request.headers)
     const { actionId } = request.params as { actionId?: unknown }
     const command = readAssistantVersionRequest(request.body)
-    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+    if (session === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     if (typeof actionId !== 'string' || !uuidPattern.test(actionId)
@@ -1149,7 +1193,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return sendPilotCommand(
       reply,
       () => state.cancelAction(
-        sessionToken,
+        session,
         actionId,
         command.expectedVersion,
       ),

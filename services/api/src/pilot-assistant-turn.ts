@@ -18,12 +18,11 @@ import {
 import {
   type AssistantTurnRequest,
 } from './assistant-state-request.js'
-import { hashPilotSessionToken } from './auth/pilot-session-token.js'
 import type { DatabaseClient, DatabasePool } from './db/types.js'
 import {
-  PilotSessionInvalidError,
-  withYandexPilotSessionTransaction,
-} from './db/yandex-pilot-transaction.js'
+  withYandexActorSession,
+  type YandexActorSessionInput,
+} from './yandex-actor-session.js'
 
 interface StoredAssistantMessageRow extends QueryResultRow {
   content: string
@@ -51,7 +50,7 @@ interface HistoryRow extends QueryResultRow {
 
 export interface PilotAssistantTurnRunner {
   runTurn(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     command: AssistantTurnRequest,
   ): Promise<AssistantTurnResponse>
 }
@@ -213,12 +212,10 @@ export class DatabasePilotAssistantTurnRunner implements PilotAssistantTurnRunne
   constructor(private readonly pool: DatabasePool) {}
 
   runTurn(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     command: AssistantTurnRequest,
   ): Promise<AssistantTurnResponse> {
-    const tokenHash = hashPilotSessionToken(sessionToken)
-    if (tokenHash === undefined) throw new PilotSessionInvalidError()
-    return withYandexPilotSessionTransaction(this.pool, tokenHash, (client) =>
+    return withYandexActorSession(this.pool, session, (client) =>
       runNativePilotAssistantTurn(client, command))
   }
 }

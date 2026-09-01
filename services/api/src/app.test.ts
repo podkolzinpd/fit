@@ -238,7 +238,9 @@ describe('native Yandex function contracts', () => {
 
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual({ items: [], unmatched: [] })
-    expect(parse).toHaveBeenCalledWith('s'.repeat(43), {
+    expect(parse).toHaveBeenCalledWith({
+      accessMode: 'read_only', token: 's'.repeat(43),
+    }, {
       text: 'присед', systemCatalog: [],
     })
   })
@@ -278,7 +280,9 @@ describe('native Yandex function contracts', () => {
       data: { id: 'summary-id', generated_at: '2026-08-26T12:00:00.000Z' },
       cached: false,
     })
-    expect(generate).toHaveBeenCalledWith('s'.repeat(43), {
+    expect(generate).toHaveBeenCalledWith({
+      accessMode: 'read_only', token: 's'.repeat(43),
+    }, {
       clientId: PROFILE_ID,
       periodStart: '2026-08-01',
       periodEnd: '2026-08-26',
@@ -286,6 +290,85 @@ describe('native Yandex function contracts', () => {
     })
     expect(listed.statusCode).toBe(200)
     expect(listed.json()).toEqual({ summaries: [{ id: 'summary-id' }] })
+  })
+
+  it('uses the read-write app session for Assistant dependencies without accepting both credentials', async () => {
+    const parse = vi.fn().mockResolvedValue({ items: [], unmatched: [] })
+    const list = vi.fn().mockResolvedValue([])
+    const app = buildApp({
+      pilotWorkoutParser: { parse },
+      pilotTrainingSummaryReader: { list },
+      logger: false,
+    })
+    apps.push(app)
+
+    const parsed = await app.inject({
+      method: 'POST',
+      url: '/v1/assistant/yandex/parse-workout',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload: { text: 'присед', systemCatalog: [] },
+    })
+    const listed = await app.inject({
+      method: 'GET',
+      url: `/v1/clients/${PROFILE_ID}/training-summaries`,
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+    })
+    const ambiguous = await app.inject({
+      method: 'GET',
+      url: `/v1/clients/${PROFILE_ID}/training-summaries`,
+      headers: {
+        'x-fit-session': 'a'.repeat(43),
+        'x-fit-pilot-session': 's'.repeat(43),
+      },
+    })
+
+    expect([parsed.statusCode, listed.statusCode, ambiguous.statusCode]).toEqual([200, 200, 401])
+    expect(parse).toHaveBeenCalledWith({
+      accessMode: 'read_write', token: 'a'.repeat(43),
+    }, { text: 'присед', systemCatalog: [] })
+    expect(list).toHaveBeenCalledWith({
+      accessMode: 'read_write', token: 'a'.repeat(43),
+    }, PROFILE_ID)
+  })
+
+  it('publishes a training summary only through a read-write app session', async () => {
+    const publish = vi.fn().mockResolvedValue(undefined)
+    const app = buildApp({
+      pilotTrainingSummaryPublisher: { publish },
+      logger: false,
+    })
+    apps.push(app)
+    const payload = {
+      clientSummary: {
+        headline: 'Стабильный прогресс',
+        achievements: [],
+        consistency: 'Регулярно',
+        encouragement: 'Продолжайте',
+      },
+      expectedVersion: 2,
+    }
+
+    const readOnly = await app.inject({
+      method: 'POST',
+      url: `/v1/training-summaries/${PROFILE_ID}/publish`,
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+      payload,
+    })
+    const readWrite = await app.inject({
+      method: 'POST',
+      url: `/v1/training-summaries/${PROFILE_ID}/publish`,
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload,
+    })
+
+    expect(readOnly.statusCode).toBe(403)
+    expect(readWrite.statusCode).toBe(204)
+    expect(publish).toHaveBeenCalledWith(
+      { accessMode: 'read_write', token: 'a'.repeat(43) },
+      PROFILE_ID,
+      payload.clientSummary,
+      2,
+    )
   })
 
   it('does not expose either native contract without a pilot session', async () => {
@@ -1764,7 +1847,9 @@ describe('read-only pilot training data endpoint', () => {
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual(TRAINING_DATA_RESPONSE)
     expect(response.headers['cache-control']).toBe('no-store')
-    expect(trainingData.readTrainingData).toHaveBeenCalledWith('s'.repeat(43))
+    expect(trainingData.readTrainingData).toHaveBeenCalledWith({
+      accessMode: 'read_only', token: 's'.repeat(43),
+    })
   })
 
   it('rejects a missing or expired pilot session', async () => {
@@ -3258,9 +3343,10 @@ describe('pilot assistant state', () => {
       conversations: [{ id: PROFILE_ID, title: 'Новый диалог' }],
     })
     expect(created.statusCode).toBe(201)
-    expect(state.listConversations).toHaveBeenCalledWith(sessionToken)
+    const session = { accessMode: 'read_only', token: sessionToken }
+    expect(state.listConversations).toHaveBeenCalledWith(session)
     expect(state.createConversation).toHaveBeenCalledWith(
-      sessionToken,
+      session,
       'Новый диалог',
     )
   })
@@ -3309,16 +3395,17 @@ describe('pilot assistant state', () => {
       completed.statusCode,
       cancelled.statusCode,
     ]).toEqual([200, 200, 200, 200, 200])
-    expect(state.listMessages).toHaveBeenCalledWith(sessionToken, PROFILE_ID)
-    expect(state.listActions).toHaveBeenCalledWith(sessionToken, PROFILE_ID)
+    const session = { accessMode: 'read_only', token: sessionToken }
+    expect(state.listMessages).toHaveBeenCalledWith(session, PROFILE_ID)
+    expect(state.listActions).toHaveBeenCalledWith(session, PROFILE_ID)
     expect(state.applyAction).toHaveBeenCalledWith(
-      sessionToken,
+      session,
       PROFILE_ID,
       { workout: {} },
       1,
     )
-    expect(state.completeSummary).toHaveBeenCalledWith(sessionToken, PROFILE_ID, 1)
-    expect(state.cancelAction).toHaveBeenCalledWith(sessionToken, PROFILE_ID, 1)
+    expect(state.completeSummary).toHaveBeenCalledWith(session, PROFILE_ID, 1)
+    expect(state.cancelAction).toHaveBeenCalledWith(session, PROFILE_ID, 1)
   })
 
   it('dispatches native turns through the opaque Yandex pilot session', async () => {
@@ -3347,7 +3434,9 @@ describe('pilot assistant state', () => {
       reply: 'Могу коротко пообщаться и записать тренировку.',
       action: null,
     })
-    expect(turnRunner.runTurn).toHaveBeenCalledWith(sessionToken, {
+    expect(turnRunner.runTurn).toHaveBeenCalledWith({
+      accessMode: 'read_only', token: sessionToken,
+    }, {
       conversationId: PROFILE_ID,
       turnId,
       message: 'что ты умеешь?',

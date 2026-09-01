@@ -156,10 +156,6 @@ function YandexAppSessionCallbackPage() {
 
     async function openSession(): Promise<void> {
       try {
-        if (actor !== null) {
-          clearPendingYandexAuthorization()
-          throw new Error('Вы уже вошли в FIT. Привяжите Yandex ID в профиле, чтобы не создать отдельную сессию.')
-        }
         sessionRequest.current ??= Promise.resolve().then(() => {
           const authorization = consumeYandexAuthorizationCallback(search)
           if (authorization.intent !== 'app') throw new Error('Начните вход через Yandex ID заново.')
@@ -179,9 +175,17 @@ function YandexAppSessionCallbackPage() {
           }
           throw new Error('Этот профиль не добавлен в пилот входа через Yandex ID.')
         }
+        if (actor !== null && result.profile.id !== actor.userId) {
+          try {
+            await yandexPilotRepository.revokeAppSession(apiBaseUrl, result.session.token)
+          } catch {
+            // Несовпавшая сессия никогда не сохраняется в browser storage.
+          }
+          throw new Error('Yandex ID связан с другим FIT-профилем. Войдите в соответствующий аккаунт или используйте другой Yandex ID.')
+        }
         if (cancelled) return
         establish(result)
-        navigate('/auth/yandex/session', { replace: true })
+        navigate(actor === null ? '/auth/yandex/session' : '/assistant', { replace: true })
       } catch (caught) {
         if (!cancelled) {
           setError(caught instanceof Error ? caught.message : 'Не удалось открыть сессию Yandex ID.')

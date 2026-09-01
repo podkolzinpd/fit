@@ -307,4 +307,40 @@ describe('yandexPilotQueries', () => {
     })
     expect(request?.headers).not.toHaveProperty('authorization')
   })
+
+  it('uses only the read-write app session for sticky Assistant requests', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValue(new Response('{}', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const baseUrl = 'https://stage.example.test'
+    const token = 'a'.repeat(43)
+    const id = '6e577cc7-3b56-4a86-bc85-1ce2426ce249'
+
+    await yandexPilotQueries.listTrainingData(baseUrl, token, 'read_write')
+    await yandexPilotQueries.listAssistantConversations(baseUrl, token, 'read_write')
+    await yandexPilotQueries.publishTrainingSummary(
+      baseUrl,
+      token,
+      id,
+      { headline: 'Стабильный прогресс' },
+      2,
+    )
+
+    for (const call of fetchMock.mock.calls) {
+      const headers = call[1]?.headers as Record<string, string>
+      expect(headers['x-fit-session']).toBe(token)
+      expect(headers).not.toHaveProperty('x-fit-pilot-session')
+      expect(headers).not.toHaveProperty('authorization')
+    }
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/training-summaries/${id}/publish`,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          clientSummary: { headline: 'Стабильный прогресс' },
+          expectedVersion: 2,
+        }),
+      }),
+    )
+  })
 })
