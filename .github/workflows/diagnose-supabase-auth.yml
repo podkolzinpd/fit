@@ -1,6 +1,11 @@
 name: Diagnose Supabase auth
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnose-supabase-auth.yml'
+      - 'scripts/query-supabase-auth-logs.mjs'
   workflow_dispatch:
     inputs:
       start_utc:
@@ -17,13 +22,14 @@ permissions:
 
 jobs:
   auth-logs:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'ops/auth-log-diagnostics'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Query sanitized auth aggregates
         run: node scripts/query-supabase-auth-logs.mjs "$START_UTC" "$END_UTC"
         env:
-          START_UTC: ${{ inputs.start_utc }}
-          END_UTC: ${{ inputs.end_utc }}
+          START_UTC: ${{ inputs.start_utc || '2026-09-01T19:30:00Z' }}
+          END_UTC: ${{ inputs.end_utc || '2026-09-01T19:40:00Z' }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
