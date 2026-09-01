@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -172,6 +172,7 @@ describe('Training summary card states', () => {
     repositories.metrics.mockResolvedValue([])
     repositories.workouts.mockResolvedValue([])
     repositories.personalRecords.mockResolvedValue([])
+    repositories.generate.mockResolvedValue({ generatedAt: publishedSummary.generatedAt, cached: true })
   })
 
   it('does not expose period or generation actions while trainer data is loading', () => {
@@ -186,7 +187,7 @@ describe('Training summary card states', () => {
     expect(screen.queryByRole('button', { name: 'Создать анализ' })).toBeNull()
   })
 
-  it('offers only retry after a trainer load error and restores the empty action after retry', async () => {
+  it('offers only retry after a trainer load error and restores a short empty state', async () => {
     const user = userEvent.setup()
     repositories.firstCompletedWorkoutDate.mockResolvedValue(null)
     repositories.listForTrainer.mockRejectedValueOnce(new Error('Анализ недоступен')).mockResolvedValueOnce([])
@@ -196,8 +197,9 @@ describe('Training summary card states', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Анализ недоступен')
     expect(screen.queryByRole('button', { name: 'Создать анализ' })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Повторить' }))
-    expect(await screen.findByText('Анализ за этот период ещё не создан')).toBeVisible()
-    expect(screen.getByRole('button', { name: 'Создать анализ' })).toBeVisible()
+    expect(await screen.findByText('Пока нет анализа за этот период')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Создать анализ' })).toBeNull()
+    expect(repositories.generate).not.toHaveBeenCalled()
   })
 
   it('keeps client measurement management available before the first summary exists', async () => {
@@ -209,10 +211,11 @@ describe('Training summary card states', () => {
       measurementManagement={<button type="button">Добавить замер</button>}
     />, { wrapper: wrapper(queryClient()) })
 
-    expect(await screen.findByText('Анализ за этот период ещё не создан')).toBeVisible()
+    expect(await screen.findByText('Пока нет анализа за этот период')).toBeVisible()
     const measurements = screen.getByRole('region', { name: 'Тренд по значениям' })
     expect(within(measurements).getByRole('button', { name: 'Добавить замер' })).toBeVisible()
-    expect(repositories.progress).toHaveBeenCalledWith('client-1')
+    await waitFor(() => expect(repositories.progress).toHaveBeenCalledWith('client-1'))
+    expect(repositories.generate).not.toHaveBeenCalled()
   })
 
   it('accepts a short history, a long exercise name and no client goal without leaking technical text', async () => {
@@ -232,7 +235,10 @@ describe('Training summary card states', () => {
     expect(screen.queryByRole('button', { name: 'Сзади' })).toBeNull()
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
     expect(document.querySelector('.body-progress-zone')).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Подробный анализ' }))
+    const detailsTrigger = screen.getByRole('button', { name: 'Подробный анализ' })
+    expect(detailsTrigger.closest('.client-progress-main-now')).not.toBeNull()
+    expect(document.querySelector('.client-progress-details-toggle')).toBeNull()
+    await user.click(detailsTrigger)
     const details = await screen.findByRole('dialog', { name: 'Подробный анализ' })
     expect(within(details).getByRole('heading', { name: 'Результат периода' })).toBeVisible()
     expect(within(details).getByRole('heading', { name: 'Связь с целью' })).toBeVisible()
@@ -431,8 +437,7 @@ describe('Training summary card states', () => {
     expect(document.body).not.toHaveTextContent('custom_metric_key')
   })
 
-  it('replaces the trainer card with the freshly loaded analysis and confirms success', async () => {
-    const user = userEvent.setup()
+  it('automatically replaces the trainer card with a freshly loaded analysis', async () => {
     const updated = {
       ...trainerSummary,
       id: 'summary-2',
@@ -453,10 +458,12 @@ describe('Training summary card states', () => {
 
     render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    expect((await screen.findAllByText('+36%'))[0]).toBeVisible()
-    await user.click(screen.getByRole('button', { name: 'Обновить' }))
     expect((await screen.findAllByText('+44%'))[0]).toBeVisible()
-    expect(screen.getByText('Анализ обновлён')).toHaveAttribute('role', 'status')
+    expect(screen.queryByRole('button', { name: 'Обновить' })).toBeNull()
+    expect(screen.queryByText('Анализ обновлён')).toBeNull()
+    expect(repositories.generate).toHaveBeenCalledWith(
+      'client-1', expect.any(String), expect.any(String), false,
+    )
     expect(repositories.listForTrainer).toHaveBeenCalledTimes(2)
   })
 
@@ -501,7 +508,7 @@ describe('Training summary card states', () => {
     expect(screen.queryByText('Для тренера')).toBeNull()
   })
 
-  it('keeps the trainer card after a refresh error and confirms a successful retry', async () => {
+  it('keeps the trainer card after an automatic refresh error and retries on demand', async () => {
     const user = userEvent.setup()
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
     repositories.listForTrainer.mockResolvedValue([trainerSummary])
@@ -512,10 +519,11 @@ describe('Training summary card states', () => {
     render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
     expect((await screen.findAllByText('+36%'))[0]).toBeVisible()
-    await user.click(screen.getByRole('button', { name: 'Обновить' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Не получилось обновить анализ')
-    await user.click(screen.getByRole('button', { name: 'Обновить' }))
-    expect(await screen.findByText('Анализ уже актуален')).toHaveAttribute('role', 'status')
+    const refreshError = await screen.findByRole('alert')
+    expect(refreshError).toHaveTextContent('Не получилось обновить анализ')
+    await user.click(within(refreshError).getByRole('button', { name: 'Повторить' }))
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+    expect(repositories.generate).toHaveBeenCalledTimes(2)
     expect(screen.getAllByText('+36%')[0]).toBeVisible()
   })
 
@@ -580,8 +588,7 @@ describe('Training summary card states', () => {
     expect(screen.getByText('Карта тела')).toBeVisible()
   })
 
-  it('keeps the current client analysis and exposes a readable refresh error', async () => {
-    const user = userEvent.setup()
+  it('keeps the current client analysis and exposes a readable automatic refresh error', async () => {
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
     repositories.listForClient.mockResolvedValue([publishedSummary])
     repositories.generate.mockRejectedValue(new Error('Не получилось создать анализ. Попробуйте ещё раз через минуту.'))
@@ -589,9 +596,13 @@ describe('Training summary card states', () => {
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
     expect(await screen.findByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
-    await user.click(screen.getByRole('button', { name: 'Обновить' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Попробуйте ещё раз через минуту')
-    expect(screen.getByRole('button', { name: 'Обновить' })).toBeEnabled()
+    const refreshError = await screen.findByRole('alert')
+    expect(refreshError).toHaveTextContent('Попробуйте ещё раз через минуту')
+    expect(within(refreshError).getByRole('button', { name: 'Повторить' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'Обновить' })).toBeNull()
+    expect(repositories.generate).toHaveBeenCalledWith(
+      'client-1', expect.any(String), expect.any(String), false,
+    )
     expect(screen.getByLabelText('Верх спины. Лучший результат зоны: +36%')).toBeVisible()
 
     const mainNow = screen.getByRole('heading', { name: `Заметное изменение · ${longExerciseName}` }).closest('section')

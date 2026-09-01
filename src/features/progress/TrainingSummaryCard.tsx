@@ -15,7 +15,7 @@ import type {
   TrainingSummary,
 } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
-import { addDays, daysBetween, formatLocalDate, normalizeTimeZone, todayInTimeZone, type LocalDate } from '../../shared/local-date'
+import { addDays, daysBetween, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { TrainingBodyProgressMap } from './ClientBodyProgressMap'
@@ -61,6 +61,13 @@ function SummaryHeader({ published }: { published?: boolean }) {
   </header>
 }
 
+function AutomaticSummaryError({ error, onRetry }: { error: Error; onRetry: () => void }) {
+  return <p className="ai-progress-auto-error" role="alert">
+    <span>{error.message}</span>
+    <button type="button" className="link" onClick={onRetry}>Повторить</button>
+  </p>
+}
+
 export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = null }: {
   clientId: string
   profileGoal?: string | null
@@ -68,10 +75,8 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
 }) {
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
-  const timeZone = normalizeTimeZone(actor?.timezone)
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState<SummaryPeriod>('1m')
-  const [generationMessage, setGenerationMessage] = useState<string | null>(null)
   const firstWorkout = useQuery({
     queryKey: ['training-summary-first-workout', clientId],
     queryFn: () => trainingSummariesRepository.firstCompletedWorkoutDate(clientId),
@@ -120,26 +125,29 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
     queryKey: ['client-goal', clientId],
     queryFn: () => goalsRepository.get(clientId),
   })
-  const generate = useMutation({
-    mutationFn: async () => {
+  const automaticGeneration = useQuery({
+    queryKey: ['training-summary-generation', 'trainer', clientId, range.start, range.end],
+    queryFn: async () => {
       const generation = await trainingSummariesRepository.generate(
         clientId,
         range.start,
         range.end,
-        Boolean(summary),
+        false,
       )
       const summaries = await trainingSummariesRepository.listForTrainer(clientId)
       return { generation, summaries }
     },
-    onMutate: () => setGenerationMessage(null),
-    onSuccess: ({ generation, summaries }) => {
-      queryClient.setQueryData(['training-summaries', 'trainer', clientId], summaries)
-      setGenerationMessage(generation.cached ? 'Анализ уже актуален' : 'Анализ обновлён')
-    },
+    enabled: ready && firstWorkout.data !== null,
   })
+  useEffect(() => {
+    if (automaticGeneration.data) {
+      queryClient.setQueryData(
+        ['training-summaries', 'trainer', clientId],
+        automaticGeneration.data.summaries,
+      )
+    }
+  }, [automaticGeneration.data, clientId, queryClient])
   const changePeriod = (nextPeriod: SummaryPeriod) => {
-    generate.reset()
-    setGenerationMessage(null)
     setPeriod(nextPeriod)
   }
   const currentWorkouts = workouts.data?.filter((workout) =>
@@ -149,7 +157,7 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
   const upcomingWorkouts = workouts.data?.filter((workout) =>
     workout.workoutDate >= today && workout.workoutDate <= storyRange.end)
 
-  return <section className="ai-progress-card client-progress-card progress-story-card trainer-progress-story-card" aria-label="ИИ-анализ тренировок" aria-busy={loading}>
+  return <section className="ai-progress-card client-progress-card progress-story-card trainer-progress-story-card" aria-label="ИИ-анализ тренировок" aria-busy={loading || (!summary && automaticGeneration.isFetching)}>
     <section className="progress-story-period" aria-labelledby="trainer-progress-period-title">
       <SummaryHeader published={summary?.published} />
       <span className="sr-only" id="trainer-progress-period-title">Период анализа прогресса</span>
@@ -187,32 +195,17 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
               queryKey: ['training-summaries', 'trainer', clientId],
             })}
           />
-        : <div className="ai-progress-empty">
-            <strong>Анализ за этот период ещё не создан</strong>
-            <p>{formatLocalDate(range.start)} — {formatLocalDate(range.end)}</p>
-          </div>}
+        : automaticGeneration.isFetching
+          ? <div className="ai-progress-empty" role="status"><strong>Обновляем прогресс…</strong></div>
+          : !automaticGeneration.error && <div className="ai-progress-empty"><strong>Пока нет анализа за этот период</strong></div>}
     </AsyncView>
-    {ready && <footer className="ai-progress-footer">
-      <span role={generationMessage ? 'status' : undefined}>
-        {generate.isPending
-          ? 'Формируем новый анализ — это может занять до минуты'
-          : generationMessage ?? (summary
-            ? `Обновлено ${new Date(summary.generatedAt).toLocaleString('ru-RU', { timeZone })}`
-            : 'Данные клиента не отправляются без действия тренера')}
-      </span>
-      <button
-        type="button"
-        className="secondary"
-        disabled={generate.isPending}
-        onClick={() => {
-          trackGoal(summary ? 'refresh_training_summary_click' : 'create_training_summary_click')
-          generate.mutate()
-        }}
-      >
-        {generate.isPending ? 'Обновляем…' : summary ? 'Обновить' : 'Создать анализ'}
-      </button>
-    </footer>}
-    {generate.error && <p className="ai-progress-error error" role="alert">{generate.error.message}</p>}
+    {automaticGeneration.error && <AutomaticSummaryError
+      error={automaticGeneration.error}
+      onRetry={() => {
+        trackGoal(summary ? 'refresh_training_summary_retry' : 'create_training_summary_retry')
+        void automaticGeneration.refetch()
+      }}
+    />}
   </section>
 }
 
@@ -517,7 +510,10 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       data-copy-source={presentation.mainNow.source}
     >
       <div className="client-progress-main-now">
-        <span>Главное сейчас</span>
+        <div className="client-progress-main-now-head">
+          <span>Главное сейчас</span>
+          <button type="button" className="link client-progress-details-trigger" onClick={() => setDetailsOpen(true)}>Подробный анализ</button>
+        </div>
         <h3 id={`${role}-progress-main-now-title`}>{mainTitle}</h3>
         <p>{mainExplanation}</p>
         {mainEvidence && <strong>{mainEvidence}</strong>}
@@ -525,6 +521,9 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       </div>
       {goalStory}
     </section>
+    {detailsOpen && <SummarySheet title="Подробный анализ" onClose={() => setDetailsOpen(false)}>
+      <ProgressDetailedAnalysis sections={detailedAnalysis} />
+    </SummarySheet>}
     <TrainingBodyProgressMap
       summary={summary}
       workouts={currentWorkouts ?? []}
@@ -623,12 +622,6 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
         onMeasurementsRetry()
       }}
     />}
-    <div className="client-progress-details-toggle">
-      <button type="button" className="link" onClick={() => setDetailsOpen(true)}>Подробный анализ</button>
-    </div>
-    {detailsOpen && <SummarySheet title="Подробный анализ" onClose={() => setDetailsOpen(false)}>
-      <ProgressDetailedAnalysis sections={detailedAnalysis} />
-    </SummarySheet>}
   </>
 }
 
@@ -700,10 +693,8 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
 }) {
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
-  const timeZone = normalizeTimeZone(actor?.timezone)
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState<SummaryPeriod>('1m')
-  const [generationMessage, setGenerationMessage] = useState<string | null>(null)
   const firstWorkout = useQuery({
     queryKey: ['training-summary-first-workout', clientId],
     queryFn: () => trainingSummariesRepository.firstCompletedWorkoutDate(clientId),
@@ -720,9 +711,10 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
     if (!availablePeriods.includes(period)) setPeriod('1m')
   }, [availablePeriods, period])
   const summary = summaryPeriodMatch(query.data ?? [], period, today)
+  const range = summaryPeriodRange(period, today)
   const workoutRange = summary
     ? { start: summary.periodStart, end: summary.periodEnd }
-    : summaryPeriodRange(period, today)
+    : range
   const periodDays = summary ? daysBetween(summary.periodStart, summary.periodEnd) + 1 : 0
   const previousRange = summary ? {
     start: addDays(summary.periodStart, -periodDays),
@@ -751,22 +743,24 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
     queryKey: ['client-goal', clientId],
     queryFn: () => goalsRepository.get(clientId),
   })
-  const generate = useMutation({
-    mutationFn: async () => {
-      const range = summaryPeriodRange(period, today)
-      const generation = await trainingSummariesRepository.generate(clientId, range.start, range.end, true)
+  const automaticGeneration = useQuery({
+    queryKey: ['training-summary-generation', 'client', clientId, range.start, range.end],
+    queryFn: async () => {
+      const generation = await trainingSummariesRepository.generate(clientId, range.start, range.end, false)
       const summaries = await trainingSummariesRepository.listForClient(clientId)
       return { generation, summaries }
     },
-    onMutate: () => setGenerationMessage(null),
-    onSuccess: ({ generation, summaries }) => {
-      queryClient.setQueryData(['training-summaries', 'client', clientId], summaries)
-      setGenerationMessage(generation.cached ? 'Анализ уже актуален' : 'Анализ обновлён')
-    },
+    enabled: ready && firstWorkout.data !== null,
   })
+  useEffect(() => {
+    if (automaticGeneration.data) {
+      queryClient.setQueryData(
+        ['training-summaries', 'client', clientId],
+        automaticGeneration.data.summaries,
+      )
+    }
+  }, [automaticGeneration.data, clientId, queryClient])
   const changePeriod = (nextPeriod: SummaryPeriod) => {
-    generate.reset()
-    setGenerationMessage(null)
     setPeriod(nextPeriod)
   }
   const currentWorkouts = workouts.data?.filter((workout) =>
@@ -776,7 +770,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
   const upcomingWorkouts = workouts.data?.filter((workout) =>
     workout.workoutDate >= today && workout.workoutDate <= storyRange.end)
 
-  return <section className="ai-progress-card client-progress-card progress-story-card" aria-label="Прогресс тренировок" aria-busy={loading}>
+  return <section className="ai-progress-card client-progress-card progress-story-card" aria-label="Прогресс тренировок" aria-busy={loading || (!summary && automaticGeneration.isFetching)}>
     <section className="progress-story-period" aria-labelledby="client-progress-period-title">
       <SummaryHeader />
       <span className="sr-only" id="client-progress-period-title">Период прогресса</span>
@@ -809,10 +803,9 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
           workoutsError={workouts.error}
           onWorkoutsRetry={() => void workouts.refetch()}
         /> : <>
-          <div className="ai-progress-empty">
-            <strong>Анализ за этот период ещё не создан</strong>
-            <p>Создай его по завершённым тренировкам.</p>
-          </div>
+          {automaticGeneration.isFetching
+            ? <div className="ai-progress-empty" role="status"><strong>Обновляем прогресс…</strong></div>
+            : !automaticGeneration.error && <div className="ai-progress-empty"><strong>Пока нет анализа за этот период</strong></div>}
           {measurementManagement && <MeasurementProgressSection
             clientId={clientId}
             entries={measurements.data ?? []}
@@ -829,24 +822,10 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
           />}
         </>}
     </AsyncView>
-    {ready && <footer className="ai-progress-footer">
-      <span role={generationMessage ? 'status' : undefined}>
-        {generate.isPending
-          ? 'Формируем новый анализ — это может занять до минуты'
-          : generationMessage ?? (summary
-            ? `Сводка сформирована ${new Date(summary.publishedAt).toLocaleDateString('ru-RU', { timeZone })}`
-            : 'Можно запросить первый анализ')}
-      </span>
-      <button
-        type="button"
-        className="secondary"
-        disabled={generate.isPending}
-        onClick={() => generate.mutate()}
-      >
-        {generate.isPending ? 'Обновляем…' : summary ? 'Обновить' : 'Создать анализ'}
-      </button>
-    </footer>}
-    {generate.error && <p className="ai-progress-error error" role="alert">{generate.error.message}</p>}
+    {automaticGeneration.error && <AutomaticSummaryError
+      error={automaticGeneration.error}
+      onRetry={() => void automaticGeneration.refetch()}
+    />}
   </section>
 }
 
