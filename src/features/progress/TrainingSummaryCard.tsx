@@ -21,7 +21,6 @@ import { trackGoal } from '../../shared/yandex-metrika'
 import { TrainingBodyProgressMap } from './ClientBodyProgressMap'
 import { MeasurementProgressSection } from './MeasurementProgressSection'
 import { ProgressDetailedAnalysis } from './ProgressDetailedAnalysis'
-import { ProgressNextStepSection } from './ProgressNextStepSection'
 import { TrainerProgressSignalsSection } from './TrainerProgressSignalsSection'
 import { WorkoutRegularityProgressSection } from './WorkoutRegularityProgressSection'
 import { progressStoryPresentation } from './client-progress-presentation'
@@ -458,14 +457,6 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       nextStep.recommendation.evidence,
     ],
   })
-  const nextStepLinks = {
-    add_measurement: measurementLink,
-    schedule_workout: workoutLink,
-    continue_rhythm: role === 'client' ? '/me/workouts' : `/clients/${clientId}/workouts`,
-    clarify_criterion: goalLink,
-    check_metric: measurementLink,
-    open_workout: (candidate: { targetId?: string }) => candidate.targetId ? `/workouts/${candidate.targetId}` : workoutLink,
-  }
   const goalStory = <>
     {goalLoading && <section className="client-progress-story-state" role="status">Проверяем данные цели…</section>}
     {goalError && <section className="client-progress-story-state" role="alert">Не удалось загрузить цель. <button type="button" className="link" onClick={onGoalRetry}>Повторить</button></section>}
@@ -600,18 +591,6 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       <h3 id={`${role}-progress-wins-title`}>{role === 'client' ? 'Твои достижения' : 'Ключевые изменения'}</h3>
       <div>{wins.map((item) => <article key={item.title}><span aria-hidden="true" /><div><strong>{item.title}</strong><p>{item.detail}</p></div></article>)}</div>
     </section>}
-    <ProgressNextStepSection
-      result={nextStep}
-      links={nextStepLinks}
-      titleId={`${role}-progress-next-step-title`}
-      loading={goalLoading || workoutsLoading || measurementsLoading}
-      error={goalError ?? workoutsError ?? measurementsError}
-      onRetry={() => {
-        onGoalRetry()
-        onWorkoutsRetry()
-        onMeasurementsRetry()
-      }}
-    />
     {role === 'trainer' && <TrainerProgressSignalsSection
       signals={trainerSignals}
       loading={goalLoading || workoutsLoading || measurementsLoading}
