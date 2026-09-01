@@ -36,7 +36,7 @@ test('exercise catalog preview keeps search, media and detail transitions usable
   await search.fill('заведомо отсутствующее движение')
   await expect(page.getByText('Ничего не найдено')).toBeVisible()
   await page.getByRole('button', { name: 'Сбросить поиск' }).click()
-  await search.fill('Присед со штангой')
+  await search.fill('лестница')
   await expect(page.getByText(/Найдено: [1-9]/)).toBeVisible()
 
   const result = page.locator('.catalog-media-card').first()
@@ -46,6 +46,7 @@ test('exercise catalog preview keeps search, media and detail transitions usable
   await expect(previewVideo).toHaveAttribute('preload', 'none')
   await expect.poll(() => previewVideo.evaluate((video: HTMLVideoElement) => video.paused)).toBe(false)
   const exerciseName = await result.locator('strong').innerText()
+  expect(exerciseName).toContain('Лестничный тренажёр')
   await result.click()
   const detail = page.getByRole('dialog')
   await expect(detail.getByRole('heading', { name: exerciseName })).toBeVisible()

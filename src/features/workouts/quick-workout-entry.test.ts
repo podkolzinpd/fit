@@ -369,6 +369,12 @@ describe('parseQuickWorkoutEntry', () => {
     expect(rankExerciseSearch(SYSTEM_EXERCISE_CATALOG, 'присед')[0]?.exercise.ref).toBe('barbell-squat')
   })
 
+  it('находит новые кардиотренажёры по привычным названиям', () => {
+    expect(rankExerciseSearch(SYSTEM_EXERCISE_CATALOG, 'лестница')[0]?.exercise.ref).toBe('vital-stair-climber')
+    expect(rankExerciseSearch(SYSTEM_EXERCISE_CATALOG, 'степпер')[0]?.exercise.ref).toBe('vital-stepper-machine')
+    expect(rankExerciseSearch(SYSTEM_EXERCISE_CATALOG, 'аэробайк')[0]?.exercise.ref).toBe('vital-air-bike-sprint')
+  })
+
   it('поднимает частое упражнение клиента среди неоднозначных вариантов, не включая автоподстановку', () => {
     const result = parseQuickWorkoutEntry('Присед 3×8 80 кг', [
       ...catalog,
