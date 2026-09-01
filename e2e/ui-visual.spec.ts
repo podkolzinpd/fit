@@ -33,6 +33,32 @@ function comparisonWorkoutRow(id: string, date: string, weight: number, distance
 }
 
 async function mockPeriodComparison(page: VisualPage) {
+  const clientSummary = {
+    headline: 'Прогресс уже заметен', achievements: ['Жим лёжа стал сильнее'],
+    consistency: 'Тренировки продолжаются', encouragement: 'Продолжай в том же темпе', next_steps: [],
+  }
+  const displayMetrics = {
+    completed_workouts: 2, workouts_per_week: 0.5, active_weeks: 2, longest_gap_days: 7,
+    progress_facts: [{ exercise_name: 'Жим лёжа', kind: 'strength', session_count: 2, changes: [
+      { metric: 'max_weight', from: 72, to: 75, change_percent: 4, favorable: true },
+    ] }],
+  }
+  await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify([{
+      id: '80000000-0000-4000-8000-000000000001', source_summary_id: '80000000-0000-4000-8000-000000000002',
+      client_id: demoClientId, period_start: '2026-08-01', period_end: '2026-08-31', summary: clientSummary,
+      display_metrics: displayMetrics, generated_at: '2026-08-31T12:00:00Z', published_at: '2026-08-31T12:00:00Z',
+    }]),
+  }))
+  await page.route('**/rest/v1/client_training_summaries?*', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify([{
+      id: '80000000-0000-4000-8000-000000000002', client_id: demoClientId,
+      period_start: '2026-08-01', period_end: '2026-08-31',
+      trainer_summary: { headline: 'Прогресс уже заметен', progress: ['Жим лёжа стал сильнее'], consistency: 'Тренировки продолжаются', attention: [] },
+      client_summary: clientSummary, display_metrics: displayMetrics,
+      generated_at: '2026-08-31T12:00:00Z', version: 1,
+    }]),
+  }))
   await page.route('**/rest/v1/rpc/list_workouts', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify([
       comparisonWorkoutRow('81000000-0000-4000-8000-000000000001', '2026-07-05', 50, 5, 1),
