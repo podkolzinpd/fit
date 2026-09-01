@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   getYandexIdPilotConfig,
+  getYandexAppSessionEntryConfig,
   getYandexSessionLinkingConfig,
   isAssistantNavPilotEnabled,
   isProductionAssistantPilotEmail,
   isTodayGreetingPilotEnabled,
   isTodayStartRedesignEnabled,
   isWearablesPilotEnabled,
+  isYandexAppSessionPilotEnabled,
   isYandexSessionLinkingPilotEnabled,
   trainerHomePath,
 } from './feature-flags'
@@ -260,5 +262,48 @@ describe('Yandex session linking pilot flag', () => {
       apiBaseUrl: 'https://stage.example.test',
       clientId: 'public-client-id',
     })
+  })
+})
+
+describe('Yandex app session pilot flag', () => {
+  it('is disabled unless the enabled flag is exactly "true"', () => {
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', 'trainer-1')
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', '')
+    expect(isYandexAppSessionPilotEnabled('trainer-1')).toBe(false)
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'TRUE')
+    expect(isYandexAppSessionPilotEnabled('trainer-1')).toBe(false)
+  })
+
+  it('accepts only trimmed non-empty UUID entries from its own allowlist', () => {
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', ' , trainer-1, ,trainer-2, ')
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS', 'client-9')
+    expect(isYandexAppSessionPilotEnabled('trainer-1')).toBe(true)
+    expect(isYandexAppSessionPilotEnabled('trainer-2')).toBe(true)
+    expect(isYandexAppSessionPilotEnabled('client-9')).toBe(false)
+    expect(isYandexAppSessionPilotEnabled('')).toBe(false)
+  })
+
+  it('is disabled for everyone with an empty allowlist', () => {
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', '')
+    expect(isYandexAppSessionPilotEnabled('trainer-1')).toBe(false)
+  })
+
+  it('exposes an entry config only with the independent flag and safe public settings', () => {
+    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test/')
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', '')
+    expect(getYandexAppSessionEntryConfig()).toBeNull()
+
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
+    expect(getYandexAppSessionEntryConfig()).toEqual({
+      apiBaseUrl: 'https://stage.example.test',
+      clientId: 'public-client-id',
+    })
+
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'http://stage.example.test')
+    expect(getYandexAppSessionEntryConfig()).toBeNull()
   })
 })

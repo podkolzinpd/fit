@@ -15,6 +15,17 @@ export const yandexPilotQueries = {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ code, codeVerifier }),
   }),
+  getAppSession: (apiBaseUrl: string, sessionToken: string) =>
+    fetch(`${apiBaseUrl}/v1/auth/yandex/session`, {
+      cache: 'no-store',
+      headers: { 'x-fit-session': sessionToken },
+    }),
+  revokeAppSession: (apiBaseUrl: string, sessionToken: string) =>
+    fetch(`${apiBaseUrl}/v1/auth/yandex/session`, {
+      method: 'DELETE',
+      cache: 'no-store',
+      headers: { 'x-fit-session': sessionToken },
+    }),
   linkYandexAccount: (
     apiBaseUrl: string,
     supabaseAccessToken: string,

@@ -5,6 +5,8 @@ import { yandexPilotRepository } from './yandex-pilot.repository'
 const queries = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   exchangeCodeForAppSession: vi.fn(),
+  getAppSession: vi.fn(),
+  revokeAppSession: vi.fn(),
   linkYandexAccount: vi.fn(),
   listClients: vi.fn(),
   listConnections: vi.fn(),
@@ -181,6 +183,8 @@ describe('yandexPilotRepository', () => {
   beforeEach(() => {
     queries.exchangeCodeForSession.mockReset()
     queries.exchangeCodeForAppSession.mockReset()
+    queries.getAppSession.mockReset()
+    queries.revokeAppSession.mockReset()
     queries.linkYandexAccount.mockReset()
     queries.listClients.mockReset()
     queries.listConnections.mockReset()
@@ -301,6 +305,32 @@ describe('yandexPilotRepository', () => {
       'code',
       'verifier',
     )).resolves.toEqual(appSession)
+  })
+
+  it('restores and revokes an opaque read-write app session', async () => {
+    const profile = { accessMode: 'read_write', profile: appSession.profile }
+    queries.getAppSession.mockResolvedValue(
+      new Response(JSON.stringify(profile), { status: 200 }),
+    )
+    queries.revokeAppSession.mockResolvedValue(new Response(null, { status: 204 }))
+
+    await expect(yandexPilotRepository.getAppSession(
+      'https://stage.example.test',
+      appSession.session.token,
+    )).resolves.toEqual(profile)
+    await expect(yandexPilotRepository.revokeAppSession(
+      'https://stage.example.test',
+      appSession.session.token,
+    )).resolves.toBeUndefined()
+  })
+
+  it('maps an invalid stored app session to an expired-session error', async () => {
+    queries.getAppSession.mockResolvedValue(new Response('{}', { status: 401 }))
+
+    await expect(yandexPilotRepository.getAppSession(
+      'https://stage.example.test',
+      appSession.session.token,
+    )).rejects.toThrow('Сессия Yandex ID истекла')
   })
 
   it('keeps a read-only pilot session outside the app session contract', async () => {

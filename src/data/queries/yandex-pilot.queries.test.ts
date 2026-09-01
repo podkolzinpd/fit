@@ -30,6 +30,25 @@ describe('yandexPilotQueries', () => {
     expect(fetchMock.mock.calls.at(-1)?.[1]?.headers)
       .not.toHaveProperty('x-fit-pilot-session')
 
+    await yandexPilotQueries.getAppSession(baseUrl, 'a'.repeat(43))
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/auth/yandex/session`,
+      {
+        cache: 'no-store',
+        headers: { 'x-fit-session': 'a'.repeat(43) },
+      },
+    )
+
+    await yandexPilotQueries.revokeAppSession(baseUrl, 'a'.repeat(43))
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/auth/yandex/session`,
+      {
+        method: 'DELETE',
+        cache: 'no-store',
+        headers: { 'x-fit-session': 'a'.repeat(43) },
+      },
+    )
+
     await yandexPilotQueries.linkYandexAccount(
       baseUrl,
       'supabase-session',

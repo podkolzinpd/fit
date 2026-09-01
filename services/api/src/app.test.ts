@@ -22,7 +22,10 @@ import {
   PilotAccessDeniedError,
   PilotSessionInvalidError,
 } from './db/yandex-pilot-transaction.js'
-import { YandexAppSessionDeniedError } from './db/yandex-app-transaction.js'
+import {
+  YandexAppSessionDeniedError,
+  YandexAppSessionInvalidError,
+} from './db/yandex-app-transaction.js'
 import type { PilotClientsResponse } from './clients.js'
 import type { PilotClientsReader } from './pilot-clients-reader.js'
 import type { PilotAppFeedbackWriter } from './pilot-app-feedback-writer.js'
@@ -42,7 +45,9 @@ import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer, PilotSessionResponse } from './pilot-session.js'
 import type {
   YandexAppSessionIssuer,
+  YandexAppSessionReader,
   YandexAppSessionResponse,
+  YandexAppSessionRevoker,
 } from './yandex-app-session.js'
 import {
   ExistingActorUnavailableError,
@@ -678,6 +683,30 @@ function buildYandexAppSessionIssuer(
     result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
   )
   return { yandexAppSessionIssuer: { issue }, issue }
+}
+
+function buildYandexAppSessionReader(
+  result: ProfileResponse | Error = { ...PROFILE_RESPONSE, accessMode: 'read_write' },
+): {
+  yandexAppSessionReader: YandexAppSessionReader
+  read: ReturnType<typeof vi.fn>
+} {
+  const read = vi.fn(() =>
+    result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
+  )
+  return { yandexAppSessionReader: { read }, read }
+}
+
+function buildYandexAppSessionRevoker(
+  result: boolean | Error = true,
+): {
+  yandexAppSessionRevoker: YandexAppSessionRevoker
+  revoke: ReturnType<typeof vi.fn>
+} {
+  const revoke = vi.fn(() =>
+    result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
+  )
+  return { yandexAppSessionRevoker: { revoke }, revoke }
 }
 
 function buildExistingActorProvider(
@@ -1324,6 +1353,72 @@ describe('Yandex ID app session and account linking endpoints', () => {
 
     expect(response.statusCode).toBe(403)
     expect(response.json()).toEqual({ error: 'yandex_session_denied' })
+  })
+
+  it('restores and revokes an opaque read-write app session', async () => {
+    const reader = buildYandexAppSessionReader()
+    const revoker = buildYandexAppSessionRevoker()
+    const app = buildApp({
+      yandexAppSessionReader: reader.yandexAppSessionReader,
+      yandexAppSessionRevoker: revoker.yandexAppSessionRevoker,
+      logger: false,
+    })
+    apps.push(app)
+
+    const restored = await app.inject({
+      method: 'GET',
+      url: '/v1/auth/yandex/session',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+    })
+    const revoked = await app.inject({
+      method: 'DELETE',
+      url: '/v1/auth/yandex/session',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+    })
+
+    expect(restored.statusCode).toBe(200)
+    expect(restored.headers['cache-control']).toBe('no-store')
+    expect(restored.json()).toEqual({ ...PROFILE_RESPONSE, accessMode: 'read_write' })
+    expect(restored.body).not.toContain('a'.repeat(43))
+    expect(revoked.statusCode).toBe(204)
+    expect(revoked.body).toBe('')
+    expect(reader.read).toHaveBeenCalledWith('a'.repeat(43))
+    expect(revoker.revoke).toHaveBeenCalledWith('a'.repeat(43))
+  })
+
+  it('rejects a missing or invalid app session without exposing its token', async () => {
+    const reader = buildYandexAppSessionReader(new YandexAppSessionInvalidError())
+    const revoker = buildYandexAppSessionRevoker(new YandexAppSessionInvalidError())
+    const app = buildApp({
+      yandexAppSessionReader: reader.yandexAppSessionReader,
+      yandexAppSessionRevoker: revoker.yandexAppSessionRevoker,
+      logger: false,
+    })
+    apps.push(app)
+
+    const missing = await app.inject({
+      method: 'GET',
+      url: '/v1/auth/yandex/session',
+    })
+    const invalid = await app.inject({
+      method: 'GET',
+      url: '/v1/auth/yandex/session',
+      headers: { 'x-fit-session': 'x'.repeat(43) },
+    })
+    const invalidRevoke = await app.inject({
+      method: 'DELETE',
+      url: '/v1/auth/yandex/session',
+      headers: { 'x-fit-session': 'x'.repeat(43) },
+    })
+
+    expect(missing.statusCode).toBe(401)
+    expect(invalid.statusCode).toBe(401)
+    expect(invalidRevoke.statusCode).toBe(401)
+    expect(missing.json()).toEqual({ error: 'unauthorized' })
+    expect(invalid.body).not.toContain('x'.repeat(43))
+    expect(invalidRevoke.body).not.toContain('x'.repeat(43))
+    expect(reader.read).toHaveBeenCalledOnce()
+    expect(revoker.revoke).toHaveBeenCalledOnce()
   })
 
   it('rejects malformed app-session input before contacting Yandex OAuth', async () => {

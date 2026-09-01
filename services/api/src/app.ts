@@ -15,7 +15,10 @@ import {
   PilotAccessDeniedError,
   PilotSessionInvalidError,
 } from './db/yandex-pilot-transaction.js'
-import { YandexAppSessionDeniedError } from './db/yandex-app-transaction.js'
+import {
+  YandexAppSessionDeniedError,
+  YandexAppSessionInvalidError,
+} from './db/yandex-app-transaction.js'
 import { AppFeedbackCommandError } from './app-feedback-command.js'
 import { readAppFeedbackRequest } from './app-feedback-request.js'
 import { AssistantStateError } from './assistant-state.js'
@@ -56,7 +59,11 @@ import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import type { PilotDomainWriter } from './pilot-domain-writer.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer } from './pilot-session.js'
-import type { YandexAppSessionIssuer } from './yandex-app-session.js'
+import type {
+  YandexAppSessionIssuer,
+  YandexAppSessionReader,
+  YandexAppSessionRevoker,
+} from './yandex-app-session.js'
 import {
   ExistingActorUnavailableError,
   YandexAccountLinkError,
@@ -131,6 +138,8 @@ interface BuildAppOptions {
   existingActorProvider?: ExistingActorProvider
   yandexAccountLinker?: YandexAccountLinker
   yandexAppSessionIssuer?: YandexAppSessionIssuer
+  yandexAppSessionReader?: YandexAppSessionReader
+  yandexAppSessionRevoker?: YandexAppSessionRevoker
   logger?: boolean
   releaseId?: string
 }
@@ -564,6 +573,46 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     } catch (error) {
       if (error instanceof YandexAppSessionDeniedError) {
         return reply.code(403).send({ error: 'yandex_session_denied' })
+      }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.get('/v1/auth/yandex/session', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-session']
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (options.yandexAppSessionReader === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+
+    try {
+      return reply.header('cache-control', 'no-store')
+        .send(await options.yandexAppSessionReader.read(sessionToken))
+    } catch (error) {
+      if (error instanceof YandexAppSessionInvalidError) {
+        return reply.code(401).send({ error: 'unauthorized' })
+      }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.delete('/v1/auth/yandex/session', async (request, reply) => {
+    const sessionToken = request.headers['x-fit-session']
+    if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (options.yandexAppSessionRevoker === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+
+    try {
+      await options.yandexAppSessionRevoker.revoke(sessionToken)
+      return reply.code(204).send()
+    } catch (error) {
+      if (error instanceof YandexAppSessionInvalidError) {
+        return reply.code(401).send({ error: 'unauthorized' })
       }
       return reply.code(503).send({ error: 'service_unavailable' })
     }

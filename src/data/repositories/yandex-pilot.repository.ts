@@ -30,6 +30,8 @@ const appSessionSchema = z.object({
   }),
 })
 
+const appSessionProfileSchema = appSessionSchema.omit({ session: true })
+
 const linkedYandexIdentitySchema = z.object({ profileId: z.uuid() })
 
 const clientSchema = z.object({
@@ -250,6 +252,7 @@ const generatedSummarySchema = z.object({
 
 export type YandexPilotSession = z.infer<typeof sessionSchema>
 export type YandexAppSession = z.infer<typeof appSessionSchema>
+export type YandexAppSessionProfile = z.infer<typeof appSessionProfileSchema>
 export type YandexLinkedIdentity = z.infer<typeof linkedYandexIdentitySchema>
 export type YandexPilotClient = z.infer<typeof clientSchema>
 export type YandexPilotMembership = z.infer<typeof membershipSchema>
@@ -270,12 +273,25 @@ function responseError(status: number): Error {
 }
 
 function appSessionResponseError(status: number): Error {
-  if (status === 401) return new Error('Yandex ID не подтвердил вход. Начните заново.')
+  if (status === 401) return new YandexAppSessionExpiredError()
   if (status === 403) {
     return new Error('Yandex ID связан, но профиль ещё не включён в основной Yandex Cloud rollout.')
   }
   if (status === 503) return new Error('Yandex Cloud вход временно недоступен. Попробуйте позднее.')
   return new Error('Не удалось открыть сессию через Yandex ID.')
+}
+
+export class YandexAppSessionExpiredError extends Error {
+  constructor() {
+    super('Сессия Yandex ID истекла. Войдите заново.')
+    this.name = 'YandexAppSessionExpiredError'
+  }
+}
+
+function appSessionRestoreError(status: number): Error {
+  if (status === 401) return new YandexAppSessionExpiredError()
+  if (status === 503) return new Error('Yandex Cloud вход временно недоступен. Попробуйте позднее.')
+  return new Error('Не удалось восстановить сессию Yandex ID.')
 }
 
 function linkResponseError(status: number): Error {
@@ -389,6 +405,30 @@ export const yandexPilotRepository = {
     const result = appSessionSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат Yandex ID сессии.')
     return result.data
+  },
+  async getAppSession(
+    apiBaseUrl: string,
+    sessionToken: string,
+  ): Promise<YandexAppSessionProfile> {
+    let response: Response
+    try {
+      response = await yandexPilotQueries.getAppSession(apiBaseUrl, sessionToken)
+    } catch {
+      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    }
+    if (!response.ok) throw appSessionRestoreError(response.status)
+    const result = appSessionProfileSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый формат Yandex ID сессии.')
+    return result.data
+  },
+  async revokeAppSession(apiBaseUrl: string, sessionToken: string): Promise<void> {
+    let response: Response
+    try {
+      response = await yandexPilotQueries.revokeAppSession(apiBaseUrl, sessionToken)
+    } catch {
+      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    }
+    if (!response.ok) throw appSessionRestoreError(response.status)
   },
   async linkYandexAccount(
     apiBaseUrl: string,

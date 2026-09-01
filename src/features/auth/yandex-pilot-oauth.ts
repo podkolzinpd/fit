@@ -1,7 +1,7 @@
 const OAUTH_STATE_KEY = 'fit.yandexIdPilot.oauthState'
 const OAUTH_VERIFIER_KEY = 'fit.yandexIdPilot.oauthVerifier'
 const OAUTH_INTENT_KEY = 'fit.yandexIdPilot.oauthIntent'
-export type YandexAuthorizationIntent = 'pilot' | 'link'
+export type YandexAuthorizationIntent = 'pilot' | 'link' | 'app'
 
 function randomBase64Url(byteLength: number): string {
   const bytes = crypto.getRandomValues(new Uint8Array(byteLength))
@@ -49,7 +49,8 @@ export interface YandexAuthorizationCode {
 export function peekPendingYandexAuthorizationIntent(
   storage: Pick<Storage, 'getItem'> = sessionStorage,
 ): YandexAuthorizationIntent {
-  return storage.getItem(OAUTH_INTENT_KEY) === 'link' ? 'link' : 'pilot'
+  const value = storage.getItem(OAUTH_INTENT_KEY)
+  return value === 'link' || value === 'app' ? value : 'pilot'
 }
 
 export function clearPendingYandexAuthorization(
