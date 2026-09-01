@@ -7,10 +7,14 @@ const EXERCISE_MEDIA_PATHS = new Set(
   Object.keys(import.meta.glob('../../public/exercises/*.jpg', { query: '?url', import: 'default' }))
     .map((path) => path.replace('../../public', '')),
 )
+const EXERCISE_VIDEO_PATHS = new Set(
+  Object.keys(import.meta.glob('../../public/exercises/vital/*.mp4', { query: '?url', import: 'default' }))
+    .map((path) => path.replace('../../public', '')),
+)
 
 describe('system exercise catalog', () => {
   it('matches the V1 baseline catalog', () => {
-    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(3)
+    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(4)
     expect(SYSTEM_EXERCISES).toHaveLength(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.ref)).size).toBe(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.name)).size).toBe(49)
@@ -143,6 +147,21 @@ describe('system exercise catalog', () => {
       for (const url of [exercise.imageUrl, exercise.motionImageUrl]) {
         expect(EXERCISE_MEDIA_PATHS.has(url!), `${exercise.name}: отсутствует ${url}`).toBe(true)
       }
+    }
+  })
+
+  it('добавляет видео только упражнениям с точным совпадением техники', () => {
+    const expected = new Map([
+      ['barbell-squat', '/exercises/vital/barbell-squat.mp4'],
+      ['romanian-deadlift', '/exercises/vital/romanian-deadlift.mp4'],
+      ['triceps-pushdown', '/exercises/vital/triceps-pushdown.mp4'],
+      ['lateral-raise', '/exercises/vital/lateral-raise.mp4'],
+    ])
+    const withVideo = SYSTEM_EXERCISE_CATALOG.filter((exercise) => exercise.techniqueVideoUrl)
+    expect(withVideo).toHaveLength(expected.size)
+    for (const exercise of withVideo) {
+      expect(exercise.techniqueVideoUrl).toBe(expected.get(exercise.ref))
+      expect(EXERCISE_VIDEO_PATHS.has(exercise.techniqueVideoUrl!)).toBe(true)
     }
   })
 
