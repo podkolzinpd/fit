@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnalyticsIcon, AssistantIcon, ClientsIcon, HomeIcon, ProfileIcon, ScheduleIcon, TodayIcon } from '../shared/icons'
 import { useAuth } from './auth-context'
+import { Coachmark } from '../shared/ui'
 import { applyAppTheme, applyMonochromeThemeColor, applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from './theme'
 import { isAssistantNavPilotEnabled, isTodayStartRedesignEnabled } from './feature-flags'
 import { useAppViewport } from './app-viewport'
@@ -109,7 +110,14 @@ export function AppLayout() {
   return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
     <NavLink to="/today"><TodayIcon />Сегодня</NavLink>
     {redesignedStart && <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>}
-    {actor?.role === 'trainer' && isAssistantNavPilotEnabled(actor.userId, actor.email) && <NavLink to="/assistant"><AssistantIcon />Ассистент</NavLink>}
+    {actor?.role === 'trainer' && isAssistantNavPilotEnabled(actor.userId, actor.email) && <Coachmark
+      id="assistant-all-trainers-2026-09"
+      userId={actor.userId}
+      title="Ассистент теперь доступен"
+      description="Диктуйте или пишите: ассистент подготовит запись тренировки и попросит подтверждение."
+    >
+      <NavLink to="/assistant"><AssistantIcon />Ассистент</NavLink>
+    </Coachmark>}
     <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>
     {!redesignedStart && <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>}
   </nav>}</div>
