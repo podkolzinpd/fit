@@ -93,7 +93,7 @@ export function ExercisesPage() {
       {systemMatches.length > 0 ? <>
         <div className="catalog-media-grid">
           {visibleExercises.map((exercise) => <button type="button" className="catalog-media-card" key={exercise.ref} onClick={() => setSelected(exercise)}>
-            <ExerciseImage src={exercise.imageUrl} alt="" />
+            <ExerciseImage src={exercise.imageUrl} videoSrc={exercise.techniqueVideoUrl} alt="" variant="preview" />
             <span><strong>{exercise.name}</strong><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small></span>
             <ChevronRightIcon />
           </button>)}

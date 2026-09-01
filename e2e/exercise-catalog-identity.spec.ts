@@ -41,6 +41,10 @@ test('exercise catalog preview keeps search, media and detail transitions usable
 
   const result = page.locator('.catalog-media-card').first()
   await expect(result.locator('.exercise-image')).toBeVisible()
+  const previewVideo = result.locator('.exercise-image-preview video')
+  await expect(previewVideo).toBeVisible()
+  await expect(previewVideo).toHaveAttribute('preload', 'none')
+  await expect.poll(() => previewVideo.evaluate((video: HTMLVideoElement) => video.paused)).toBe(false)
   const exerciseName = await result.locator('strong').innerText()
   await result.click()
   const detail = page.getByRole('dialog')
@@ -53,6 +57,7 @@ test('exercise catalog preview keeps search, media and detail transitions usable
   await expect(techniqueVideo.evaluate((video: HTMLVideoElement) => video.muted)).resolves.toBe(true)
 
   await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(previewVideo).toHaveCount(0)
   await expect(techniqueVideo).toHaveCount(0)
   await expect(detail.locator('.exercise-image-frame-start')).toBeVisible()
   await expect(detail.getByText('Оборудование', { exact: true })).toBeVisible()
