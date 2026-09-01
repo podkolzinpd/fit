@@ -2,7 +2,7 @@ import type { ExerciseSnapshot, MuscleGroup } from './domain'
 import { IMPORTED_EXERCISES } from './system-exercises.generated'
 import { BASE_EXERCISES } from './system-exercises.base.generated'
 
-export const SYSTEM_EXERCISE_CATALOG_VERSION = 3
+export const SYSTEM_EXERCISE_CATALOG_VERSION = 4
 
 // Форма импортированного упражнения (генерируется scripts/import-exercises.mjs).
 export interface ImportedExercise extends ExerciseSnapshot {
@@ -157,10 +157,20 @@ const SYSTEM_EXERCISE_CATALOG_SOURCE: readonly ExerciseSnapshot[] = [
   ...WARMUP_AND_MOBILITY,
 ]
 
+// Пилот локальных видео Vital Animations. Не подбираем движение приблизительно:
+// видео показывается только у упражнений с однозначным совпадением техники.
+const TECHNIQUE_VIDEO_BY_REF: Readonly<Record<string, string>> = {
+  'barbell-squat': '/exercises/vital/barbell-squat.mp4',
+  'romanian-deadlift': '/exercises/vital/romanian-deadlift.mp4',
+  'triceps-pushdown': '/exercises/vital/triceps-pushdown.mp4',
+  'lateral-raise': '/exercises/vital/lateral-raise.mp4',
+}
+
 // Составные протоколы и СБУ переиспользуют обложки базовых упражнений. Для
 // карточки техники им нужен тот же второй кадр, но дублировать его URL в каждом
 // литерале нет смысла.
 export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = SYSTEM_EXERCISE_CATALOG_SOURCE.map((exercise) => ({
   ...exercise,
   motionImageUrl: exercise.motionImageUrl ?? exercise.imageUrl?.replace(/\.jpg$/, '-end.jpg'),
+  techniqueVideoUrl: TECHNIQUE_VIDEO_BY_REF[exercise.ref],
 }))

@@ -3799,7 +3799,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           doneCount: 1,
           completionPercent: 50,
           lastWorkoutDate: '2026-08-19',
-          needsAttention: false,
+          // На 14-й день без тренировки сигнал уже должен быть активен.
+          needsAttention: true,
         },
       })
 

@@ -9,10 +9,23 @@ test('exercise catalog search and technique detail work in the iOS shell', async
 
   await page.goto('/exercises')
   await expect(page.locator('.phone-frame')).toHaveClass(/exercise-catalog-identity/)
-  await page.getByLabel('Поиск упражнения').fill('face pull')
+  await page.getByLabel('Поиск упражнения').fill('Присед со штангой')
   const result = page.locator('.catalog-media-card').first()
   await expect(result.locator('.exercise-image')).toBeVisible()
   await result.click()
-  await expect(page.getByRole('dialog').locator('.exercise-image-technique')).toBeVisible()
+  const technique = page.getByRole('dialog').locator('.exercise-image-technique')
+  await expect(technique).toBeVisible()
+  const video = technique.locator('video')
+  await expect(video).toBeVisible()
+  await expect(video.evaluate((element: HTMLVideoElement) => ({
+    autoplay: element.autoplay,
+    loop: element.loop,
+    muted: element.muted,
+  }))).resolves.toEqual({ autoplay: true, loop: true, muted: true })
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(false)
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(video).toHaveCount(0)
+  await expect(technique.locator('.exercise-image-frame-start')).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
