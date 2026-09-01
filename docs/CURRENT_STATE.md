@@ -51,7 +51,8 @@
 - Верх Progress закреплён в порядке `Период → Главное сейчас / Подробный анализ → Цель → Карта
   тела → Сравнение → Измерения → Регулярность → Результаты →
   сигналы тренера`. Карта тела компактная: фигура ограничена 210 px,
-  переключатели — 184/160 px, вывод остаётся сразу под картой. LLM-текст
+  переключатели режима/стороны — 164/144 px, их видимая плашка занимает 36 px
+  при зоне нажатия 44 px; вывод остаётся сразу под картой. LLM-текст
   допускается только при совпадении предмета и рассчитанных чисел, иначе
   используется deterministic fallback.
 - Измерения вынесены в самостоятельный аналитический блок: приоритетный
@@ -107,27 +108,15 @@
 - Реальный invite → join → leave/remove smoke — внешняя проверка. Production
   остаётся на Supabase; полный cutover не выполнен.
 ## Проверки активной ветки
-- `codex/yandex-session-linking-ui` добавляет default-off карточку привязки
-  Yandex ID в профиль тренера/клиента и link-mode callback поверх уже
-  существующего `POST /v1/auth/yandex/link`. Вне
-  `VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS` UI не меняется; основной вход,
-  `auth-context`, production routing и Supabase остаются прежними.
-- Проверено локально: targeted tests для feature flags, PKCE intent,
-  linking-card, linking callback и read-only Yandex pilot callback; `npm run
-  check`; WebKit default-off и flag-on для тренера/клиента на 390 px. После
-  merge с `e5362ff` повторены targeted tests, полный check и WebKit smoke.
-- YAFIT-421, пункт 6: сравнение сокращается до трёх главных изменений, короткой
-  подписи месяцев и одного ограничения выборки; пустые состояния не показывают
-  диапазоны дат и служебный текст. Полный `npm run check` зелёный: frontend
-  995/995, API 276/276, infra 72/72, lint/typecheck/build. Локальный database
-  gate зелёный: Supabase SQL/RLS 886/886, PostgreSQL actor/RLS 28/28, generated
-  types и migration safety. Точечные тесты 45/45; visual baselines клиента
-  390/430 и тренера 1440 в light/dark просмотрены и повторены без обновления на
-  Darwin и Linux, по 3/3. Перед merge обязательны зелёные `app`, `database`,
-  `e2e` и production smoke.
+- YAFIT-421, пункт 9: финальный аудит Progress охватывает клиента и тренера на
+  320/375/390/430 px и desktop, светлую и тёмную темы, оба режима карты и обе
+  стороны при наличии данных. Исправлен воспроизводимый дефект чрезмерно
+  крупных переключателей карты; остальные блоки меняются только при
+  подтверждённой регрессии. Перед merge обязательны полный локальный gate,
+  зелёные `app`, `database`, `e2e` и production smoke.
 ## Ближайший порядок
-1. Завершить пункт 6 YAFIT-421: полный gate, PR, CI, merge и production smoke.
-2. Только после production перейти к пункту 7 — подробному анализу.
+1. Завершить пункт 9 YAFIT-421: полный gate, PR, CI, merge и production smoke.
+2. После production план пострелизного упрощения Progress считается закрытым.
 3. Assistant, `app_feedback` и Yandex parity/cutover ведутся отдельно; после
    session linking подключить основной Assistant UI через sticky tenant routing.
 ## Отложено
