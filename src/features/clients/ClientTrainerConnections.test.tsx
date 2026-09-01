@@ -65,4 +65,15 @@ describe('ClientTrainerConnections safe disconnect', () => {
     expect(screen.getByText('Александр Ситников')).toBeVisible()
   })
 
+  it('shows an explicit copy action next to a newly created trainer code', async () => {
+    const user = userEvent.setup()
+    repository.create.mockResolvedValue('ABC123DEF456')
+    renderConnections()
+
+    await user.click(screen.getByRole('button', { name: 'Пригласить тренера' }))
+
+    expect(await screen.findByText(/Код для тренера:/)).toHaveTextContent('ABC123DEF456')
+    expect(screen.getByRole('button', { name: 'Скопировать код для тренера' })).toBeVisible()
+  })
+
 })
