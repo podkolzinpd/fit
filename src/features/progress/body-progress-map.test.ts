@@ -59,7 +59,8 @@ describe('body progress map', () => {
     expect(result.regions.map((region) => [region.group, region.percent])).toEqual([
       ['chest', 40], ['upper_back', 36],
     ])
-    expect(result.regions[0]!.metricLabel).toBe('Лучший результат зоны')
+    expect(result.description).toBeUndefined()
+    expect(result.regions[0]!.metricLabel).toBe('Результат зоны')
     expect(result.regions[0]!.primaryDetail).toBe(
       'Жим гантелей лёжа (Гантели) · Объём за тренировку: 1 000 → 1 400 кг',
     )
