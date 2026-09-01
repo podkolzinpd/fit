@@ -1979,17 +1979,17 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .body-progress-map > header span { color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label); text-transform:uppercase }
 .body-progress-map > header h3 { margin:3px 0 0; font-size:var(--type-section-size); line-height:var(--leading-tight) }
 .body-progress-map > header p { margin:3px 0 0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
-.body-progress-modes { position:relative; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); justify-self:start; width:min(100%,164px); gap:0; padding:0; border:0; border-radius:9px; background:transparent }
+.body-progress-modes { position:relative; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); justify-self:center; width:min(100%,164px); gap:0; padding:0; border:0; border-radius:9px; background:transparent }
 .body-progress-modes::before { content:""; position:absolute; z-index:0; inset:4px 0; border:1px solid var(--border); border-radius:9px; background:var(--surface-sunken); pointer-events:none }
 .body-progress-modes button { position:relative; z-index:1; isolation:isolate; min-height:44px; padding:4px 6px; border:0; border-radius:7px; background:transparent; color:var(--muted); box-shadow:none; font-size:11px; font-weight:var(--weight-semibold) }
 .body-progress-modes button[aria-pressed="true"] { color:var(--accent-strong); box-shadow:none}
 .body-progress-modes button[aria-pressed="true"]::before { content:""; position:absolute; z-index:-1; inset:5px 1px; border-radius:7px; background:var(--surface-raised); pointer-events:none }
 .body-progress-figure-shell { display:grid; justify-items:center; gap:8px; min-width:0 }
-.body-progress-sides { position:relative; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0; width:min(100%,144px); padding:0; border:0; border-radius:8px; background:transparent }
-.body-progress-sides::before { content:""; position:absolute; z-index:0; inset:4px 0; border:1px solid color-mix(in srgb,var(--border) 72%,transparent); border-radius:8px; background:color-mix(in srgb,var(--surface-sunken) 78%,transparent); pointer-events:none }
-.body-progress-sides button { position:relative; z-index:1; isolation:isolate; min-height:44px; padding:3px 5px; border:0; border-radius:6px; background:transparent; color:var(--muted); box-shadow:none; font-size:11px; font-weight:var(--weight-semibold) }
+.body-progress-sides { position:relative; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0; width:min(100%,120px); height:28px; padding:0; border:0; border-radius:var(--radius-pill); background:transparent }
+.body-progress-sides::before { content:""; position:absolute; z-index:0; inset:2px 0; border:1px solid color-mix(in srgb,var(--border) 72%,transparent); border-radius:var(--radius-pill); background:color-mix(in srgb,var(--surface-sunken) 78%,transparent); pointer-events:none }
+.body-progress-sides button { position:relative; z-index:1; isolation:isolate; min-height:44px; margin:-8px 0; padding:3px 4px; border:0; border-radius:var(--radius-pill); background:transparent; color:var(--muted); box-shadow:none; font-size:10px; font-weight:var(--weight-semibold) }
 .body-progress-sides button[aria-pressed="true"] { color:var(--fg-strong); box-shadow:none}
-.body-progress-sides button[aria-pressed="true"]::before { content:""; position:absolute; z-index:-1; inset:5px 1px; border-radius:6px; background:var(--surface-raised); pointer-events:none }
+.body-progress-sides button[aria-pressed="true"]::before { content:""; position:absolute; z-index:-1; inset:11px 1px; border-radius:var(--radius-pill); background:var(--surface-raised); pointer-events:none }
 .body-progress-sides button:disabled { opacity:.38 }
 .body-progress-visual { position:relative; width:min(100%,210px); aspect-ratio:476/1000; justify-self:center; overflow:hidden; touch-action:pan-y; border-radius:var(--radius-lg); background:transparent }
 .body-progress-overlay { position:absolute; inset:0; width:100%; height:100%; overflow:visible; filter:none; user-select:none }
@@ -3279,9 +3279,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .body-progress-modes::before { border-color:var(--border); background:var(--surface-sunken) }
 .progress-identity .body-progress-modes button { min-height:44px; border-radius:7px; color:var(--muted); font-size:11px; font-weight:500 }
 .progress-identity .body-progress-modes button[aria-pressed='true'] { color:var(--fg); box-shadow:none}
-.progress-identity .body-progress-sides { width:min(100%,144px); border:0; border-radius:8px; background:transparent }
+.progress-identity .body-progress-sides { width:min(100%,120px); border:0; border-radius:var(--radius-pill); background:transparent }
 .progress-identity .body-progress-sides::before { border-color:var(--border); background:var(--surface-sunken) }
-.progress-identity .body-progress-sides button { min-height:44px; border-radius:6px; font-size:11px; font-weight:500 }
+.progress-identity .body-progress-sides button { min-height:44px; border-radius:var(--radius-pill); font-size:10px; font-weight:500 }
 .progress-identity .body-progress-sides button[aria-pressed='true'] { color:var(--fg); box-shadow:none}
 .progress-identity .body-progress-visual { width:min(100%,210px); border:1px solid var(--border); border-radius:16px; background:var(--surface-sunken) }
 .progress-identity .body-progress-overlay { filter:none }
@@ -4558,9 +4558,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-identity .body-progress-modes::before { border-color:var(--border); background:var(--surface-sunken) }
 .trainer-progress-identity .body-progress-modes button { min-height:44px; border-radius:7px; color:var(--secondary-label-fg); font-size:11px; font-weight:500 }
 .trainer-progress-identity .body-progress-modes button[aria-pressed='true'] { color:var(--fg); box-shadow:none}
-.trainer-progress-identity .body-progress-sides { width:min(100%,144px); border:0; border-radius:8px; background:transparent }
+.trainer-progress-identity .body-progress-sides { width:min(100%,120px); border:0; border-radius:var(--radius-pill); background:transparent }
 .trainer-progress-identity .body-progress-sides::before { border-color:var(--border); background:var(--surface-sunken) }
-.trainer-progress-identity .body-progress-sides button { min-height:44px; border-radius:6px; font-size:11px; font-weight:500 }
+.trainer-progress-identity .body-progress-sides button { min-height:44px; border-radius:var(--radius-pill); font-size:10px; font-weight:500 }
 .trainer-progress-identity .body-progress-sides button[aria-pressed='true'] { color:var(--fg); box-shadow:none}
 .trainer-progress-identity .body-progress-sides button:disabled { opacity:1; color:var(--secondary-label-fg) }
 .trainer-progress-identity .body-progress-visual { width:min(100%,210px); border:1px solid var(--border); border-radius:16px; background:var(--surface-sunken) }
