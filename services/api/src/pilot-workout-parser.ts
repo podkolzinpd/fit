@@ -1,6 +1,5 @@
 import type { QueryResultRow } from 'pg'
 
-import { hashPilotSessionToken } from './auth/pilot-session-token.js'
 import {
   YandexWorkoutParser,
   type WorkoutParseResponse,
@@ -8,9 +7,9 @@ import {
 } from './legacy-workout-parser.js'
 import type { DatabasePool } from './db/types.js'
 import {
-  PilotSessionInvalidError,
-  withYandexPilotSessionTransaction,
-} from './db/yandex-pilot-transaction.js'
+  withYandexActorSession,
+  type YandexActorSessionInput,
+} from './yandex-actor-session.js'
 
 interface ExerciseRow extends QueryResultRow {
   id: string
@@ -19,7 +18,7 @@ interface ExerciseRow extends QueryResultRow {
 }
 
 export interface PilotWorkoutParser {
-  parse(sessionToken: string, value: unknown): Promise<WorkoutParseResponse>
+  parse(session: YandexActorSessionInput, value: unknown): Promise<WorkoutParseResponse>
 }
 
 export class DatabasePilotWorkoutParser implements PilotWorkoutParser {
@@ -28,12 +27,10 @@ export class DatabasePilotWorkoutParser implements PilotWorkoutParser {
     private readonly parser: YandexWorkoutParser,
   ) {}
 
-  async parse(sessionToken: string, value: unknown): Promise<WorkoutParseResponse> {
-    const tokenHash = hashPilotSessionToken(sessionToken)
-    if (tokenHash === undefined) throw new PilotSessionInvalidError()
-    const customCatalog = await withYandexPilotSessionTransaction(
+  async parse(session: YandexActorSessionInput, value: unknown): Promise<WorkoutParseResponse> {
+    const customCatalog = await withYandexActorSession(
       this.pool,
-      tokenHash,
+      session,
       async (client) => {
         const rows = await client.query<ExerciseRow>(`
           select exercise.id, exercise.name, exercise.input_kind

@@ -132,9 +132,37 @@ Opaque session token хранится в browser localStorage только дл�
 после перезагрузки, передаётся API в `x-fit-session`, не попадает в URL, UI,
 логи или аналитику и отзывается через API при выходе. Как и UUID allowlist, он
 доступен исполняемому frontend JavaScript, поэтому защита от доступа к данным
-остаётся на backend ownership/tenant-проверках. Этот rollout пока открывает
-только экран проверки сессии и не переключает основные вкладки с Supabase на
-Yandex API.
+остаётся на backend ownership/tenant-проверках.
+
+Sticky routing основного Trainer Assistant имеет отдельный default-off rollout:
+
+```text
+VITE_YANDEX_ASSISTANT_ROUTING_ENABLED=true
+VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS=<one-auth-user-uuid>
+```
+
+Флаг включается только при точном `true`; пустой/отсутствующий allowlist или
+профиль вне него сохраняет прежний Supabase Assistant. Для первой репетиции в
+списке должен быть ровно один заранее перенесённый тестовый trainer UUID. Этот
+же UUID обязан входить в `VITE_YANDEX_APP_SESSION_PILOT_USER_IDS`, иметь
+действующую `read_write` app-session и серверное назначение `provider=yandex`,
+`access_mode=read_write`. UUID виден во frontend bundle и не
+является авторизацией: Yandex API повторно разрешает actor через opaque session,
+ownership и tenant-проверки.
+
+После выбора backend все зависимости Assistant — история, turns/actions,
+упражнения, разбор тренировки и сводки — используют только `x-fit-session` и
+Yandex API. Ошибка Yandex показывается пользователю; автоматического fallback
+на Supabase для отдельного запроса нет, чтобы один сценарий не создал записи в
+двух БД. Несовпадение UUID текущего FIT actor и Yandex app-session блокирует
+загрузку данных. Остальные вкладки и все пользователи вне rollout продолжают
+работать через Supabase.
+
+Изменение обеих build-time переменных требует нового deployment. Безопасный
+rollback — установить `VITE_YANDEX_ASSISTANT_ROUTING_ENABLED=false` (или убрать
+pilot UUID) и выполнить новый deployment; данные между backend автоматически
+не синхронизируются, поэтому переключение допускается только после проверки
+export/import и отсутствия незавершённых mutations.
 
 Светлая и тёмная палитры Foundation UI Identity v1 доступны всем пользователям
 и выбираются обычной настройкой темы в профиле. Отдельных Figma/dark pilot
@@ -184,12 +212,11 @@ YANDEX_CLOUD_MODEL_ID=yandexgpt
 Yandex Cloud только агрегаты завершённых тренировок и сохраняет usage модели
 для контроля стоимости.
 
-Stage API для Assistant turn (`POST /v1/assistant/turn`) использует opaque
-`x-fit-pilot-session`, actor-context в PostgreSQL и deterministic fallback для
-маленькой болталки. Отдельный Supabase JWT, OAuth Client secret или новый
-YandexGPT secret для этого endpoint не нужны. Наличие endpoint не переключает
-production Assistant: основной UI переедет на него только отдельным sticky tenant
-routing rollout.
+Stage API для Assistant turn (`POST /v1/assistant/turn`) принимает ровно один
+opaque credential: read-only `x-fit-pilot-session` для изолированного pilot UI
+или read-write `x-fit-session` для sticky-routed основного Assistant. Оба вместе
+отклоняются. Actor-context задаётся PostgreSQL-транзакцией; отдельный Supabase
+JWT, OAuth Client secret или новый YandexGPT secret endpoint-у не нужны.
 
 ## Google OAuth
 

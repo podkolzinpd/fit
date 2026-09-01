@@ -216,6 +216,9 @@ const app = buildApp(
       ? {}
       : { pilotTrainingSummaryGenerator }),
     ...(pilotTrainingSummaryReader === undefined ? {} : { pilotTrainingSummaryReader }),
+    ...(pilotTrainingSummaryReader === undefined
+      ? {}
+      : { pilotTrainingSummaryPublisher: pilotTrainingSummaryReader }),
     ...(legacyWorkoutParser === undefined ? {} : { legacyWorkoutParser }),
     ...(legacySummaryHandler === undefined ? {} : { legacySummaryHandler }),
   },

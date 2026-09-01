@@ -4,10 +4,12 @@ import {
   getYandexAppSessionEntryConfig,
   getYandexSessionLinkingConfig,
   isAssistantNavPilotEnabled,
+  isAssistantRouteEnabled,
   isProductionAssistantPilotEmail,
   isTodayGreetingPilotEnabled,
   isTodayStartRedesignEnabled,
   isWearablesPilotEnabled,
+  isYandexAssistantRoutingPilotEnabled,
   isYandexAppSessionPilotEnabled,
   isYandexSessionLinkingPilotEnabled,
   trainerHomePath,
@@ -305,5 +307,47 @@ describe('Yandex app session pilot flag', () => {
 
     vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'http://stage.example.test')
     expect(getYandexAppSessionEntryConfig()).toBeNull()
+  })
+})
+
+describe('Yandex Assistant sticky routing flag', () => {
+  it('is default-off even for an allowlisted user', () => {
+    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS', 'trainer-1')
+    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_ENABLED', '')
+    expect(isYandexAssistantRoutingPilotEnabled('trainer-1')).toBe(false)
+    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_ENABLED', 'TRUE')
+    expect(isYandexAssistantRoutingPilotEnabled('trainer-1')).toBe(false)
+  })
+
+  it('uses one trimmed non-empty pilot UUID independently', () => {
+    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS', ' , trainer-1, ')
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', 'client-9')
+    expect(isYandexAssistantRoutingPilotEnabled('trainer-1')).toBe(true)
+    expect(isYandexAssistantRoutingPilotEnabled('client-9')).toBe(false)
+  })
+
+  it('fails closed when more than one sticky tenant is configured', () => {
+    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS', 'trainer-1,trainer-2')
+
+    expect(isYandexAssistantRoutingPilotEnabled('trainer-1')).toBe(false)
+    expect(isYandexAssistantRoutingPilotEnabled('trainer-2')).toBe(false)
+  })
+
+  it('is disabled for everyone without its own allowlist', () => {
+    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS', '')
+    expect(isYandexAssistantRoutingPilotEnabled('trainer-1')).toBe(false)
+  })
+
+  it('opens the existing Assistant route for the independent sticky rollout', () => {
+    vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'false')
+    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS', 'trainer-1')
+
+    expect(isAssistantRouteEnabled('trainer-1')).toBe(true)
+    expect(isAssistantRouteEnabled('trainer-2')).toBe(false)
   })
 })

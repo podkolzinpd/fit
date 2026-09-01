@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { yandexPilotQueries } from '../queries/yandex-pilot.queries'
+import type { YandexApiAccessMode } from '../queries/yandex-pilot.queries'
 
 const profilePayloadSchema = z.object({
   id: z.uuid(),
@@ -479,10 +480,14 @@ export const yandexPilotRepository = {
       invitations: result.data.invitations,
     }
   },
-  async listTrainingData(apiBaseUrl: string, sessionToken: string): Promise<YandexPilotTrainingData> {
+  async listTrainingData(
+    apiBaseUrl: string,
+    sessionToken: string,
+    accessMode: YandexApiAccessMode = 'read_only',
+  ): Promise<YandexPilotTrainingData> {
     let response: Response
     try {
-      response = await yandexPilotQueries.listTrainingData(apiBaseUrl, sessionToken)
+      response = await yandexPilotQueries.listTrainingData(apiBaseUrl, sessionToken, accessMode)
     } catch {
       throw new Error('Не удалось подключиться к Yandex Cloud stage.')
     }
@@ -502,9 +507,10 @@ export const yandexPilotRepository = {
     sessionToken: string,
     text: string,
     systemCatalog: readonly unknown[],
+    accessMode: YandexApiAccessMode = 'read_only',
   ): Promise<YandexPilotParsedWorkout> {
     const response = await aiResponse(() => yandexPilotQueries.parseWorkout(
-      apiBaseUrl, sessionToken, text, systemCatalog,
+      apiBaseUrl, sessionToken, text, systemCatalog, accessMode,
     ))
     const result = parsedWorkoutSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат разбора тренировки.')
@@ -528,9 +534,10 @@ export const yandexPilotRepository = {
     apiBaseUrl: string,
     sessionToken: string,
     clientId: string,
+    accessMode: YandexApiAccessMode = 'read_only',
   ): Promise<YandexPilotStoredSummary[]> {
     const response = await aiResponse(() => yandexPilotQueries.listTrainingSummaries(
-      apiBaseUrl, sessionToken, clientId,
+      apiBaseUrl, sessionToken, clientId, accessMode,
     ))
     const result = summaryListSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат ИИ-анализа.')
@@ -543,13 +550,30 @@ export const yandexPilotRepository = {
     periodStart: string,
     periodEnd: string,
     force = false,
+    accessMode: YandexApiAccessMode = 'read_only',
   ): Promise<{ data: YandexPilotStoredSummary; cached: boolean }> {
     const response = await aiResponse(() => yandexPilotQueries.generateTrainingSummary(
-      apiBaseUrl, sessionToken, clientId, periodStart, periodEnd, force,
+      apiBaseUrl, sessionToken, clientId, periodStart, periodEnd, force, accessMode,
     ))
     const result = generatedSummarySchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый результат ИИ-анализа.')
     return result.data
+  },
+  async publishTrainingSummary(
+    apiBaseUrl: string,
+    sessionToken: string,
+    summaryId: string,
+    clientSummary: Record<string, unknown>,
+    expectedVersion: number,
+  ): Promise<void> {
+    const response = await commandResponse(() => yandexPilotQueries.publishTrainingSummary(
+      apiBaseUrl,
+      sessionToken,
+      summaryId,
+      clientSummary,
+      expectedVersion,
+    ))
+    if (response.status !== 204) throw new Error('Stage не подтвердил публикацию ИИ-анализа.')
   },
   async createInvitation(
     apiBaseUrl: string,

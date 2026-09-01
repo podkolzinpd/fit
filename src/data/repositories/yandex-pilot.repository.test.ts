@@ -15,6 +15,7 @@ const queries = vi.hoisted(() => ({
   sendAssistantTurn: vi.fn(),
   listTrainingSummaries: vi.fn(),
   generateTrainingSummary: vi.fn(),
+  publishTrainingSummary: vi.fn(),
   claimInvitation: vi.fn(),
   createInvitation: vi.fn(),
   leaveClient: vi.fn(),
@@ -193,6 +194,7 @@ describe('yandexPilotRepository', () => {
     queries.sendAssistantTurn.mockReset()
     queries.listTrainingSummaries.mockReset()
     queries.generateTrainingSummary.mockReset()
+    queries.publishTrainingSummary.mockReset()
     queries.claimInvitation.mockReset()
     queries.createInvitation.mockReset()
     queries.leaveClient.mockReset()
@@ -281,6 +283,25 @@ describe('yandexPilotRepository', () => {
       'https://stage.example.test', 's'.repeat(43), CLIENT_ID,
       '2026-08-01', '2026-08-26',
     )).rejects.toThrow('Для выбранного периода нет завершённых тренировок')
+  })
+
+  it('publishes a summary through the read-write command contract', async () => {
+    queries.publishTrainingSummary.mockResolvedValue(new Response(null, { status: 204 }))
+
+    await expect(yandexPilotRepository.publishTrainingSummary(
+      'https://stage.example.test',
+      'a'.repeat(43),
+      CLIENT_ID,
+      { headline: 'Стабильный прогресс' },
+      2,
+    )).resolves.toBeUndefined()
+    expect(queries.publishTrainingSummary).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      'a'.repeat(43),
+      CLIENT_ID,
+      { headline: 'Стабильный прогресс' },
+      2,
+    )
   })
 
   it('accepts the explicit read-only session contract', async () => {

@@ -3,13 +3,13 @@ import { useAuth } from './auth-context'
 import { trackPageView } from '../shared/yandex-metrika'
 import { AppLayout } from './AppLayout'
 import { AppViewportProvider } from './app-viewport'
-import { isAssistantNavPilotEnabled, trainerHomePath } from './feature-flags'
+import { isAssistantRouteEnabled, trainerHomePath } from './feature-flags'
 import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage, YandexAppSessionPage, YandexPilotCallbackPage } from '../features/auth'
 import { ClientDetailPage, ClientFormPage, ClientProfilePage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyGoalPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
-import { AssistantHistoryPage } from '../features/assistant'
+import { YandexAssistantRoute } from '../features/assistant'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
 import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canonical-client-route'
 
@@ -34,7 +34,7 @@ function ClientOnly() {
 
 function AssistantPilotOnly() {
   const { actor } = useAuth()
-  return actor && isAssistantNavPilotEnabled(actor.userId, actor.email)
+  return actor && isAssistantRouteEnabled(actor.userId, actor.email)
     ? <Outlet />
     : <Navigate to={actor?.role === 'client' ? '/me' : trainerHomePath()} replace />
 }
@@ -45,7 +45,7 @@ function Home() {
 }
 
 function AssistantPage() {
-  return <AssistantHistoryPage />
+  return <YandexAssistantRoute />
 }
 
 const router = createBrowserRouter([

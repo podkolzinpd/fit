@@ -10,40 +10,39 @@ import {
   type AssistantMessage,
   type AssistantStoredAction,
 } from './assistant-state.js'
-import { hashPilotSessionToken } from './auth/pilot-session-token.js'
 import type { DatabasePool } from './db/types.js'
 import {
-  PilotSessionInvalidError,
-  withYandexPilotSessionTransaction,
-} from './db/yandex-pilot-transaction.js'
+  withYandexActorSession,
+  type YandexActorSessionInput,
+} from './yandex-actor-session.js'
 
 export interface PilotAssistantState {
-  listConversations(sessionToken: string): Promise<AssistantConversation[]>
+  listConversations(session: YandexActorSessionInput): Promise<AssistantConversation[]>
   createConversation(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     title: string | null,
   ): Promise<AssistantConversation>
   listMessages(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     conversationId: string,
   ): Promise<AssistantMessage[]>
   listActions(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     conversationId: string | null,
   ): Promise<AssistantStoredAction[]>
   applyAction(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     actionId: string,
     input: Record<string, unknown>,
     expectedVersion: number,
   ): Promise<Record<string, unknown>>
   completeSummary(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     actionId: string,
     expectedVersion: number,
   ): Promise<Record<string, unknown>>
   cancelAction(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     actionId: string,
     expectedVersion: number,
   ): Promise<Record<string, unknown>>
@@ -53,58 +52,56 @@ export class DatabasePilotAssistantState implements PilotAssistantState {
   constructor(private readonly pool: DatabasePool) {}
 
   private withSession<Result>(
-    sessionToken: string,
-    work: Parameters<typeof withYandexPilotSessionTransaction<Result>>[2],
+    session: YandexActorSessionInput,
+    work: Parameters<typeof withYandexActorSession<Result>>[2],
   ): Promise<Result> {
-    const tokenHash = hashPilotSessionToken(sessionToken)
-    if (tokenHash === undefined) throw new PilotSessionInvalidError()
-    return withYandexPilotSessionTransaction(this.pool, tokenHash, work)
+    return withYandexActorSession(this.pool, session, work)
   }
 
-  listConversations(sessionToken: string) {
-    return this.withSession(sessionToken, listAssistantConversations)
+  listConversations(session: YandexActorSessionInput) {
+    return this.withSession(session, listAssistantConversations)
   }
 
-  createConversation(sessionToken: string, title: string | null) {
-    return this.withSession(sessionToken, (client) =>
+  createConversation(session: YandexActorSessionInput, title: string | null) {
+    return this.withSession(session, (client) =>
       createAssistantConversation(client, title))
   }
 
-  listMessages(sessionToken: string, conversationId: string) {
-    return this.withSession(sessionToken, (client) =>
+  listMessages(session: YandexActorSessionInput, conversationId: string) {
+    return this.withSession(session, (client) =>
       listAssistantMessages(client, conversationId))
   }
 
-  listActions(sessionToken: string, conversationId: string | null) {
-    return this.withSession(sessionToken, (client) =>
+  listActions(session: YandexActorSessionInput, conversationId: string | null) {
+    return this.withSession(session, (client) =>
       listAssistantActions(client, conversationId))
   }
 
   applyAction(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     actionId: string,
     input: Record<string, unknown>,
     expectedVersion: number,
   ) {
-    return this.withSession(sessionToken, (client) =>
+    return this.withSession(session, (client) =>
       applyAssistantAction(client, actionId, input, expectedVersion))
   }
 
   completeSummary(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     actionId: string,
     expectedVersion: number,
   ) {
-    return this.withSession(sessionToken, (client) =>
+    return this.withSession(session, (client) =>
       completeAssistantSummary(client, actionId, expectedVersion))
   }
 
   cancelAction(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     actionId: string,
     expectedVersion: number,
   ) {
-    return this.withSession(sessionToken, (client) =>
+    return this.withSession(session, (client) =>
       cancelAssistantAction(client, actionId, expectedVersion))
   }
 }

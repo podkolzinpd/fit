@@ -1,15 +1,17 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronRightIcon } from '../../shared/icons'
 import { useAuth } from '../../app/auth-context'
 import { useAppViewport } from '../../app/app-viewport'
-import { assistantRepository, type AssistantOrchestratorAction } from '../../data/repositories/assistant.repository'
-import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
+import {
+  supabaseAssistantBackend,
+  type AssistantBackend,
+  type AssistantOrchestratorAction,
+} from '../../data/repositories/assistant.repository'
 import { VoiceInputButton, type VoiceInputPhase } from '../voice-input'
 import { clientSchema } from '../../shared/validation'
 import { currentTimeInTimeZone, formatLocalDate, todayInTimeZone } from '../../shared/local-date'
 import type { ExerciseSnapshot, WorkoutDraft } from '../../shared/domain'
-import { useExerciseCatalog } from '../exercises'
 import { parseWorkoutWithLlm } from '../workouts/llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
@@ -24,7 +26,9 @@ import { anchorAssistantViewport } from './assistant-viewport'
 
 type FailedTurn = { turnId: string; message: string }
 
-export function AssistantHistoryPage() {
+export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
+  backend?: AssistantBackend
+}) {
   const { actor } = useAuth()
   const { keyboardOpen } = useAppViewport()
   const queryClient = useQueryClient()
@@ -46,12 +50,24 @@ export function AssistantHistoryPage() {
   const [savingSummaryIds, setSavingSummaryIds] = useState<string[]>([])
   const [savedSummaryIds, setSavedSummaryIds] = useState<string[]>([])
   const [actionVersions, setActionVersions] = useState<Record<string, number>>({})
+  const [loadRetry, setLoadRetry] = useState(0)
+  const [loadFailed, setLoadFailed] = useState(false)
   const conversationRef = useRef<string | undefined>(undefined)
   const loadSequence = useRef(0)
   const threadRef = useRef<HTMLElement>(null)
   const voiceBaseTextRef = useRef('')
   const voiceConversationRef = useRef<string | undefined>(undefined)
   const composerInputRef = useRef<HTMLTextAreaElement>(null)
+  const assistantRepository = backend.assistant
+  const customExercises = useQuery({
+    queryKey: ['assistant-exercises', backend.cacheKey, actor?.userId],
+    queryFn: () => backend.listCustomExercises(),
+    enabled: actor !== null,
+  })
+  const catalog = {
+    exercises: [...backend.systemExercises, ...(customExercises.data ?? [])],
+    loading: customExercises.isLoading,
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -69,13 +85,18 @@ export function AssistantHistoryPage() {
     setConversations([])
     setMessages([])
     setLoadingMessages(false)
+    setLoadFailed(false)
     void (async () => {
-      const { data: conversations } = await assistantRepository.listConversations()
+      const conversationResult = await assistantRepository.listConversations()
+      if (conversationResult.error) throw conversationResult.error
+      const conversations = conversationResult.data
       const today = todayInTimeZone(actor.timezone)
       let available = (conversations ?? []) as AssistantConversation[]
       let conversation = selectTodayConversation(available, actor.timezone, today)
       if (!conversation) {
-        conversation = (await assistantRepository.createConversation(actor.userId)).data as AssistantConversation | undefined
+        const created = await assistantRepository.createConversation(actor.userId)
+        if (created.error) throw created.error
+        conversation = created.data ?? undefined
         if (conversation) available = [conversation, ...available]
       }
       if (cancelled) return
@@ -85,9 +106,15 @@ export function AssistantHistoryPage() {
       setTodayConversationId(current?.id ?? conversation.id)
       setConversationId(conversation.id)
       conversationRef.current = conversation.id
-    })()
+      setLoadFailed(false)
+    })().catch(() => {
+      if (cancelled) return
+      setLoadingMessages(false)
+      setLoadFailed(true)
+      setError('Не удалось загрузить сессию ассистента. Попробуйте ещё раз.')
+    })
     return () => { cancelled = true }
-  }, [actor])
+  }, [actor, assistantRepository, loadRetry])
 
   useEffect(() => {
     if (!conversationId) return
@@ -96,9 +123,13 @@ export function AssistantHistoryPage() {
     setMessages([])
     setLoadingMessages(true)
     void (async () => {
-      const [{ data }, { data: actions }] = await Promise.all([
+      const [messagesResult, actionsResult] = await Promise.all([
         assistantRepository.listMessages(conversationId), assistantRepository.listActions(conversationId),
       ])
+      if (messagesResult.error) throw messagesResult.error
+      if (actionsResult.error) throw actionsResult.error
+      const data = messagesResult.data
+      const actions = actionsResult.data
       if (sequence !== loadSequence.current || conversationRef.current !== conversationId) return
       const merged = mergeAssistantMessages((data ?? []) as AssistantMessage[], (actions ?? []) as Parameters<typeof mergeAssistantMessages>[1])
       const versions: Record<string, number> = {}
@@ -106,8 +137,14 @@ export function AssistantHistoryPage() {
       setMessages(merged)
       setActionVersions(versions)
       setLoadingMessages(false)
-    })()
-  }, [conversationId])
+      setLoadFailed(false)
+    })().catch(() => {
+      if (sequence !== loadSequence.current) return
+      setLoadingMessages(false)
+      setLoadFailed(true)
+      setError('Не удалось загрузить сообщения. Попробуйте ещё раз.')
+    })
+  }, [assistantRepository, conversationId])
 
   const readOnly = isReadOnlyConversation(conversationId, todayConversationId)
   const voiceActive = voicePhase !== 'idle'
@@ -231,7 +268,7 @@ export function AssistantHistoryPage() {
     setRunningSummaryIds((current) => [...current, messageId])
     setError(undefined)
     try {
-      await trainingSummariesRepository.generate(payload.clientId, payload.periodStart, payload.periodEnd, false)
+      await backend.generateTrainingSummary(payload.clientId, payload.periodStart, payload.periodEnd, false)
       if (action.id) {
         const version = actionVersions[action.id] ?? 1
         const result = await assistantRepository.completeSummary(action.id, version)
@@ -266,10 +303,10 @@ export function AssistantHistoryPage() {
     setSavingSummaryIds((current) => [...current, messageId])
     setError(undefined)
     try {
-      const summaries = await trainingSummariesRepository.listForTrainer(clientId)
+      const summaries = await backend.listTrainingSummaries(clientId)
       const summary = summaries.find((item) => item.id === summaryId)
       if (!summary) throw new Error('assistant_summary_not_found')
-      await trainingSummariesRepository.publish(summary, summary.client)
+      await backend.publishTrainingSummary(summary, summary.client)
       setSavedSummaryIds((current) => [...current, messageId])
     } catch {
       setError('Не удалось сохранить сводку в прогресс. Попробуйте ещё раз.')
@@ -312,7 +349,7 @@ export function AssistantHistoryPage() {
     let cancelled = false
     void Promise.all(summaries.map(async ({ messageId, summaryId, clientId }) => {
       try {
-        const rows = await trainingSummariesRepository.listForTrainer(clientId)
+        const rows = await backend.listTrainingSummaries(clientId)
         return rows.some((row) => row.id === summaryId && row.published) ? messageId : undefined
       } catch { return undefined }
     })).then((savedIds) => {
@@ -321,7 +358,7 @@ export function AssistantHistoryPage() {
       if (found.length > 0) setSavedSummaryIds((current) => [...new Set([...current, ...found])])
     })
     return () => { cancelled = true }
-  }, [messages])
+  }, [backend, messages])
 
   return <main className="assistant-page">
     <h1 className="sr-only">Ассистент</h1>
@@ -361,10 +398,15 @@ export function AssistantHistoryPage() {
         if (!showContent) return null
         return <article key={message.id} className="assistant-message assistant-message-assistant" data-message-kind="assistant"><AssistantMessageContent content={message.content} /></article>
       })}
-      {error && <div className="assistant-message-error" data-message-kind="error" role="alert"><span>{error}</span>{failedTurn && <button type="button" onClick={() => void send(undefined, failedTurn)} disabled={sending}>Повторить</button>}</div>}
+      {customExercises.isError && <div className="assistant-message-error" data-message-kind="error" role="alert"><span>Не удалось загрузить каталог упражнений.</span><button type="button" onClick={() => void customExercises.refetch()}>Повторить</button></div>}
+      {error && <div className="assistant-message-error" data-message-kind="error" role="alert"><span>{error}</span>{failedTurn
+        ? <button type="button" onClick={() => void send(undefined, failedTurn)} disabled={sending}>Повторить</button>
+        : loadFailed
+          ? <button type="button" onClick={() => { setError(undefined); setLoadRetry((value) => value + 1) }}>Повторить</button>
+          : null}</div>}
     </section>
     {latestActiveAction && <section className="assistant-context-panel" data-message-kind="action-result" aria-label="Текущий контекст ассистента">
-      <AssistantAction action={latestActiveAction.action} timezone={actor?.timezone} workoutDraftStorageKey={workoutDraftStorageKey} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onApplyAction={(input) => applyAction(latestActiveAction.message.id, latestActiveAction.action, input)} onSuggestion={(value) => void send(value)} onCancel={() => { void (async () => { const cancelled = await cancelAction(latestActiveAction.message.id, latestActiveAction.action); if (!cancelled) return; if (workoutDraftStorageKey) clearAssistantWorkoutDraft(workoutDraftStorageKey); if (!latestActiveAction.action.id) await send('Отменить') })() }} onConfirm={() => void confirmSummary(latestActiveAction.message.id, latestActiveAction.action)} onConfirmClient={(draft) => void confirmClient(latestActiveAction.message.id, latestActiveAction.action, draft)} running={runningSummaryIds.includes(latestActiveAction.message.id) || runningClientIds.includes(latestActiveAction.message.id)} completed={completedSummaryIds.includes(latestActiveAction.message.id) || completedClientIds.includes(latestActiveAction.message.id) || latestActiveAction.action.lifecycleStatus === 'applied'} />
+      <AssistantAction action={latestActiveAction.action} timezone={actor?.timezone} catalog={catalog} parseWorkout={(text, systemCatalog) => backend.parseWorkout(text, systemCatalog)} workoutDraftStorageKey={workoutDraftStorageKey} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onApplyAction={(input) => applyAction(latestActiveAction.message.id, latestActiveAction.action, input)} onSuggestion={(value) => void send(value)} onCancel={() => { void (async () => { const cancelled = await cancelAction(latestActiveAction.message.id, latestActiveAction.action); if (!cancelled) return; if (workoutDraftStorageKey) clearAssistantWorkoutDraft(workoutDraftStorageKey); if (!latestActiveAction.action.id) await send('Отменить') })() }} onConfirm={() => void confirmSummary(latestActiveAction.message.id, latestActiveAction.action)} onConfirmClient={(draft) => void confirmClient(latestActiveAction.message.id, latestActiveAction.action, draft)} running={runningSummaryIds.includes(latestActiveAction.message.id) || runningClientIds.includes(latestActiveAction.message.id)} completed={completedSummaryIds.includes(latestActiveAction.message.id) || completedClientIds.includes(latestActiveAction.message.id) || latestActiveAction.action.lifecycleStatus === 'applied'} />
     </section>}
     <form className="assistant-composer" autoComplete="off" onSubmit={(event) => { event.preventDefault(); void send() }}>
       <label className="sr-only" htmlFor="assistant-history-message">Сообщение ассистенту</label>
@@ -410,6 +452,11 @@ type SummaryPayload = { step: string; clientId?: string; clientName?: string; tr
 type ClientDraftPayload = { step: string; fullName: string; gender?: 'male' | 'female'; ageYears?: number; heightCm?: number; goal?: string; initialWeightKg?: number; missing?: string[] }
 type WorkoutDraftPayload = { step: string; clientId: string; clientName: string; transcript?: string }
 type ProgramDraftPayload = { step: string; clientId: string; clientName: string; goal?: string | null; brief: string; sessions: unknown[] }
+type AssistantCatalog = { exercises: readonly ExerciseSnapshot[]; loading: boolean }
+type AssistantWorkoutParser = (
+  text: string,
+  systemCatalog: readonly ExerciseSnapshot[],
+) => Promise<WorkoutParseResponse>
 
 function summaryPayload(action: AssistantOrchestratorAction): { clientId: string; periodStart: string; periodEnd: string } | undefined {
   const payload = action.payload as SummaryPayload
@@ -418,16 +465,16 @@ function summaryPayload(action: AssistantOrchestratorAction): { clientId: string
     : undefined
 }
 
-function AssistantAction({ action, timezone, workoutDraftStorageKey, onWorkoutSaved, onApplyAction, onSuggestion, onCancel, onConfirm, onConfirmClient, running, completed }: { action: AssistantOrchestratorAction; timezone?: string; workoutDraftStorageKey?: string; onWorkoutSaved: () => void; onApplyAction: (input: object) => Promise<void>; onSuggestion: (value: string) => void; onCancel: () => void; onConfirm: () => void; onConfirmClient: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {
+function AssistantAction({ action, timezone, catalog, parseWorkout, workoutDraftStorageKey, onWorkoutSaved, onApplyAction, onSuggestion, onCancel, onConfirm, onConfirmClient, running, completed }: { action: AssistantOrchestratorAction; timezone?: string; catalog: AssistantCatalog; parseWorkout: AssistantWorkoutParser; workoutDraftStorageKey?: string; onWorkoutSaved: () => void; onApplyAction: (input: object) => Promise<void>; onSuggestion: (value: string) => void; onCancel: () => void; onConfirm: () => void; onConfirmClient: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {
   const payload = action.payload as SummaryPayload
   const view = assistantActionView({ tool: action.tool, payload: action.payload })
   if (view === 'client-collection') return <ClientCollectionCard payload={payload as ClientDraftPayload} onSuggestion={onSuggestion} onCancel={onCancel} />
   if (view === 'client-confirm') return <ClientDraftCard payload={payload as ClientDraftPayload} onCancel={onCancel} onConfirm={onConfirmClient} running={running} completed={completed} />
   if (view === 'client-choices') return <AssistantClientChoices tool={action.tool} candidates={payload.candidates ?? []} onSuggestion={onSuggestion} onCancel={onCancel} />
-  if (view === 'workout-confirm') return <AssistantWorkoutDraftCard key={`workout-${payload.clientId}`} mode="confirm" payload={payload as WorkoutDraftPayload} timezone={timezone} storageKey={workoutDraftStorageKey} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} />
-  if (view === 'workout-collection') return <AssistantWorkoutDraftCard key={`workout-${payload.clientId}`} mode="collecting" payload={payload as WorkoutDraftPayload} timezone={timezone} storageKey={workoutDraftStorageKey} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} onFinish={() => onSuggestion('Готово, разобрать тренировку')} />
+  if (view === 'workout-confirm') return <AssistantWorkoutDraftCard key={`workout-${payload.clientId}`} mode="confirm" payload={payload as WorkoutDraftPayload} timezone={timezone} catalog={catalog} parseWorkout={parseWorkout} storageKey={workoutDraftStorageKey} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} />
+  if (view === 'workout-collection') return <AssistantWorkoutDraftCard key={`workout-${payload.clientId}`} mode="collecting" payload={payload as WorkoutDraftPayload} timezone={timezone} catalog={catalog} parseWorkout={parseWorkout} storageKey={workoutDraftStorageKey} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} onFinish={() => onSuggestion('Готово, разобрать тренировку')} />
   if (view === 'program-brief') return <ProgramBriefCard payload={payload} onCancel={onCancel} />
-  if (view === 'program-confirm') return <ProgramDraftCard payload={payload as ProgramDraftPayload} timezone={timezone} onApply={onApplyAction} onSaved={onWorkoutSaved} onCancel={onCancel} />
+  if (view === 'program-confirm') return <ProgramDraftCard payload={payload as ProgramDraftPayload} timezone={timezone} catalog={catalog} onApply={onApplyAction} onSaved={onWorkoutSaved} onCancel={onCancel} />
   if (view === 'summary-period' && typeof payload.clientName === 'string' && Array.isArray(payload.options)) return <SummaryPeriodChoices clientName={payload.clientName} options={payload.options} onSuggestion={onSuggestion} onCancel={onCancel} />
   if (view === 'summary-confirm' && summaryPayload(action) !== undefined) return <div className="assistant-progress-preview"><strong>{action.title}</strong><span>{action.description}</span><button type="button" className="primary" onClick={onConfirm} disabled={running || completed}>{completed ? 'Сводка сформирована' : running ? 'Формирую…' : 'Сформировать сводку'}</button>{!completed && <CancelActionButton onCancel={onCancel} />}<small>Будут использованы только завершённые тренировки за выбранный период.</small></div>
   return <ActionPreview action={action} onCancel={onCancel} />
@@ -455,8 +502,7 @@ function ClientCollectionCard({ payload, onSuggestion, onCancel }: { payload: Cl
   </div>
 }
 
-function ProgramDraftCard({ payload, timezone, onApply, onSaved, onCancel }: { payload: ProgramDraftPayload; timezone?: string; onApply: (input: object) => Promise<void>; onSaved: () => void; onCancel: () => void }) {
-  const catalog = useExerciseCatalog()
+function ProgramDraftCard({ payload, timezone, catalog, onApply, onSaved, onCancel }: { payload: ProgramDraftPayload; timezone?: string; catalog: AssistantCatalog; onApply: (input: object) => Promise<void>; onSaved: () => void; onCancel: () => void }) {
   const [sessions, setSessions] = useState(() => programSessions(payload.sessions))
   const [dates, setDates] = useState(() => sessions.map((_, index) => { const date = new Date(`${todayInTimeZone(timezone)}T12:00:00`); date.setDate(date.getDate() + index * 7); return date.toISOString().slice(0, 10) }))
   // One confirmation can be safely retried after a timeout: each planned
@@ -505,8 +551,7 @@ function parsedWorkoutExercises(result: WorkoutParseResponse, catalog: readonly 
   })
 }
 
-function AssistantWorkoutDraftCard({ mode, payload, timezone, storageKey, onCancel, onApply, onSaved, onFinish }: { mode: 'collecting' | 'confirm'; payload: WorkoutDraftPayload; timezone?: string; storageKey?: string; onCancel: () => void; onApply: (input: object) => Promise<void>; onSaved: () => void; onFinish?: () => void }) {
-  const catalog = useExerciseCatalog()
+function AssistantWorkoutDraftCard({ mode, payload, timezone, catalog, parseWorkout, storageKey, onCancel, onApply, onSaved, onFinish }: { mode: 'collecting' | 'confirm'; payload: WorkoutDraftPayload; timezone?: string; catalog: AssistantCatalog; parseWorkout: AssistantWorkoutParser; storageKey?: string; onCancel: () => void; onApply: (input: object) => Promise<void>; onSaved: () => void; onFinish?: () => void }) {
   const [restored] = useState(() => storageKey ? readAssistantWorkoutDraft(storageKey) : undefined)
   const [rawFragments, setRawFragments] = useState<string[]>(() => restored?.rawFragments ?? [])
   const [workoutDate, setWorkoutDate] = useState<string>(() => restored?.workoutDate ?? todayInTimeZone(timezone))
@@ -530,7 +575,10 @@ function AssistantWorkoutDraftCard({ mode, payload, timezone, storageKey, onCanc
       }
       setParsing(true); setError(undefined)
       try {
-        const next = await parseWorkoutWithLlm(normalized, catalog.exercises, { requireLocalDisambiguation: true })
+        const next = await parseWorkoutWithLlm(normalized, catalog.exercises, {
+          requireLocalDisambiguation: true,
+          remoteParser: parseWorkout,
+        })
         setResult((current) => appendWorkoutParse(current, next))
         if (receipt) setRawFragments((current) => [...current, normalized])
         if (!next.items.length && !next.unmatched.length) setError('Не удалось распознать упражнение. Уточните диктовку и попробуйте ещё раз.')

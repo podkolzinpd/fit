@@ -1,12 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import type { QueryResultRow } from 'pg'
 
-import { hashPilotSessionToken } from './auth/pilot-session-token.js'
 import type { DatabaseClient, DatabasePool } from './db/types.js'
-import {
-  PilotSessionInvalidError,
-  withYandexPilotSessionTransaction,
-} from './db/yandex-pilot-transaction.js'
 import {
   buildProgressData,
   requestYandexSummary,
@@ -20,6 +15,11 @@ import { buildSummaryModelInput } from './legacy-summary/summary-model-input.js'
 import { buildSummaryProgressFacts } from './legacy-summary/summary-progress-facts.js'
 import { PROMPT_VERSION } from './legacy-summary/summary-contract.js'
 import type { YandexAiAuthorization } from './yandex-ai-authorization.js'
+import {
+  withYandexActorSession,
+  type YandexActorSession,
+  type YandexActorSessionInput,
+} from './yandex-actor-session.js'
 
 const MAX_SOURCE_ROWS = 1000
 
@@ -52,21 +52,24 @@ export interface TrainingSummaryRequest {
 }
 
 export interface PilotTrainingSummaryReader {
-  list(sessionToken: string, clientId: string): Promise<unknown[]>
+  list(session: YandexActorSessionInput, clientId: string): Promise<unknown[]>
 }
 
 export interface PilotTrainingSummaryGenerator {
-  generate(sessionToken: string, request: TrainingSummaryRequest): Promise<unknown>
+  generate(session: YandexActorSessionInput, request: TrainingSummaryRequest): Promise<unknown>
+}
+
+export interface PilotTrainingSummaryPublisher {
+  publish(
+    session: YandexActorSession,
+    summaryId: string,
+    clientSummary: Record<string, unknown>,
+    expectedVersion: number,
+  ): Promise<void>
 }
 
 export interface PilotTrainingSummaries
   extends PilotTrainingSummaryReader, PilotTrainingSummaryGenerator {}
-
-function tokenHash(sessionToken: string): string {
-  const result = hashPilotSessionToken(sessionToken)
-  if (result === undefined) throw new PilotSessionInvalidError()
-  return result
-}
 
 function fingerprint(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex')
@@ -84,8 +87,8 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
     private readonly authorization?: YandexAiAuthorization,
   ) {}
 
-  async list(sessionToken: string, clientId: string): Promise<unknown[]> {
-    return withYandexPilotSessionTransaction(this.pool, tokenHash(sessionToken), async (client) => {
+  async list(session: YandexActorSessionInput, clientId: string): Promise<unknown[]> {
+    return withYandexActorSession(this.pool, session, async (client) => {
       const actor = await this.readActor(client, clientId)
       const rows = actor === 'client'
         ? await client.query<JsonRow>(`
@@ -107,7 +110,11 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
               'trainer_summary', summary.trainer_summary,
               'client_summary', summary.client_summary,
               'display_metrics', summary.display_metrics,
-              'generated_at', summary.generated_at, 'version', summary.version
+              'generated_at', summary.generated_at, 'version', summary.version,
+              'published', exists (
+                select 1 from public.client_published_training_summaries published
+                where published.source_summary_id = summary.id
+              )
             ) result
             from public.client_training_summaries summary
             where summary.client_id = $1
@@ -117,18 +124,17 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
     })
   }
 
-  async generate(sessionToken: string, request: TrainingSummaryRequest): Promise<unknown> {
-    const hash = tokenHash(sessionToken)
-    const source = await withYandexPilotSessionTransaction(
+  async generate(session: YandexActorSessionInput, request: TrainingSummaryRequest): Promise<unknown> {
+    const source = await withYandexActorSession(
       this.pool,
-      hash,
+      session,
       (client) => this.readSource(client, request),
     )
     const inputFingerprint = fingerprint(source.trainingData)
     if (!request.force) {
-      const cached = await withYandexPilotSessionTransaction(
+      const cached = await withYandexActorSession(
         this.pool,
-        hash,
+        session,
         (client) => this.readCache(client, request, source.actor, inputFingerprint),
       )
       if (cached !== undefined) return { data: cached, cached: true }
@@ -152,7 +158,7 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
       sets: source.sets,
       model_version: generated.modelVersion,
     }
-    const saved = await withYandexPilotSessionTransaction(this.pool, hash, async (client) => {
+    const saved = await withYandexActorSession(this.pool, session, async (client) => {
       const rows = await client.query<JsonRow>(`
         select public.save_generated_training_summary(
           $1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb,
@@ -169,6 +175,32 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
       return rows[0].result
     })
     return { data: saved, cached: false }
+  }
+
+  async publish(
+    session: YandexActorSession,
+    summaryId: string,
+    clientSummary: Record<string, unknown>,
+    expectedVersion: number,
+  ): Promise<void> {
+    try {
+      await withYandexActorSession(this.pool, session, async (client) => {
+        const rows = await client.query<QueryResultRow>(`
+          select * from public.publish_training_summary($1, $2::jsonb, $3)
+        `, [summaryId, JSON.stringify(clientSummary), expectedVersion])
+        if (rows.length === 0) {
+          throw new PilotTrainingSummaryError(409, 'training_summary_conflict')
+        }
+      })
+    } catch (error) {
+      if (error instanceof PilotTrainingSummaryError) throw error
+      const code = typeof error === 'object' && error !== null && 'code' in error
+        ? String(error.code)
+        : ''
+      if (code === 'PT404') throw new PilotTrainingSummaryError(404, 'training_summary_not_found')
+      if (code === 'PT409') throw new PilotTrainingSummaryError(409, 'training_summary_conflict')
+      throw error
+    }
   }
 
   private async readActor(client: DatabaseClient, clientId: string): Promise<'client' | 'trainer'> {
