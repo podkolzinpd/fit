@@ -44,12 +44,17 @@ async function expectCompactBodyMap(map: Locator) {
       const node = element.querySelector<HTMLElement>(selector)
       if (!node) return null
       const box = node.getBoundingClientRect()
-      return { top: box.top, bottom: box.bottom, width: box.width, height: box.height }
+      return { left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: box.width, height: box.height, centerX: box.left + box.width / 2 }
     }
+    const sidesElement = element.querySelector<HTMLElement>('.body-progress-sides')
+    const sidesTrack = sidesElement ? getComputedStyle(sidesElement, '::before') : null
     return {
       modes: rect('.body-progress-modes'),
       modeButtons: Array.from(element.querySelectorAll<HTMLElement>('.body-progress-modes button')).map((node) => node.getBoundingClientRect().height),
       sides: rect('.body-progress-sides'),
+      sideTrackHeight: sidesElement && sidesTrack
+        ? sidesElement.getBoundingClientRect().height - Number.parseFloat(sidesTrack.top) - Number.parseFloat(sidesTrack.bottom)
+        : null,
       sideButtons: Array.from(element.querySelectorAll<HTMLElement>('.body-progress-sides button')).map((node) => node.getBoundingClientRect().height),
       visual: rect('.body-progress-visual'),
       detail: rect('.body-progress-detail'),
@@ -63,10 +68,13 @@ async function expectCompactBodyMap(map: Locator) {
   expect(geometry.visual).not.toBeNull()
   expect(geometry.visual!.width).toBeLessThanOrEqual(212)
   expect(geometry.visual!.height).toBeLessThanOrEqual(445)
+  expect(Math.abs(geometry.modes!.centerX - geometry.visual!.centerX)).toBeLessThanOrEqual(1)
   if (geometry.sides) {
     expect(geometry.sides.width).toBeLessThanOrEqual(146)
-    expect(geometry.sides.height).toBeLessThanOrEqual(44)
+    expect(geometry.sides.height).toBeLessThanOrEqual(28)
+    expect(geometry.sideTrackHeight).toBeLessThanOrEqual(24)
     expect(geometry.sideButtons.every((height) => height >= 44)).toBe(true)
+    expect(Math.abs(geometry.modes!.centerX - geometry.sides.centerX)).toBeLessThanOrEqual(1)
   }
   if (geometry.detail) {
     expect(geometry.detail.top).toBeGreaterThanOrEqual(geometry.visual!.bottom)
@@ -1151,7 +1159,15 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     await summary.getByRole('button', { name: 'Спереди' }).click()
     await expect(summary.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
     await summary.getByLabel('Грудь. Лучший результат зоны: +20%').click()
-    await summary.getByRole('button', { name: 'Сзади' }).click()
+    await summary.locator('.body-progress-visual').evaluate((element) => {
+      const swipe = (type: 'touchstart' | 'touchend', clientX: number) => {
+        const event = new Event(type, { bubbles: true })
+        Object.defineProperty(event, 'changedTouches', { value: [{ clientX }] })
+        element.dispatchEvent(event)
+      }
+      swipe('touchstart', 180)
+      swipe('touchend', 80)
+    })
     await expect(summary.getByRole('group', { name: 'Анатомическая схема мышц, вид сзади' })).toBeVisible()
     await expectCompactBodyMap(summary.locator('.body-progress-map'))
     await summary.getByLabel('Верх спины. Лучший результат зоны: +36%').press('Enter')
