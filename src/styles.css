@@ -1973,7 +1973,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-progress-card .ai-progress-periods { width:min(320px, calc(100% - 2 * var(--card-padding))); margin-bottom:var(--space-2); padding:2px; border-color:color-mix(in srgb, var(--ai-divider) 72%, transparent); box-shadow:none}
 .client-progress-card .ai-progress-periods.period-count-1 { width:min(140px, calc(100% - 2 * var(--card-padding))) }
 .client-progress-card .ai-progress-periods button { min-height:34px; padding:5px var(--space-2) }
-.body-progress-map { display:grid; gap:10px; padding:var(--space-3) var(--card-padding) var(--space-4); border-block:1px solid var(--ai-divider); background:var(--surface-raised) }
+.body-progress-map { display:grid; gap:10px; overflow:hidden; padding:var(--space-3) var(--card-padding) var(--space-4); border:1px solid var(--ai-divider); border-radius:var(--radius-lg); background:var(--surface-raised) }
 .body-progress-map > header { min-width:0; display:grid; gap:8px }
 .body-progress-map > header > div:first-child { min-width:0 }
 .body-progress-map > header span { color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label); text-transform:uppercase }
@@ -2012,10 +2012,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 @keyframes body-zone-discovery { 0%,100% { opacity:var(--body-zone-base-opacity) } 42%,68% { opacity:.18 } }
 .body-progress-detail { display:grid; gap:4px; padding:12px; border:1px solid color-mix(in srgb, var(--success-border) 70%, var(--border)); border-radius:var(--radius-md); background:color-mix(in srgb, var(--success-surface) 52%, var(--surface-raised)) }
 .body-progress-detail-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:var(--space-2) }
-.body-progress-detail-heading > div { min-width:0; display:grid; gap:2px }
 .body-progress-detail-heading strong { overflow-wrap:anywhere; font-size:var(--type-body-size); line-height:var(--leading-tight) }
 .body-progress-detail-heading span { flex:0 0 auto; color:var(--success-fg); font-size:var(--type-section-size); font-variant-numeric:tabular-nums; font-weight:var(--weight-bold); letter-spacing:0; text-transform:none }
-.body-progress-detail-heading small { color:var(--muted); font-size:var(--text-xs); line-height:var(--leading-snug) }
 .body-progress-detail p { margin:0; overflow-wrap:anywhere; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
 .body-progress-detail .body-progress-primary-detail { color:var(--fg-strong); font-weight:var(--weight-semibold) }
 .body-progress-more { width:fit-content; min-height:44px; padding:6px 0; color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold) }

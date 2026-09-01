@@ -25,10 +25,10 @@ function subjectAnchors(region: BodyMapRegion): string[] {
 
 function safeLlmCandidate(candidate: string, region: BodyMapRegion): boolean {
   const text = candidate.trim()
-  if (!text || text.length > 180 || text.split(/[.!?]+/).filter(Boolean).length > 2) return false
-  if (/(?:нужно|следует|стоит|рекоменду|добавь|увеличь|снизь|измени|программ)/i.test(text)) return false
+  if (!text || text.length > 90 || text.split(/[.!?]+/).filter(Boolean).length > 1) return false
+  if (/(?:лучший|подтвержден|подтверждён|нужно|следует|стоит|рекоменду|добавь|увеличь|снизь|измени|программ)/i.test(text)) return false
   const anchors = subjectAnchors(region)
-  const value = normalize(region.valueLabel).replace(/\s+/g, '')
+  const value = normalize(region.valueLabel).replace(/\s+/g, '').replace(/^\+/, '')
   const normalized = normalize(text)
   const matchedAnchors = anchors.filter((anchor) => normalized.includes(anchor)).length
   const requiredAnchors = Math.min(2, anchors.length)
@@ -39,7 +39,7 @@ function safeLlmCandidate(candidate: string, region: BodyMapRegion): boolean {
 
 function deterministicConclusion(data: BodyMapData, region: BodyMapRegion): string {
   return data.mode === 'progress'
-    ? `В зоне «${region.label}» лучший подтверждённый результат изменился на ${region.valueLabel}.`
+    ? `Результат вырос на ${region.valueLabel.replace(/^\+/, '')}.`
     : `На зону «${region.label}» приходится ${region.valueLabel} всех выполненных подходов.`
 }
 
