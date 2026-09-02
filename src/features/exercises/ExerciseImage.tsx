@@ -32,45 +32,35 @@ export function ExerciseImage({ src, motionSrc, videoSrc, alt = '', variant = 't
   const [primaryFailed, setPrimaryFailed] = useState(false)
   const [motionFailed, setMotionFailed] = useState(false)
   const [videoFailed, setVideoFailed] = useState(false)
-  const frameRef = useRef<HTMLSpanElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
   const reducedMotion = usePrefersReducedMotion()
-  const previewNeedsVisibility = variant === 'preview' && Boolean(videoSrc)
-  const [previewVisible, setPreviewVisible] = useState(() => (
-    !previewNeedsVisibility || typeof IntersectionObserver === 'undefined'
-  ))
 
   useEffect(() => setPrimaryFailed(false), [src])
   useEffect(() => setMotionFailed(false), [motionSrc])
   useEffect(() => setVideoFailed(false), [videoSrc])
   useEffect(() => {
-    if (!previewNeedsVisibility || typeof IntersectionObserver === 'undefined') {
-      setPreviewVisible(true)
-      return
-    }
-    const frame = frameRef.current
-    if (!frame) return
-    setPreviewVisible(false)
-    const observer = new IntersectionObserver(([entry]) => {
-      setPreviewVisible(Boolean(entry?.isIntersecting))
-    }, { rootMargin: '120px' })
-    observer.observe(frame)
-    return () => observer.disconnect()
-  }, [previewNeedsVisibility, videoSrc])
+    const video = videoRef.current
+    if (video && variant === 'technique' && reducedMotion && !video.paused) video.pause()
+  }, [reducedMotion, variant])
 
   const className = `exercise-image exercise-image-${variant}`
   const primaryAvailable = Boolean(src) && !primaryFailed
-  const motionAvailable = (variant === 'technique' || variant === 'picker') && Boolean(motionSrc) && !motionFailed
-  const videoAvailable = (variant === 'technique' || variant === 'picker' || (variant === 'preview' && previewVisible))
-    && Boolean(videoSrc) && !videoFailed && !reducedMotion
-  if (!primaryAvailable && !motionAvailable && !videoAvailable) {
-    return <span ref={frameRef} className={`${className} exercise-image-empty`} aria-hidden="true"><ExerciseIcon /></span>
+  const motionFallbackAvailable = Boolean(motionSrc) && !motionFailed
+  const motionAvailable = variant === 'technique' && motionFallbackAvailable
+  // Compact cards stay still. Motion starts only after an explicit tap opens
+  // the technique view, so scrolling never decides which exercise plays.
+  const videoAvailable = variant === 'technique' && Boolean(videoSrc) && !videoFailed
+  if (!primaryAvailable && !motionFallbackAvailable && !videoAvailable) {
+    return <span className={`${className} exercise-image-empty`} aria-hidden="true"><ExerciseIcon /></span>
   }
 
-  const fallbackSrc = primaryAvailable ? src : motionSrc
+  // Compact cards never animate, but the end frame still protects them from a
+  // broken start frame so the picker does not collapse to an empty placeholder.
+  const fallbackSrc = primaryAvailable ? src : motionFallbackAvailable ? motionSrc : undefined
   const animated = !videoAvailable && primaryAvailable && motionAvailable
-  return <span ref={frameRef} className={`${className}${animated ? ' exercise-image-motion' : ''}`}>
+  return <span className={`${className}${animated ? ' exercise-image-motion' : ''}`}>
     {fallbackSrc && <img className="exercise-image-frame exercise-image-frame-start" src={fallbackSrc} alt={alt} loading="lazy" decoding="async" onError={() => primaryAvailable ? setPrimaryFailed(true) : setMotionFailed(true)} />}
     {animated && <img className="exercise-image-frame exercise-image-frame-end" src={motionSrc} alt="" aria-hidden="true" loading="lazy" decoding="async" onError={() => setMotionFailed(true)} />}
-    {videoAvailable && <video className="exercise-image-video" src={videoSrc} poster={fallbackSrc} autoPlay loop={variant !== 'picker'} muted playsInline preload={variant === 'technique' ? 'metadata' : 'none'} aria-hidden="true" disablePictureInPicture onCanPlay={(event) => { void event.currentTarget.play().catch(() => undefined) }} onError={() => setVideoFailed(true)} />}
+    {videoAvailable && <video ref={videoRef} className="exercise-image-video" src={videoSrc} poster={fallbackSrc} autoPlay={!reducedMotion} loop muted playsInline preload="metadata" controls aria-label={`Техника: ${alt || 'упражнение'}`} disablePictureInPicture onCanPlay={(event) => { if (!reducedMotion) void event.currentTarget.play().catch(() => undefined) }} onError={() => setVideoFailed(true)} />}
   </span>
 }

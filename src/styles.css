@@ -2347,7 +2347,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-image-picker { width:62px }
 .exercise-image-detail { width:104px }
 .exercise-image-technique { width:100%; aspect-ratio:3 / 2; border-radius:var(--radius-lg) }
-.exercise-image-picker.exercise-image-motion .exercise-image-frame-end { animation-iteration-count:1 }
 .exercise-image-empty { background:var(--surface-sunken) }
 .picker-technique-header { display:grid; grid-template-columns:40px minmax(0,1fr) 40px; text-align:center }
 .picker-technique-header h1 { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
@@ -4809,7 +4808,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-catalog-identity .catalog-media-card:focus-visible { outline:2px solid var(--fg); outline-offset:2px }
 .exercise-catalog-identity .catalog-media-card .exercise-image { width:56px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken) }
 .exercise-catalog-identity .catalog-media-card .exercise-image img { background:var(--surface-raised) }
-.exercise-catalog-identity .catalog-media-card > span { display:grid; gap:4px; min-width:0 }
+.exercise-catalog-identity .catalog-media-card-visual { position:relative; display:block; min-width:0 }
+.exercise-catalog-identity .catalog-media-card-play { position:absolute; right:-4px; bottom:-4px; width:20px; height:20px; display:grid; place-items:center; border:2px solid var(--surface-elevated); border-radius:50%; background:var(--fg); color:var(--bg) }
+.exercise-catalog-identity .catalog-media-card-play svg { width:11px; height:11px }
+.exercise-catalog-identity .catalog-media-card-copy { display:grid; gap:4px; min-width:0 }
 .exercise-catalog-identity .catalog-media-card strong { overflow:hidden; color:var(--fg); font-size:14px; font-weight:500; line-height:1.25; text-overflow:ellipsis }
 .exercise-catalog-identity .catalog-media-card small { overflow:hidden; color:var(--secondary-label-fg); font-size:12px; font-weight:400; line-height:1.25; text-overflow:ellipsis; white-space:nowrap }
 .exercise-catalog-identity .catalog-media-card > svg { width:18px; height:18px; color:var(--secondary-label-fg) }

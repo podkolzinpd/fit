@@ -3,7 +3,7 @@ import { SYSTEM_EXERCISES, SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISE_CATALOG_VERS
 import { IMPORTED_EXERCISES } from './system-exercises.generated'
 import { BASE_EXERCISES } from './system-exercises.base.generated'
 import { CATALOG_EXPANSION } from './system-exercises.expansion.generated'
-import { VITAL_FREE_PACK_ASSETS, VITAL_FREE_PACK_EXERCISES } from './vital-free-pack'
+import { VITAL_FREE_PACK_ASSETS, VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_MEDIA_BY_REF } from './vital-free-pack'
 
 const EXERCISE_MEDIA_PATHS = new Set(
   Object.keys(import.meta.glob('../../public/exercises/**/*.jpg', { query: '?url', import: 'default' }))
@@ -16,7 +16,7 @@ const EXERCISE_VIDEO_PATHS = new Set(
 
 describe('system exercise catalog', () => {
   it('matches the V1 baseline catalog', () => {
-    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(6)
+    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(7)
     expect(SYSTEM_EXERCISES).toHaveLength(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.ref)).size).toBe(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.name)).size).toBe(49)
@@ -186,6 +186,7 @@ describe('system exercise catalog', () => {
     const withVideo = SYSTEM_EXERCISE_CATALOG.filter((exercise) => exercise.techniqueVideoUrl)
     expect(withVideo).toHaveLength(expected.size)
     for (const exercise of withVideo) {
+      expect(exercise).toMatchObject(VITAL_FREE_PACK_MEDIA_BY_REF[exercise.ref]!)
       expect(exercise.techniqueVideoUrl).toBe(expected.get(exercise.ref))
       expect(EXERCISE_VIDEO_PATHS.has(exercise.techniqueVideoUrl!)).toBe(true)
     }
