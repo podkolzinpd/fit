@@ -5,7 +5,7 @@ import { ExerciseImage } from './ExerciseImage'
 import { CONTINUOUS_RUNNING_FORMATS, INTERVAL_RUNNING_FORMATS, type RunningFormat } from '../../shared/running-formats'
 import { MUSCLE_GROUP_LABELS, MUSCLE_GROUPS, RUNNING_EXERCISE_REFS } from '../../shared/system-exercises'
 import type { ExerciseCatalogState } from './exercise-catalog'
-import { matchesExerciseSearch, rankExerciseSearch } from './exercise-search'
+import { matchesExerciseSearch, rankExerciseSearch, type ExerciseSearchOptions } from './exercise-search'
 import { readRecentKeys, recordRecent, resolveRecent } from './recent-exercises'
 import { selectableExercises } from './selectable-exercises'
 
@@ -15,6 +15,7 @@ export function filterExercises(
   search: string,
   muscle: string | null = null,
   equipment: string | null = null,
+  searchOptions: ExerciseSearchOptions = {},
 ): readonly ExerciseSnapshot[] {
   const allowed = exercises
     .filter((exercise) => {
@@ -23,7 +24,7 @@ export function filterExercises(
         && (!equipment || exercise.equipment === equipment)
     })
   if (!search.trim()) return allowed.sort((left, right) => left.name.localeCompare(right.name, 'ru'))
-  return rankExerciseSearch(allowed, search)
+  return rankExerciseSearch(allowed, search, searchOptions)
     .filter(({ exercise }) => matchesExerciseSearch(exercise, search))
     .map(({ exercise }) => exercise)
 }
@@ -145,11 +146,15 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const { style: viewportStyle, keyboardOpen } = useVisualViewportStyle()
   const activeMode = mode === 'choose' ? 'all' : mode
   const selectableCatalog = useMemo(() => selectableExercises(catalog.exercises), [catalog.exercises])
+  const preferredSearchRefs = useMemo(
+    () => [...clientRecent.map((exercise) => exercise.ref), ...readRecentKeys()].filter((ref, index, refs) => refs.indexOf(ref) === index),
+    [clientRecent],
+  )
   const filtered = useMemo(
-    () => filterExercises(selectableCatalog, category, search, muscle, equipment)
+    () => filterExercises(selectableCatalog, category, search, muscle, equipment, { preferredExerciseRefs: preferredSearchRefs, customFirst: true })
       .filter((exercise) => matchesPickerMode(exercise, activeMode))
       .filter((exercise) => !customOnly || exercise.source === 'custom'),
-    [activeMode, selectableCatalog, category, search, muscle, equipment, customOnly],
+    [activeMode, selectableCatalog, category, search, muscle, equipment, customOnly, preferredSearchRefs],
   )
   // Детальные мышцы выбранной группы (2-й уровень). Показываем, если их >1.
   const muscles = useMemo(
