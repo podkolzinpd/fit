@@ -32,7 +32,7 @@ function comparisonWorkoutRow(id: string, date: string, weight: number, distance
   }
 }
 
-async function mockPeriodComparison(page: VisualPage) {
+async function mockProgressPeriodSummary(page: VisualPage) {
   const clientSummary = {
     headline: 'Прогресс уже заметен', achievements: ['Жим лёжа стал сильнее'],
     consistency: 'Тренировки продолжаются', encouragement: 'Продолжай в том же темпе', next_steps: [],
@@ -59,6 +59,10 @@ async function mockPeriodComparison(page: VisualPage) {
       generated_at: '2026-08-31T12:00:00Z', version: 1,
     }]),
   }))
+}
+
+async function mockPeriodComparison(page: VisualPage) {
+  await mockProgressPeriodSummary(page)
   await page.route('**/rest/v1/rpc/list_workouts', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify([
       comparisonWorkoutRow('81000000-0000-4000-8000-000000000001', '2026-07-05', 50, 5, 1),
@@ -122,8 +126,8 @@ async function mockMeasurementProgress(page: VisualPage) {
   ]) }))
 }
 
-async function mockRegularityProgress(page: VisualPage, options: { periodSummary?: boolean } = {}) {
-  if (options.periodSummary) await mockPeriodComparison(page)
+async function mockRegularityProgress(page: VisualPage) {
+  await mockProgressPeriodSummary(page)
   const current = ['2026-08-03', '2026-08-10', '2026-08-12']
   const previous = ['2026-07-02', '2026-07-05', '2026-07-08', '2026-07-12', '2026-07-16', '2026-07-20', '2026-07-24', '2026-07-28']
   const rows = [...previous, ...current].map((date, index) => comparisonWorkoutRow(
@@ -140,6 +144,22 @@ async function mockRegularityProgress(page: VisualPage, options: { periodSummary
 
 type VisualPage = import('@playwright/test').Page
 type VisualGotoOptions = Parameters<VisualPage['goto']>[1]
+type VisualLocator = import('@playwright/test').Locator
+
+async function alignElementToCssPixel(locator: VisualLocator) {
+  await locator.evaluate((element) => {
+    let scrollContainer = element.parentElement
+    while (scrollContainer) {
+      const { overflowY } = getComputedStyle(scrollContainer)
+      if (/(auto|scroll)/.test(overflowY) && scrollContainer.scrollHeight > scrollContainer.clientHeight) break
+      scrollContainer = scrollContainer.parentElement
+    }
+    const fractionalTop = element.getBoundingClientRect().top - Math.round(element.getBoundingClientRect().top)
+    if (Math.abs(fractionalTop) < 0.001) return
+    if (scrollContainer) scrollContainer.scrollTop += fractionalTop
+    else window.scrollBy(0, fractionalTop)
+  })
+}
 
 async function gotoStable(page: VisualPage, url: string, options?: VisualGotoOptions) {
   const protectedNavigation = !new URL(url, 'http://127.0.0.1').pathname.startsWith('/auth')
@@ -874,7 +894,7 @@ test('measurement trends stay readable for client and trainer in both themes', a
 test('weekly training rhythm stays visual and readable for client and trainer in both themes', async ({ page }, testInfo) => {
   const trainer = testInfo.project.name === 'visual-trainer-1440'
   const initialViewport = page.viewportSize()
-  await mockRegularityProgress(page, { periodSummary: !trainer })
+  await mockRegularityProgress(page)
   if (trainer) {
     await signIn(page, 'trainer@fit.local', /\/today$/)
     await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
@@ -916,6 +936,7 @@ test('weekly training rhythm stays visual and readable for client and trainer in
     if (initialViewport) await page.setViewportSize(initialViewport)
   }
   await regularity.scrollIntoViewIfNeeded()
+  await alignElementToCssPixel(regularity)
   await expect(regularity).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-workout-regularity-${process.platform}.png`, {
     animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
   })
@@ -926,6 +947,7 @@ test('weekly training rhythm stays visual and readable for client and trainer in
   regularity = page.locator('.client-progress-regularity-story')
   await expect(regularity.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
   await regularity.scrollIntoViewIfNeeded()
+  await alignElementToCssPixel(regularity)
   await expect(regularity).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-workout-regularity-dark-${process.platform}.png`, {
     animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
   })
