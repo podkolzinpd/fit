@@ -269,7 +269,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     const hasTechniqueVideo = Boolean(exercise.techniqueVideoUrl)
     return <article className={`picker-item${checked ? ' selected' : ''}`} key={`${keyPrefix}-${exercise.source}-${exercise.ref}`}>
       <button type="button" className="picker-item-technique" aria-label={`Посмотреть технику: ${exercise.name}`} onClick={() => openTechnique(exercise)}>
-        <span className="picker-item-media"><ExerciseImage src={exercise.imageUrl} alt="" variant="picker" />{hasTechniqueVideo && <span className="picker-item-play" aria-hidden="true"><PlayIcon /></span>}</span>
+        <span className="picker-item-media"><ExerciseImage src={exercise.imageUrl} motionSrc={exercise.motionImageUrl} alt="" variant="picker" />{hasTechniqueVideo && <span className="picker-item-play" aria-hidden="true"><PlayIcon /></span>}</span>
         <span className="picker-item-copy"><span className="picker-item-name">{exercise.name}</span><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small></span>
       </button>
       <button type="button" className="picker-select-mark" aria-label={checked ? `Убрать: ${exercise.name}` : multiple ? `Выбрать: ${exercise.name}` : `Добавить: ${exercise.name}`} aria-pressed={multiple ? checked : undefined} data-exercise-ref={exercise.ref} data-exercise-source={exercise.source} onClick={() => pick(exercise)}>{checked ? <CheckIcon /> : <AddIcon />}</button>

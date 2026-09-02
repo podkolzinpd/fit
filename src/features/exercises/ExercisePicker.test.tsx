@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ExercisePicker, equipmentForSelection, filterExercises, musclesForGroup } from './ExercisePicker'
@@ -78,6 +78,15 @@ describe('ExercisePicker', () => {
     expect(screen.getAllByRole('button', { name: /Посмотреть технику: Жим лёжа/ })).toHaveLength(1)
     expect(screen.getAllByRole('button', { name: /Посмотреть технику: Разгибание ног/ })).toHaveLength(1)
     expect(screen.getAllByRole('button', { name: /Посмотреть технику: Присед/ })).toHaveLength(1)
+  })
+
+  it('оставляет статичный запасной кадр в списке, если основной кадр не загрузился', () => {
+    render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    const squat = document.querySelector<HTMLElement>('[data-exercise-ref="a"]')!.closest('.picker-item')!
+    fireEvent.error(squat.querySelector('img')!)
+    expect(squat.querySelector('img')).toHaveAttribute('src', '/squat-end.jpg')
+    expect(squat.querySelector('video')).not.toBeInTheDocument()
+    expect(squat.querySelector('.exercise-image-motion')).not.toBeInTheDocument()
   })
 
   it('ищет по словам в любом порядке, оборудованию и без различия е/ё', () => {
