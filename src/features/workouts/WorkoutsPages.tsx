@@ -39,7 +39,7 @@ import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writ
 import { plannedWorkoutActionLabels } from './workout-entry-rules'
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
-import { parseRunDurationInput, runDistanceKmFromInput, runDistanceLabel, runPaceLabel, type RunDistanceUnit } from '../../shared/run-metrics'
+import { isRowingExerciseRef, parseRunDurationInput, rowingPaceLabel, runDistanceKmFromInput, runDistanceLabel, runPaceLabel, type RunDistanceUnit } from '../../shared/run-metrics'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
 import { WorkoutCompletionCard } from './WorkoutCompletionCard'
@@ -259,8 +259,8 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo }: { work
     <div className="workout-chronicle-exercises">
       {exercisePreview.visible.length > 0 ? exercisePreview.visible.map((exercise) => {
         const result = done
-          ? compactCompletedSetSummary(exercise.sets)
-          : compactPlannedSetSummary(exercise.sets)
+          ? compactCompletedSetSummary(exercise.sets, false, exercise.ref)
+          : compactPlannedSetSummary(exercise.sets, false, exercise.ref)
         return <div className="workout-chronicle-exercise" key={exercise.id}>
           <span className="workout-chronicle-exercise-name">{exercise.name}
             {exercise.trainerComment && <small className="workout-exercise-comment">💬 {exercise.trainerComment}</small>}
@@ -763,7 +763,7 @@ export function WorkoutDetailPage() {
       {!done && <div className="workout-detail-exercise-overview"><p>ПЛАН ТРЕНИРОВКИ</p><span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)} · {sets.length} {setCountLabel(sets.length)}</span></div>}
       <div className={`cards ${done ? 'completed-exercise-list' : 'planned-exercise-list'}`}>{groupIntoBlocks(workout.exercises).map((block) => {
         const articles = block.exercises.map((exercise) => {
-          const detailSummary = compactExerciseDetailSummary(exercise.inputKind, exercise.sets, done ? 'completed' : 'planned', showRpe)
+          const detailSummary = compactExerciseDetailSummary(exercise.inputKind, exercise.sets, done ? 'completed' : 'planned', showRpe, exercise.ref)
           return <WorkoutExercise state={done ? 'history' : 'planned'} className={`exercise ${done ? 'completed-exercise' : 'planned-detail-exercise'}`} key={exercise.id}>
           <div className="workout-detail-exercise-row">
             <details className={done ? 'completed-exercise-details' : 'planned-exercise-details'}>
@@ -772,7 +772,7 @@ export function WorkoutDetailPage() {
                 <span className="workout-detail-exercise-result">{detailSummary}</span>
               </summary>
               <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={[done ? 'Результат' : 'План']} className="workout-history-sets">
-                {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} />)}
+                {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} exerciseRef={exercise.ref} />)}
               </WorkoutSetTable>
             </details>
             <Link className="exercise-history-link" aria-label={`История упражнения «${exercise.name}»`} to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><HistoryIcon /><span className="sr-only">История</span></Link>
@@ -1131,18 +1131,19 @@ function WorkoutClientComment({ workout }: { workout: Workout }) {
   </section>
 }
 
-function formatSet(set: WorkoutSet, showRpe: boolean) {
+function formatSet(set: WorkoutSet, showRpe: boolean, exerciseRef?: string) {
   const duration = durationLabel(set.durationSec, set.durationMin)
   const distance = runDistanceLabel(set.distanceKm)
-  const pace = runPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm)
-  const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, distance, duration, showRpe && set.rpe !== undefined && `RPE ${set.rpe}`].filter(Boolean).join(' × ')
+  const rowing = isRowingExerciseRef(exerciseRef)
+  const pace = rowing ? rowingPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm) : runPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm)
+  const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} ${rowing ? 'гребков/мин' : 'повт.'}`, distance, duration, showRpe && set.rpe !== undefined && `RPE ${set.rpe}`].filter(Boolean).join(' × ')
   return pace && plan ? `${plan} · темп ${pace}` : plan || 'Подход без плана'
 }
 
-function WorkoutHistorySet({ set, index, done, showRpe }: { set: WorkoutSet; index: number; done: boolean; showRpe: boolean }) {
+function WorkoutHistorySet({ set, index, done, showRpe, exerciseRef }: { set: WorkoutSet; index: number; done: boolean; showRpe: boolean; exerciseRef?: string }) {
   const confirmed = Boolean(set.confirmedAt)
-  const { fact, planNote } = formatFactVsPlan(set, showRpe)
-  const result = done ? fact : formatSet(set, showRpe)
+  const { fact, planNote } = formatFactVsPlan(set, showRpe, exerciseRef)
+  const result = done ? fact : formatSet(set, showRpe, exerciseRef)
   return <WorkoutSetRow state={done ? (confirmed ? 'completed' : 'skipped') : 'planned'} className={`workout-history-set ${confirmed ? 'confirmed' : 'missed'}`}>
     <span className="workout-set-number workout-history-set-number" aria-label={`Подход ${index + 1}`}>{index + 1}</span>
     <span className="workout-history-set-result"><strong>{result}</strong>
@@ -1157,7 +1158,7 @@ function WorkoutHistorySet({ set, index, done, showRpe }: { set: WorkoutSet; ind
 // Плановое значение подхода вторичной строкой («План: 100 кг × 10») по типу
 // упражнения. Факт остаётся основным редактируемым полем, план — явно виден
 // (раньше был только тусклым placeholder). null — если план не задан.
-function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet): string | null {
+function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet, exerciseRef?: string): string | null {
   const parts: string[] = []
   if (inputKind === 'strength') {
     if (set.weightKg !== undefined) parts.push(`${set.weightKg} кг`)
@@ -1174,10 +1175,15 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet): st
     if (duration) parts.push(duration)
     const distance = runDistanceLabel(set.distanceKm)
     if (distance) parts.push(distance)
+    if (isRowingExerciseRef(exerciseRef) && set.reps !== undefined) parts.push(`${set.reps} гребков/мин`)
   }
   if (set.rpe !== undefined) parts.push(`RPE ${set.rpe}`)
   const plan = parts.length ? parts.join(' × ') : null
-  const pace = inputKind === 'distance' ? runPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm) : null
+  const pace = inputKind === 'distance'
+    ? isRowingExerciseRef(exerciseRef)
+      ? rowingPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm)
+      : runPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm)
+    : null
   return pace && plan ? `${plan} · темп ${pace}` : plan
 }
 
@@ -1204,7 +1210,7 @@ function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, 
   />
 }
 
-function LiveSetFields({ inputKind, set, editing = false, showRpe = false }: { inputKind: ExerciseSnapshot['inputKind']; set: WorkoutSet; editing?: boolean; showRpe?: boolean }) {
+function LiveSetFields({ inputKind, exerciseRef, set, editing = false, showRpe = false }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; set: WorkoutSet; editing?: boolean; showRpe?: boolean }) {
   // После подтверждения показываем зафиксированный результат (факт, иначе план)
   // как обычное яркое значение в заблокированном поле, а не тусклый placeholder.
   // Правка по карандашику временно разблокирует поля (editing).
@@ -1246,15 +1252,19 @@ function LiveSetFields({ inputKind, set, editing = false, showRpe = false }: { i
   return <>
     <RunMetricsFields
       idPrefix={`live-run-${set.id}-${k}`}
+      rowing={isRowingExerciseRef(exerciseRef)}
       durationSec={value(factDuration, planDuration)}
       distanceKm={value(set.fact.distanceKm, set.distanceKm)}
+      strokeRate={value(set.fact.reps, set.reps)}
       inputClassName="live-set-input"
       disabled={locked}
       planDurationHint={isPlanHint(factDuration, planDuration)}
       planDistanceHint={isPlanHint(set.fact.distanceKm, set.distanceKm)}
+      planStrokeRateHint={isPlanHint(set.fact.reps, set.reps)}
       durationName="runDuration"
       distanceName="runDistance"
       distanceUnitName="runDistanceUnit"
+      strokeRateName="reps"
       durationLabel="Фактическое время"
       distanceLabel="Фактическая дистанция"
       distanceUnitLabel="Единица фактической дистанции"
@@ -1674,8 +1684,8 @@ export function LiveWorkoutPage() {
         ? 'Готово'
         : 'Готово, отдых'
     if (!isExpanded) {
-      const plan = planLine(exercise.inputKind, set)
-      const fact = set.confirmedAt ? factLine(displayedSet) : enteredFactLine(displayedSet)
+      const plan = planLine(exercise.inputKind, set, exercise.ref)
+      const fact = set.confirmedAt ? factLine(displayedSet, true, exercise.ref) : enteredFactLine(displayedSet, true, exercise.ref)
       const compactValues = <span className="live-set-compact-values"><strong>{fact ? `${set.confirmedAt ? 'Факт' : 'Введено'} ${fact}` : plan ? `План ${plan}` : 'Без значений'}</strong>{fact && plan && <small>План {plan}</small>}</span>
       return <div className={`live-set-compact ${set.confirmedAt ? 'confirmed' : 'upcoming'}`} key={set.id}>
         <span className="live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
@@ -1700,7 +1710,7 @@ export function LiveWorkoutPage() {
     }}>
       <WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        <LiveSetFields inputKind={exercise.inputKind} set={displayedSet} editing={isEditing} showRpe={showRpe} />
+        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} set={displayedSet} editing={isEditing} showRpe={showRpe} />
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
@@ -1778,13 +1788,13 @@ export function LiveWorkoutPage() {
             const collapsed = allDone && !expandedExercises.has(exercise.id)
             if (collapsed) {
               const doneCount = exercise.sets.length
-              const best = exercise.sets.map((set) => factLine(set)).filter(Boolean).slice(-1)[0] ?? null
+              const best = exercise.sets.map((set) => factLine(set, true, exercise.ref)).filter(Boolean).slice(-1)[0] ?? null
               return <WorkoutExerciseCompact key={exercise.id} state="completed" className="live-exercise-collapsed" title={exercise.name}
                 meta={`${doneCount} ${doneCount === 1 ? 'подход' : doneCount < 5 ? 'подхода' : 'подходов'}${best ? ` · ${best}` : ''}`}
                 onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))} />
             }
             if (blockStatus === 'upcoming') {
-              const firstPlan = exercise.sets.map((set) => planLine(exercise.inputKind, set)).find(Boolean)
+              const firstPlan = exercise.sets.map((set) => planLine(exercise.inputKind, set, exercise.ref)).find(Boolean)
               const countLabel = exercise.sets.length === 1 ? 'подход' : exercise.sets.length < 5 ? 'подхода' : 'подходов'
               return <WorkoutExercise key={exercise.id} state="upcoming" className="live-exercise-upcoming">
                 <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
@@ -1793,7 +1803,7 @@ export function LiveWorkoutPage() {
             }
             return <WorkoutExercise key={exercise.id} state={blockStatus === 'done' ? 'completed' : blockStatus} className={`live-exercise ${blockStatus}`}>
               <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
-              {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
+              {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </WorkoutSetTable>
@@ -1925,7 +1935,7 @@ export function ExerciseHistoryPage() {
             : null}
       </>}
 
-      {tab === 'history' && <ExerciseProgressHistory items={items} showRpe={showRpe} />}
+      {tab === 'history' && <ExerciseProgressHistory items={items} showRpe={showRpe} exerciseRef={exerciseRef} />}
 
       {tab === 'how' && <section className="exercise-technique">
         <ExerciseImage src={meta?.imageUrl} motionSrc={meta?.motionImageUrl} videoSrc={meta?.techniqueVideoUrl} alt={`Техника: ${name}`} variant="technique" />

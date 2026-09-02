@@ -7,6 +7,7 @@ import type { PreviousExerciseResult } from '../../data/repositories/workouts.re
 import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, compactExerciseDetailSummary, groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, previousResultLine, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
 import { OverflowMenu, useConfirm } from '../../shared/ui'
 import { ArrowDownIcon, ArrowUpIcon, CloseIcon } from '../../shared/icons'
+import { isRowingExerciseRef } from '../../shared/run-metrics'
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
 import { WorkoutExercise, WorkoutSetRow } from './WorkoutSurface'
@@ -234,8 +235,10 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       <RunMetricsFields
         key={`${exercise.name}-${set.position}`}
         idPrefix={`plan-run-${exerciseIndex}-${setIndex}`}
+        rowing={isRowingExerciseRef(exercise.ref)}
         durationSec={durationSec}
         distanceKm={set.distanceKm}
+        strokeRate={set.reps}
         inputClassName={inputClass}
         durationLabel={`Время, подход ${setIndex + 1}`}
         distanceLabel={`Расстояние, подход ${setIndex + 1}`}
@@ -262,7 +265,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
     const hasCustomRest = exercise.restBetweenSetsSec !== undefined && exercise.restBetweenSetsSec !== 90
     const hasComment = Boolean(exercise.trainerComment)
     const detailsHint = [hasCustomRest ? `Отдых ${exercise.restBetweenSetsSec} с` : '', hasComment ? 'Есть заметка' : ''].filter(Boolean).join(' · ')
-    const compactSummary = compactExerciseDetailSummary(exercise.inputKind, exercise.sets, 'planned', showRpe)
+    const compactSummary = compactExerciseDetailSummary(exercise.inputKind, exercise.sets, 'planned', showRpe, exercise.ref)
     return <WorkoutExercise state="planned" className="exercise planned-exercise" key={`${exercise.ref}-${exerciseIndex}`}>
       <header className="planned-exercise-head compact-editor-exercise-head">
         <button type="button" className="compact-editor-exercise-toggle" aria-expanded={expanded} onClick={() => toggleExercise(exercise, exerciseIndex)}>
@@ -280,7 +283,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       ]} /></span>
       </header>
       {expanded && <div className="compact-editor-exercise-fields">
-      {(() => { const previous = previousResults.get(exercise.ref); const line = previous && previousResultLine(previous.sets); return line ? <p className="exercise-prefill-note">В прошлый раз: {line}</p> : exercise.prefilledFromDate ? <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p> : null })()}
+      {(() => { const previous = previousResults.get(exercise.ref); const line = previous && previousResultLine(previous.sets, exercise.ref); return line ? <p className="exercise-prefill-note">В прошлый раз: {line}</p> : exercise.prefilledFromDate ? <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p> : null })()}
       <WorkoutSetTable variant="planned" inputKind={exercise.inputKind} showRpe={showRpe}
         columnLabels={exercise.inputKind === 'distance' && showRpe ? ['Параметры', ''] : undefined}
         className={exercise.inputKind === 'distance' && showRpe ? 'planned-run-rpe-table' : ''}>

@@ -56,6 +56,8 @@ describe('exercise progress presentation', () => {
     expect(exerciseProgressValueLabel(5.25, 'distance')).toBe('5,3 км')
     expect(exerciseProgressSetLabel({ durationSec: 60, rpe: 7.5 }, 'duration', true)).toBe('1 мин × RPE 7,5')
     expect(exerciseProgressSetLabel({ weightKg: 0, reps: 20 }, 'reps', false)).toBe('20 повт.')
+    expect(exerciseProgressSetLabel({ distanceKm: 0.5, durationSec: 288, reps: 32 }, 'distance', false, 'rowing-machine'))
+      .toBe('500 м × 4:48 × 4:48/500 м × 32 гребков/мин')
   })
 
   it('shows bodyweight progress without fake kilograms and keeps completion milestones', () => {

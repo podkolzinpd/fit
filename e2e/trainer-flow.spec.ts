@@ -98,6 +98,38 @@ test('форма: короткая беговая фраза создаёт ре
   await expect(page.getByLabel('Отдых между подходами, с')).toHaveValue('90')
 })
 
+test('гребной тренажёр использует темп на 500 м и частоту гребков', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+
+  await page.goto('/workouts/new')
+  await selectClient(page, 'Анна Смирнова')
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
+  await page.getByLabel('Поиск упражнения').fill('Гребной тренажёр')
+  await page.getByRole('button', { name: /Гребной тренажёр/ }).first().click()
+  await page.getByRole('button', { name: 'Добавить к выбранным' }).click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+
+  await page.getByLabel('Время, подход 1').fill('5:08')
+  await expect(page.getByLabel('Единица расстояния, подход 1')).toHaveValue('m')
+  await page.getByLabel('Расстояние, подход 1').fill('500')
+  await page.getByLabel('Гребков в минуту').fill('30')
+  await page.getByLabel('Гребков в минуту').press('Tab')
+
+  await expect(page.getByLabel('Время, подход 1')).toHaveValue('5:08')
+  await expect(page.getByLabel('Расстояние, подход 1')).toHaveValue('500')
+  await expect(page.getByText('Темп 5:08/500 м')).toBeVisible()
+  await expect(page.getByLabel('Гребков в минуту')).toHaveValue('30')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.setViewportSize({ width: 430, height: 932 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+})
+
 test('стартовый экран показывает точный результат автоматического распознавания до сохранения', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')

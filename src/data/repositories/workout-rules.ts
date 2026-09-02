@@ -3,7 +3,7 @@ import type { LocalDate } from '../../shared/local-date'
 import type { RunningFormat } from '../../shared/running-formats'
 import { runningFormatExerciseName } from '../../shared/running-formats'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
-import { runDistanceLabel, runPaceLabel } from '../../shared/run-metrics'
+import { isRowingExerciseRef, rowingPaceLabel, runDistanceLabel, runPaceLabel } from '../../shared/run-metrics'
 
 export interface ExerciseBlock {
   blockId: string
@@ -513,19 +513,26 @@ export function durationLabel(durationSec?: number, durationMin?: number): strin
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
-function setLine(weightKg?: number, reps?: number, distanceKm?: number, durationSec?: number, durationMin?: number, rpe?: number, showRpe = true): string {
+function setLine(weightKg?: number, reps?: number, distanceKm?: number, durationSec?: number, durationMin?: number, rpe?: number, showRpe = true, exerciseRef?: string): string {
   const duration = durationLabel(durationSec, durationMin)
   const distance = runDistanceLabel(distanceKm)
-  const pace = runPaceLabel(durationSeconds(durationSec, durationMin), distanceKm)
-  const result = [weightKg && `${weightKg} кг`, reps && `${reps} повт.`, distance, duration, showRpe && rpe !== undefined && `RPE ${rpe}`].filter(Boolean).join(' × ')
+  const rowing = isRowingExerciseRef(exerciseRef)
+  const pace = rowing
+    ? rowingPaceLabel(durationSeconds(durationSec, durationMin), distanceKm)
+    : runPaceLabel(durationSeconds(durationSec, durationMin), distanceKm)
+  const repsLabel = reps && `${reps} ${rowing ? 'гребков/мин' : 'повт.'}`
+  const result = (rowing
+    ? [distance, duration, repsLabel, showRpe && rpe !== undefined && `RPE ${rpe}`]
+    : [weightKg && `${weightKg} кг`, repsLabel, distance, duration, showRpe && rpe !== undefined && `RPE ${rpe}`]
+  ).filter(Boolean).join(' × ')
   return pace && result ? `${result} · темп ${pace}` : result
 }
 
 // Короткий план допустим только когда каждая строка будет выглядеть одинаково.
 // Разные значения и пустой план сохраняют подробную таблицу: там важен порядок.
-export function compactPlannedSetSummary(sets: readonly WorkoutSet[], showRpe = false): string | null {
+export function compactPlannedSetSummary(sets: readonly WorkoutSet[], showRpe = false, exerciseRef?: string): string | null {
   if (sets.length === 0) return null
-  const lines = sets.map((set) => setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin, set.rpe, showRpe))
+  const lines = sets.map((set) => setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin, set.rpe, showRpe, exerciseRef))
   const first = lines[0]
   if (!first || !lines.every((line) => line === first)) return null
   return sets.length === 1 ? first : `${sets.length} × ${first}`
@@ -543,11 +550,11 @@ function setCountLabel(count: number): string {
 // Карточка плана всегда получает короткий читаемый итог. Одинаковые подходы
 // сворачиваются полностью, у разных показываем первые два значения и оставляем
 // полный порядок в раскрываемом списке.
-export function compactPlannedSetOverview(sets: readonly WorkoutSet[], showRpe = false): string {
-  const compact = compactPlannedSetSummary(sets, showRpe)
+export function compactPlannedSetOverview(sets: readonly WorkoutSet[], showRpe = false, exerciseRef?: string): string {
+  const compact = compactPlannedSetSummary(sets, showRpe, exerciseRef)
   if (compact) return compact
   if (sets.length === 0) return 'Без подходов'
-  const lines = sets.map((set) => setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin, set.rpe, showRpe) || 'без значений')
+  const lines = sets.map((set) => setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin, set.rpe, showRpe, exerciseRef) || 'без значений')
   const preview = lines.slice(0, 2).join(' · ')
   return `${sets.length} ${setCountLabel(sets.length)} · ${preview}${lines.length > 2 ? ' · …' : ''}`
 }
@@ -555,7 +562,7 @@ export function compactPlannedSetOverview(sets: readonly WorkoutSet[], showRpe =
 // Итог тренировки — это чтение факта, а не таблица для редактирования. Одинаковые
 // подтверждённые подходы сворачиваются в одну строку; разные остаются в порядке
 // выполнения, но без служебных номера и статуса каждой строки.
-export function compactCompletedSetSummary(sets: readonly WorkoutSet[], showRpe = false): string {
+export function compactCompletedSetSummary(sets: readonly WorkoutSet[], showRpe = false, exerciseRef?: string): string {
   const completed = sets.filter((set) => Boolean(set.confirmedAt))
   const lines = completed.map((set) => {
     const weight = set.fact.weightKg ?? set.weightKg
@@ -564,7 +571,7 @@ export function compactCompletedSetSummary(sets: readonly WorkoutSet[], showRpe 
     const durationSec = set.fact.durationSec ?? set.durationSec
     const durationMin = durationSec === undefined ? (set.fact.durationMin ?? set.durationMin) : undefined
     const rpe = set.fact.rpe ?? set.rpe
-    return setLine(weight, reps, distance, durationSec, durationMin, rpe, showRpe) || 'Без результата'
+    return setLine(weight, reps, distance, durationSec, durationMin, rpe, showRpe, exerciseRef) || 'Без результата'
   })
   const first = lines[0]
   const fact = !first ? 'Без выполненных подходов'
@@ -607,6 +614,7 @@ export function compactExerciseDetailSummary(
   sets: readonly (WorkoutSet | WorkoutSetDraft)[],
   mode: ExerciseDetailMode,
   showRpe = false,
+  exerciseRef?: string,
 ): string {
   if (sets.length === 0) return 'Без значений'
 
@@ -670,8 +678,14 @@ export function compactExerciseDetailSummary(
         : [runDistanceLabel(value.distanceKm), durationLabel(value.durationSec)].filter(Boolean).join(' · ') || 'без значений'))
     }
     if (values.length === 1) {
-      const pace = runPaceLabel(values[0]?.durationSec, values[0]?.distanceKm)
+      const pace = isRowingExerciseRef(exerciseRef)
+        ? rowingPaceLabel(values[0]?.durationSec, values[0]?.distanceKm)
+        : runPaceLabel(values[0]?.durationSec, values[0]?.distanceKm)
       if (pace) summary += ` · ${pace}`
+    }
+    if (isRowingExerciseRef(exerciseRef)) {
+      const strokeRates = values.map((value) => value.skipped || value.reps === undefined ? '—' : String(value.reps))
+      if (strokeRates.some((value) => value !== '—')) summary += ` · ${repeatedSeries(strokeRates)} гребков/мин`
     }
   }
 
@@ -685,14 +699,14 @@ export function compactExerciseDetailSummary(
 // Результат подхода: строка факта (факт, иначе план) и приписка плана — только
 // если факт был введён и отличается от плана хоть по одному параметру.
 // Совпал факт с планом или факта нет вовсе → planNote = null.
-export function formatFactVsPlan(set: WorkoutSet, showRpe = true): { fact: string; planNote: string | null } {
+export function formatFactVsPlan(set: WorkoutSet, showRpe = true, exerciseRef?: string): { fact: string; planNote: string | null } {
   const weight = set.fact.weightKg ?? set.weightKg
   const reps = set.fact.reps ?? set.reps
   const distance = set.fact.distanceKm ?? set.distanceKm
   const durationSec = set.fact.durationSec ?? set.durationSec
   const durationMin = durationSec === undefined ? (set.fact.durationMin ?? set.durationMin) : undefined
   const rpe = set.fact.rpe ?? set.rpe
-  const fact = setLine(weight, reps, distance, durationSec, durationMin, rpe, showRpe) || 'Без результата'
+  const fact = setLine(weight, reps, distance, durationSec, durationMin, rpe, showRpe, exerciseRef) || 'Без результата'
   const differs =
     (set.fact.weightKg !== undefined && set.fact.weightKg !== set.weightKg) ||
     (set.fact.reps !== undefined && set.fact.reps !== set.reps) ||
@@ -700,30 +714,30 @@ export function formatFactVsPlan(set: WorkoutSet, showRpe = true): { fact: strin
     (set.fact.durationSec !== undefined && set.fact.durationSec !== set.durationSec) ||
     (set.fact.durationMin !== undefined && set.fact.durationMin !== set.durationMin) ||
     (showRpe && set.fact.rpe !== undefined && set.fact.rpe !== set.rpe)
-  const planNote = differs ? `план ${setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin, set.rpe, showRpe)}` : null
+  const planNote = differs ? `план ${setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin, set.rpe, showRpe, exerciseRef)}` : null
   return { fact, planNote }
 }
 
 // Введённые фактические значения без учёта статуса подхода. Используется в live,
 // чтобы после перехода к следующей строке тренер видел набранные числа до
 // подтверждения подхода.
-export function enteredFactLine(set: WorkoutSet, showRpe = true): string | null {
-  const line = setLine(set.fact.weightKg, set.fact.reps, set.fact.distanceKm, set.fact.durationSec, set.fact.durationMin, set.fact.rpe, showRpe)
+export function enteredFactLine(set: WorkoutSet, showRpe = true, exerciseRef?: string): string | null {
+  const line = setLine(set.fact.weightKg, set.fact.reps, set.fact.distanceKm, set.fact.durationSec, set.fact.durationMin, set.fact.rpe, showRpe, exerciseRef)
   return line || null
 }
 
 // Фактический результат подтверждённого подхода — строка вида «90 кг × 8 повт.».
 // В истории и аналитике неподтверждённый ввод не считаем выполненным фактом.
-export function factLine(set: WorkoutSet, showRpe = true): string | null {
-  return set.confirmedAt ? enteredFactLine(set, showRpe) : null
+export function factLine(set: WorkoutSet, showRpe = true, exerciseRef?: string): string | null {
+  return set.confirmedAt ? enteredFactLine(set, showRpe, exerciseRef) : null
 }
 
 // Короткий ориентир для тренера: берём последний заполненный подход из прошлой
 // завершённой тренировки. Это только справка — текущие значения не меняем.
-export function previousResultLine(sets: readonly WorkoutSetDraft[]): string | null {
+export function previousResultLine(sets: readonly WorkoutSetDraft[], exerciseRef?: string): string | null {
   for (let index = sets.length - 1; index >= 0; index -= 1) {
     const set = sets[index]!
-    const line = setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin)
+    const line = setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin, undefined, true, exerciseRef)
     if (line) return line
   }
   return null
