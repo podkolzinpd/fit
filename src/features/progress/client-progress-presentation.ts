@@ -218,7 +218,7 @@ function nextWorkoutStory(workouts: readonly Workout[], today?: LocalDate): Clie
     title: next.stageTitle ?? 'Ближайшая тренировка',
     exercises: next.exercises.slice(0, 3).map((exercise) => ({
       name: exercise.name,
-      plan: compactPlannedSetSummary(exercise.sets) ?? undefined,
+      plan: compactPlannedSetSummary(exercise.sets, false, exercise.ref) ?? undefined,
     })),
   }
 }
