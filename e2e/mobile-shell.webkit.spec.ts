@@ -339,7 +339,7 @@ test('iPhone: тренер назначает интервалы, спортсм
     await expect(trainer.getByRole('button', { name: /Темповый бег/ })).toBeVisible()
     await expect(trainer.getByRole('button', { name: /Восстановительный бег/ })).toBeVisible()
     await expect(trainer.getByRole('button', { name: /^Интервалы/ })).toBeVisible()
-    await expect(trainer.getByRole('button', { name: /Семенящий бег/ })).toBeVisible()
+    await expect(trainer.getByRole('button', { name: 'Посмотреть технику: Семенящий бег', exact: true })).toBeVisible()
     await expectNoHorizontalOverflow(trainer)
     await trainer.screenshot({ path: testInfo.outputPath('running-formats-390.png'), fullPage: true })
     await trainer.getByRole('button', { name: /^Интервалы/ }).click()
