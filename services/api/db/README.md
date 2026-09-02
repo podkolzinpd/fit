@@ -54,6 +54,15 @@ producer, scheduler, dispatcher or sender, so applying it cannot send a push.
 Subscription enable/disable and the matching reminder preference update happen
 atomically inside the database command.
 
+Migration `000030` completes the Yandex delivery contract without `pg_net` or a
+business trigger. Creating a trainer-authored plan explicitly enqueues the
+`workout_scheduled` event in the same API transaction; a private timer runner
+enqueues timezone-aware 09:00 reminders, leases at most 20 rows with
+`SKIP LOCKED`, calls the existing Web Push sender and finalizes every result.
+Leases recover after ten minutes, retries stop after ten attempts, expired
+subscriptions are discarded and removed, and the outbox remains unavailable
+through both direct `fit_api` grants and `ops_readonly`.
+
 Migration `000026` ports durable Assistant conversations, messages and actions.
 Only trainer actors can create or read their own history; user turns and model
 responses are idempotent by `turn_id`, and action confirmation uses optimistic
@@ -73,10 +82,11 @@ an enabled `yandex`/`read_write` rollout assignment. Provider OAuth tokens,
 raw Yandex identifiers and the app session token are never stored; only SHA-256
 digests are persisted.
 
-Before delivery is enabled, the transport slice must add a reviewed public
-Web Push endpoint/egress policy, queue claim/lease semantics, bounded retries,
-producer tests and sender finalization. Storage parity alone is not permission
-to make outbound requests.
+Delivery is enabled only by the separately reviewed private dispatcher and
+timer infrastructure. Applying the database migration alone cannot make an
+outbound request. The sender function keeps the existing shared-secret
+contract; provider errors are reduced to stable status codes so subscription
+endpoints never reach responses, logs or outbox error text.
 
 Stage delivery uses the private migration runner to load one deterministic,
 synthetic workout fixture for each enabled read-only trainer plus an isolated

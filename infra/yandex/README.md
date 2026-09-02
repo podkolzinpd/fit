@@ -11,6 +11,8 @@ database password, OAuth secret or Terraform state.
 - separate `fit_owner` migration and non-owner `fit_api` runtime users;
 - one `fit` database owned only by the migration user;
 - one Serverless Container with 1 GB RAM and no provisioned instances;
+- one private 512 MB push dispatcher with no provisioned instances, plus a
+  one-minute timer and separate least-privilege runtime/scheduler identities;
 - one Container Registry repository with image retention;
 - one least-privilege runtime service account;
 - direct references to the generated Connection Manager Lockbox secrets;
@@ -19,9 +21,15 @@ database password, OAuth secret or Terraform state.
   for migrations and separately probes the exact `fit_api` runtime identity
   before an API revision can be created.
 
-The container is private by default. Stage delivery enables browser invocation
+The API container is private by default. Stage delivery enables browser invocation
 only after Yandex ID validation and the read-only rollout allowlist are present.
-The migration runner is always private.
+The migration runner and push dispatcher are always private. The dispatcher
+reuses the existing `fit-send-push-notifications` function and its Lockbox
+`PUSH_DISPATCH_SECRET` from the separate Functions folder. The workflow resolves
+only their non-secret IDs with the existing Functions OIDC identity, grants the
+dispatcher `lockbox.payloadViewer` on that exact secret, and then restores the
+stage OIDC identity. Terraform receives IDs and the immutable version only; the
+payload is mounted directly into the runtime and never enters CI or state.
 
 ## Safe workflow
 
@@ -30,6 +38,23 @@ delivery is owned by `.github/workflows/deploy-yandex-stage.yml`: OIDC
 authentication, immutable image push, locked forward migrations, final
 Terraform plan/apply, private runtime-database preflight, bounded readiness
 checks and automatic image rollback.
+
+The first push-pipeline bootstrap is an explicit exception to steady-state
+automatic delivery. The plan summary shows the exact new identities, private
+container and timer plus a bounded usage estimate. A manual `workflow_dispatch`
+with `plan_only=true` can review that plan without applying it; an apply fails
+before build or migration until a second manual run sets `plan_only=false` and
+`approve_push_pipeline=true`. The workflow creates the timer only after the
+private dispatcher reports the exact candidate release; a failed update restores
+the preceding revision, while a failed first revision leaves no timer. Once the
+resources exist, immutable image updates follow the normal automatic path.
+
+At one invocation per minute there are about 43,200 dispatcher requests per
+30-day month. With 512 MB, 1 vCPU and zero warm instances, the current official
+Russia-region rates imply roughly 0–389 RUB/month for average 0.1–5 second
+calls, before shared free-tier consumption. Sender-function calls and outgoing
+Web Push traffic remain usage-dependent; the workflow repeats this estimate
+before the one-time approval.
 
 The only long-lived CI credentials are repository secrets containing the
 dedicated S3 access key and secret for the private Terraform state bucket.

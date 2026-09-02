@@ -183,6 +183,12 @@ export function savePlannedWorkout(
     )
     const saved = rows[0]
     if (saved === undefined) throw new Error('Workout was not saved')
+    if (expectedVersion === null) {
+      await client.query(
+        'select app_private.enqueue_workout_scheduled_notification($1)',
+        [saved.workout_id],
+      )
+    }
     return { id: saved.workout_id, version: safeVersion(saved.version) }
   })
 }

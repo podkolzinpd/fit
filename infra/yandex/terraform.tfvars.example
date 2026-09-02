@@ -15,6 +15,12 @@ serverless_service_cidr = "198.19.0.0/16"
 api_image_tag = "foundation"
 migration_image_tag = "foundation"
 
+# Existing transport metadata is resolved automatically by the GitHub workflow
+# from the separate Functions folder. These IDs are not secret values.
+# push_function_id = "d4e..."
+# push_transport_secret_id = "e6q..."
+# push_transport_secret_version_id = "e6q..."
+
 # Optional temporary bridge while selected handlers execute in Yandex Cloud but
 # use the existing Supabase auth and tables. Store the four payload values only
 # in this existing Lockbox secret, never in Terraform variables or Git.

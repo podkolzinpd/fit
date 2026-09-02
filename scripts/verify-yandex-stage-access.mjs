@@ -86,6 +86,8 @@ export async function findMissingRuntimeBindings({
   deployerServiceAccountId,
   apiRuntimeServiceAccountId,
   migrationRuntimeServiceAccountId,
+  pushDispatcherServiceAccountId,
+  pushSchedulerServiceAccountId,
   token,
   fetchImpl = fetch,
 }) {
@@ -93,6 +95,8 @@ export async function findMissingRuntimeBindings({
     ['deployer itself', deployerServiceAccountId],
     ['API runtime', apiRuntimeServiceAccountId],
     ['migration runtime', migrationRuntimeServiceAccountId],
+    ['push dispatcher runtime', pushDispatcherServiceAccountId],
+    ['push scheduler', pushSchedulerServiceAccountId],
   ]
   const results = await Promise.all(
     accounts.map(async ([label, serviceAccountId]) => ({
@@ -113,6 +117,8 @@ export async function waitForRuntimeBindings({
   deployerServiceAccountId,
   apiRuntimeServiceAccountId,
   migrationRuntimeServiceAccountId,
+  pushDispatcherServiceAccountId,
+  pushSchedulerServiceAccountId,
   token,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
@@ -127,6 +133,8 @@ export async function waitForRuntimeBindings({
       deployerServiceAccountId,
       apiRuntimeServiceAccountId,
       migrationRuntimeServiceAccountId,
+      pushDispatcherServiceAccountId,
+      pushSchedulerServiceAccountId,
       token,
       fetchImpl,
     })
@@ -155,6 +163,14 @@ async function main() {
     migrationRuntimeServiceAccountId: requiredString(
       options.migration_runtime_sa_id,
       '--migration-runtime-sa-id',
+    ),
+    pushDispatcherServiceAccountId: requiredString(
+      options.push_dispatcher_sa_id,
+      '--push-dispatcher-sa-id',
+    ),
+    pushSchedulerServiceAccountId: requiredString(
+      options.push_scheduler_sa_id,
+      '--push-scheduler-sa-id',
     ),
     token: requiredString(process.env.YC_TOKEN, 'YC_TOKEN'),
   })

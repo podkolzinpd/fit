@@ -185,3 +185,65 @@ resource "yandex_serverless_container_iam_binding" "migration_invocation" {
   role         = "serverless.containers.invoker"
   members      = [var.migration_invoker_member]
 }
+
+resource "yandex_serverless_container" "push_dispatcher" {
+  folder_id          = var.folder_id
+  name               = "${local.name_prefix}-push-dispatcher"
+  description        = "Private timer-driven Fit push outbox dispatcher"
+  memory             = 512
+  cores              = 1
+  core_fraction      = 100
+  concurrency        = 1
+  execution_timeout  = "60s"
+  service_account_id = yandex_iam_service_account.push_dispatcher.id
+  labels             = local.labels
+
+  runtime {
+    type = "http"
+  }
+
+  connectivity {
+    network_id = yandex_vpc_network.fit.id
+  }
+
+  image {
+    url     = "cr.yandex/${yandex_container_repository.api.name}:${var.api_image_tag}"
+    command = ["node", "dist/push-dispatcher-server.js"]
+    environment = {
+      APP_ENV                = var.environment
+      FIT_RELEASE_ID         = var.api_image_tag
+      LOG_LEVEL              = "info"
+      DATABASE_HOST          = yandex_mdb_postgresql_cluster_v2.fit.hosts["primary"].fqdn
+      DATABASE_PORT          = "6432"
+      DATABASE_NAME          = yandex_mdb_postgresql_database.fit.name
+      DATABASE_USER          = yandex_mdb_postgresql_user.api.name
+      DATABASE_SSL_ROOT_CERT = "/app/certs/yandex-cloud-ca.pem"
+      PUSH_FUNCTION_URL      = "https://functions.yandexcloud.net/${var.push_function_id}"
+    }
+  }
+
+  secrets {
+    id                   = data.yandex_connectionmanager_connection.api.lockbox_secret.id
+    version_id           = data.yandex_connectionmanager_connection.api.lockbox_secret.version
+    key                  = data.yandex_connectionmanager_connection.api.params.postgresql.auth.user_password.password.lockbox_secret_key
+    environment_variable = "DATABASE_PASSWORD"
+  }
+
+  secrets {
+    id                   = var.push_transport_secret_id
+    version_id           = var.push_transport_secret_version_id
+    key                  = "PUSH_DISPATCH_SECRET"
+    environment_variable = "PUSH_DISPATCH_SECRET"
+  }
+
+  log_options {
+    folder_id = var.folder_id
+    min_level = "INFO"
+  }
+
+  depends_on = [
+    yandex_container_registry_iam_binding.api_image_puller,
+    yandex_iam_service_account_iam_member.push_dispatcher_deployer,
+    yandex_lockbox_secret_iam_member.push_dispatcher_connection_secret_reader,
+  ]
+}

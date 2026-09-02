@@ -18,6 +18,21 @@ output "migration_service_account_id" {
   value       = yandex_iam_service_account.migration.id
 }
 
+output "push_dispatcher_container_url" {
+  description = "Private timer-driven push dispatcher URL. It has no public invocation binding."
+  value       = yandex_serverless_container.push_dispatcher.url
+}
+
+output "push_dispatcher_service_account_id" {
+  description = "Least-privilege runtime identity attached to the private push dispatcher."
+  value       = yandex_iam_service_account.push_dispatcher.id
+}
+
+output "push_scheduler_service_account_id" {
+  description = "Timer identity allowed to invoke the private push dispatcher."
+  value       = yandex_iam_service_account.push_scheduler.id
+}
+
 output "database_cluster_id" {
   description = "Managed PostgreSQL cluster ID."
   value       = yandex_mdb_postgresql_cluster_v2.fit.id

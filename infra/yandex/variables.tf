@@ -236,3 +236,33 @@ variable "migration_invoker_member" {
     error_message = "migration_invoker_member must be a supported scoped IAM member or null."
   }
 }
+
+variable "push_function_id" {
+  description = "Existing Yandex Cloud Function ID used for Web Push transport. Resolve it through the function-folder OIDC identity; this is not a secret."
+  type        = string
+
+  validation {
+    condition     = length(trimspace(var.push_function_id)) > 0
+    error_message = "push_function_id must not be empty."
+  }
+}
+
+variable "push_transport_secret_id" {
+  description = "Existing Lockbox secret ID containing PUSH_DISPATCH_SECRET. The payload never enters Terraform."
+  type        = string
+
+  validation {
+    condition     = length(trimspace(var.push_transport_secret_id)) > 0
+    error_message = "push_transport_secret_id must not be empty."
+  }
+}
+
+variable "push_transport_secret_version_id" {
+  description = "Current immutable version of push_transport_secret_id, resolved immediately before planning."
+  type        = string
+
+  validation {
+    condition     = length(trimspace(var.push_transport_secret_version_id)) > 0
+    error_message = "push_transport_secret_version_id must not be empty."
+  }
+}

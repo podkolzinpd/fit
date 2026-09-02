@@ -40,9 +40,9 @@ function json(statusCode: number, body: unknown): FunctionResponse {
 
 /**
  * Production Yandex Cloud Function entry point for `fit-send-push-notifications`.
- * Unlike `yandex-summary-function`, the caller is not an end user but the
- * `private.dispatch_push_notifications` pg_cron job in Supabase — auth is a
- * shared secret (PUSH_DISPATCH_SECRET).
+ * Unlike `yandex-summary-function`, the caller is not an end user but a
+ * private timer-driven Serverless Container — auth is a shared secret
+ * (PUSH_DISPATCH_SECRET).
  *
  * The secret travels in a custom `X-Push-Dispatch-Secret` header, not the
  * standard `Authorization` header: Yandex Cloud's own API Gateway intercepts

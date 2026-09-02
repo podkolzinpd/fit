@@ -30,6 +30,9 @@ function runPolicy(resourceChanges, options = {}) {
       ...(options.automaticStageUpdate === true
         ? ['--automatic-stage-update']
         : []),
+      ...(options.allowPushPipelineBootstrap === true
+        ? ['--allow-push-pipeline-bootstrap']
+        : []),
     ],
     { encoding: 'utf8' },
   )
@@ -85,6 +88,78 @@ describe('Yandex Terraform plan policy', () => {
       result.stderr,
       /Automatic stage deploy contains new or cost-sensitive infrastructure changes/,
     )
+  })
+
+  test('accepts only the explicitly approved bounded push pipeline bootstrap', () => {
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_serverless_container.push_dispatcher',
+          change: {
+            actions: ['create'],
+            after: {
+              memory: 512,
+              cores: 1,
+              core_fraction: 100,
+              concurrency: 1,
+              execution_timeout: '60s',
+              provision_policy: [],
+            },
+          },
+        },
+        {
+          address: 'yandex_function_trigger.push_dispatcher_timer',
+          change: {
+            actions: ['create'],
+            after: {
+              timer: [{
+                cron_expression: '* * * * ? *',
+                payload: 'sync-push-notifications',
+              }],
+              container: [{
+                path: '/internal/push/dispatch',
+                retry_attempts: '1',
+                retry_interval: '10',
+              }],
+            },
+          },
+        },
+      ],
+      {
+        automaticStageUpdate: true,
+        allowPushPipelineBootstrap: true,
+      },
+    )
+
+    assert.equal(result.status, 0)
+    assert.match(result.stdout, /Push pipeline bootstrap cost estimate/)
+    assert.match(result.stdout, /about 0–389 RUB\/month/)
+    assert.match(result.stdout, /approve_push_pipeline=true/)
+  })
+
+  test('rejects an oversized push dispatcher even with bootstrap approval', () => {
+    const result = runPolicy(
+      [{
+        address: 'yandex_serverless_container.push_dispatcher',
+        change: {
+          actions: ['create'],
+          after: {
+            memory: 2048,
+            cores: 1,
+            core_fraction: 100,
+            concurrency: 1,
+            execution_timeout: '60s',
+            provision_policy: [],
+          },
+        },
+      }],
+      {
+        automaticStageUpdate: true,
+        allowPushPipelineBootstrap: true,
+      },
+    )
+
+    assert.notEqual(result.status, 0)
   })
 
   test('blocks an automatic database resize', () => {

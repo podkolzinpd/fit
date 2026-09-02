@@ -21,6 +21,11 @@ import {
   setNotificationPreference,
   upsertPushSubscription,
 } from '../push-notifications-command.js'
+import {
+  claimPushNotifications,
+  enqueueWorkoutReminders,
+  finalizePushNotifications,
+} from '../push-dispatcher-command.js'
 import { readAccessibleClients } from '../clients.js'
 import { readAccessibleConnections } from '../connections.js'
 import {
@@ -3431,6 +3436,259 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await ownerPool.query(
           'delete from public.push_subscriptions where user_id = any($1::uuid[])',
           [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )
+      }
+    })
+
+    it('produces, leases and finalizes Yandex push notifications without direct table grants', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const workoutIds: string[] = []
+      const timezoneRows = await ownerPool.query<{ timezone: string } & QueryResultRow>(
+        'select timezone from public.profiles where id = $1',
+        [OTHER_ACTOR_ID],
+      )
+      const originalTimezone = timezoneRows.rows[0]?.timezone
+      if (originalTimezone === undefined) throw new Error('Client timezone is missing')
+      const actorRows = await ownerPool.query<{ full_name: string } & QueryResultRow>(
+        `select btrim(coalesce(first_name, '') || ' ' || coalesce(last_name, ''))
+           as full_name
+         from public.profiles
+         where id = $1`,
+        [ACTOR_ID],
+      )
+      const actorName = actorRows.rows[0]?.full_name
+      if (actorName === undefined || actorName === '') {
+        throw new Error('Trainer name is missing')
+      }
+
+      try {
+        await ownerPool.query(
+          'delete from app_private.push_notifications_outbox where user_id = $1',
+          [OTHER_ACTOR_ID],
+        )
+        await ownerPool.query(
+          'delete from public.notification_preferences where user_id = $1',
+          [OTHER_ACTOR_ID],
+        )
+        await ownerPool.query(
+          'delete from public.push_subscriptions where user_id = $1',
+          [OTHER_ACTOR_ID],
+        )
+        await ownerPool.query(
+          "update public.profiles set timezone = 'UTC' where id = $1",
+          [OTHER_ACTOR_ID],
+        )
+
+        await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+          upsertPushSubscription(client, {
+            endpoint: 'https://push.example/yandex-pipeline',
+            p256dh: 'pipeline-public-key',
+            authKey: 'pipeline-auth-key',
+          }))
+
+        const trainerWorkout = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => savePlannedWorkout(client, {
+            id: null,
+            clientId: CLIENT_ID,
+            workoutDate: '2099-01-01',
+            startTime: '18:30',
+            endTime: null,
+            notes: 'Yandex push pipeline trainer plan',
+            exercises: [],
+          }, null),
+        )
+        workoutIds.push(trainerWorkout.id)
+
+        await ownerPool.query(
+          `delete from app_private.push_notifications_outbox
+           where kind = 'workout_scheduled'
+             and data = jsonb_build_object('workout_id', $1::uuid)`,
+          [trainerWorkout.id],
+        )
+        const outsideEnqueued = await withActorTransaction(
+          runtimePool,
+          OUTSIDE_TRAINER_ID,
+          async (client) => {
+            const rows = await client.query<{ enqueued: boolean } & QueryResultRow>(
+              `select app_private.enqueue_workout_scheduled_notification($1)
+                 as enqueued`,
+              [trainerWorkout.id],
+            )
+            return rows[0]?.enqueued
+          },
+        )
+        expect(outsideEnqueued).toBe(false)
+        const ownerEnqueued = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          async (client) => {
+            const rows = await client.query<{ enqueued: boolean } & QueryResultRow>(
+              `select app_private.enqueue_workout_scheduled_notification($1)
+                 as enqueued`,
+              [trainerWorkout.id],
+            )
+            return rows[0]?.enqueued
+          },
+        )
+        expect(ownerEnqueued).toBe(true)
+
+        const clientWorkout = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => savePlannedWorkout(client, {
+            id: null,
+            clientId: CLIENT_ID,
+            workoutDate: '2099-01-02',
+            startTime: null,
+            endTime: null,
+            notes: 'Yandex push pipeline self plan',
+            exercises: [],
+          }, null),
+        )
+        workoutIds.push(clientWorkout.id)
+
+        const scheduled = await ownerPool.query<{
+          body: string
+          kind: string
+          title: string
+        } & QueryResultRow>(
+          `select kind, title, body
+           from app_private.push_notifications_outbox
+           where user_id = $1`,
+          [OTHER_ACTOR_ID],
+        )
+        expect(scheduled.rows).toHaveLength(1)
+        expect(scheduled.rows[0]).toMatchObject({
+          kind: 'workout_scheduled',
+          title: 'Новая тренировка',
+        })
+        expect(scheduled.rows[0]?.body).toContain(actorName)
+
+        await ownerPool.query(
+          `insert into app_private.push_notifications_outbox (
+             kind, user_id, title, body, data, attempts
+           ) values (
+             'retry_limit_test', $1, 'Retry limit', 'Retry limit', $2::jsonb, 9
+           )`,
+          [OTHER_ACTOR_ID, JSON.stringify({ test: 'retry-limit' })],
+        )
+
+        const dispatchTime = new Date('2099-01-01T09:02:00.000Z')
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => enqueueWorkoutReminders(client, dispatchTime),
+        )).resolves.toBe(1)
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => enqueueWorkoutReminders(client, dispatchTime),
+        )).resolves.toBe(0)
+
+        const batch = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => claimPushNotifications(client, dispatchTime),
+        )
+        expect(batch?.notifications).toHaveLength(3)
+        if (batch === null) throw new Error('Push batch was not claimed')
+        const results = batch.notifications.map((notification) =>
+          notification.title === 'Новая тренировка'
+            ? { id: notification.id, ok: true as const }
+            : notification.title === 'Retry limit'
+              ? {
+                  id: notification.id,
+                  ok: false as const,
+                  status: 503,
+                  error: 'web_push_503',
+                }
+            : {
+                id: notification.id,
+                ok: false as const,
+                status: 410,
+                error: 'web_push_410',
+              })
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => finalizePushNotifications(
+            client,
+            batch.dispatchToken,
+            results.slice(0, 1),
+            dispatchTime,
+          ),
+        )).rejects.toMatchObject({ code: 'PT422' })
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => finalizePushNotifications(
+            client,
+            batch.dispatchToken,
+            results,
+            dispatchTime,
+          ),
+        )).resolves.toEqual({ succeeded: 1, failed: 2, discarded: 2 })
+
+        const finalized = await ownerPool.query<{
+          attempts: number
+          discarded: boolean
+          kind: string
+          sent: boolean
+        } & QueryResultRow>(
+          `select
+             kind,
+             sent_at is not null as sent,
+             discarded_at is not null as discarded,
+             attempts
+           from app_private.push_notifications_outbox
+           where user_id = $1
+           order by kind`,
+          [OTHER_ACTOR_ID],
+        )
+        expect(finalized.rows).toEqual([
+          { kind: 'retry_limit_test', sent: false, discarded: true, attempts: 10 },
+          { kind: 'workout_reminder', sent: false, discarded: true, attempts: 1 },
+          { kind: 'workout_scheduled', sent: true, discarded: false, attempts: 0 },
+        ])
+        expect((await ownerPool.query(
+          'select user_id from public.push_subscriptions where user_id = $1',
+          [OTHER_ACTOR_ID],
+        )).rows).toEqual([])
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => claimPushNotifications(
+            client,
+            new Date('2099-01-01T09:03:00.000Z'),
+          ),
+        )).resolves.toBeNull()
+      } finally {
+        await ownerPool.query(
+          'delete from app_private.push_notifications_outbox where user_id = $1',
+          [OTHER_ACTOR_ID],
+        )
+        await ownerPool.query(
+          'delete from public.notification_preferences where user_id = $1',
+          [OTHER_ACTOR_ID],
+        )
+        await ownerPool.query(
+          'delete from public.push_subscriptions where user_id = $1',
+          [OTHER_ACTOR_ID],
+        )
+        if (workoutIds.length > 0) {
+          await ownerPool.query(
+            'delete from public.workouts where id = any($1::uuid[])',
+            [workoutIds],
+          )
+        }
+        await ownerPool.query(
+          'update public.profiles set timezone = $2 where id = $1',
+          [OTHER_ACTOR_ID, originalTimezone],
         )
       }
     })
