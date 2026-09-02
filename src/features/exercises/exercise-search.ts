@@ -26,7 +26,7 @@ export const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   dips: ['брусья'],
   'pec-deck': ['бабочка', 'пек дек'],
   'barbell-row': ['тяга в наклоне', 'горизонтальная тяга'],
-  'dumbbell-row': ['тяга гантели одной рукой'],
+  'dumbbell-row': ['тяга гантели в наклоне'],
   'pull-ups': ['турник'],
   'lat-pulldown': ['вертикальная тяга', 'верхняя тяга'],
   'seated-cable-row': ['горизонтальный блок', 'нижняя тяга'],
@@ -125,10 +125,16 @@ const SEARCH_PHRASE_REPLACEMENTS: ReadonlyArray<readonly [RegExp, string]> = [
 ]
 
 const SEARCH_TOKEN_REPLACEMENTS: Readonly<Record<string, string>> = {
-  db: 'гантели', dumbbell: 'гантели', dumbbells: 'гантели',
+  db: 'гантели', дб: 'гантели', dumbbell: 'гантели', dumbbells: 'гантели',
   bb: 'штанга', barbell: 'штанга',
   smith: 'смит', hack: 'хак', squat: 'присед', press: 'жим', incline: 'наклон', row: 'тяга', curl: 'сгибания', extension: 'разгибание',
-  гант: 'гантели', гантель: 'гантели', гантелями: 'гантели',
+  гант: 'гантели', гантель: 'гантели', гантелей: 'гантели', гантелями: 'гантели', гантелях: 'гантели',
+  штанги: 'штанга', штангой: 'штанга', штанге: 'штанга',
+  гири: 'гиря', гирей: 'гиря', гирями: 'гиря',
+  смита: 'смит', смите: 'смит', смитом: 'смит',
+  тренажера: 'тренажер', тренажере: 'тренажер', тренажером: 'тренажер', тренажеры: 'тренажер',
+  блока: 'блок', блоке: 'блок', блоком: 'блок',
+  кроссовера: 'кроссовер', кроссовере: 'кроссовер', кроссовером: 'кроссовер',
   накл: 'наклон', инклайн: 'наклон',
   биц: 'бицепс', триц: 'трицепс',
   гакк: 'хак', гак: 'хак',
@@ -170,9 +176,45 @@ function editDistanceAtMostOne(left: string, right: string): boolean {
   return true
 }
 
+// Падежи и число нужны для поиска, но не должны превращать разные движения в
+// одно каноническое имя. Поэтому лёгкий стемминг используется только при
+// сопоставлении отдельных слов; автоматический выбор ниже опирается на точную
+// или единственную почти точную фразу.
+function searchTokenStem(token: string): string {
+  if (token.length < 6) return token
+  const suffixes = [
+    'иями', 'ями', 'ами', 'его', 'ого', 'ему', 'ому', 'ыми', 'ими',
+    'ая', 'яя', 'ое', 'ее', 'ые', 'ие', 'ой', 'ей', 'ую', 'юю',
+    'ах', 'ях', 'ам', 'ям', 'ом', 'ем', 'ов', 'ев',
+    'ы', 'и', 'а', 'я', 'у', 'ю', 'е',
+  ]
+  const suffix = suffixes.find((candidate) => token.endsWith(candidate) && token.length - candidate.length >= 4)
+  return suffix ? token.slice(0, -suffix.length) : token
+}
+
 function tokenMatches(queryToken: string, searchableTokens: readonly string[]): boolean {
-  return searchableTokens.some((token) => token.includes(queryToken)
-    || (queryToken.length >= 5 && token.length >= 5 && editDistanceAtMostOne(queryToken, token)))
+  const queryStem = searchTokenStem(queryToken)
+  return searchableTokens.some((token) => {
+    const tokenStem = searchTokenStem(token)
+    return token.includes(queryToken)
+      || tokenStem === queryStem
+      || (queryToken.length >= 5 && token.length >= 5 && editDistanceAtMostOne(queryToken, token))
+  })
+}
+
+function isNearPhraseMatch(left: string, right: string): boolean {
+  const leftTokens = left.split(/\s+/).filter(Boolean)
+  const rightTokens = right.split(/\s+/).filter(Boolean)
+  if (leftTokens.length !== rightTokens.length) return false
+  let typoCount = 0
+  for (let index = 0; index < leftTokens.length; index += 1) {
+    const leftToken = leftTokens[index]!
+    const rightToken = rightTokens[index]!
+    if (leftToken === rightToken) continue
+    if (leftToken.length < 5 || rightToken.length < 5 || !editDistanceAtMostOne(leftToken, rightToken)) return false
+    typoCount += 1
+  }
+  return typoCount === 1
 }
 
 const OPTIONAL_VARIANT_TOKENS = new Set([
@@ -191,58 +233,108 @@ const DEFAULT_GENERIC_QUERY_REFS: Readonly<Record<string, string>> = {
 export interface RankedExerciseMatch {
   exercise: ExerciseSnapshot
   score: number
+  match: 'exact' | 'search'
+}
+
+export interface ExerciseSearchOptions {
+  /** Самое недавнее упражнение идёт первым, но не становится от этого точным. */
+  preferredExerciseRefs?: readonly string[]
+  /** Пользовательские упражнения выше равных системных вариантов. */
+  customFirst?: boolean
+}
+
+export interface ExerciseSearchResolution {
+  level: 'exact' | 'ambiguous' | 'search'
+  matches: RankedExerciseMatch[]
+}
+
+interface ExerciseSearchIndex {
+  name: string
+  aliases: readonly string[]
+  searchableTokens: readonly string[]
+  nameTokens: readonly string[]
+}
+
+// Каталог просматривается при каждом символе в строке поиска. Его объекты
+// стабильны, поэтому нормализуем постоянные поля один раз, а не заново для
+// каждого запроса. WeakMap не удерживает удалённые пользовательские записи.
+const exerciseSearchIndexCache = new WeakMap<ExerciseSnapshot, ExerciseSearchIndex>()
+
+function getExerciseSearchIndex(exercise: ExerciseSnapshot): ExerciseSearchIndex {
+  const cached = exerciseSearchIndexCache.get(exercise)
+  if (cached) return cached
+  const name = normalizeExerciseSearch(exercise.name.replace(/\s*\([^)]*\)\s*$/, ''))
+  const aliases = (SEARCH_ALIASES[exercise.ref] ?? []).map(normalizeExerciseSearch)
+  const searchableTokens = normalizeExerciseSearch([
+    name,
+    exercise.equipment ?? '',
+    exercise.primaryMuscleDetail ?? '',
+    MUSCLE_GROUP_LABELS[exercise.muscleGroup],
+    ...aliases,
+  ].join(' ')).split(/\s+/).filter(Boolean)
+  const index = { name, aliases, searchableTokens, nameTokens: name.split(/\s+/) }
+  exerciseSearchIndexCache.set(exercise, index)
+  return index
 }
 
 /**
  * Ранжирование для свободного ввода. В отличие от фильтра, оно выбирает
  * базовый вариант, если тренер не назвал специальный хват/угол/технику.
  */
-export function rankExerciseSearch(catalog: readonly ExerciseSnapshot[], search: string): RankedExerciseMatch[] {
+export function rankExerciseSearch(catalog: readonly ExerciseSnapshot[], search: string, options: ExerciseSearchOptions = {}): RankedExerciseMatch[] {
   const query = normalizeExerciseSearch(search)
   const queryTokens = query.split(/\s+/).filter(Boolean)
   if (!queryTokens.length) return []
+  const preferredIndex = new Map((options.preferredExerciseRefs ?? []).map((ref, index) => [ref, index]))
   return catalog.flatMap((exercise) => {
-    const name = normalizeExerciseSearch(exercise.name.replace(/\s*\([^)]*\)\s*$/, ''))
-    const aliases = SEARCH_ALIASES[exercise.ref] ?? []
-    const normalizedAliases = aliases.map(normalizeExerciseSearch)
-    // Используем тот же набор полей, что и обычный фильтр каталога: запрос
-    // «ноги тренажёр» должен находить упражнение даже если «ноги» указано
-    // только как группа, а не в самом названии.
-    const searchableTokens = normalizeExerciseSearch([
-      name,
-      exercise.equipment ?? '',
-      exercise.primaryMuscleDetail ?? '',
-      MUSCLE_GROUP_LABELS[exercise.muscleGroup],
-      ...normalizedAliases,
-    ].join(' ')).split(/\s+/).filter(Boolean)
+    const { name, aliases: normalizedAliases, searchableTokens, nameTokens } = getExerciseSearchIndex(exercise)
     const matchedTokens = queryTokens.filter((token) => tokenMatches(token, searchableTokens))
     if (matchedTokens.length !== queryTokens.length) return []
 
-    const exactAlias = normalizedAliases.includes(query)
-    const exactName = name === query
+    const exactAlias = normalizedAliases.some((alias) => alias === query || isNearPhraseMatch(alias, query))
+    const exactName = name === query || isNearPhraseMatch(name, query)
     const inOrder = name.includes(query) || normalizedAliases.some((alias) => alias.includes(query))
     // Для короткого общего названия сперва показываем базовое движение:
     // «присед» → «Присед со штангой», а не один из частных вариантов.
     const startsWithQuery = name.startsWith(query)
-    const nameTokens = name.split(/\s+/)
     const omittedVariantTokens = nameTokens.filter((token) => OPTIONAL_VARIANT_TOKENS.has(token) && !queryTokens.some((queryToken) => tokenMatches(queryToken, [token])))
     const genericDefault = DEFAULT_GENERIC_QUERY_REFS[query] === exercise.ref
     const score = (exactName ? 240 : 0) + (exactAlias ? 220 : 0) + (genericDefault ? 180 : 0) + matchedTokens.length * 30 + (inOrder ? 24 : 0) + (startsWithQuery ? 28 : 0) - omittedVariantTokens.length * 18
-    return [{ exercise, score }]
-  }).sort((left, right) => right.score - left.score || left.exercise.name.localeCompare(right.exercise.name, 'ru'))
+    return [{ exercise, score, match: exactName || exactAlias ? 'exact' as const : 'search' as const }]
+  }).sort((left, right) => {
+    if (left.match !== right.match) return left.match === 'exact' ? -1 : 1
+    const leftPreferred = preferredIndex.get(left.exercise.ref)
+    const rightPreferred = preferredIndex.get(right.exercise.ref)
+    if (leftPreferred !== undefined || rightPreferred !== undefined) {
+      if (leftPreferred === undefined) return 1
+      if (rightPreferred === undefined) return -1
+      if (leftPreferred !== rightPreferred) return leftPreferred - rightPreferred
+    }
+    if ((options.customFirst ?? true) && left.exercise.source !== right.exercise.source) return left.exercise.source === 'custom' ? -1 : 1
+    return right.score - left.score || left.exercise.name.localeCompare(right.exercise.name, 'ru')
+  })
+}
+
+/**
+ * Единый контракт поиска для picker и свободного ввода:
+ * - exact — один точный или почти точный вариант, его можно подставить;
+ * - ambiguous — несколько точных вариантов либо равные поисковые кандидаты;
+ * - search — релевантные подсказки без права молчаливой подстановки.
+ */
+export function resolveExerciseSearch(catalog: readonly ExerciseSnapshot[], search: string, options: ExerciseSearchOptions = {}): ExerciseSearchResolution {
+  const matches = rankExerciseSearch(catalog, search, options)
+  const exact = matches.filter((candidate) => candidate.match === 'exact')
+  if (exact.length === 1) return { level: 'exact', matches: exact }
+  if (exact.length > 1) return { level: 'ambiguous', matches: exact }
+  const [first, second] = matches
+  if (first && second && first.score - second.score < 18) return { level: 'ambiguous', matches }
+  return { level: 'search', matches }
 }
 
 export function matchesExerciseSearch(exercise: ExerciseSnapshot, search: string): boolean {
   const queryTokens = normalizeExerciseSearch(search).split(/\s+/).filter(Boolean)
   if (queryTokens.length === 0) return true
-  const searchableText = [
-    exercise.name,
-    exercise.equipment,
-    exercise.primaryMuscleDetail,
-    MUSCLE_GROUP_LABELS[exercise.muscleGroup],
-    ...(SEARCH_ALIASES[exercise.ref] ?? []),
-  ].filter(Boolean).join(' ')
-  const searchableTokens = normalizeExerciseSearch(searchableText).split(/\s+/).filter(Boolean)
+  const { searchableTokens } = getExerciseSearchIndex(exercise)
   return queryTokens.every((token) => tokenMatches(token, searchableTokens))
 }
 
@@ -251,4 +343,28 @@ export function matchesExerciseSearch(exercise: ExerciseSnapshot, search: string
 export function isExerciseSearchAlias(exercise: ExerciseSnapshot, search: string): boolean {
   const query = normalizeExerciseSearch(search)
   return Boolean(query) && (SEARCH_ALIASES[exercise.ref] ?? []).some((alias) => normalizeExerciseSearch(alias) === query)
+}
+
+export interface ExerciseSearchConflict {
+  phrase: string
+  exerciseRefs: string[]
+}
+
+/** Находит фразы, которые без подтверждения указывают на разные упражнения. */
+export function exerciseSearchConflicts(catalog: readonly ExerciseSnapshot[]): ExerciseSearchConflict[] {
+  const refsByPhrase = new Map<string, Set<string>>()
+  for (const exercise of catalog) {
+    const phrases = [exercise.name.replace(/\s*\([^)]*\)\s*$/, ''), ...(SEARCH_ALIASES[exercise.ref] ?? [])]
+    for (const phrase of phrases) {
+      const normalized = normalizeExerciseSearch(phrase)
+      if (!normalized) continue
+      const refs = refsByPhrase.get(normalized) ?? new Set<string>()
+      refs.add(exercise.ref)
+      refsByPhrase.set(normalized, refs)
+    }
+  }
+  return [...refsByPhrase.entries()]
+    .filter(([, refs]) => refs.size > 1)
+    .map(([phrase, refs]) => ({ phrase, exerciseRefs: [...refs].sort() }))
+    .sort((left, right) => left.phrase.localeCompare(right.phrase, 'ru'))
 }

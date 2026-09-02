@@ -1,6 +1,7 @@
 import type { BlockPreset, BlockType, ExerciseSnapshot, WorkoutSetDraft } from '../../shared/domain'
 import { isValidRpe } from '../../shared/rpe'
-import { isExerciseSearchAlias, rankExerciseSearch, SEARCH_ALIASES } from '../exercises/exercise-search'
+import { resolveExerciseSearch, SEARCH_ALIASES, type ExerciseSearchResolution } from '../exercises/exercise-search'
+import { selectableExercises } from '../exercises/selectable-exercises'
 import { normalizeWorkoutSpeech, parseWorkoutNumber, WORKOUT_NUMBER_SOURCE } from './workout-speech-normalizer'
 
 export interface ParsedWorkoutExercise {
@@ -163,6 +164,22 @@ function equipmentVariantMatches(name: string, catalog: readonly ExerciseSnapsho
   })
 }
 
+function rankAmbiguousVariants(exercises: readonly ExerciseSnapshot[], preferredExerciseRefs: readonly string[]): ExerciseSearchResolution['matches'] {
+  const preferredIndex = new Map(preferredExerciseRefs.map((ref, index) => [ref, index]))
+  return exercises.map((exercise) => ({ exercise, score: 0, match: 'search' as const }))
+    .sort((left, right) => {
+      const leftPreferred = preferredIndex.get(left.exercise.ref)
+      const rightPreferred = preferredIndex.get(right.exercise.ref)
+      if (leftPreferred !== undefined || rightPreferred !== undefined) {
+        if (leftPreferred === undefined) return 1
+        if (rightPreferred === undefined) return -1
+        if (leftPreferred !== rightPreferred) return leftPreferred - rightPreferred
+      }
+      if (left.exercise.source !== right.exercise.source) return left.exercise.source === 'custom' ? -1 : 1
+      return left.exercise.name.localeCompare(right.exercise.name, 'ru')
+    })
+}
+
 function number(value: string | undefined): number | undefined {
   return parseWorkoutNumber(value)
 }
@@ -207,59 +224,34 @@ export function quickWorkoutExerciseName(line: string): string {
     .trim()
 }
 
-function prioritizePreferred(matches: readonly ExerciseSnapshot[], preferredExerciseRefs: readonly string[]): ExerciseSnapshot[] {
-  if (!preferredExerciseRefs.length || matches.length < 2) return [...matches]
-  const preferredIndex = new Map(preferredExerciseRefs.map((ref, index) => [ref, index]))
-  return matches.slice().sort((left, right) => {
-    const leftIndex = preferredIndex.get(left.ref)
-    const rightIndex = preferredIndex.get(right.ref)
-    if (leftIndex === undefined && rightIndex === undefined) return 0
-    if (leftIndex === undefined) return 1
-    if (rightIndex === undefined) return -1
-    return leftIndex - rightIndex
-  })
-}
-
-function matchingExercises(name: string, catalog: readonly ExerciseSnapshot[], preferredExerciseRefs: readonly string[]): ExerciseSnapshot[] {
-  const query = normalize(normalizeSportSpeech(name))
-  if (!query) return []
-  const scopedCatalog = catalog.filter((exercise) => matchesExplicitWorkoutEquipment(name, exercise))
+function matchingExerciseResolution(name: string, catalog: readonly ExerciseSnapshot[], preferredExerciseRefs: readonly string[]): ExerciseSearchResolution {
+  if (!normalize(name)) return { level: 'search', matches: [] }
+  // Старые системные ref остаются доступны истории, но не должны создавать
+  // ложную неоднозначность при разборе новой тренировки.
+  const scopedCatalog = selectableExercises(catalog).filter((exercise) => matchesExplicitWorkoutEquipment(name, exercise))
   const equipmentVariants = equipmentVariantMatches(name, scopedCatalog)
-  if (equipmentVariants.length > 1) return prioritizePreferred(equipmentVariants, preferredExerciseRefs)
-  const exact = scopedCatalog.filter((exercise) => normalizedExerciseName(exercise.name) === query)
-  if (exact.length === 1) return exact
-  // Своё упражнение иногда повторяет системное по имени. Для записи без явного
-  // уточнения берём единственный встроенный вариант: его тип ввода стабилен.
-  // Несколько системных совпадений по-прежнему считаем неоднозначностью.
-  const exactSystem = exact.filter((exercise) => exercise.source === 'system')
-  if (exactSystem.length === 1) return exactSystem
-  const aliases = scopedCatalog.filter((exercise) => isExerciseSearchAlias(exercise, query))
-  if (aliases.length === 1) return aliases
-  // Одно короткое слово («присед») почти всегда скрывает вариацию. Не делаем
-  // вид, что знаем намерение тренера: точные «Планка»/«Бег» уже прошли exact.
-  // Но для вариантов вроде «биц», «гакк» и «смит» учитываем алиасы, чтобы
-  // тренер хотя бы получил релевантные варианты, а не пустой результат.
-  if (query.split(' ').length < 2) {
-    return prioritizePreferred(rankExerciseSearch(scopedCatalog, name).map(({ exercise }) => exercise), preferredExerciseRefs)
+  const options = { preferredExerciseRefs, customFirst: true }
+  // Точное каталожное название уже однозначно: «Жим лёжа» означает базовый
+  // вариант, а гантели/тренажёр пользователь называет отдельно. Иначе каждый
+  // такой ввод попадал бы на лишний экран выбора из-за существования вариантов.
+  const direct = resolveExerciseSearch(scopedCatalog, name, options)
+  if (direct.level === 'exact') return direct
+  // Picker показывает оборудование в скобках и может вернуть его в текст.
+  // После строгой фильтрации по оборудованию скобки не должны лишать точное
+  // каталожное название права на безопасную подстановку.
+  const nameWithoutEquipmentLabel = name.replace(/\s*\([^)]*\)\s*$/, '').trim()
+  if (nameWithoutEquipmentLabel !== name) {
+    const withoutEquipmentLabel = resolveExerciseSearch(scopedCatalog, nameWithoutEquipmentLabel, options)
+    if (withoutEquipmentLabel.level === 'exact') return withoutEquipmentLabel
   }
-  return prioritizePreferred(rankExerciseSearch(scopedCatalog, name).map(({ exercise }) => exercise), preferredExerciseRefs)
-}
-
-function canResolveSafely(name: string, matches: readonly ExerciseSnapshot[], catalog: readonly ExerciseSnapshot[]): boolean {
-  if (equipmentVariantMatches(name, catalog).length > 1) return false
-  if (matches.length !== 1 && name.trim().split(/\s+/).length < 2) return false
-  if (matches.length === 1) return true
-  const ranked = rankExerciseSearch(catalog.filter((exercise) => matchesExplicitWorkoutEquipment(name, exercise)), name)
-  const [first, second] = ranked
-  // Для фразы из нескольких слов авто-выбор допустим, когда лучший вариант
-  // явно опережает следующий. Тренер всё равно видит итог и может его заменить.
-  return Boolean(first && second && first.score >= 84 && first.score - second.score >= 18)
-}
-
-function needsTrainerChoice(name: string, catalog: readonly ExerciseSnapshot[]): boolean {
-  const query = normalize(name)
-  if (query.split(' ').length >= 2) return false
-  return !catalog.some((exercise) => normalizedExerciseName(exercise.name) === query || isExerciseSearchAlias(exercise, query))
+  if (equipmentVariants.length > 1) {
+    return { level: 'ambiguous', matches: rankAmbiguousVariants(equipmentVariants, preferredExerciseRefs) }
+  }
+  if (direct.matches.length) return direct
+  const speechNormalized = normalizeSportSpeech(name)
+  return normalize(speechNormalized) === normalize(name)
+    ? direct
+    : resolveExerciseSearch(scopedCatalog, speechNormalized, options)
 }
 
 export function splitWorkoutText(text: string, catalog: readonly ExerciseSnapshot[]): string[] {
@@ -275,7 +267,9 @@ export function splitWorkoutText(text: string, catalog: readonly ExerciseSnapsho
 
 /** Кандидаты из каталога для одного фрагмента диктовки, в порядке релевантности. */
 export function workoutCandidates(line: string, catalog: readonly ExerciseSnapshot[]): ExerciseSnapshot[] {
-  return matchingExercises(quickWorkoutExerciseName(line), catalog, []).slice(0, 8)
+  return matchingExerciseResolution(quickWorkoutExerciseName(line), catalog, []).matches
+    .map(({ exercise }) => exercise)
+    .slice(0, 8)
 }
 
 function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { sets: WorkoutSetDraft[]; hasValues: boolean } {
@@ -434,8 +428,9 @@ export function parseQuickWorkoutEntry(text: string, catalog: readonly ExerciseS
       continue
     }
     const name = quickWorkoutExerciseName(line)
-    const matches = matchingExercises(name, catalog, options.preferredExerciseRefs ?? [])
-    if (needsTrainerChoice(name, catalog) || !canResolveSafely(name, matches, catalog)) {
+    const resolution = matchingExerciseResolution(name, catalog, options.preferredExerciseRefs ?? [])
+    const matches = resolution.matches.map(({ exercise }) => exercise)
+    if (resolution.level !== 'exact') {
       unparsed.push({ line, reason: matches.length ? 'ambiguous' : 'not-found', candidates: matches.slice(0, 3) })
       continue
     }
