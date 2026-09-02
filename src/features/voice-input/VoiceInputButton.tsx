@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { CloseIcon, MicIcon, StopIcon } from '../../shared/icons'
 import { BrowserAudioRecorder, decodeAudioToPcm16, type AudioRecorder } from './audio-recorder'
 import type { SpeechRecognizer } from './speech-recognizer'
@@ -27,6 +27,8 @@ interface VoiceInputButtonProps {
   startupTimeoutMs?: number
   disabled?: boolean
   showTranscriptStatus?: boolean
+  /** Idle-only extra control rendered inside the hero card's label area (e.g. a text-entry alternative). */
+  secondaryAction?: ReactNode
 }
 
 export function VoiceInputButton({
@@ -47,6 +49,7 @@ export function VoiceInputButton({
   startupTimeoutMs = 30_000,
   disabled = false,
   showTranscriptStatus = true,
+  secondaryAction,
 }: VoiceInputButtonProps) {
   const [phase, setPhase] = useState<VoiceInputPhase>('idle')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -287,7 +290,7 @@ export function VoiceInputButton({
       <MicIcon />
       <span className="voice-action-ring" />
     </span>}
-    {recording ? <div className="voice-action-recording-controls"><button type="button" className="primary wide" onClick={finishCurrentRecording}>Готово</button><button type="button" className="link" onClick={cancelRecording}>Отменить</button></div> : <div className="voice-action-label">{!busy && <strong>{idleLabel}</strong>}{busy && <span>Это займёт несколько секунд</span>}</div>}
+    {recording ? <div className="voice-action-recording-controls"><button type="button" className="primary wide" onClick={finishCurrentRecording}>Готово</button><button type="button" className="link" onClick={cancelRecording}>Отменить</button></div> : <div className="voice-action-label">{!busy && <strong>{idleLabel}</strong>}{busy && <span>Это займёт несколько секунд</span>}{!busy && secondaryAction}</div>}
     {message && !message.startsWith('Сейчас распознаю:') && <div className="voice-action-error" role="alert"><strong>{message}</strong></div>}
   </section>
 
