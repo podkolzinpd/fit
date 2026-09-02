@@ -78,9 +78,13 @@ The following remain unchanged during the foundation phase:
    represented by `000024`, with operator reads limited to `ops_readonly`.
    Production routing, the Telegram delivery transport and the tenant data copy
    remain pending.
-8. Rehearse full tenant migration at least twice. Cut over one isolated tenant
-   cohort only after all data it can mutate is migrated and writes are frozen
-   for the cutover window.
+8. [Tooling implemented locally; rehearsals pending] Export/import/validation
+   now covers one isolated trainer cohort with an encrypted manifest, mandatory
+   dry-run, transactional idempotent apply and per-table count/checksum
+   validation. Rehearse the full migration at least twice with
+   production-like non-production data. Cut over one isolated tenant cohort
+   only after all data it can mutate is migrated and writes are frozen for the
+   cutover window.
 9. Expand sticky tenant cohorts gradually after monitoring data integrity,
    authorization failures, latency and error rates.
 10. Remove Supabase only after all cohorts are migrated and the rollback window
