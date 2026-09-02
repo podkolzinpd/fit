@@ -937,6 +937,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .menu { display: flex; flex-direction: column; margin: 22px 0; border-block: 1px solid var(--border) }
 .menu a, .menu > button { min-height: 52px; display: flex; align-items: center; justify-content: flex-start; padding: 15px 4px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; color: var(--fg); font: inherit; text-align: left; text-decoration: none; box-shadow:none}.menu > :last-child { border-bottom: 0 }
 .profile-settings { margin: 20px 0 22px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow:none}
+.profile-settings-group-head { display:grid; gap:4px; padding:16px 14px 10px; border-top:1px solid var(--border); color:var(--fg) }
+.profile-settings-group-head strong { font-size:var(--type-body-size); font-weight:var(--weight-semibold); line-height:var(--leading-snug) }
+.profile-settings-group-head span { color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.profile-settings-group-head + .switch-row { border-top:0 }
 .yandex-account-linking-card { display:grid; gap:var(--space-3); margin:20px 0 22px; padding:var(--space-3); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); box-shadow:none}
 .yandex-account-linking-card .eyebrow { margin:0 0 var(--space-1) }
 .yandex-account-linking-card h2 { margin:0; font-size:var(--type-section-size); line-height:var(--leading-snug) }
@@ -1172,6 +1176,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .block-rest { display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0 0 }
 .block-rest-field { display: inline-flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 12px; font-weight: 600 }
 .block-rest-field input { width: 72px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700; text-align: center }
+.exercise-plan-rest-field { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:6px 0 12px; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-sunken); color:var(--muted); font-size:var(--type-caption-size); font-weight:var(--weight-medium); line-height:var(--leading-snug) }
+.exercise-plan-rest-field input { width:78px; min-height:44px; flex:0 0 auto; padding:8px 10px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-raised); color:var(--fg); font:inherit; font-size:var(--type-body-size); font-weight:var(--weight-semibold); text-align:center }
 .exercise-options { margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px }
 .exercise-options summary { width: fit-content; min-height:var(--control-height-standard); display:flex; align-items:center; color: var(--accent-weak); cursor: pointer; font-size: 13px; font-weight: 700; list-style-position: inside }
 .exercise-options-hint { margin-left: 5px; color: var(--muted); font-weight: 600 }
