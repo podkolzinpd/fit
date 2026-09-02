@@ -39,7 +39,9 @@ export const VITAL_FREE_PACK_ASSETS = [
   { id: '0077', sourceName: 'rowing machine', ref: 'rowing-machine', file: 'rowing-machine' },
   { id: '0078', sourceName: 'run on treadmill', ref: 'vital-treadmill-running', file: 'treadmill-running' },
   { id: '0079', sourceName: 'seated leg curl machine', ref: 'fedb-seated-leg-curl', file: 'seated-leg-curl-machine' },
-  { id: '0080', sourceName: 'seated overhead press', ref: 'fedb-machine-shoulder-military-press', file: 'machine-shoulder-press' },
+  // Несмотря на историческое имя файла, в кадре именно жим гантелей сидя,
+  // без рычажного тренажёра или грифа Смита.
+  { id: '0080', sourceName: 'seated overhead press', ref: 'seated-dumbbell-press', file: 'machine-shoulder-press' },
   { id: '0081', sourceName: 'step-ups (weighted)', ref: 'fedb-dumbbell-step-ups', file: 'dumbbell-step-ups' },
   { id: '0082', sourceName: 'stepmill machine version 1', ref: 'vital-stair-climber', file: 'stair-climber' },
   { id: '0083', sourceName: 'stepmill machine', ref: 'vital-stepper-machine', file: 'stepper-machine' },
