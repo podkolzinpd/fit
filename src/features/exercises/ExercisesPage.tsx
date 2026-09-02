@@ -3,7 +3,7 @@ import { useMemo, useState, type FormEvent, type MouseEvent } from 'react'
 import { exercisesRepository, type CustomExercise } from '../../data/repositories/exercises.repository'
 import { useAuth } from '../../app/auth-context'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
-import { ChevronRightIcon, CloseIcon, SearchIcon } from '../../shared/icons'
+import { ChevronRightIcon, CloseIcon, PlayIcon, SearchIcon } from '../../shared/icons'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ExerciseImage } from './ExerciseImage'
@@ -93,8 +93,8 @@ export function ExercisesPage() {
       {systemMatches.length > 0 ? <>
         <div className="catalog-media-grid">
           {visibleExercises.map((exercise) => <button type="button" className="catalog-media-card" key={exercise.ref} onClick={() => setSelected(exercise)}>
-            <ExerciseImage src={exercise.imageUrl} alt="" />
-            <span><strong>{exercise.name}</strong><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small></span>
+            <span className="catalog-media-card-visual"><ExerciseImage src={exercise.imageUrl} motionSrc={exercise.motionImageUrl} alt="" variant="preview" />{exercise.techniqueVideoUrl && <span className="catalog-media-card-play" aria-hidden="true"><PlayIcon /></span>}</span>
+            <span className="catalog-media-card-copy"><strong>{exercise.name}</strong><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small></span>
             <ChevronRightIcon />
           </button>)}
         </div>
@@ -121,7 +121,7 @@ export function ExercisesPage() {
     {selected && <div className="catalog-detail-overlay" onClick={() => setSelected(null)}>
       <section className="catalog-detail" role="dialog" aria-modal="true" aria-labelledby="catalog-detail-title" onClick={stopPropagation}>
         <header><div><p className="eyebrow">ТЕХНИКА</p><h2 id="catalog-detail-title">{selected.name}</h2></div><button type="button" className="catalog-detail-close" aria-label="Закрыть" onClick={() => setSelected(null)}><CloseIcon /></button></header>
-        <ExerciseImage src={selected.imageUrl} motionSrc={selected.motionImageUrl} alt={selected.name} variant="technique" />
+        <ExerciseImage src={selected.imageUrl} motionSrc={selected.motionImageUrl} videoSrc={selected.techniqueVideoUrl} alt={selected.name} variant="technique" />
         <div className="catalog-detail-facts"><span><small>Группа</small><strong>{MUSCLE_GROUP_LABELS[selected.muscleGroup]}</strong></span><span><small>Оборудование</small><strong>{selected.equipment ?? 'Без оборудования'}</strong></span><span><small>Тип ввода</small><strong>{INPUT_KIND_LABELS[selected.inputKind]}</strong></span><span><small>Уровень</small><strong>{selected.level ? LEVEL_LABELS[selected.level.toLocaleLowerCase()] ?? selected.level : 'Не указан'}</strong></span></div>
         {selected.instructions?.length ? <div className="catalog-detail-instructions"><h3>Как выполнять</h3><ol>{selected.instructions.map((instruction, index) => <li key={`${selected.ref}-${index}`}>{instruction}</li>)}</ol></div> : <p className="catalog-detail-note">Для этого упражнения пока нет пошагового описания.</p>}
         <button type="button" className="secondary" onClick={() => setSelected(null)}>Закрыть</button>

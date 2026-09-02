@@ -18,6 +18,7 @@ import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
 import { AnalyticsIcon, ChevronRightIcon, HistoryIcon, ScheduleIcon } from '../../shared/icons'
+import { InvitationCodeCard } from '../../shared/invitation-code-card'
 
 export function MyClientPage() {
   const { actor, refresh } = useAuth()
@@ -311,7 +312,7 @@ export function ClientDetailPage() {
       <ClientNoteBlock client={query.data} />
       <div className="page-actions">
         {query.data.hasAccount === false && <button className="secondary wide" disabled={invite.isPending} aria-busy={invite.isPending} onClick={() => invite.mutate()}>{invite.isPending ? 'Создаём приглашение…' : 'Пригласить клиента'}</button>}
-        {invite.data && <div className="card"><strong>Код клиента: {invite.data}</strong><p>Передайте код клиенту. Он действует 7 дней и используется один раз.</p></div>}
+        {invite.data && <InvitationCodeCard code={invite.data} label="Код клиента" description="Передайте код клиенту. Он действует 7 дней и используется один раз." />}
         {invitations.data?.map((item) => <article className="card" key={item.id}><div><strong>Активное приглашение клиента</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU', { timeZone: normalizeTimeZone(actor?.timezone) })}</p></div><button className="link danger" disabled={revoke.isPending} aria-busy={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Код больше нельзя будет использовать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>{revoke.isPending ? 'Отзываем…' : 'Отозвать'}</button></article>)}
         {invite.error && <p className="error">{invite.error.message}</p>}
         {revoke.error && <p className="error">{revoke.error.message}</p>}

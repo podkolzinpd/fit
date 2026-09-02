@@ -2,15 +2,21 @@ import { describe, expect, it } from 'vitest'
 import { SYSTEM_EXERCISES, SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISE_CATALOG_VERSION } from './system-exercises'
 import { IMPORTED_EXERCISES } from './system-exercises.generated'
 import { BASE_EXERCISES } from './system-exercises.base.generated'
+import { CATALOG_EXPANSION } from './system-exercises.expansion.generated'
+import { VITAL_FREE_PACK_ASSETS, VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_MEDIA_BY_REF } from './vital-free-pack'
 
 const EXERCISE_MEDIA_PATHS = new Set(
-  Object.keys(import.meta.glob('../../public/exercises/*.jpg', { query: '?url', import: 'default' }))
+  Object.keys(import.meta.glob('../../public/exercises/**/*.jpg', { query: '?url', import: 'default' }))
+    .map((path) => path.replace('../../public', '')),
+)
+const EXERCISE_VIDEO_PATHS = new Set(
+  Object.keys(import.meta.glob('../../public/exercises/vital/*.mp4', { query: '?url', import: 'default' }))
     .map((path) => path.replace('../../public', '')),
 )
 
 describe('system exercise catalog', () => {
   it('matches the V1 baseline catalog', () => {
-    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(3)
+    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(7)
     expect(SYSTEM_EXERCISES).toHaveLength(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.ref)).size).toBe(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.name)).size).toBe(49)
@@ -59,10 +65,35 @@ describe('system exercise catalog', () => {
 
   it('добавляет импортированный каталог поверх базового без дублей', () => {
     // Полный каталог = 49 базовых + импортированные, ref уникальны.
-    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(521)
+    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(662)
     expect(IMPORTED_EXERCISES).toHaveLength(451)
-    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(SYSTEM_EXERCISES.length + IMPORTED_EXERCISES.length + 21)
+    expect(CATALOG_EXPANSION).toHaveLength(120)
+    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(SYSTEM_EXERCISES.length + IMPORTED_EXERCISES.length + CATALOG_EXPANSION.length + 42)
     expect(new Set(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.ref)).size).toBe(SYSTEM_EXERCISE_CATALOG.length)
+  })
+
+  it('добавляет 120 отобранных упражнений с двумя фото и русскими данными', () => {
+    expect(new Set(CATALOG_EXPANSION.map((exercise) => exercise.ref)).size).toBe(CATALOG_EXPANSION.length)
+    expect(new Set(CATALOG_EXPANSION.map((exercise) => exercise.name)).size).toBe(CATALOG_EXPANSION.length)
+    for (const exercise of CATALOG_EXPANSION) {
+      expect(exercise.ref).toMatch(/^fedb-/)
+      expect(exercise.name.replace(/EZ/g, '')).not.toMatch(/[A-Za-z]/)
+      expect(exercise.name).toMatch(/\([^)]+\)$/)
+      expect(exercise.equipment).toBeTruthy()
+      expect(exercise.primaryMuscleDetail).toBeTruthy()
+      expect(exercise.instructions?.length).toBeGreaterThanOrEqual(2)
+      expect(EXERCISE_MEDIA_PATHS.has(exercise.imageUrl)).toBe(true)
+      expect(EXERCISE_MEDIA_PATHS.has(exercise.motionImageUrl)).toBe(true)
+    }
+  })
+
+  it('использует подходящий формат результата в новых направлениях', () => {
+    const exercise = (ref: string) => CATALOG_EXPANSION.find((item) => item.ref === ref)
+    expect(exercise('fedb-recumbent-bike')).toMatchObject({ muscleGroup: 'cardio', inputKind: 'distance' })
+    expect(exercise('fedb-yoke-walk')).toMatchObject({ inputKind: 'distance' })
+    expect(exercise('fedb-front-box-jump')).toMatchObject({ inputKind: 'reps' })
+    expect(exercise('fedb-hamstring-smr')).toMatchObject({ inputKind: 'duration' })
+    expect(exercise('fedb-trap-bar-deadlift')).toMatchObject({ inputKind: 'strength' })
   })
 
   it('импортированные упражнения имеют метаданные каталога', () => {
@@ -146,8 +177,33 @@ describe('system exercise catalog', () => {
     }
   })
 
+  it('подключает все 50 видео бесплатного пака только к точным упражнениям', () => {
+    const expected = new Map<string, string>(VITAL_FREE_PACK_ASSETS.map((asset) => [asset.ref, `/exercises/vital/${asset.file}.mp4`]))
+    expect(VITAL_FREE_PACK_ASSETS).toHaveLength(50)
+    expect(new Set(VITAL_FREE_PACK_ASSETS.map((asset) => asset.id))).toEqual(new Set(Array.from({ length: 50 }, (_, index) => String(index + 51).padStart(4, '0'))))
+    expect(new Set(VITAL_FREE_PACK_ASSETS.map((asset) => asset.ref)).size).toBe(50)
+    expect(new Set(VITAL_FREE_PACK_ASSETS.map((asset) => asset.file)).size).toBe(50)
+    const withVideo = SYSTEM_EXERCISE_CATALOG.filter((exercise) => exercise.techniqueVideoUrl)
+    expect(withVideo).toHaveLength(expected.size)
+    for (const exercise of withVideo) {
+      expect(exercise).toMatchObject(VITAL_FREE_PACK_MEDIA_BY_REF[exercise.ref]!)
+      expect(exercise.techniqueVideoUrl).toBe(expected.get(exercise.ref))
+      expect(EXERCISE_VIDEO_PATHS.has(exercise.techniqueVideoUrl!)).toBe(true)
+    }
+  })
+
+  it('добавляет отдельные карточки только для отсутствующих движений Free50', () => {
+    expect(VITAL_FREE_PACK_EXERCISES).toHaveLength(21)
+    for (const exercise of VITAL_FREE_PACK_EXERCISES) {
+      expect(exercise.name).toMatch(/\([^)]+\)$/)
+      expect(exercise.instructions?.length).toBeGreaterThanOrEqual(3)
+      expect(EXERCISE_MEDIA_PATHS.has(exercise.imageUrl!)).toBe(true)
+      expect(EXERCISE_MEDIA_PATHS.has(exercise.motionImageUrl!)).toBe(true)
+    }
+  })
+
   it('каталог = обогащённые базовые + импортированные без дублей', () => {
-    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(BASE_EXERCISES.length + IMPORTED_EXERCISES.length + 21)
+    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(BASE_EXERCISES.length + IMPORTED_EXERCISES.length + CATALOG_EXPANSION.length + 42)
     expect(new Set(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.ref)).size).toBe(SYSTEM_EXERCISE_CATALOG.length)
   })
 

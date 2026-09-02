@@ -70,7 +70,7 @@ test('trainer adds the first client, plans a workout and gets an invitation code
   await page.getByRole('button', { name: 'Выбрать упражнения вручную' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим лёжа/ }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByText('Добавить значения', { exact: true }).click()
   await page.getByLabel(/вес, подход 1/i).fill('40')
@@ -81,7 +81,12 @@ test('trainer adds the first client, plans a workout and gets an invitation code
   await expect(page.getByRole('heading', { name: 'Тренировка запланирована' })).toBeVisible()
   await page.getByRole('button', { name: 'Пригласить спортсмена' }).click()
   await expect(page.getByText(/Код приглашения/)).toBeVisible()
-  await expect(page.locator('.first-plan-invite-code strong')).toHaveText(/[A-F0-9]{12}/)
+  const invitationCode = (await page.locator('.invitation-code-card strong').textContent())?.match(/[A-F0-9]{12}/)?.[0]
+  expect(invitationCode).toBeTruthy()
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.getByRole('button', { name: 'Скопировать код приглашения' }).click()
+  await expect(page.getByRole('button', { name: 'Код приглашения скопирован' })).toBeVisible()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(invitationCode)
 })
 
 test('client registers, starts without a profile questionnaire and creates an own workout', async ({ page }, testInfo) => {
@@ -134,7 +139,7 @@ test('client registers, starts without a profile questionnaire and creates an ow
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим лёжа/ }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
@@ -196,6 +201,10 @@ test('invitation links reject the wrong role and revoked code without consuming 
   await page.getByRole('button', { name: 'Пригласить клиента' }).click()
   const clientCode = (await page.getByText(/Код клиента:/).textContent())?.match(/[A-F0-9]{12}/)?.[0]
   expect(clientCode).toBeTruthy()
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.getByRole('button', { name: 'Скопировать код клиента' }).click()
+  await expect(page.getByRole('button', { name: 'Код клиента скопирован' })).toBeVisible()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(clientCode)
 
   // Тренер не может использовать код клиента; код остаётся действующим для
   // правильного аккаунта и следующий переход по ссылке обрабатывается сам.
@@ -234,6 +243,9 @@ test('invitation links reject the wrong role and revoked code without consuming 
   await page.getByRole('button', { name: 'Пригласить тренера' }).click()
   const trainerCode = (await page.getByText(/Код для тренера:/).textContent())?.match(/[A-F0-9]{12}/)?.[0]
   expect(trainerCode).toBeTruthy()
+  await page.getByRole('button', { name: 'Скопировать код для тренера' }).click()
+  await expect(page.getByRole('button', { name: 'Код для тренера скопирован' })).toBeVisible()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(trainerCode)
   await page.getByRole('button', { name: 'Отозвать' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Отозвать' }).click()
   await expect(page.getByRole('heading', { name: 'Активные приглашения' })).toHaveCount(0)
@@ -487,7 +499,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
   await page.getByRole('menuitem', { name: 'Заменить' }).click()
   await page.getByLabel('Поиск упражнения').fill('Планка')
-  await page.getByRole('button', { name: /^Планка/ }).first().click()
+  await page.getByRole('button', { name: /^Добавить: Планка/ }).first().click()
   await expect(page.locator('.live-exercise-head h2').first()).toContainText('Планка')
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
   await page.getByRole('menuitem', { name: 'Заменить' }).click()

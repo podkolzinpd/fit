@@ -32,7 +32,7 @@ function comparisonWorkoutRow(id: string, date: string, weight: number, distance
   }
 }
 
-async function mockPeriodComparison(page: VisualPage) {
+async function mockProgressPeriodSummary(page: VisualPage) {
   const clientSummary = {
     headline: 'Прогресс уже заметен', achievements: ['Жим лёжа стал сильнее'],
     consistency: 'Тренировки продолжаются', encouragement: 'Продолжай в том же темпе', next_steps: [],
@@ -59,6 +59,10 @@ async function mockPeriodComparison(page: VisualPage) {
       generated_at: '2026-08-31T12:00:00Z', version: 1,
     }]),
   }))
+}
+
+async function mockPeriodComparison(page: VisualPage) {
+  await mockProgressPeriodSummary(page)
   await page.route('**/rest/v1/rpc/list_workouts', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify([
       comparisonWorkoutRow('81000000-0000-4000-8000-000000000001', '2026-07-05', 50, 5, 1),
@@ -123,6 +127,7 @@ async function mockMeasurementProgress(page: VisualPage) {
 }
 
 async function mockRegularityProgress(page: VisualPage) {
+  await mockProgressPeriodSummary(page)
   const current = ['2026-08-03', '2026-08-10', '2026-08-12']
   const previous = ['2026-07-02', '2026-07-05', '2026-07-08', '2026-07-12', '2026-07-16', '2026-07-20', '2026-07-24', '2026-07-28']
   const rows = [...previous, ...current].map((date, index) => comparisonWorkoutRow(
@@ -430,7 +435,7 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим лёжа/ }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
@@ -609,7 +614,7 @@ test('future standalone plan stays compact on client home', async ({ page }, tes
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим лёжа/ }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
@@ -1082,7 +1087,7 @@ async function addCompletedBenchPress(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим лёжа/ }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('60')
   await page.getByLabel('Повторы, подход 1').fill('10')
@@ -1181,7 +1186,7 @@ async function openWorkoutForDetailReview(page: import('@playwright/test').Page,
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим лёжа/ }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
@@ -1209,7 +1214,7 @@ test('workout detail, completion and exercise history keep their visual baseline
   // покрывала partial независимо от числа подходов в исходном плане.
   await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Берпи')
-  await page.getByRole('button', { name: /^Берпи/ }).click()
+  await page.getByRole('button', { name: /^Добавить: Берпи/ }).click()
   await expect(page.getByRole('heading', { name: 'Берпи' })).toBeVisible()
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   const partialFinish = page.getByRole('button', { name: 'Завершить', exact: true })
@@ -1459,6 +1464,35 @@ test('trainer Clients list keeps its mobile visual baselines', async ({ page }, 
   await expect(page).toHaveScreenshot(`trainer-clients-mobile-search-focus-dark-${process.platform}.png`, { animations: 'disabled', caret: 'hide', fullPage: true, maxDiffPixelRatio: 0.03 })
 })
 
+test('exercise picker keeps search, filters and technique readable', async ({ page }, testInfo) => {
+  await signIn(page, 'trainer@fit.local', /\/today$/)
+  const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : testInfo.project.name.replace('visual-client-', 'mobile-')
+  await gotoStable(page, `/workouts/new?client=${demoClientId}`)
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
+
+  const search = page.getByLabel('Поиск упражнения')
+  await search.fill('Болгарский')
+  await expect(page.getByRole('button', { name: 'Очистить поиск' })).toBeVisible()
+  await expect(page.getByText(/Найдено: \d+/)).toBeVisible()
+  await expectVisualBaseline(page, `exercise-picker-search-${profile}-${process.platform}.png`, [page.locator('.picker-item-media')])
+
+  await page.getByRole('button', { name: /Посмотреть технику: Болгарский присед \(Штанга\)/ }).click()
+  await expect(page.getByRole('heading', { name: 'Техника' })).toBeVisible()
+  await expect(page.getByText('Как выполнять')).toBeVisible()
+  await expectVisualBaseline(page, `exercise-picker-technique-${profile}-${process.platform}.png`, [page.locator('.picker-technique-view .exercise-image-technique')])
+  await page.getByRole('button', { name: 'Назад к выбору' }).click()
+  await expect(search).toHaveValue('Болгарский')
+
+  await page.getByRole('button', { name: 'Очистить поиск' }).click()
+  await page.getByRole('button', { name: 'Фильтры' }).click()
+  await page.getByLabel('Группа мышц').selectOption('legs')
+  await page.getByLabel('Мышца').selectOption('Передняя поверхность бедра')
+  await expect(page.getByLabel('Выбранные фильтры')).toContainText('Ноги')
+  await expect(page.getByLabel('Выбранные фильтры')).toContainText('Передняя поверхность бедра')
+  await expectVisualBaseline(page, `exercise-picker-filters-${profile}-${process.platform}.png`, [page.locator('.picker-item-media')])
+})
+
 test('trainer Client Detail keeps its visual baselines', async ({ page }, testInfo) => {
   await page.route('**/rest/v1/rpc/list_workout_summaries', (route) => route.fulfill({
     contentType: 'application/json', body: '[]',
@@ -1597,7 +1631,7 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
     await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
     await page.getByRole('button', { name: /^Силовая/ }).click()
     await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-    await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
+    await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим лёжа/ }).first().click()
     await page.getByRole('button', { name: 'Добавить 1' }).click()
     await page.getByRole('button', { name: 'Сохранить' }).click()
     await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]+$/)

@@ -44,6 +44,19 @@ describe('workouts repository rules', () => {
     }])).toBe('5,2 км × 29:40 · темп 5:42/км')
   })
 
+  it('показывает темп и частоту гребли в специальных единицах', () => {
+    const rowing: WorkoutSet = {
+      id: 'rowing', position: 0, durationSec: 308, distanceKm: 0.5, reps: 30,
+      fact: { durationSec: 288, distanceKm: 0.5, reps: 32 }, confirmedAt: 'now', version: 1,
+    }
+    expect(compactPlannedSetSummary([rowing], false, 'rowing-machine'))
+      .toBe('500 м × 5:08 × 30 гребков/мин · темп 5:08/500 м')
+    expect(compactCompletedSetSummary([rowing], false, 'rowing-machine'))
+      .toBe('500 м × 4:48 × 32 гребков/мин · темп 4:48/500 м')
+    expect(compactExerciseDetailSummary('distance', [rowing], 'completed', false, 'rowing-machine'))
+      .toBe('500 м · 4:48 · 4:48/500 м · 32 гребков/мин')
+  })
+
   it('даёт спокойную двухстрочную сводку для детального экрана', () => {
     const strength = (position: number, reps: number, confirmed = true): WorkoutSet => ({
       id: `detail-${position}`, position, weightKg: 120, reps: 10,

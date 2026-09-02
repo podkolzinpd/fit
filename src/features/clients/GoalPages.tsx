@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
@@ -10,6 +10,7 @@ import { progressRepository } from '../../data/repositories/progress.repository'
 import type { Client, ClientGoal, CustomMetric, ExerciseSnapshot, GoalCriterionMetric, GoalCriterionOperation, GoalStage, SaveGoalCriterionInput } from '../../shared/domain'
 import { GOAL_CRITERION_METRICS, GOAL_CRITERION_OPERATIONS, goalCriterionTargetLabel, validateGoalCriterionInput } from '../../shared/goal-criterion-rules'
 import { orderedStages, stageStatus } from '../../shared/goal-rules'
+import { GOAL_STAGE_TITLE_MAX_LENGTH, GOAL_TITLE_MAX_LENGTH, titleLengthValidation } from '../../shared/goal-title-limits'
 import { formatLocalDateShort, localDate, todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Field, Page, Switch, useConfirm } from '../../shared/ui'
 import { useExerciseCatalog } from '../exercises'
@@ -127,6 +128,7 @@ function GoalForm({ clientId, goal, initialTitle, onSaved, onCancel }: {
   onSaved: () => Promise<void>
   onCancel?: () => void
 }) {
+  const titleCounterId = useId()
   const catalog = useExerciseCatalog()
   const queryClient = useQueryClient()
   const metrics = useQuery({ queryKey: ['progress-metrics', clientId], queryFn: () => progressRepository.listMetrics(clientId) })
@@ -150,7 +152,8 @@ function GoalForm({ clientId, goal, initialTitle, onSaved, onCancel }: {
     targetDate: goal?.targetDate ?? '',
   }
   const form = useForm<GoalFormValues>({ defaultValues: defaults })
-  const title = useWatch({ control: form.control, name: 'title' }).trim()
+  const titleValue = useWatch({ control: form.control, name: 'title' })
+  const title = titleValue.trim()
   const criterionNeedsReview = Boolean(existingCriteria.some((criterion) => criterion.confirmationStatus !== 'confirmed') || (existingCriteria.length && title !== goal?.title))
   const suggestion = useMutation({
     mutationFn: async () => {
@@ -183,7 +186,12 @@ function GoalForm({ clientId, goal, initialTitle, onSaved, onCancel }: {
     {!goal && <p className="muted">Оформите цель с датой и при желании настройте измеримый критерий.</p>}
     <Field label="Цель" error={form.formState.errors.title?.message}>
       <textarea rows={2} placeholder="Например: держать вес 59 кг"
-        {...form.register('title', { required: 'Введите цель' })} />
+        maxLength={GOAL_TITLE_MAX_LENGTH} aria-label="Цель" aria-describedby={titleCounterId}
+        {...form.register('title', {
+          required: 'Введите цель',
+          validate: (value) => titleLengthValidation(value, 'Цель', GOAL_TITLE_MAX_LENGTH),
+        })} />
+      <small id={titleCounterId} className="goal-title-counter">{titleValue.length}/{GOAL_TITLE_MAX_LENGTH}</small>
     </Field>
     <Field label="Дата достижения"><input type="date" {...form.register('targetDate')} /></Field>
     <section className="goal-criterion-form">
@@ -292,6 +300,7 @@ function StageForm({ goalId, stage, position, defaultStart, targetDate, onSaved,
   goalId: string; stage?: GoalStage; position: number; defaultStart: string; targetDate: string | null
   onSaved: () => Promise<void>; onCancel: () => void
 }) {
+  const titleCounterId = useId()
   const form = useForm<{ title: string; startsOn: string; endsOn: string }>({
     defaultValues: {
       title: stage?.title ?? '', startsOn: stage?.startsOn ?? defaultStart, endsOn: stage?.endsOn ?? '',
@@ -304,9 +313,15 @@ function StageForm({ goalId, stage, position, defaultStart, targetDate, onSaved,
     }),
     onSuccess: () => void onSaved(),
   })
+  const titleValue = useWatch({ control: form.control, name: 'title' })
   return <form className="stack stage-form" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
     <Field label="Название этапа" error={form.formState.errors.title?.message}>
-      <input placeholder="Например: Сушка" {...form.register('title', { required: 'Введите название' })} />
+      <input placeholder="Например: Сушка" maxLength={GOAL_STAGE_TITLE_MAX_LENGTH} aria-label="Название этапа" aria-describedby={titleCounterId}
+        {...form.register('title', {
+          required: 'Введите название',
+          validate: (value) => titleLengthValidation(value, 'Название этапа', GOAL_STAGE_TITLE_MAX_LENGTH),
+        })} />
+      <small id={titleCounterId} className="goal-title-counter">{titleValue.length}/{GOAL_STAGE_TITLE_MAX_LENGTH}</small>
     </Field>
     <div className="split">
       <Field label="Начало" error={form.formState.errors.startsOn?.message}><input type="date" {...form.register('startsOn', { required: 'Дата' })} /></Field>
