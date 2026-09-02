@@ -208,6 +208,26 @@ describe('workout exercise editor rules', () => {
     expect(screen.queryByLabelText('Целевой RPE, подход 1')).not.toBeInTheDocument()
   })
 
+  it('uses the trainer rest preference while keeping a per-exercise override', async () => {
+    const user = userEvent.setup()
+    render(<WorkoutExerciseEditor exercises={exercises} onChange={vi.fn()} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} showRestByDefault />)
+
+    expect(screen.getByLabelText('Отдых между подходами, Присед')).toHaveValue(90)
+    await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Скрыть отдых' }))
+    expect(screen.queryByLabelText('Отдых между подходами, Присед')).not.toBeInTheDocument()
+  })
+
+  it('can reveal rest from the exercise menu without changing the global preference', async () => {
+    const user = userEvent.setup()
+    render(<EditorHarness onOpenPicker={vi.fn()} />)
+
+    expect(screen.queryByLabelText('Отдых между подходами, Присед')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Показать отдых' }))
+    expect(screen.getByLabelText('Отдых между подходами, Присед')).toBeInTheDocument()
+  })
+
   it('shows reorder arrows only in the explicit reorder mode', async () => {
     const user = userEvent.setup()
     render(<ReorderEditorHarness />)

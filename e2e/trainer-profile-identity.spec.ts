@@ -33,7 +33,14 @@ test('trainer profile preview keeps settings, panels and form actions usable', a
   await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Настройки' })).toBeVisible()
 
-  const rpe = page.getByRole('switch', { name: 'Показывать RPE в подходах' })
+  await expect(page.getByText('Поля плана упражнений', { exact: true })).toBeVisible()
+  const rest = page.getByRole('switch', { name: 'Всегда показывать отдых между подходами', exact: true })
+  const restBefore = await rest.isChecked()
+  await rest.setChecked(!restBefore)
+  await expect(rest).toBeChecked({ checked: !restBefore })
+  await rest.setChecked(restBefore)
+
+  const rpe = page.getByRole('switch', { name: 'Всегда показывать RPE в подходах', exact: true })
   const rpeBefore = await rpe.isChecked()
   await rpe.setChecked(!rpeBefore)
   await expect(rpe).toBeChecked({ checked: !rpeBefore })
