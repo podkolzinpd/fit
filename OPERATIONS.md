@@ -65,6 +65,29 @@ trainer-связей и pending push, freeze writes, target, backup и rollback 
 Точные границы manifest и ограничения описаны в
 `docs/design/YANDEX_TENANT_MIGRATION_TOOLING.md`.
 
+## Первый запуск Yandex push pipeline
+
+Миграция `000030` сама не отправляет уведомления. Доставку включает только
+private Serverless Container `fit-stage-push-dispatcher`, вызываемый timer
+trigger раз в минуту. У контейнера нет `allUsers`, постоянно прогретых
+экземпляров и собственного секрета в Terraform state: пароль БД и
+`PUSH_DISPATCH_SECRET` монтируются из Lockbox. Function и transport Lockbox
+живут в отдельном каталоге `YC_SUMMARY_FOLDER_ID`: workflow получает их
+несекретные ID через существующую OIDC-учётку функций, выдаёт новому dispatcher
+только `lockbox.payloadViewer` на конкретный секрет и возвращается к stage OIDC.
+Payload не читается и не копируется в GitHub или Terraform state.
+
+После merge первый автоматический `Deploy Yandex stage` ожидаемо остановится на
+проверке Terraform plan. Запустите workflow вручную с `plan_only=true` и
+`approve_push_pipeline=false`: такой запуск только покажет точный список
+ресурсов и расчёт, ничего не применяя. Проверьте 43 200 вызовов в 30 дней,
+512 МБ, 1 vCPU и ориентир 0–389 ₽/месяц при средней длительности 0,1–5 секунд;
+общий free tier, вызовы sender-функции и исходящий трафик могут изменить счёт.
+Только после отдельного подтверждения запустите workflow с `plan_only=false` и
+`approve_push_pipeline=true`. Это одноразовое разрешение: timer создаётся лишь
+после health-check точной ревизии, а последующие image-only обновления снова
+выкатываются автоматически. Ручной SQL и копирование Lockbox payload не нужны.
+
 ## GitHub Secrets
 
 В repository secrets должны быть настроены:

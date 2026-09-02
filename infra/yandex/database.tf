@@ -153,3 +153,9 @@ resource "yandex_lockbox_secret_iam_member" "migration_connection_secret_reader"
   role      = "lockbox.payloadViewer"
   member    = "serviceAccount:${yandex_iam_service_account.migration.id}"
 }
+
+resource "yandex_lockbox_secret_iam_member" "push_dispatcher_connection_secret_reader" {
+  secret_id = data.yandex_connectionmanager_connection.api.lockbox_secret.id
+  role      = "lockbox.payloadViewer"
+  member    = "serviceAccount:${yandex_iam_service_account.push_dispatcher.id}"
+}
