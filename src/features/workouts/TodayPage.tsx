@@ -38,7 +38,7 @@ import { TrainerFirstPlanPrompt, TrainerFirstRun } from './FirstRunExperience'
 import { takeFirstWorkoutIntent } from './first-workout-intent'
 import { groupParsedWorkoutReviewBlocks, moveParsedWorkoutReviewBlock } from './today-review-order'
 import { AppInstallPrompt } from '../install'
-import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon } from '../../shared/icons'
+import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon, KeyboardIcon } from '../../shared/icons'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
@@ -677,7 +677,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
           onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }}
           onPhaseChange={setVoicePhase}
           onTranscript={handleHeroTranscript}
-          secondaryAction={greetingHeaderPilotEnabled ? <button type="button" className="today-voice-text-inline" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}>Ввести текстом</button> : undefined}
+          secondaryAction={greetingHeaderPilotEnabled ? <button type="button" className="today-voice-text-inline" aria-label="Ввести текстом" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}><KeyboardIcon /></button> : undefined}
         />
       </div>}
       {!textComposerOpen && voicePhase === 'idle' && !greetingHeaderPilotEnabled && <button type="button" className="link today-text-toggle" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}>Ввести текстом</button>}

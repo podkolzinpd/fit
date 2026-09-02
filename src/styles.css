@@ -4141,7 +4141,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Пилот приветствия в шапке: аккуратная кнопка «Ввести текстом» внутри той
    же чёрной карточки, рядом с идущим текстом. position+z-index обязательны,
    иначе клик перехватывает voice-action-hitarea (z-index:2) над ней. */
-.trainer-today-identity .today-voice-text-inline { position:relative; z-index:3; justify-self:start; margin-top:6px; padding:5px 12px; border:1px solid var(--mono-on-primary); border-radius:12px; background:transparent; color:var(--mono-on-primary); font-size:12px; font-weight:500 }
+.trainer-today-identity .today-voice-text-inline { position:relative; z-index:3; justify-self:start; margin-top:6px; width:48px; height:48px; display:grid; place-items:center; padding:0; border:0; border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); box-shadow:none }
+.trainer-today-identity .today-voice-text-inline svg { width:23px; height:23px; stroke-width:1.8 }
 .trainer-today-identity .voice-action-recording-controls { grid-area:controls; width:100%; grid-template-columns:minmax(0,1fr) auto; align-items:center; margin-top:10px }
 .trainer-today-identity .voice-action-recording-controls .wide { min-height:48px; border:1px solid var(--mono-on-primary); border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); font-size:14px; font-weight:500 }
 .trainer-today-identity .voice-action-recording-controls .link { min-height:44px; color:var(--mono-on-primary); font-size:14px; font-weight:500 }
