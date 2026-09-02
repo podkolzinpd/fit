@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ExerciseIcon } from '../../shared/icons'
 
 export type ExerciseImageVariant = 'thumbnail' | 'preview' | 'picker' | 'detail' | 'technique'
@@ -32,11 +32,16 @@ export function ExerciseImage({ src, motionSrc, videoSrc, alt = '', variant = 't
   const [primaryFailed, setPrimaryFailed] = useState(false)
   const [motionFailed, setMotionFailed] = useState(false)
   const [videoFailed, setVideoFailed] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
   const reducedMotion = usePrefersReducedMotion()
 
   useEffect(() => setPrimaryFailed(false), [src])
   useEffect(() => setMotionFailed(false), [motionSrc])
   useEffect(() => setVideoFailed(false), [videoSrc])
+  useEffect(() => {
+    const video = videoRef.current
+    if (video && variant === 'technique' && reducedMotion && !video.paused) video.pause()
+  }, [reducedMotion, variant])
 
   const className = `exercise-image exercise-image-${variant}`
   const primaryAvailable = Boolean(src) && !primaryFailed
@@ -53,6 +58,6 @@ export function ExerciseImage({ src, motionSrc, videoSrc, alt = '', variant = 't
   return <span className={`${className}${animated ? ' exercise-image-motion' : ''}`}>
     {fallbackSrc && <img className="exercise-image-frame exercise-image-frame-start" src={fallbackSrc} alt={alt} loading="lazy" decoding="async" onError={() => primaryAvailable ? setPrimaryFailed(true) : setMotionFailed(true)} />}
     {animated && <img className="exercise-image-frame exercise-image-frame-end" src={motionSrc} alt="" aria-hidden="true" loading="lazy" decoding="async" onError={() => setMotionFailed(true)} />}
-    {videoAvailable && <video className="exercise-image-video" src={videoSrc} poster={fallbackSrc} autoPlay={!reducedMotion} loop muted playsInline preload="metadata" controls aria-label={`Техника: ${alt || 'упражнение'}`} disablePictureInPicture onCanPlay={(event) => { if (!reducedMotion) void event.currentTarget.play().catch(() => undefined) }} onError={() => setVideoFailed(true)} />}
+    {videoAvailable && <video ref={videoRef} className="exercise-image-video" src={videoSrc} poster={fallbackSrc} autoPlay={!reducedMotion} loop muted playsInline preload="metadata" controls aria-label={`Техника: ${alt || 'упражнение'}`} disablePictureInPicture onCanPlay={(event) => { if (!reducedMotion) void event.currentTarget.play().catch(() => undefined) }} onError={() => setVideoFailed(true)} />}
   </span>
 }

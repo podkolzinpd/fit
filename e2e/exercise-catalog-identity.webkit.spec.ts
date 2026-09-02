@@ -13,9 +13,8 @@ test('exercise catalog search and technique detail work in the iOS shell', async
   const result = page.locator('.catalog-media-card').first()
   await expect(result.getByText('Лестничный тренажёр (Степмилл)')).toBeVisible()
   await expect(result.locator('.exercise-image')).toBeVisible()
-  const previewVideo = result.locator('.exercise-image-preview video')
-  await expect(previewVideo).toBeVisible()
-  await expect.poll(() => previewVideo.evaluate((element: HTMLVideoElement) => element.paused)).toBe(false)
+  await expect(result.locator('.exercise-image-preview video')).toHaveCount(0)
+  await expect(result.locator('.catalog-media-card-play')).toBeVisible()
   await result.click()
   const technique = page.getByRole('dialog').locator('.exercise-image-technique')
   await expect(technique).toBeVisible()
@@ -23,15 +22,16 @@ test('exercise catalog search and technique detail work in the iOS shell', async
   await expect(video).toBeVisible()
   await expect(video.evaluate((element: HTMLVideoElement) => ({
     autoplay: element.autoplay,
+    controls: element.controls,
     loop: element.loop,
     muted: element.muted,
-  }))).resolves.toEqual({ autoplay: true, loop: true, muted: true })
+  }))).resolves.toEqual({ autoplay: true, controls: true, loop: true, muted: true })
   await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(false)
 
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await expect(previewVideo).toHaveCount(0)
-  await expect(video).toHaveCount(0)
-  await expect(technique.locator('.exercise-image-frame-start')).toBeVisible()
+  await expect(video).toBeVisible()
+  await expect(video).not.toHaveAttribute('autoplay', '')
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(true)
   await page.getByRole('dialog').locator('button.secondary').click()
 
   await page.getByLabel('Поиск упражнения').fill('трэп гриф')
