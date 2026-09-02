@@ -9,6 +9,7 @@ export interface ParsedWorkoutExercise {
   exercise: ExerciseSnapshot
   sets: WorkoutSetDraft[]
   hasValues: boolean
+  trainerComment?: string
   structure?: {
     blockId?: string
     blockType?: BlockType
@@ -224,6 +225,22 @@ export function quickWorkoutExerciseName(line: string): string {
     .trim()
 }
 
+/** Сохраняет важные уточнения техники как заметку, а не теряет их при разборе. */
+export function workoutTrainerComment(line: string): string | undefined {
+  const normalized = line.toLocaleLowerCase('ru').replaceAll('ё', 'е')
+  const comments: string[] = []
+  if (/на\s+кажд(?:ую|ой)\s+ног[уе]/u.test(normalized)) comments.push('На каждую ногу')
+  if (/на\s+прям(?:ую|ой)(?:\s|\)|,|$)/u.test(normalized)) comments.push('На прямую ногу')
+  const negative = /негативн\p{L}*\s+фаз\p{L}*\s*(\d+(?:[.,]\d+)?)\s*(?:сек\p{L}*|с)(?:\s|[,.]|$)/u.exec(normalized)
+  if (negative?.[1]) comments.push(`Негативная фаза — ${negative[1].replace(',', '.')} сек.`)
+  if (/(?:хват\s+узк\p{L}*|узк\p{L}*\s+хват\p{L}*)/u.test(normalized)) comments.push('Узкий хват')
+  if (/(?:хват\s+широк\p{L}*|широк\p{L}*\s+хват\p{L}*)/u.test(normalized)) comments.push('Широкий хват')
+  if (/(?:w|в)[\s-]*образн\p{L}*\s+рукоят\p{L}*/u.test(normalized)) comments.push('W-образная рукоять')
+  if (/(?:поочередн\p{L}*|попеременн\p{L}*)/u.test(normalized)) comments.push('Поочерёдно')
+  if (/кист\p{L}*\s+(?:смотр\p{L}*|направл\p{L}*)\s+в\s+пол/u.test(normalized)) comments.push('Кисти направлены в пол')
+  return comments.length ? comments.join(' · ') : undefined
+}
+
 function matchingExerciseResolution(name: string, catalog: readonly ExerciseSnapshot[], preferredExerciseRefs: readonly string[]): ExerciseSearchResolution {
   if (!normalize(name)) return { level: 'search', matches: [] }
   // Старые системные ref остаются доступны истории, но не должны создавать
@@ -239,7 +256,7 @@ function matchingExerciseResolution(name: string, catalog: readonly ExerciseSnap
   // Picker показывает оборудование в скобках и может вернуть его в текст.
   // После строгой фильтрации по оборудованию скобки не должны лишать точное
   // каталожное название права на безопасную подстановку.
-  const nameWithoutEquipmentLabel = name.replace(/\s*\([^)]*\)\s*$/, '').trim()
+  const nameWithoutEquipmentLabel = name.replace(/\s*\((?:штанга|гантел(?:ь|и)|гир(?:я|и)|блок|тренаж[её]р(?:\s+смита)?|сво[её]\s+тело|резина|петли|фитбол|блин)\)\s*$/iu, '').trim()
   if (nameWithoutEquipmentLabel !== name) {
     const withoutEquipmentLabel = resolveExerciseSearch(scopedCatalog, nameWithoutEquipmentLabel, options)
     if (withoutEquipmentLabel.level === 'exact') return withoutEquipmentLabel
@@ -261,8 +278,8 @@ export function splitWorkoutText(text: string, catalog: readonly ExerciseSnapsho
     .split(/[\n;]+/)
     .flatMap((line) => line.split(/\s+(?:затем|потом|далее|дальше|после\s+этого)\s*,?\s*/iu))
     .flatMap((line) => line.split(/\s*\+\s*/u))
-    .map((line) => line.trim())
-    .filter(Boolean)
+    .map((line) => line.trim().replace(/^\d+\s*[.)]\s*/u, ''))
+    .filter((line) => Boolean(line) && !/^(?:ягодицы|ноги|спина|плечи|грудь|руки|кор|пресс|кардио)(?:\s*[/+]\s*(?:ягодицы|ноги|спина|плечи|грудь|руки|кор|пресс|кардио))*\s*:?$/iu.test(line))
 }
 
 /** Кандидаты из каталога для одного фрагмента диктовки, в порядке релевантности. */
@@ -392,12 +409,14 @@ function activeRunningIntervalDrafts(line: string, catalog: readonly ExerciseSna
 
 export function resolveQuickWorkoutLine(line: string, exercise: ExerciseSnapshot): ParsedWorkoutExercise {
   const values = setDrafts(line, exercise.inputKind)
-  if (exercise.ref !== 'running') return { line, exercise, ...values }
+  const trainerComment = workoutTrainerComment(line)
+  if (exercise.ref !== 'running') return { line, exercise, ...values, trainerComment }
   if (new RegExp(`${WORKOUT_NUMBER_SOURCE}\\s*(?:[xх×]|по)\\s*${WORKOUT_NUMBER_SOURCE}\\s*(?:км|km|километр|м\\b|метр)`, 'iu').test(line)) {
     return {
       line,
       exercise: { ...exercise, name: 'Бег — интервалы' },
       ...values,
+      trainerComment,
       structure: { blockType: 'single', blockPreset: 'interval', blockRounds: 1, restBetweenSetsSec: 90 },
     }
   }
@@ -406,10 +425,11 @@ export function resolveQuickWorkoutLine(line: string, exercise: ExerciseSnapshot
       line,
       exercise: { ...exercise, name: 'Бег — восстановление' },
       ...values,
+      trainerComment,
       structure: { blockType: 'single', blockPreset: 'interval', blockRounds: 1 },
     }
   }
-  return { line, exercise, ...values }
+  return { line, exercise, ...values, trainerComment }
 }
 
 /**

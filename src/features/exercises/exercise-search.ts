@@ -6,13 +6,13 @@ import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 export const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   'barbell-squat': ['классический присед', 'приседания', 'присед штанга', 'скват'],
   'front-squat': ['фронтальный', 'фронт скват'],
-  'leg-press': ['платформа', 'жим платформы'],
-  'romanian-deadlift': ['румынка', 'рдл'],
+  'leg-press': ['платформа', 'жим платформы', 'жим платформы ногами'],
+  'romanian-deadlift': ['румынка', 'рдл', 'румынская'],
   'stiff-leg-deadlift': ['тяга на прямых', 'мертвая тяга'],
   'fedb-stiff-legged-dumbbell-deadlift': ['становая с гантелями', 'становая гантели'],
-  'bulgarian-split-squat': ['болгарские', 'сплит присед'],
+  'bulgarian-split-squat': ['болгарские', 'болгары', 'болгарские выпады', 'сплит присед'],
   'leg-curl': ['сгибания лежа', 'бицепс бедра', 'сгибание ног в тренажере'],
-  'leg-extension': ['разгибания', 'квадрицепс'],
+  'leg-extension': ['разгибания', 'разгибания ног', 'разгибания ног сидя', 'квадрицепс'],
   'calf-raise': ['икры', 'подъемы на икры'],
   hyperextension: ['гипер', 'гиперы', 'гиперэкстензия с блином', 'гипер с блином'],
   'bench-press': ['жим штанги лежа', 'горизонтальный жим'],
@@ -25,15 +25,15 @@ export const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   'push-ups': ['отжимашки'],
   dips: ['брусья'],
   'pec-deck': ['бабочка', 'пек дек'],
-  'barbell-row': ['тяга в наклоне', 'горизонтальная тяга'],
+  'barbell-row': ['тяга в наклоне', 'тяга штанги к поясу'],
   'dumbbell-row': ['тяга гантели в наклоне'],
   'pull-ups': ['турник'],
-  'lat-pulldown': ['вертикальная тяга', 'верхняя тяга'],
-  'seated-cable-row': ['горизонтальный блок', 'нижняя тяга'],
+  'lat-pulldown': ['вертикальная тяга', 'верхняя тяга', 'вертикальный блок'],
+  'seated-cable-row': ['горизонтальная тяга', 'горизонтальный блок', 'нижняя тяга', 'тяга горизонтального блока'],
   deadlift: ['становая', 'классическая тяга'],
   'overhead-press': ['армейский жим', 'жим над головой'],
   'seated-dumbbell-press': ['жим гантелей вверх'],
-  'lateral-raise': ['махи в стороны', 'средняя дельта'],
+  'lateral-raise': ['махи в стороны', 'махи на среднюю дельту', 'отведения на среднюю дельту с гантелями', 'средняя дельта'],
   'rear-delt-fly': ['задняя дельта', 'махи в наклоне'],
   'upright-row': ['протяжка'],
   'biceps-curl': ['бицепс', 'сгибания рук'],
@@ -46,7 +46,6 @@ export const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   'leg-raise': ['подъемы ног', 'пресс ноги'],
   'side-plank': ['планка боковая'],
   running: [
-    'беговая дорожка', 'дорожка', 'беговая', 'тредмил', 'тредмилл',
     'интервальный бег', 'интервалы бег', 'легкий бег', 'лёгкий бег',
     'длительный бег', 'темповый бег', 'восстановительный бег',
   ],
@@ -57,7 +56,7 @@ export const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   'stationary-bike': ['велосипед', 'вело', 'велик', 'сайкл', 'спинбайк'],
   elliptical: ['эллипсоид', 'эллипс', 'орбитрек'],
   'rowing-machine': ['гребля', 'гребной', 'гребной тренажер', 'гребной эргометр', 'эргометр', 'роуэр', 'rower'],
-  walking: ['дорожка ходьба'],
+  walking: ['прогулка', 'ходьба пешком'],
   'jump-rope': ['скакалка'],
   'fedb-smith-machine-squat': ['присед в смите', 'смит присед', 'присед смит'],
   'fedb-smith-machine-bench-press': ['жим в смите', 'смит жим'],
@@ -66,15 +65,23 @@ export const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   'fedb-goblet-squat': ['присед с гирей', 'приседания с гирей'],
   'fedb-dumbbell-lunges': ['выпады с гантелями', 'выпады гантели'],
   'fedb-thigh-adductor': ['сведение ног', 'сведение ног в тренажере'],
-  'fedb-thigh-abductor': ['разведение ног', 'разведение ног в тренажере'],
+  'fedb-thigh-abductor': ['разведение ног', 'разведение ног в тренажере', 'отведения сидя в тренажере', 'отведение ног сидя'],
   'fedb-barbell-hip-thrust': ['хиптраст', 'хип траст', 'ягодичный мост со штангой'],
-  'fedb-butt-lift-bridge': ['ягодичный мост', 'глют бридж'],
+  'fedb-butt-lift-bridge': ['ягодичный мост', 'ягодичный мостик', 'глют бридж'],
   'fedb-cable-pull-through': ['пултру', 'пул тру', 'тяга между ног'],
   'fedb-sumo-deadlift': ['сумо', 'сумо тяга'],
   'fedb-lat-pulldown': ['верхний блок', 'тяга сверху'],
   'fedb-chest-supported-row': ['тяга с упором грудью', 'тяга к груди в тренажере'],
   'fedb-bent-over-two-arm-long-bar-row': ['т-гриф', 'т тяга', 'тяга т грифа', 'т бар', 'тяга т бар'],
   'fedb-face-pull': ['фейс пул', 'фейспул', 'тяга к лицу'],
+  'fedb-close-grip-front-lat-pulldown': ['вертикальная тяга узкая', 'вертикальная тяга узким хватом', 'верхняя тяга узким хватом'],
+  'fedb-smith-single-leg-split-squat': ['выпад в смите', 'выпады в смите', 'выпад смит', 'сплит выпад в смите', 'выпад в смите на каждую ногу на прямую'],
+  'fedb-straight-arm-pulldown': ['тяга рейдера', 'тяга райдера', 'рейдер', 'райдер', 'тяга рейдера хват узко w образная рукоять'],
+  'fedb-cable-rope-rear-delt-rows': ['тяга назад с косичкой', 'тяга косички назад', 'косичка на заднюю дельту'],
+  'fedb-smith-machine-overhead-shoulder-press': ['жим на плечи в смите', 'жим плечи смит', 'плечевой жим в смите'],
+  'fedb-upright-cable-row': ['протяжка с нижнего блока', 'протяжка с нижнего блока широким хватом', 'протяжка в кроссовере'],
+  'fedb-alternating-deltoid-raise': ['подъем гантелей перед собой поочередно', 'подъем гантелей перед собой поочередно кисти смотрят в пол'],
+  'fedb-one-legged-cable-kickback': ['махи назад в кроссовере', 'мах ногой назад в кроссовере', 'отведение ноги назад в кроссовере'],
   'fedb-cable-lateral-raise': ['мах в кроссовере', 'разводка в кроссовере'],
   'fedb-reverse-pec-deck': ['обратная бабочка', 'задняя дельта в бабочке'],
   'fedb-triceps-rope-pushdown': ['канат', 'канат трицепс', 'разгибание канатом'],
@@ -101,7 +108,8 @@ export const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   'vital-cable-cross-lateral-raise': ['разводка в кроссовере стоя', 'махи в стороны в кроссовере'],
   'vital-machine-lateral-raise': ['разводка на среднюю дельту в тренажере', 'махи в тренажере'],
   'vital-smith-seated-military-press': ['армейский жим в смите', 'жим сидя в смите'],
-  'vital-reverse-pec-deck': ['обратная бабочка', 'задняя дельта в бабочке', 'обратный пек дек'],
+  'vital-reverse-pec-deck': ['обратная бабочка', 'задняя дельта в бабочке', 'обратный пек дек', 'отведения в пек деке', 'отведение рук в пек деке'],
+  'smith-single-leg-romanian-deadlift': ['журавлик в смите', 'журавль в смите', 'журавлик смит', 'румынская тяга на одной ноге в смите'],
   'fedb-recumbent-bike': ['горизонтальный велосипед', 'лежачий велосипед', 'лежачий велотренажер'],
   'fedb-trap-bar-deadlift': ['трэп гриф', 'треп гриф', 'становая с трэп грифом', 'хекс бар'],
   'fedb-muscle-up': ['выход силой', 'выход на две'],
@@ -151,6 +159,55 @@ export function normalizeExerciseSearch(value: string): string {
     .split(/\s+/)
     .map((token) => SEARCH_TOKEN_REPLACEMENTS[token] ?? token)
     .join(' ')
+}
+
+// Эти варианты расширяют только поиск и подсказки. В отличие от ручного
+// SEARCH_ALIASES они никогда сами по себе не дают права молча выбрать
+// упражнение: совпадение нужно подтвердить. Так весь каталог получает
+// разговорный охват без словаря из сотен почти одинаковых строк.
+const GENERATED_SEARCH_VARIANT_RULES: ReadonlyArray<readonly [RegExp, string]> = [
+  [/\bтренажер\b/gu, 'машина'],
+  [/\bсвое тело\b/gu, 'без оборудования'],
+  [/\bгантели\b/gu, 'дб'],
+  [/\bгантель\b/gu, 'дб'],
+  [/\bштанга\b/gu, 'гриф'],
+  [/\bсмит\b/gu, 'машина смита'],
+  [/\bблок\b/gu, 'кроссовер'],
+  [/\bподъем\b/gu, 'подъемы'],
+  [/\bсгибание\b/gu, 'сгибания'],
+  [/\bразгибание\b/gu, 'разгибания'],
+  [/\bразведение\b/gu, 'разводка'],
+  [/\bразводка\b/gu, 'разведения'],
+  [/\bвыпад\b/gu, 'выпады'],
+  [/\bприседание\b/gu, 'присед'],
+]
+
+/**
+ * Полный набор фраз для поиска одного упражнения. Ручные варианты отвечают за
+ * точный сленг, сгенерированные — за формы слов и оборудование во всём каталоге.
+ */
+export function exerciseSearchAliases(exercise: ExerciseSnapshot): readonly string[] {
+  const nameWithoutLabel = exercise.name.replace(/\s*\([^)]*\)\s*$/, '').trim()
+  const normalizedName = normalizeExerciseSearch(nameWithoutLabel)
+  const aliases = new Set<string>(SEARCH_ALIASES[exercise.ref] ?? [])
+  const muscleGroup = MUSCLE_GROUP_LABELS[exercise.muscleGroup]
+  if (normalizedName) aliases.add(`${normalizedName} ${normalizeExerciseSearch(muscleGroup)}`)
+  if (exercise.equipment) aliases.add(`${normalizedName} ${normalizeExerciseSearch(exercise.equipment)}`)
+  // Импортированные ref сохраняют исходное английское название. Оно даёт
+  // бесплатный англоязычный поиск по всему каталогу без передачи словаря LLM.
+  if (exercise.source === 'system' && /^[a-z0-9-]+$/u.test(exercise.ref)) {
+    aliases.add(exercise.ref.replace(/^(?:fedb|vital)-/u, '').replaceAll('-', ' '))
+  }
+  for (const [pattern, replacement] of GENERATED_SEARCH_VARIANT_RULES) {
+    pattern.lastIndex = 0
+    if (!pattern.test(normalizedName)) continue
+    pattern.lastIndex = 0
+    aliases.add(normalizedName.replace(pattern, replacement))
+  }
+  aliases.delete(nameWithoutLabel)
+  aliases.delete(normalizedName)
+  aliases.delete('')
+  return [...aliases]
 }
 
 function editDistanceAtMostOne(left: string, right: string): boolean {
@@ -251,6 +308,7 @@ export interface ExerciseSearchResolution {
 interface ExerciseSearchIndex {
   name: string
   aliases: readonly string[]
+  exactAliases: readonly string[]
   searchableTokens: readonly string[]
   nameTokens: readonly string[]
 }
@@ -264,7 +322,8 @@ function getExerciseSearchIndex(exercise: ExerciseSnapshot): ExerciseSearchIndex
   const cached = exerciseSearchIndexCache.get(exercise)
   if (cached) return cached
   const name = normalizeExerciseSearch(exercise.name.replace(/\s*\([^)]*\)\s*$/, ''))
-  const aliases = (SEARCH_ALIASES[exercise.ref] ?? []).map(normalizeExerciseSearch)
+  const exactAliases = (SEARCH_ALIASES[exercise.ref] ?? []).map(normalizeExerciseSearch)
+  const aliases = exerciseSearchAliases(exercise).map(normalizeExerciseSearch)
   const searchableTokens = normalizeExerciseSearch([
     name,
     exercise.equipment ?? '',
@@ -272,7 +331,7 @@ function getExerciseSearchIndex(exercise: ExerciseSnapshot): ExerciseSearchIndex
     MUSCLE_GROUP_LABELS[exercise.muscleGroup],
     ...aliases,
   ].join(' ')).split(/\s+/).filter(Boolean)
-  const index = { name, aliases, searchableTokens, nameTokens: name.split(/\s+/) }
+  const index = { name, aliases, exactAliases, searchableTokens, nameTokens: name.split(/\s+/) }
   exerciseSearchIndexCache.set(exercise, index)
   return index
 }
@@ -287,11 +346,11 @@ export function rankExerciseSearch(catalog: readonly ExerciseSnapshot[], search:
   if (!queryTokens.length) return []
   const preferredIndex = new Map((options.preferredExerciseRefs ?? []).map((ref, index) => [ref, index]))
   return catalog.flatMap((exercise) => {
-    const { name, aliases: normalizedAliases, searchableTokens, nameTokens } = getExerciseSearchIndex(exercise)
+    const { name, aliases: normalizedAliases, exactAliases, searchableTokens, nameTokens } = getExerciseSearchIndex(exercise)
     const matchedTokens = queryTokens.filter((token) => tokenMatches(token, searchableTokens))
     if (matchedTokens.length !== queryTokens.length) return []
 
-    const exactAlias = normalizedAliases.some((alias) => alias === query || isNearPhraseMatch(alias, query))
+    const exactAlias = exactAliases.some((alias) => alias === query || isNearPhraseMatch(alias, query))
     const exactName = name === query || isNearPhraseMatch(name, query)
     const inOrder = name.includes(query) || normalizedAliases.some((alias) => alias.includes(query))
     // Для короткого общего названия сперва показываем базовое движение:
