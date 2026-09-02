@@ -85,6 +85,15 @@ export function repositoryError(error: unknown): RepositoryError {
   if (code === 'PT403') {
     return new RepositoryError(code, 'Ответить может тренер, назначенный на эту тренировку.')
   }
+  if (code === 'PT422' && /(?:^|\W)invalid_stage(?:$|\W)/.test(normalizedMessage)) {
+    return new RepositoryError(
+      'invalid_stage',
+      'Проверьте этап: название — не более 120 символов, дата окончания — не раньше начала и не позже даты цели.',
+    )
+  }
+  if (code === 'PT422' && /(?:^|\W)invalid_goal(?:$|\W)/.test(normalizedMessage)) {
+    return new RepositoryError('invalid_goal', 'Проверьте цель: название должно содержать не более 200 символов.')
+  }
   if (code === 'PT422') {
     return new RepositoryError(code, 'Операцию нельзя выполнить с текущими данными.')
   }
