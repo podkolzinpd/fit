@@ -65,6 +65,21 @@ describe('ClientTrainerConnections safe disconnect', () => {
     expect(screen.getByText('Александр Ситников')).toBeVisible()
   })
 
+  it('removes a disconnected trainer from the profile immediately without restoring stale query data', async () => {
+    const user = userEvent.setup()
+    repository.disconnectTrainer.mockResolvedValue({
+      clientId: 'client-1', trainerId: 'trainer-1', status: 'disconnected',
+    })
+    renderConnections()
+
+    await user.click(await screen.findByRole('button', { name: 'Отключить' }))
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Отключить' }))
+
+    expect(await screen.findByText('Сейчас вы занимаетесь самостоятельно.')).toBeVisible()
+    expect(screen.queryByText('Александр Ситников')).not.toBeInTheDocument()
+    expect(repository.listTrainers).toHaveBeenCalledTimes(1)
+  })
+
   it('shows an explicit copy action next to a newly created trainer code', async () => {
     const user = userEvent.setup()
     repository.create.mockResolvedValue('ABC123DEF456')
