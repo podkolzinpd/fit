@@ -72,6 +72,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await page.getByRole('button', { name: 'Завершённая' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
+  await page.getByLabel('Поиск упражнения').fill('Планка')
   await page.getByRole('button', { name: 'Выбрать: Планка (Своё тело)', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await Promise.all([
@@ -171,6 +172,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await page.getByRole('button', { name: 'Завершённая' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
+  await page.getByLabel('Поиск упражнения').fill('Планка')
   await page.getByRole('button', { name: 'Выбрать: Планка (Своё тело)', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await Promise.all([
