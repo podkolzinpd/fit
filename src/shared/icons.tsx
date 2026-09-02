@@ -117,3 +117,7 @@ export function MicIcon(props: IconProps) {
 export function StopIcon(props: IconProps) {
   return <Icon data-icon="stop" {...props}><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none" /></Icon>
 }
+
+export function KeyboardIcon(props: IconProps) {
+  return <Icon data-icon="keyboard" {...props}><rect x="3" y="6" width="18" height="12" rx="2.5" /><path d="M7 10h.01M11 10h.01M15 10h.01M17 10h.01M7 14h10" /></Icon>
+}
