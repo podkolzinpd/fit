@@ -14,6 +14,7 @@ resource "yandex_container_registry_iam_binding" "api_image_puller" {
   members = [
     "serviceAccount:${yandex_iam_service_account.api.id}",
     "serviceAccount:${yandex_iam_service_account.migration.id}",
+    "serviceAccount:${yandex_iam_service_account.push_dispatcher.id}",
   ]
 }
 

@@ -2,7 +2,7 @@
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк.
 > После merge сведения заменяются; полная история хранится в Git, PR и Tracker.
 Обновлено: 2026-09-02
-Проверенный базовый `main`: `ace6713` (`понятный запуск видео техники, #756`)
+Проверенный базовый `main`: `77f7daed` (`safe tenant migration tooling, #739`)
 ## Последняя проверенная продуктовая точка
 - Главные страницы обеих ролей сохраняют voice-first действие и ввод текстом;
   Client Home показывает ближайшее назначение, состоявшуюся неделю и максимум
@@ -21,15 +21,15 @@
 - ИИ-сводка и production-разбор — через Yandex Cloud Functions, локальный разбор
   — в Supabase. Tracker sync `app_feedback` остановлен; команда читает через
   `analytics.app_feedback` и Telegram (`notify-app-feedback-telegram`).
-- Assistant открыт всем тренерским аккаунтам и защищён `TrainerOnly`;
-  `VITE_ASSISTANT_NAV_ENABLED=false` остаётся общим kill switch. Durable turns/actions и narrow
+- Assistant открыт всем тренерским аккаунтам и защищён `TrainerOnly`; `VITE_ASSISTANT_NAV_ENABLED=false` остаётся общим kill switch. Durable turns/actions и narrow
   RPC сохраняют owner/RLS. Новые turn'ы создают workout draft, прежние карточки
   остаются читаемыми; исходная диктовка сохраняется при уточнении клиента.
   Числовые поля черновика допускают полную очистку перед вводом нового значения;
   многострочный composer держит микрофон и отправку на одной нижней линии, а
   неизвестное имя открывает полный выбор прямых и подключённых клиентов.
-- PWA, беговой MVP, локальный каталог и Web Push работают; гребной тренажёр
-  использует темп `/500 м` и частоту гребков в плане, Live, факте и истории.
+- PWA, беговой MVP и локальный каталог работают; Yandex Web Push producers,
+  lease/retry и private timer готовы локально, но stage bootstrap ещё не применён;
+  гребной тренажёр использует темп `/500 м` и частоту гребков.
 - Email-вход ограничивает зависший сетевой запрос, один раз автоматически
   повторяет временный сбой и всегда возвращает активную форму с понятной ошибкой.
 - Каталог содержит 50 точных локальных роликов бесплатного пакета Vital
@@ -85,7 +85,8 @@
 - Локальная разработка и проверки используют только Podman. Docker не нужен.
 - Stage содержит Managed PostgreSQL 17 и Serverless Containers. Миграции
   доставляются автоматически через GitHub OIDC, private runner и forward-only
-  policy; `fit_api` не имеет прямых INSERT/UPDATE/DELETE grants на domain tables.
+  policy; `fit_api` не имеет прямых domain grants, а private push timer создаётся
+  только после отдельного cost approval и health-check точной ревизии.
 - Ограниченный Yandex ID pilot и доменная цепочка представлены в `000001–000027`:
   `000026` добавляет actor-scoped Assistant state, `000027` — безопасное linking
   FIT-профиля с Yandex ID и read-write app-session только через явный
@@ -110,11 +111,10 @@
 - Реальный invite → join → leave/remove smoke — внешняя проверка; полный cutover не выполнен.
 ## Проверки активной ветки
 - Tenant migration tooling: encrypted 28-table manifest; read-only repeatable
-  export, rollback dry-run, idempotent apply и count/checksum validation
-  прошли на двух локальных Podman PostgreSQL.
-- Migration `000029` сохраняет `workouts.stage_id`/`client_progress.updated_by`; production и удалённые БД не менялись.
+  export/import/validation прошли на двух локальных Podman PostgreSQL; migrations
+  `000029–000030` сохраняют parity и push pipeline, удалённые БД не менялись.
 ## Ближайший порядок
-1. Завершить PR #739; провести две rehearsal на non-production tenant.
-2. Затем оценить production infrastructure и согласовать rollout/rollback.
+1. После review применить one-time stage push bootstrap; затем две rehearsal на non-production tenant.
+2. Оценить production infrastructure и согласовать rollout/rollback.
 ## Отложено
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.

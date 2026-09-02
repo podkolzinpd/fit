@@ -66,6 +66,63 @@ test('keeps enough time for the bounded three-attempt summary contract', () => {
   assert.match(workflow, /^  TF_VAR_api_execution_timeout: '120s'$/m)
 })
 
+test('bootstraps the private push timer only after explicit cost approval and health', () => {
+  assert.match(workflow, /^      approve_push_pipeline:$/m)
+  assert.match(workflow, /^        default: false$/m)
+  assert.match(
+    workflow,
+    /PUSH_PIPELINE_PLAN_REVIEWED: \$\{\{ \(inputs\.plan_only == true \|\| inputs\.approve_push_pipeline == true\)/,
+  )
+  assert.match(workflow, /policy_args\+=\(--allow-push-pipeline-bootstrap\)/)
+  assert.match(workflow, /YC_PUSH_FOLDER_ID: \$\{\{ vars\.YC_SUMMARY_FOLDER_ID \}\}/)
+  assert.match(workflow, /TF_VAR_push_function_id=\$function_id/)
+  assert.match(workflow, /TF_VAR_push_transport_secret_version_id=/)
+  assert.match(
+    workflow,
+    /yc lockbox secret add-access-binding[\s\S]*?--role lockbox\.payloadViewer[\s\S]*?push_dispatcher_service_account_id/,
+  )
+  const grantTokenIndex = workflow.indexOf(
+    '- name: Exchange OIDC token for the push transport access grant',
+  )
+  const grantIndex = workflow.indexOf(
+    '- name: Grant the dispatcher access only to the shared transport payload',
+  )
+  const restoreStageTokenIndex = workflow.indexOf(
+    '- name: Restore the stage deployment identity',
+  )
+  assert.ok(grantTokenIndex >= 0)
+  assert.ok(grantIndex > grantTokenIndex)
+  assert.ok(restoreStageTokenIndex > grantIndex)
+  assert.match(
+    workflow.slice(grantTokenIndex, grantIndex),
+    /YC_DEPLOY_SA_ID: \$\{\{ vars\.YC_SUMMARY_DEPLOY_SA_ID \}\}[\s\S]*?scripts\/yandex-github-oidc\.sh/,
+  )
+
+  const deployIndex = workflow.indexOf(
+    '- name: Deploy and verify the private push dispatcher',
+  )
+  const finalApplyIndex = workflow.indexOf(
+    'terraform apply -auto-approve stage-post-revision.tfplan',
+  )
+  assert.ok(deployIndex >= 0)
+  assert.ok(finalApplyIndex > deployIndex)
+  assert.match(
+    workflow,
+    /-target=yandex_serverless_container\.push_dispatcher/,
+  )
+  assert.match(
+    workflow,
+    /-target=yandex_serverless_container_iam_binding\.push_dispatcher_invocation/,
+  )
+  assert.match(workflow, /push-dispatcher-health\.json/)
+  assert.match(workflow, /\.releaseId == \$release_id/)
+  assert.match(workflow, /The first push dispatcher revision failed health; its timer was not created/)
+  assert.match(
+    workflow,
+    /deploy-yandex-serverless-revision\.mjs rollback[\s\S]*?push_previous\.outputs\.revision_id/,
+  )
+})
+
 test('allows the API gateway and database readiness to settle before rollback', () => {
   assert.match(
     workflow,
@@ -151,6 +208,8 @@ test('probes the fit_api identity privately before changing the API revision', (
     workflow,
     /-target=yandex_lockbox_secret_iam_member\.migration_api_connection_secret_reader/,
   )
+  assert.match(workflow, /--push-dispatcher-sa-id/)
+  assert.match(workflow, /--push-scheduler-sa-id/)
   assert.match(containerTerraform, /STAGE_RUNTIME_DATABASE_PREFLIGHT_ENABLED/)
   assert.match(containerTerraform, /environment_variable = "DATABASE_PASSWORD"/)
   assert.match(
@@ -340,7 +399,7 @@ test('supports a plan-only stage diagnostic that cannot deploy resources', () =>
 test('validates feature branches without expanding the main-only Yandex OIDC trust', () => {
   const validateIndex = workflow.indexOf('name: Validate Terraform configuration')
   const planIndex = workflow.indexOf('name: Review Terraform plan')
-  const oidcIndex = workflow.indexOf('name: Exchange GitHub OIDC token for a short-lived IAM token')
+  const oidcIndex = workflow.indexOf('name: Exchange OIDC token for the push transport identity')
 
   assert.ok(validateIndex >= 0)
   assert.ok(planIndex > validateIndex)
