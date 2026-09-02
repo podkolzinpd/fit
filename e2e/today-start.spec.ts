@@ -216,6 +216,7 @@ test('today: быстрый старт ведёт к единому выбору
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Записать выполненную' }).click()
   await expect(page.getByRole('button', { name: 'Записать тренировку' })).toBeEnabled()
+  await expect(page.getByText('Завершена', { exact: true })).toBeVisible()
   await expect(page.getByLabel('Время тренировки')).toHaveCount(0)
   await page.getByRole('button', { name: '← К проверке' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
@@ -226,6 +227,24 @@ test('today: быстрый старт ведёт к единому выбору
   await expect(page.getByLabel('Тренировка')).toHaveValue('Присед со штангой 3×8 — 80 кг\nПланка 3×45 сек')
   await page.waitForTimeout(3600)
   await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
+})
+
+test('today: пустой финальный шаг не оставляет пользователя с неактивной кнопкой', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/(today|clients)$/)
+  await page.evaluate(() => Object.keys(localStorage)
+    .filter((key) => key.startsWith('fit.today-draft.'))
+    .forEach((key) => localStorage.removeItem(key)))
+
+  await page.goto('/today?view=save')
+
+  await expect(page).toHaveURL(/\/today$/)
+  await expect(page.getByRole('heading', { name: 'Сохраните тренировку' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Запланировать тренировку' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
 })
 
 test('today: беговая ветка сразу добавляет интервалы с активным восстановлением', async ({ page }) => {
