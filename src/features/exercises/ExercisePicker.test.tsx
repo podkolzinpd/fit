@@ -296,6 +296,7 @@ describe('ExercisePicker', () => {
     expect(screen.getByRole('heading', { name: 'Присед (Штанга)' })).toBeInTheDocument()
     expect(screen.getByText('Как выполнять')).toBeInTheDocument()
     expect(document.querySelector('.picker-technique-view video')).toHaveAttribute('src', '/squat.mp4')
+    expect(document.querySelector('.picker-technique-view video')).toHaveAttribute('controls')
 
     await user.click(screen.getByRole('button', { name: 'Назад к выбору' }))
     expect(screen.getByLabelText('Поиск упражнения')).toHaveValue('Присед')
@@ -311,10 +312,16 @@ describe('ExercisePicker', () => {
     expect(screen.getByRole('button', { name: 'Убрать: Присед (Штанга)' })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('запускает движение максимум у двух видимых карточек', async () => {
-    const exercises = ENRICHED.slice(0, 3).map((exercise) => ({ ...exercise, imageUrl: `/${exercise.ref}.jpg`, techniqueVideoUrl: `/${exercise.ref}.mp4` }))
+  it('не запускает видео в списке и отмечает значком только настоящее видео', () => {
+    const exercises = [
+      ENRICHED[0]!,
+      { ...ENRICHED[1]!, imageUrl: '/b.jpg', motionImageUrl: '/b-end.jpg' },
+    ]
     render(<ExercisePicker catalog={catalog({ exercises })} onPick={vi.fn()} onClose={vi.fn()} />)
-    await waitFor(() => expect(document.querySelectorAll('.picker-list video')).toHaveLength(2))
+    expect(document.querySelectorAll('.picker-list video')).toHaveLength(0)
+    expect(document.querySelectorAll('.picker-item-play')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Посмотреть технику: Присед (Штанга)' }).querySelector('.picker-item-play')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Посмотреть технику: Разгибание ног (Тренажёр)' }).querySelector('.picker-item-play')).not.toBeInTheDocument()
   })
 
   it('closes from the overlay and close button', async () => {

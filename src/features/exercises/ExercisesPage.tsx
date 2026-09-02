@@ -3,7 +3,7 @@ import { useMemo, useState, type FormEvent, type MouseEvent } from 'react'
 import { exercisesRepository, type CustomExercise } from '../../data/repositories/exercises.repository'
 import { useAuth } from '../../app/auth-context'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
-import { ChevronRightIcon, CloseIcon, SearchIcon } from '../../shared/icons'
+import { ChevronRightIcon, CloseIcon, PlayIcon, SearchIcon } from '../../shared/icons'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ExerciseImage } from './ExerciseImage'
@@ -93,8 +93,8 @@ export function ExercisesPage() {
       {systemMatches.length > 0 ? <>
         <div className="catalog-media-grid">
           {visibleExercises.map((exercise) => <button type="button" className="catalog-media-card" key={exercise.ref} onClick={() => setSelected(exercise)}>
-            <ExerciseImage src={exercise.imageUrl} videoSrc={exercise.techniqueVideoUrl} alt="" variant="preview" />
-            <span><strong>{exercise.name}</strong><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small></span>
+            <span className="catalog-media-card-visual"><ExerciseImage src={exercise.imageUrl} alt="" variant="preview" />{exercise.techniqueVideoUrl && <span className="catalog-media-card-play" aria-hidden="true"><PlayIcon /></span>}</span>
+            <span className="catalog-media-card-copy"><strong>{exercise.name}</strong><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small></span>
             <ChevronRightIcon />
           </button>)}
         </div>

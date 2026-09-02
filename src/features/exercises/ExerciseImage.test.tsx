@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ExerciseImage } from './ExerciseImage'
 
@@ -31,12 +31,13 @@ describe('ExerciseImage', () => {
     expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
   })
 
-  it('uses a silent looping video in technique and visible catalog preview variants', () => {
+  it('uses an accessible controlled video only in the explicit technique view', () => {
     const { container, rerender } = render(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="technique" />)
-    const video = container.querySelector('video')
+    const video = screen.getByLabelText('Техника: Присед')
     expect(video).toHaveAttribute('src', '/exercises/technique.mp4')
     expect(video).toHaveAttribute('autoplay')
     expect(video).toHaveAttribute('loop')
+    expect(video).toHaveAttribute('controls')
     expect(video).toHaveProperty('muted', true)
     expect(video).toHaveAttribute('playsinline')
     expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
@@ -45,27 +46,7 @@ describe('ExerciseImage', () => {
     expect(container.querySelector('video')).not.toBeInTheDocument()
 
     rerender(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="preview" />)
-    expect(container.querySelector('video')).toHaveAttribute('preload', 'none')
-  })
-
-  it('mounts catalog video only while its preview is near the viewport', () => {
-    let notify: IntersectionObserverCallback | undefined
-    const observe = vi.fn()
-    const disconnect = vi.fn()
-    vi.stubGlobal('IntersectionObserver', vi.fn(function (callback: IntersectionObserverCallback) {
-      notify = callback
-      return { observe, disconnect }
-    }))
-
-    const { container, unmount } = render(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" variant="preview" />)
-    expect(observe).toHaveBeenCalledOnce()
     expect(container.querySelector('video')).not.toBeInTheDocument()
-    act(() => notify?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver))
-    expect(container.querySelector('video')).toBeInTheDocument()
-    act(() => notify?.([{ isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver))
-    expect(container.querySelector('video')).not.toBeInTheDocument()
-    unmount()
-    expect(disconnect).toHaveBeenCalledOnce()
   })
 
   it('falls back to the two technique frames when video loading fails', () => {
@@ -76,14 +57,13 @@ describe('ExerciseImage', () => {
     expect(container.querySelectorAll('img')).toHaveLength(2)
   })
 
-  it('keeps the catalog cover when preview video loading fails', () => {
-    const { container } = render(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/broken.mp4" alt="Присед" variant="preview" />)
-    fireEvent.error(container.querySelector('video')!)
+  it('keeps compact catalog cards static even when video is available', () => {
+    const { container } = render(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="preview" />)
     expect(container.querySelector('video')).not.toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Присед' })).toHaveAttribute('src', '/exercises/start.jpg')
   })
 
-  it('does not autoplay video when reduced motion is enabled', () => {
+  it('keeps manual video controls but disables autoplay when reduced motion is enabled', () => {
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
       matches: true,
       media: '(prefers-reduced-motion: reduce)',
@@ -91,8 +71,9 @@ describe('ExerciseImage', () => {
       removeEventListener: vi.fn(),
     }))
     const { container, rerender } = render(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="technique" />)
-    expect(container.querySelector('video')).not.toBeInTheDocument()
-    expect(container.firstElementChild).toHaveClass('exercise-image-motion')
+    expect(container.querySelector('video')).toHaveAttribute('controls')
+    expect(container.querySelector('video')).not.toHaveAttribute('autoplay')
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
     rerender(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="preview" />)
     expect(container.querySelector('video')).not.toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Присед' })).toBeVisible()

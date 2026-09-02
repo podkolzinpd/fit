@@ -134,7 +134,6 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const listRef = useRef<HTMLDivElement>(null)
   const savedScrollTop = useRef(0)
   const [previewExercise, setPreviewExercise] = useState<ExerciseSnapshot | null>(null)
-  const [activePreviewKeys, setActivePreviewKeys] = useState<Set<string>>(() => new Set())
   const [visibleCount, setVisibleCount] = useState(PICKER_BATCH_SIZE)
   const [customOnly, setCustomOnly] = useState(false)
   const [selected, setSelected] = useState<Map<string, ExerciseSnapshot>>(() => new Map())
@@ -187,44 +186,12 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     [filtered, hasFilters, promotedClient, recent, search],
   )
   const visibleListExercises = useMemo(() => listExercises.slice(0, visibleCount), [listExercises, visibleCount])
-  const renderedExercises = useMemo(
-    () => [...promotedClient, ...recent, ...visibleListExercises],
-    [promotedClient, recent, visibleListExercises],
-  )
-  const renderedExerciseKeys = renderedExercises.map(exerciseKey).join('|')
   const hasVisibleExercises = promotedClient.length > 0 || recent.length > 0 || listExercises.length > 0
 
   useEffect(() => {
     setVisibleCount(PICKER_BATCH_SIZE)
   }, [activeMode, category, customOnly, equipment, muscle, search])
 
-  useEffect(() => {
-    if (previewExercise || !listRef.current) return
-    const items = [...listRef.current.querySelectorAll<HTMLElement>('[data-preview-key]')]
-    const moving = items.filter((item) => item.dataset.hasTechniqueMedia === 'true')
-    if (typeof IntersectionObserver === 'undefined') {
-      setActivePreviewKeys(new Set(moving.slice(0, 2).map((item) => item.dataset.previewKey!)))
-      return
-    }
-    const visible = new Set<HTMLElement>()
-    const publish = () => {
-      const keys = [...visible]
-        .sort((left, right) => left.getBoundingClientRect().top - right.getBoundingClientRect().top)
-        .slice(0, 2)
-        .map((item) => item.dataset.previewKey!)
-      setActivePreviewKeys(new Set(keys))
-    }
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        const item = entry.target as HTMLElement
-        if (entry.isIntersecting) visible.add(item)
-        else visible.delete(item)
-      })
-      publish()
-    }, { root: listRef.current, threshold: 0.45 })
-    moving.forEach((item) => observer.observe(item))
-    return () => observer.disconnect()
-  }, [previewExercise, renderedExerciseKeys])
   function openCreate() {
     setName(search.trim())
     setCreating(true)
@@ -299,11 +266,10 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   function item(exercise: ExerciseSnapshot, keyPrefix: string) {
     const key = exerciseKey(exercise)
     const checked = selected.has(key)
-    const moving = activePreviewKeys.has(key)
-    const hasTechniqueMedia = Boolean(exercise.motionImageUrl || exercise.techniqueVideoUrl)
-    return <article className={`picker-item${checked ? ' selected' : ''}`} data-preview-key={key} data-has-technique-media={hasTechniqueMedia} key={`${keyPrefix}-${exercise.source}-${exercise.ref}`}>
+    const hasTechniqueVideo = Boolean(exercise.techniqueVideoUrl)
+    return <article className={`picker-item${checked ? ' selected' : ''}`} key={`${keyPrefix}-${exercise.source}-${exercise.ref}`}>
       <button type="button" className="picker-item-technique" aria-label={`Посмотреть технику: ${exercise.name}`} onClick={() => openTechnique(exercise)}>
-        <span className="picker-item-media"><ExerciseImage src={exercise.imageUrl} motionSrc={moving ? exercise.motionImageUrl : undefined} videoSrc={moving ? exercise.techniqueVideoUrl : undefined} alt="" variant="picker" />{hasTechniqueMedia && <span className="picker-item-play" aria-hidden="true"><PlayIcon /></span>}</span>
+        <span className="picker-item-media"><ExerciseImage src={exercise.imageUrl} alt="" variant="picker" />{hasTechniqueVideo && <span className="picker-item-play" aria-hidden="true"><PlayIcon /></span>}</span>
         <span className="picker-item-copy"><span className="picker-item-name">{exercise.name}</span><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small></span>
       </button>
       <button type="button" className="picker-select-mark" aria-label={checked ? `Убрать: ${exercise.name}` : multiple ? `Выбрать: ${exercise.name}` : `Добавить: ${exercise.name}`} aria-pressed={multiple ? checked : undefined} data-exercise-ref={exercise.ref} data-exercise-source={exercise.source} onClick={() => pick(exercise)}>{checked ? <CheckIcon /> : <AddIcon />}</button>

@@ -65,6 +65,16 @@ export const VITAL_FREE_PACK_ASSETS = [
 const vitalPoster = (file: string) => `/exercises/vital/${file}.jpg`
 const vitalEndPoster = (file: string) => `/exercises/vital/${file}-end.jpg`
 
+export const VITAL_FREE_PACK_MEDIA_BY_REF: Readonly<Record<string, {
+  imageUrl: string
+  motionImageUrl: string
+  techniqueVideoUrl: string
+}>> = Object.fromEntries(VITAL_FREE_PACK_ASSETS.map((asset) => [asset.ref, {
+  imageUrl: vitalPoster(asset.file),
+  motionImageUrl: vitalEndPoster(asset.file),
+  techniqueVideoUrl: `/exercises/vital/${asset.file}.mp4`,
+}]))
+
 export const VITAL_FREE_PACK_EXERCISES = [
   { source: 'system', ref: 'vital-air-bike-sprint', name: 'Аэробайк — спринт (Тренажёр)', muscleGroup: 'cardio', inputKind: 'duration', equipment: 'Аэробайк', equipmentRef: 'machine', primaryMuscleDetail: 'Кардио', secondaryMuscles: ['Передняя поверхность бедра', 'Плечи'], level: 'beginner', imageUrl: vitalPoster('air-bike-sprint'), motionImageUrl: vitalEndPoster('air-bike-sprint'), instructions: ['Настройте сиденье и держите корпус устойчиво.', 'Одновременно толкайте и тяните рукояти, быстро работая педалями.', 'Укажите длительность рабочего отрезка.'] },
   { source: 'system', ref: 'vital-barbell-march', name: 'Марш со штангой на плечах (Штанга)', muscleGroup: 'legs', inputKind: 'strength', equipment: 'Штанга', equipmentRef: 'barbell', primaryMuscleDetail: 'Передняя поверхность бедра', secondaryMuscles: ['Ягодицы', 'Пресс'], level: 'intermediate', imageUrl: vitalPoster('barbell-march'), motionImageUrl: vitalEndPoster('barbell-march'), instructions: ['Положите штангу на трапеции и выпрямитесь.', 'Поочерёдно поднимайте колени, не раскачивая корпус.', 'Опускайте стопу под контролем и сохраняйте ровную спину.'] },
@@ -90,5 +100,5 @@ export const VITAL_FREE_PACK_EXERCISES = [
 ] as const satisfies readonly ExerciseSnapshot[]
 
 export const VITAL_FREE_PACK_VIDEO_BY_REF: Readonly<Record<string, string>> = Object.fromEntries(
-  VITAL_FREE_PACK_ASSETS.map((asset) => [asset.ref, `/exercises/vital/${asset.file}.mp4`]),
+  Object.entries(VITAL_FREE_PACK_MEDIA_BY_REF).map(([ref, media]) => [ref, media.techniqueVideoUrl]),
 )
