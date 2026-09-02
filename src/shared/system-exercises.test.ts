@@ -192,6 +192,26 @@ describe('system exercise catalog', () => {
     }
   })
 
+  it('не подменяет жим в тренажёре видео жима гантелей сидя', () => {
+    const seatedDumbbellPress = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'seated-dumbbell-press')
+    const machineShoulderPress = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-machine-shoulder-military-press')
+
+    expect(VITAL_FREE_PACK_ASSETS.find((asset) => asset.id === '0080')).toMatchObject({
+      sourceName: 'seated overhead press',
+      ref: 'seated-dumbbell-press',
+    })
+    expect(seatedDumbbellPress).toMatchObject({
+      name: 'Жим гантелей сидя (Гантели)',
+      equipment: 'Гантели',
+      techniqueVideoUrl: '/exercises/vital/machine-shoulder-press.mp4',
+    })
+    expect(machineShoulderPress).toMatchObject({
+      name: 'Армейский жим в тренажёре (Тренажёр)',
+      equipment: 'Тренажёр',
+    })
+    expect(machineShoulderPress?.techniqueVideoUrl).toBeUndefined()
+  })
+
   it('добавляет отдельные карточки только для отсутствующих движений Free50', () => {
     expect(VITAL_FREE_PACK_EXERCISES).toHaveLength(21)
     for (const exercise of VITAL_FREE_PACK_EXERCISES) {
