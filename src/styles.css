@@ -2475,6 +2475,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .run-distance-unit { width:100%; min-width:0; min-height:var(--control-height-standard); padding:4px 25px 4px 9px; border:1px solid var(--border); border-radius:var(--radius-sm); appearance:none; -webkit-appearance:none; background:var(--surface-sunken); color:var(--fg); text-align:center; font-size:13px; font-weight:700; text-transform:lowercase }
 .run-distance-unit:focus { border-color:var(--accent-focus); box-shadow:none; outline:none }
 .run-distance-unit:disabled { border-color:transparent; background:transparent; color:var(--fg); opacity:1 }
+.rowing-stroke-rate-field { min-width:0; display:grid; gap:3px; margin-top:3px; color:var(--secondary-label-fg); font-size:12px; font-weight:700; line-height:1.25; text-align:center }
+.rowing-stroke-rate-field > span { min-width:0 }
+.rowing-stroke-rate-field > input { min-height:36px; padding-block:4px }
 .planned-set-rpe { width:100%; min-width:0; min-height:var(--control-height-standard); padding:5px 3px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-sunken); color:var(--fg); text-align:center; font-size:13px; font-weight:700 }
 .planned-set-table.rpe-visible .planned-set-table-head,
 .planned-set.rpe-visible { grid-template-columns:28px minmax(0, 1fr) minmax(0, 1fr) 48px 32px; gap:5px }

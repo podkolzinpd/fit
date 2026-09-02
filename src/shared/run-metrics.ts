@@ -1,5 +1,7 @@
 export type RunDistanceUnit = 'm' | 'km'
 
+const ROWING_EXERCISE_REFS = new Set(['rowing-machine', 'interval-rowing'])
+
 const distanceFormatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 3 })
 
 export function formatRunDuration(seconds?: number): string {
@@ -59,4 +61,14 @@ export function runPaceLabel(durationSec?: number, distanceKm?: number): string 
   if (durationSec === undefined || distanceKm === undefined || durationSec <= 0 || distanceKm <= 0) return null
   const paceSeconds = Math.round(durationSec / distanceKm)
   return `${Math.floor(paceSeconds / 60)}:${String(paceSeconds % 60).padStart(2, '0')}/км`
+}
+
+export function isRowingExerciseRef(exerciseRef?: string): boolean {
+  return exerciseRef !== undefined && ROWING_EXERCISE_REFS.has(exerciseRef)
+}
+
+export function rowingPaceLabel(durationSec?: number, distanceKm?: number): string | null {
+  if (durationSec === undefined || distanceKm === undefined || durationSec <= 0 || distanceKm <= 0) return null
+  const paceSeconds = Math.round(durationSec * 0.5 / distanceKm)
+  return `${Math.floor(paceSeconds / 60)}:${String(paceSeconds % 60).padStart(2, '0')}/500 м`
 }

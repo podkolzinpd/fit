@@ -257,6 +257,7 @@ export interface WorkoutSetDraft {
   sourceSetId?: UUID
   position: number
   weightKg?: number
+  /** Повторы; для гребного тренажёра — частота гребков в минуту. */
   reps?: number
   /** Новые тренировки хранят длительность точно, в целых секундах. */
   durationSec?: number
@@ -302,6 +303,7 @@ export interface WorkoutDraft {
 
 export interface LiveSetDraft {
   weightKg?: number
+  /** Повторы; для гребного тренажёра — фактическая частота гребков в минуту. */
   reps?: number
   durationSec?: number
   durationMin?: number

@@ -6,6 +6,7 @@ import {
   preferredRunDistanceUnit,
   runDistanceKmFromInput,
   runPaceLabel,
+  rowingPaceLabel,
   type RunDistanceUnit,
 } from '../../shared/run-metrics'
 
@@ -17,13 +18,17 @@ interface RunMetricsFieldsProps {
   disabled?: boolean
   planDurationHint?: boolean
   planDistanceHint?: boolean
+  planStrokeRateHint?: boolean
+  rowing?: boolean
+  strokeRate?: number
   durationName?: string
   distanceName?: string
   distanceUnitName?: string
+  strokeRateName?: string
   durationLabel: string
   distanceLabel: string
   distanceUnitLabel: string
-  onCommit?: (patch: { durationSec?: number; durationMin?: undefined; distanceKm?: number }) => void
+  onCommit?: (patch: { durationSec?: number; durationMin?: undefined; distanceKm?: number; reps?: number }) => void
 }
 
 export function RunMetricsFields({
@@ -34,23 +39,29 @@ export function RunMetricsFields({
   disabled = false,
   planDurationHint = false,
   planDistanceHint = false,
+  planStrokeRateHint = false,
+  rowing = false,
+  strokeRate,
   durationName,
   distanceName,
   distanceUnitName,
+  strokeRateName,
   durationLabel,
   distanceLabel,
   distanceUnitLabel,
   onCommit,
 }: RunMetricsFieldsProps) {
-  const [unit, setUnit] = useState<RunDistanceUnit>(() => preferredRunDistanceUnit(distanceKm))
+  const [unit, setUnit] = useState<RunDistanceUnit>(() => rowing && distanceKm === undefined ? 'm' : preferredRunDistanceUnit(distanceKm))
   const [durationText, setDurationText] = useState(() => formatRunDuration(durationSec))
   const [distanceText, setDistanceText] = useState(() => formatRunDistanceInput(distanceKm, unit))
+  const [strokeRateText, setStrokeRateText] = useState(() => strokeRate === undefined ? '' : String(strokeRate))
   const parsedDuration = parseRunDurationInput(durationText)
   const parsedDistance = runDistanceKmFromInput(distanceText, unit)
-  const pace = runPaceLabel(parsedDuration, parsedDistance)
+  const pace = rowing ? rowingPaceLabel(parsedDuration, parsedDistance) : runPaceLabel(parsedDuration, parsedDistance)
 
   useEffect(() => setDurationText(formatRunDuration(durationSec)), [durationSec])
   useEffect(() => setDistanceText(formatRunDistanceInput(distanceKm, unit)), [distanceKm, unit])
+  useEffect(() => setStrokeRateText(strokeRate === undefined ? '' : String(strokeRate)), [strokeRate])
 
   function commitDuration() {
     const next = parseRunDurationInput(durationText)
@@ -68,6 +79,13 @@ export function RunMetricsFields({
     const currentKm = runDistanceKmFromInput(distanceText, unit)
     setUnit(next)
     setDistanceText(formatRunDistanceInput(currentKm, next))
+  }
+
+  function commitStrokeRate() {
+    const parsed = strokeRateText.trim() === '' ? undefined : Number(strokeRateText)
+    const next = parsed !== undefined && Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined
+    setStrokeRateText(next === undefined ? '' : String(next))
+    onCommit?.({ reps: next })
   }
 
   return <>
@@ -120,7 +138,24 @@ export function RunMetricsFields({
           </select>
         </span>
       </div>
-      <small>{pace ? `Темп ${pace}` : 'Темп —'}</small>
+      <small>{pace ? `Темп ${pace}` : `Темп —${rowing ? '/500 м' : ''}`}</small>
+      {rowing && <label className="rowing-stroke-rate-field">
+        <span>Гребков в минуту</span>
+        <input
+          className={`${inputClassName}${planStrokeRateHint ? ' plan-hint' : ''}`}
+          name={strokeRateName}
+          aria-label="Гребков в минуту"
+          type="number"
+          inputMode="numeric"
+          min="0"
+          step="1"
+          placeholder="—"
+          value={strokeRateText}
+          disabled={disabled}
+          onChange={(event) => setStrokeRateText(event.target.value)}
+          onBlur={commitStrokeRate}
+        />
+      </label>}
     </div>
   </>
 }
