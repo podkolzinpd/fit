@@ -80,6 +80,19 @@ describe('ExercisePicker', () => {
     expect(screen.getAllByRole('button', { name: /Посмотреть технику: Присед/ })).toHaveLength(1)
   })
 
+  it('при поиске поднимает недавнее и пользовательское упражнение, не скрывая остальные', async () => {
+    const user = userEvent.setup()
+    const system: ExerciseSnapshot = { source: 'system', ref: 'system-row', name: 'Тяга к поясу', muscleGroup: 'back', inputKind: 'strength' }
+    const recent: ExerciseSnapshot = { source: 'system', ref: 'recent-row', name: 'Тяга к поясу сидя', muscleGroup: 'back', inputKind: 'strength' }
+    const custom: ExerciseSnapshot = { source: 'custom', ref: 'custom-row', customExerciseId: 'custom-row', name: 'Моя тяга к поясу', muscleGroup: 'back', inputKind: 'strength' }
+
+    render(<ExercisePicker catalog={catalog({ exercises: [system, recent, custom] })} clientRecent={[recent]} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.type(screen.getByLabelText('Поиск упражнения'), 'тяга поясу')
+
+    expect([...document.querySelectorAll<HTMLElement>('.picker-item [data-exercise-ref]')].map((node) => node.dataset.exerciseRef))
+      .toEqual(['recent-row', 'custom-row', 'system-row'])
+  })
+
   it('скрывает только системный дубль при новом выборе и оставляет одноимённое упражнение тренера', () => {
     const canonical = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'barbell-row')!
     const duplicate = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-bent-over-barbell-row')!
