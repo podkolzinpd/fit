@@ -2,9 +2,9 @@ import type { ExerciseSnapshot, MuscleGroup } from './domain'
 import { IMPORTED_EXERCISES } from './system-exercises.generated'
 import { BASE_EXERCISES } from './system-exercises.base.generated'
 import { CATALOG_EXPANSION } from './system-exercises.expansion.generated'
-import { VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_VIDEO_BY_REF } from './vital-free-pack'
+import { VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_MEDIA_BY_REF } from './vital-free-pack'
 
-export const SYSTEM_EXERCISE_CATALOG_VERSION = 6
+export const SYSTEM_EXERCISE_CATALOG_VERSION = 7
 
 // Форма импортированного упражнения (генерируется scripts/import-exercises.mjs).
 export interface ImportedExercise extends ExerciseSnapshot {
@@ -164,8 +164,12 @@ const SYSTEM_EXERCISE_CATALOG_SOURCE: readonly ExerciseSnapshot[] = [
 // Составные протоколы и СБУ переиспользуют обложки базовых упражнений. Для
 // карточки техники им нужен тот же второй кадр, но дублировать его URL в каждом
 // литерале нет смысла.
-export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = SYSTEM_EXERCISE_CATALOG_SOURCE.map((exercise) => ({
-  ...exercise,
-  motionImageUrl: exercise.motionImageUrl ?? exercise.imageUrl?.replace(/\.jpg$/, '-end.jpg'),
-  techniqueVideoUrl: VITAL_FREE_PACK_VIDEO_BY_REF[exercise.ref],
-}))
+export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = SYSTEM_EXERCISE_CATALOG_SOURCE.map((exercise) => {
+  const vitalMedia = VITAL_FREE_PACK_MEDIA_BY_REF[exercise.ref]
+  return {
+    ...exercise,
+    imageUrl: vitalMedia?.imageUrl ?? exercise.imageUrl,
+    motionImageUrl: vitalMedia?.motionImageUrl ?? exercise.motionImageUrl ?? exercise.imageUrl?.replace(/\.jpg$/, '-end.jpg'),
+    techniqueVideoUrl: vitalMedia?.techniqueVideoUrl,
+  }
+})
