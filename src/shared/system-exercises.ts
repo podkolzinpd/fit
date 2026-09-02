@@ -1,9 +1,10 @@
 import type { ExerciseSnapshot, MuscleGroup } from './domain'
 import { IMPORTED_EXERCISES } from './system-exercises.generated'
 import { BASE_EXERCISES } from './system-exercises.base.generated'
+import { CATALOG_EXPANSION } from './system-exercises.expansion.generated'
 import { VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_VIDEO_BY_REF } from './vital-free-pack'
 
-export const SYSTEM_EXERCISE_CATALOG_VERSION = 5
+export const SYSTEM_EXERCISE_CATALOG_VERSION = 6
 
 // Форма импортированного упражнения (генерируется scripts/import-exercises.mjs).
 export interface ImportedExercise extends ExerciseSnapshot {
@@ -157,6 +158,7 @@ const SYSTEM_EXERCISE_CATALOG_SOURCE: readonly ExerciseSnapshot[] = [
   ...RUNNING_DRILLS,
   ...WARMUP_AND_MOBILITY,
   ...VITAL_FREE_PACK_EXERCISES,
+  ...CATALOG_EXPANSION,
 ]
 
 // Составные протоколы и СБУ переиспользуют обложки базовых упражнений. Для
