@@ -2,7 +2,7 @@
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк.
 > После merge сведения заменяются; полная история хранится в Git, PR и Tracker.
 Обновлено: 2026-09-02
-Проверенный базовый `main`: `139c28e` (`валидация названий целей, #752`)
+Проверенный базовый `main`: `ace6713` (`понятный запуск видео техники, #756`)
 ## Последняя проверенная продуктовая точка
 - Главные страницы обеих ролей сохраняют voice-first действие и ввод текстом;
   Client Home показывает ближайшее назначение, состоявшуюся неделю и максимум
@@ -109,12 +109,12 @@
   stage API без изменения production routing.
 - Реальный invite → join → leave/remove smoke — внешняя проверка; полный cutover не выполнен.
 ## Проверки активной ветки
-- `npm run check`: 150 файлов/1070 тестов, lint, typecheck, API и production
-  build зелёные; SQL/RLS 886/886 и API actor/RLS 28/28 зелёные.
-- Picker component 30/30; Chromium create/replace, auth/client-regрессия и
-  iPhone WebKit зелёные; visual QA 390/430/1440 зелёный.
+- Tenant migration tooling: encrypted 28-table manifest; read-only repeatable
+  export, rollback dry-run, idempotent apply и count/checksum validation
+  прошли на двух локальных Podman PostgreSQL.
+- Migration `000029` сохраняет `workouts.stage_id`/`client_progress.updated_by`; production и удалённые БД не менялись.
 ## Ближайший порядок
-1. Создать PR #751, дождаться обязательных проверок и выполнить squash-merge.
-2. Проверить production и установить свежий `main` в iOS Simulator.
+1. Завершить PR #739; провести две rehearsal на non-production tenant.
+2. Затем оценить production infrastructure и согласовать rollout/rollback.
 ## Отложено
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.

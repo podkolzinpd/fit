@@ -6,6 +6,65 @@
 
 Development-сборка программно отклоняет любой Supabase URL, кроме `localhost` и `127.0.0.1`. Production URL и publishable key задаются только в Vercel. Их запрещено копировать в `.env.local`, `.env.development` или другие локальные env-файлы. Для сброса локальных данных используйте `npm run db:reset`.
 
+## Перенос одного tenant в Yandex PostgreSQL
+
+CLI `npm run tenant:migrate` подготавливает и проверяет перенос одного
+изолированного trainer cohort. Он не меняет frontend routing, rollout assignment
+или cloud resources. До двух отдельных репетиций и согласованного окна его
+нельзя считать разрешением production cutover.
+
+Секреты передаются только через окружение и не добавляются в аргументы, `.env`,
+репозиторий или логи:
+
+```text
+FIT_TENANT_SOURCE_DATABASE_URL=<source PostgreSQL URL>
+FIT_TENANT_TARGET_DATABASE_URL=<target PostgreSQL URL>
+FIT_TENANT_MIGRATION_PASSPHRASE=<at least 20 characters>
+FIT_TENANT_SOURCE_SSL_ROOT_CERT=<source CA file, required for remote>
+FIT_TENANT_TARGET_SSL_ROOT_CERT=<target CA file, required for remote>
+```
+
+Базовая последовательность сначала выполняется только на локальных базах в
+Podman:
+
+```text
+npm run tenant:migrate -- export --trainer-id <trainer-auth-uuid> --out <artifact.fit>
+npm run tenant:migrate -- import --in <artifact.fit>
+npm run tenant:migrate -- import --in <artifact.fit> --apply
+npm run tenant:migrate -- validate --in <artifact.fit>
+```
+
+Первый `import` — обязательный dry-run: он открывает транзакцию, проверяет все
+FK/unique/check constraints и checksums, затем делает rollback. `--apply`
+фиксирует данные только после полной проверки. Повторный apply безопасен и
+должен показать `inserted=0`. Существующие отличающиеся строки не
+перезаписываются: операция завершается ошибкой и целиком откатывается.
+
+Артефакт зашифрован AES-256-GCM, создаётся с правами `0600` и не
+перезаписывается. Он всё равно считается чувствительным backup-файлом: хранить
+его следует только в согласованном защищённом месте, а после закрытия rollback-
+окна удалить по отдельной процедуре. В выводе допустимы только имена таблиц,
+количества и необратимый fingerprint tenant-а.
+
+Удалённое чтение или подключение заблокировано без одновременных
+`--allow-remote` и:
+
+```text
+FIT_TENANT_REMOTE_CONFIRMATION=I_UNDERSTAND_REMOTE_DATABASE_ACCESS
+```
+
+Для remote `--apply` дополнительно требуется:
+
+```text
+FIT_TENANT_REMOTE_APPLY_CONFIRMATION=APPLY_TENANT_TO_YANDEX_POSTGRES
+```
+
+Эти значения — предохранители, не секреты и не замена явному подтверждению
+оператора. Перед production export отдельно сверяются cohort, отсутствие общих
+trainer-связей и pending push, freeze writes, target, backup и rollback plan.
+Точные границы manifest и ограничения описаны в
+`docs/design/YANDEX_TENANT_MIGRATION_TOOLING.md`.
+
 ## GitHub Secrets
 
 В repository secrets должны быть настроены:
