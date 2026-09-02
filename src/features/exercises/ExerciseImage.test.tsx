@@ -63,6 +63,14 @@ describe('ExerciseImage', () => {
     expect(screen.getByRole('img', { name: 'Присед' })).toHaveAttribute('src', '/exercises/start.jpg')
   })
 
+  it('uses the still end frame when a compact card start frame fails', () => {
+    const { container } = render(<ExerciseImage src="/exercises/broken.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Жим лёжа" variant="picker" />)
+    fireEvent.error(screen.getByRole('img', { name: 'Жим лёжа' }))
+    expect(screen.getByRole('img', { name: 'Жим лёжа' })).toHaveAttribute('src', '/exercises/end.jpg')
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
+  })
+
   it('keeps manual video controls but disables autoplay when reduced motion is enabled', () => {
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
       matches: true,

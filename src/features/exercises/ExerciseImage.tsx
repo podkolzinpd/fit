@@ -45,15 +45,18 @@ export function ExerciseImage({ src, motionSrc, videoSrc, alt = '', variant = 't
 
   const className = `exercise-image exercise-image-${variant}`
   const primaryAvailable = Boolean(src) && !primaryFailed
-  const motionAvailable = variant === 'technique' && Boolean(motionSrc) && !motionFailed
+  const motionFallbackAvailable = Boolean(motionSrc) && !motionFailed
+  const motionAvailable = variant === 'technique' && motionFallbackAvailable
   // Compact cards stay still. Motion starts only after an explicit tap opens
   // the technique view, so scrolling never decides which exercise plays.
   const videoAvailable = variant === 'technique' && Boolean(videoSrc) && !videoFailed
-  if (!primaryAvailable && !motionAvailable && !videoAvailable) {
+  if (!primaryAvailable && !motionFallbackAvailable && !videoAvailable) {
     return <span className={`${className} exercise-image-empty`} aria-hidden="true"><ExerciseIcon /></span>
   }
 
-  const fallbackSrc = primaryAvailable ? src : motionSrc
+  // Compact cards never animate, but the end frame still protects them from a
+  // broken start frame so the picker does not collapse to an empty placeholder.
+  const fallbackSrc = primaryAvailable ? src : motionFallbackAvailable ? motionSrc : undefined
   const animated = !videoAvailable && primaryAvailable && motionAvailable
   return <span className={`${className}${animated ? ' exercise-image-motion' : ''}`}>
     {fallbackSrc && <img className="exercise-image-frame exercise-image-frame-start" src={fallbackSrc} alt={alt} loading="lazy" decoding="async" onError={() => primaryAvailable ? setPrimaryFailed(true) : setMotionFailed(true)} />}
