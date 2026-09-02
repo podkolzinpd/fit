@@ -835,7 +835,7 @@ async function addExercise(page: Page, name: string, first = false) {
   await page.getByRole('button', { name: first ? 'Выбрать упражнения' : '＋ Упражнение' }).click()
   if (first) await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill(name)
-  await page.getByRole('button', { name: new RegExp(name) }).first().click()
+  await page.locator('.picker-select-mark').first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
 }
 

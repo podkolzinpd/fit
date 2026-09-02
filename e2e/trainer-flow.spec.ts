@@ -450,7 +450,7 @@ test('план: порядок упражнений меняется в отде
     await page.getByRole('button', { name: index === 0 ? 'Выбрать упражнения' : '＋ Упражнение' }).click()
     if (index === 0) await page.getByRole('button', { name: /^Силовая/ }).click()
     await page.getByLabel('Поиск упражнения').fill(q)
-    await page.getByRole('button', { name: new RegExp(q) }).first().click()
+    await page.locator('.picker-select-mark').first().click()
     await page.getByRole('button', { name: 'Добавить 1' }).click()
   }
   // В обычном режиме стрелок нет: порядок включается из меню упражнения.
@@ -492,7 +492,7 @@ test('live: порядок упражнений меняется в отдель
     await page.getByRole('button', { name: index === 0 ? 'Выбрать упражнения' : '＋ Упражнение' }).click()
     if (index === 0) await page.getByRole('button', { name: /^Силовая/ }).click()
     await page.getByLabel('Поиск упражнения').fill(q)
-    await page.getByRole('button', { name: new RegExp(q) }).first().click()
+    await page.locator('.picker-select-mark').first().click()
     await page.getByRole('button', { name: 'Добавить 1' }).click()
     await page.getByLabel('Вес, подход 1').nth(index).fill(index === 0 ? '70' : '50')
     await page.getByLabel('Повторы, подход 1').nth(index).fill(index === 0 ? '8' : '10')
@@ -612,7 +612,7 @@ test('карточка упражнения: шапка с оборудован�
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('тяга штанги в наклоне (штанга)')
-  await page.getByRole('button', { name: /Тяга штанги в наклоне \(Штанга\)/ }).first().click()
+  await page.locator('.picker-item').filter({ hasText: 'Тяга штанги в наклоне (Штанга)' }).first().locator('.picker-select-mark').click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
@@ -681,7 +681,7 @@ test('план: два упражнения объединяются в супе
     await page.getByRole('button', { name: index === 0 ? 'Выбрать упражнения' : '＋ Упражнение' }).click()
     if (index === 0) await page.getByRole('button', { name: /^Силовая/ }).click()
     await page.getByLabel('Поиск упражнения').fill(q)
-    await page.getByRole('button', { name: new RegExp(q) }).first().click()
+    await page.locator('.picker-select-mark').first().click()
     await page.getByRole('button', { name: 'Добавить 1' }).click()
   }
   // Объединяем первое упражнение со следующим в блок → появляется селектор типа.
@@ -943,7 +943,7 @@ test('расписание: карточка события — время, им
     await page.getByRole('button', { name: index === 0 ? 'Выбрать упражнения' : '＋ Упражнение' }).click()
     if (index === 0) await page.getByRole('button', { name: /^Силовая/ }).click()
     await page.getByLabel('Поиск упражнения').fill(q)
-    await page.locator('.picker-item').first().click()
+    await page.locator('.picker-select-mark').first().click()
     await page.getByRole('button', { name: 'Добавить 1' }).click()
   }
   await page.getByRole('button', { name: 'Сохранить' }).click()
@@ -1066,7 +1066,7 @@ test('live: удаление подхода и наследование факт
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
-  await page.locator('.picker-item').first().click()
+  await page.locator('.picker-select-mark').first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('90')
   await page.getByLabel('Повторы, подход 1').fill('8')
@@ -1154,7 +1154,7 @@ test('live: «Готово» без ввода факта — подход сч�
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
-  await page.locator('.picker-item').first().click()
+  await page.locator('.picker-select-mark').first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('100')
   await page.getByLabel('Повторы, подход 1').fill('5')
