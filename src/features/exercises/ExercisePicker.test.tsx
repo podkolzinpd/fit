@@ -106,6 +106,14 @@ describe('ExercisePicker', () => {
     expect(filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', 'db incline press').map((exercise) => exercise.ref)).toContain('fedb-incline-dumbbell-press')
   })
 
+  it('находит новые тренажёры, функциональные движения и мобильность', () => {
+    expect(filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', 'лежачий велотренажер')[0]?.ref).toBe('fedb-recumbent-bike')
+    expect(filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', 'трэп гриф')[0]?.ref).toBe('fedb-trap-bar-deadlift')
+    expect(filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', 'переворот шины')[0]?.ref).toBe('fedb-tire-flip')
+    expect(filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', 'мфр задней поверхности бедра')[0]?.ref).toBe('fedb-hamstring-smr')
+    expect(filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', 'выход на две')[0]?.ref).toBe('fedb-muscle-up')
+  })
+
   it('строит список мышц группы по частоте и фильтрует по мышце', () => {
     expect(musclesForGroup(ENRICHED, 'legs')).toEqual(['Квадрицепс', 'Бицепс бедра'])
     expect(musclesForGroup(ENRICHED, 'chest')).toEqual(['Грудь'])
