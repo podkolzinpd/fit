@@ -671,6 +671,8 @@ test('карточка упражнения: шапка с оборудован�
   // демонстрации техники.
   const techniqueImage = page.locator('.exercise-image-technique')
   await expect(techniqueImage.locator('img')).toHaveCount(2)
+  await expect(techniqueImage.locator('img').first()).toHaveCSS('position', 'absolute')
+  await expect(techniqueImage.locator('img').first()).toHaveCSS('object-fit', 'contain')
   await expect(techniqueImage).toHaveClass(/exercise-image-motion/)
   await expect(techniqueImage.locator('.exercise-image-frame-end')).not.toHaveCSS('animation-name', 'none')
   await page.emulateMedia({ reducedMotion: 'reduce' })

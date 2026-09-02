@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { invitationsRepository } from '../../data/repositories/invitations.repository'
+import type { TrainerMembership } from '../../shared/domain'
 import { useConfirm } from '../../shared/ui'
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
 
@@ -15,7 +16,8 @@ export function ClientTrainerConnections({ clientId }: { clientId: string }) {
     mutationFn: () => invitationsRepository.disconnectTrainer(clientId),
     onMutate: () => setDisconnectMessage(null),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['client-trainers', clientId] })
+      queryClient.setQueryData<TrainerMembership[]>(['client-trainers', clientId], [])
+      await queryClient.invalidateQueries({ queryKey: ['client-trainers', clientId], refetchType: 'none' })
       setDisconnectMessage('Тренер отключён. Ваш аккаунт, тренировки, замеры и цели сохранены.')
     },
   })

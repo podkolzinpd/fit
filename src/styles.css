@@ -1494,7 +1494,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
    hero-вариант меняет только представление первого экрана. */
 .today-voice-home { min-height:calc(100dvh - 190px); align-content:start; gap:12px; }
 .today-greeting { margin:2px 0 0; color:var(--text); font-size:15px; line-height:1.35; }
-.voice-action { display:grid; justify-items:center; gap:14px; padding:2px 0 0; text-align:center; }
+.voice-action { position:relative; display:grid; justify-items:center; gap:14px; padding:2px 0 0; text-align:center; }
+.voice-action-hitarea { position:absolute; inset:0; z-index:2; width:100%; min-height:0; padding:0; border:0; border-radius:inherit; background:transparent; box-shadow:none; cursor:pointer; }
+.voice-action-hitarea:hover { background:transparent; }
+.voice-action-hitarea:focus-visible { outline:3px solid var(--accent-ring); outline-offset:3px; }
+.voice-action-hitarea:disabled { background:transparent; cursor:wait; }
 .voice-action-copy { min-height:34px; display:grid; align-content:center; gap:8px; }
 .voice-action-copy h2 { margin:0; color:var(--voice-title); font-size:21px; letter-spacing:-.02em; }
 .voice-action-guidance { max-width:310px; margin:0; color:var(--voice-copy); font-size:14px; line-height:1.4; }
@@ -1503,6 +1507,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .voice-action-button:active { transform:scale(.965); box-shadow:none; }
 .voice-action-button:focus-visible { outline:3px solid var(--accent-ring); outline-offset:9px; }
 .voice-action-button:disabled { opacity:1; cursor:wait; }
+.voice-action-button-visual { pointer-events:none; }
 .voice-action-button svg { position:relative; z-index:1; width:47px; height:47px; }
 .voice-action-ring { position:absolute; inset:-7px; border-radius:50%; pointer-events:none; }
 .voice-action-recording .voice-action-button::before { animation:voice-breathe 1.9s ease-in-out infinite; }
@@ -2341,7 +2346,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .picker-select-mark svg { width:17px; height:17px }
 .picker-load-more { flex:0 0 auto; min-height:44px; border:1px solid var(--border); border-radius:13px; background:var(--surface-sunken); color:var(--fg); font-size:14px; font-weight:650; box-shadow:none }
 .exercise-image { position:relative; box-sizing:border-box; flex:0 0 auto; display:grid; place-items:center; aspect-ratio:1; overflow:hidden; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-sunken); color:var(--secondary-label-fg) }
-.exercise-image img { display:block; grid-area:1 / 1; width:100%; height:100%; box-sizing:border-box; padding:3px; object-fit:contain; object-position:center; background:var(--surface-raised) }
+.exercise-image img { position:absolute; inset:0; display:block; width:100%; min-width:0; height:100%; min-height:0; box-sizing:border-box; padding:3px; object-fit:contain; object-position:center; background:var(--surface-raised) }
 .exercise-image-video { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:contain; object-position:center; background:var(--surface-raised) }
 .exercise-image-frame-end { position:absolute; inset:0; opacity:0 }
 .exercise-image-motion .exercise-image-frame-end { animation:exercise-image-two-frame 3.2s steps(1, end) infinite }
@@ -3002,28 +3007,32 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 
 .client-home-identity .voice-action {
   grid-template-columns:minmax(0,1fr) 48px;
-  grid-template-areas:"copy button" "label button" "controls controls" "error error";
+  grid-template-areas:"copy button" "label button";
+  align-content:center;
   align-items:center;
   justify-items:stretch;
-  gap:4px 14px;
-  min-height:116px;
-  padding:18px;
+  gap:6px 16px;
+  min-height:112px;
+  padding:16px 18px;
   border:0;
   border-radius:18px;
   background:var(--mono-primary);
   color:var(--mono-on-primary);
   text-align:left;
+  transition:transform .14s ease;
 }
 .client-home-identity .voice-action-copy { grid-area:copy; min-height:0; justify-items:start; gap:5px }
 .client-home-identity .voice-action-copy h2 { color:var(--mono-on-primary); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
 .client-home-identity .voice-action-guidance, .client-home-identity .voice-action-transcript { max-width:none; color:var(--mono-on-primary); font-size:12px; font-weight:400; line-height:1.35; opacity:.76 }
-.client-home-identity .voice-action-button { grid-area:button; width:48px; height:48px; border:0; border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); box-shadow:none}
+.client-home-identity .voice-action-button { grid-area:button; align-self:center; justify-self:end; width:48px; height:48px; border:0; border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); box-shadow:none}
 .client-home-identity .voice-action-button::before { display:none }
 .client-home-identity .voice-action-button svg { width:23px; height:23px; stroke-width:1.8 }
 .client-home-identity .voice-action-button:focus-visible { outline:2px solid var(--mono-on-primary); outline-offset:3px }
 .client-home-identity .voice-action-label { grid-area:label; justify-items:start; gap:0 }
 .client-home-identity .voice-action-label strong, .client-home-identity .voice-action-label span { color:var(--mono-on-primary); font-size:14px; font-weight:500; line-height:1.3 }
 .client-home-identity .voice-action-ring { inset:0; border:0 }
+.client-home-identity .voice-action-hitarea:focus-visible { outline:2px solid var(--mono-on-primary); outline-offset:-3px }
+.client-home-identity .voice-action:has(.voice-action-hitarea:active) { transform:scale(.995) }
 .client-home-identity .voice-action-recording-controls { grid-area:controls; width:100%; grid-template-columns:minmax(0,1fr) auto; align-items:center; margin-top:10px }
 .client-home-identity .voice-action-recording-controls .wide { min-height:48px; border:1px solid var(--mono-on-primary); border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); font-size:14px; font-weight:500 }
 .client-home-identity .voice-action-recording-controls .link { min-height:44px; color:var(--mono-on-primary); font-size:14px; font-weight:500 }
@@ -4110,12 +4119,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-today-identity .today-voice-home { min-height:0; gap:12px }
 .trainer-today-identity .today-greeting { margin:0 0 2px; color:var(--secondary-label-fg); font-size:14px; font-weight:400; line-height:1.4 }
 
-.trainer-today-identity .voice-action { grid-template-columns:minmax(0,1fr) 48px; grid-template-areas:"copy button" "label button" "controls controls" "error error"; align-items:center; justify-items:stretch; gap:4px 14px; min-height:116px; padding:18px; border:0; border-radius:18px; background:var(--mono-primary); color:var(--mono-on-primary); text-align:left; box-shadow:none}
+.trainer-today-identity .voice-action { grid-template-columns:minmax(0,1fr) 48px; grid-template-areas:"copy button" "label button"; align-content:center; align-items:center; justify-items:stretch; gap:6px 16px; min-height:112px; padding:16px 18px; border:0; border-radius:18px; background:var(--mono-primary); color:var(--mono-on-primary); text-align:left; box-shadow:none; transition:transform .14s ease}
 .trainer-today-identity .voice-action-copy { grid-area:copy; min-height:0; justify-items:start; gap:5px }
 .trainer-today-identity .voice-action-copy h2 { color:var(--mono-on-primary); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
 .trainer-today-identity .voice-action-guidance,
 .trainer-today-identity .voice-action-transcript { max-width:none; color:var(--mono-on-primary); font-size:12px; font-weight:400; line-height:1.35; opacity:.76 }
-.trainer-today-identity .voice-action-button { grid-area:button; width:48px; height:48px; border:0; border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); box-shadow:none}
+.trainer-today-identity .voice-action-button { grid-area:button; align-self:center; justify-self:end; width:48px; height:48px; border:0; border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); box-shadow:none}
 .trainer-today-identity .voice-action-button::before { display:none }
 .trainer-today-identity .voice-action-button svg { width:23px; height:23px; stroke-width:1.8 }
 .trainer-today-identity .voice-action-button:focus-visible { outline:2px solid var(--mono-on-primary); outline-offset:3px }
@@ -4123,6 +4132,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-today-identity .voice-action-label strong,
 .trainer-today-identity .voice-action-label span { color:var(--mono-on-primary); font-size:14px; font-weight:500; line-height:1.3 }
 .trainer-today-identity .voice-action-ring { inset:0; border:0 }
+.trainer-today-identity .voice-action-hitarea:focus-visible { outline:2px solid var(--mono-on-primary); outline-offset:-3px }
+.trainer-today-identity .voice-action:has(.voice-action-hitarea:active) { transform:scale(.995) }
+/* Пилот приветствия в шапке (см. feature-flags.ts): убирает фиксированный
+   min-height карточки, чтобы верхний и нижний паддинг совпадали при коротком
+   тексте. Применяется только тому же allowlist, не всем пользователям. */
+.trainer-today-identity .today-voice-hero-compact .voice-action { min-height:0 }
 .trainer-today-identity .voice-action-recording-controls { grid-area:controls; width:100%; grid-template-columns:minmax(0,1fr) auto; align-items:center; margin-top:10px }
 .trainer-today-identity .voice-action-recording-controls .wide { min-height:48px; border:1px solid var(--mono-on-primary); border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); font-size:14px; font-weight:500 }
 .trainer-today-identity .voice-action-recording-controls .link { min-height:44px; color:var(--mono-on-primary); font-size:14px; font-weight:500 }
@@ -5257,4 +5272,33 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
     transition-duration:.01ms !important;
     transition-delay:0ms !important;
   }
+}
+
+/* Голосовая hero-плашка — единая зона нажатия. Правило стоит после общих
+   button-состояний, чтобы прозрачный слой не перекрывал содержимое карточки. */
+.client-home-identity .voice-action > .voice-action-hitarea,
+.trainer-today-identity .voice-action > .voice-action-hitarea,
+.client-home-identity .voice-action > .voice-action-hitarea:hover,
+.trainer-today-identity .voice-action > .voice-action-hitarea:hover,
+.client-home-identity .voice-action > .voice-action-hitarea:disabled,
+.trainer-today-identity .voice-action > .voice-action-hitarea:disabled {
+  min-height:0;
+  border:0;
+  border-radius:inherit;
+  background:transparent;
+  color:transparent;
+  box-shadow:none;
+}
+.client-home-identity .voice-action > .voice-action-hitarea:focus-visible,
+.trainer-today-identity .voice-action > .voice-action-hitarea:focus-visible {
+  outline:2px solid var(--mono-on-primary);
+  outline-offset:-4px;
+}
+.client-home-identity .voice-action-recording,
+.trainer-today-identity .voice-action-recording {
+  grid-template-areas:"copy button" "controls controls" "error error";
+}
+.client-home-identity .voice-action:has(.voice-action-error):not(.voice-action-recording),
+.trainer-today-identity .voice-action:has(.voice-action-error):not(.voice-action-recording) {
+  grid-template-areas:"copy button" "label button" "error error";
 }
