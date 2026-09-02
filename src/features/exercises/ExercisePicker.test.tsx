@@ -80,6 +80,30 @@ describe('ExercisePicker', () => {
     expect(screen.getAllByRole('button', { name: /Посмотреть технику: Присед/ })).toHaveLength(1)
   })
 
+  it('скрывает только системный дубль при новом выборе и оставляет одноимённое упражнение тренера', () => {
+    const canonical = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'barbell-row')!
+    const duplicate = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-bent-over-barbell-row')!
+    const custom: ExerciseSnapshot = {
+      source: 'custom', ref: 'custom-row', customExerciseId: 'custom-row',
+      name: duplicate.name, muscleGroup: duplicate.muscleGroup, inputKind: duplicate.inputKind,
+    }
+
+    render(<ExercisePicker catalog={catalog({ exercises: [canonical, duplicate, custom] })} onPick={vi.fn()} onClose={vi.fn()} />)
+
+    expect(document.querySelector('[data-exercise-ref="barbell-row"]')).toBeInTheDocument()
+    expect(document.querySelector('[data-exercise-ref="fedb-bent-over-barbell-row"]')).not.toBeInTheDocument()
+    expect(document.querySelector('[data-exercise-ref="custom-row"][data-exercise-source="custom"]')).toBeInTheDocument()
+  })
+
+  it('не возвращает скрытый системный дубль через недавние упражнения клиента', () => {
+    const duplicate = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-bent-over-barbell-row')!
+
+    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} clientRecent={[duplicate]} onPick={vi.fn()} onClose={vi.fn()} />)
+
+    expect(document.querySelector('[data-exercise-ref="fedb-bent-over-barbell-row"]')).not.toBeInTheDocument()
+    expect(screen.queryByText('Последние у клиента')).not.toBeInTheDocument()
+  })
+
   it('оставляет статичный запасной кадр в списке, если основной кадр не загрузился', () => {
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
     const squat = document.querySelector<HTMLElement>('[data-exercise-ref="a"]')!.closest('.picker-item')!

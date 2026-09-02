@@ -7,6 +7,7 @@ import { MUSCLE_GROUP_LABELS, MUSCLE_GROUPS, RUNNING_EXERCISE_REFS } from '../..
 import type { ExerciseCatalogState } from './exercise-catalog'
 import { matchesExerciseSearch, rankExerciseSearch } from './exercise-search'
 import { readRecentKeys, recordRecent, resolveRecent } from './recent-exercises'
+import { selectableExercises } from './selectable-exercises'
 
 export function filterExercises(
   exercises: readonly ExerciseSnapshot[],
@@ -143,40 +144,41 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const [inputKind, setInputKind] = useState<InputKind>('distance')
   const { style: viewportStyle, keyboardOpen } = useVisualViewportStyle()
   const activeMode = mode === 'choose' ? 'all' : mode
+  const selectableCatalog = useMemo(() => selectableExercises(catalog.exercises), [catalog.exercises])
   const filtered = useMemo(
-    () => filterExercises(catalog.exercises, category, search, muscle, equipment)
+    () => filterExercises(selectableCatalog, category, search, muscle, equipment)
       .filter((exercise) => matchesPickerMode(exercise, activeMode))
       .filter((exercise) => !customOnly || exercise.source === 'custom'),
-    [activeMode, catalog.exercises, category, search, muscle, equipment, customOnly],
+    [activeMode, selectableCatalog, category, search, muscle, equipment, customOnly],
   )
   // Детальные мышцы выбранной группы (2-й уровень). Показываем, если их >1.
   const muscles = useMemo(
-    () => (category === 'all' ? [] : musclesForGroup(catalog.exercises, category)),
-    [catalog.exercises, category],
+    () => (category === 'all' ? [] : musclesForGroup(selectableCatalog, category)),
+    [selectableCatalog, category],
   )
   const equipmentOptions = useMemo(
-    () => (category === 'all' ? [] : equipmentForSelection(catalog.exercises, category, muscle)),
-    [catalog.exercises, category, muscle],
+    () => (category === 'all' ? [] : equipmentForSelection(selectableCatalog, category, muscle)),
+    [selectableCatalog, category, muscle],
   )
   const hasFilters = category !== 'all' || muscle !== null || equipment !== null || customOnly
   const activeFilterCount = [category !== 'all', muscle !== null, equipment !== null, customOnly].filter(Boolean).length
-  const runningExercise = useMemo(() => catalog.exercises.find((exercise) => exercise.ref === 'running'), [catalog.exercises])
+  const runningExercise = useMemo(() => selectableCatalog.find((exercise) => exercise.ref === 'running'), [selectableCatalog])
   const runningDrills = useMemo(
-    () => catalog.exercises.filter((exercise) => exercise.ref !== 'running' && RUNNING_EXERCISE_REFS.has(exercise.ref)),
-    [catalog.exercises],
+    () => selectableCatalog.filter((exercise) => exercise.ref !== 'running' && RUNNING_EXERCISE_REFS.has(exercise.ref)),
+    [selectableCatalog],
   )
   const showRunningFormats = activeMode === 'running' && !search.trim() && !hasFilters
   const promotedClient = useMemo(
-    () => (!hasFilters && !search.trim() ? clientRecent.filter((exercise) => matchesPickerMode(exercise, activeMode)) : []),
+    () => (!hasFilters && !search.trim() ? selectableExercises(clientRecent).filter((exercise) => matchesPickerMode(exercise, activeMode)) : []),
     [activeMode, clientRecent, hasFilters, search],
   )
   const recent = useMemo(() => {
     if (hasFilters || search.trim()) return []
     const clientKeys = new Set(promotedClient.map(exerciseKey))
-    return resolveRecent(readRecentKeys(), catalog.exercises)
+    return resolveRecent(readRecentKeys(), selectableCatalog)
       .filter((exercise) => matchesPickerMode(exercise, activeMode))
       .filter((exercise) => !clientKeys.has(exerciseKey(exercise)))
-  }, [activeMode, catalog.exercises, hasFilters, promotedClient, search])
+  }, [activeMode, hasFilters, promotedClient, search, selectableCatalog])
   const listExercises = useMemo(
     () => {
       if (hasFilters || search.trim()) return filtered
