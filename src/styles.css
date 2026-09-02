@@ -4134,6 +4134,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-today-identity .voice-action-ring { inset:0; border:0 }
 .trainer-today-identity .voice-action-hitarea:focus-visible { outline:2px solid var(--mono-on-primary); outline-offset:-3px }
 .trainer-today-identity .voice-action:has(.voice-action-hitarea:active) { transform:scale(.995) }
+/* Пилот приветствия в шапке (см. feature-flags.ts): убирает фиксированный
+   min-height карточки, чтобы верхний и нижний паддинг совпадали при коротком
+   тексте. Применяется только тому же allowlist, не всем пользователям. */
+.trainer-today-identity .today-voice-hero-compact .voice-action { min-height:0 }
 .trainer-today-identity .voice-action-recording-controls { grid-area:controls; width:100%; grid-template-columns:minmax(0,1fr) auto; align-items:center; margin-top:10px }
 .trainer-today-identity .voice-action-recording-controls .wide { min-height:48px; border:1px solid var(--mono-on-primary); border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); font-size:14px; font-weight:500 }
 .trainer-today-identity .voice-action-recording-controls .link { min-height:44px; color:var(--mono-on-primary); font-size:14px; font-weight:500 }
