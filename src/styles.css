@@ -4119,11 +4119,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-today-identity .today-voice-home { min-height:0; gap:12px }
 .trainer-today-identity .today-greeting { margin:0 0 2px; color:var(--secondary-label-fg); font-size:14px; font-weight:400; line-height:1.4 }
 
-.trainer-today-identity .voice-action { grid-template-columns:minmax(0,1fr) 48px; grid-template-areas:"copy button" "label button"; align-content:center; align-items:center; justify-items:stretch; gap:6px 16px; min-height:112px; padding:16px 18px; border:0; border-radius:18px; background:var(--mono-primary); color:var(--mono-on-primary); text-align:left; box-shadow:none; transition:transform .14s ease}
+.trainer-today-identity .voice-action { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"copy button" "label button"; align-content:center; align-items:center; justify-items:stretch; gap:6px 16px; min-height:112px; padding:16px 18px; border:0; border-radius:18px; background:var(--mono-primary); color:var(--mono-on-primary); text-align:left; box-shadow:none; transition:transform .14s ease}
 .trainer-today-identity .voice-action-copy { grid-area:copy; min-height:0; justify-items:start; gap:5px }
 .trainer-today-identity .voice-action-copy h2 { color:var(--mono-on-primary); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
 .trainer-today-identity .voice-action-guidance,
 .trainer-today-identity .voice-action-transcript { max-width:none; color:var(--mono-on-primary); font-size:12px; font-weight:400; line-height:1.35; opacity:.76 }
+.trainer-today-identity .voice-action-buttons { grid-area:button; display:flex; align-items:center; gap:10px }
 .trainer-today-identity .voice-action-button { grid-area:button; align-self:center; justify-self:end; width:48px; height:48px; border:0; border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); box-shadow:none}
 .trainer-today-identity .voice-action-button::before { display:none }
 .trainer-today-identity .voice-action-button svg { width:23px; height:23px; stroke-width:1.8 }
@@ -4141,7 +4142,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Пилот приветствия в шапке: аккуратная кнопка «Ввести текстом» внутри той
    же чёрной карточки, рядом с идущим текстом. position+z-index обязательны,
    иначе клик перехватывает voice-action-hitarea (z-index:2) над ней. */
-.trainer-today-identity .today-voice-text-inline { position:relative; z-index:3; justify-self:start; margin-top:6px; width:48px; height:48px; display:grid; place-items:center; padding:0; border:0; border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); box-shadow:none }
+.trainer-today-identity .today-voice-text-inline { position:relative; z-index:3; width:48px; height:48px; display:grid; place-items:center; padding:0; border:0; border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); box-shadow:none }
 .trainer-today-identity .today-voice-text-inline svg { width:23px; height:23px; stroke-width:1.8 }
 .trainer-today-identity .voice-action-recording-controls { grid-area:controls; width:100%; grid-template-columns:minmax(0,1fr) auto; align-items:center; margin-top:10px }
 .trainer-today-identity .voice-action-recording-controls .wide { min-height:48px; border:1px solid var(--mono-on-primary); border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); font-size:14px; font-weight:500 }
