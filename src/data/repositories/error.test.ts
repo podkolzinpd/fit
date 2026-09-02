@@ -82,6 +82,23 @@ describe('repositoryError', () => {
     expect(error.message).toBe('В одном из подходов указано некорректное RPE. Выберите значение от 6 до 10 с шагом 0,5.')
   })
 
+  it.each([
+    ['invalid_stage', 'invalid_stage', 'Проверьте этап: название — не более 120 символов, дата окончания — не раньше начала и не позже даты цели.'],
+    ['invalid_goal', 'invalid_goal', 'Проверьте цель: название должно содержать не более 200 символов.'],
+  ])('explains %s without exposing database details', (sourceMessage, code, message) => {
+    const error = repositoryError({ code: 'PT422', message: sourceMessage })
+
+    expect(error.code).toBe(code)
+    expect(error.message).toBe(message)
+  })
+
+  it('does not confuse an invalid goal criterion with an invalid goal title', () => {
+    const error = repositoryError({ code: 'PT422', message: 'invalid_goal_criterion' })
+
+    expect(error.code).toBe('PT422')
+    expect(error.message).toBe('Операцию нельзя выполнить с текущими данными.')
+  })
+
   it('never exposes an unknown database message', () => {
     const error = repositoryError({ code: 'XX000', message: 'internal database detail' })
 
