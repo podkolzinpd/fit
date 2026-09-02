@@ -186,8 +186,15 @@ test('iPhone: поиск и фильтры каталога не перекры�
   await expect(page.getByLabel('Группа мышц')).toBeHidden()
   await expect(page.getByRole('button', { name: 'Фильтры 1' })).toBeVisible()
   await search.fill('присед')
-  await expect(page.locator('.picker-list-meta').getByText(/\d+ упражнени(?:е|я|й)/)).toBeVisible()
-  await expect(page.getByRole('button', { name: /Присед/ }).first()).toBeInViewport()
+  await expect(page.locator('.picker-list-meta').getByText(/Найдено: \d+/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Очистить поиск' })).toBeVisible()
+  const technique = page.getByRole('button', { name: /Посмотреть технику: Присед/ }).first()
+  await expect(technique).toBeInViewport()
+  await technique.click()
+  await expect(page.getByRole('heading', { name: 'Техника' })).toBeVisible()
+  await expect(page.locator('.picker-technique-view')).toBeInViewport()
+  await page.getByRole('button', { name: 'Назад к выбору' }).click()
+  await expect(search).toHaveValue('присед')
   await expectNoHorizontalOverflow(page)
 })
 
@@ -594,7 +601,7 @@ test('iPhone: в live клиент видит те же действия с тр
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Планка')
-  await page.getByRole('button', { name: /^Планка/ }).first().click()
+  await page.getByRole('button', { name: /^Выбрать: Планка/ }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
