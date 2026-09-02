@@ -32,7 +32,7 @@ function comparisonWorkoutRow(id: string, date: string, weight: number, distance
   }
 }
 
-async function mockPeriodComparison(page: VisualPage) {
+async function mockProgressPeriodSummary(page: VisualPage) {
   const clientSummary = {
     headline: 'Прогресс уже заметен', achievements: ['Жим лёжа стал сильнее'],
     consistency: 'Тренировки продолжаются', encouragement: 'Продолжай в том же темпе', next_steps: [],
@@ -59,6 +59,10 @@ async function mockPeriodComparison(page: VisualPage) {
       generated_at: '2026-08-31T12:00:00Z', version: 1,
     }]),
   }))
+}
+
+async function mockPeriodComparison(page: VisualPage) {
+  await mockProgressPeriodSummary(page)
   await page.route('**/rest/v1/rpc/list_workouts', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify([
       comparisonWorkoutRow('81000000-0000-4000-8000-000000000001', '2026-07-05', 50, 5, 1),
@@ -123,6 +127,7 @@ async function mockMeasurementProgress(page: VisualPage) {
 }
 
 async function mockRegularityProgress(page: VisualPage) {
+  await mockProgressPeriodSummary(page)
   const current = ['2026-08-03', '2026-08-10', '2026-08-12']
   const previous = ['2026-07-02', '2026-07-05', '2026-07-08', '2026-07-12', '2026-07-16', '2026-07-20', '2026-07-24', '2026-07-28']
   const rows = [...previous, ...current].map((date, index) => comparisonWorkoutRow(

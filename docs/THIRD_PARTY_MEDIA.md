@@ -1,5 +1,16 @@
 # Сторонние медиа
 
+## Free Exercise DB
+
+- Источник: [Free Exercise DB](https://github.com/yuhonas/free-exercise-db)
+- Лицензия: Unlicense / public domain
+- Использование: два локальных JPG-кадра техники для системных упражнений.
+
+В дополнение к прежнему импорту из 451 упражнения добавлен отдельный
+воспроизводимый набор из 120 карточек. Явный список исходных ID и русских
+названий хранится в `scripts/import-exercise-expansion.mjs`; он не изменяет
+старые идентификаторы и не добавляет смысловые дубли карточек Vital.
+
 ## Vital Animations Free Pack
 
 - Источник: [Vital Animations Free Pack](https://vitalanimations.com/free-pack)
