@@ -604,6 +604,9 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   useEffect(() => {
     if (firstPlanClient && !clientId) setClientId(firstPlanClient.id)
   }, [clientId, firstPlanClient])
+  // Пилот приветствия в шапке (feature-flags.ts): та же allowlist, что и для
+  // компактной voice-hero карточки — визуальная доводка того же экрана.
+  const attentionHideEyebrow = Boolean(actor && isTodayGreetingPilotEnabled(actor.userId))
   const attentionSurface = !clientMode && !trainerHasNoClients && <TrainerAttentionQueue
     actions={actionItems}
     planning={planningItems}
@@ -611,6 +614,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     error={trainerAttention.error ?? attentionPreferences.error}
     snoozingClientId={snoozeAttention.isPending ? snoozeAttention.variables : undefined}
     onSnooze={(targetClientId) => snoozeAttention.mutate(targetClientId)}
+    hideEyebrow={attentionHideEyebrow}
   />
   const clientHomeError = clientMode ? mine.error ?? workouts.error ?? regularity.error ?? goal.error ?? personalRecords.error : null
   const greetingName = clientMode ? mine.data?.fullName || actor?.firstName || 'спортсмен' : actor?.firstName || 'тренер'
@@ -724,19 +728,20 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   </Page>
 }
 
-function TrainerAttentionQueue({ actions, planning, loading, error, snoozingClientId, onSnooze }: {
+function TrainerAttentionQueue({ actions, planning, loading, error, snoozingClientId, onSnooze, hideEyebrow }: {
   actions: TrainerActionItem[]
   planning: TrainerPlanningItem[]
   loading: boolean
   error: Error | null
   snoozingClientId?: string
   onSnooze: (clientId: string) => void
+  hideEyebrow?: boolean
 }) {
   if (loading) return <section className="trainer-attention trainer-attention-loading" aria-label="Задачи по клиентам"><span className="skeleton-line" /><span className="skeleton-line short" /></section>
   if (error) return <p className="error">Не удалось загрузить задачи по клиентам.</p>
-  if (!actions.length && !planning.length) return <section className="trainer-attention trainer-attention-clear"><p className="eyebrow">ПО КЛИЕНТАМ</p><strong>Срочных действий нет</strong></section>
+  if (!actions.length && !planning.length) return <section className="trainer-attention trainer-attention-clear">{!hideEyebrow && <p className="eyebrow">ПО КЛИЕНТАМ</p>}<strong>Срочных действий нет</strong></section>
   return <section className="trainer-attention" aria-labelledby="trainer-attention-title">
-    {actions.length > 0 && <><div className="trainer-attention-heading"><p className="eyebrow">ПО КЛИЕНТАМ</p><h2 id="trainer-attention-title">Требует действия</h2></div><div className="trainer-attention-list">{actions.map((item) => <Link className={`trainer-attention-row reason-${item.reason}`} key={item.clientId} to={`/workouts/${item.workoutId}${item.reason === 'question' ? '?reply=1' : ''}`}>
+    {actions.length > 0 && <><div className="trainer-attention-heading">{!hideEyebrow && <p className="eyebrow">ПО КЛИЕНТАМ</p>}<h2 id="trainer-attention-title">Требует действия</h2></div><div className="trainer-attention-list">{actions.map((item) => <Link className={`trainer-attention-row reason-${item.reason}`} key={item.clientId} to={`/workouts/${item.workoutId}${item.reason === 'question' ? '?reply=1' : ''}`}>
       <span><strong>{item.clientName}</strong><small>{item.title}</small><em>{item.reason === 'past_plan' ? formatLocalDate(localDate(item.detail)) : item.detail}</em></span><b>{item.actionLabel}</b>
     </Link>)}</div></>}
     {planning.length > 0 && <details className="trainer-planning">
