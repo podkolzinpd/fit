@@ -123,6 +123,7 @@ async function mockMeasurementProgress(page: VisualPage) {
 }
 
 async function mockRegularityProgress(page: VisualPage) {
+  await mockPeriodComparison(page)
   const current = ['2026-08-03', '2026-08-10', '2026-08-12']
   const previous = ['2026-07-02', '2026-07-05', '2026-07-08', '2026-07-12', '2026-07-16', '2026-07-20', '2026-07-24', '2026-07-28']
   const rows = [...previous, ...current].map((date, index) => comparisonWorkoutRow(
