@@ -10,10 +10,11 @@ import { formatLocalDate, localDate, todayInTimeZone } from '../../shared/local-
 import { isValidRpe } from '../../shared/rpe'
 import type { RunningFormat } from '../../shared/running-formats'
 import { trackGoal } from '../../shared/yandex-metrika'
-import { Page } from '../../shared/ui'
+import { OverflowMenu, Page } from '../../shared/ui'
 import { ExercisePicker, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { ClientPicker, type ClientPickerSelection } from '../clients'
 import { useAuth } from '../../app/auth-context'
+import { useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { useRpeDisplay } from '../../app/rpe-display'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { formatLlmWorkoutText, parseWorkoutWithLlm } from './llm-workout-parser'
@@ -160,7 +161,9 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [items, setItems] = useState<ParsedWorkoutExercise[]>([])
   const [reordering, setReordering] = useState(false)
   const showRpeByDefault = useRpeDisplay(actor?.userId)
+  const showRestByDefault = useExercisePlanRestDisplay(actor?.userId)
   const [rpeOverrides, setRpeOverrides] = useState<Map<number, boolean>>(() => new Map())
+  const [restOverrides, setRestOverrides] = useState<Map<number, boolean>>(() => new Map())
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerFromCompose, setPickerFromCompose] = useState(false)
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
@@ -203,6 +206,14 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
 
   function toggleRpe(exerciseIndex: number) {
     setRpeOverrides((current) => new Map(current).set(exerciseIndex, !isRpeVisible(exerciseIndex)))
+  }
+
+  function isRestVisible(exerciseIndex: number) {
+    return restOverrides.get(exerciseIndex) ?? showRestByDefault
+  }
+
+  function toggleRest(exerciseIndex: number) {
+    setRestOverrides((current) => new Map(current).set(exerciseIndex, !isRestVisible(exerciseIndex)))
   }
 
   // Каждый шаг — отдельный маршрут. Так кнопка назад и системный жест iOS
@@ -490,6 +501,16 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     }))
   }
 
+  function updateRestBetweenSets(itemIndex: number, restBetweenSetsSec: number) {
+    trackGoal('today_review_edited')
+    const ref = items[itemIndex]?.exercise.ref
+    if (ref) setManualRefs((current) => current.includes(ref) ? current : [...current, ref])
+    setItems((current) => current.map((item, index) => index !== itemIndex ? item : {
+      ...item,
+      structure: { ...item.structure, restBetweenSetsSec: Math.min(600, Math.max(0, restBetweenSetsSec)) },
+    }))
+  }
+
   function addSet(itemIndex: number) {
     const ref = items[itemIndex]?.exercise.ref
     if (ref) setManualRefs((current) => current.includes(ref) ? current : [...current, ref])
@@ -517,6 +538,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     setRemovedItem({ item, index: itemIndex })
     setRemovedRefs((current) => current.includes(item.exercise.ref) ? current : [...current, item.exercise.ref])
     setItems((current) => current.filter((_, index) => index !== itemIndex))
+    setRpeOverrides(new Map())
+    setRestOverrides(new Map())
   }
 
   function undoRemoveExercise() {
@@ -539,6 +562,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     // Видимость RPE — временная настройка по индексу. После перестановки
     // сбрасываем её, чтобы настройка не прикрепилась к другому упражнению.
     setRpeOverrides(new Map())
+    setRestOverrides(new Map())
   }
 
   function clearDraftAndForm(openComposer = false) {
@@ -661,14 +685,20 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </div>}
       {items.length > 0 ? <div className={`today-exercise-list ${reordering ? 'is-reordering' : ''}`}>{reviewBlocks.map((block, blockIndex) => <div className="today-review-block" key={block.id}>{block.items.map(({ item, index }, itemInBlockIndex) => {
         const showRpe = isRpeVisible(index)
+        const showRest = isRestVisible(index)
         const reorderActions = itemInBlockIndex === 0 ? <span className="block-reorder today-review-order-buttons">
           <button type="button" className="reorder-btn" aria-label={`Переместить блок «${item.exercise.name}» вверх`} disabled={blockIndex === 0} onClick={() => moveReviewBlock(index, -1)}><ArrowUpIcon /></button>
           <button type="button" className="reorder-btn" aria-label={`Переместить блок «${item.exercise.name}» вниз`} disabled={blockIndex === reviewBlocks.length - 1} onClick={() => moveReviewBlock(index, 1)}><ArrowDownIcon /></button>
         </span> : undefined
         return <WorkoutExercise state="planned" className="today-exercise planned-exercise" key={`${item.exercise.ref}-${index}`}>
-          <WorkoutExerciseHeader as="header" titleAs="strong" className="today-exercise-title" name={item.exercise.name} actions={reordering ? reorderActions : <button type="button" className="icon-button" aria-label={`Удалить ${item.exercise.name}`} onClick={() => removeExercise(index)}><CloseIcon /></button>} />
+          <WorkoutExerciseHeader as="header" titleAs="strong" className="today-exercise-title" name={item.exercise.name} actions={reordering ? reorderActions : <OverflowMenu label={`Настройки упражнения «${item.exercise.name}»`} items={[
+            { label: showRest ? 'Скрыть отдых' : 'Показать отдых', onClick: () => toggleRest(index) },
+            { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(index) },
+            { label: 'Заменить', onClick: () => { setReplaceIndex(index); setPickerOpen(true) } },
+            { label: 'Удалить', danger: true, onClick: () => removeExercise(index) },
+          ]} />} />
           <p className={setSummary(item) === 'без значений' ? 'today-exercise-missing' : undefined}>{setSummary(item)}</p>
-          {!reordering && <details className="today-exercise-editor"><summary>{setSummary(item) === 'без значений' ? 'Добавить значения' : 'Править подходы'}</summary><div className="today-exercise-actions"><button type="button" className="link" onClick={() => { setReplaceIndex(index); setPickerOpen(true) }}>Заменить</button><button type="button" className="link" aria-pressed={showRpe} onClick={() => toggleRpe(index)}>{showRpe ? 'Скрыть RPE' : 'Указать RPE'}</button></div><WorkoutSetTable variant="planned" inputKind={item.exercise.inputKind} layout={item.exercise.inputKind === 'distance' ? 'full' : 'singleValue'} showRpe={showRpe} className="today-set-list">{item.sets.map((set, setIndex) => <WorkoutSetRow state="planned" className={`today-set-editor planned-set ${showRpe ? 'rpe-visible' : ''}`} key={set.position}><strong className="workout-set-number planned-set-number">{setIndex + 1}</strong>{item.exercise.inputKind === 'strength' && <><label><span className="sr-only">Кг</span><input className="planned-set-input" aria-label={`${item.exercise.name}: вес, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.weightKg ?? ''} onChange={(event) => updateSet(index, setIndex, { weightKg: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><label><span className="sr-only">Повт.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label></>}{item.exercise.inputKind === 'duration' && <><label><span className="sr-only">Сек.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: секунды, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.durationSec ?? ''} onChange={(event) => updateSet(index, setIndex, { durationSec: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><span /></>}{item.exercise.inputKind === 'reps' && <><label><span className="sr-only">Повт.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><span /></>}{item.exercise.inputKind === 'distance' && <RunMetricsFields idPrefix={`today-run-${index}-${setIndex}`} rowing={isRowingExerciseRef(item.exercise.ref)} durationSec={set.durationSec} distanceKm={set.distanceKm} strokeRate={set.reps} inputClassName="planned-set-input" durationLabel={`${item.exercise.name}: время, подход ${setIndex + 1}`} distanceLabel={`${item.exercise.name}: расстояние, подход ${setIndex + 1}`} distanceUnitLabel={`${item.exercise.name}: единица расстояния, подход ${setIndex + 1}`} onCommit={(patch) => updateSet(index, setIndex, patch)} />}{showRpe && <label><span className="sr-only">RPE</span><input className="planned-set-rpe" aria-label={`${item.exercise.name}: RPE, подход ${setIndex + 1}`} type="number" min="1" max="10" step="0.5" inputMode="decimal" value={set.rpe ?? ''} onChange={(event) => updateSet(index, setIndex, { rpe: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.sets.length > 1 && <button type="button" className="link danger planned-set-remove" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(index, setIndex)}><CloseIcon /></button>}</WorkoutSetRow>)}</WorkoutSetTable><div className="set-add-row"><button type="button" className="secondary today-add-set" onClick={() => addSet(index)}>＋ Подход</button></div></details>}
+          {!reordering && <details className="today-exercise-editor"><summary>{setSummary(item) === 'без значений' ? 'Добавить значения' : 'Править подходы'}</summary>{showRest && <label className="exercise-plan-rest-field">Отдых между подходами, с<input key={`${index}-${item.structure?.restBetweenSetsSec ?? 90}`} aria-label={`Отдых между подходами, ${item.exercise.name}`} type="number" inputMode="numeric" min="0" max="600" defaultValue={item.structure?.restBetweenSetsSec ?? 90} onFocus={(event) => event.currentTarget.select()} onBlur={(event) => { const raw = event.currentTarget.value; const next = raw === '' || Number.isNaN(Number(raw)) ? 90 : Math.min(600, Math.max(0, Number(raw))); event.currentTarget.value = String(next); updateRestBetweenSets(index, next) }} onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }} /></label>}<WorkoutSetTable variant="planned" inputKind={item.exercise.inputKind} layout={item.exercise.inputKind === 'distance' ? 'full' : 'singleValue'} showRpe={showRpe} className="today-set-list">{item.sets.map((set, setIndex) => <WorkoutSetRow state="planned" className={`today-set-editor planned-set ${showRpe ? 'rpe-visible' : ''}`} key={set.position}><strong className="workout-set-number planned-set-number">{setIndex + 1}</strong>{item.exercise.inputKind === 'strength' && <><label><span className="sr-only">Кг</span><input className="planned-set-input" aria-label={`${item.exercise.name}: вес, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.weightKg ?? ''} onChange={(event) => updateSet(index, setIndex, { weightKg: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><label><span className="sr-only">Повт.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label></>}{item.exercise.inputKind === 'duration' && <><label><span className="sr-only">Сек.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: секунды, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.durationSec ?? ''} onChange={(event) => updateSet(index, setIndex, { durationSec: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><span /></>}{item.exercise.inputKind === 'reps' && <><label><span className="sr-only">Повт.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><span /></>}{item.exercise.inputKind === 'distance' && <RunMetricsFields idPrefix={`today-run-${index}-${setIndex}`} rowing={isRowingExerciseRef(item.exercise.ref)} durationSec={set.durationSec} distanceKm={set.distanceKm} strokeRate={set.reps} inputClassName="planned-set-input" durationLabel={`${item.exercise.name}: время, подход ${setIndex + 1}`} distanceLabel={`${item.exercise.name}: расстояние, подход ${setIndex + 1}`} distanceUnitLabel={`${item.exercise.name}: единица расстояния, подход ${setIndex + 1}`} onCommit={(patch) => updateSet(index, setIndex, patch)} />}{showRpe && <label><span className="sr-only">RPE</span><input className="planned-set-rpe" aria-label={`${item.exercise.name}: RPE, подход ${setIndex + 1}`} type="number" min="1" max="10" step="0.5" inputMode="decimal" value={set.rpe ?? ''} onChange={(event) => updateSet(index, setIndex, { rpe: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.sets.length > 1 && <button type="button" className="link danger planned-set-remove" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(index, setIndex)}><CloseIcon /></button>}</WorkoutSetRow>)}</WorkoutSetTable><div className="set-add-row"><button type="button" className="secondary today-add-set" onClick={() => addSet(index)}>＋ Подход</button></div></details>}
         </WorkoutExercise>
       })}</div>)}</div> : <section className="today-empty today-exercise-empty"><p>Добавьте упражнения из каталога — можно выбрать несколько сразу.</p><button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button></section>}
       {items.length > 0 && !reordering && <button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button>}
