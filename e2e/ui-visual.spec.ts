@@ -122,8 +122,8 @@ async function mockMeasurementProgress(page: VisualPage) {
   ]) }))
 }
 
-async function mockRegularityProgress(page: VisualPage) {
-  await mockPeriodComparison(page)
+async function mockRegularityProgress(page: VisualPage, options: { periodSummary?: boolean } = {}) {
+  if (options.periodSummary) await mockPeriodComparison(page)
   const current = ['2026-08-03', '2026-08-10', '2026-08-12']
   const previous = ['2026-07-02', '2026-07-05', '2026-07-08', '2026-07-12', '2026-07-16', '2026-07-20', '2026-07-24', '2026-07-28']
   const rows = [...previous, ...current].map((date, index) => comparisonWorkoutRow(
@@ -874,7 +874,7 @@ test('measurement trends stay readable for client and trainer in both themes', a
 test('weekly training rhythm stays visual and readable for client and trainer in both themes', async ({ page }, testInfo) => {
   const trainer = testInfo.project.name === 'visual-trainer-1440'
   const initialViewport = page.viewportSize()
-  await mockRegularityProgress(page)
+  await mockRegularityProgress(page, { periodSummary: !trainer })
   if (trainer) {
     await signIn(page, 'trainer@fit.local', /\/today$/)
     await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
