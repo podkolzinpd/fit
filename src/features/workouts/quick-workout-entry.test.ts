@@ -49,14 +49,13 @@ describe('parseQuickWorkoutEntry', () => {
     expect(barbell.parsed[0]?.exercise.equipmentRef).toBe('barbell')
   })
 
-  it('просит выбрать оборудование для общего названия жима лёжа', () => {
-    const result = parseQuickWorkoutEntry('Жим лёжа 100 кг 3 по 15', SYSTEM_EXERCISE_CATALOG)
+  it('считает точное каталожное название базовым вариантом и понимает подпись оборудования', () => {
+    for (const text of ['Жим лёжа 100 кг 3 по 15', 'Жим лёжа (Штанга) 100 кг 3 по 15']) {
+      const result = parseQuickWorkoutEntry(text, SYSTEM_EXERCISE_CATALOG)
 
-    expect(result.parsed).toEqual([])
-    expect(result.unparsed[0]).toMatchObject({ reason: 'ambiguous' })
-    expect(result.unparsed[0]?.candidates.map((exercise) => exercise.ref)).toEqual(expect.arrayContaining([
-      'bench-press', 'dumbbell-bench-press',
-    ]))
+      expect(result.unparsed, text).toEqual([])
+      expect(result.parsed[0]?.exercise.ref, text).toBe('bench-press')
+    }
   })
 
   it('понимает разговорные названия тренажёров и не смешивает их с похожими движениями', () => {
@@ -393,11 +392,15 @@ describe('parseQuickWorkoutEntry', () => {
     expect(result.parsed[0]?.exercise.ref).toBe('biceps-curl')
   })
 
-  it('предпочитает системное упражнение одноимённому пользовательскому', () => {
+  it('не подменяет одноимённое пользовательское упражнение системным', () => {
     const result = parseQuickWorkoutEntry('Планка 45 сек', [...catalog, {
       source: 'custom', ref: 'custom-plank', customExerciseId: 'custom-plank', name: 'Планка', muscleGroup: 'core', inputKind: 'strength',
     }])
-    expect(result.parsed[0]?.exercise.ref).toBe('plank')
+    expect(result.parsed).toEqual([])
+    expect(result.unparsed[0]).toMatchObject({
+      reason: 'ambiguous',
+      candidates: [{ source: 'custom', ref: 'custom-plank' }, { source: 'system', ref: 'plank' }],
+    })
   })
 
   it('находит примеры подсказки в полном каталоге', () => {
