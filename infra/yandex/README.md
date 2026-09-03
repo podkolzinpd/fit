@@ -24,12 +24,15 @@ database password, OAuth secret or Terraform state.
 The API container is private by default. Stage delivery enables browser invocation
 only after Yandex ID validation and the read-only rollout allowlist are present.
 The migration runner and push dispatcher are always private. The dispatcher
-reuses the existing `fit-send-push-notifications` function and its Lockbox
-`PUSH_DISPATCH_SECRET` from the separate Functions folder. The workflow resolves
-only their non-secret IDs with the existing Functions OIDC identity, grants the
-dispatcher `lockbox.payloadViewer` on that exact secret, and then restores the
-stage OIDC identity. Terraform receives IDs and the immutable version only; the
-payload is mounted directly into the runtime and never enters CI or state.
+reuses the existing `fit-send-push-notifications` function. That function lives
+in a separate Functions security scope, so its OIDC identity reads only
+`PUSH_DISPATCH_SECRET` into a masked runner-temporary file. After switching back
+to the stage OIDC identity, the workflow creates or updates the deletion-protected
+`fit-stage-push-transport` Lockbox mirror and removes the temporary files. The
+dispatcher receives `lockbox.payloadViewer` only on that stage-local secret.
+Terraform receives only the mirror ID and immutable version; the payload never
+enters GitHub outputs, environment files, logs or Terraform state. The source
+version ID in the mirror version description makes later rotations idempotent.
 The provider cannot plan IAM binding lists containing service-account IDs that
 are still unknown on the first run. The read-only plan therefore omits only
 those free IAM members. After the bootstrap identity phase, the workflow pins

@@ -136,6 +136,17 @@ describe('Yandex Terraform plan policy', () => {
           },
         },
         {
+          address: 'yandex_lockbox_secret_iam_member.push_dispatcher_transport_secret_reader',
+          change: {
+            actions: ['create'],
+            after: {
+              member: null,
+              role: 'lockbox.payloadViewer',
+            },
+            after_unknown: { member: true },
+          },
+        },
+        {
           address: 'yandex_container_registry_iam_binding.api_image_puller',
           change: {
             actions: ['update'],
